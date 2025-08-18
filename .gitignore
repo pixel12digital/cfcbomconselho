@@ -1,0 +1,35 @@
+﻿# Sistema CFC Bom Conselho
+
+# Arquivos de configuração local
+config_local.php
+
+# Logs
+logs/*
+
+# Backups
+backups/*
+
+# Uploads
+uploads/*
+
+# Arquivos temporários
+*.tmp
+*.log
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependências
+vendor/
+node_modules/
+
+# Arquivos de ambiente
+.env
+.env.local

@@ -1,0 +1,636 @@
+﻿<html lang="pt-br" style="overflow-x: hidden;">
+<head>
+	<title>e-condutor</title>
+	
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta content='width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no' name='viewport'>
+
+<link rel="stylesheet" href="/recursos/font-awesome/css/all.min.css" type="text/css">
+<link rel="stylesheet" href="/recursos/font-awesome/css/v4-shims.min.css" type="text/css">
+<link rel="stylesheet" href="/recursos/font-awesome/css/v4-font-face.min.css" type="text/css">
+<link rel="stylesheet" href="/recursos/font-awesome/css/v5-font-face.min.css" type="text/css">
+
+<link rel="stylesheet" href="/recursos/css/bootstrap.min.css">
+<link rel="stylesheet" href="/recursos/css/estilo.css?1.82.01">
+
+<!-- Datepicker -->
+<link href="/recursos/datepicker/datepicker3.css" rel="stylesheet">
+
+<!-- Alertfy -->
+<link href="/recursos/alertify/alertify.min.css" rel="stylesheet">
+<link href="/recursos/alertify/custom.css?1.82.01" rel="stylesheet">
+
+<!-- Favicon -->
+<link rel="shortcut icon" href="/recursos/img/favicon.ico" type="image/x-icon">
+<link rel="icon" href="/recursos/img/favicon.ico" type="image/x-icon">
+
+<!-- Bootstrap Select -->
+<link rel="stylesheet" href="/recursos/css/bootstrap-select.css">
+
+<link rel="stylesheet" href="/recursos/css/bootstrap-toggle.min.css">
+<!-- <link href="https://gitcdn.github.io/bootstrap-toggle/2.2.2/css/bootstrap-toggle.min.css" rel="stylesheet"> -->
+
+<!-- Quasar -->
+<!-- <link href="https://fonts.googleapis.com/css?family=Roboto:100,300,400,500,700,900|Material+Icons|Material+Icons+Outlined|Material+Icons+Round|Material+Icons+Sharp" rel="stylesheet" type="text/css">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined|Material+Symbols+Rounded|Material+Symbols+Sharp" rel="stylesheet" type="text/css">
+<link href="https://use.fontawesome.com/releases/v6.1.1/css/all.css" rel="stylesheet" type="text/css">
+<link href="https://cdn.jsdelivr.net/npm/animate.css@^4.0.0/animate.min.css" rel="stylesheet" type="text/css">
+<link href="https://cdn.jsdelivr.net/npm/quasar@2.15.4/dist/quasar.prod.css" rel="stylesheet" type="text/css"> -->
+
+
+<div class="request_new_login" id="request_new_login" style="background-color: rgba(0,0,0,0.8);;width:100%;height:5000px; padding-top: 100px; position: absolute; z-index: 1999; display:none;">
+	<center>
+	<div style="background-color: white; border: 1px solid black;width:700px;height:230px;text-align:center;padding: 30px 30px 30px 30px;border-radius:10px;margin: 50px 50px 50px 50px;">
+		<p style="font-size: 24px;">Sua sessão expirou. Para continuar usando o sistema <br>é necessário efetuar o login novamente.</p>
+		<br><br>
+		<p><a style="font-size: 24px; width:250px;" href="/index.jsp" class="btn btn-success" >Efetuar Login</a></p>
+	</div>
+	</center>
+</div><!-- Sentry.IO to capture exceptions -->
+<!-- Removed, Sentry contains rate limited in FreeVersion -->
+<!-- <script src="../recursos/js/aa62e4953309f28e2d22a41e6a2979b1.min.js"></script> -->
+
+<!-- Alertfy -->
+<script type="text/javascript" src="../recursos/alertify/alertify.min.js" type="text/javascript"></script>
+
+<!-- JQuery -->
+<script type="text/javascript" src="../recursos/js/jquery.min.js"></script>
+<script type="text/javascript" src="../recursos/js/moment-with-locales.js"></script>
+<script type="text/javascript" src="../recursos/js/jquery-ui.js"></script>
+<script type="text/javascript" src="../recursos/js/jquery.mask.min.js"></script>
+<script type="text/javascript" src="../recursos/js/jquery.maskMoney.min.js"></script>
+
+<!-- VueJS 2 -->
+<script type="text/javascript" src="../recursos/js/vue.min.js"></script>
+
+<!-- Pinia Standalone -->
+<script type="text/javascript" src="../recursos/js/demi.iife.js"></script>
+<script type="text/javascript" src="../recursos/js/pinia.iife.js"></script>
+
+<!-- CurrencyJS -->
+<script src="../recursos/js/currency.min.js"></script>
+
+<!-- VueJqueryMask -->
+<script type="text/javascript" src="../recursos/js/vue-jquery-mask.js"></script>
+
+<!-- Axios v0.27.2  -->
+<script type="text/javascript" src="../recursos/js/axios.min.js"></script>
+
+<!-- Bootstrap -->
+<script type="text/javascript" src="../recursos/js/bootstrap.min.js"></script>
+<script type="text/javascript" src="../recursos/js/bootstrap-select.js"></script>
+<script type="text/javascript" src="../recursos/js/bootstrap-toggle.min.js"></script>
+
+<script type="text/javascript" src="../recursos/js/lodash_4.17.11.js"></script>
+<script type="text/javascript" src="../recursos/js/carousel.js"></script>
+<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/jquery-cookie/1.4.1/jquery.cookie.min.js"></script>
+
+<!-- <script src="https://kit.fontawesome.com/ffce7f2b00.js" crossorigin="anonymous"></script> -->
+<script type="text/javascript" src="../recursos/font-awesome/js/regular.min.js"></script>
+
+<!-- Exeções personalizadas!!! -->
+<script type="text/javascript" src="../recursos/js/custom-exceptions.js"></script>
+
+
+<!-- Google Recaptcha V3 -->
+	<script src="https://www.google.com/recaptcha/enterprise.js" async defer></script>
+<!-- Global site tag (gtag.js) - Google Analytics -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=UA-67821843-1"></script>
+	<script>
+	  window.dataLayer = window.dataLayer || [];
+	  function gtag(){dataLayer.push(arguments);}
+	  gtag('js', new Date());
+	 
+	  gtag('config', 'UA-67821843-1');
+	</script>
+	
+	<!-- Global site tag (gtag.js) - AdWords: 877939079 -->
+	<script async src="https://www.googletagmanager.com/gtag/js?id=AW-877939079"></script>
+	<script>
+		window.dataLayer = window.dataLayer || [];
+		function gtag() {
+			dataLayer.push(arguments);
+		}
+		gtag('js', new Date());
+	
+		gtag('config', 'AW-877939079');
+	</script>
+	
+	<!-- <script async type="text/javascript">
+	$(document).ready(function(){
+		setTimeout(function(){
+	    
+		    // tidio
+		    $.getScript("//code.tidio.co/jtpdxrpkpdqdrx9wqfnq9wef9ytshco7.js");
+		    // facebook
+// 		    ! function(f, b, e, v, n, t, s){
+// 		        if (f.fbq) return;
+// 		        n = f.fbq = function() {
+// 		            n.callMethod ?
+// 		                n.callMethod.apply(n, arguments) : n.queue.push(arguments)
+// 		        };
+// 		        if (!f._fbq) f._fbq = n;
+// 		        n.push = n;
+// 		        n.loaded = !0;
+// 		        n.version = '2.0';
+// 		        n.queue = [];
+// 		        t = b.createElement(e);
+// 		        t.async = !0;
+// 		        t.src = v;
+// 		        s = b.getElementsByTagName(e)[0];
+// 		        s.parentNode.insertBefore(t, s)
+// 		    }(window, document, 'script','https://connect.facebook.net/en_US/fbevents.js');
+// 		    fbq('init', '411986752528756');
+// 		    fbq('track', 'PageView');
+// 		    fbq('track', 'ViewContent');
+		    
+			// hotjar
+		    /* (function(h,o,t,j,a,r){
+		        h.hj=h.hj||function(){(h.hj.q=h.hj.q||[]).push(arguments)};
+		        h._hjSettings={hjid:540836,hjsv:5};
+		        a=o.getElementsByTagName('head')[0];
+		        r=o.createElement('script');r.async=1;
+		        r.src=t+h._hjSettings.hjid+j+h._hjSettings.hjsv;
+		        a.appendChild(r);
+		    })(window,document,'//static.hotjar.com/c/hotjar-','.js?sv='); */
+		},1000);
+	});
+	</script> -->
+	
+<!-- 	<noscript> -->
+<!-- 		<img height="1" width="1" style="display:none" src="https://www.facebook.com/tr?id=411986752528756&ev=PageView&noscript=1"/> -->
+<!-- 	</noscript> -->
+<!-- Datepicker -->
+<script type="text/javascript" src="../recursos/datepicker/bootstrap-datepicker.js"></script>
+<script type="text/javascript" src="../recursos/datepicker/locales/bootstrap-datepicker.pt-BR.js" charset="UTF-8"></script>
+
+<!-- Mascaras -->
+<script type="text/javascript" src="../recursos/js/mascara.js?1.82.01" ></script>
+
+<!-- Orndenação de tabela -->
+<script type="text/javascript" src="../recursos/js/jquery.tablesorter.js"></script>
+
+<script type="text/javascript" src="../recursos/js/comum.js?1.82.01"></script>
+
+
+<!-- Quasar -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quasar@2.15.4/dist/quasar.umd.prod.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/quasar@2.15.4/dist/lang/pt-BR.umd.prod.js"></script> -->
+
+<script type="text/javascript">
+	//Configure sentryOnLoad before adding the Loader Script
+	/* var environment = "local";
+	
+	if(document.location.hostname.includes("homologacao")) {
+		environment = "test";
+	} else if(document.location.hostname.includes("prehomolog")) {
+		environment = "test-prehomolog";
+	} else if(document.location.hostname.includes("localhost") || document.location.hostname.includes("127.0.0.1")) {
+		environment = "local";
+	} else {
+		environment = "production";
+	}
+	
+	window.sentryOnLoad = function () {
+	  Sentry.init({
+		  environment:environment,
+	  });
+	}; */
+	
+	// Config Moment
+	moment.locale('pt-br');
+	
+	// Your app init logic may go here
+	Vue.use(VuejQueryMask);
+	Vue.use(Pinia.PiniaVuePlugin);
+	
+	
+	/*
+	* Componente input Global de dinheiro;
+	*/
+	Vue.component('currency-input', {
+	  props: ['value'],
+	  data: function () {
+	    return {
+	      options: {
+	        reverse: true
+	      }
+	    }
+	  },
+	  template: `
+	  <vue-mask
+	    :value="value"
+	    @input="$emit('input', $event)"
+	    mask="000.000.000.000.000,00"
+	    :options="options"
+	    :raw="false"
+	    maxlength="13" 
+	    minlength="1" 
+	    class="form-control" 
+	    type="text"  
+	    required>
+	    </vue-mask>
+	  `,
+	});
+	
+	/*
+	* Componente input Global de data;
+	*/
+	Vue.component('date-input', {
+	  props: ['id','value'],
+	  data: function () {
+	    return {
+	      options: {
+	        reverse: true,
+	        placeholder: 'dd/mm/aaaa',
+	      }
+	    }
+	  },
+	  template: `
+	  <vue-mask
+	  	:id="id"
+	    :value="value"
+	    @input="$emit('input', $event)"
+	    mask="00/00/0000"
+	    pattern="[0-9]{2}/[0-9]{2}/[0-9]{4}$"
+	    :options="options"
+	    :raw="false"
+	    maxlength="10" 
+	    minlength="10" 
+	    class="form-control vueDatePicker" 
+	    type="text"  
+	    required>
+	    </vue-mask>
+	  `,
+	});
+	
+	/* Vue.use(VueMask.VueMaskPlugin);
+	Vue.directive('mask', VueMask.VueMaskDirective); */
+	
+	/*
+	* Pinia Store Global
+	*/
+	const useGlobalStore = Pinia.defineStore('globalStore', {
+		state: () => ({ usuarioLogado: null }),
+    actions: {
+      async getUserProfile() {
+    	  axios.defaults.baseURL = $.cookie('baseURL');
+  			axios.defaults.headers.common['Authorization'] = 'Bearer ' + $.cookie('access_token');
+  			
+  			try {
+  				let res = await axios.get('/auth/profile');
+  		    this.usuarioLogado = res.data;
+  		    return res.data;
+  			} catch (error) {
+	        console.log(error);
+	        // let the form component display the error
+	        return error
+	      }
+      },
+      isPDF(file){
+			var allowedExtensions = /(\pdf)$/i;
+			
+				return allowedExtensions.exec(file);
+			},
+			isIMG(file){
+				var allowedExtensions = /(\gif|jpg|jpeg|tiff|png)$/i;
+				
+				return allowedExtensions.exec(file);
+			},
+			exibirAlert(title, msg, ok = 'OK') {
+			  return new Promise((resolve) => {
+			    alertify.alert()
+				  .setting({
+				    'label':ok,
+				    'title': title,
+				    'message': msg,
+				    'onok': function(){ resolve(true)}
+				  }).show();
+				});
+			},
+			async searchCep(cep) {
+	      let res = await fetch("https://viacep.com.br/ws/"+cep+"/json/");
+	      let dataRes = await res.json();	
+	      
+	      return dataRes;
+	    },
+    }
+  });
+	
+	//override defaults
+	alertify.defaults.transition = "zoom";
+	alertify.defaults.theme.ok = "btn btn-success";
+	alertify.defaults.theme.cancel = "btn btn-danger";
+	alertify.defaults.theme.input = "form-control";
+	alertify.set('notifier','position', 'top-right');
+	alertify.set('notifier','delay', 10);
+</script>
+
+<!-- Modal -->
+<div class="modal fade" id="loading" tabindex="-1" role="dialog" aria-labelledby="loading"  data-backdrop="static" data-keyboard="false">
+	<div class="modal-dialog" style="margin-top: 50px;">
+		<div class="loading" style="margin-top: 100px;">
+			<img src="/recursos/img/loading.gif" style="width: 128px; height: 128px; margin-left: -64px;" />
+		</div>
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<!-- Modal -->
+<div class="modal fade" id="loadingModal" tabindex="-1" role="dialog" aria-labelledby="loading"  data-backdrop="static" data-keyboard="false">
+	<div class="modal-dialog" style="margin-top: 50px;">
+		<div class="loading" style="margin-top: 100px;">
+			<img src="/recursos/img/stone/loading.gif" style="width: 128px; height: 128px; margin-left: -64px;" />
+		</div>
+	</div><!-- /.modal-dialog -->
+</div><!-- /.modal -->
+
+<script type="text/javascript">
+    
+    $(window).resize(function() {
+    	exibirIconeNotificacao();
+    });
+    
+</script><script type="text/javascript">
+		$(function msg() {
+			var mensagem = '';
+			
+			if(mensagem != "") alertify.warning(mensagem);
+			
+			var mensagemSuccess = '';
+			if(mensagemSuccess != "") alertify.success(mensagemSuccess);
+		});
+	</script>
+	
+	<script type="text/javascript">
+		function acessoCFC(){
+			document.location.href='acesso_cfc.jsp';
+		}
+	</script>
+	
+	
+<!-- LOGIN FACEBOOK -->
+<script>
+  window.fbAsyncInit = function() {
+    FB.init({
+      appId      : '176576092753646',
+      xfbml      : true,
+      version    : 'v2.7'
+    });
+    $('#btnFacebook').show();
+  };
+	
+  (function(d, s, id){
+     var js, fjs = d.getElementsByTagName(s)[0];
+     if (d.getElementById(id)) {return;}
+     js = d.createElement(s); js.id = id;
+     js.src = "//connect.facebook.net/en_US/sdk.js";
+     fjs.parentNode.insertBefore(js, fjs);
+   }(document, 'script', 'facebook-jssdk'));
+</script>
+
+
+<script>
+  // This is called with the results from from FB.getLoginStatus().
+  function statusChangeCallback(response) {
+   
+    if (response.status === 'connected') {
+      // Usuário está logado no facebook e no aplicativo
+      logarViaFacebook();
+      
+    } else if (response.status === 'not_authorized') {
+      // Usuário está logado no facebook, mas não no aplicativo
+      $('#status').attr("class", "text-danger");
+      $('#status').html('Por favor, autorize o aplicativo para acessar via facebook.');
+      
+    } else {
+      // O usuário não está logado no facebook
+      $('#status').attr("class", "text-primary");
+      $('#status').html('Por favor, faça login no facebook.');
+    }
+  }
+
+  // Verifica o status de login do usuário
+  function checkLoginState() {
+    FB.getLoginStatus(function(response) {
+      statusChangeCallback(response);
+    });
+  }
+  
+  //Verifica o status de login do usuário
+  function loginFB() {
+    FB.login(function(response) {
+      statusChangeCallback(response);
+    }, {scope: 'email'});
+  }
+
+  // Teste
+  function logarViaFacebook() {
+    FB.api('/me?fields=email', function(response) {
+      var form = $('#form_index');
+      $('#status').html('');
+      $('#login').val(response.email);
+      $('#acao').val('logar');
+      form.append('<input id="login_fb" name="login_fb" value="true" hidden>');
+      $('#form_index').submit();
+    });
+  }  
+</script>
+	
+</head>
+<body>
+
+<!-- -------------------------------------- Conteúdo ---------------------------------------------- -->
+	<div class="geral" id="loginApp">
+		<nav class="navbar navbar-original navbar-fixed-top">
+			<div class="container-fluid">
+	            <div class="navbar-header empresa">
+	            	<a class="navbar-brand" href="/index.jsp"><img src="/recursos/img/logo.png" alt="e-condutor" height="20px"></a>
+	        	
+                   	<a onclick="acessoCFC()">
+                   		<button type="button" class="btn btn-default navbar-btn fr" id="btnAcessoCFC" name="btnAcessoCFC">Acesso CFC</button>
+                   	</a>
+	        	</div>  
+	            
+			</div>
+		</nav>
+	
+		
+<!-- -------------------------------------- Formulário de login ---------------------------------------------- -->
+	
+		<form class="form-horizontal" name="form_index" id="form_index" role="form" method="post" action="/acessar">
+		<!--  Teste para subir nova versão -->
+			<div class="container-fluid" style="padding-top: 10px;">
+		
+				<div class="titulo">
+					<img src="/recursos/img/logo-original.png" alt="e-condutor" height="40px">
+				</div>
+			
+				<div class="row">
+					<div class="col-md-6 col-md-offset-3 col-sm-10 col-sm-offset-1">
+						<div class="panel panel-default">
+							<div class="panel-heading">
+					    		<h2 class="panel-title"><b>Acesso</b></h2>
+					  		</div>
+				
+				  			<div class="panel-body">
+		   						<div class="form-group">
+									<div class="col-md-10 col-md-offset-1 col-sm-10 col-sm-offset-1">
+											<label class="control-label">E-mail</label>
+										<div class="input-group">
+											<span class="input-group-addon" id="basic-addon1">@</span>
+											
+											<input required id="login" name="login" placeholder="e-mail" type="email" pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,20}$" onchange="document.getElementById('login').value = document.getElementById('login').value.toLowerCase();" class="form-control" value="" aria-describedby="basic-addon1">
+										</div>
+									</div>
+								</div>
+								
+								<div class="form-group">
+									<div class="col-md-10 col-md-offset-1 col-sm-10 col-sm-offset-1">
+										<label class="control-label">Senha</label>
+										<div class="input-group">
+											<span class="input-group-addon" id="basic-addon1"><span class="fa fa-asterisk"></span></span>
+											<input required id="senha" name="senha" placeholder="senha" type="password" class="form-control" value="" aria-describedby="basic-addon1">
+										</div>
+									</div>
+								</div>
+																
+								<div class="form-group" id="div-captcha" style="display: none">
+									<div class="col-md-10 col-md-offset-1 col-sm-10 col-sm-offset-1">
+										<div class="g-recaptcha" style="width: 302px;margin: auto;" id="g-recaptcha" data-sitekey="6LcY620rAAAAAAOqRRazHRhGnrgMU5pz6O14yq-L" data-action="LOGIN"></div>
+									</div>
+								</div>
+								
+								<div class="form-group">
+
+								    <div class="col-md-10 col-md-offset-1 col-sm-10 col-sm-offset-1">
+								    	<div style=float:right>
+									    	<button class="btn btn-primary" id="btnEntrar" name="btnEntrar">
+									    		<span class="fa fa-sign-in mr5"></span>Entrar
+									    	</button>
+									    </div>
+									    <div style=float:left>
+									    	<a href="#" class="checkbox fr" OnClick="GoTo('recovery-password')"> Esqueci minha senha </a>
+										</div>	
+									</div>
+									
+								</div>
+								
+								<div class="col-md-10 col-md-offset-1 col-sm-10 col-sm-offset-1 no-padding">
+									<div class="linha"></div>
+						  			<button class="btn btn-primary col-md-12 none" id="btnFacebook" type="button" onclick="loginFB();">
+										<span class="fa fa-facebook mr5"></span><span class="mr5"> | </span>Entrar via Facebook
+									</button>
+									
+									<span class="" id="status"></span>
+							    </div>
+		               		</div>
+			  			</div>
+			  		</div>
+				</div>
+				
+				<div class="stoneLogo">
+					<img src="/recursos/img/stone/logo_padrao.png" alt="stone-partner" height="50px">
+				</div>
+	  		</div>
+	  		
+	  		<input hidden id="plataforma" name="plataforma" type="text">
+	  		<input hidden id="ip" name="ip" type="text">
+	  		<input hidden id="tentativas" name="tentativas" type="text" value="0">
+		</form>
+	</div>
+	
+
+<!-- -------------------------------------- Rodapé padrão ---------------------------------------------- -->
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<!-- <script async src="//code.tidio.co/jtpdxrpkpdqdrx9wqfnq9wef9ytshco7.js"></script> -->
+
+	<script type="module">
+  import Chatbox from 'https://cdn.jsdelivr.net/npm/@chatvolt/embeds@latest/dist/chatbox/index.js';
+
+	let userName = $.cookie('user_name');
+	let userEmail = $.cookie('user_email');
+
+	if(userName != null && userName != undefined) {
+  	Chatbox.initBubble({
+    	agentId: 'cm8xeikqu07wqamku41dkfl04',
+			contact : {
+				firstName: userName,
+				email: userEmail
+			}
+  	});
+	} else {
+		Chatbox.initBubble({
+    	agentId: 'cm8xeikqu07wqamku41dkfl04',
+  	});
+	}
+
+	</script>
+
+	<footer class="footer rodape navbar navbar-clean" id="footer" style="position: initial; width: 102%">
+		<div class="container-fluid">
+			<div class="row">
+				<ul>
+					<li class="infos col-md-6">
+						
+					</li>
+					
+					<li class="assinatura col-md-6">
+						<p class="navbar-text no-float">
+							<span>
+								<b>
+									Horário de atendimento: 
+								</b> das 8h às 18h, de SEGUNDA a SEXTA
+							</span>
+							<br>
+							<span>
+								<b>
+									Contato: 
+								</b>suporte@anovasistemas.com.br 
+								<span class="mw5">
+									-
+								</span> (11) 4063-6310
+							</span>
+							<br>
+							e-condutor &copy; 2025. Vers&atilde;o 1.82.01<br>
+							<span style="margin: 0 5px;">
+								<span class="mw5"><a href="../ajuda.jsp" target="_blank">Ajuda</a></span>
+							</span>  
+						</p>
+					</li>
+				</ul>
+			</div>
+		</div>
+	</footer><script src="/recursos/js/senha.js?1.82.01"></script>
+	<script src="/recursos/js-vue/vue_login.js?1.82.01"></script>
+	<script type="text/javascript">
+		$(document).ready(function() {
+			limpaStorage();
+			
+			const platform = navigator.platform + ' - ' + navigator.userAgent;
+			document.getElementById("plataforma").value = platform;
+		});
+		
+		async function getIP(json) {
+			document.getElementById("ip").value = json.ip;
+			
+			let url = document.location.origin;
+			if(url.includes("localhost")) url = url.replace("8080", "5000");
+			const res = await fetch(url+'/api/v2/auth/login?ip='+json.ip);
+			if(res.status == 200) {
+				const data = await res.json();
+				const tentativas = data["tentativas"];
+				
+				if(tentativas >= 3) {
+					var elemento = document.getElementById("div-captcha");
+					elemento.style.display = "block";
+				}
+				
+				document.getElementById("tentativas").value = tentativas;
+			}
+	  }
+	</script>
+	
+	<script type="application/javascript" src="https://api.ipify.org?format=jsonp&callback=getIP"></script>
+</body>
+</html>
