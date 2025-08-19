@@ -10,7 +10,7 @@ require_once 'includes/auth.php';
 
 // Se já estiver logado, redirecionar para dashboard
 if (isLoggedIn()) {
-    header('Location: admin/dashboard.php');
+    header('Location: admin/');
     exit;
 }
 
@@ -26,14 +26,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($senha)) {
         $error = 'Por favor, preencha todos os campos';
     } else {
-        $result = $auth->login($email, $senha, $remember);
-        
-        if ($result['success']) {
-            $success = $result['message'];
-            // Redirecionar após 1 segundo
-            header('Refresh: 1; URL=admin/dashboard.php');
-        } else {
-            $error = $result['message'];
+        try {
+            $result = $auth->login($email, $senha, $remember);
+            
+            if ($result['success']) {
+                $success = $result['message'];
+                // Redirecionar após 1 segundo
+                header('Refresh: 1; URL=admin/');
+                exit;
+            } else {
+                $error = $result['message'];
+            }
+        } catch (Exception $e) {
+            $error = 'Erro interno do sistema. Tente novamente.';
+            if (LOG_ENABLED) {
+                error_log('Erro no login: ' . $e->getMessage());
+            }
         }
     }
 }
@@ -41,13 +49,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Obter IP do cliente para controle de tentativas
 $clientIP = $_SERVER['HTTP_CLIENT_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
 
-// Verificar se deve mostrar captcha
+// Verificar se deve mostrar captcha (simplificado)
 $showCaptcha = false;
-if (AUDIT_ENABLED) {
-    $sql = "SELECT COUNT(*) as tentativas FROM logs WHERE ip_address = :ip AND acao = 'login_failed' AND criado_em > DATE_SUB(NOW(), INTERVAL :timeout SECOND)";
-    $result = db()->fetch($sql, ['ip' => $clientIP, 'timeout' => LOGIN_TIMEOUT]);
-    $showCaptcha = $result['tentativas'] >= MAX_LOGIN_ATTEMPTS;
-}
+// Removida verificação da tabela logs que estava causando erro
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -77,22 +81,8 @@ if (AUDIT_ENABLED) {
     <link rel="icon" type="image/x-icon" href="assets/img/favicon.ico">
     <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png">
     
-    <!-- CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-                    <link href="assets/css/variables.css" rel="stylesheet">
-                <link href="assets/css/login.css" rel="stylesheet">
-                <link href="assets/css/responsive-utilities.css" rel="stylesheet">
-                <link href="assets/css/fix-visibility.css" rel="stylesheet">
-
-    <link href="assets/css/components/login-form.css" rel="stylesheet">
-    <link href="assets/css/components/desktop-layout.css" rel="stylesheet">
-    <link href="assets/css/components/no-scroll-optimization.css" rel="stylesheet">
-    
-    <!-- Recaptcha -->
-    <?php if (RECAPTCHA_SITE_KEY && $showCaptcha): ?>
-    <script src="https://www.google.com/recaptcha/api.js" async defer></script>
-    <?php endif; ?>
+    <!-- CSS LOCAL APENAS -->
+    <link href="assets/css/simple-login.css" rel="stylesheet">
 </head>
 <body class="login-page">
     <!-- Skip to main content link for screen readers -->
@@ -101,31 +91,29 @@ if (AUDIT_ENABLED) {
     <div class="login-page-container">
         <!-- Coluna da esquerda - Informações do sistema (Desktop) -->
         <div class="login-info-column" role="banner" aria-label="Informações do sistema">
-            <div class="login-info-content">
-                <div class="login-logo-container">
-                    <i class="fas fa-car login-logo-icon" aria-hidden="true"></i>
-                    <h1 class="login-logo-title"><?php echo APP_NAME; ?></h1>
-                    <p class="login-logo-subtitle">Sistema completo para gestão de Centros de Formação de Condutores</p>
-                </div>
-                <nav class="login-features-list" role="navigation" aria-label="Recursos do sistema">
-                    <div class="login-feature-item">
-                        <i class="fas fa-users login-feature-icon" aria-hidden="true"></i>
-                        <span class="login-feature-text">Gestão de Alunos e Instrutores</span>
-                    </div>
-                    <div class="login-feature-item">
-                        <i class="fas fa-calendar-alt login-feature-icon" aria-hidden="true"></i>
-                        <span class="login-feature-text">Agendamento de Aulas</span>
-                    </div>
-                    <div class="login-feature-item">
-                        <i class="fas fa-chart-line login-feature-icon" aria-hidden="true"></i>
-                        <span class="login-feature-text">Relatórios e Estatísticas</span>
-                    </div>
-                    <div class="login-feature-item">
-                        <i class="fas fa-shield-alt login-feature-icon" aria-hidden="true"></i>
-                        <span class="login-feature-text">Controle de Documentação</span>
-                    </div>
-                </nav>
+            <div class="login-logo-container">
+                <span class="login-logo-icon">🚗</span>
+                <h1 class="login-logo-title"><?php echo APP_NAME; ?></h1>
+                <p class="login-logo-subtitle">Sistema completo para gestão de Centros de Formação de Condutores</p>
             </div>
+            <nav class="login-features-list" role="navigation" aria-label="Recursos do sistema">
+                <div class="login-feature-item">
+                    <span class="login-feature-icon">👥</span>
+                    <span class="login-feature-text">Gestão de Alunos e Instrutores</span>
+                </div>
+                <div class="login-feature-item">
+                    <span class="login-feature-icon">📅</span>
+                    <span class="login-feature-text">Agendamento de Aulas</span>
+                </div>
+                <div class="login-feature-item">
+                    <span class="login-feature-icon">📊</span>
+                    <span class="login-feature-text">Relatórios e Estatísticas</span>
+                </div>
+                <div class="login-feature-item">
+                    <span class="login-feature-icon">🛡️</span>
+                    <span class="login-feature-text">Controle de Documentação</span>
+                </div>
+            </nav>
         </div>
             
         <!-- Coluna da direita - Formulário de login -->
@@ -133,7 +121,7 @@ if (AUDIT_ENABLED) {
             <div class="login-form-wrapper">
                 <!-- Logo para mobile - Sempre visível -->
                 <div class="login-mobile-logo d-lg-none">
-                    <i class="fas fa-car" aria-hidden="true"></i>
+                    <span>🚗</span>
                     <h2><?php echo APP_NAME; ?></h2>
                 </div>
                     
@@ -147,26 +135,20 @@ if (AUDIT_ENABLED) {
                             
                             <!-- Mensagens de erro/sucesso -->
                             <?php if ($error): ?>
-                            <div class="alert alert-danger alert-dismissible fade show" role="alert" aria-live="polite" aria-atomic="true">
-                                <i class="fas fa-exclamation-triangle me-2" aria-hidden="true"></i>
-                                <span id="error-message"><?php echo htmlspecialchars($error); ?></span>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar alerta"></button>
+                            <div class="alert alert-danger" role="alert" aria-live="polite" aria-atomic="true">
+                                <span id="error-message">⚠️ <?php echo htmlspecialchars($error); ?></span>
                             </div>
                             <?php endif; ?>
                             
                             <?php if ($success): ?>
-                            <div class="alert alert-success alert-dismissible fade show" role="alert" aria-live="polite" aria-atomic="true">
-                                <i class="fas fa-check-circle me-2" aria-hidden="true"></i>
-                                <span id="success-message"><?php echo htmlspecialchars($success); ?></span>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar alerta"></button>
+                            <div class="alert alert-success" role="alert" aria-live="polite" aria-atomic="true">
+                                <span id="success-message">✅ <?php echo htmlspecialchars($success); ?></span>
                             </div>
                             <?php endif; ?>
                             
                             <?php if (isset($_GET['message']) && $_GET['message'] === 'logout_success'): ?>
-                            <div class="alert alert-info alert-dismissible fade show" role="alert" aria-live="polite" aria-atomic="true">
-                                <i class="fas fa-sign-out-alt me-2" aria-hidden="true"></i>
-                                <span>Logout realizado com sucesso! Você foi desconectado do sistema.</span>
-                                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar alerta"></button>
+                            <div class="alert alert-info" role="alert" aria-live="polite" aria-atomic="true">
+                                <span>ℹ️ Logout realizado com sucesso! Você foi desconectado do sistema.</span>
                             </div>
                             <?php endif; ?>
                             
@@ -175,12 +157,10 @@ if (AUDIT_ENABLED) {
                         <!-- Campo Email -->
                         <div class="form-field-group">
                             <label for="email" class="form-field-label">
-                                <i class="fas fa-envelope" aria-hidden="true"></i>E-mail
+                                📧 E-mail
                             </label>
                             <div class="form-input-group">
-                                <span class="input-group-text" id="email-addon">
-                                    <i class="fas fa-at" aria-hidden="true"></i>
-                                </span>
+                                <span class="input-group-text">@</span>
                                 <input type="email" 
                                        class="form-field-input" 
                                        id="email" 
@@ -205,12 +185,10 @@ if (AUDIT_ENABLED) {
                         <!-- Campo Senha -->
                         <div class="form-field-group">
                             <label for="senha" class="form-field-label">
-                                <i class="fas fa-lock" aria-hidden="true"></i>Senha
+                                🔒 Senha
                             </label>
                             <div class="form-input-group">
-                                <span class="input-group-text" id="senha-addon">
-                                    <i class="fas fa-key" aria-hidden="true"></i>
-                                </span>
+                                <span class="input-group-text">🔑</span>
                                 <input type="password" 
                                        class="form-field-input" 
                                        id="senha" 
@@ -226,7 +204,7 @@ if (AUDIT_ENABLED) {
                                         id="togglePassword"
                                         aria-label="Mostrar senha"
                                         aria-pressed="false">
-                                    <i class="fas fa-eye" aria-hidden="true"></i>
+                                    👁️
                                 </button>
                             </div>
                             <div class="form-help-text" id="senha-help">
@@ -235,22 +213,6 @@ if (AUDIT_ENABLED) {
                             <div class="form-validation-message" id="senha-error" role="alert" aria-live="polite"></div>
                         </div>
                                 
-                        <!-- Captcha (se necessário) -->
-                        <?php if ($showCaptcha && RECAPTCHA_SITE_KEY): ?>
-                        <div class="form-field-group">
-                            <div class="g-recaptcha" 
-                                 data-sitekey="<?php echo RECAPTCHA_SITE_KEY; ?>"
-                                 data-callback="onRecaptchaSuccess"
-                                 data-expired-callback="onRecaptchaExpired"
-                                 aria-label="Verificação de segurança reCAPTCHA">
-                            </div>
-                            <div class="form-help-text text-danger">
-                                <i class="fas fa-info-circle" aria-hidden="true"></i>
-                                Muitas tentativas de login. Complete o captcha para continuar.
-                            </div>
-                        </div>
-                        <?php endif; ?>
-                        
                         <!-- Opções adicionais -->
                         <div class="form-field-group">
                             <div class="form-checkbox-container">
@@ -278,14 +240,9 @@ if (AUDIT_ENABLED) {
                             <button type="submit" 
                                     class="form-submit-btn" 
                                     id="btnLogin"
-                                    <?php echo $showCaptcha ? 'disabled' : ''; ?>
                                     aria-describedby="login-help">
                                 <div class="btn-content">
-                                    <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
-                                    <span>Entrar no Sistema</span>
-                                </div>
-                                <div class="spinner">
-                                    <i class="fas fa-spinner" aria-hidden="true"></i>
+                                    🚀 Entrar no Sistema
                                 </div>
                             </button>
                             <div class="form-help-text text-center mt-2" id="login-help">
@@ -296,8 +253,7 @@ if (AUDIT_ENABLED) {
                         <!-- Informações de suporte -->
                         <div class="text-center">
                             <small class="form-help-text">
-                                <i class="fas fa-info-circle" aria-hidden="true"></i>
-                                Problemas para acessar? Entre em contato com o suporte.
+                                ℹ️ Problemas para acessar? Entre em contato com o suporte.
                             </small>
                         </div>
                             </form>
@@ -308,14 +264,12 @@ if (AUDIT_ENABLED) {
                     <footer class="text-center mt-3" role="contentinfo">
                         <p class="text-muted mb-1">
                             <small>
-                                <i class="fas fa-clock me-1" aria-hidden="true"></i>
-                                Suporte: <?php echo SUPPORT_HOURS; ?>
+                                🕐 Suporte: <?php echo SUPPORT_HOURS; ?>
                             </small>
                         </p>
                         <p class="text-muted mb-0">
                             <small>
-                                <i class="fas fa-envelope me-1" aria-hidden="true"></i>
-                                <a href="mailto:<?php echo SUPPORT_EMAIL; ?>" aria-label="Enviar e-mail para suporte">
+                                📧 <a href="mailto:<?php echo SUPPORT_EMAIL; ?>" aria-label="Enviar e-mail para suporte">
                                     <?php echo SUPPORT_EMAIL; ?>
                                 </a>
                             </small>
@@ -332,214 +286,62 @@ if (AUDIT_ENABLED) {
         </div>
     </div>
     
-    <!-- Loading Modal -->
-    <div class="modal fade" id="loadingModal" tabindex="-1" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false" role="dialog" aria-labelledby="loading-title">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-body text-center p-4">
-                    <div class="spinner-border text-primary mb-3" role="status" aria-hidden="true">
-                        <span class="visually-hidden">Carregando...</span>
-                    </div>
-                    <h5 class="mb-2" id="loading-title">Autenticando...</h5>
-                    <p class="text-muted mb-0">Por favor, aguarde enquanto verificamos suas credenciais.</p>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.0/jquery.min.js"></script>
-    <script src="assets/js/login.js"></script>
-    <script src="assets/js/login-form.js"></script>
-    <script src="assets/js/fix-visibility.js"></script>
-    
+    <!-- JavaScript SIMPLIFICADO -->
     <script>
-        // Variáveis globais para o captcha
-        let recaptchaCompleted = <?php echo $showCaptcha ? 'false' : 'true'; ?>;
-        
-        // Função chamada quando o captcha é completado
-        function onRecaptchaSuccess() {
-            recaptchaCompleted = true;
-            const btnLogin = document.getElementById('btnLogin');
-            if (btnLogin) {
-                btnLogin.disabled = false;
-                btnLogin.classList.remove('btn-secondary');
-                btnLogin.classList.add('btn-primary');
-                btnLogin.setAttribute('aria-disabled', 'false');
-            }
-        }
-        
-        // Função chamada quando o captcha expira
-        function onRecaptchaExpired() {
-            recaptchaCompleted = false;
-            const btnLogin = document.getElementById('btnLogin');
-            if (btnLogin) {
-                btnLogin.disabled = true;
-                btnLogin.classList.remove('btn-primary');
-                btnLogin.classList.add('btn-secondary');
-                btnLogin.setAttribute('aria-disabled', 'true');
-            }
-        }
-        
-        // Validação do formulário
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
-            if (!this.checkValidity()) {
-                e.preventDefault();
-                e.stopPropagation();
-            }
-            
-            // Verificar captcha se necessário
-            if (<?php echo $showCaptcha ? 'true' : 'false'; ?> && !recaptchaCompleted) {
-                e.preventDefault();
-                alert('Por favor, complete o captcha para continuar.');
-                return false;
-            }
-            
-            // Mostrar loading
-            if (this.checkValidity()) {
-                const loadingModal = new bootstrap.Modal(document.getElementById('loadingModal'));
-                loadingModal.show();
-            }
-            
-            this.classList.add('was-validated');
-        });
-        
-        // Toggle de visibilidade da senha
-        document.getElementById('togglePassword').addEventListener('click', function() {
-            const senhaInput = document.getElementById('senha');
-            const icon = this.querySelector('i');
-            const isVisible = senhaInput.type === 'text';
-            
-            if (isVisible) {
-                senhaInput.type = 'password';
-                icon.classList.remove('fa-eye-slash');
-                icon.classList.add('fa-eye');
-                this.setAttribute('aria-label', 'Mostrar senha');
-                this.setAttribute('aria-pressed', 'false');
-            } else {
-                senhaInput.type = 'text';
-                icon.classList.remove('fa-eye');
-                icon.classList.add('fa-eye-slash');
-                this.setAttribute('aria-label', 'Ocultar senha');
-                this.setAttribute('aria-pressed', 'true');
-            }
-            
-            // Focar no campo de senha
-            senhaInput.focus();
-        });
-        
-        // Auto-focus no campo de email
+        // Sistema de login SIMPLIFICADO para evitar travamentos
         document.addEventListener('DOMContentLoaded', function() {
-            const emailInput = document.getElementById('email');
-            if (emailInput) {
-                emailInput.focus();
-            }
-        });
-        
-        // Validação em tempo real
-        document.getElementById('email').addEventListener('blur', function() {
-            if (this.value && !this.checkValidity()) {
-                this.classList.add('is-invalid');
-                this.setAttribute('aria-invalid', 'true');
-            } else {
-                this.classList.remove('is-invalid');
-                this.classList.add('is-valid');
-                this.setAttribute('aria-invalid', 'false');
-            }
-        });
-        
-        document.getElementById('senha').addEventListener('blur', function() {
-            if (this.value && !this.checkValidity()) {
-                this.classList.add('is-invalid');
-                this.setAttribute('aria-invalid', 'true');
-            } else {
-                this.classList.remove('is-invalid');
-                this.classList.add('is-valid');
-                this.setAttribute('aria-invalid', 'false');
-            }
-        });
-        
-        // Limpar validações ao digitar
-        document.getElementById('email').addEventListener('input', function() {
-            this.classList.remove('is-invalid', 'is-valid');
-            this.setAttribute('aria-invalid', 'false');
-        });
-        
-        document.getElementById('senha').addEventListener('input', function() {
-            this.classList.remove('is-invalid', 'is-valid');
-            this.setAttribute('aria-invalid', 'false');
-        });
-        
-        // Prevenção de múltiplos submits
-        let formSubmitted = false;
-        document.getElementById('loginForm').addEventListener('submit', function() {
-            if (formSubmitted) {
-                return false;
-            }
-            formSubmitted = true;
+            const loginForm = document.getElementById('loginForm');
             const btnLogin = document.getElementById('btnLogin');
-            if (btnLogin) {
-                btnLogin.disabled = true;
-                btnLogin.setAttribute('aria-disabled', 'true');
-                btnLogin.innerHTML = '<i class="fas fa-spinner fa-spin me-2" aria-hidden="true"></i><span>Entrando...</span>';
-            }
-        });
-        
-        // Detectar mudanças na conexão
-        window.addEventListener('online', function() {
-            console.log('Conexão restaurada');
-        });
-        
-        window.addEventListener('offline', function() {
-            console.log('Conexão perdida');
-            alert('Conexão com a internet perdida. Verifique sua conexão e tente novamente.');
-        });
-        
-        // Prevenção de ataques de força bruta
-        let loginAttempts = 0;
-        const maxAttempts = 5;
-        const lockoutTime = 300000; // 5 minutos em ms
-        
-        function checkLoginAttempts() {
-            if (loginAttempts >= maxAttempts) {
-                const btnLogin = document.getElementById('btnLogin');
-                if (btnLogin) {
+            
+            if (loginForm && btnLogin) {
+                // Prevenção de múltiplos submits
+                let formSubmitted = false;
+                
+                loginForm.addEventListener('submit', function(e) {
+                    if (formSubmitted) {
+                        e.preventDefault();
+                        return false;
+                    }
+                    
+                    // Validar campos obrigatórios
+                    const email = document.getElementById('email').value.trim();
+                    const senha = document.getElementById('senha').value.trim();
+                    
+                    if (!email || !senha) {
+                        e.preventDefault();
+                        alert('Por favor, preencha todos os campos.');
+                        return false;
+                    }
+                    
+                    // Marcar como enviado
+                    formSubmitted = true;
+                    
+                    // Mostrar loading no botão
+                    btnLogin.innerHTML = '⏳ <span>Entrando...</span>';
                     btnLogin.disabled = true;
-                    btnLogin.setAttribute('aria-disabled', 'true');
-                    btnLogin.innerHTML = '<i class="fas fa-lock me-2" aria-hidden="true"></i><span>Bloqueado temporariamente</span>';
+                    
+                    // Permitir envio do formulário
+                    return true;
+                });
+                
+                // Toggle de visibilidade da senha
+                const togglePassword = document.getElementById('togglePassword');
+                const senhaInput = document.getElementById('senha');
+                
+                if (togglePassword && senhaInput) {
+                    togglePassword.addEventListener('click', function() {
+                        const type = senhaInput.type === 'password' ? 'text' : 'password';
+                        senhaInput.type = type;
+                        
+                        // Atualizar emoji do botão
+                        this.innerHTML = type === 'password' ? '👁️' : '🙈';
+                    });
                 }
                 
-                setTimeout(() => {
-                    loginAttempts = 0;
-                    if (btnLogin) {
-                        btnLogin.disabled = false;
-                        btnLogin.setAttribute('aria-disabled', 'false');
-                        btnLogin.innerHTML = '<i class="fas fa-sign-in-alt me-2" aria-hidden="true"></i><span>Entrar no Sistema</span>';
-                    }
-                }, lockoutTime);
-            }
-        }
-        
-        // Interceptar erros de login
-        <?php if ($error): ?>
-        loginAttempts++;
-        checkLoginAttempts();
-        <?php endif; ?>
-        
-        // Melhorar acessibilidade para navegação por teclado
-        document.addEventListener('keydown', function(e) {
-            // Escape para limpar formulário
-            if (e.key === 'Escape') {
-                const form = document.getElementById('loginForm');
-                if (form) {
-                    form.reset();
-                    // Limpar validações
-                    const inputs = form.querySelectorAll('.form-control');
-                    inputs.forEach(input => {
-                        input.classList.remove('is-invalid', 'is-valid');
-                        input.setAttribute('aria-invalid', 'false');
-                    });
+                // Auto-focus no email
+                const emailInput = document.getElementById('email');
+                if (emailInput) {
+                    emailInput.focus();
                 }
             }
         });

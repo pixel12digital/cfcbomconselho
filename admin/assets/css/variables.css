@@ -1,0 +1,98 @@
+/* =====================================================
+   VARIÁVEIS DE CORES - SISTEMA CFC BOM CONSELHO
+   Baseado na paleta do logo oficial e design do e-condutor
+   ===================================================== */
+
+:root {
+    /* Cores Principais do Logo */
+    --primary-color: #1e3a8a;        /* Azul Marinho */
+    --primary-light: #3b82f6;        /* Azul Claro */
+    --primary-dark: #1e40af;         /* Azul Escuro */
+    
+    /* Cores de Suporte */
+    --secondary-color: #64748b;      /* Cinza Azulado */
+    --accent-color: #0ea5e9;         /* Azul Ciano */
+    
+    /* Cores Neutras */
+    --white: #ffffff;                /* Branco Puro */
+    --light-gray: #f8fafc;           /* Cinza Muito Claro */
+    --gray: #e2e8f0;                 /* Cinza Claro */
+    --dark-gray: #475569;            /* Cinza Escuro */
+    --black: #0f172a;                /* Preto Suave */
+    
+    /* Cores de Estado */
+    --success-color: #10b981;        /* Verde */
+    --warning-color: #f59e0b;        /* Amarelo */
+    --danger-color: #ef4444;         /* Vermelho */
+    --info-color: #3b82f6;           /* Azul Info */
+    
+    /* Tons de Azul */
+    --blue-50: #eff6ff;
+    --blue-100: #dbeafe;
+    --blue-200: #bfdbfe;
+    --blue-300: #93c5fd;
+    --blue-400: #60a5fa;
+    --blue-500: #3b82f6;
+    --blue-600: #2563eb;
+    --blue-700: #1d4ed8;
+    --blue-800: #1e40af;
+    --blue-900: #1e3a8a;
+    
+    /* Tons de Cinza */
+    --gray-50: #f8fafc;
+    --gray-100: #f1f5f9;
+    --gray-200: #e2e8f0;
+    --gray-300: #cbd5e1;
+    --gray-400: #94a3b8;
+    --gray-500: #64748b;
+    --gray-600: #475569;
+    --gray-700: #334155;
+    --gray-800: #1e293b;
+    --gray-900: #0f172a;
+    
+    /* Sombras */
+    --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    
+    /* Bordas */
+    --border-radius: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+    
+    /* Transições */
+    --transition-fast: 0.15s ease-in-out;
+    --transition-normal: 0.3s ease-in-out;
+    --transition-slow: 0.5s ease-in-out;
+    
+    /* Espaçamentos */
+    --spacing-xs: 0.25rem;
+    --spacing-sm: 0.5rem;
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+    --spacing-2xl: 3rem;
+    
+    /* Tipografia */
+    --font-family-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    --font-family-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace;
+    
+    /* Tamanhos de fonte */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 1.875rem;
+    --font-size-4xl: 2.25rem;
+    
+    /* Pesos de fonte */
+    --font-weight-light: 300;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --font-weight-extrabold: 800;
+}

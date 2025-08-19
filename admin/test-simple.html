@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Simples - Dashboard</title>
+    
+    <!-- Bootstrap 5 CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- FontAwesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- CSS específico para dashboard -->
+    <link href="assets/css/dashboard.css" rel="stylesheet">
+    
+    <style>
+        /* Debug styles */
+        .debug-border {
+            border: 2px solid red !important;
+        }
+        
+        .debug-bg {
+            background-color: yellow !important;
+        }
+        
+        /* Teste de impressão */
+        @media print {
+            body {
+                margin: 0 !important;
+                padding: 0 !important;
+                background: white !important;
+            }
+            
+            .dashboard-container {
+                background: white !important;
+                padding: 0 !important;
+            }
+            
+            .card {
+                border: 2px solid #000 !important;
+                box-shadow: none !important;
+                break-inside: avoid !important;
+                page-break-inside: avoid !important;
+                margin-bottom: 20px !important;
+            }
+            
+            .btn, .dropdown {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h1 class="text-center my-4">🧪 Teste Simples do Dashboard</h1>
+        
+        <!-- Container do Dashboard -->
+        <div class="dashboard-container debug-border">
+            <h2 class="text-center mb-4">Dashboard Container Ativo</h2>
+            
+            <!-- Teste de Cards -->
+            <div class="row mb-4">
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card debug-bg">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Teste Card 1</h6>
+                            <h3 class="text-primary">123</h3>
+                            <i class="fas fa-user fa-2x text-primary"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card debug-bg">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Teste Card 2</h6>
+                            <h3 class="text-success">456</h3>
+                            <i class="fas fa-car fa-2x text-success"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card debug-bg">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Teste Card 3</h6>
+                            <h3 class="text-info">789</h3>
+                            <i class="fas fa-calendar fa-2x text-info"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-3 col-md-6 mb-3">
+                    <div class="card debug-bg">
+                        <div class="card-body">
+                            <h6 class="card-title text-muted">Teste Card 4</h6>
+                            <h3 class="text-warning">012</h3>
+                            <i class="fas fa-chart fa-2x text-warning"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Teste de Botões -->
+            <div class="row mb-4">
+                <div class="col-12 text-center">
+                    <button class="btn btn-primary me-2" onclick="window.print()">
+                        <i class="fas fa-print me-1"></i>Testar Impressão
+                    </button>
+                    <button class="btn btn-success me-2" onclick="testarCSS()">
+                        <i class="fas fa-eye me-1"></i>Verificar CSS
+                    </button>
+                    <button class="btn btn-info" onclick="testarLayout()">
+                        <i class="fas fa-th-large me-1"></i>Testar Layout
+                    </button>
+                </div>
+            </div>
+            
+            <!-- Informações de Debug -->
+            <div class="row">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="mb-0">🔍 Informações de Debug</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="debug-info">
+                                <p><strong>Status do CSS:</strong> <span id="css-status">Verificando...</span></p>
+                                <p><strong>Container Ativo:</strong> <span id="container-status">Verificando...</span></p>
+                                <p><strong>Cards Encontrados:</strong> <span id="cards-count">Verificando...</span></p>
+                                <p><strong>Bootstrap Ativo:</strong> <span id="bootstrap-status">Verificando...</span></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Funções de teste
+        function testarCSS() {
+            const container = document.querySelector('.dashboard-container');
+            const computedStyle = window.getComputedStyle(container);
+            
+            document.getElementById('css-status').innerHTML = 
+                `CSS aplicado: ${computedStyle.backgroundColor !== 'rgba(0, 0, 0, 0)' ? '✅ SIM' : '❌ NÃO'}`;
+            
+            document.getElementById('container-status').innerHTML = 
+                `Container encontrado: ${container ? '✅ SIM' : '❌ NÃO'}`;
+            
+            const cards = document.querySelectorAll('.dashboard-container .card');
+            document.getElementById('cards-count').innerHTML = 
+                `Cards encontrados: ${cards.length}`;
+            
+            // Verificar Bootstrap
+            const bootstrapActive = typeof bootstrap !== 'undefined';
+            document.getElementById('bootstrap-status').innerHTML = 
+                `Bootstrap: ${bootstrapActive ? '✅ ATIVO' : '❌ INATIVO'}`;
+        }
+        
+        function testarLayout() {
+            const container = document.querySelector('.dashboard-container');
+            const rect = container.getBoundingClientRect();
+            
+            alert(`Layout do Container:
+                - Largura: ${rect.width}px
+                - Altura: ${rect.height}px
+                - Top: ${rect.top}px
+                - Left: ${rect.left}px
+                - Background: ${window.getComputedStyle(container).backgroundColor}
+                - Padding: ${window.getComputedStyle(container).padding}`);
+        }
+        
+        // Executar teste automático
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(testarCSS, 1000);
+            console.log('Página de teste carregada!');
+        });
+    </script>
+</body>
+</html>

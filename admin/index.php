@@ -1,13 +1,9 @@
 <?php
 // Definir caminho base
 $base_path = dirname(__DIR__);
-if (!file_exists($base_path . '/includes/config.php')) {
-    // Se não encontrar, usar o diretório atual
-    $base_path = getcwd();
-}
-require_once $base_path . '/includes/config.php';
-require_once $base_path . '/includes/database.php';
-require_once $base_path . '/includes/auth.php';
+require_once '../includes/config.php';
+require_once '../includes/database.php';
+require_once '../includes/auth.php';
 
 // Verificar se o usuário está logado e tem permissão de admin
 if (!isLoggedIn() || !hasPermission('admin')) {
@@ -21,28 +17,36 @@ $db = Database::getInstance();
 
 // Obter estatísticas para o dashboard
 $stats = [
-    'total_alunos' => $db->dbCount('alunos'),
-    'total_instrutores' => $db->dbCount('instrutores'),
-    'total_aulas' => $db->dbCount('aulas'),
-    'total_veiculos' => $db->dbCount('veiculos'),
-    'aulas_hoje' => $db->dbCount('aulas', ['data' => date('Y-m-d')]),
-    'aulas_semana' => $db->dbCount('aulas', ['data >=' => date('Y-m-d', strtotime('monday this week'))])
+    'total_alunos' => $db->count('alunos'),
+    'total_instrutores' => $db->count('instrutores'),
+    'total_aulas' => $db->count('aulas'),
+    'total_veiculos' => $db->count('veiculos'),
+    'aulas_hoje' => $db->count('aulas', 'data_aula = ?', [date('Y-m-d')]),
+    'aulas_semana' => $db->count('aulas', 'data_aula >= ?', [date('Y-m-d', strtotime('monday this week'))])
 ];
 
 // Obter últimas atividades
-$ultimas_atividades = $db->query("
-    SELECT 'aluno' as tipo, nome, 'cadastrado' as acao, created_at as data
-    FROM alunos 
-    ORDER BY created_at DESC 
-    LIMIT 5
-    UNION ALL
-    SELECT 'instrutor' as tipo, nome, 'cadastrado' as acao, created_at as data
-    FROM instrutores 
-    ORDER BY created_at DESC 
-    LIMIT 5
-    ORDER BY data DESC 
-    LIMIT 10
-")->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $ultimas_atividades = $db->fetchAll("
+        SELECT 'aluno' as tipo, nome, 'cadastrado' as acao, criado_em as data
+        FROM alunos 
+        ORDER BY criado_em DESC 
+        LIMIT 5
+        UNION ALL
+        SELECT 'instrutor' as tipo, u.nome, 'cadastrado' as acao, i.criado_em as data
+        FROM instrutores i
+        JOIN usuarios u ON i.usuario_id = u.id
+        ORDER BY i.criado_em DESC 
+        LIMIT 5
+        ORDER BY data DESC 
+        LIMIT 10
+    ");
+} catch (Exception $e) {
+    $ultimas_atividades = [];
+    if (LOG_ENABLED) {
+        error_log('Erro ao buscar últimas atividades: ' . $e->getMessage());
+    }
+}
 
 $page = $_GET['page'] ?? 'dashboard';
 $action = $_GET['action'] ?? 'list';
@@ -54,199 +58,242 @@ $action = $_GET['action'] ?? 'list';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard Administrativo - <?php echo APP_NAME; ?></title>
     
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <!-- Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    
-    <!-- Custom CSS -->
-    <link href="../assets/css/variables.css" rel="stylesheet">
+    <!-- CSS Principal -->
     <link href="assets/css/admin.css" rel="stylesheet">
+    
+    <!-- Font Awesome para ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/x-icon" href="../assets/logo.png">
 </head>
 <body>
-    <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-primary fixed-top">
-        <div class="container-fluid">
-            <a class="navbar-brand" href="index.php">
-                <i class="fas fa-car me-2"></i>
-                <?php echo APP_NAME; ?> - Admin
-            </a>
-            
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav me-auto">
-                    <li class="nav-item">
-                        <a class="nav-link <?php echo $page === 'dashboard' ? 'active' : ''; ?>" href="index.php">
-                            <i class="fas fa-tachometer-alt me-1"></i>Dashboard
-                        </a>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-users me-1"></i>Usuários
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="index.php?page=usuarios&action=list">Listar Usuários</a></li>
-                            <li><a class="dropdown-item" href="index.php?page=usuarios&action=create">Novo Usuário</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-building me-1"></i>CFCs
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="index.php?page=cfcs&action=list">Listar CFCs</a></li>
-                            <li><a class="dropdown-item" href="index.php?page=cfcs&action=create">Novo CFC</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-graduate me-1"></i>Alunos
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="index.php?page=alunos&action=list">Listar Alunos</a></li>
-                            <li><a class="dropdown-item" href="index.php?page=alunos&action=create">Novo Aluno</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-chalkboard-teacher me-1"></i>Instrutores
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="index.php?page=instrutores&action=list">Listar Instrutores</a></li>
-                            <li><a class="dropdown-item" href="index.php?page=instrutores&action=create">Novo Instrutor</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-calendar-alt me-1"></i>Aulas
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="index.php?page=aulas&action=list">Listar Aulas</a></li>
-                            <li><a class="dropdown-item" href="index.php?page=aulas&action=create">Nova Aula</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-car me-1"></i>Veículos
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="index.php?page=veiculos&action=list">Listar Veículos</a></li>
-                            <li><a class="dropdown-item" href="index.php?page=veiculos&action=create">Novo Veículo</a></li>
-                        </ul>
-                    </li>
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-chart-bar me-1"></i>Relatórios
-                        </a>
-                        <ul class="dropdown-menu">
-                            <li><a class="dropdown-item" href="index.php?page=relatorios&action=alunos">Relatório de Alunos</a></li>
-                            <li><a class="dropdown-item" href="index.php?page=relatorios&action=aulas">Relatório de Aulas</a></li>
-                            <li><a class="dropdown-item" href="index.php?page=relatorios&action=financeiro">Relatório Financeiro</a></li>
-                        </ul>
-                    </li>
-                </ul>
-                
-                <ul class="navbar-nav">
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle" href="#" role="button" data-bs-toggle="dropdown">
-                            <i class="fas fa-user-circle me-1"></i><?php echo htmlspecialchars($user['nome']); ?>
-                        </a>
-                        <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="index.php?page=perfil&action=edit">
-                                <i class="fas fa-user-edit me-1"></i>Editar Perfil
-                            </a></li>
-                            <li><a class="dropdown-item" href="index.php?page=configuracoes&action=edit">
-                                <i class="fas fa-cog me-1"></i>Configurações
-                            </a></li>
-                            <li><hr class="dropdown-divider"></li>
-                            <li><a class="dropdown-item" href="../logout.php">
-                                <i class="fas fa-sign-out-alt me-1"></i>Sair
-                            </a></li>
-                        </ul>
-                    </li>
-                </ul>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Content -->
-    <div class="container-fluid mt-5 pt-3">
-        <div class="row">
-            <!-- Sidebar -->
-            <nav class="col-md-3 col-lg-2 d-md-block bg-light sidebar collapse">
-                <div class="position-sticky pt-3">
-                    <ul class="nav flex-column">
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $page === 'dashboard' ? 'active' : ''; ?>" href="index.php">
-                                <i class="fas fa-tachometer-alt me-2"></i>Dashboard
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $page === 'usuarios' ? 'active' : ''; ?>" href="index.php?page=usuarios&action=list">
-                                <i class="fas fa-users me-2"></i>Usuários
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $page === 'cfcs' ? 'active' : ''; ?>" href="index.php?page=cfcs&action=list">
-                                <i class="fas fa-building me-2"></i>CFCs
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $page === 'alunos' ? 'active' : ''; ?>" href="index.php?page=alunos&action=list">
-                                <i class="fas fa-user-graduate me-2"></i>Alunos
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $page === 'instrutores' ? 'active' : ''; ?>" href="index.php?page=instrutores&action=list">
-                                <i class="fas fa-chalkboard-teacher me-2"></i>Instrutores
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $page === 'aulas' ? 'active' : ''; ?>" href="index.php?page=aulas&action=list">
-                                <i class="fas fa-calendar-alt me-2"></i>Aulas
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $page === 'veiculos' ? 'active' : ''; ?>" href="index.php?page=veiculos&action=list">
-                                <i class="fas fa-car me-2"></i>Veículos
-                            </a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link <?php echo $page === 'relatorios' ? 'active' : ''; ?>" href="index.php?page=relatorios&action=alunos">
-                                <i class="fas fa-chart-bar me-2"></i>Relatórios
-                            </a>
-                        </li>
-                    </ul>
+    <!-- Container Principal -->
+    <div class="admin-container">
+        
+        <!-- Header Superior -->
+        <header class="admin-header">
+            <div class="header-content">
+                <div class="logo">
+                    <img src="../assets/logo.png" alt="<?php echo APP_NAME; ?>">
+                    <span>Sistema CFC - Admin</span>
                 </div>
-            </nav>
-
-            <!-- Main Content Area -->
-            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4">
-                <?php
-                // Carregar conteúdo dinâmico baseado na página e ação
-                $content_file = "pages/{$page}.php";
-                if (file_exists($content_file)) {
-                    include $content_file;
-                } else {
-                    // Página padrão - Dashboard
-                    include 'pages/dashboard.php';
-                }
-                ?>
-            </main>
-        </div>
+                
+                <div class="header-actions">
+                    <div class="user-menu">
+                        <div class="user-avatar">
+                            <?php echo strtoupper(substr($user['nome'], 0, 1)); ?>
+                        </div>
+                        <div class="user-info">
+                            <div class="user-name"><?php echo htmlspecialchars($user['nome']); ?></div>
+                            <div class="user-role">Administrador</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+        
+        <!-- Sidebar de Navegação -->
+        <nav class="admin-sidebar">
+            <div class="sidebar-header">
+                <div class="sidebar-title">Navegação</div>
+                <div class="sidebar-subtitle">Sistema CFC</div>
+            </div>
+            
+            <div class="nav-menu">
+                <div class="nav-item">
+                    <a href="index.php" class="nav-link <?php echo $page === 'dashboard' ? 'active' : ''; ?>">
+                        <div class="nav-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="nav-text">Dashboard</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="index.php?page=usuarios&action=list" class="nav-link <?php echo $page === 'usuarios' ? 'active' : ''; ?>">
+                        <div class="nav-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="nav-text">Usuários</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="index.php?page=cfcs&action=list" class="nav-link <?php echo $page === 'cfcs' ? 'active' : ''; ?>">
+                        <div class="nav-icon">
+                            <i class="fas fa-building"></i>
+                        </div>
+                        <div class="nav-text">CFCs</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="index.php?page=alunos&action=list" class="nav-link <?php echo $page === 'alunos' ? 'active' : ''; ?>">
+                        <div class="nav-icon">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <div class="nav-text">Alunos</div>
+                        <div class="nav-badge"><?php echo $stats['total_alunos']; ?></div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="index.php?page=instrutores&action=list" class="nav-link <?php echo $page === 'instrutores' ? 'active' : ''; ?>">
+                        <div class="nav-icon">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                        </div>
+                        <div class="nav-text">Instrutores</div>
+                        <div class="nav-badge"><?php echo $stats['total_instrutores']; ?></div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="index.php?page=aulas&action=list" class="nav-link <?php echo $page === 'aulas' ? 'active' : ''; ?>">
+                        <div class="nav-icon">
+                            <i class="fas fa-calendar-alt"></i>
+                        </div>
+                        <div class="nav-text">Aulas</div>
+                        <div class="nav-badge"><?php echo $stats['total_aulas']; ?></div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="index.php?page=veiculos&action=list" class="nav-link <?php echo $page === 'veiculos' ? 'active' : ''; ?>">
+                        <div class="nav-icon">
+                            <i class="fas fa-car"></i>
+                        </div>
+                        <div class="nav-text">Veículos</div>
+                        <div class="nav-badge"><?php echo $stats['total_veiculos']; ?></div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="index.php?page=relatorios&action=alunos" class="nav-link <?php echo $page === 'relatorios' ? 'active' : ''; ?>">
+                        <div class="nav-icon">
+                            <i class="fas fa-chart-bar"></i>
+                        </div>
+                        <div class="nav-text">Relatórios</div>
+                    </a>
+                </div>
+                
+                <div class="nav-item">
+                    <a href="../logout.php" class="nav-link">
+                        <div class="nav-icon">
+                            <i class="fas fa-sign-out-alt"></i>
+                        </div>
+                        <div class="nav-text">Sair</div>
+                    </a>
+                </div>
+            </div>
+        </nav>
+        
+        <!-- Conteúdo Principal -->
+        <main class="admin-main">
+            <?php
+            // Carregar conteúdo dinâmico baseado na página e ação
+            $content_file = "pages/{$page}.php";
+            if (file_exists($content_file)) {
+                include $content_file;
+            } else {
+                // Página padrão - Dashboard
+                include 'pages/dashboard.php';
+            }
+            ?>
+        </main>
+        
     </div>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     
-    <!-- Custom JS -->
-    <script src="assets/js/admin.js"></script>
+    <!-- JavaScript -->
+    <script>
+        // Sistema de navegação responsiva
+        document.addEventListener('DOMContentLoaded', function() {
+            // Toggle sidebar em dispositivos móveis
+            const sidebarToggle = document.querySelector('.sidebar-toggle');
+            const sidebar = document.querySelector('.admin-sidebar');
+            
+            if (sidebarToggle) {
+                sidebarToggle.addEventListener('click', function() {
+                    sidebar.classList.toggle('open');
+                });
+            }
+            
+            // Fechar sidebar ao clicar fora em dispositivos móveis
+            document.addEventListener('click', function(e) {
+                if (window.innerWidth <= 1024) {
+                    if (!sidebar.contains(e.target) && !e.target.closest('.sidebar-toggle')) {
+                        sidebar.classList.remove('open');
+                    }
+                }
+            });
+            
+            // Animações de entrada
+            const animateElements = document.querySelectorAll('.stat-card, .card, .chart-section');
+            animateElements.forEach((element, index) => {
+                element.style.animationDelay = `${index * 0.1}s`;
+                element.classList.add('animate-fade-in');
+            });
+            
+            // Tooltips
+            const tooltipElements = document.querySelectorAll('[data-tooltip]');
+            tooltipElements.forEach(element => {
+                element.classList.add('tooltip');
+            });
+            
+            // Estados de carregamento
+            const loadingElements = document.querySelectorAll('.loading');
+            loadingElements.forEach(element => {
+                element.classList.add('loading-state');
+            });
+        });
+        
+        // Função para mostrar notificações
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `alert alert-${type}`;
+            notification.innerHTML = `
+                <div class="alert-content">
+                    <div class="d-flex items-center gap-3">
+                        <div class="notification-icon ${type}">
+                            <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : type === 'danger' ? 'times-circle' : 'info-circle'}"></i>
+                        </div>
+                        <div>${message}</div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(notification);
+            
+            // Remover após 5 segundos
+            setTimeout(() => {
+                notification.remove();
+            }, 5000);
+        }
+        
+        // Função para confirmar ações
+        function confirmAction(message, callback) {
+            if (confirm(message)) {
+                callback();
+            }
+        }
+        
+        // Função para formatar números
+        function formatNumber(number) {
+            return new Intl.NumberFormat('pt-BR').format(number);
+        }
+        
+        // Função para formatar datas
+        function formatDate(date) {
+            return new Intl.DateTimeFormat('pt-BR').format(new Date(date));
+        }
+        
+        // Função para formatar moeda
+        function formatCurrency(amount) {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(amount);
+        }
+    </script>
 </body>
 </html>

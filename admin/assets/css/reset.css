@@ -1,0 +1,104 @@
+/* =====================================================
+   RESET CSS - SISTEMA CFC BOM CONSELHO
+   Baseado no design do e-condutor para mesma experiência
+   ===================================================== */
+
+/* Reset completo e moderno */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+/* Documento base */
+html {
+    line-height: 1.15;
+    -webkit-text-size-adjust: 100%;
+    -moz-tab-size: 4;
+    tab-size: 4;
+    scroll-behavior: smooth;
+}
+
+body {
+    margin: 0;
+    font-family: var(--font-family-sans);
+    font-size: var(--font-size-base);
+    line-height: 1.6;
+    color: var(--black);
+    background-color: var(--light-gray);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+/* Elementos de texto */
+h1, h2, h3, h4, h5, h6 {
+    font-size: inherit;
+    font-weight: inherit;
+    margin: 0;
+}
+
+p {
+    margin: 0;
+}
+
+/* Listas */
+ol, ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+/* Links */
+a {
+    background-color: transparent;
+    color: inherit;
+    text-decoration: inherit;
+}
+
+/* Imagens */
+img, svg {
+    max-width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* Formulários */
+button, input, optgroup, select, textarea {
+    font-family: inherit;
+    font-size: 100%;
+    line-height: 1.15;
+    margin: 0;
+}
+
+button, select {
+    text-transform: none;
+}
+
+button, [type="button"], [type="reset"], [type="submit"] {
+    -webkit-appearance: button;
+    appearance: button;
+}
+
+/* Tabelas */
+table {
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+/* Elementos interativos */
+[tabindex="-1"]:focus:not(:focus-visible) {
+    outline: 0 !important;
+}
+
+/* Acessibilidade */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}

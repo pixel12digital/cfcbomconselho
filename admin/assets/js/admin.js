@@ -1,566 +1,469 @@
 /**
- * Dashboard Administrativo - JavaScript
- * Sistema CFC Bom Conselho
+ * JavaScript para o Painel Administrativo - Sistema CFC
+ * Baseado no design do e-condutor para mesma experiência
  */
 
-// ===== CONFIGURAÇÕES GLOBAIS =====
-const ADMIN_CONFIG = {
-    apiUrl: '../api/',
-    refreshInterval: 30000, // 30 segundos
-    maxNotifications: 10,
-    chartColors: {
-        primary: '#4e73df',
-        success: '#1cc88a',
-        info: '#36b9cc',
-        warning: '#f6c23e',
-        danger: '#e74a3b'
+// Classe principal do painel administrativo
+class AdminPanel {
+    constructor() {
+        this.init();
     }
-};
 
-// ===== INICIALIZAÇÃO =====
+    init() {
+        this.setupEventListeners();
+        this.initializeComponents();
+        this.setupResponsiveBehavior();
+    }
+
+    // Configurar event listeners
+    setupEventListeners() {
+        // Toggle sidebar em dispositivos móveis
+        const sidebarToggle = document.querySelector('.sidebar-toggle');
+        if (sidebarToggle) {
+            sidebarToggle.addEventListener('click', () => this.toggleSidebar());
+        }
+
+        // Fechar sidebar ao clicar fora
+        document.addEventListener('click', (e) => {
+            if (window.innerWidth <= 1024) {
+                const sidebar = document.querySelector('.admin-sidebar');
+                const sidebarToggle = document.querySelector('.sidebar-toggle');
+                
+                if (sidebar && !sidebar.contains(e.target) && !e.target.closest('.sidebar-toggle')) {
+                    sidebar.classList.remove('open');
+                }
+            }
+        });
+
+        // Navegação responsiva
+        window.addEventListener('resize', () => this.handleResize());
+    }
+
+    // Inicializar componentes
+    initializeComponents() {
+        this.initializeAnimations();
+        this.initializeTooltips();
+        this.initializeLoadingStates();
+        this.initializeNotifications();
+    }
+
+    // Configurar comportamento responsivo
+    setupResponsiveBehavior() {
+        if (window.innerWidth <= 1024) {
+            document.body.classList.add('mobile-view');
+        }
+    }
+
+    // Toggle sidebar
+    toggleSidebar() {
+        const sidebar = document.querySelector('.admin-sidebar');
+        if (sidebar) {
+            sidebar.classList.toggle('open');
+        }
+    }
+
+    // Lidar com redimensionamento da janela
+    handleResize() {
+        if (window.innerWidth <= 1024) {
+            document.body.classList.add('mobile-view');
+        } else {
+            document.body.classList.remove('mobile-view');
+            const sidebar = document.querySelector('.admin-sidebar');
+            if (sidebar) {
+                sidebar.classList.remove('open');
+            }
+        }
+    }
+
+    // Inicializar animações
+    initializeAnimations() {
+        const animateElements = document.querySelectorAll('.stat-card, .card, .chart-section');
+        animateElements.forEach((element, index) => {
+            element.style.animationDelay = `${index * 0.1}s`;
+            element.classList.add('animate-fade-in');
+        });
+    }
+
+    // Inicializar tooltips
+    initializeTooltips() {
+        const tooltipElements = document.querySelectorAll('[data-tooltip]');
+        tooltipElements.forEach(element => {
+            element.classList.add('tooltip');
+        });
+    }
+
+    // Inicializar estados de carregamento
+    initializeLoadingStates() {
+        const loadingElements = document.querySelectorAll('.loading');
+        loadingElements.forEach(element => {
+            element.classList.add('loading-state');
+        });
+    }
+
+    // Inicializar sistema de notificações
+    initializeNotifications() {
+        // Criar container de notificações se não existir
+        if (!document.querySelector('.notifications-container')) {
+            const container = document.createElement('div');
+            container.className = 'notifications-container';
+            container.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 9999;
+                max-width: 400px;
+            `;
+            document.body.appendChild(container);
+        }
+    }
+}
+
+// Sistema de notificações
+class NotificationSystem {
+    static show(message, type = 'info', duration = 5000) {
+        const container = document.querySelector('.notifications-container') || this.createContainer();
+        
+        const notification = document.createElement('div');
+        notification.className = `alert alert-${type} animate-slide-in-right`;
+        notification.innerHTML = `
+            <div class="alert-content">
+                <div class="d-flex items-center gap-3">
+                    <div class="notification-icon ${type}">
+                        <i class="fas fa-${this.getIcon(type)}"></i>
+                    </div>
+                    <div>${message}</div>
+                </div>
+            </div>
+        `;
+        
+        container.appendChild(notification);
+        
+        // Remover após o tempo especificado
+        setTimeout(() => {
+            notification.classList.add('animate-slide-in-right');
+            setTimeout(() => {
+                if (notification.parentNode) {
+                    notification.parentNode.removeChild(notification);
+                }
+            }, 300);
+        }, duration);
+        
+        return notification;
+    }
+
+    static success(message, duration) {
+        return this.show(message, 'success', duration);
+    }
+
+    static error(message, duration) {
+        return this.show(message, 'danger', duration);
+    }
+
+    static warning(message, duration) {
+        return this.show(message, 'warning', duration);
+    }
+
+    static info(message, duration) {
+        return this.show(message, 'info', duration);
+    }
+
+    static getIcon(type) {
+        const icons = {
+            success: 'check-circle',
+            error: 'times-circle',
+            warning: 'exclamation-triangle',
+            danger: 'times-circle',
+            info: 'info-circle'
+        };
+        return icons[type] || 'info-circle';
+    }
+
+    static createContainer() {
+        const container = document.createElement('div');
+        container.className = 'notifications-container';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+            max-width: 400px;
+        `;
+        document.body.appendChild(container);
+        return container;
+    }
+}
+
+// Sistema de confirmação
+class ConfirmationSystem {
+    static confirm(message, callback) {
+        const modal = this.createModal(message);
+        document.body.appendChild(modal);
+        
+        const confirmBtn = modal.querySelector('.confirm-btn');
+        const cancelBtn = modal.querySelector('.cancel-btn');
+        
+        confirmBtn.addEventListener('click', () => {
+            document.body.removeChild(modal);
+            if (callback) callback(true);
+        });
+        
+        cancelBtn.addEventListener('click', () => {
+            document.body.removeChild(modal);
+            if (callback) callback(false);
+        });
+        
+        // Fechar ao clicar fora
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+                if (callback) callback(false);
+            }
+        });
+    }
+
+    static createModal(message) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+            <div class="modal">
+                <div class="modal-header">
+                    <h3 class="modal-title">Confirmação</h3>
+                </div>
+                <div class="modal-body">
+                    <p>${message}</p>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary cancel-btn">Cancelar</button>
+                    <button class="btn btn-primary confirm-btn">Confirmar</button>
+                </div>
+            </div>
+        `;
+        return modal;
+    }
+}
+
+// Sistema de loading
+class LoadingSystem {
+    static show(element = null, message = 'Carregando...') {
+        if (element) {
+            this.showElement(element, message);
+        } else {
+            this.showGlobal(message);
+        }
+    }
+
+    static hide(element = null) {
+        if (element) {
+            this.hideElement(element);
+        } else {
+            this.hideGlobal();
+        }
+    }
+
+    static showElement(element, message = 'Carregando...') {
+        element.classList.add('loading-state');
+        
+        const loadingOverlay = document.createElement('div');
+        loadingOverlay.className = 'loading-overlay';
+        loadingOverlay.innerHTML = `
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">${message}</div>
+            </div>
+        `;
+        
+        element.style.position = 'relative';
+        element.appendChild(loadingOverlay);
+        element.loadingOverlay = loadingOverlay;
+    }
+
+    static hideElement(element) {
+        element.classList.remove('loading-state');
+        if (element.loadingOverlay) {
+            element.removeChild(element.loadingOverlay);
+            element.loadingOverlay = null;
+        }
+    }
+
+    static showGlobal(message = 'Carregando...') {
+        const overlay = document.createElement('div');
+        overlay.className = 'global-loading-overlay';
+        overlay.innerHTML = `
+            <div class="global-loading-content">
+                <div class="loading-spinner"></div>
+                <div class="loading-text">${message}</div>
+            </div>
+        `;
+        
+        overlay.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        `;
+        
+        document.body.appendChild(overlay);
+        document.body.globalLoadingOverlay = overlay;
+    }
+
+    static hideGlobal() {
+        if (document.body.globalLoadingOverlay) {
+            document.body.removeChild(document.body.globalLoadingOverlay);
+            document.body.globalLoadingOverlay = null;
+        }
+    }
+}
+
+// Utilitários
+class Utils {
+    static formatNumber(number) {
+        return new Intl.NumberFormat('pt-BR').format(number);
+    }
+
+    static formatDate(date) {
+        return new Intl.DateTimeFormat('pt-BR').format(new Date(date));
+    }
+
+    static formatCurrency(amount) {
+        return new Intl.NumberFormat('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        }).format(amount);
+    }
+
+    static formatPhone(phone) {
+        // Formatar telefone brasileiro
+        const cleaned = phone.replace(/\D/g, '');
+        const match = cleaned.match(/^(\d{2})(\d{4,5})(\d{4})$/);
+        if (match) {
+            return `(${match[1]}) ${match[2]}-${match[3]}`;
+        }
+        return phone;
+    }
+
+    static formatCPF(cpf) {
+        const cleaned = cpf.replace(/\D/g, '');
+        const match = cleaned.match(/^(\d{3})(\d{3})(\d{3})(\d{2})$/);
+        if (match) {
+            return `${match[1]}.${match[2]}.${match[3]}-${match[4]}`;
+        }
+        return cpf;
+    }
+
+    static debounce(func, wait) {
+        let timeout;
+        return function executedFunction(...args) {
+            const later = () => {
+                clearTimeout(timeout);
+                func(...args);
+            };
+            clearTimeout(timeout);
+            timeout = setTimeout(later, wait);
+        };
+    }
+
+    static throttle(func, limit) {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        };
+    }
+}
+
+// Sistema de validação
+class ValidationSystem {
+    static validateEmail(email) {
+        const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return re.test(email);
+    }
+
+    static validateCPF(cpf) {
+        const cleaned = cpf.replace(/\D/g, '');
+        if (cleaned.length !== 11) return false;
+        
+        // Verificar dígitos repetidos
+        if (/^(\d)\1{10}$/.test(cleaned)) return false;
+        
+        // Validar primeiro dígito verificador
+        let sum = 0;
+        for (let i = 0; i < 9; i++) {
+            sum += parseInt(cleaned.charAt(i)) * (10 - i);
+        }
+        let remainder = 11 - (sum % 11);
+        if (remainder === 10 || remainder === 11) remainder = 0;
+        if (remainder !== parseInt(cleaned.charAt(9))) return false;
+        
+        // Validar segundo dígito verificador
+        sum = 0;
+        for (let i = 0; i < 10; i++) {
+            sum += parseInt(cleaned.charAt(i)) * (11 - i);
+        }
+        remainder = 11 - (sum % 11);
+        if (remainder === 10 || remainder === 11) remainder = 0;
+        if (remainder !== parseInt(cleaned.charAt(10))) return false;
+        
+        return true;
+    }
+
+    static validatePhone(phone) {
+        const cleaned = phone.replace(/\D/g, '');
+        return cleaned.length >= 10 && cleaned.length <= 11;
+    }
+
+    static validateRequired(value) {
+        return value !== null && value !== undefined && value.toString().trim() !== '';
+    }
+
+    static validateMinLength(value, min) {
+        return value && value.toString().length >= min;
+    }
+
+    static validateMaxLength(value, max) {
+        return value && value.toString().length <= max;
+    }
+}
+
+// Inicializar quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
-    initializeAdmin();
+    // Inicializar painel administrativo
+    window.adminPanel = new AdminPanel();
+    
+    // Disponibilizar sistemas globalmente
+    window.notifications = NotificationSystem;
+    window.confirm = ConfirmationSystem.confirm;
+    window.loading = LoadingSystem;
+    window.utils = Utils;
+    window.validation = ValidationSystem;
+    
+    // Log de inicialização
+    console.log('Painel Administrativo inicializado com sucesso!');
+    
+    // Mostrar notificação de boas-vindas
+    setTimeout(() => {
+        NotificationSystem.success('Painel administrativo carregado com sucesso!', 3000);
+    }, 1000);
 });
 
-function initializeAdmin() {
-    console.log('Inicializando Dashboard Administrativo...');
-    
-    // Inicializar componentes
-    initializeSidebar();
-    initializeNotifications();
-    initializeDataTables();
-    initializeModals();
-    initializeTooltips();
-    
-    // Configurar atualizações automáticas
-    setupAutoRefresh();
-    
-    // Configurar eventos globais
-    setupGlobalEvents();
-    
-    console.log('Dashboard Administrativo inicializado com sucesso!');
-}
-
-// ===== SIDEBAR =====
-function initializeSidebar() {
-    const sidebarToggle = document.querySelector('.sidebar-toggle');
-    const sidebar = document.querySelector('.sidebar');
-    
-    if (sidebarToggle && sidebar) {
-        sidebarToggle.addEventListener('click', function() {
-            sidebar.classList.toggle('collapsed');
-            document.body.classList.toggle('sidebar-collapsed');
-        });
-    }
-    
-    // Marcar item ativo no sidebar
-    markActiveSidebarItem();
-}
-
-function markActiveSidebarItem() {
-    const currentPage = getCurrentPage();
-    const sidebarLinks = document.querySelectorAll('.sidebar .nav-link');
-    
-    sidebarLinks.forEach(link => {
-        link.classList.remove('active');
-        if (link.getAttribute('href') && link.getAttribute('href').includes(currentPage)) {
-            link.classList.add('active');
-        }
-    });
-}
-
-function getCurrentPage() {
-    const urlParams = new URLSearchParams(window.location.search);
-    return urlParams.get('page') || 'dashboard';
-}
-
-// ===== NOTIFICAÇÕES =====
-function initializeNotifications() {
-    // Carregar notificações iniciais
-    loadNotifications();
-    
-    // Configurar intervalo de atualização
-    setInterval(loadNotifications, ADMIN_CONFIG.refreshInterval);
-}
-
-function loadNotifications() {
-    const container = document.getElementById('notificacoes-container');
-    if (!container) return;
-    
-    // Simular carregamento de notificações da API
-    fetch(`${ADMIN_CONFIG.apiUrl}notificacoes.php`)
-        .then(response => response.json())
-        .then(data => {
-            displayNotifications(data.notificacoes || []);
-        })
-        .catch(error => {
-            console.error('Erro ao carregar notificações:', error);
-            displayNotifications(getDefaultNotifications());
-        });
-}
-
-function displayNotifications(notificacoes) {
-    const container = document.getElementById('notificacoes-container');
-    if (!container) return;
-    
-    if (notificacoes.length === 0) {
-        container.innerHTML = `
-            <div class="text-center text-muted py-3">
-                <i class="fas fa-bell-slash fa-2x mb-2"></i>
-                <p>Nenhuma notificação no momento.</p>
-            </div>
-        `;
-        return;
-    }
-    
-    const html = notificacoes.slice(0, ADMIN_CONFIG.maxNotifications).map(notif => {
-        const alertClass = getAlertClass(notif.tipo);
-        const icon = getNotificationIcon(notif.tipo);
-        
-        return `
-            <div class="alert alert-${alertClass} alert-dismissible fade show" role="alert">
-                <i class="${icon} me-2"></i>
-                <strong>${notif.titulo}</strong> ${notif.mensagem}
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        `;
-    }).join('');
-    
-    container.innerHTML = html;
-}
-
-function getAlertClass(tipo) {
-    const classes = {
-        'info': 'info',
-        'success': 'success',
-        'warning': 'warning',
-        'error': 'danger',
-        'danger': 'danger'
+// Exportar para uso em módulos (se necessário)
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        AdminPanel,
+        NotificationSystem,
+        ConfirmationSystem,
+        LoadingSystem,
+        Utils,
+        ValidationSystem
     };
-    return classes[tipo] || 'info';
 }
-
-function getNotificationIcon(tipo) {
-    const icons = {
-        'info': 'fas fa-info-circle',
-        'success': 'fas fa-check-circle',
-        'warning': 'fas fa-exclamation-triangle',
-        'error': 'fas fa-times-circle',
-        'danger': 'fas fa-exclamation-triangle'
-    };
-    return icons[tipo] || 'fas fa-bell';
-}
-
-function getDefaultNotifications() {
-    return [
-        {
-            tipo: 'info',
-            titulo: 'Bem-vindo!',
-            mensagem: 'O dashboard foi configurado com sucesso.'
-        },
-        {
-            tipo: 'warning',
-            titulo: 'Atenção:',
-            mensagem: 'Verifique os cadastros pendentes de aprovação.'
-        },
-        {
-            tipo: 'success',
-            titulo: 'Sucesso:',
-            mensagem: 'Sistema funcionando perfeitamente.'
-        }
-    ];
-}
-
-// ===== TABELAS DE DADOS =====
-function initializeDataTables() {
-    // Inicializar DataTables se estiver disponível
-    if (typeof $.fn.DataTable !== 'undefined') {
-        $('.datatable').DataTable({
-            language: {
-                url: '//cdn.datatables.net/plug-ins/1.13.4/i18n/pt-BR.json'
-            },
-            responsive: true,
-            pageLength: 25,
-            order: [[0, 'desc']]
-        });
-    }
-}
-
-// ===== MODAIS =====
-function initializeModals() {
-    // Configurar modais de confirmação
-    setupConfirmationModals();
-    
-    // Configurar modais de formulário
-    setupFormModals();
-}
-
-function setupConfirmationModals() {
-    const confirmButtons = document.querySelectorAll('[data-confirm]');
-    
-    confirmButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            const message = this.getAttribute('data-confirm');
-            if (!confirm(message)) {
-                e.preventDefault();
-                return false;
-            }
-        });
-    });
-}
-
-function setupFormModals() {
-    const formModals = document.querySelectorAll('.modal-form');
-    
-    formModals.forEach(modal => {
-        const form = modal.querySelector('form');
-        if (form) {
-            form.addEventListener('submit', handleFormSubmit);
-        }
-    });
-}
-
-function handleFormSubmit(e) {
-    const form = e.target;
-    const submitBtn = form.querySelector('[type="submit"]');
-    
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processando...';
-    }
-    
-    // Aqui você pode adicionar validação adicional se necessário
-    return true;
-}
-
-// ===== TOOLTIPS =====
-function initializeTooltips() {
-    // Inicializar tooltips do Bootstrap
-    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl);
-    });
-}
-
-// ===== ATUALIZAÇÃO AUTOMÁTICA =====
-function setupAutoRefresh() {
-    // Atualizar estatísticas periodicamente
-    setInterval(updateStatistics, ADMIN_CONFIG.refreshInterval);
-    
-    // Atualizar gráficos periodicamente
-    setInterval(updateCharts, ADMIN_CONFIG.refreshInterval * 2);
-}
-
-function updateStatistics() {
-    // Atualizar estatísticas do dashboard
-    fetch(`${ADMIN_CONFIG.apiUrl}estatisticas.php`)
-        .then(response => response.json())
-        .then(data => {
-            updateStatisticsDisplay(data);
-        })
-        .catch(error => {
-            console.error('Erro ao atualizar estatísticas:', error);
-        });
-}
-
-function updateStatisticsDisplay(data) {
-    // Atualizar valores dos cards de estatísticas
-    Object.keys(data).forEach(key => {
-        const element = document.querySelector(`[data-stat="${key}"]`);
-        if (element) {
-            element.textContent = formatNumber(data[key]);
-        }
-    });
-}
-
-function updateCharts() {
-    // Atualizar dados dos gráficos
-    console.log('Atualizando gráficos...');
-    // Implementar atualização dos gráficos conforme necessário
-}
-
-// ===== EVENTOS GLOBAIS =====
-function setupGlobalEvents() {
-    // Configurar logout automático por inatividade
-    setupInactivityLogout();
-    
-    // Configurar tratamento de erros
-    setupErrorHandling();
-    
-    // Configurar shortcuts de teclado
-    setupKeyboardShortcuts();
-}
-
-function setupInactivityLogout() {
-    let inactivityTimer;
-    const timeout = 30 * 60 * 1000; // 30 minutos
-    
-    function resetTimer() {
-        clearTimeout(inactivityTimer);
-        inactivityTimer = setTimeout(logout, timeout);
-    }
-    
-    // Eventos que resetam o timer
-    ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(event => {
-        document.addEventListener(event, resetTimer, true);
-    });
-    
-    resetTimer();
-}
-
-function logout() {
-    if (confirm('Sua sessão expirou por inatividade. Deseja fazer login novamente?')) {
-        window.location.href = '../logout.php';
-    }
-}
-
-function setupErrorHandling() {
-    window.addEventListener('error', function(e) {
-        console.error('Erro JavaScript:', e.error);
-        showErrorNotification('Erro no sistema', 'Ocorreu um erro inesperado. Tente novamente.');
-    });
-    
-    window.addEventListener('unhandledrejection', function(e) {
-        console.error('Promise rejeitada:', e.reason);
-        showErrorNotification('Erro na operação', 'Falha na operação solicitada.');
-    });
-}
-
-function setupKeyboardShortcuts() {
-    document.addEventListener('keydown', function(e) {
-        // Ctrl/Cmd + K - Busca
-        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
-            e.preventDefault();
-            focusSearch();
-        }
-        
-        // Ctrl/Cmd + N - Nova entrada
-        if ((e.ctrlKey || e.metaKey) && e.key === 'n') {
-            e.preventDefault();
-            openNewEntry();
-        }
-        
-        // Esc - Fechar modais
-        if (e.key === 'Escape') {
-            closeAllModals();
-        }
-    });
-}
-
-// ===== FUNÇÕES UTILITÁRIAS =====
-function formatNumber(num) {
-    if (num === null || num === undefined) return '0';
-    return new Intl.NumberFormat('pt-BR').format(num);
-}
-
-function formatCurrency(value) {
-    return new Intl.NumberFormat('pt-BR', {
-        style: 'currency',
-        currency: 'BRL'
-    }).format(value);
-}
-
-function formatDate(date) {
-    return new Intl.DateTimeFormat('pt-BR').format(new Date(date));
-}
-
-function formatDateTime(dateTime) {
-    return new Intl.DateTimeFormat('pt-BR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    }).format(new Date(dateTime));
-}
-
-function showSuccessNotification(title, message) {
-    showNotification('success', title, message);
-}
-
-function showErrorNotification(title, message) {
-    showNotification('danger', title, message);
-}
-
-function showWarningNotification(title, message) {
-    showNotification('warning', title, message);
-}
-
-function showInfoNotification(title, message) {
-    showNotification('info', title, message);
-}
-
-function showNotification(type, title, message) {
-    const alertHtml = `
-        <div class="alert alert-${type} alert-dismissible fade show" role="alert">
-            <strong>${title}</strong> ${message}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-    `;
-    
-    // Inserir no topo da página
-    const container = document.querySelector('.container-fluid');
-    if (container) {
-        container.insertAdjacentHTML('afterbegin', alertHtml);
-        
-        // Auto-remover após 5 segundos
-        setTimeout(() => {
-            const alert = container.querySelector('.alert');
-            if (alert) {
-                alert.remove();
-            }
-        }, 5000);
-    }
-}
-
-// ===== FUNÇÕES DE NAVEGAÇÃO =====
-function focusSearch() {
-    const searchInput = document.querySelector('#search-input, .search-input');
-    if (searchInput) {
-        searchInput.focus();
-    }
-}
-
-function openNewEntry() {
-    const newEntryBtn = document.querySelector('.btn-new-entry, [href*="action=create"]');
-    if (newEntryBtn) {
-        newEntryBtn.click();
-    }
-}
-
-function closeAllModals() {
-    const modals = document.querySelectorAll('.modal.show');
-    modals.forEach(modal => {
-        const modalInstance = bootstrap.Modal.getInstance(modal);
-        if (modalInstance) {
-            modalInstance.hide();
-        }
-    });
-}
-
-// ===== FUNÇÕES DE EXPORTAÇÃO =====
-function exportToCSV(tableId, filename = 'export.csv') {
-    const table = document.getElementById(tableId);
-    if (!table) return;
-    
-    let csv = [];
-    const rows = table.querySelectorAll('tr');
-    
-    for (let i = 0; i < rows.length; i++) {
-        let row = [], cols = rows[i].querySelectorAll('td, th');
-        
-        for (let j = 0; j < cols.length; j++) {
-            let text = cols[j].innerText.replace(/"/g, '""');
-            row.push('"' + text + '"');
-        }
-        
-        csv.push(row.join(','));
-    }
-    
-    downloadCSV(csv.join('\n'), filename);
-}
-
-function downloadCSV(csv, filename) {
-    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    
-    if (link.download !== undefined) {
-        const url = URL.createObjectURL(blob);
-        link.setAttribute('href', url);
-        link.setAttribute('download', filename);
-        link.style.visibility = 'hidden';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-}
-
-// ===== FUNÇÕES DE VALIDAÇÃO =====
-function validateForm(form) {
-    const inputs = form.querySelectorAll('input[required], select[required], textarea[required]');
-    let isValid = true;
-    
-    inputs.forEach(input => {
-        if (!input.value.trim()) {
-            markFieldAsInvalid(input, 'Este campo é obrigatório');
-            isValid = false;
-        } else {
-            markFieldAsValid(input);
-        }
-    });
-    
-    return isValid;
-}
-
-function markFieldAsInvalid(field, message) {
-    field.classList.add('is-invalid');
-    field.classList.remove('is-valid');
-    
-    // Remover mensagem de erro existente
-    const existingError = field.parentNode.querySelector('.invalid-feedback');
-    if (existingError) {
-        existingError.remove();
-    }
-    
-    // Adicionar nova mensagem de erro
-    const errorDiv = document.createElement('div');
-    errorDiv.className = 'invalid-feedback';
-    errorDiv.textContent = message;
-    field.parentNode.appendChild(errorDiv);
-}
-
-function markFieldAsValid(field) {
-    field.classList.remove('is-invalid');
-    field.classList.add('is-valid');
-    
-    // Remover mensagem de erro
-    const existingError = field.parentNode.querySelector('.invalid-feedback');
-    if (existingError) {
-        existingError.remove();
-    }
-}
-
-// ===== FUNÇÕES DE AJAX =====
-function ajaxRequest(url, options = {}) {
-    const defaultOptions = {
-        method: 'GET',
-        headers: {
-            'Content-Type': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    };
-    
-    const finalOptions = { ...defaultOptions, ...options };
-    
-    return fetch(url, finalOptions)
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            return response.json();
-        })
-        .catch(error => {
-            console.error('Erro na requisição AJAX:', error);
-            throw error;
-        });
-}
-
-// ===== FUNÇÕES DE DEBUG =====
-function debugLog(message, data = null) {
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        console.log(`[DEBUG] ${message}`, data);
-    }
-}
-
-// ===== EXPORTAÇÃO DE FUNÇÕES GLOBAIS =====
-window.AdminDashboard = {
-    showNotification,
-    showSuccessNotification,
-    showErrorNotification,
-    showWarningNotification,
-    showInfoNotification,
-    exportToCSV,
-    validateForm,
-    ajaxRequest,
-    debugLog
-};
