@@ -223,13 +223,13 @@ Este documento descreve todas as correções implementadas para otimizar o layou
 ### 1. **Arquivo Principal**
 ```bash
 # Acessar o arquivo principal
-http://localhost/cfc-bom-conselho/index.php
+http://localhost:8080/cfc-bom-conselho/index.php
 ```
 
 ### 2. **Arquivo de Teste**
 ```bash
 # Acessar o arquivo de teste
-http://localhost/cfc-bom-conselho/test_desktop_layout.php
+http://localhost:8080/cfc-bom-conselho/test_desktop_layout.php
 ```
 
 ### 3. **Verificações**

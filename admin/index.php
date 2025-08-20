@@ -149,11 +149,11 @@ $action = $_GET['action'] ?? 'list';
                 </div>
                 
                 <div class="nav-item">
-                    <a href="index.php?page=aulas&action=list" class="nav-link <?php echo $page === 'aulas' ? 'active' : ''; ?>">
+                    <a href="index.php?page=agendamento" class="nav-link <?php echo $page === 'agendamento' ? 'active' : ''; ?>">
                         <div class="nav-icon">
                             <i class="fas fa-calendar-alt"></i>
                         </div>
-                        <div class="nav-text">Aulas</div>
+                        <div class="nav-text">Agendamento</div>
                         <div class="nav-badge"><?php echo $stats['total_aulas']; ?></div>
                     </a>
                 </div>

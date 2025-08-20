@@ -71,6 +71,7 @@ CREATE TABLE aulas (
     aluno_id INT NOT NULL,
     instrutor_id INT NOT NULL,
     cfc_id INT NOT NULL,
+    veiculo_id INT,
     tipo_aula ENUM('teorica', 'pratica') NOT NULL,
     data_aula DATE NOT NULL,
     hora_inicio TIME NOT NULL,
@@ -78,9 +79,11 @@ CREATE TABLE aulas (
     status ENUM('agendada', 'em_andamento', 'concluida', 'cancelada') DEFAULT 'agendada',
     observacoes TEXT,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (aluno_id) REFERENCES alunos(id),
     FOREIGN KEY (instrutor_id) REFERENCES instrutores(id),
-    FOREIGN KEY (cfc_id) REFERENCES cfcs(id)
+    FOREIGN KEY (cfc_id) REFERENCES cfcs(id),
+    FOREIGN KEY (veiculo_id) REFERENCES veiculos(id)
 );
 
 -- Tabela de veículos
@@ -114,11 +117,10 @@ CREATE TABLE logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     usuario_id INT,
     acao VARCHAR(100) NOT NULL,
-    tabela_afetada VARCHAR(50),
+    tabela VARCHAR(50),
     registro_id INT,
-    dados_anteriores TEXT,
-    dados_novos TEXT,
-    ip_address VARCHAR(45),
+    dados TEXT,
+    ip VARCHAR(45),
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
 );

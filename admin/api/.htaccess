@@ -1,0 +1,24 @@
+RewriteEngine On
+
+# Permitir CORS
+Header always set Access-Control-Allow-Origin "*"
+Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
+Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
+
+# Roteamento para agendamento.php
+RewriteRule ^agendamento/(.*)$ agendamento.php [QSA,L]
+
+# Redirecionar todas as outras requisições para agendamento.php
+RewriteRule ^(.*)$ agendamento.php [QSA,L]
+
+# Configurações de segurança
+<Files "*.php">
+    Order Allow,Deny
+    Allow from all
+</Files>
+
+# Bloquear acesso a arquivos sensíveis
+<FilesMatch "\.(htaccess|htpasswd|ini|log|sh|inc|bak)$">
+    Order Allow,Deny
+    Deny from all
+</FilesMatch>
