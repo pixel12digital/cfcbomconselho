@@ -257,40 +257,56 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" 
-                                            onclick="editarVeiculo(<?php echo $veiculo['id']; ?>)" 
-                                            title="Editar Veículo">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-info" 
-                                            onclick="visualizarVeiculo(<?php echo $veiculo['id']; ?>)" 
-                                            title="Visualizar Detalhes">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-success" 
-                                            onclick="agendarAula(<?php echo $veiculo['id']; ?>)" 
-                                            title="Agendar Aula">
-                                        <i class="fas fa-calendar-plus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-warning" 
-                                            onclick="agendarManutencao(<?php echo $veiculo['id']; ?>)" 
-                                            title="Agendar Manutenção">
-                                        <i class="fas fa-tools"></i>
-                                    </button>
-                                    <?php if ($veiculo['ativo']): ?>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            onclick="desativarVeiculo(<?php echo $veiculo['id']; ?>)" 
-                                            title="Desativar Veículo">
-                                        <i class="fas fa-ban"></i>
-                                    </button>
-                                    <?php else: ?>
-                                    <button type="button" class="btn btn-sm btn-outline-success" 
-                                            onclick="ativarVeiculo(<?php echo $veiculo['id']; ?>)" 
-                                            title="Ativar Veículo">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <?php endif; ?>
+                                <div class="action-buttons-container">
+                                    <!-- Botões principais em linha -->
+                                    <div class="action-buttons-primary">
+                                        <button type="button" class="btn btn-edit action-btn" 
+                                                onclick="editarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                                                title="Editar dados do veículo">
+                                            <i class="fas fa-edit me-1"></i>Editar
+                                        </button>
+                                        <button type="button" class="btn btn-view action-btn" 
+                                                onclick="visualizarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                                                title="Ver detalhes completos do veículo">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button type="button" class="btn btn-schedule action-btn" 
+                                                onclick="agendarAula(<?php echo $veiculo['id']; ?>)" 
+                                                title="Agendar aula usando este veículo">
+                                            <i class="fas fa-calendar-plus me-1"></i>Agendar
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Botões secundários em linha -->
+                                    <div class="action-buttons-secondary">
+                                        <button type="button" class="btn btn-maintenance action-btn" 
+                                                onclick="agendarManutencao(<?php echo $veiculo['id']; ?>)" 
+                                                title="Agendar manutenção para este veículo">
+                                            <i class="fas fa-tools me-1"></i>Manutenção
+                                        </button>
+                                        <?php if ($veiculo['ativo']): ?>
+                                        <button type="button" class="btn btn-toggle action-btn" 
+                                                onclick="desativarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                                                title="Desativar veículo (não poderá ser usado em aulas)">
+                                            <i class="fas fa-ban me-1"></i>Desativar
+                                        </button>
+                                        <?php else: ?>
+                                        <button type="button" class="btn btn-schedule action-btn" 
+                                                onclick="ativarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                                                title="Reativar veículo para uso em aulas">
+                                            <i class="fas fa-check me-1"></i>Ativar
+                                        </button>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <!-- Botão de exclusão destacado -->
+                                    <div class="action-buttons-danger">
+                                        <button type="button" class="btn btn-delete action-btn" 
+                                                onclick="excluirVeiculo(<?php echo $veiculo['id']; ?>)" 
+                                                title="⚠️ EXCLUIR VEÍCULO - Esta ação não pode ser desfeita!">
+                                            <i class="fas fa-trash me-1"></i>Excluir
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -758,7 +774,7 @@ function ucfirst(str) {
 
 function agendarAula(id) {
     // Redirecionar para página de agendamento
-    window.location.href = `admin/pages/agendar-aula.php?veiculo_id=${id}`;
+    window.location.href = `pages/agendar-aula.php?veiculo_id=${id}`;
 }
 
 function agendarManutencao(id) {
@@ -775,6 +791,35 @@ function ativarVeiculo(id) {
 function desativarVeiculo(id) {
     if (confirm('Deseja realmente desativar este veículo? Esta ação pode afetar o agendamento de aulas.')) {
         alterarStatusVeiculo(id, 'inativo');
+    }
+}
+
+function excluirVeiculo(id) {
+    const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este veículo?';
+    
+    if (confirm(mensagem)) {
+        fetch(`../api/veiculos.php`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: id })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('Veículo excluído com sucesso!', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                mostrarAlerta(data.error || 'Erro ao excluir veículo', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao excluir veículo', 'danger');
+        });
     }
 }
 

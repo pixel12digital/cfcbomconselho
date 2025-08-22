@@ -38,6 +38,14 @@ Sistema web completo desenvolvido em **PHP**, **HTML**, **CSS** e **JavaScript**
   - Controle de horários
   - Status de aulas
   - Observações e feedback
+  - **Regras de Agendamento:**
+    - Cada aula tem duração fixa de **50 minutos**
+    - Instrutor pode dar **máximo de 3 aulas por dia**
+    - **Padrão de aulas:** 2 aulas consecutivas + intervalo de 30 min + 1 aula final
+    - **Alternativa:** 1 aula + intervalo de 30 min + 2 aulas consecutivas
+    - Sistema previne conflitos de horário (mesmo instrutor/veículo)
+    - Validação automática antes do agendamento
+    - Mensagens explicativas para agendamentos inválidos
 
 - 🚗 **Gestão de Veículos**
   - Cadastro de veículos do CFC
@@ -55,6 +63,28 @@ Sistema web completo desenvolvido em **PHP**, **HTML**, **CSS** e **JavaScript**
   - Controle de sessões
   - Backup automático
   - Proteção contra ataques
+
+## 📅 Regras de Agendamento de Aulas
+
+### ⏰ Duração e Estrutura
+- **Duração da Aula:** Cada aula tem exatamente **50 minutos**
+- **Máximo Diário:** Instrutor pode dar no máximo **3 aulas por dia**
+
+### 🔄 Padrões de Aulas
+1. **Padrão Principal:** 2 aulas consecutivas → intervalo de 30 min → 1 aula final
+2. **Padrão Alternativo:** 1 aula → intervalo de 30 min → 2 aulas consecutivas
+
+### ✅ Validações Automáticas
+- **Conflito de Instrutor:** Sistema verifica se o instrutor já possui aula no mesmo horário
+- **Conflito de Veículo:** Sistema verifica se o veículo já está agendado no mesmo horário
+- **Limite Diário:** Sistema verifica se o instrutor não excedeu o limite de 3 aulas/dia
+- **Intervalos:** Sistema garante intervalo mínimo de 30 minutos entre blocos de aulas
+
+### 🚫 Prevenção de Conflitos
+- Mesmo instrutor não pode ter múltiplos agendamentos simultâneos
+- Mesmo veículo não pode ser usado em múltiplas aulas simultâneas
+- Sistema analisa todos os critérios antes de permitir agendamento
+- Mensagens explicativas detalhadas para agendamentos inválidos
 
 ## 🛠️ Tecnologias Utilizadas
 
@@ -181,7 +211,7 @@ chmod 644 .htaccess
 1. Acessar: `https://seudominio.com`
 2. Fazer login com as credenciais padrão:
    - **Email**: `admin@cfc.com`
-   - **Senha**: `password`
+   - **Senha**: `admin123`
 
 3. **IMPORTANTE**: Alterar a senha padrão após o primeiro login!
 

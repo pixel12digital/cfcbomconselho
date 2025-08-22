@@ -245,7 +245,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                 </span>
                             </td>
                             <td>
-                                <?php if ($aluno['ultima_aula']): ?>
+                                <?php if (!empty($aluno['ultima_aula'])): ?>
                                     <small><?php echo date('d/m/Y', strtotime($aluno['ultima_aula'])); ?></small>
                                 <?php else: ?>
                                     <span class="text-muted">Nunca</span>
@@ -254,7 +254,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                             <td>
                                 <div class="progress" style="height: 20px;">
                                     <?php 
-                                    $progresso = $aluno['progresso'] ?? 0;
+                                    $progresso = isset($aluno['progresso']) ? $aluno['progresso'] : 0;
                                     $progresso = min(100, max(0, $progresso));
                                     ?>
                                     <div class="progress-bar" role="progressbar" 
@@ -266,40 +266,57 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                 </div>
                             </td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" 
-                                            onclick="editarAluno(<?php echo $aluno['id']; ?>)" 
-                                            title="Editar Aluno">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-info" 
-                                            onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" 
-                                            title="Visualizar Detalhes">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-success" 
-                                            onclick="agendarAula(<?php echo $aluno['id']; ?>)" 
-                                            title="Agendar Aula">
-                                        <i class="fas fa-calendar-plus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-warning" 
-                                            onclick="historicoAluno(<?php echo $aluno['id']; ?>)" 
-                                            title="Histórico">
-                                        <i class="fas fa-history"></i>
-                                    </button>
-                                    <?php if ($aluno['status'] === 'ativo'): ?>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            onclick="desativarAluno(<?php echo $aluno['id']; ?>)" 
-                                            title="Desativar Aluno">
-                                        <i class="fas fa-ban"></i>
-                                    </button>
-                                    <?php else: ?>
-                                    <button type="button" class="btn btn-sm btn-outline-success" 
-                                            onclick="ativarAluno(<?php echo $aluno['id']; ?>)" 
-                                            title="Ativar Aluno">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <?php endif; ?>
+                                <div class="action-buttons-container">
+                                    <!-- Botões principais em linha -->
+                                    <div class="action-buttons-primary">
+                                        <button type="button" class="btn btn-edit action-btn" 
+                                                onclick="editarAluno(<?php echo $aluno['id']; ?>)" 
+                                                title="Editar dados do aluno">
+                                            <i class="fas fa-edit me-1"></i>Editar
+                                        </button>
+                                        <button type="button" class="btn btn-view action-btn" 
+                                                onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" 
+                                                title="Ver detalhes completos do aluno">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button type="button" class="btn btn-schedule action-btn" 
+                                                onclick="agendarAula(<?php echo $aluno['id']; ?>)" 
+                                                title="Agendar nova aula para este aluno">
+                                            <i class="fas fa-calendar-plus me-1"></i>Agendar
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Botões secundários em linha -->
+                                    <div class="action-buttons-secondary">
+                                        <button type="button" class="btn btn-history action-btn" 
+                                                onclick="historicoAluno(<?php echo $aluno['id']; ?>)" 
+                                                title="Visualizar histórico de aulas e progresso">
+                                            <i class="fas fa-history me-1"></i>Histórico
+                                        </button>
+
+                                        <?php if ($aluno['status'] === 'ativo'): ?>
+                                        <button type="button" class="btn btn-toggle action-btn" 
+                                                onclick="desativarAluno(<?php echo $aluno['id']; ?>)" 
+                                                title="Desativar aluno (não poderá agendar aulas)">
+                                            <i class="fas fa-ban me-1"></i>Desativar
+                                        </button>
+                                        <?php else: ?>
+                                        <button type="button" class="btn btn-schedule action-btn" 
+                                                onclick="ativarAluno(<?php echo $aluno['id']; ?>)" 
+                                                title="Reativar aluno para agendamento de aulas">
+                                            <i class="fas fa-check me-1"></i>Ativar
+                                        </button>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <!-- Botão de exclusão destacado -->
+                                    <div class="action-buttons-danger">
+                                        <button type="button" class="btn btn-delete action-btn" 
+                                                onclick="excluirAluno(<?php echo $aluno['id']; ?>)" 
+                                                title="⚠️ EXCLUIR ALUNO - Esta ação não pode ser desfeita!">
+                                            <i class="fas fa-trash me-1"></i>Excluir
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -625,49 +642,7 @@ function inicializarFiltrosAluno() {
     document.getElementById('filtroCategoria').addEventListener('change', filtrarAlunos);
 }
 
-function filtrarAlunos() {
-    const status = document.getElementById('filtroStatus').value;
-    const cfc = document.getElementById('filtroCFC').value;
-    const categoria = document.getElementById('filtroCategoria').value;
-    const busca = document.getElementById('buscaAluno').value.toLowerCase();
-    
-    const linhas = document.querySelectorAll('#tabelaAlunos tbody tr');
-    
-    linhas.forEach(linha => {
-        let mostrar = true;
-        
-        // Filtro por status
-        if (status && linha.querySelector('td:nth-child(6) .badge').textContent !== status) {
-            mostrar = false;
-        }
-        
-        // Filtro por CFC
-        if (cfc) {
-            const cfcLinha = linha.querySelector('td:nth-child(4) .badge').textContent;
-            if (cfcLinha === 'N/A' || cfcLinha !== cfc) {
-                mostrar = false;
-            }
-        }
-        
-        // Filtro por categoria
-        if (categoria && linha.querySelector('td:nth-child(5) .badge').textContent !== categoria) {
-            mostrar = false;
-        }
-        
-        // Filtro por busca
-        if (busca) {
-            const texto = linha.textContent.toLowerCase();
-            if (!texto.includes(busca)) {
-                mostrar = false;
-            }
-        }
-        
-        linha.style.display = mostrar ? '' : 'none';
-    });
-    
-    // Atualizar estatísticas
-    atualizarEstatisticas();
-}
+
 
 function inicializarBuscaAluno() {
     document.getElementById('buscaAluno').addEventListener('input', filtrarAlunos);
@@ -683,25 +658,76 @@ function inicializarProgresso() {
 }
 
 function editarAluno(id) {
-    // Buscar dados do aluno
-    fetch(`admin/api/alunos.php?id=${id}`)
-        .then(response => response.json())
+    console.log('🚀 editarAluno chamada com ID:', id);
+    
+    // Verificar se os elementos necessários existem
+    const modalElement = document.getElementById('modalAluno');
+    const modalTitle = document.getElementById('modalTitle');
+    const acaoAluno = document.getElementById('acaoAluno');
+    const alunoId = document.getElementById('aluno_id');
+    
+    console.log('🔍 Verificando elementos do DOM:');
+    console.log('  modalAluno:', modalElement ? '✅ Existe' : '❌ Não existe');
+    console.log('  modalTitle:', modalTitle ? '✅ Existe' : '❌ Não existe');
+    console.log('  acaoAluno:', acaoAluno ? '✅ Existe' : '❌ Não existe');
+    console.log('  aluno_id:', alunoId ? '✅ Existe' : '❌ Não existe');
+    
+    if (!modalElement) {
+        console.error('❌ Modal não encontrado!');
+        alert('ERRO: Modal não encontrado na página!');
+        return;
+    }
+    
+    console.log(`📡 Fazendo requisição para api/super-simple.php?id=${id}`);
+    
+    // Buscar dados do aluno (usando API ultra simples)
+    fetch(`api/super-simple.php?id=${id}`)
+        .then(response => {
+            console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            // Primeiro vamos ver o texto da resposta
+            return response.text().then(text => {
+                console.log('📄 Texto da resposta:', text);
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ Erro ao fazer parse do JSON:', e);
+                    console.error('📄 Texto que causou erro:', text);
+                    throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+                }
+            });
+        })
         .then(data => {
+            console.log('📄 Dados recebidos:', data);
+            
             if (data.success) {
-                preencherFormularioAluno(data.aluno);
-                document.getElementById('modalTitle').textContent = 'Editar Aluno';
-                document.getElementById('acaoAluno').value = 'editar';
-                document.getElementById('aluno_id').value = id;
+                console.log('✅ Success = true, abrindo modal...');
                 
-                const modal = new bootstrap.Modal(document.getElementById('modalAluno'));
+                // Preencher formulário
+                preencherFormularioAluno(data.aluno);
+                console.log('✅ Formulário preenchido');
+                
+                // Configurar modal
+                if (modalTitle) modalTitle.textContent = 'Editar Aluno';
+                if (acaoAluno) acaoAluno.value = 'editar';
+                if (alunoId) alunoId.value = id;
+                
+                // Abrir modal
+                const modal = new bootstrap.Modal(modalElement);
                 modal.show();
+                console.log('🪟 Modal aberto!');
+                
             } else {
-                mostrarAlerta('Erro ao carregar dados do aluno', 'danger');
+                console.error('❌ Success = false, erro:', data.error);
+                mostrarAlerta('Erro ao carregar dados do aluno: ' + (data.error || 'Erro desconhecido'), 'danger');
             }
         })
         .catch(error => {
-            console.error('Erro:', error);
-            mostrarAlerta('Erro ao carregar dados do aluno', 'danger');
+            console.error('💥 Erro na requisição:', error);
+            mostrarAlerta('Erro ao carregar dados do aluno: ' + error.message, 'danger');
         });
 }
 
@@ -733,20 +759,66 @@ function preencherFormularioAluno(aluno) {
 }
 
 function visualizarAluno(id) {
-    fetch(`admin/api/alunos.php?id=${id}`)
-        .then(response => response.json())
+    console.log('🚀 visualizarAluno chamada com ID:', id);
+
+    // Verificar se os elementos necessários existem
+    const modalElement = document.getElementById('modalVisualizarAluno');
+    const modalBody = document.getElementById('modalVisualizarAlunoBody');
+
+    console.log('🔍 Verificando elementos do DOM:');
+    console.log('  modalVisualizarAluno:', modalElement ? '✅ Existe' : '❌ Não existe');
+    console.log('  modalVisualizarAlunoBody:', modalBody ? '✅ Existe' : '❌ Não existe');
+
+    if (!modalElement) {
+        console.error('❌ Modal de visualização não encontrado!');
+        alert('ERRO: Modal de visualização não encontrado na página!');
+        return;
+    }
+
+    console.log(`📡 Fazendo requisição para api/super-simple.php?id=${id}`);
+
+    // Buscar dados do aluno (usando API simples)
+    fetch(`api/super-simple.php?id=${id}`)
+        .then(response => {
+            console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+
+            return response.text().then(text => {
+                console.log('📄 Texto da resposta:', text);
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ Erro ao fazer parse do JSON:', e);
+                    console.error('📄 Texto que causou erro:', text);
+                    throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+                }
+            });
+        })
         .then(data => {
+            console.log('📄 Dados recebidos:', data);
+
             if (data.success) {
+                console.log('✅ Success = true, preenchendo modal...');
+
+                // Preencher modal
                 preencherModalVisualizacao(data.aluno);
-                const modal = new bootstrap.Modal(document.getElementById('modalVisualizarAluno'));
+                console.log('✅ Modal preenchido');
+
+                // Abrir modal
+                const modal = new bootstrap.Modal(modalElement);
                 modal.show();
+                console.log('🪟 Modal de visualização aberto!');
+
             } else {
-                mostrarAlerta('Erro ao carregar dados do aluno', 'danger');
+                console.error('❌ Success = false, erro:', data.error);
+                mostrarAlerta('Erro ao carregar dados do aluno: ' + (data.error || 'Erro desconhecido'), 'danger');
             }
         })
         .catch(error => {
-            console.error('Erro:', error);
-            mostrarAlerta('Erro ao carregar dados do aluno', 'danger');
+            console.error('💥 Erro na requisição:', error);
+            mostrarAlerta('Erro ao carregar dados do aluno: ' + error.message, 'danger');
         });
 }
 
@@ -808,13 +880,16 @@ function preencherModalVisualizacao(aluno) {
 }
 
 function agendarAula(id) {
-    // Redirecionar para página de agendamento
-    window.location.href = `admin/pages/agendar-aula.php?aluno_id=${id}`;
+    // Redirecionar para página de agendamento usando o sistema de páginas do admin
+    window.location.href = `?page=agendar-aula&aluno_id=${id}`;
 }
 
 function historicoAluno(id) {
-    // Redirecionar para página de histórico
-    window.location.href = `admin/pages/historico-aluno.php?id=${id}`;
+    // Debug: verificar se a função está sendo chamada
+    console.log('Função historicoAluno chamada com ID:', id);
+    
+    // Redirecionar para página de histórico usando o sistema de roteamento do admin
+    window.location.href = `?page=historico-aluno&id=${id}`;
 }
 
 function ativarAluno(id) {
@@ -829,24 +904,95 @@ function desativarAluno(id) {
     }
 }
 
-function alterarStatusAluno(id, status) {
-    const formData = new FormData();
-    formData.append('acao', 'alterar_status');
-    formData.append('aluno_id', id);
-    formData.append('status', status);
+function excluirAluno(id) {
+    const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este aluno?';
     
-    fetch('admin/pages/alunos.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.text())
-    .then(data => {
-        location.reload();
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        mostrarAlerta('Erro ao alterar status do aluno', 'danger');
-    });
+    if (confirm(mensagem)) {
+        if (typeof loading !== 'undefined') {
+            loading.showGlobal('Excluindo aluno...');
+        }
+        
+        fetch(`api/alunos.php`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: id })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (typeof loading !== 'undefined') {
+                loading.hideGlobal();
+            }
+            
+            if (data.success) {
+                if (typeof notifications !== 'undefined') {
+                    notifications.success('Aluno excluído com sucesso!');
+                } else {
+                    mostrarAlerta('Aluno excluído com sucesso!', 'success');
+                }
+                location.reload();
+            } else {
+                if (typeof notifications !== 'undefined') {
+                    notifications.error(data.error || 'Erro ao excluir aluno');
+                } else {
+                    mostrarAlerta(data.error || 'Erro ao excluir aluno', 'danger');
+                }
+            }
+        })
+        .catch(error => {
+            if (typeof loading !== 'undefined') {
+                loading.hideGlobal();
+            }
+            console.error('Erro:', error);
+            if (typeof notifications !== 'undefined') {
+                notifications.error('Erro ao excluir aluno');
+            } else {
+                mostrarAlerta('Erro ao excluir aluno', 'danger');
+            }
+        });
+    }
+}
+
+function alterarStatusAluno(id, status) {
+    const mensagem = `Deseja realmente ${status === 'ativo' ? 'ativar' : 'desativar'} este aluno?`;
+    
+    if (confirm(mensagem)) {
+        if (typeof loading !== 'undefined') {
+            loading.showGlobal('Alterando status...');
+        }
+        
+        const formData = new FormData();
+        formData.append('acao', 'alterar_status');
+        formData.append('aluno_id', id);
+        formData.append('status', status);
+        
+        fetch('pages/alunos.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text())
+        .then(data => {
+            if (typeof loading !== 'undefined') {
+                loading.hideGlobal();
+            }
+            if (typeof notifications !== 'undefined') {
+                notifications.success(`Status do aluno alterado para ${status} com sucesso!`);
+            }
+            location.reload();
+        })
+        .catch(error => {
+            if (typeof loading !== 'undefined') {
+                loading.hideGlobal();
+            }
+            console.error('Erro:', error);
+            if (typeof notifications !== 'undefined') {
+                notifications.error('Erro ao alterar status do aluno');
+            } else {
+                mostrarAlerta('Erro ao alterar status do aluno', 'danger');
+            }
+        });
+    }
 }
 
 function limparFiltros() {
@@ -857,87 +1003,6 @@ function limparFiltros() {
     filtrarAlunos();
 }
 
-function atualizarEstatisticas() {
-    const linhasVisiveis = document.querySelectorAll('#tabelaAlunos tbody tr:not([style*="display: none"])');
-    
-    document.getElementById('totalAlunos').textContent = linhasVisiveis.length;
-    
-    const ativos = Array.from(linhasVisiveis).filter(linha => 
-        linha.querySelector('td:nth-child(6) .badge').textContent === 'Ativo'
-    ).length;
-    
-    const concluidos = Array.from(linhasVisiveis).filter(linha => 
-        linha.querySelector('td:nth-child(6) .badge').textContent === 'Concluído'
-    ).length;
-    
-    document.getElementById('alunosAtivos').textContent = ativos;
-    document.getElementById('emFormacao').textContent = ativos;
-    document.getElementById('concluidos').textContent = concluidos;
-}
-
-function exportarAlunos() {
-    // Implementar exportação para Excel/CSV
-    alert('Funcionalidade de exportação será implementada em breve!');
-}
-
-function imprimirAlunos() {
-    window.print();
-}
-
-// Função para mostrar alertas usando o sistema de notificações
-function mostrarAlerta(mensagem, tipo) {
-    if (typeof notifications !== 'undefined') {
-        notifications.show(mensagem, tipo);
-    } else {
-        // Fallback para alertas tradicionais
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${mensagem}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.d-flex'));
-        
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 5000);
-    }
-}
-
-// Funções modernas para melhor experiência do usuário
-function exportarFiltros() {
-    if (typeof loading !== 'undefined') {
-        loading.showGlobal('Preparando exportação...');
-    }
-    
-    setTimeout(() => {
-        if (typeof loading !== 'undefined') {
-            loading.hideGlobal();
-        }
-        if (typeof notifications !== 'undefined') {
-            notifications.success('Exportação realizada com sucesso!');
-        } else {
-            alert('Exportação realizada com sucesso!');
-        }
-    }, 1500);
-}
-
-// Busca em tempo real com debounce
-let buscaTimeout;
-document.getElementById('buscaAluno').addEventListener('input', function() {
-    clearTimeout(buscaTimeout);
-    buscaTimeout = setTimeout(() => {
-        filtrarAlunos();
-    }, 300);
-});
-
-// Filtros em tempo real
-document.getElementById('filtroStatus').addEventListener('change', filtrarAlunos);
-document.getElementById('filtroCFC').addEventListener('change', filtrarAlunos);
-document.getElementById('filtroCategoria').addEventListener('change', filtrarAlunos);
-
-// Melhorar função de filtro
 function filtrarAlunos() {
     const busca = document.getElementById('buscaAluno').value.toLowerCase();
     const status = document.getElementById('filtroStatus').value;
@@ -990,6 +1055,82 @@ function filtrarAlunos() {
     }
 }
 
+function atualizarEstatisticas() {
+    const linhasVisiveis = document.querySelectorAll('#tabelaAlunos tbody tr:not([style*="display: none"])');
+    
+    document.getElementById('totalAlunos').textContent = linhasVisiveis.length;
+    
+    const ativos = Array.from(linhasVisiveis).filter(linha => 
+        linha.querySelector('td:nth-child(6) .badge').textContent === 'Ativo'
+    ).length;
+    
+    const concluidos = Array.from(linhasVisiveis).filter(linha => 
+        linha.querySelector('td:nth-child(6) .badge').textContent === 'Concluído'
+    ).length;
+    
+    document.getElementById('alunosAtivos').textContent = ativos;
+    document.getElementById('emFormacao').textContent = ativos;
+    document.getElementById('concluidos').textContent = concluidos;
+}
+
+function exportarAlunos() {
+    // Implementar exportação para Excel/CSV
+    alert('Funcionalidade de exportação será implementada em breve!');
+}
+
+function imprimirAlunos() {
+    window.print();
+}
+
+function exportarFiltros() {
+    if (typeof loading !== 'undefined') {
+        loading.showGlobal('Preparando exportação...');
+    }
+    
+    setTimeout(() => {
+        if (typeof loading !== 'undefined') {
+            loading.hideGlobal();
+        }
+        if (typeof notifications !== 'undefined') {
+            notifications.success('Exportação realizada com sucesso!');
+        } else {
+            alert('Exportação realizada com sucesso!');
+        }
+    }, 1500);
+}
+
+// Função para mostrar alertas usando o sistema de notificações
+function mostrarAlerta(mensagem, tipo) {
+    if (typeof notifications !== 'undefined') {
+        notifications.show(mensagem, tipo);
+    } else {
+        // Fallback para alertas tradicionais
+        const alertDiv = document.createElement('div');
+        alertDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
+        alertDiv.innerHTML = `
+            ${mensagem}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        `;
+        
+        document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.d-flex'));
+        
+        setTimeout(() => {
+            alertDiv.remove();
+        }, 5000);
+    }
+}
+
+// Função para confirmar ações importantes
+function confirmarAcao(mensagem, acao) {
+    if (typeof modals !== 'undefined') {
+        modals.confirm(mensagem, acao);
+    } else {
+        if (confirm(mensagem)) {
+            acao();
+        }
+    }
+}
+
 // Inicializar funcionalidades quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
     // Aplicar máscaras se disponível
@@ -1010,57 +1151,4 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
-
-// Função para confirmar ações importantes
-function confirmarAcao(mensagem, acao) {
-    if (typeof modals !== 'undefined') {
-        modals.confirm(mensagem, acao);
-    } else {
-        if (confirm(mensagem)) {
-            acao();
-        }
-    }
-}
-
-// Melhorar função de alterar status
-function alterarStatusAluno(id, status) {
-    const mensagem = `Deseja realmente ${status === 'ativo' ? 'ativar' : 'desativar'} este aluno?`;
-    
-    confirmarAcao(mensagem, () => {
-        if (typeof loading !== 'undefined') {
-            loading.showGlobal('Alterando status...');
-        }
-        
-        const formData = new FormData();
-        formData.append('acao', 'alterar_status');
-        formData.append('aluno_id', id);
-        formData.append('status', status);
-        
-        fetch('admin/pages/alunos.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.text())
-        .then(data => {
-            if (typeof loading !== 'undefined') {
-                loading.hideGlobal();
-            }
-            if (typeof notifications !== 'undefined') {
-                notifications.success(`Status do aluno alterado para ${status} com sucesso!`);
-            }
-            location.reload();
-        })
-        .catch(error => {
-            if (typeof loading !== 'undefined') {
-                loading.hideGlobal();
-            }
-            console.error('Erro:', error);
-            if (typeof notifications !== 'undefined') {
-                notifications.error('Erro ao alterar status do aluno');
-            } else {
-                mostrarAlerta('Erro ao alterar status do aluno', 'danger');
-            }
-        });
-    });
-}
 </script>

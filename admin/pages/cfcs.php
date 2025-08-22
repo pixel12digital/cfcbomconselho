@@ -138,35 +138,51 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                 <span class="badge bg-primary"><?php echo $cfc['total_alunos'] ?? 0; ?></span>
                             </td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" 
-                                            onclick="editarCFC(<?php echo $cfc['id']; ?>)" 
-                                            title="Editar CFC">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-info" 
-                                            onclick="visualizarCFC(<?php echo $cfc['id']; ?>)" 
-                                            title="Visualizar Detalhes">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-warning" 
-                                            onclick="gerenciarCFC(<?php echo $cfc['id']; ?>)" 
-                                            title="Gerenciar CFC">
-                                        <i class="fas fa-cogs"></i>
-                                    </button>
-                                    <?php if ($cfc['ativo']): ?>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            onclick="desativarCFC(<?php echo $cfc['id']; ?>)" 
-                                            title="Desativar CFC">
-                                        <i class="fas fa-ban"></i>
-                                    </button>
-                                    <?php else: ?>
-                                    <button type="button" class="btn btn-sm btn-outline-success" 
-                                            onclick="ativarCFC(<?php echo $cfc['id']; ?>)" 
-                                            title="Ativar CFC">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <?php endif; ?>
+                                <div class="action-buttons-container">
+                                    <!-- Botões principais em linha -->
+                                    <div class="action-buttons-primary">
+                                        <button type="button" class="btn btn-edit action-btn" 
+                                                onclick="editarCFC(<?php echo $cfc['id']; ?>)" 
+                                                title="Editar dados do CFC">
+                                            <i class="fas fa-edit me-1"></i>Editar
+                                        </button>
+                                        <button type="button" class="btn btn-view action-btn" 
+                                                onclick="visualizarCFC(<?php echo $cfc['id']; ?>)" 
+                                                title="Ver detalhes completos do CFC">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button type="button" class="btn btn-manage action-btn" 
+                                                onclick="gerenciarCFC(<?php echo $cfc['id']; ?>)" 
+                                                title="Gerenciar instrutores, alunos e veículos">
+                                            <i class="fas fa-cogs me-1"></i>Gerenciar
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Botões secundários em linha -->
+                                    <div class="action-buttons-secondary">
+                                        <?php if ($cfc['ativo']): ?>
+                                        <button type="button" class="btn btn-toggle action-btn" 
+                                                onclick="desativarCFC(<?php echo $cfc['id']; ?>)" 
+                                                title="Desativar CFC (não poderá operar)">
+                                            <i class="fas fa-ban me-1"></i>Desativar
+                                        </button>
+                                        <?php else: ?>
+                                        <button type="button" class="btn btn-schedule action-btn" 
+                                                onclick="ativarCFC(<?php echo $cfc['id']; ?>)" 
+                                                title="Reativar CFC para operação">
+                                            <i class="fas fa-check me-1"></i>Ativar
+                                        </button>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <!-- Botão de exclusão destacado -->
+                                    <div class="action-buttons-danger">
+                                        <button type="button" class="btn btn-delete action-btn" 
+                                                onclick="excluirCFC(<?php echo $cfc['id']; ?>)" 
+                                                title="⚠️ EXCLUIR CFC - Esta ação não pode ser desfeita!">
+                                            <i class="fas fa-trash me-1"></i>Excluir
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -384,6 +400,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar busca
     inicializarBuscaCFC();
+    
+    // Handler para o formulário de CFC
+    document.getElementById('formCFC').addEventListener('submit', function(e) {
+        e.preventDefault();
+        salvarCFC();
+    });
 });
 
 function inicializarMascarasCFC() {
@@ -499,11 +521,11 @@ function inicializarBuscaCFC() {
 
 function editarCFC(id) {
     // Buscar dados do CFC
-    fetch(`admin/api/cfcs.php?id=${id}`)
+    fetch(`../api/cfcs.php?id=${id}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                preencherFormularioCFC(data.cfc);
+                preencherFormularioCFC(data.data);
                 document.getElementById('modalTitle').textContent = 'Editar CFC';
                 document.getElementById('acaoCFC').value = 'editar';
                 document.getElementById('cfc_id').value = id;
@@ -543,11 +565,11 @@ function preencherFormularioCFC(cfc) {
 }
 
 function visualizarCFC(id) {
-    fetch(`admin/api/cfcs.php?id=${id}`)
+    fetch(`../api/cfcs.php?id=${id}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                preencherModalVisualizacao(data.cfc);
+                preencherModalVisualizacao(data.data);
                 const modal = new bootstrap.Modal(document.getElementById('modalVisualizarCFC'));
                 modal.show();
             } else {
@@ -625,28 +647,189 @@ function desativarCFC(id) {
 }
 
 function alterarStatusCFC(id, status) {
-    const formData = new FormData();
-    formData.append('acao', 'alterar_status');
-    formData.append('cfc_id', id);
-    formData.append('ativo', status);
+    if (confirm('Deseja realmente alterar o status deste CFC?')) {
+        // Fazer requisição para a API
+        fetch(`../api/cfcs.php`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                id: id,
+                ativo: status === 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('Status do CFC alterado com sucesso!', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                mostrarAlerta(data.error || 'Erro ao alterar status do CFC', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao alterar status do CFC', 'danger');
+        });
+    }
+}
+
+function salvarCFC() {
+    const form = document.getElementById('formCFC');
+    const formData = new FormData(form);
     
-    fetch('admin/pages/cfcs.php', {
-        method: 'POST',
-        body: formData
+    // Validações básicas
+    if (!formData.get('nome').trim()) {
+        mostrarAlerta('Nome do CFC é obrigatório', 'danger');
+        return;
+    }
+    
+    if (!formData.get('cnpj').trim()) {
+        mostrarAlerta('CNPJ é obrigatório', 'danger');
+        return;
+    }
+    
+    if (!formData.get('cidade').trim()) {
+        mostrarAlerta('Cidade é obrigatória', 'danger');
+        return;
+    }
+    
+    if (!formData.get('uf')) {
+        mostrarAlerta('UF é obrigatória', 'danger');
+        return;
+    }
+    
+    // Preparar dados para envio
+    const cfcData = {
+        nome: formData.get('nome').trim(),
+        cnpj: formData.get('cnpj').trim(),
+        razao_social: formData.get('nome').trim(),
+        email: formData.get('email').trim(),
+        telefone: formData.get('telefone').trim(),
+        cep: formData.get('cep').trim(),
+        endereco: formData.get('logradouro').trim() + ' ' + formData.get('numero').trim(),
+        bairro: formData.get('bairro').trim(),
+        cidade: formData.get('cidade').trim(),
+        uf: formData.get('uf'),
+        responsavel: formData.get('responsavel').trim(),
+        ativo: true
+    };
+    
+    const acao = formData.get('acao');
+    const cfc_id = formData.get('cfc_id');
+    
+    if (acao === 'editar' && cfc_id) {
+        cfcData.id = cfc_id;
+    }
+    
+    // Mostrar loading
+    const btnSalvar = document.getElementById('btnSalvarCFC');
+    const originalText = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Salvando...';
+    btnSalvar.disabled = true;
+    
+    // Fazer requisição para a API
+    const url = '../api/cfcs.php';
+    const method = acao === 'editar' ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(cfcData)
     })
-    .then(response => response.text())
+    .then(response => response.json())
     .then(data => {
-        location.reload();
+        if (data.success) {
+            mostrarAlerta(data.message || 'CFC salvo com sucesso!', 'success');
+            
+            // Fechar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalCFC'));
+            modal.hide();
+            
+            // Limpar formulário
+            form.reset();
+            
+            // Recarregar página para mostrar dados atualizados
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            mostrarAlerta(data.error || 'Erro ao salvar CFC', 'danger');
+        }
     })
     .catch(error => {
         console.error('Erro:', error);
-        mostrarAlerta('Erro ao alterar status do CFC', 'danger');
+        mostrarAlerta('Erro ao salvar CFC. Tente novamente.', 'danger');
+    })
+    .finally(() => {
+        // Restaurar botão
+        btnSalvar.innerHTML = originalText;
+        btnSalvar.disabled = false;
     });
 }
 
+function excluirCFC(id) {
+    const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este CFC?';
+    
+    if (confirm(mensagem)) {
+        fetch(`../api/cfcs.php`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: id })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('CFC excluído com sucesso!', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                mostrarAlerta(data.error || 'Erro ao excluir CFC', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao excluir CFC', 'danger');
+        });
+    }
+}
+
 function exportarCFCs() {
-    // Implementar exportação para Excel/CSV
-    alert('Funcionalidade de exportação será implementada em breve!');
+    // Buscar dados reais da API
+    fetch('../api/cfcs.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Criar CSV
+                let csv = 'Nome,CNPJ,Cidade,UF,Telefone,Email,Status\n';
+                data.data.forEach(cfc => {
+                    csv += `"${cfc.nome}","${cfc.cnpj}","${cfc.cidade}","${cfc.uf}","${cfc.telefone || ''}","${cfc.email || ''}","${cfc.ativo ? 'Ativo' : 'Inativo'}"\n`;
+                });
+                
+                // Download do arquivo
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'cfcs.csv';
+                link.click();
+                
+                mostrarAlerta('Exportação concluída!', 'success');
+            } else {
+                mostrarAlerta(data.error || 'Erro ao exportar CFCs', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao exportar CFCs. Tente novamente.', 'danger');
+        });
 }
 
 function imprimirCFCs() {

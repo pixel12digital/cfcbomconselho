@@ -354,7 +354,28 @@ class AgendamentoController {
             $instrutorId = $dados['instrutor_id'];
             $veiculoId = $dados['veiculo_id'] ?? null;
             
-            // Verificar conflitos de instrutor
+            // 1. Verificar duração da aula (deve ser exatamente 50 minutos)
+            if (!$this->verificarDuracaoAula($horaInicio, $horaFim)) {
+                return [
+                    'disponivel' => false,
+                    'motivo' => 'A aula deve ter exatamente 50 minutos de duração',
+                    'tipo' => 'duracao'
+                ];
+            }
+            
+            // 2. Verificar limite diário de aulas do instrutor
+            $limiteDiario = $this->verificarLimiteDiarioInstrutor($instrutorId, $data, $aulaIdExcluir);
+            if (!$limiteDiario['disponivel']) {
+                return $limiteDiario;
+            }
+            
+            // 3. Verificar padrão de aulas e intervalos
+            $padraoAulas = $this->verificarPadraoAulasInstrutor($instrutorId, $data, $horaInicio, $aulaIdExcluir);
+            if (!$padraoAulas['disponivel']) {
+                return $padraoAulas;
+            }
+            
+            // 4. Verificar conflitos de instrutor
             $sqlInstrutor = "SELECT COUNT(*) as total FROM aulas 
                             WHERE instrutor_id = ? 
                             AND data_aula = ? 
@@ -386,7 +407,7 @@ class AgendamentoController {
                 ];
             }
             
-            // Verificar conflitos de veículo (se especificado)
+            // 5. Verificar conflitos de veículo (se especificado)
             if ($veiculoId) {
                 $sqlVeiculo = "SELECT COUNT(*) as total FROM aulas 
                               WHERE veiculo_id = ? 
@@ -420,7 +441,7 @@ class AgendamentoController {
                 }
             }
             
-            // Verificar se o horário está dentro do horário de funcionamento
+            // 6. Verificar se o horário está dentro do horário de funcionamento
             if (!$this->verificarHorarioFuncionamento($horaInicio, $horaFim)) {
                 return [
                     'disponivel' => false,
@@ -538,8 +559,8 @@ class AgendamentoController {
     private function validarDadosAula($dados) {
         $erros = [];
         
-        // Campos obrigatórios
-        $camposObrigatorios = ['aluno_id', 'instrutor_id', 'cfc_id', 'tipo_aula', 'data_aula', 'hora_inicio', 'hora_fim'];
+        // Campos obrigatórios (hora_fim não é mais obrigatório, será calculada automaticamente)
+        $camposObrigatorios = ['aluno_id', 'instrutor_id', 'cfc_id', 'tipo_aula', 'data_aula', 'hora_inicio'];
         
         foreach ($camposObrigatorios as $campo) {
             if (empty($dados[$campo])) {
@@ -554,6 +575,13 @@ class AgendamentoController {
                 'erros' => $erros,
                 'tipo' => 'erro'
             ];
+        }
+        
+        // Calcular hora_fim automaticamente se não fornecida (50 minutos de duração)
+        if (empty($dados['hora_fim'])) {
+            $horaInicio = strtotime($dados['hora_inicio']);
+            $horaFim = $horaInicio + (50 * 60); // 50 minutos em segundos
+            $dados['hora_fim'] = date('H:i:s', $horaFim);
         }
         
         // Validar data
@@ -572,6 +600,12 @@ class AgendamentoController {
             $erros[] = "Hora de início deve ser menor que hora de fim";
         }
         
+        // Validar duração (deve ser exatamente 50 minutos)
+        $duracao = ($horaFim - $horaInicio) / 60; // Duração em minutos
+        if ($duracao != 50) {
+            $erros[] = "A aula deve ter exatamente 50 minutos de duração";
+        }
+        
         // Validar tipo de aula
         $tiposValidos = ['teorica', 'pratica'];
         if (!in_array($dados['tipo_aula'], $tiposValidos)) {
@@ -588,6 +622,209 @@ class AgendamentoController {
         }
         
         return ['sucesso' => true];
+    }
+    
+    /**
+     * Verificar duração da aula (deve ser exatamente 50 minutos)
+     * @param string $horaInicio Hora de início
+     * @param string $horaFim Hora de fim
+     * @return bool True se a duração for exatamente 50 minutos
+     */
+    private function verificarDuracaoAula($horaInicio, $horaFim) {
+        $inicio = strtotime($horaInicio);
+        $fim = strtotime($horaFim);
+        $duracao = ($fim - $inicio) / 60; // Duração em minutos
+        
+        return $duracao == 50; // Exatamente 50 minutos
+    }
+    
+    /**
+     * Verificar limite diário de aulas do instrutor (máximo 3 por dia)
+     * @param int $instrutorId ID do instrutor
+     * @param string $data Data da aula
+     * @param int $aulaIdExcluir ID da aula a ser excluída da contagem
+     * @return array Resultado da verificação
+     */
+    private function verificarLimiteDiarioInstrutor($instrutorId, $data, $aulaIdExcluir = null) {
+        try {
+            $sql = "SELECT COUNT(*) as total FROM aulas 
+                    WHERE instrutor_id = ? 
+                    AND data_aula = ? 
+                    AND status != 'cancelada'";
+            
+            $params = [$instrutorId, $data];
+            
+            if ($aulaIdExcluir) {
+                $sql .= " AND id != ?";
+                $params[] = $aulaIdExcluir;
+            }
+            
+            $stmt = $this->db->query($sql, $params);
+            $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
+            $totalAulas = $resultado['total'];
+            
+            if ($totalAulas >= 3) {
+                return [
+                    'disponivel' => false,
+                    'motivo' => 'Instrutor já possui 3 aulas agendadas para este dia (limite máximo atingido)',
+                    'tipo' => 'limite_diario'
+                ];
+            }
+            
+            return ['disponivel' => true];
+            
+        } catch (Exception $e) {
+            error_log("Erro ao verificar limite diário: " . $e->getMessage());
+            return [
+                'disponivel' => false,
+                'motivo' => 'Erro ao verificar limite diário de aulas',
+                'tipo' => 'erro'
+            ];
+        }
+    }
+    
+    /**
+     * Verificar padrão de aulas e intervalos do instrutor
+     * @param int $instrutorId ID do instrutor
+     * @param string $data Data da aula
+     * @param string $horaInicio Hora de início da nova aula
+     * @param int $aulaIdExcluir ID da aula a ser excluída da verificação
+     * @return array Resultado da verificação
+     */
+    private function verificarPadraoAulasInstrutor($instrutorId, $data, $horaInicio, $aulaIdExcluir = null) {
+        try {
+            // Buscar todas as aulas do instrutor na data
+            $sql = "SELECT hora_inicio, hora_fim FROM aulas 
+                    WHERE instrutor_id = ? 
+                    AND data_aula = ? 
+                    AND status != 'cancelada'
+                    ORDER BY hora_inicio ASC";
+            
+            $params = [$instrutorId, $data];
+            
+            if ($aulaIdExcluir) {
+                $sql .= " AND id != ?";
+                $params[] = $aulaIdExcluir;
+            }
+            
+            $stmt = $this->db->query($sql, $params);
+            $aulasExistentes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            
+            if (empty($aulasExistentes)) {
+                return ['disponivel' => true]; // Primeira aula do dia
+            }
+            
+            // Converter horários para minutos desde meia-noite
+            $horarios = [];
+            foreach ($aulasExistentes as $aula) {
+                $horarios[] = [
+                    'inicio' => $this->horaParaMinutos($aula['hora_inicio']),
+                    'fim' => $this->horaParaMinutos($aula['hora_fim'])
+                ];
+            }
+            
+            $novaAulaInicio = $this->horaParaMinutos($horaInicio);
+            $novaAulaFim = $novaAulaInicio + 50; // 50 minutos de duração
+            
+            // Verificar se a nova aula respeita os padrões
+            if (!$this->verificarPadraoAulas($horarios, $novaAulaInicio, $novaAulaFim)) {
+                return [
+                    'disponivel' => false,
+                    'motivo' => 'A nova aula não respeita o padrão de aulas e intervalos. ' .
+                                'Padrão: 2 aulas consecutivas + 30 min intervalo + 1 aula, ' .
+                                'ou 1 aula + 30 min intervalo + 2 aulas consecutivas',
+                    'tipo' => 'padrao_aulas'
+                ];
+            }
+            
+            return ['disponivel' => true];
+            
+        } catch (Exception $e) {
+            error_log("Erro ao verificar padrão de aulas: " . $e->getMessage());
+            return [
+                'disponivel' => false,
+                'motivo' => 'Erro ao verificar padrão de aulas',
+                'tipo' => 'erro'
+            ];
+        }
+    }
+    
+    /**
+     * Verificar se a nova aula respeita o padrão de aulas e intervalos
+     * @param array $horarios Array de horários existentes
+     * @param int $novaInicio Início da nova aula em minutos
+     * @param int $novaFim Fim da nova aula em minutos
+     * @return bool True se respeita o padrão
+     */
+    private function verificarPadraoAulas($horarios, $novaInicio, $novaFim) {
+        // Adicionar a nova aula aos horários existentes
+        $todosHorarios = array_merge($horarios, [['inicio' => $novaInicio, 'fim' => $novaFim]]);
+        
+        // Ordenar por horário de início
+        usort($todosHorarios, function($a, $b) {
+            return $a['inicio'] - $b['inicio'];
+        });
+        
+        // Verificar se há mais de 3 aulas
+        if (count($todosHorarios) > 3) {
+            return false;
+        }
+        
+        // Se há apenas 1 aula, é válido
+        if (count($todosHorarios) == 1) {
+            return true;
+        }
+        
+        // Se há 2 aulas, verificar se são consecutivas
+        if (count($todosHorarios) == 2) {
+            $aula1 = $todosHorarios[0];
+            $aula2 = $todosHorarios[1];
+            
+            // Verificar se são consecutivas (sem intervalo)
+            if ($aula1['fim'] == $aula2['inicio']) {
+                return true;
+            }
+            
+            // Verificar se há intervalo de 30 minutos
+            if (($aula2['inicio'] - $aula1['fim']) == 30) {
+                return true;
+            }
+            
+            return false;
+        }
+        
+        // Se há 3 aulas, verificar o padrão
+        if (count($todosHorarios) == 3) {
+            $aula1 = $todosHorarios[0];
+            $aula2 = $todosHorarios[1];
+            $aula3 = $todosHorarios[2];
+            
+            // Padrão 1: 2 consecutivas + 30 min + 1
+            if ($aula1['fim'] == $aula2['inicio'] && 
+                ($aula3['inicio'] - $aula2['fim']) == 30) {
+                return true;
+            }
+            
+            // Padrão 2: 1 + 30 min + 2 consecutivas
+            if (($aula2['inicio'] - $aula1['fim']) == 30 && 
+                $aula2['fim'] == $aula3['inicio']) {
+                return true;
+            }
+            
+            return false;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Converter hora (HH:MM) para minutos desde meia-noite
+     * @param string $hora Hora no formato HH:MM
+     * @return int Minutos desde meia-noite
+     */
+    private function horaParaMinutos($hora) {
+        $partes = explode(':', $hora);
+        return (int)$partes[0] * 60 + (int)$partes[1];
     }
     
     /**

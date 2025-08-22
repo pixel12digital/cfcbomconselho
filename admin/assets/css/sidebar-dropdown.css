@@ -1,0 +1,217 @@
+/* =====================================================
+   SIDEBAR DROPDOWN - SISTEMA CFC BOM CONSELHO
+   Estilos para menus com subitens organizados
+   ===================================================== */
+
+/* =====================================================
+   GRUPOS DE NAVEGAÇÃO
+   ===================================================== */
+
+.nav-group {
+    position: relative;
+}
+
+.nav-toggle {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+}
+
+.nav-toggle:hover {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+}
+
+.nav-arrow {
+    margin-left: auto;
+    transition: transform 0.3s ease;
+}
+
+.nav-arrow i {
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* =====================================================
+   SUBMENUS
+   ===================================================== */
+
+.nav-submenu {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    background-color: rgba(0, 0, 0, 0.1);
+    margin: 0 var(--spacing-md);
+    border-radius: var(--border-radius);
+}
+
+.nav-submenu.open {
+    max-height: 500px;
+    opacity: 1;
+}
+
+.nav-sublink {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm) var(--spacing-lg);
+    color: rgba(255, 255, 255, 0.8);
+    text-decoration: none;
+    border-radius: var(--border-radius);
+    transition: var(--transition-normal);
+    font-size: var(--font-size-sm);
+    margin: 2px var(--spacing-sm);
+    position: relative;
+}
+
+.nav-sublink:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--white);
+    transform: translateX(5px);
+}
+
+.nav-sublink.active {
+    background-color: var(--accent-color);
+    color: var(--white);
+    font-weight: var(--font-weight-semibold);
+}
+
+.nav-sublink i {
+    width: 16px;
+    height: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--font-size-sm);
+    opacity: 0.9;
+}
+
+.nav-sublink span {
+    flex: 1;
+    font-weight: var(--font-weight-medium);
+}
+
+.nav-sublink .nav-badge {
+    background-color: var(--accent-color);
+    color: var(--white);
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: var(--font-weight-semibold);
+    min-width: 20px;
+    text-align: center;
+}
+
+/* =====================================================
+   ANIMAÇÕES E TRANSITIONS
+   ===================================================== */
+
+.nav-submenu {
+    transform-origin: top;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        transform: scaleY(0);
+        opacity: 0;
+    }
+    to {
+        transform: scaleY(1);
+        opacity: 1;
+    }
+}
+
+/* =====================================================
+   RESPONSIVIDADE
+   ===================================================== */
+
+@media (max-width: 1024px) {
+    .nav-submenu {
+        margin: 0 var(--spacing-sm);
+    }
+    
+    .nav-sublink {
+        padding: var(--spacing-sm) var(--spacing-md);
+        font-size: var(--font-size-xs);
+    }
+    
+    .nav-sublink i {
+        width: 14px;
+        height: 14px;
+        font-size: var(--font-size-xs);
+    }
+}
+
+/* =====================================================
+   ESTADOS ESPECIAIS
+   ===================================================== */
+
+.nav-group:hover .nav-toggle {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
+.nav-submenu .nav-sublink:first-child {
+    margin-top: var(--spacing-sm);
+}
+
+.nav-submenu .nav-sublink:last-child {
+    margin-bottom: var(--spacing-sm);
+}
+
+/* =====================================================
+   INDICADORES VISUAIS
+   ===================================================== */
+
+.nav-group.has-active .nav-toggle {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: var(--white);
+}
+
+.nav-group.has-active .nav-toggle .nav-icon {
+    color: var(--accent-color);
+}
+
+/* =====================================================
+   MELHORIAS DE ACESSIBILIDADE
+   ===================================================== */
+
+.nav-toggle:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+.nav-sublink:focus {
+    outline: 2px solid var(--accent-color);
+    outline-offset: 2px;
+}
+
+/* =====================================================
+   ESTILOS PARA PÁGINAS ATIVAS
+   ===================================================== */
+
+.nav-sublink.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 60%;
+    background-color: var(--white);
+    border-radius: 0 2px 2px 0;
+}
+
+/* =====================================================
+   HOVER EFFECTS AVANÇADOS
+   ===================================================== */
+
+.nav-sublink:hover i {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}
+
+.nav-toggle:hover .nav-arrow i {
+    transform: scale(1.1);
+    transition: transform 0.2s ease;
+}

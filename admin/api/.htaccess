@@ -5,11 +5,15 @@ Header always set Access-Control-Allow-Origin "*"
 Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
 Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
 
-# Roteamento para agendamento.php
+# Roteamento para APIs específicas
+RewriteRule ^usuarios/(.*)$ usuarios.php [QSA,L]
+RewriteRule ^cfcs/(.*)$ cfcs.php [QSA,L]
+RewriteRule ^instrutores/(.*)$ instrutores.php [QSA,L]
+RewriteRule ^alunos/(.*)$ alunos.php [QSA,L]
 RewriteRule ^agendamento/(.*)$ agendamento.php [QSA,L]
 
-# Redirecionar todas as outras requisições para agendamento.php
-RewriteRule ^(.*)$ agendamento.php [QSA,L]
+# Permitir acesso direto aos arquivos PHP
+# RewriteRule ^(.*)$ agendamento.php [QSA,L]
 
 # Configurações de segurança
 <Files "*.php">

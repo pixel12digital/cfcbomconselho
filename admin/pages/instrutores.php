@@ -252,40 +252,56 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                 <span class="badge bg-primary"><?php echo $instrutor['total_alunos'] ?? 0; ?></span>
                             </td>
                             <td>
-                                <div class="btn-group" role="group">
-                                    <button type="button" class="btn btn-sm btn-outline-primary" 
-                                            onclick="editarInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                            title="Editar Instrutor">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-info" 
-                                            onclick="visualizarInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                            title="Visualizar Detalhes">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-success" 
-                                            onclick="agendarAula(<?php echo $instrutor['id']; ?>)" 
-                                            title="Agendar Aula">
-                                        <i class="fas fa-calendar-plus"></i>
-                                    </button>
-                                    <button type="button" class="btn btn-sm btn-outline-warning" 
-                                            onclick="historicoInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                            title="Histórico">
-                                        <i class="fas fa-history"></i>
-                                    </button>
-                                    <?php if ($instrutor['ativo']): ?>
-                                    <button type="button" class="btn btn-sm btn-outline-danger" 
-                                            onclick="desativarInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                            title="Desativar Instrutor">
-                                        <i class="fas fa-ban"></i>
-                                    </button>
-                                    <?php else: ?>
-                                    <button type="button" class="btn btn-sm btn-outline-success" 
-                                            onclick="ativarInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                            title="Ativar Instrutor">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <?php endif; ?>
+                                <div class="action-buttons-container">
+                                    <!-- Botões principais em linha -->
+                                    <div class="action-buttons-primary">
+                                        <button type="button" class="btn btn-edit action-btn" 
+                                                onclick="editarInstrutor(<?php echo $instrutor['id']; ?>)" 
+                                                title="Editar dados do instrutor">
+                                            <i class="fas fa-edit me-1"></i>Editar
+                                        </button>
+                                        <button type="button" class="btn btn-view action-btn" 
+                                                onclick="visualizarInstrutor(<?php echo $instrutor['id']; ?>)" 
+                                                title="Ver detalhes completos do instrutor">
+                                            <i class="fas fa-eye me-1"></i>Ver
+                                        </button>
+                                        <button type="button" class="btn btn-schedule action-btn" 
+                                                onclick="agendarAula(<?php echo $instrutor['id']; ?>)" 
+                                                title="Agendar nova aula com este instrutor">
+                                            <i class="fas fa-calendar-plus me-1"></i>Agendar
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Botões secundários em linha -->
+                                    <div class="action-buttons-secondary">
+                                        <button type="button" class="btn btn-history action-btn" 
+                                                onclick="historicoInstrutor(<?php echo $instrutor['id']; ?>)" 
+                                                title="Visualizar histórico de aulas e desempenho">
+                                            <i class="fas fa-history me-1"></i>Histórico
+                                        </button>
+                                        <?php if ($instrutor['ativo']): ?>
+                                        <button type="button" class="btn btn-toggle action-btn" 
+                                                onclick="desativarInstrutor(<?php echo $instrutor['id']; ?>)" 
+                                                title="Desativar instrutor (não poderá dar aulas)">
+                                            <i class="fas fa-ban me-1"></i>Desativar
+                                        </button>
+                                        <?php else: ?>
+                                        <button type="button" class="btn btn-schedule action-btn" 
+                                                onclick="ativarInstrutor(<?php echo $instrutor['id']; ?>)" 
+                                                title="Reativar instrutor para dar aulas">
+                                            <i class="fas fa-check me-1"></i>Ativar
+                                        </button>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <!-- Botão de exclusão destacado -->
+                                    <div class="action-buttons-danger">
+                                        <button type="button" class="btn btn-delete action-btn" 
+                                                onclick="excluirInstrutor(<?php echo $instrutor['id']; ?>)" 
+                                                title="⚠️ EXCLUIR INSTRUTOR - Esta ação não pode ser desfeita!">
+                                            <i class="fas fa-trash me-1"></i>Excluir
+                                        </button>
+                                    </div>
                                 </div>
                             </td>
                         </tr>
@@ -549,6 +565,12 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar busca
     inicializarBuscaInstrutor();
+    
+    // Handler para o formulário de instrutor
+    document.getElementById('formInstrutor').addEventListener('submit', function(e) {
+        e.preventDefault();
+        salvarInstrutor();
+    });
 });
 
 function inicializarFiltrosInstrutor() {
@@ -767,12 +789,15 @@ function ucfirst(str) {
 
 function agendarAula(id) {
     // Redirecionar para página de agendamento
-    window.location.href = `admin/pages/agendar-aula.php?instrutor_id=${id}`;
+    window.location.href = `pages/agendar-aula.php?instrutor_id=${id}`;
 }
 
 function historicoInstrutor(id) {
-    // Redirecionar para página de histórico
-    window.location.href = `admin/pages/historico-instrutor.php?id=${id}`;
+    // Debug: verificar se a função está sendo chamada
+    console.log('Função historicoInstrutor chamada com ID:', id);
+    
+    // Redirecionar para página de histórico usando o sistema de roteamento do admin
+    window.location.href = `?page=historico-instrutor&id=${id}`;
 }
 
 function ativarInstrutor(id) {
@@ -787,24 +812,64 @@ function desativarInstrutor(id) {
     }
 }
 
-function alterarStatusInstrutor(id, status) {
-    const formData = new FormData();
-    formData.append('acao', 'alterar_status');
-    formData.append('instrutor_id', id);
-    formData.append('ativo', status);
+function excluirInstrutor(id) {
+    const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este instrutor?';
     
-    fetch('admin/pages/instrutores.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.text())
-    .then(data => {
-        location.reload();
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        mostrarAlerta('Erro ao alterar status do instrutor', 'danger');
-    });
+    if (confirm(mensagem)) {
+        fetch(`../api/instrutores.php`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ id: id })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('Instrutor excluído com sucesso!', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                mostrarAlerta(data.error || 'Erro ao excluir instrutor', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao excluir instrutor', 'danger');
+        });
+    }
+}
+
+function alterarStatusInstrutor(id, status) {
+    if (confirm('Deseja realmente alterar o status deste instrutor?')) {
+        // Fazer requisição para a API
+        fetch(`../api/instrutores.php`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                id: id,
+                ativo: status === 1
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('Status do instrutor alterado com sucesso!', 'success');
+                setTimeout(() => {
+                    location.reload();
+                }, 1500);
+            } else {
+                mostrarAlerta(data.error || 'Erro ao alterar status do instrutor', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao alterar status do instrutor', 'danger');
+        });
+    }
 }
 
 function limparFiltros() {
@@ -827,9 +892,122 @@ function atualizarEstatisticas() {
     document.getElementById('instrutoresAtivos').textContent = ativos;
 }
 
+function salvarInstrutor() {
+    const form = document.getElementById('formInstrutor');
+    const formData = new FormData(form);
+    
+    // Validações básicas
+    if (!formData.get('usuario_id')) {
+        mostrarAlerta('Usuário é obrigatório', 'danger');
+        return;
+    }
+    
+    if (!formData.get('cfc_id')) {
+        mostrarAlerta('CFC é obrigatório', 'danger');
+        return;
+    }
+    
+    if (!formData.get('credencial').trim()) {
+        mostrarAlerta('Credencial é obrigatória', 'danger');
+        return;
+    }
+    
+    // Preparar dados para envio
+    const instrutorData = {
+        usuario_id: formData.get('usuario_id'),
+        cfc_id: formData.get('cfc_id'),
+        credencial: formData.get('credencial').trim(),
+        categoria: formData.get('categoria_habilitacao') || '',
+        telefone: formData.get('telefone') || '',
+        endereco: formData.get('endereco') || '',
+        cidade: formData.get('cidade') || '',
+        uf: formData.get('uf') || '',
+        ativo: formData.get('ativo') === '1'
+    };
+    
+    const acao = formData.get('acao');
+    const instrutor_id = formData.get('instrutor_id');
+    
+    if (acao === 'editar' && instrutor_id) {
+        instrutorData.id = instrutor_id;
+    }
+    
+    // Mostrar loading
+    const btnSalvar = document.getElementById('btnSalvarInstrutor');
+    const originalText = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Salvando...';
+    btnSalvar.disabled = true;
+    
+    // Fazer requisição para a API
+    const url = '../api/instrutores.php';
+    const method = acao === 'editar' ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(instrutorData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta(data.message || 'Instrutor salvo com sucesso!', 'success');
+            
+            // Fechar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalInstrutor'));
+            modal.hide();
+            
+            // Limpar formulário
+            form.reset();
+            
+            // Recarregar página para mostrar dados atualizados
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            mostrarAlerta(data.error || 'Erro ao salvar instrutor', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        mostrarAlerta('Erro ao salvar instrutor. Tente novamente.', 'danger');
+    })
+    .finally(() => {
+        // Restaurar botão
+        btnSalvar.innerHTML = originalText;
+        btnSalvar.disabled = false;
+    });
+}
+
 function exportarInstrutores() {
-    // Implementar exportação para Excel/CSV
-    alert('Funcionalidade de exportação será implementada em breve!');
+    // Buscar dados reais da API
+    fetch('../api/instrutores.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Criar CSV
+                let csv = 'Nome,Email,CFC,Credencial,Categorias,Status\n';
+                data.data.forEach(instrutor => {
+                    csv += `"${instrutor.nome_usuario || ''}","${instrutor.email || ''}","${instrutor.nome_cfc || ''}","${instrutor.credencial || ''}","${instrutor.categoria || ''}","${instrutor.ativo ? 'Ativo' : 'Inativo'}"\n`;
+                });
+                
+                // Download do arquivo
+                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'instrutores.csv';
+                link.click();
+                
+                mostrarAlerta('Exportação concluída!', 'success');
+            } else {
+                mostrarAlerta(data.error || 'Erro ao exportar instrutores', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao exportar instrutores. Tente novamente.', 'danger');
+        });
 }
 
 function imprimirInstrutores() {
