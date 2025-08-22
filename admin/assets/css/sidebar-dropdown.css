@@ -1,6 +1,7 @@
 /* =====================================================
    SIDEBAR DROPDOWN - SISTEMA CFC BOM CONSELHO
    Estilos para menus com subitens organizados
+   Versão otimizada para produção
    ===================================================== */
 
 /* =====================================================
@@ -41,8 +42,8 @@
     transition: max-height 0.3s ease, opacity 0.3s ease;
     opacity: 0;
     background-color: rgba(0, 0, 0, 0.1);
-    margin: 0 var(--spacing-md);
-    border-radius: var(--border-radius);
+    margin: 0 1rem;
+    border-radius: 8px;
 }
 
 .nav-submenu.open {
@@ -53,27 +54,27 @@
 .nav-sublink {
     display: flex;
     align-items: center;
-    gap: var(--spacing-md);
-    padding: var(--spacing-sm) var(--spacing-lg);
+    gap: 1rem;
+    padding: 0.5rem 1.5rem;
     color: rgba(255, 255, 255, 0.8);
     text-decoration: none;
-    border-radius: var(--border-radius);
-    transition: var(--transition-normal);
-    font-size: var(--font-size-sm);
-    margin: 2px var(--spacing-sm);
+    border-radius: 8px;
+    transition: all 0.3s ease;
+    font-size: 0.875rem;
+    margin: 2px 0.5rem;
     position: relative;
 }
 
 .nav-sublink:hover {
     background-color: rgba(255, 255, 255, 0.1);
-    color: var(--white);
+    color: #ffffff;
     transform: translateX(5px);
 }
 
 .nav-sublink.active {
-    background-color: var(--accent-color);
-    color: var(--white);
-    font-weight: var(--font-weight-semibold);
+    background-color: #0ea5e9;
+    color: #ffffff;
+    font-weight: 600;
 }
 
 .nav-sublink i {
@@ -82,22 +83,22 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: var(--font-size-sm);
+    font-size: 0.875rem;
     opacity: 0.9;
 }
 
 .nav-sublink span {
     flex: 1;
-    font-weight: var(--font-weight-medium);
+    font-weight: 500;
 }
 
 .nav-sublink .nav-badge {
-    background-color: var(--accent-color);
-    color: var(--white);
+    background-color: #0ea5e9;
+    color: #ffffff;
     padding: 2px 6px;
     border-radius: 10px;
     font-size: 10px;
-    font-weight: var(--font-weight-semibold);
+    font-weight: 600;
     min-width: 20px;
     text-align: center;
 }
@@ -128,18 +129,18 @@
 
 @media (max-width: 1024px) {
     .nav-submenu {
-        margin: 0 var(--spacing-sm);
+        margin: 0 0.5rem;
     }
     
     .nav-sublink {
-        padding: var(--spacing-sm) var(--spacing-md);
-        font-size: var(--font-size-xs);
+        padding: 0.5rem 1rem;
+        font-size: 0.75rem;
     }
     
     .nav-sublink i {
         width: 14px;
         height: 14px;
-        font-size: var(--font-size-xs);
+        font-size: 0.75rem;
     }
 }
 
@@ -152,11 +153,11 @@
 }
 
 .nav-submenu .nav-sublink:first-child {
-    margin-top: var(--spacing-sm);
+    margin-top: 0.5rem;
 }
 
 .nav-submenu .nav-sublink:last-child {
-    margin-bottom: var(--spacing-sm);
+    margin-bottom: 0.5rem;
 }
 
 /* =====================================================
@@ -165,11 +166,11 @@
 
 .nav-group.has-active .nav-toggle {
     background-color: rgba(255, 255, 255, 0.15);
-    color: var(--white);
+    color: #ffffff;
 }
 
 .nav-group.has-active .nav-toggle .nav-icon {
-    color: var(--accent-color);
+    color: #0ea5e9;
 }
 
 /* =====================================================
@@ -177,12 +178,12 @@
    ===================================================== */
 
 .nav-toggle:focus {
-    outline: 2px solid var(--accent-color);
+    outline: 2px solid #0ea5e9;
     outline-offset: 2px;
 }
 
 .nav-sublink:focus {
-    outline: 2px solid var(--accent-color);
+    outline: 2px solid #0ea5e9;
     outline-offset: 2px;
 }
 
@@ -198,7 +199,7 @@
     transform: translateY(-50%);
     width: 3px;
     height: 60%;
-    background-color: var(--white);
+    background-color: #ffffff;
     border-radius: 0 2px 2px 0;
 }
 
@@ -214,4 +215,80 @@
 .nav-toggle:hover .nav-arrow i {
     transform: scale(1.1);
     transition: transform 0.2s ease;
+}
+
+/* =====================================================
+   ESTILOS DE FALLBACK PARA PRODUÇÃO
+   ===================================================== */
+
+/* Garantir que os estilos funcionem mesmo sem variáveis CSS */
+.nav-submenu {
+    background-color: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+}
+
+.nav-sublink {
+    color: rgba(255, 255, 255, 0.8);
+    border-radius: 8px;
+}
+
+.nav-sublink:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #ffffff;
+}
+
+.nav-sublink.active {
+    background-color: #0ea5e9;
+    color: #ffffff;
+}
+
+.nav-sublink .nav-badge {
+    background-color: #0ea5e9;
+    color: #ffffff;
+}
+
+/* =====================================================
+   CORREÇÕES ESPECÍFICAS PARA PRODUÇÃO
+   ===================================================== */
+
+/* Forçar exibição dos submenus quando abertos */
+.nav-submenu.open {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    max-height: 500px !important;
+}
+
+/* Garantir que as setas funcionem */
+.nav-arrow i.fa-chevron-up {
+    transform: rotate(180deg);
+}
+
+.nav-arrow i.fa-chevron-down {
+    transform: rotate(0deg);
+}
+
+/* =====================================================
+   ESTILOS DE EMERGÊNCIA
+   ===================================================== */
+
+/* Se nada funcionar, mostrar submenus sempre */
+.nav-submenu {
+    /* display: none; - REMOVIDO PARA EVITAR CONFLITOS */
+    max-height: 0;
+    opacity: 0;
+    overflow: hidden;
+}
+
+.nav-submenu.open {
+    display: block !important;
+    max-height: 500px !important;
+    opacity: 1 !important;
+}
+
+/* Estilo alternativo para produção */
+.nav-submenu.production-fallback {
+    display: block;
+    max-height: none;
+    opacity: 1;
 }

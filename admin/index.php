@@ -70,6 +70,138 @@ define('ADMIN_ROUTING', true);
     <!-- CSS dos Botões de Ação -->
     <link href="assets/css/action-buttons.css" rel="stylesheet">
     
+    <!-- CSS Inline para Garantir Funcionamento em Produção -->
+    <style>
+        /* Estilos críticos para o menu dropdown */
+        .nav-group { position: relative; }
+        .nav-toggle { cursor: pointer; user-select: none; position: relative; }
+        .nav-toggle:hover { background-color: rgba(255, 255, 255, 0.15) !important; }
+        
+        .nav-arrow { margin-left: auto; transition: transform 0.3s ease; }
+        .nav-arrow i { font-size: 12px; opacity: 0.8; }
+        
+        .nav-submenu {
+            max-height: 0;
+            overflow: hidden;
+            transition: all 0.3s ease;
+            opacity: 0;
+            background-color: rgba(0, 0, 0, 0.1);
+            margin: 0 1rem;
+            border-radius: 8px;
+            display: none;
+            transform: translateY(-10px);
+        }
+        
+        .nav-submenu.open {
+            max-height: 500px;
+            opacity: 1;
+            display: block !important;
+            transform: translateY(0);
+        }
+        
+        .nav-sublink {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0.5rem 1.5rem;
+            color: rgba(255, 255, 255, 0.8);
+            text-decoration: none;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            font-size: 0.875rem;
+            margin: 2px 0.5rem;
+            position: relative;
+        }
+        
+        .nav-sublink:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: #ffffff;
+            transform: translateX(5px);
+        }
+        
+        .nav-sublink.active {
+            background-color: #0ea5e9;
+            color: #ffffff;
+            font-weight: 600;
+        }
+        
+        .nav-sublink i {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+        
+        .nav-sublink span {
+            flex: 1;
+            font-weight: 500;
+        }
+        
+        .nav-sublink .nav-badge {
+            background-color: #0ea5e9;
+            color: #ffffff;
+            padding: 2px 6px;
+            border-radius: 10px;
+            font-size: 10px;
+            font-weight: 600;
+            min-width: 20px;
+            text-align: center;
+        }
+        
+        /* Animações */
+        @keyframes slideDown {
+            from { transform: scaleY(0); opacity: 0; }
+            to { transform: scaleY(1); opacity: 1; }
+        }
+        
+        .nav-submenu { animation: slideDown 0.3s ease-out; }
+        
+        /* Responsividade */
+        @media (max-width: 1024px) {
+            .nav-submenu { margin: 0 0.5rem; }
+            .nav-sublink { padding: 0.5rem 1rem; font-size: 0.75rem; }
+            .nav-sublink i { width: 14px; height: 14px; font-size: 0.75rem; }
+        }
+        
+        /* Estados especiais */
+        .nav-group:hover .nav-toggle { background-color: rgba(255, 255, 255, 0.1); }
+        .nav-submenu .nav-sublink:first-child { margin-top: 0.5rem; }
+        .nav-submenu .nav-sublink:last-child { margin-bottom: 0.5rem; }
+        
+        /* Indicadores visuais */
+        .nav-group.has-active .nav-toggle { background-color: rgba(255, 255, 255, 0.15); color: #ffffff; }
+        .nav-group.has-active .nav-toggle .nav-icon { color: #0ea5e9; }
+        
+        /* Acessibilidade */
+        .nav-toggle:focus { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+        .nav-sublink:focus { outline: 2px solid #0ea5e9; outline-offset: 2px; }
+        
+        /* Páginas ativas */
+        .nav-sublink.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 60%;
+            background-color: #ffffff;
+            border-radius: 0 2px 2px 0;
+        }
+        
+        /* Hover effects */
+        .nav-sublink:hover i { transform: scale(1.1); transition: transform 0.2s ease; }
+        .nav-toggle:hover .nav-arrow i { transform: scale(1.1); transition: transform 0.2s ease; }
+        
+        /* Correções para produção */
+        .nav-submenu.open { display: block !important; visibility: visible !important; opacity: 1 !important; }
+        .nav-arrow i.fa-chevron-up { transform: rotate(180deg); }
+        .nav-arrow i.fa-chevron-down { transform: rotate(0deg); }
+    </style>
+    
     <!-- Font Awesome para ícones - via Google Fonts -->
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" crossorigin="anonymous">
     <style>
@@ -504,59 +636,169 @@ define('ADMIN_ROUTING', true);
             }).format(amount);
         }
         
-        // Sistema de menus dropdown
+        // Sistema de menus dropdown otimizado para produção
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Iniciando sistema de menus dropdown...');
+            
             // Controle dos menus dropdown
             const navToggles = document.querySelectorAll('.nav-toggle');
+            console.log(`📋 Encontrados ${navToggles.length} toggles de menu`);
             
-            navToggles.forEach(toggle => {
-                toggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    
-                    const group = this.getAttribute('data-group');
-                    const submenu = document.getElementById(group);
-                    const arrow = this.querySelector('.nav-arrow i');
-                    
-                    // Fechar outros submenus
-                    document.querySelectorAll('.nav-submenu').forEach(menu => {
-                        if (menu.id !== group) {
-                            menu.classList.remove('open');
-                            const otherArrow = menu.previousElementSibling.querySelector('.nav-arrow i');
+            if (navToggles.length === 0) {
+                console.warn('⚠️ Nenhum toggle de menu encontrado. Verificando estrutura...');
+                // Fallback: tentar encontrar elementos por classe
+                const fallbackToggles = document.querySelectorAll('[data-group]');
+                if (fallbackToggles.length > 0) {
+                    console.log(`🔄 Usando fallback: ${fallbackToggles.length} elementos encontrados`);
+                    fallbackToggles.forEach(toggle => {
+                        toggle.classList.add('nav-toggle');
+                        toggle.style.cursor = 'pointer';
+                    });
+                }
+            }
+            
+            // Função para alternar submenu
+            function toggleSubmenu(toggleElement) {
+                const group = toggleElement.getAttribute('data-group');
+                const submenu = document.getElementById(group);
+                const arrow = toggleElement.querySelector('.nav-arrow i, .fa-chevron-down, .fa-chevron-up');
+                
+                if (!submenu) {
+                    console.error(`❌ Submenu não encontrado para o grupo: ${group}`);
+                    return;
+                }
+                
+                console.log(`🔄 Alternando submenu: ${group}`);
+                
+                // Fechar outros submenus (comportamento accordion)
+                document.querySelectorAll('.nav-submenu').forEach(menu => {
+                    if (menu.id !== group) {
+                        menu.classList.remove('open');
+                        const otherToggle = menu.previousElementSibling;
+                        if (otherToggle) {
+                            const otherArrow = otherToggle.querySelector('.nav-arrow i, .fa-chevron-down, .fa-chevron-up');
                             if (otherArrow) {
                                 otherArrow.classList.remove('fa-chevron-up');
                                 otherArrow.classList.add('fa-chevron-down');
+                                otherArrow.style.transform = 'rotate(0deg)';
                             }
                         }
-                    });
-                    
-                    // Toggle do submenu atual
-                    submenu.classList.toggle('open');
-                    
-                    // Rotacionar seta
+                    }
+                });
+                
+                // Toggle do submenu atual
+                const isOpen = submenu.classList.contains('open');
+                submenu.classList.toggle('open');
+                
+                // Aplicar estilos baseado no estado
+                if (submenu.classList.contains('open')) {
+                    submenu.style.display = 'block';
+                    submenu.style.visibility = 'visible';
+                    submenu.style.opacity = '1';
+                    submenu.style.maxHeight = '500px';
+                    submenu.style.overflow = 'visible';
+                } else {
+                    submenu.style.display = 'none';
+                    submenu.style.visibility = 'hidden';
+                    submenu.style.opacity = '0';
+                    submenu.style.maxHeight = '0';
+                    submenu.style.overflow = 'hidden';
+                }
+                
+                // Rotacionar seta com animação suave
+                if (arrow) {
                     if (submenu.classList.contains('open')) {
                         arrow.classList.remove('fa-chevron-down');
                         arrow.classList.add('fa-chevron-up');
+                        arrow.style.transform = 'rotate(180deg)';
+                        arrow.style.transition = 'transform 0.3s ease';
                     } else {
                         arrow.classList.remove('fa-chevron-up');
                         arrow.classList.add('fa-chevron-down');
+                        arrow.style.transform = 'rotate(0deg)';
+                        arrow.style.transition = 'transform 0.3s ease';
                     }
+                }
+                
+                console.log(`✅ Submenu ${group} ${isOpen ? 'fechado' : 'aberto'}`);
+            }
+            
+            // Adicionar event listeners
+            navToggles.forEach((toggle, index) => {
+                console.log(`🔗 Adicionando listener para toggle ${index + 1}: ${toggle.getAttribute('data-group')}`);
+                
+                toggle.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log(`🖱️ Clique no toggle: ${this.getAttribute('data-group')}`);
+                    toggleSubmenu(this);
+                });
+                
+                // Adicionar listener de teclado para acessibilidade
+                toggle.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        console.log(`⌨️ Tecla pressionada no toggle: ${this.getAttribute('data-group')}`);
+                        toggleSubmenu(this);
+                    }
+                });
+                
+                // Adicionar hover effect para melhor UX
+                toggle.addEventListener('mouseenter', function() {
+                    this.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                });
+                
+                toggle.addEventListener('mouseleave', function() {
+                    this.style.backgroundColor = '';
                 });
             });
             
-            // Abrir submenu da página ativa
-            const activeSubmenu = document.querySelector('.nav-sublink.active');
-            if (activeSubmenu) {
-                const submenu = activeSubmenu.closest('.nav-submenu');
-                if (submenu) {
-                    submenu.classList.add('open');
-                    const toggle = submenu.previousElementSibling;
-                    const arrow = toggle.querySelector('.nav-arrow i');
-                    if (arrow) {
-                        arrow.classList.remove('fa-chevron-down');
-                        arrow.classList.add('fa-chevron-up');
+            // Abrir submenu da página ativa automaticamente (se houver)
+            setTimeout(() => {
+                const activeSubmenu = document.querySelector('.nav-sublink.active');
+                if (activeSubmenu) {
+                    const submenu = activeSubmenu.closest('.nav-submenu');
+                    if (submenu) {
+                        console.log(`🎯 Abrindo submenu da página ativa: ${submenu.id}`);
+                        submenu.classList.add('open');
+                        submenu.style.display = 'block';
+                        submenu.style.visibility = 'visible';
+                        submenu.style.opacity = '1';
+                        submenu.style.maxHeight = '500px';
+                        submenu.style.overflow = 'visible';
+                        
+                        const toggle = submenu.previousElementSibling;
+                        if (toggle) {
+                            const arrow = toggle.querySelector('.nav-arrow i, .fa-chevron-down, .fa-chevron-up');
+                            if (arrow) {
+                                arrow.classList.remove('fa-chevron-down');
+                                arrow.classList.add('fa-chevron-up');
+                                arrow.style.transform = 'rotate(180deg)';
+                            }
+                        }
                     }
                 }
-            }
+            }, 100);
+            
+            // Garantir que todos os submenus comecem fechados por padrão
+            document.querySelectorAll('.nav-submenu').forEach(submenu => {
+                submenu.classList.remove('open');
+                submenu.style.display = 'none';
+                submenu.style.visibility = 'hidden';
+                submenu.style.opacity = '0';
+                submenu.style.maxHeight = '0';
+                submenu.style.overflow = 'hidden';
+            });
+            
+            // Garantir que todas as setas comecem apontando para baixo
+            document.querySelectorAll('.nav-arrow i').forEach(arrow => {
+                arrow.classList.remove('fa-chevron-up');
+                arrow.classList.add('fa-chevron-down');
+                arrow.style.transform = 'rotate(0deg)';
+            });
+            
+            console.log('✅ Sistema de menus dropdown inicializado com sucesso!');
+            console.log('📋 Menu configurado para funcionar como accordion - apenas um grupo aberto por vez');
         });
     </script>
     
