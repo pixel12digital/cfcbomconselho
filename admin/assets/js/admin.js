@@ -442,7 +442,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Disponibilizar sistemas globalmente
     window.notifications = NotificationSystem;
-    window.confirm = ConfirmationSystem.confirm;
+    // window.confirm = ConfirmationSystem.confirm;
     window.loading = LoadingSystem;
     window.utils = Utils;
     window.validation = ValidationSystem;

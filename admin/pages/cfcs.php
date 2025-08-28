@@ -28,6 +28,9 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
         <button type="button" class="btn btn-warning ms-2" onclick="limparCacheAPI()" title="Limpar cache da API">
             <i class="fas fa-broom me-1"></i>Limpar Cache
         </button>
+        <button type="button" class="btn btn-success ms-2" onclick="testarAPICFC()" title="Testar API de CFCs">
+            <i class="fas fa-vial me-1"></i>Testar API CFC
+        </button>
     </div>
 </div>
 

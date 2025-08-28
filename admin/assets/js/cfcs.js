@@ -156,22 +156,40 @@ window.salvarCFC = async function() {
             return;
         }
         
-        // Preparar dados
+        // Preparar dados baseado na estrutura real do banco
+        // Campos reais: id, nome, cnpj, endereco, telefone, email, responsavel, status, created_at, updated_at, responsavel_id, ativo
         const cfcData = {
             nome: formData.get('nome').trim(),
             cnpj: formData.get('cnpj').trim(),
-            razao_social: formData.get('razao_social').trim() || formData.get('nome').trim(),
-            email: formData.get('email').trim(),
-            telefone: formData.get('telefone').trim(),
-            cep: formData.get('cep').trim(),
             endereco: formData.get('endereco').trim(),
-            bairro: formData.get('bairro').trim(),
-            cidade: formData.get('cidade').trim(),
-            uf: formData.get('uf'),
+            telefone: formData.get('telefone').trim(),
+            email: formData.get('email').trim(),
             responsavel_id: formData.get('responsavel_id') || null,
-            ativo: formData.get('ativo') === '1',
-            observacoes: formData.get('observacoes').trim()
+            ativo: formData.get('ativo') === '1'
         };
+        
+        // Adicionar campos opcionais se existirem no banco
+        if (formData.get('cep')) {
+            cfcData.cep = formData.get('cep').trim();
+        }
+        
+        if (formData.get('bairro')) {
+            cfcData.bairro = formData.get('bairro').trim();
+        }
+        
+        if (formData.get('cidade')) {
+            cfcData.cidade = formData.get('cidade').trim();
+        }
+        
+        if (formData.get('uf')) {
+            cfcData.uf = formData.get('uf');
+        }
+        
+        if (formData.get('observacoes')) {
+            cfcData.observacoes = formData.get('observacoes').trim();
+        }
+        
+        console.log('📤 Dados preparados para envio:', cfcData);
         
         const acao = formData.get('acao');
         const cfc_id = formData.get('cfc_id');
@@ -224,6 +242,35 @@ window.salvarCFC = async function() {
     }
 };
 
+// Função para testar a API
+window.testarAPICFC = async function() {
+    console.log('🧪 Testando API de CFCs...');
+    
+    try {
+        // Testar busca de um CFC específico
+        const response = await fetchAPI('?id=34');
+        const data = await response.json();
+        
+        console.log('📊 Resposta da API:', data);
+        console.log('📋 Estrutura dos dados:', JSON.stringify(data, null, 2));
+        
+        if (data.success && data.data) {
+            const cfc = data.data;
+            console.log('✅ CFC encontrado:', cfc);
+            console.log('📝 Campos disponíveis:', Object.keys(cfc));
+            
+            // Mostrar valores de cada campo
+            Object.keys(cfc).forEach(key => {
+                console.log(`  ${key}: ${cfc[key]} (tipo: ${typeof cfc[key]})`);
+            });
+        } else {
+            console.error('❌ API não retornou dados válidos');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao testar API:', error);
+    }
+};
+
 // Função para editar CFC
 window.editarCFC = async function(id) {
     console.log('✏️ Editando CFC ID:', id);
@@ -232,8 +279,11 @@ window.editarCFC = async function(id) {
         const response = await fetchAPI(`?id=${id}`);
         const data = await response.json();
         
+        console.log('📊 Resposta da API:', data);
+        
         if (data.success) {
             const cfc = data.data;
+            console.log('📋 Dados do CFC recebidos:', cfc);
             
             // Preencher formulário
             const form = document.getElementById('formCFC');
@@ -241,45 +291,105 @@ window.editarCFC = async function(id) {
                 // Limpar formulário primeiro
                 form.reset();
                 
-                // Preencher campos
-                const nomeField = document.getElementById('nome');
-                const cnpjField = document.getElementById('cnpj');
-                const razaoSocialField = document.getElementById('razao_social');
-                const emailField = document.getElementById('email');
-                const telefoneField = document.getElementById('telefone');
-                const cepField = document.getElementById('cep');
-                const enderecoField = document.getElementById('endereco');
-                const bairroField = document.getElementById('bairro');
-                const cidadeField = document.getElementById('cidade');
-                const ufField = document.getElementById('uf');
-                const responsavelField = document.getElementById('responsavel_id');
-                const ativoField = document.getElementById('ativo');
-                const observacoesField = document.getElementById('observacoes');
+                // Mapear campos do banco para os campos do formulário
+                // Baseado na estrutura real do banco (cfcs table)
+                // Campos reais: id, nome, cnpj, endereco, telefone, email, responsavel, status, created_at, updated_at, responsavel_id, ativo
                 
-                if (nomeField) nomeField.value = cfc.nome || '';
-                if (cnpjField) cnpjField.value = cfc.cnpj || '';
-                if (razaoSocialField) razaoSocialField.value = cfc.razao_social || '';
-                if (emailField) emailField.value = cfc.email || '';
-                if (telefoneField) telefoneField.value = cfc.telefone || '';
-                if (cepField) cepField.value = cfc.cep || '';
-                if (enderecoField) enderecoField.value = cfc.endereco || '';
-                if (bairroField) bairroField.value = cfc.bairro || '';
-                if (cidadeField) cidadeField.value = cfc.cidade || '';
-                if (ufField) ufField.value = cfc.uf || '';
-                if (responsavelField) responsavelField.value = cfc.responsavel_id || '';
-                if (ativoField) ativoField.value = cfc.ativo ? '1' : '0';
-                if (observacoesField) observacoesField.value = cfc.observacoes || '';
+                if (nomeField) {
+                    nomeField.value = cfc.nome || '';
+                    console.log('✅ Campo nome preenchido:', cfc.nome);
+                }
+                
+                if (cnpjField) {
+                    cnpjField.value = cfc.cnpj || '';
+                    console.log('✅ Campo CNPJ preenchido:', cfc.cnpj);
+                }
+                
+                if (razaoSocialField) {
+                    // Campo razao_social não existe no banco, usar nome como fallback
+                    razaoSocialField.value = cfc.nome || '';
+                    console.log('✅ Campo razão social preenchido (fallback para nome):', cfc.nome);
+                }
+                
+                if (emailField) {
+                    emailField.value = cfc.email || '';
+                    console.log('✅ Campo email preenchido:', cfc.email);
+                }
+                
+                if (telefoneField) {
+                    telefoneField.value = cfc.telefone || '';
+                    console.log('✅ Campo telefone preenchido:', cfc.telefone);
+                }
+                
+                if (cepField) {
+                    // Campo CEP não existe no banco
+                    cepField.value = '';
+                    console.log('⚠️ Campo CEP não existe no banco, deixando vazio');
+                }
+                
+                if (enderecoField) {
+                    enderecoField.value = cfc.endereco || '';
+                    console.log('✅ Campo endereço preenchido:', cfc.endereco);
+                }
+                
+                if (bairroField) {
+                    // Campo bairro não existe no banco
+                    bairroField.value = '';
+                    console.log('⚠️ Campo bairro não existe no banco, deixando vazio');
+                }
+                
+                if (cidadeField) {
+                    // Campo cidade não existe no banco
+                    cidadeField.value = '';
+                    console.log('⚠️ Campo cidade não existe no banco, deixando vazio');
+                }
+                
+                if (ufField) {
+                    // Campo UF não existe no banco
+                    ufField.value = '';
+                    console.log('⚠️ Campo UF não existe no banco, deixando vazio');
+                }
+                
+                if (responsavelField) {
+                    responsavelField.value = cfc.responsavel_id || '';
+                    console.log('✅ Campo responsável preenchido:', cfc.responsavel_id);
+                }
+                
+                if (ativoField) {
+                    // Converter para string '1' ou '0' para o select
+                    const ativoValue = cfc.ativo ? '1' : '0';
+                    ativoField.value = ativoValue;
+                    console.log('✅ Campo ativo preenchido:', ativoValue, '(', cfc.ativo, ')');
+                }
+                
+                if (observacoesField) {
+                    // Campo observações não existe no banco
+                    observacoesField.value = '';
+                    console.log('⚠️ Campo observações não existe no banco, deixando vazio');
+                }
                 
                 // Configurar modal para edição
                 const modalTitle = document.getElementById('modalTitle');
                 const acaoField = document.getElementById('acaoCFC');
                 const cfcIdField = document.getElementById('cfc_id');
                 
-                if (modalTitle) modalTitle.textContent = 'Editar CFC';
-                if (acaoField) acaoField.value = 'editar';
-                if (cfcIdField) cfcIdField.value = id;
+                if (modalTitle) {
+                    modalTitle.textContent = 'Editar CFC';
+                    console.log('✅ Título do modal alterado para: Editar CFC');
+                }
+                
+                if (acaoField) {
+                    acaoField.value = 'editar';
+                    console.log('✅ Campo ação definido como: editar');
+                }
+                
+                if (cfcIdField) {
+                    cfcIdField.value = id;
+                    console.log('✅ Campo ID do CFC definido como:', id);
+                }
                 
                 // Abrir modal
+                console.log('🚀 Abrindo modal de edição...');
                 abrirModalCFC();
                 
                 console.log('✅ Formulário preenchido com dados do CFC:', cfc);
@@ -287,6 +397,7 @@ window.editarCFC = async function(id) {
                 throw new Error('Formulário não encontrado');
             }
         } else {
+            console.error('❌ API retornou erro:', data.error);
             alert('Erro ao carregar dados do CFC: ' + (data.error || 'Erro desconhecido'));
         }
     } catch (error) {
