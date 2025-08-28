@@ -797,10 +797,10 @@ function editarCFCInterno(id) {
         return;
     }
     
-            console.log(`📡 Fazendo requisição para api/cfcs.php?id=${id}`);
+            console.log(`📡 Fazendo requisição para /admin/api/cfcs.php?id=${id}`);
         
         // Buscar dados do CFC
-        fetch(`api/cfcs.php?id=${id}`, {
+        fetch(`/admin/api/cfcs.php?id=${id}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         },
@@ -873,7 +873,7 @@ function preencherFormularioCFC(cfc) {
 }
 
 function visualizarCFCInterno(id) {
-    fetch(`api/cfcs.php?id=${id}`, {
+    fetch(`/admin/api/cfcs.php?id=${id}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         },
@@ -985,7 +985,7 @@ window.desativarCFC = desativarCFC;
 function alterarStatusCFC(id, status) {
     if (confirm('Deseja realmente alterar o status deste CFC?')) {
         // Fazer requisição para a API
-        fetch(`api/cfcs.php`, {
+        fetch(`/admin/api/cfcs.php`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -1092,7 +1092,7 @@ function salvarCFC() {
             console.log('🔄 Fazendo requisição para a API...');
             
             // Fazer requisição para a API
-            const url = 'api/cfcs.php';
+            const url = '/admin/api/cfcs.php';
             const method = acao === 'editar' ? 'PUT' : 'POST';
             
             fetch(url, {
@@ -1229,7 +1229,7 @@ function salvarCFCDireto() {
             console.log('🔄 Fazendo requisição para a API...');
             
             // Fazer requisição para a API
-            const url = 'api/cfcs.php';
+            const url = '/admin/api/cfcs.php';
             const method = acao === 'editar' ? 'PUT' : 'POST';
             
             fetch(url, {
@@ -1330,7 +1330,7 @@ if (typeof window.excluirCFC !== 'function') {
 // Função para verificar se há registros vinculados
 async function verificarRegistrosVinculados(id) {
     try {
-        const response = await fetch(`api/cfcs.php?id=${id}`, {
+        const response = await fetch(`/admin/api/cfcs.php?id=${id}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -1387,8 +1387,8 @@ function executarExclusao(id, cascade = false) {
     btnExcluir.disabled = true;
     
     const url = cascade ? 
-        `api/cfcs.php?id=${id}&cascade=true` : 
-        `api/cfcs.php?id=${id}`;
+        `/admin/api/cfcs.php?id=${id}&cascade=true` : 
+        `/admin/api/cfcs.php?id=${id}`;
     
     console.log('Fazendo requisição DELETE para:', url);
     
@@ -1449,7 +1449,7 @@ function executarExclusao(id, cascade = false) {
             } else if (error.message.includes('400')) {
                 console.log('Erro 400 - tentando obter detalhes...');
                 // Tentar extrair detalhes do erro se disponível
-                fetch(`api/cfcs.php?id=${id}`, {
+                fetch(`/admin/api/cfcs.php?id=${id}`, {
                     method: 'DELETE',
                     credentials: 'same-origin',
                     headers: {
@@ -1486,7 +1486,7 @@ function executarExclusao(id, cascade = false) {
 
 function exportarCFCs() {
     // Buscar dados reais da API
-    fetch('api/cfcs.php', {
+    fetch('/admin/api/cfcs.php', {
         credentials: 'same-origin'
     })
         .then(response => response.json())
