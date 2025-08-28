@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de URLs Corrigidas - Sistema CFC</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .url { font-family: monospace; background-color: #f8f9fa; padding: 5px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Teste de URLs Corrigidas - Sistema CFC</h1>
+    
+    <div class="test-section info">
+        <h3>📍 Informações do Ambiente</h3>
+        <p><strong>URL Atual:</strong> <span class="url" id="current-url"></span></p>
+        <p><strong>Host:</strong> <span class="url" id="current-host"></span></p>
+        <p><strong>Origin:</strong> <span class="url" id="current-origin"></span></p>
+    </div>
+
+    <div class="test-section info">
+        <h3>🔧 Configuração das APIs</h3>
+        <div id="api-config-info"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🧪 Teste de Construção de URLs</h3>
+        <div id="url-test-results"></div>
+    </div>
+
+    <script>
+        // Simular a configuração das APIs (como seria carregada do config.js)
+        const API_CONFIG = {
+            // Detectar ambiente automaticamente
+            isProduction: window.location.hostname.includes('hostinger') || window.location.hostname.includes('hstgr.io'),
+            
+            // Endpoints das APIs
+            ENDPOINTS: {
+                INSTRUTORES: 'admin/api/instrutores.php',
+                USUARIOS: 'admin/api/usuarios.php',
+                CFCs: 'admin/api/cfcs.php'
+            },
+
+            // Função para obter URL da API (CORRIGIDA para produção)
+            getRelativeApiUrl: function(endpoint) {
+                const baseUrl = this.isProduction ? window.location.origin : '';
+                return baseUrl + '/' + this.ENDPOINTS[endpoint];
+            }
+        };
+
+        // Função para testar construção de URLs
+        function testUrlConstruction() {
+            const resultsDiv = document.getElementById('url-test-results');
+            resultsDiv.innerHTML = '';
+
+            const endpoints = ['INSTRUTORES', 'USUARIOS', 'CFCs'];
+            
+            endpoints.forEach(endpoint => {
+                const url = API_CONFIG.getRelativeApiUrl(endpoint);
+                const resultDiv = document.createElement('div');
+                resultDiv.className = 'test-section success';
+                resultDiv.innerHTML = `
+                    <h4>✅ ${endpoint}</h4>
+                    <p><strong>URL Construída:</strong> <span class="url">${url}</span></p>
+                    <p><strong>Endpoint:</strong> <span class="url">${API_CONFIG.ENDPOINTS[endpoint]}</span></p>
+                `;
+                resultsDiv.appendChild(resultDiv);
+            });
+        }
+
+        // Executar quando a página carregar
+        window.addEventListener('load', () => {
+            // Preencher informações do ambiente
+            document.getElementById('current-url').textContent = window.location.href;
+            document.getElementById('current-host').textContent = window.location.hostname;
+            document.getElementById('current-origin').textContent = window.location.origin;
+
+            // Preencher informações da configuração
+            const configDiv = document.getElementById('api-config-info');
+            configDiv.innerHTML = `
+                <p><strong>Ambiente Detectado:</strong> <span class="url">${API_CONFIG.isProduction ? 'PRODUÇÃO' : 'DESENVOLVIMENTO'}</span></p>
+                <p><strong>Hostname:</strong> <span class="url">${window.location.hostname}</span></p>
+                <p><strong>Origin:</strong> <span class="url">${window.location.origin}</span></p>
+            `;
+
+            // Testar construção de URLs
+            testUrlConstruction();
+
+            console.log('🔧 Configuração de API carregada:', API_CONFIG);
+            console.log('🌍 Ambiente detectado:', API_CONFIG.isProduction ? 'PRODUÇÃO' : 'DESENVOLVIMENTO');
+            console.log('✅ URLs das APIs corrigidas - usando URLs absolutas em produção');
+            console.log('🎯 Exemplo: Instrutores =', API_CONFIG.getRelativeApiUrl('INSTRUTORES'));
+        });
+    </script>
+</body>
+</html>

@@ -1,6 +1,9 @@
-// Configuração centralizada para URLs das APIs - VERSÃO FINAL CORRIGIDA
+// Configuração centralizada para URLs das APIs - VERSÃO FINAL CORRIGIDA PARA PRODUÇÃO
 const API_CONFIG = {
-    // Endpoints das APIs - SEMPRE URLs relativas
+    // Detectar ambiente automaticamente
+    isProduction: window.location.hostname.includes('hostinger') || window.location.hostname.includes('hstgr.io'),
+    
+    // Endpoints das APIs - URLs absolutas para produção, relativas para desenvolvimento
     ENDPOINTS: {
         INSTRUTORES: 'admin/api/instrutores.php',
         USUARIOS: 'admin/api/usuarios.php',
@@ -11,19 +14,20 @@ const API_CONFIG = {
         HISTORICO: 'admin/api/historico.php'
     },
 
-    // Função para obter URL relativa da API (RECOMENDADA)
+    // Função para obter URL da API (CORRIGIDA para produção)
     getRelativeApiUrl: function(endpoint) {
-        return this.ENDPOINTS[endpoint];
+        const baseUrl = this.isProduction ? window.location.origin : '';
+        return baseUrl + '/' + this.ENDPOINTS[endpoint];
     },
 
     // Função para obter URL completa da API (para casos específicos)
     getApiUrl: function(endpoint) {
-        // SEMPRE usar URL relativa para evitar problemas de contexto
         return this.getRelativeApiUrl(endpoint);
     }
 };
 
 // Log da configuração para debug
 console.log('🔧 Configuração de API carregada:', API_CONFIG);
-console.log('✅ URLs das APIs corrigidas - usando sempre URLs relativas');
+console.log('🌍 Ambiente detectado:', API_CONFIG.isProduction ? 'PRODUÇÃO' : 'DESENVOLVIMENTO');
+console.log('✅ URLs das APIs corrigidas - usando URLs absolutas em produção');
 console.log('🎯 Exemplo: Instrutores =', API_CONFIG.getRelativeApiUrl('INSTRUTORES'));
