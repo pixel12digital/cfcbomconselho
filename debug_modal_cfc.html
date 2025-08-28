@@ -1,0 +1,463 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug Modal CFC - Identificar Problemas</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        /* DEBUG VISUAL: Bordas coloridas para identificar problemas */
+        #modalCFC {
+            border: 5px solid red !important;
+            outline: 5px solid blue !important;
+        }
+        
+        #modalCFC .modal-dialog {
+            border: 5px solid green !important;
+            outline: 5px solid orange !important;
+        }
+        
+        #modalCFC .modal-content {
+            border: 5px solid purple !important;
+            outline: 5px solid yellow !important;
+        }
+        
+        .modal-custom-cfc {
+            border: 5px solid lime !important;
+            outline: 5px solid cyan !important;
+        }
+        
+        /* SOLUÇÃO NUCLEAR: Sobrescrever TUDO */
+        *[class*="modal-custom-cfc"],
+        *[class*="modal-dialog"],
+        .modal-dialog,
+        #modalCFC * {
+            max-width: 1000px !important;
+            width: 1000px !important;
+        }
+        
+        /* Forçar largura máxima em todos os contextos */
+        .modal-custom-cfc,
+        #modalCFC .modal-dialog,
+        .modal-dialog.modal-custom-cfc {
+            max-width: 1000px !important;
+            width: 1000px !important;
+            margin: 2rem auto !important;
+        }
+        
+        /* Sobrescrever Bootstrap completamente */
+        .modal-dialog {
+            max-width: 1000px !important;
+            width: 1000px !important;
+            margin: 2rem auto !important;
+        }
+        
+        /* Garantir que o modal não seja cortado em nenhuma resolução */
+        @media (max-width: 1400px) {
+            .modal-custom-cfc,
+            #modalCFC .modal-dialog,
+            .modal-dialog.modal-custom-cfc,
+            .modal-dialog {
+                max-width: 95vw !important;
+                width: 95vw !important;
+                margin: 1rem auto !important;
+            }
+        }
+        
+        @media (max-width: 992px) {
+            .modal-custom-cfc,
+            #modalCFC .modal-dialog,
+            .modal-dialog.modal-custom-cfc,
+            .modal-dialog {
+                max-width: 98vw !important;
+                width: 98vw !important;
+                margin: 0.5rem auto !important;
+            }
+        }
+        
+        /* SOLUÇÃO ULTRA ESPECÍFICA: Sobrescrever Bootstrap em todos os contextos */
+        .modal .modal-dialog.modal-custom-cfc,
+        .modal.show .modal-dialog.modal-custom-cfc,
+        .modal.fade .modal-dialog.modal-custom-cfc {
+            max-width: 1000px !important;
+            width: 1000px !important;
+            margin: 2rem auto !important;
+        }
+        
+        /* Forçar largura em todos os estados do modal */
+        #modalCFC.modal .modal-dialog,
+        #modalCFC.modal.show .modal-dialog,
+        #modalCFC.modal.fade .modal-dialog {
+            max-width: 1000px !important;
+            width: 1000px !important;
+            margin: 2rem auto !important;
+        }
+        
+        /* Sobrescrever qualquer CSS do Bootstrap que possa estar causando conflito */
+        .modal-dialog[class*="modal-custom-cfc"],
+        .modal-dialog.modal-custom-cfc,
+        #modalCFC .modal-dialog[class*="modal-custom-cfc"] {
+            max-width: 1000px !important;
+            width: 1000px !important;
+            margin: 2rem auto !important;
+        }
+        
+        /* Garantir que o modal seja exibido corretamente em todas as resoluções */
+        @media (max-width: 1200px) {
+            .modal-dialog[class*="modal-custom-cfc"],
+            .modal-dialog.modal-custom-cfc,
+            #modalCFC .modal-dialog[class*="modal-custom-cfc"] {
+                max-width: 90vw !important;
+                width: 90vw !important;
+                margin: 1rem auto !important;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .modal-dialog[class*="modal-custom-cfc"],
+            .modal-dialog.modal-custom-cfc,
+            #modalCFC .modal-dialog[class*="modal-custom-cfc"] {
+                max-width: 95vw !important;
+                width: 95vw !important;
+                margin: 0.5rem auto !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .modal-dialog[class*="modal-custom-cfc"],
+            .modal-dialog.modal-custom-cfc,
+            #modalCFC .modal-dialog[class*="modal-custom-cfc"] {
+                max-width: 98vw !important;
+                width: 98vw !important;
+                margin: 0.25rem auto !important;
+            }
+        }
+        
+        /* DEBUG: Mostrar informações de largura */
+        #modalCFC::before {
+            content: "DEBUG: Modal CFC - Largura: 1000px" !important;
+            position: fixed !important;
+            top: 10px !important;
+            left: 10px !important;
+            background: red !important;
+            color: white !important;
+            padding: 10px !important;
+            z-index: 9999 !important;
+            font-size: 12px !important;
+        }
+        
+        /* SOLUÇÃO FINAL: Garantir que o modal seja exibido corretamente */
+        #modalCFC {
+            z-index: 1055 !important;
+        }
+        
+        #modalCFC .modal-dialog {
+            position: relative !important;
+            z-index: 1056 !important;
+        }
+        
+        #modalCFC .modal-content {
+            position: relative !important;
+            z-index: 1057 !important;
+        }
+        
+        /* Teste de largura */
+        .test-width {
+            border: 2px solid red;
+            background: rgba(255, 0, 0, 0.1);
+            padding: 10px;
+            margin: 10px 0;
+        }
+        
+        .debug-info {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1>🔍 Debug do Modal de CFC</h1>
+        <p>Este arquivo foi criado para identificar problemas de largura do modal.</p>
+        
+        <div class="debug-info">
+            <h4>Informações de Debug:</h4>
+            <p><strong>Largura da tela:</strong> <span id="screen-width"></span>px</p>
+            <p><strong>Largura do viewport:</strong> <span id="viewport-width"></span>px</p>
+            <p><strong>Largura do container:</strong> <span id="container-width"></span>px</p>
+        </div>
+        
+        <button class="btn btn-primary" onclick="abrirModalCFCDebug()">
+            🔍 Abrir Modal CFC com Debug
+        </button>
+        
+        <button class="btn btn-warning" onclick="verificarEstilos()">
+            📊 Verificar Estilos Computados
+        </button>
+        
+        <button class="btn btn-info" onclick="verificarConflitos()">
+            ⚠️ Verificar Conflitos CSS
+        </button>
+        
+        <div class="test-width">
+            <strong>Área de Teste:</strong> Esta área deve ter bordas vermelhas para debug visual.
+        </div>
+    </div>
+
+    <!-- Modal Bootstrap para Cadastro/Edição de CFC -->
+    <div class="modal fade" id="modalCFC" tabindex="-1" aria-labelledby="modalCFCLabel" aria-hidden="true">
+        <div class="modal-dialog modal-custom-cfc">
+            <div class="modal-content">
+                <form id="formCFC" onsubmit="return false;">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">
+                            🔍 Debug Modal CFC
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="debug-info">
+                            <h6>Debug do Modal:</h6>
+                            <p><strong>ID:</strong> modalCFC</p>
+                            <p><strong>Classe:</strong> modal-custom-cfc</p>
+                            <p><strong>Largura esperada:</strong> 1000px</p>
+                        </div>
+                        
+                        <div class="container-fluid">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">Campo de Teste 1</label>
+                                    <input type="text" class="form-control" placeholder="Teste 1">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">Campo de Teste 2</label>
+                                    <input type="text" class="form-control" placeholder="Teste 2">
+                                </div>
+                            </div>
+                            
+                            <div class="row mt-3">
+                                <div class="col-12">
+                                    <label class="form-label">Campo de Teste 3</label>
+                                    <textarea class="form-control" rows="3" placeholder="Campo de teste longo para verificar largura"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            Fechar
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="verificarLarguraModal()">
+                            📏 Verificar Largura
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- JavaScript de debug -->
+    <script>
+        // Função para abrir modal de CFC com debug
+        function abrirModalCFCDebug() {
+            console.log('🚀 Abrindo modal de CFC com debug...');
+            
+            const modal = document.getElementById('modalCFC');
+            if (!modal) {
+                console.error('❌ Modal não encontrado!');
+                alert('Erro: Modal não encontrado na página!');
+                return;
+            }
+            
+            // DEBUG: Verificar estrutura do modal
+            console.log('🔍 DEBUG: Estrutura do modal:', modal);
+            console.log('🔍 DEBUG: Classes do modal:', modal.className);
+            
+            const modalDialog = modal.querySelector('.modal-dialog');
+            if (modalDialog) {
+                console.log('🔍 DEBUG: Modal dialog encontrado:', modalDialog);
+                console.log('🔍 DEBUG: Classes do modal dialog:', modalDialog.className);
+                console.log('🔍 DEBUG: Estilos computados do modal dialog:', window.getComputedStyle(modalDialog));
+                console.log('🔍 DEBUG: Largura atual:', modalDialog.offsetWidth);
+                console.log('🔍 DEBUG: Largura máxima atual:', modalDialog.style.maxWidth);
+            }
+            
+            // SOLUÇÃO CRÍTICA: Forçar estilos CSS antes de abrir o modal
+            if (modalDialog) {
+                console.log('🔧 DEBUG: Aplicando estilos forçados...');
+                
+                // Aplicar estilos inline para sobrescrever qualquer CSS
+                modalDialog.style.setProperty('max-width', '1000px', 'important');
+                modalDialog.style.setProperty('width', '1000px', 'important');
+                modalDialog.style.setProperty('margin', '2rem auto', 'important');
+                modalDialog.style.setProperty('position', 'relative', 'important');
+                modalDialog.style.setProperty('z-index', '1056', 'important');
+                
+                // Aplicar estilos responsivos
+                if (window.innerWidth <= 1200) {
+                    modalDialog.style.setProperty('max-width', '90vw', 'important');
+                    modalDialog.style.setProperty('width', '90vw', 'important');
+                    modalDialog.style.setProperty('margin', '1rem auto', 'important');
+                    console.log('🔧 DEBUG: Aplicando estilo responsivo para tela <= 1200px');
+                }
+                if (window.innerWidth <= 768) {
+                    modalDialog.style.setProperty('max-width', '95vw', 'important');
+                    modalDialog.style.setProperty('width', '95vw', 'important');
+                    modalDialog.style.setProperty('margin', '0.5rem auto', 'important');
+                    console.log('🔧 DEBUG: Aplicando estilo responsivo para tela <= 768px');
+                }
+                if (window.innerWidth <= 576) {
+                    modalDialog.style.setProperty('max-width', '98vw', 'important');
+                    modalDialog.style.setProperty('width', '98vw', 'important');
+                    modalDialog.style.setProperty('margin', '0.25rem auto', 'important');
+                    console.log('🔧 DEBUG: Aplicando estilo responsivo para tela <= 576px');
+                }
+                
+                // Verificar se os estilos foram aplicados
+                console.log('🔍 DEBUG: Estilos após aplicação:', {
+                    maxWidth: modalDialog.style.maxWidth,
+                    width: modalDialog.style.width,
+                    margin: modalDialog.style.margin
+                });
+                
+                // Verificar estilos computados
+                const computedStyle = window.getComputedStyle(modalDialog);
+                console.log('🔍 DEBUG: Estilos computados após aplicação:', {
+                    maxWidth: computedStyle.maxWidth,
+                    width: computedStyle.width,
+                    margin: computedStyle.margin
+                });
+            }
+            
+            // DEBUG: Verificar se há conflitos de CSS
+            console.log('🔍 DEBUG: Verificando conflitos de CSS...');
+            const allModals = document.querySelectorAll('.modal-dialog');
+            console.log('🔍 DEBUG: Total de modais encontrados:', allModals.length);
+            allModals.forEach((m, index) => {
+                console.log(`🔍 DEBUG: Modal ${index}:`, {
+                    element: m,
+                    classes: m.className,
+                    maxWidth: m.style.maxWidth,
+                    width: m.style.width
+                });
+            });
+            
+            // Mostrar modal usando Bootstrap
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                console.log('🔧 DEBUG: Usando Bootstrap Modal');
+                const bootstrapModal = new bootstrap.Modal(modal);
+                bootstrapModal.show();
+                
+                // DEBUG: Verificar após abertura
+                setTimeout(() => {
+                    console.log('🔍 DEBUG: Modal aberto - verificando estilos finais...');
+                    if (modalDialog) {
+                        const finalComputedStyle = window.getComputedStyle(modalDialog);
+                        console.log('🔍 DEBUG: Estilos finais computados:', {
+                            maxWidth: finalComputedStyle.maxWidth,
+                            width: finalComputedStyle.width,
+                            margin: finalComputedStyle.margin,
+                            offsetWidth: modalDialog.offsetWidth
+                        });
+                    }
+                }, 100);
+            } else {
+                console.log('🔧 DEBUG: Usando fallback customizado');
+                // Fallback para modal customizado
+                modal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+            
+            console.log('✅ Modal aberto com sucesso!');
+        }
+        
+        // Função para verificar estilos computados
+        function verificarEstilos() {
+            console.log('📊 Verificando estilos computados...');
+            
+            const modal = document.getElementById('modalCFC');
+            const modalDialog = modal?.querySelector('.modal-dialog');
+            
+            if (modalDialog) {
+                const computedStyle = window.getComputedStyle(modalDialog);
+                console.log('📊 Estilos computados do modal dialog:', {
+                    maxWidth: computedStyle.maxWidth,
+                    width: computedStyle.width,
+                    margin: computedStyle.margin,
+                    position: computedStyle.position,
+                    zIndex: computedStyle.zIndex
+                });
+                
+                alert(`Estilos computados:\nMax-width: ${computedStyle.maxWidth}\nWidth: ${computedStyle.width}\nMargin: ${computedStyle.margin}`);
+            } else {
+                alert('Modal dialog não encontrado!');
+            }
+        }
+        
+        // Função para verificar conflitos CSS
+        function verificarConflitos() {
+            console.log('⚠️ Verificando conflitos CSS...');
+            
+            const allModals = document.querySelectorAll('.modal-dialog');
+            let conflitos = [];
+            
+            allModals.forEach((m, index) => {
+                const computedStyle = window.getComputedStyle(m);
+                if (computedStyle.maxWidth !== '1000px' && computedStyle.maxWidth !== 'none') {
+                    conflitos.push(`Modal ${index}: max-width = ${computedStyle.maxWidth}`);
+                }
+            });
+            
+            if (conflitos.length > 0) {
+                console.log('⚠️ Conflitos encontrados:', conflitos);
+                alert('Conflitos CSS encontrados:\n' + conflitos.join('\n'));
+            } else {
+                console.log('✅ Nenhum conflito encontrado');
+                alert('Nenhum conflito CSS encontrado!');
+            }
+        }
+        
+        // Função para verificar largura do modal
+        function verificarLarguraModal() {
+            const modalDialog = document.querySelector('#modalCFC .modal-dialog');
+            if (modalDialog) {
+                const computedStyle = window.getComputedStyle(modalDialog);
+                const offsetWidth = modalDialog.offsetWidth;
+                
+                alert(`Largura do Modal:\nMax-width: ${computedStyle.maxWidth}\nWidth: ${computedStyle.width}\nOffset Width: ${offsetWidth}px`);
+                
+                console.log('📏 Largura do modal:', {
+                    maxWidth: computedStyle.maxWidth,
+                    width: computedStyle.width,
+                    offsetWidth: offsetWidth
+                });
+            }
+        }
+        
+        // Atualizar informações de largura
+        function updateWidthInfo() {
+            document.getElementById('screen-width').textContent = screen.width;
+            document.getElementById('viewport-width').textContent = window.innerWidth;
+            document.getElementById('container-width').textContent = document.querySelector('.container').offsetWidth;
+        }
+        
+        // Atualizar na carga da página e no redimensionamento
+        window.addEventListener('load', updateWidthInfo);
+        window.addEventListener('resize', updateWidthInfo);
+        
+        // Atualizar inicialmente
+        updateWidthInfo();
+        
+        console.log('🔍 Debug do modal CFC carregado!');
+    </script>
+</body>
+</html>

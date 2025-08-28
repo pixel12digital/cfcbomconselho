@@ -3,50 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste Modal CFC - Layout Melhorado</title>
+    <title>Teste Modal CFC</title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <!-- CSS específico para CFCs -->
     <link href="admin/assets/css/cfcs.css" rel="stylesheet">
     
     <style>
-        body {
-            background-color: #f8f9fa;
-            padding: 20px;
+        /* CSS Inline para Garantir Funcionamento do Modal */
+        #modalCFC .modal-dialog {
+            max-width: 1000px !important;
+            width: 1000px !important;
+            margin: 2rem auto !important;
         }
-        .test-container {
-            max-width: 1200px;
-            margin: 0 auto;
+        
+        #modalCFC .modal-content {
+            width: 100% !important;
+            max-width: none !important;
         }
-        .test-header {
-            text-align: center;
-            margin-bottom: 30px;
-            padding: 20px;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        
+        /* Forçar largura em todas as resoluções */
+        @media (max-width: 1200px) {
+            #modalCFC .modal-dialog {
+                max-width: 90vw !important;
+                width: 90vw !important;
+                margin: 1rem auto !important;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            #modalCFC .modal-dialog {
+                max-width: 95vw !important;
+                width: 95vw !important;
+                margin: 0.5rem auto !important;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            #modalCFC .modal-dialog {
+                max-width: 98vw !important;
+                width: 98vw !important;
+                margin: 0.25rem auto !important;
+            }
+        }
+        
+        /* Garantir que o modal não seja cortado */
+        .modal-custom-cfc {
+            max-width: 1000px !important;
+            width: 1000px !important;
+            margin: 2rem auto !important;
+        }
+        
+        /* Sobrescrever Bootstrap completamente */
+        .modal-dialog.modal-custom-cfc {
+            max-width: 1000px !important;
+            width: 1000px !important;
+            margin: 2rem auto !important;
+        }
+        
+        /* Teste de largura */
+        .test-width {
+            border: 2px solid red;
+            background: rgba(255, 0, 0, 0.1);
+            padding: 10px;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <div class="test-container">
-        <div class="test-header">
-            <h1>🧪 Teste do Modal de CFC</h1>
-            <p>Testando o layout melhorado com espaçamento otimizado</p>
-            <button class="btn btn-primary btn-lg" onclick="abrirModalTeste()">
-                <i class="fas fa-plus me-2"></i>Abrir Modal de CFC
-            </button>
+    <div class="container mt-5">
+        <h1>Teste do Modal de CFC</h1>
+        <p>Este é um teste para verificar se o modal está sendo exibido corretamente sem corte lateral.</p>
+        
+        <button class="btn btn-primary" onclick="abrirModalCFC('criar')">
+            <i class="fas fa-plus me-1"></i>Abrir Modal CFC
+        </button>
+        
+        <div class="test-width">
+            <strong>Largura da tela:</strong> <span id="screen-width"></span>px<br>
+            <strong>Largura do viewport:</strong> <span id="viewport-width"></span>px
         </div>
     </div>
 
     <!-- Modal Bootstrap para Cadastro/Edição de CFC -->
     <div class="modal fade" id="modalCFC" tabindex="-1" aria-labelledby="modalCFCLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
+        <div class="modal-dialog modal-custom-cfc">
             <div class="modal-content">
                 <form id="formCFC" onsubmit="return false;">
                     <div class="modal-header">
@@ -156,77 +199,10 @@
                                         <label for="uf" class="form-label">UF</label>
                                         <select class="form-select" id="uf" name="uf">
                                             <option value="">Selecione...</option>
-                                            <option value="AC">Acre</option>
-                                            <option value="AL">Alagoas</option>
-                                            <option value="AP">Amapá</option>
-                                            <option value="AM">Amazonas</option>
-                                            <option value="BA">Bahia</option>
-                                            <option value="CE">Ceará</option>
-                                            <option value="DF">Distrito Federal</option>
-                                            <option value="ES">Espírito Santo</option>
-                                            <option value="GO">Goiás</option>
-                                            <option value="MA">Maranhão</option>
-                                            <option value="MT">Mato Grosso</option>
-                                            <option value="MS">Mato Grosso do Sul</option>
-                                            <option value="MG">Minas Gerais</option>
-                                            <option value="PA">Pará</option>
-                                            <option value="PB">Paraíba</option>
-                                            <option value="PR">Paraná</option>
-                                            <option value="PE">Pernambuco</option>
-                                            <option value="PI">Piauí</option>
-                                            <option value="RJ">Rio de Janeiro</option>
-                                            <option value="RN">Rio Grande do Norte</option>
-                                            <option value="RS">Rio Grande do Sul</option>
-                                            <option value="RO">Rondônia</option>
-                                            <option value="RR">Roraima</option>
-                                            <option value="SC">Santa Catarina</option>
                                             <option value="SP">São Paulo</option>
-                                            <option value="SE">Sergipe</option>
-                                            <option value="TO">Tocantins</option>
+                                            <option value="RJ">Rio de Janeiro</option>
+                                            <option value="MG">Minas Gerais</option>
                                         </select>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Seção 4: Configurações -->
-                            <div class="row mb-2">
-                                <div class="col-12">
-                                    <h6 class="text-primary border-bottom pb-1 mb-2">
-                                        <i class="fas fa-cog me-1"></i>Configurações
-                                    </h6>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-1">
-                                        <label for="responsavel_id" class="form-label">Responsável</label>
-                                        <select class="form-select" id="responsavel_id" name="responsavel_id">
-                                            <option value="">Selecione um usuário...</option>
-                                            <option value="1">Administrador (admin)</option>
-                                            <option value="2">João Silva (instrutor)</option>
-                                            <option value="3">Maria Santos (instrutor)</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="col-md-6">
-                                    <div class="mb-1">
-                                        <label for="ativo" class="form-label">Status</label>
-                                        <select class="form-select" id="ativo" name="ativo">
-                                            <option value="1">Ativo</option>
-                                            <option value="0">Inativo</option>
-                                        </select>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Seção 5: Observações -->
-                            <div class="row">
-                                <div class="col-12">
-                                    <h6 class="text-primary border-bottom pb-1 mb-2">
-                                        <i class="fas fa-sticky-note me-1"></i>Observações
-                                    </h6>
-                                    <div class="mb-1">
-                                        <label for="observacoes" class="form-label">Observações</label>
-                                        <textarea class="form-control" id="observacoes" name="observacoes" rows="3" 
-                                                  placeholder="Informações adicionais sobre o CFC..."></textarea>
                                     </div>
                                 </div>
                             </div>
@@ -248,20 +224,69 @@
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
+    <!-- JavaScript de teste -->
     <script>
-        function abrirModalTeste() {
-            const modal = new bootstrap.Modal(document.getElementById('modalCFC'));
-            modal.show();
+        // Função para abrir modal de CFC
+        function abrirModalCFC(modo = 'criar') {
+            console.log('🚀 Abrindo modal de CFC em modo:', modo);
+            
+            const modal = document.getElementById('modalCFC');
+            if (!modal) {
+                console.error('❌ Modal não encontrado!');
+                alert('Erro: Modal não encontrado na página!');
+                return;
+            }
+            
+            // SOLUÇÃO CRÍTICA: Forçar estilos CSS antes de abrir o modal
+            const modalDialog = modal.querySelector('.modal-dialog');
+            if (modalDialog) {
+                modalDialog.style.maxWidth = '1000px';
+                modalDialog.style.width = '1000px';
+                modalDialog.style.margin = '2rem auto';
+                
+                // Aplicar estilos responsivos
+                if (window.innerWidth <= 1200) {
+                    modalDialog.style.maxWidth = '90vw';
+                    modalDialog.style.width = '90vw';
+                    modalDialog.style.margin = '1rem auto';
+                }
+                if (window.innerWidth <= 768) {
+                    modalDialog.style.maxWidth = '95vw';
+                    modalDialog.style.width = '95vw';
+                    modalDialog.style.margin = '0.5rem auto';
+                }
+                if (window.innerWidth <= 576) {
+                    modalDialog.style.maxWidth = '98vw';
+                    modalDialog.style.width = '98vw';
+                    modalDialog.style.margin = '0.25rem auto';
+                }
+            }
+            
+            // Mostrar modal usando Bootstrap
+            if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                const bootstrapModal = new bootstrap.Modal(modal);
+                bootstrapModal.show();
+            } else {
+                // Fallback para modal customizado
+                modal.style.display = 'block';
+                document.body.style.overflow = 'hidden';
+            }
+            
+            console.log('✅ Modal aberto com sucesso!');
         }
         
-        // Testar funcionalidade do formulário
-        document.getElementById('formCFC').addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('✅ Formulário enviado com sucesso!\n\nEste é apenas um teste para verificar o layout do modal.');
-        });
+        // Atualizar informações de largura
+        function updateWidthInfo() {
+            document.getElementById('screen-width').textContent = screen.width;
+            document.getElementById('viewport-width').textContent = window.innerWidth;
+        }
         
-        console.log('🧪 Página de teste do modal CFC carregada com sucesso!');
-        console.log('📱 Modal configurado com CSS personalizado para melhor espaçamento');
+        // Atualizar na carga da página e no redimensionamento
+        window.addEventListener('load', updateWidthInfo);
+        window.addEventListener('resize', updateWidthInfo);
+        
+        // Atualizar inicialmente
+        updateWidthInfo();
     </script>
 </body>
 </html>

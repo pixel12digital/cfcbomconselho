@@ -6,11 +6,46 @@
 // Cache para o caminho da API
 let caminhoAPICache = null;
 
-// Verificar se já foi carregado para evitar duplicação
-if (window.cfcsSystemLoaded) {
-    console.warn('⚠️ Sistema CFC já foi carregado anteriormente. Ignorando carregamento duplicado.');
-} else {
-    window.cfcsSystemLoaded = true;
+    // Verificar se já foi carregado para evitar duplicação
+    if (window.cfcsSystemLoaded) {
+        console.warn('⚠️ Sistema CFC já foi carregado anteriormente. Ignorando carregamento duplicado.');
+    } else {
+        window.cfcsSystemLoaded = true;
+        
+        // CRÍTICO: Listener global para remover backdrop
+        document.addEventListener('DOMContentLoaded', function() {
+            // Observer para detectar quando modais são abertos
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    if (mutation.type === 'childList') {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.classList && node.classList.contains('modal-backdrop')) {
+                                // Remover backdrop imediatamente
+                                node.style.display = 'none';
+                                node.style.opacity = '0';
+                                node.style.visibility = 'hidden';
+                                node.style.pointerEvents = 'none';
+                            }
+                        });
+                    }
+                });
+            });
+            
+            // Observar mudanças no DOM
+            observer.observe(document.body, {
+                childList: true,
+                subtree: true
+            });
+            
+            // Remover backdrop existente se houver
+            const existingBackdrops = document.querySelectorAll('.modal-backdrop');
+            existingBackdrops.forEach(backdrop => {
+                backdrop.style.display = 'none';
+                backdrop.style.opacity = '0';
+                backdrop.style.visibility = 'hidden';
+                backdrop.style.pointerEvents = 'none';
+            });
+        });
     
     // Função para sanitizar dados de entrada
     function sanitizarDados(texto) {
@@ -94,7 +129,6 @@ if (window.cfcsSystemLoaded) {
             caminhoAPICache = baseUrl + '/admin/api/cfcs.php';
         }
         
-        console.log('🌐 Caminho da API detectado:', caminhoAPICache);
         return caminhoAPICache;
     }
 
@@ -102,8 +136,6 @@ if (window.cfcsSystemLoaded) {
     async function fetchAPI(endpoint = '', options = {}) {
         const baseApiUrl = await detectarCaminhoAPI();
         const url = baseApiUrl + endpoint;
-        
-        console.log('📡 Fazendo requisição para:', url);
         
         const defaultOptions = {
             headers: {
@@ -148,7 +180,6 @@ if (window.cfcsSystemLoaded) {
             
             // Se for erro de timeout, tentar novamente uma vez
             if (error.name === 'TimeoutError') {
-                console.log('⏰ Timeout detectado, tentando novamente...');
                 try {
                     const retryOptions = { ...mergedOptions };
                     delete retryOptions.signal; // Remover timeout para retry
@@ -177,8 +208,6 @@ if (window.cfcsSystemLoaded) {
             formData: typeof FormData !== 'undefined'
         };
         
-        console.log('🔍 Verificando compatibilidade:', compatibilidade);
-        
         if (!compatibilidade.fetch) {
             console.error('❌ Fetch API não suportada neste navegador');
             alert('Seu navegador não suporta as funcionalidades necessárias. Atualize para uma versão mais recente.');
@@ -196,8 +225,6 @@ if (window.cfcsSystemLoaded) {
 
     // Função para abrir modal de CFC
     window.abrirModalCFC = function(modo = 'criar') {
-        console.log('🚀 Abrindo modal de CFC em modo:', modo);
-        
         const modal = document.getElementById('modalCFC');
         if (!modal) {
             console.error('❌ Modal não encontrado!');
@@ -220,23 +247,135 @@ if (window.cfcsSystemLoaded) {
             }
         }
         
+        // SOLUÇÃO CRÍTICA: Forçar estilos CSS antes de abrir o modal
+        const modalDialog = modal.querySelector('.modal-dialog');
+        if (modalDialog) {
+            // Aplicar estilos inline para sobrescrever qualquer CSS
+            modalDialog.style.setProperty('max-width', '1200px', 'important');
+            modalDialog.style.setProperty('width', '1200px', 'important');
+            modalDialog.style.setProperty('margin', '2rem auto', 'important');
+            modalDialog.style.setProperty('position', 'relative', 'important');
+            modalDialog.style.setProperty('z-index', '1056', 'important');
+            
+            // Aplicar estilos responsivos
+            if (window.innerWidth <= 1400) {
+                modalDialog.style.setProperty('max-width', '95vw', 'important');
+                modalDialog.style.setProperty('width', '95vw', 'important');
+                modalDialog.style.setProperty('margin', '1.5rem auto', 'important');
+            }
+            if (window.innerWidth <= 1200) {
+                modalDialog.style.setProperty('max-width', '90vw', 'important');
+                modalDialog.style.setProperty('width', '90vw', 'important');
+                modalDialog.style.setProperty('margin', '1rem auto', 'important');
+            }
+            if (window.innerWidth <= 768) {
+                modalDialog.style.setProperty('max-width', '95vw', 'important');
+                modalDialog.style.setProperty('width', '95vw', 'important');
+                modalDialog.style.setProperty('margin', '0.5rem auto', 'important');
+            }
+            if (window.innerWidth <= 576) {
+                modalDialog.style.setProperty('max-width', '98vw', 'important');
+                modalDialog.style.setProperty('width', '98vw', 'important');
+                modalDialog.style.setProperty('margin', '0.25rem auto', 'important');
+            }
+        }
+        
         // Mostrar modal usando Bootstrap
         if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-            const bootstrapModal = new bootstrap.Modal(modal);
+            const bootstrapModal = new bootstrap.Modal(modal, {
+                backdrop: false, // CRÍTICO: Desabilitar backdrop
+                keyboard: true
+            });
             bootstrapModal.show();
+            
+            // CRÍTICO: Remover backdrop programaticamente
+            setTimeout(() => {
+                // Remover todos os backdrops que possam ter sido criados
+                const backdrops = document.querySelectorAll('.modal-backdrop');
+                backdrops.forEach(backdrop => {
+                    backdrop.style.display = 'none';
+                    backdrop.style.opacity = '0';
+                    backdrop.style.visibility = 'hidden';
+                    backdrop.style.pointerEvents = 'none';
+                });
+                
+                // Remover classe 'modal-open' do body se existir
+                if (document.body.classList.contains('modal-open')) {
+                    document.body.classList.remove('modal-open');
+                }
+                
+                // Aplicar estilos finais para garantir funcionamento
+                if (modalDialog) {
+                    modalDialog.style.setProperty('max-width', '1200px', 'important');
+                    modalDialog.style.setProperty('width', '1200px', 'important');
+                    modalDialog.style.setProperty('margin', '2rem auto', 'important');
+                    modalDialog.style.setProperty('position', 'relative', 'important');
+                    modalDialog.style.setProperty('left', 'auto', 'important');
+                    modalDialog.style.setProperty('right', 'auto', 'important');
+                    modalDialog.style.setProperty('transform', 'none', 'important');
+                    
+                    // DEBUG: Verificar se os estilos foram aplicados
+                    console.log('🔍 DEBUG Modal Width:', {
+                        computedWidth: window.getComputedStyle(modalDialog).width,
+                        computedMaxWidth: window.getComputedStyle(modalDialog).maxWidth,
+                        offsetWidth: modalDialog.offsetWidth,
+                        clientWidth: modalDialog.clientWidth,
+                        inlineWidth: modalDialog.style.width,
+                        inlineMaxWidth: modalDialog.style.maxWidth
+                    });
+                }
+
+                // NOVA SOLUÇÃO: Observer para garantir que a largura seja mantida
+                const widthObserver = new MutationObserver((mutations) => {
+                    mutations.forEach((mutation) => {
+                        if (mutation.type === 'attributes' && 
+                            (mutation.attributeName === 'style' || mutation.attributeName === 'class')) {
+                            
+                            const currentWidth = window.getComputedStyle(modalDialog).width;
+                            const currentMaxWidth = window.getComputedStyle(modalDialog).maxWidth;
+                            
+                            // Se a largura foi alterada, forçar novamente
+                            if (currentWidth !== '1200px' || currentMaxWidth !== '1200px') {
+                                console.log('🔄 Forçando largura novamente:', { currentWidth, currentMaxWidth });
+                                modalDialog.style.setProperty('max-width', '1200px', 'important');
+                                modalDialog.style.setProperty('width', '1200px', 'important');
+                                modalDialog.style.setProperty('min-width', '1200px', 'important');
+                            }
+                        }
+                    });
+                });
+
+                // Observar mudanças no modal-dialog
+                widthObserver.observe(modalDialog, {
+                    attributes: true,
+                    attributeFilter: ['style', 'class']
+                });
+
+                // Aplicar largura a cada 100ms por 2 segundos para garantir
+                let attempts = 0;
+                const widthInterval = setInterval(() => {
+                    if (attempts >= 20) {
+                        clearInterval(widthInterval);
+                        return;
+                    }
+                    
+                    modalDialog.style.setProperty('max-width', '1200px', 'important');
+                    modalDialog.style.setProperty('width', '1200px', 'important');
+                    modalDialog.style.setProperty('min-width', '1200px', 'important');
+                    
+                    attempts++;
+                }, 100);
+
+            }, 100);
         } else {
             // Fallback para modal customizado
             modal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
+            document.body.style.overflow = 'visible'; // Não bloquear scroll
         }
-        
-        console.log('✅ Modal aberto com sucesso!');
     };
 
     // Função para fechar modal de CFC
     window.fecharModalCFC = function() {
-        console.log('🚪 Fechando modal de CFC...');
-        
         const modal = document.getElementById('modalCFC');
         if (modal) {
             // Fechar modal usando Bootstrap
@@ -245,19 +384,32 @@ if (window.cfcsSystemLoaded) {
                 if (bootstrapModal) {
                     bootstrapModal.hide();
                 }
+                
+                // CRÍTICO: Remover backdrop ao fechar
+                setTimeout(() => {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(backdrop => {
+                        backdrop.style.display = 'none';
+                        backdrop.style.opacity = '0';
+                        backdrop.style.visibility = 'hidden';
+                        backdrop.style.pointerEvents = 'none';
+                    });
+                    
+                    // Remover classe 'modal-open' do body
+                    if (document.body.classList.contains('modal-open')) {
+                        document.body.classList.remove('modal-open');
+                    }
+                }, 100);
             } else {
                 // Fallback para modal customizado
                 modal.style.display = 'none';
-                document.body.style.overflow = 'auto';
+                document.body.style.overflow = 'visible';
             }
-            console.log('✅ Modal fechado!');
         }
     };
 
     // Função para salvar CFC
     window.salvarCFC = async function() {
-        console.log('💾 Salvando CFC...');
-        
         try {
             const form = document.getElementById('formCFC');
             if (!form) {
@@ -298,7 +450,6 @@ if (window.cfcsSystemLoaded) {
             }
             
             // Preparar dados baseado na estrutura real do banco
-            // Campos reais: id, nome, cnpj, endereco, telefone, email, responsavel, status, created_at, updated_at, responsavel_id, ativo, cidade, uf, cep, bairro, observacoes
             const cfcData = {
                 nome: sanitizarDados(formData.get('nome').trim()),
                 cnpj: sanitizarDados(formData.get('cnpj').trim()),
@@ -313,10 +464,6 @@ if (window.cfcsSystemLoaded) {
                 bairro: sanitizarDados(formData.get('bairro')?.trim() || ''),
                 observacoes: sanitizarDados(formData.get('observacoes')?.trim() || '')
             };
-            
-
-            
-            console.log('📤 Dados preparados para envio:', cfcData);
             
             const acao = formData.get('acao');
             const cfc_id = formData.get('cfc_id');
@@ -369,152 +516,14 @@ if (window.cfcsSystemLoaded) {
         }
     };
 
-    // Função para debug em produção
-    window.debugCFC = function() {
-        console.group('🐛 Debug do Sistema CFC');
-        
-        // Verificar elementos
-        const elementos = {
-            modalCFC: document.getElementById('modalCFC'),
-            formCFC: document.getElementById('formCFC'),
-            btnSalvarCFC: document.getElementById('btnSalvarCFC'),
-            modalVisualizarCFC: document.getElementById('modalVisualizarCFC'),
-            modalVisualizarCFCBody: document.getElementById('modalVisualizarCFCBody')
-        };
-        
-        console.log('🔍 Elementos encontrados:', elementos);
-        
-        // Verificar compatibilidade
-        const compatibilidade = {
-            fetch: typeof fetch !== 'undefined',
-            abortSignal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout,
-            bootstrap: typeof bootstrap !== 'undefined' && bootstrap.Modal,
-            formData: typeof FormData !== 'undefined'
-        };
-        
-        console.log('🔍 Compatibilidade:', compatibilidade);
-        
-        // Verificar cache da API
-        console.log('🌐 Cache da API:', caminhoAPICache);
-        
-        // Verificar variáveis globais
-        console.log('🌍 Variáveis globais:', {
-            cfcVisualizacaoAtual: window.cfcVisualizacaoAtual,
-            abrirModalCFC: typeof window.abrirModalCFC,
-            fecharModalCFC: typeof window.fecharModalCFC,
-            salvarCFC: typeof window.salvarCFC,
-            editarCFC: typeof window.editarCFC,
-            excluirCFC: typeof window.excluirCFC
-        });
-        
-        console.groupEnd();
-        
-        // Mostrar alerta com informações básicas
-        const elementosFaltando = Object.entries(elementos)
-            .filter(([nome, elemento]) => !elemento)
-            .map(([nome]) => nome);
-        
-        if (elementosFaltando.length > 0) {
-            alert(`⚠️ Elementos faltando: ${elementosFaltando.join(', ')}\n\nVerifique o console para mais detalhes.`);
-        } else {
-            alert('✅ Todos os elementos encontrados!\n\nVerifique o console para mais detalhes.');
-        }
-    };
-
-    // Função para testar a API
-    window.testarAPICFC = async function() {
-        console.log('🧪 Testando API de CFCs...');
-        
-        try {
-            // Testar busca de um CFC específico
-            const response = await fetchAPI('?id=34');
-            const data = await response.json();
-            
-            console.log('📊 Resposta da API:', data);
-            console.log('📋 Estrutura dos dados:', JSON.stringify(data, null, 2));
-            
-            if (data.success && data.data) {
-                const cfc = data.data;
-                console.log('✅ CFC encontrado:', cfc);
-                console.log('📝 Campos disponíveis:', Object.keys(cfc));
-                
-                // Mostrar valores de cada campo
-                Object.keys(cfc).forEach(key => {
-                    console.log(`  ${key}: ${cfc[key]} (tipo: ${typeof cfc[key]})`);
-                });
-            } else {
-                console.error('❌ API não retornou dados válidos');
-            }
-        } catch (error) {
-            console.error('❌ Erro ao testar API:', error);
-        }
-    };
-
-    // Função para testar campos do formulário
-    window.testarCamposFormulario = function() {
-        console.group('🧪 Teste de Campos do Formulário');
-        
-        const campos = {
-            nome: document.getElementById('nome'),
-            cnpj: document.getElementById('cnpj'),
-            razao_social: document.getElementById('razao_social'),
-            email: document.getElementById('email'),
-            telefone: document.getElementById('telefone'),
-            cep: document.getElementById('cep'),
-            endereco: document.getElementById('endereco'),
-            bairro: document.getElementById('bairro'),
-            cidade: document.getElementById('cidade'),
-            uf: document.getElementById('uf'),
-            responsavel_id: document.getElementById('responsavel_id'),
-            ativo: document.getElementById('ativo'),
-            observacoes: document.getElementById('observacoes')
-        };
-        
-        console.log('🔍 Verificando campos do formulário:');
-        
-        Object.entries(campos).forEach(([nome, campo]) => {
-            if (campo) {
-                console.log(`✅ ${nome}: Encontrado (tipo: ${campo.type || 'select/textarea'})`);
-            } else {
-                console.error(`❌ ${nome}: NÃO ENCONTRADO!`);
-            }
-        });
-        
-        // Verificar se o modal está visível
-        const modal = document.getElementById('modalCFC');
-        if (modal) {
-            const isVisible = modal.classList.contains('show') || modal.style.display === 'block';
-            console.log(`📱 Modal CFC: ${isVisible ? 'VISÍVEL' : 'NÃO VISÍVEL'}`);
-            console.log(`📱 Classes do modal:`, modal.className);
-            console.log(`📱 Estilo display:`, modal.style.display);
-        }
-        
-        console.groupEnd();
-        
-        // Mostrar resumo
-        const camposEncontrados = Object.values(campos).filter(campo => !!campo).length;
-        const totalCampos = Object.keys(campos).length;
-        
-        if (camposEncontrados === totalCampos) {
-            alert(`✅ Todos os ${totalCampos} campos foram encontrados!`);
-        } else {
-            alert(`⚠️ Apenas ${camposEncontrados} de ${totalCampos} campos foram encontrados!\n\nVerifique o console para detalhes.`);
-        }
-    };
-
     // Função para editar CFC
     window.editarCFC = async function(id) {
-        console.log('✏️ Editando CFC ID:', id);
-        
         try {
             const response = await fetchAPI(`?id=${id}`);
             const data = await response.json();
             
-            console.log('📊 Resposta da API:', data);
-            
             if (data.success) {
                 const cfc = data.data;
-                console.log('📋 Dados do CFC recebidos:', cfc);
                 
                 // Preencher formulário
                 const form = document.getElementById('formCFC');
@@ -537,160 +546,44 @@ if (window.cfcsSystemLoaded) {
                     const ativoField = document.getElementById('ativo');
                     const observacoesField = document.getElementById('observacoes');
                     
-                    console.log('🔍 Campos encontrados:', {
-                        nome: !!nomeField,
-                        cnpj: !!cnpjField,
-                        razao_social: !!razaoSocialField,
-                        email: !!emailField,
-                        telefone: !!telefoneField,
-                        cep: !!cepField,
-                        endereco: !!enderecoField,
-                        bairro: !!bairroField,
-                        cidade: !!cidadeField,
-                        uf: !!ufField,
-                        responsavel_id: !!responsavelField,
-                        ativo: !!ativoField,
-                        observacoes: !!observacoesField
-                    });
-                    
                     // Mapear campos do banco para os campos do formulário
-                    // Baseado na estrutura real do banco (cfcs table)
-                    
-                    if (nomeField) {
-                        nomeField.value = cfc.nome || '';
-                        console.log('✅ Campo nome preenchido:', cfc.nome);
-                    } else {
-                        console.error('❌ Campo nome não encontrado!');
-                    }
-                    
-                    if (cnpjField) {
-                        cnpjField.value = cfc.cnpj || '';
-                        console.log('✅ Campo CNPJ preenchido:', cfc.cnpj);
-                    } else {
-                        console.error('❌ Campo CNPJ não encontrado!');
-                    }
-                    
-                    if (razaoSocialField) {
-                        razaoSocialField.value = cfc.razao_social || '';
-                        console.log('✅ Campo razão social preenchido:', cfc.razao_social);
-                    } else {
-                        console.error('❌ Campo razão social não encontrado!');
-                    }
-                    
-                    if (emailField) {
-                        emailField.value = cfc.email || '';
-                        console.log('✅ Campo email preenchido:', cfc.email);
-                    } else {
-                        console.error('❌ Campo email não encontrado!');
-                    }
-                    
-                    if (telefoneField) {
-                        telefoneField.value = cfc.telefone || '';
-                        console.log('✅ Campo telefone preenchido:', cfc.telefone);
-                    } else {
-                        console.error('❌ Campo telefone não encontrado!');
-                    }
-                    
-                    if (cepField) {
-                        cepField.value = cfc.cep || '';
-                        console.log('✅ Campo CEP preenchido:', cfc.cep);
-                    } else {
-                        console.error('❌ Campo CEP não encontrado!');
-                    }
-                    
-                    if (enderecoField) {
-                        enderecoField.value = cfc.endereco || '';
-                        console.log('✅ Campo endereço preenchido:', cfc.endereco);
-                    } else {
-                        console.error('❌ Campo endereço não encontrado!');
-                    }
-                    
-                    if (bairroField) {
-                        bairroField.value = cfc.bairro || '';
-                        console.log('✅ Campo bairro preenchido:', cfc.bairro);
-                    } else {
-                        console.error('❌ Campo bairro não encontrado!');
-                    }
-                    
-                    if (cidadeField) {
-                        cidadeField.value = cfc.cidade || '';
-                        console.log('✅ Campo cidade preenchido:', cfc.cidade);
-                    } else {
-                        console.error('❌ Campo cidade não encontrado!');
-                    }
-                    
-                    if (ufField) {
-                        ufField.value = cfc.uf || '';
-                        console.log('✅ Campo UF preenchido:', cfc.uf);
-                    } else {
-                        console.error('❌ Campo UF não encontrado!');
-                    }
-                    
-                    if (responsavelField) {
-                        responsavelField.value = cfc.responsavel_id || '';
-                        console.log('✅ Campo responsável preenchido:', cfc.responsavel_id);
-                    } else {
-                        console.error('❌ Campo responsável não encontrado!');
-                    }
-                    
-                    if (ativoField) {
-                        // Converter para string '1' ou '0' para o select
-                        const ativoValue = cfc.ativo ? '1' : '0';
-                        ativoField.value = ativoValue;
-                        console.log('✅ Campo ativo preenchido:', ativoValue, '(', cfc.ativo, ')');
-                    } else {
-                        console.error('❌ Campo ativo não encontrado!');
-                    }
-                    
-                    if (observacoesField) {
-                        observacoesField.value = cfc.observacoes || '';
-                        console.log('✅ Campo observações preenchido:', cfc.observacoes);
-                    } else {
-                        console.error('❌ Campo observações não encontrado!');
-                    }
+                    if (nomeField) nomeField.value = cfc.nome || '';
+                    if (cnpjField) cnpjField.value = cfc.cnpj || '';
+                    if (razaoSocialField) razaoSocialField.value = cfc.razao_social || '';
+                    if (emailField) emailField.value = cfc.email || '';
+                    if (telefoneField) telefoneField.value = cfc.telefone || '';
+                    if (cepField) cepField.value = cfc.cep || '';
+                    if (enderecoField) enderecoField.value = cfc.endereco || '';
+                    if (bairroField) bairroField.value = cfc.bairro || '';
+                    if (cidadeField) cidadeField.value = cfc.cidade || '';
+                    if (ufField) ufField.value = cfc.uf || '';
+                    if (responsavelField) responsavelField.value = cfc.responsavel_id || '';
+                    if (ativoField) ativoField.value = cfc.ativo ? '1' : '0';
+                    if (observacoesField) observacoesField.value = cfc.observacoes || '';
                     
                     // Configurar modal para edição
                     const modalTitle = document.getElementById('modalTitle');
                     const acaoField = document.getElementById('acaoCFC');
                     const cfcIdField = document.getElementById('cfc_id');
                     
-                    if (modalTitle) {
-                        modalTitle.textContent = 'Editar CFC';
-                        console.log('✅ Título do modal alterado para: Editar CFC');
-                    }
-                    
-                    if (acaoField) {
-                        acaoField.value = 'editar';
-                        console.log('✅ Campo ação definido como: editar');
-                    }
-                    
-                    if (cfcIdField) {
-                        cfcIdField.value = id;
-                        console.log('✅ Campo ID do CFC definido como:', id);
-                    }
+                    if (modalTitle) modalTitle.textContent = 'Editar CFC';
+                    if (acaoField) acaoField.value = 'editar';
+                    if (cfcIdField) cfcIdField.value = id;
                     
                     // Abrir modal
-                    console.log('🚀 Abrindo modal de edição...');
-                    
-                    // Abrir modal diretamente usando Bootstrap em vez de chamar abrirModalCFC
                     const modal = document.getElementById('modalCFC');
                     if (modal && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                         const bootstrapModal = new bootstrap.Modal(modal);
                         bootstrapModal.show();
-                        console.log('✅ Modal de edição aberto com Bootstrap');
                     } else {
                         // Fallback para modal customizado
                         modal.style.display = 'block';
                         document.body.style.overflow = 'hidden';
-                        console.log('✅ Modal de edição aberto com fallback');
                     }
-                    
-                    console.log('✅ Formulário preenchido com dados do CFC:', cfc);
                 } else {
                     throw new Error('Formulário não encontrado');
                 }
             } else {
-                console.error('❌ API retornou erro:', data.error);
                 alert('Erro ao carregar dados do CFC: ' + (data.error || 'Erro desconhecido'));
             }
         } catch (error) {
@@ -701,8 +594,6 @@ if (window.cfcsSystemLoaded) {
 
     // Função para excluir CFC
     window.excluirCFC = async function(id) {
-        console.log('🗑️ Excluindo CFC ID:', id);
-        
         // Usar confirm nativo do navegador em vez de createModal
         if (!confirm('⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este CFC?')) {
             return;
@@ -733,8 +624,6 @@ if (window.cfcsSystemLoaded) {
 
     // Função para editar CFC da visualização
     window.editarCFCDaVisualizacao = function() {
-        console.log('✏️ Editando CFC da visualização...');
-        
         // Fechar modal de visualização
         const modalVisualizacao = document.getElementById('modalVisualizarCFC');
         if (modalVisualizacao && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
@@ -758,8 +647,6 @@ if (window.cfcsSystemLoaded) {
 
     // Função para visualizar CFC
     window.visualizarCFC = async function(id) {
-        console.log('👁️ Visualizando CFC ID:', id);
-        
         // Armazenar ID para uso na edição
         window.cfcVisualizacaoAtual = id;
         
@@ -821,8 +708,6 @@ if (window.cfcsSystemLoaded) {
                             modalElement.style.display = 'block';
                             document.body.style.overflow = 'hidden';
                         }
-                        
-                        console.log('✅ Modal de visualização aberto com dados do CFC:', cfc);
                     } else {
                         throw new Error('Elemento do modal de visualização não encontrado');
                     }
@@ -886,8 +771,6 @@ if (window.cfcsSystemLoaded) {
 
     // Inicialização quando o DOM estiver pronto
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('🚀 Inicializando sistema de CFCs...');
-        
         // Verificar compatibilidade do navegador
         if (!verificarCompatibilidade()) {
             console.error('❌ Sistema não pode ser inicializado devido a incompatibilidade');
@@ -900,8 +783,6 @@ if (window.cfcsSystemLoaded) {
             formCFC: document.getElementById('formCFC'),
             btnSalvarCFC: document.getElementById('btnSalvarCFC')
         };
-        
-        console.log('🔍 Verificando elementos essenciais:', elementosEssenciais);
         
         // Verificar se todos os elementos essenciais estão presentes
         const elementosFaltando = Object.entries(elementosEssenciais)
@@ -948,11 +829,7 @@ if (window.cfcsSystemLoaded) {
                 }
             }
         });
-        
-        console.log('✅ Sistema de CFCs inicializado!');
     });
-
-    console.log('📋 Arquivo cfcs.js carregado!');
 }
 
 // Função para testar edição de CFC

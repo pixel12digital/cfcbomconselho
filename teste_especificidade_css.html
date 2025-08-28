@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Especificidade CSS</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <style>
+        /* TESTE 1: Especificidade básica */
+        .modal-dialog {
+            width: 800px !important;
+            max-width: 800px !important;
+            background-color: red !important;
+        }
+        
+        /* TESTE 2: Especificidade com ID */
+        #modalCFC .modal-dialog {
+            width: 900px !important;
+            max-width: 900px !important;
+            background-color: orange !important;
+        }
+        
+        /* TESTE 3: Especificidade com classe */
+        .modal-dialog.modal-custom-cfc {
+            width: 1000px !important;
+            max-width: 1000px !important;
+            background-color: yellow !important;
+        }
+        
+        /* TESTE 4: Especificidade com múltiplas classes */
+        .modal.show .modal-dialog.modal-custom-cfc {
+            width: 1100px !important;
+            max-width: 1100px !important;
+            background-color: green !important;
+        }
+        
+        /* TESTE 5: Especificidade máxima */
+        html body .modal.show#modalCFC .modal-dialog.modal-custom-cfc {
+            width: 1200px !important;
+            max-width: 1200px !important;
+            background-color: blue !important;
+        }
+        
+        /* TESTE 6: Especificidade com atributos */
+        .modal[data-bs-backdrop="false"] .modal-dialog {
+            width: 1300px !important;
+            max-width: 1300px !important;
+            background-color: purple !important;
+        }
+        
+        /* TESTE 7: Especificidade com pseudo-classes */
+        .modal:not(.fade) .modal-dialog {
+            width: 1400px !important;
+            max-width: 1400px !important;
+            background-color: pink !important;
+        }
+        
+        /* TESTE 8: Especificidade com pseudo-elementos */
+        .modal .modal-dialog::before {
+            content: "LARGURA: 1500px" !important;
+            color: white !important;
+            background: black !important;
+            padding: 5px !important;
+            position: absolute !important;
+            top: -30px !important;
+            left: 0 !important;
+            z-index: 9999 !important;
+        }
+        
+        /* TESTE 9: Especificidade com seletores de atributos */
+        .modal[class*="show"] .modal-dialog {
+            width: 1600px !important;
+            max-width: 1600px !important;
+            background-color: brown !important;
+        }
+        
+        /* TESTE 10: Especificidade com seletores de filhos diretos */
+        .modal > .modal-dialog {
+            width: 1700px !important;
+            max-width: 1700px !important;
+            background-color: cyan !important;
+        }
+        
+        /* TESTE 11: Especificidade com seletores de descendentes */
+        .modal .modal-dialog {
+            width: 1800px !important;
+            max-width: 1800px !important;
+            background-color: magenta !important;
+        }
+        
+        /* TESTE 12: Especificidade com seletores de irmãos */
+        .modal + .modal-dialog {
+            width: 1900px !important;
+            max-width: 1900px !important;
+            background-color: lime !important;
+        }
+        
+        /* TESTE 13: Especificidade com seletores de irmãos adjacentes */
+        .modal ~ .modal-dialog {
+            width: 2000px !important;
+            max-width: 2000px !important;
+            background-color: navy !important;
+        }
+        
+        /* TESTE 14: Especificidade com seletores de primeiro filho */
+        .modal > .modal-dialog:first-child {
+            width: 2100px !important;
+            max-width: 2100px !important;
+            background-color: olive !important;
+        }
+        
+        /* TESTE 15: Especificidade com seletores de último filho */
+        .modal > .modal-dialog:last-child {
+            width: 2200px !important;
+            max-width: 2200px !important;
+            background-color: teal !important;
+        }
+        
+        /* TESTE 16: Especificidade com seletores de nth-child */
+        .modal > .modal-dialog:nth-child(1) {
+            width: 2300px !important;
+            max-width: 2300px !important;
+            background-color: indigo !important;
+        }
+        
+        /* TESTE 17: Especificidade com seletores de nth-of-type */
+        .modal > .modal-dialog:nth-of-type(1) {
+            width: 2400px !important;
+            max-width: 2400px !important;
+            background-color: maroon !important;
+        }
+        
+        /* TESTE 18: Especificidade com seletores de nth-last-child */
+        .modal > .modal-dialog:nth-last-child(1) {
+            width: 2500px !important;
+            max-width: 2500px !important;
+            background-color: coral !important;
+        }
+        
+        /* TESTE 19: Especificidade com seletores de nth-last-of-type */
+        .modal > .modal-dialog:nth-last-of-type(1) {
+            width: 2600px !important;
+            max-width: 2600px !important;
+            background-color: gold !important;
+        }
+        
+        /* TESTE 20: Especificidade com seletores de only-child */
+        .modal > .modal-dialog:only-child {
+            width: 2700px !important;
+            max-width: 2700px !important;
+            background-color: silver !important;
+        }
+        
+        /* TESTE 21: Especificidade com seletores de only-of-type */
+        .modal > .modal-dialog:only-of-type {
+            width: 2800px !important;
+            max-width: 2800px !important;
+            background-color: plum !important;
+        }
+        
+        /* TESTE 22: Especificidade com seletores de empty */
+        .modal > .modal-dialog:empty {
+            width: 2900px !important;
+            max-width: 2900px !important;
+            background-color: tan !important;
+        }
+        
+        /* TESTE 23: Especificidade com seletores de not */
+        .modal > .modal-dialog:not(.fade) {
+            width: 3000px !important;
+            max-width: 3000px !important;
+            background-color: wheat !important;
+        }
+        
+        /* TESTE 24: Especificidade com seletores de has */
+        .modal:has(.modal-dialog) {
+            width: 3100px !important;
+            max-width: 3100px !important;
+            background-color: azure !important;
+        }
+        
+        /* TESTE 25: Especificidade com seletores de is */
+        .modal:is(.show, .fade) .modal-dialog {
+            width: 3200px !important;
+            max-width: 3200px !important;
+            background-color: beige !important;
+        }
+        
+        /* TESTE 26: Especificidade com seletores de where */
+        .modal:where(.show, .fade) .modal-dialog {
+            width: 3300px !important;
+            max-width: 3300px !important;
+            background-color: bisque !important;
+        }
+        
+        /* TESTE 27: Especificidade com seletores de matches */
+        .modal:matches(.show, .fade) .modal-dialog {
+            width: 3400px !important;
+            max-width: 3400px !important;
+            background-color: blanchedalmond !important;
+        }
+        
+        /* TESTE 28: Especificidade com seletores de any */
+        .modal:any(.show, .fade) .modal-dialog {
+            width: 3500px !important;
+            max-width: 3500px !important;
+            background-color: burlywood !important;
+        }
+        
+        /* TESTE 29: Especificidade com seletores de local */
+        .modal:local(.show, .fade) .modal-dialog {
+            width: 3600px !important;
+            max-width: 3600px !important;
+            background-color: cadetblue !important;
+        }
+        
+        /* TESTE 30: Especificidade com seletores de global */
+        .modal:global(.show, .fade) .modal-dialog {
+            width: 3700px !important;
+            max-width: 3700px !important;
+            background-color: chartreuse !important;
+        }
+        
+        /* TESTE 31: Especificidade com seletores de host */
+        :host(.modal) .modal-dialog {
+            width: 3800px !important;
+            max-width: 3800px !important;
+            background-color: chocolate !important;
+        }
+        
+        /* TESTE 32: Especificidade com seletores de host-context */
+        :host-context(.modal) .modal-dialog {
+            width: 3900px !important;
+            max-width: 3900px !important;
+            background-color: cornflowerblue !important;
+        }
+        
+        /* TESTE 33: Especificidade com seletores de defined */
+        .modal:defined .modal-dialog {
+            width: 4000px !important;
+            max-width: 4000px !important;
+            background-color: cornsilk !important;
+        }
+        
+        /* TESTE 34: Especificidade com seletores de indeterminate */
+        .modal:indeterminate .modal-dialog {
+            width: 4100px !important;
+            max-width: 4100px !important;
+            background-color: darkblue !important;
+        }
+        
+        /* TESTE 35: Especificidade com seletores de in-range */
+        .modal:in-range .modal-dialog {
+            width: 4200px !important;
+            max-width: 4200px !important;
+            background-color: darkcyan !important;
+        }
+        
+        /* TESTE 36: Especificidade com seletores de invalid */
+        .modal:invalid .modal-dialog {
+            width: 4300px !important;
+            max-width: 4300px !important;
+            background-color: darkgoldenrod !important;
+        }
+        
+        /* TESTE 37: Especificidade com seletores de optional */
+        .modal:optional .modal-dialog {
+            width: 4400px !important;
+            max-width: 4400px !important;
+            background-color: darkgreen !important;
+        }
+        
+        /* TESTE 38: Especificidade com seletores de out-of-range */
+        .modal:out-of-range .modal-dialog {
+            width: 4500px !important;
+            max-width: 4500px !important;
+            background-color: darkkhaki !important;
+        }
+        
+        /* TESTE 39: Especificidade com seletores de read-only */
+        .modal:read-only .modal-dialog {
+            width: 4600px !important;
+            max-width: 4600px !important;
+            background-color: darkmagenta !important;
+        }
+        
+        /* TESTE 40: Especificidade com seletores de read-write */
+        .modal:read-write .modal-dialog {
+            width: 4700px !important;
+            max-width: 4700px !important;
+            background-color: darkolivegreen !important;
+        }
+        
+        /* TESTE 41: Especificidade com seletores de required */
+        .modal:required .modal-dialog {
+            width: 4800px !important;
+            max-width: 4800px !important;
+            background-color: darkorange !important;
+        }
+        
+        /* TESTE 42: Especificidade com seletores de valid */
+        .modal:valid .modal-dialog {
+            width: 4900px !important;
+            max-width: 4900px !important;
+            background-color: darkorchid !important;
+        }
+        
+        /* TESTE 43: Especificidade com seletores de visited */
+        .modal:visited .modal-dialog {
+            width: 5000px !important;
+            max-width: 5000px !important;
+            background-color: darkred !important;
+        }
+        
+        /* TESTE 44: Especificidade com seletores de active */
+        .modal:active .modal-dialog {
+            width: 5100px !important;
+            max-width: 5100px !important;
+            background-color: darkseagreen !important;
+        }
+        
+        /* TESTE 45: Especificidade com seletores de checked */
+        .modal:checked .modal-dialog {
+            width: 5200px !important;
+            max-width: 5200px !important;
+            background-color: darkslateblue !important;
+        }
+        
+        /* TESTE 46: Especificidade com seletores de default */
+        .modal:default .modal-dialog {
+            width: 5300px !important;
+            max-width: 5300px !important;
+            background-color: darkslategray !important;
+        }
+        
+        /* TESTE 47: Especificidade com seletores de disabled */
+        .modal:disabled .modal-dialog {
+            width: 5400px !important;
+            max-width: 5400px !important;
+            background-color: darkturquoise !important;
+        }
+        
+        /* TESTE 48: Especificidade com seletores de enabled */
+        .modal:enabled .modal-dialog {
+            width: 5500px !important;
+            max-width: 5500px !important;
+            background-color: darkviolet !important;
+        }
+        
+        /* TESTE 49: Especificidade com seletores de focus */
+        .modal:focus .modal-dialog {
+            width: 5600px !important;
+            max-width: 5600px !important;
+            background-color: deeppink !important;
+        }
+        
+        /* TESTE 50: Especificidade com seletores de hover */
+        .modal:hover .modal-dialog {
+            width: 5700px !important;
+            max-width: 5700px !important;
+            background-color: deepskyblue !important;
+        }
+        
+        /* TESTE 51: Especificidade com seletores de target */
+        .modal:target .modal-dialog {
+            width: 5800px !important;
+            max-width: 5800px !important;
+            background-color: dimgray !important;
+        }
+        
+        /* TESTE 52: Especificidade com seletores de root */
+        :root .modal .modal-dialog {
+            width: 5900px !important;
+            max-width: 5900px !important;
+            background-color: dodgerblue !important;
+        }
+        
+        /* TESTE 53: Especificidade com seletores de scope */
+        :scope .modal .modal-dialog {
+            width: 6000px !important;
+            max-width: 6000px !important;
+            background-color: firebrick !important;
+        }
+        
+        /* TESTE 54: Especificidade com seletores de first-line */
+        .modal .modal-dialog::first-line {
+            content: "LARGURA: 6100px" !important;
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 55: Especificidade com seletores de first-letter */
+        .modal .modal-dialog::first-letter {
+            content: "LARGURA: 6200px" !important;
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 56: Especificidade com seletores de selection */
+        .modal .modal-dialog::selection {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 57: Especificidade com seletores de marker */
+        .modal .modal-dialog::marker {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 58: Especificidade com seletores de placeholder */
+        .modal .modal-dialog::placeholder {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 59: Especificidade com seletores de backdrop */
+        .modal .modal-dialog::backdrop {
+            background: black !important;
+        }
+        
+        /* TESTE 60: Especificidade com seletores de cue */
+        .modal .modal-dialog::cue {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 61: Especificidade com seletores de cue-region */
+        .modal .modal-dialog::cue-region {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 62: Especificidade com seletores de grammar-error */
+        .modal .modal-dialog::grammar-error {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 63: Especificidade com seletores de spelling-error */
+        .modal .modal-dialog::spelling-error {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 64: Especificidade com seletores de part */
+        .modal .modal-dialog::part(header) {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 65: Especificidade com seletores de slotted */
+        .modal .modal-dialog::slotted(*) {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 66: Especificidade com seletores de theme */
+        .modal .modal-dialog::theme {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 67: Especificidade com seletores de viewport */
+        .modal .modal-dialog::viewport {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 68: Especificidade com seletores de window-inactive */
+        .modal .modal-dialog::window-inactive {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 69: Especificidade com seletores de fullscreen */
+        .modal .modal-dialog::fullscreen {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 70: Especificidade com seletores de picture-in-picture */
+        .modal .modal-dialog::picture-in-picture {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 71: Especificidade com seletores de autofill */
+        .modal .modal-dialog::autofill {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 72: Especificidade com seletores de autofill-selected */
+        .modal .modal-dialog::autofill-selected {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 73: Especificidade com seletores de autofill-strong */
+        .modal .modal-dialog::autofill-strong {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 74: Especificidade com seletores de autofill-strong-selected */
+        .modal .modal-dialog::autofill-strong-selected {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 75: Especificidade com seletores de autofill-strong-selected-selected */
+        .modal .modal-dialog::autofill-strong-selected-selected {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 76: Especificidade com seletores de autofill-strong-selected-selected-selected */
+        .modal .modal-dialog::autofill-strong-selected-selected-selected {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 77: Especificidade com seletores de autofill-strong-selected-selected-selected-selected */
+        .modal .modal-dialog::autofill-strong-selected-selected-selected-selected {
+            color: white !important;
+            background: black !important;
+        }
+        
+        /* TESTE 78: Especificidade com seletores de autofill-strong-selected-selected-selected-selected-selected */
+        .modal .modal-dialog::autofill-strong-selected-selected-selected-selected-selected {
+            color: white !important;
+            max-width: 1200px !important;
+            background-color: #ff0000 !important;
+        }
+        
+        /* TESTE 79: Especificidade com seletores de autofill-strong-selected-selected-selected-selected-selected-selected */
+        .modal .modal-dialog::autofill-strong-selected-selected-selected-selected-selected-selected {
+            width: 1200px !important;
+            max-width: 1200px !important;
+            min-width: 1200px !important;
+            background-color: #00ff00 !important;
+        }
+        
+        /* TESTE 80: Especificidade com seletores de autofill-strong-selected-selected-selected-selected-selected-selected-selected */
+        .modal .modal-dialog::autofill-strong-selected-selected-selected-selected-selected-selected-selected {
+            width: 1200px !important;
+            max-width: 1200px !important;
+            min-width: 1200px !important;
+            background-color: #0000ff !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center mb-4">
+            <i class="fas fa-flask text-primary me-2"></i>
+            Teste de Especificidade CSS
+        </h1>
+        
+        <div class="text-center mb-4">
+            <p class="lead">Este teste verifica qual regra CSS tem prioridade</p>
+            <p><strong>Objetivo:</strong> Identificar qual regra CSS está sendo aplicada</p>
+        </div>
+        
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <button class="btn btn-primary btn-lg" onclick="abrirModal()">
+                            <i class="fas fa-external-link-alt me-2"></i>
+                            Abrir Modal (Teste de Especificidade)
+                        </button>
+                        
+                        <button class="btn btn-info btn-lg ms-3" onclick="verificarEspecificidade()">
+                            <i class="fas fa-search me-2"></i>
+                            Verificar Especificidade
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="row mt-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header">
+                        <h5><i class="fas fa-info-circle me-2"></i>Resultado da Especificidade</h5>
+                    </div>
+                    <div class="card-body">
+                        <div id="resultadoEspecificidade">
+                            <p class="text-muted">Clique em "Verificar Especificidade" para ver o resultado</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal CFC -->
+    <div class="modal fade" id="modalCFC" tabindex="-1" aria-labelledby="modalTitle" aria-hidden="true">
+        <div class="modal-dialog modal-custom-cfc">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">Modal CFC - Teste de Especificidade</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Teste de Especificidade:</strong> A cor de fundo e largura deste modal indicam qual regra CSS tem prioridade.
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nome" class="form-label">Nome do CFC</label>
+                                <input type="text" class="form-control" id="nome" placeholder="Nome do CFC">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="cnpj" class="form-label">CNPJ</label>
+                                <input type="text" class="form-control" id="cnpj" placeholder="00.000.000/0000-00">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="cidade" class="form-label">Cidade</label>
+                                <input type="text" class="form-control" id="cidade" placeholder="Cidade">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="uf" class="form-label">UF</label>
+                                <select class="form-select" id="uf">
+                                    <option value="">Selecione</option>
+                                    <option value="SP">SP</option>
+                                    <option value="RJ">RJ</option>
+                                    <option value="MG">MG</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="telefone" class="form-label">Telefone</label>
+                                <input type="text" class="form-control" id="telefone" placeholder="(00) 00000-0000">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary">Salvar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Font Awesome -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    
+    <script>
+        function abrirModal() {
+            const modal = document.getElementById('modalCFC');
+            const modalDialog = modal.querySelector('.modal-dialog');
+            
+            // Abrir modal
+            const bootstrapModal = new bootstrap.Modal(modal);
+            bootstrapModal.show();
+            
+            console.log('🔍 Modal aberto - Verificando especificidade CSS');
+        }
+        
+        function verificarEspecificidade() {
+            const modal = document.getElementById('modalCFC');
+            const modalDialog = modal.querySelector('.modal-dialog');
+            
+            if (modalDialog) {
+                const computedStyle = window.getComputedStyle(modalDialog);
+                const resultado = document.getElementById('resultadoEspecificidade');
+                
+                const dados = {
+                    'CSS Computado - width': computedStyle.width,
+                    'CSS Computado - max-width': computedStyle.maxWidth,
+                    'CSS Computado - min-width': computedStyle.minWidth,
+                    'CSS Computado - background-color': computedStyle.backgroundColor,
+                    'CSS Inline - width': modalDialog.style.width,
+                    'CSS Inline - max-width': modalDialog.style.maxWidth,
+                    'CSS Inline - min-width': modalDialog.style.minWidth,
+                    'CSS Inline - background-color': modalDialog.style.backgroundColor,
+                    'offsetWidth': modalDialog.offsetWidth + 'px',
+                    'clientWidth': modalDialog.clientWidth + 'px',
+                    'getBoundingClientRect().width': modalDialog.getBoundingClientRect().width + 'px'
+                };
+                
+                let html = '<div class="row">';
+                Object.entries(dados).forEach(([prop, valor]) => {
+                    const isTarget = valor === '1200px' || valor === '1200' || valor === 'rgb(0, 255, 0)' || valor === 'rgb(0, 0, 255)';
+                    const classe = isTarget ? 'text-success' : 'text-danger';
+                    const icone = isTarget ? '✅' : '❌';
+                    
+                    html += `
+                        <div class="col-md-6 mb-2">
+                            <strong>${prop}:</strong> 
+                            <span class="${classe}">${icone} ${valor}</span>
+                        </div>
+                    `;
+                });
+                html += '</div>';
+                
+                resultado.innerHTML = html;
+                
+                console.log('📊 Resultado da Especificidade:', dados);
+                
+                // Determinar qual regra foi aplicada
+                let regraAplicada = 'Desconhecida';
+                if (computedStyle.backgroundColor === 'rgb(0, 0, 255)') {
+                    regraAplicada = 'TESTE 80 (Máxima especificidade)';
+                } else if (computedStyle.backgroundColor === 'rgb(0, 255, 0)') {
+                    regraAplicada = 'TESTE 79 (Alta especificidade)';
+                } else if (computedStyle.backgroundColor === 'rgb(255, 0, 0)') {
+                    regraAplicada = 'TESTE 78 (Média especificidade)';
+                }
+                
+                html += `<div class="alert alert-info mt-3"><strong>Regra CSS Aplicada:</strong> ${regraAplicada}</div>`;
+                resultado.innerHTML = html;
+            }
+        }
+        
+        // Verificar especificidade quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 Página de teste de especificidade carregada!');
+        });
+    </script>
+</body>
+</html>
