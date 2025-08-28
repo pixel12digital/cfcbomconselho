@@ -118,80 +118,8 @@ class AdminPanel {
     }
 }
 
-// Sistema de notificações
-class NotificationSystem {
-    static show(message, type = 'info', duration = 5000) {
-        const container = document.querySelector('.notifications-container') || this.createContainer();
-        
-        const notification = document.createElement('div');
-        notification.className = `alert alert-${type} animate-slide-in-right`;
-        notification.innerHTML = `
-            <div class="alert-content">
-                <div class="d-flex items-center gap-3">
-                    <div class="notification-icon ${type}">
-                        <i class="fas fa-${this.getIcon(type)}"></i>
-                    </div>
-                    <div>${message}</div>
-                </div>
-            </div>
-        `;
-        
-        container.appendChild(notification);
-        
-        // Remover após o tempo especificado
-        setTimeout(() => {
-            notification.classList.add('animate-slide-in-right');
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.parentNode.removeChild(notification);
-                }
-            }, 300);
-        }, duration);
-        
-        return notification;
-    }
-
-    static success(message, duration) {
-        return this.show(message, 'success', duration);
-    }
-
-    static error(message, duration) {
-        return this.show(message, 'danger', duration);
-    }
-
-    static warning(message, duration) {
-        return this.show(message, 'warning', duration);
-    }
-
-    static info(message, duration) {
-        return this.show(message, 'info', duration);
-    }
-
-    static getIcon(type) {
-        const icons = {
-            success: 'check-circle',
-            error: 'times-circle',
-            warning: 'exclamation-triangle',
-            danger: 'times-circle',
-            info: 'info-circle'
-        };
-        return icons[type] || 'info-circle';
-    }
-
-    static createContainer() {
-        const container = document.createElement('div');
-        container.className = 'notifications-container';
-        container.style.cssText = `
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 9999;
-            max-width: 400px;
-        `;
-        document.body.appendChild(container);
-        return container;
-    }
-}
+// Sistema de notificações - REMOVIDO (definido em components.js)
+// class NotificationSystem removida para evitar duplicação
 
 // Sistema de confirmação
 class ConfirmationSystem {
@@ -242,83 +170,8 @@ class ConfirmationSystem {
     }
 }
 
-// Sistema de loading
-class LoadingSystem {
-    static show(element = null, message = 'Carregando...') {
-        if (element) {
-            this.showElement(element, message);
-        } else {
-            this.showGlobal(message);
-        }
-    }
-
-    static hide(element = null) {
-        if (element) {
-            this.hideElement(element);
-        } else {
-            this.hideGlobal();
-        }
-    }
-
-    static showElement(element, message = 'Carregando...') {
-        element.classList.add('loading-state');
-        
-        const loadingOverlay = document.createElement('div');
-        loadingOverlay.className = 'loading-overlay';
-        loadingOverlay.innerHTML = `
-            <div class="loading-content">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">${message}</div>
-            </div>
-        `;
-        
-        element.style.position = 'relative';
-        element.appendChild(loadingOverlay);
-        element.loadingOverlay = loadingOverlay;
-    }
-
-    static hideElement(element) {
-        element.classList.remove('loading-state');
-        if (element.loadingOverlay) {
-            element.removeChild(element.loadingOverlay);
-            element.loadingOverlay = null;
-        }
-    }
-
-    static showGlobal(message = 'Carregando...') {
-        const overlay = document.createElement('div');
-        overlay.className = 'global-loading-overlay';
-        overlay.innerHTML = `
-            <div class="global-loading-content">
-                <div class="loading-spinner"></div>
-                <div class="loading-text">${message}</div>
-            </div>
-        `;
-        
-        overlay.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.5);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 9999;
-        `;
-        
-        document.body.appendChild(overlay);
-        document.body.globalLoadingOverlay = overlay;
-    }
-
-    static hideGlobal() {
-        if (document.body.globalLoadingOverlay) {
-            document.body.removeChild(document.body.globalLoadingOverlay);
-            document.body.globalLoadingOverlay = null;
-        }
-    }
-}
+// Sistema de loading - REMOVIDO (definido em components.js)
+// class LoadingSystem removida para evitar duplicação
 
 // Utilitários
 class Utils {
@@ -441,9 +294,9 @@ document.addEventListener('DOMContentLoaded', function() {
     window.adminPanel = new AdminPanel();
     
     // Disponibilizar sistemas globalmente
-    window.notifications = NotificationSystem;
+    // window.notifications = NotificationSystem; // REMOVIDO - definido em components.js
     // window.confirm = ConfirmationSystem.confirm;
-    window.loading = LoadingSystem;
+    // window.loading = LoadingSystem; // REMOVIDO - definido em components.js
     window.utils = Utils;
     window.validation = ValidationSystem;
     
@@ -452,7 +305,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Mostrar notificação de boas-vindas
     setTimeout(() => {
-        NotificationSystem.success('Painel administrativo carregado com sucesso!', 3000);
+        // NotificationSystem.success('Painel administrativo carregado com sucesso!', 3000); // REMOVIDO - definido em components.js
     }, 1000);
 });
 
@@ -460,9 +313,9 @@ document.addEventListener('DOMContentLoaded', function() {
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
         AdminPanel,
-        NotificationSystem,
+        // NotificationSystem, // REMOVIDO - definido em components.js
         ConfirmationSystem,
-        LoadingSystem,
+        // LoadingSystem, // REMOVIDO - definido em components.js
         Utils,
         ValidationSystem
     };

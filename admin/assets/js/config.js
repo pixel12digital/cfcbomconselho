@@ -1,8 +1,5 @@
-// Configuração centralizada para URLs das APIs
+// Configuração centralizada para URLs das APIs - CORRIGIDA DEFINITIVAMENTE
 const API_CONFIG = {
-    // URLs base das APIs
-    BASE_URL: window.location.origin + window.location.pathname.replace(/\/[^\/]*$/, ''),
-    
     // Endpoints das APIs
     ENDPOINTS: {
         INSTRUTORES: 'admin/api/instrutores.php',
@@ -14,17 +11,18 @@ const API_CONFIG = {
         HISTORICO: 'admin/api/historico.php'
     },
     
-    // Função para obter URL completa da API
-    getApiUrl: function(endpoint) {
-        return this.BASE_URL + '/' + this.ENDPOINTS[endpoint];
-    },
-    
-    // Função para obter URL relativa da API
+    // Função para obter URL relativa da API (RECOMENDADA)
     getRelativeApiUrl: function(endpoint) {
         return this.ENDPOINTS[endpoint];
+    },
+    
+    // Função para obter URL completa da API (para casos específicos)
+    getApiUrl: function(endpoint) {
+        // Sempre usar URL relativa para evitar problemas de contexto
+        return this.getRelativeApiUrl(endpoint);
     }
 };
 
 // Log da configuração para debug
 console.log('🔧 Configuração de API carregada:', API_CONFIG);
-console.log('🌐 Base URL:', API_CONFIG.BASE_URL);
+console.log('✅ URLs das APIs corrigidas - usando sempre URLs relativas');
