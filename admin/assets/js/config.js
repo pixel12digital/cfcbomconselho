@@ -1,6 +1,6 @@
-// Configuração centralizada para URLs das APIs - CORRIGIDA DEFINITIVAMENTE
+// Configuração centralizada para URLs das APIs - VERSÃO FINAL CORRIGIDA
 const API_CONFIG = {
-    // Endpoints das APIs
+    // Endpoints das APIs - SEMPRE URLs relativas
     ENDPOINTS: {
         INSTRUTORES: 'admin/api/instrutores.php',
         USUARIOS: 'admin/api/usuarios.php',
@@ -10,15 +10,15 @@ const API_CONFIG = {
         AGENDAMENTO: 'admin/api/agendamento.php',
         HISTORICO: 'admin/api/historico.php'
     },
-    
+
     // Função para obter URL relativa da API (RECOMENDADA)
     getRelativeApiUrl: function(endpoint) {
         return this.ENDPOINTS[endpoint];
     },
-    
+
     // Função para obter URL completa da API (para casos específicos)
     getApiUrl: function(endpoint) {
-        // Sempre usar URL relativa para evitar problemas de contexto
+        // SEMPRE usar URL relativa para evitar problemas de contexto
         return this.getRelativeApiUrl(endpoint);
     }
 };
@@ -26,3 +26,4 @@ const API_CONFIG = {
 // Log da configuração para debug
 console.log('🔧 Configuração de API carregada:', API_CONFIG);
 console.log('✅ URLs das APIs corrigidas - usando sempre URLs relativas');
+console.log('🎯 Exemplo: Instrutores =', API_CONFIG.getRelativeApiUrl('INSTRUTORES'));

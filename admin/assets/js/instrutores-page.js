@@ -1,0 +1,493 @@
+// Funções JavaScript da página de instrutores - VERSÃO CORRIGIDA
+// Este arquivo é carregado APÓS o config.js, garantindo que API_CONFIG esteja disponível
+
+// Funções JavaScript com URLs CORRIGIDAS
+function abrirModalInstrutor() {
+    document.getElementById('modalTitle').textContent = 'Novo Instrutor';
+    document.getElementById('acaoInstrutor').value = 'novo';
+    document.getElementById('instrutor_id').value = '';
+    document.getElementById('formInstrutor').reset();
+    
+    const modal = document.getElementById('modalInstrutor');
+    modal.style.display = 'block';
+    modal.classList.add('show');
+    
+    // Garantir que o modal seja visível
+    setTimeout(() => {
+        modal.scrollTop = 0;
+        const modalDialog = modal.querySelector('.custom-modal-dialog');
+        if (modalDialog) {
+            modalDialog.style.opacity = '1';
+            modalDialog.style.transform = 'translateY(0)';
+        }
+    }, 100);
+}
+
+function fecharModalInstrutor() {
+    const modal = document.getElementById('modalInstrutor');
+    modal.classList.remove('show');
+    
+    // Animar o fechamento
+    const modalDialog = modal.querySelector('.custom-modal-dialog');
+    if (modalDialog) {
+        modalDialog.style.opacity = '0';
+        modalDialog.style.transform = 'translateY(-20px)';
+    }
+    
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
+}
+
+function editarInstrutor(id) {
+    // Buscar dados do instrutor
+    fetch(`${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                preencherFormularioInstrutor(data.data);
+                document.getElementById('modalTitle').textContent = 'Editar Instrutor';
+                document.getElementById('acaoInstrutor').value = 'editar';
+                document.getElementById('instrutor_id').value = id;
+                
+                abrirModalInstrutor();
+            } else {
+                mostrarAlerta('Erro ao carregar dados do instrutor', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao carregar dados do instrutor', 'danger');
+        });
+}
+
+function preencherFormularioInstrutor(instrutor) {
+    // Preencher campos do formulário
+    document.getElementById('nome').value = instrutor.nome || instrutor.nome_usuario || '';
+    document.getElementById('cpf').value = instrutor.cpf || '';
+    document.getElementById('cnh').value = instrutor.cnh || '';
+    document.getElementById('data_nascimento').value = instrutor.data_nascimento || '';
+    document.getElementById('email').value = instrutor.email || '';
+    document.getElementById('usuario_id').value = instrutor.usuario_id || '';
+    document.getElementById('cfc_id').value = instrutor.cfc_id || '';
+    document.getElementById('credencial').value = instrutor.credencial || '';
+    document.getElementById('telefone').value = instrutor.telefone || '';
+    document.getElementById('endereco').value = instrutor.endereco || '';
+    document.getElementById('cidade').value = instrutor.cidade || '';
+    document.getElementById('uf').value = instrutor.uf || '';
+    document.getElementById('ativo').value = instrutor.ativo ? '1' : '0';
+    document.getElementById('tipo_carga').value = instrutor.tipo_carga || '';
+    document.getElementById('validade_credencial').value = instrutor.validade_credencial || '';
+    document.getElementById('observacoes').value = instrutor.observacoes || '';
+    
+    // Limpar checkboxes primeiro
+    document.querySelectorAll('input[name="categorias[]"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[name="dias_semana[]"]').forEach(cb => cb.checked = false);
+    
+    // Marcar categorias selecionadas
+    if (instrutor.categoria_habilitacao) {
+        const categorias = instrutor.categoria_habilitacao.split(',');
+        categorias.forEach(cat => {
+            const checkbox = document.querySelector(`input[name="categorias[]"][value="${cat.trim()}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
+    }
+    
+    // Marcar dias da semana selecionados
+    if (instrutor.dias_semana) {
+        const dias = instrutor.dias_semana.split(',');
+        dias.forEach(dia => {
+            const checkbox = document.querySelector(`input[name="dias_semana[]"][value="${dia.trim()}"]`);
+            if (checkbox) checkbox.checked = true;
+        });
+    }
+    
+    // Preencher horários
+    if (instrutor.horario_inicio) {
+        document.getElementById('horario_inicio').value = instrutor.horario_inicio;
+    }
+    if (instrutor.horario_fim) {
+        document.getElementById('horario_fim').value = instrutor.horario_fim;
+    }
+}
+
+function excluirInstrutor(id) {
+    if (confirm('Tem certeza que deseja excluir este instrutor?')) {
+        fetch(`${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta('Instrutor excluído com sucesso!', 'success');
+                carregarInstrutores(); // Recarregar tabela
+            } else {
+                mostrarAlerta(data.error || 'Erro ao excluir instrutor', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarAlerta('Erro ao excluir instrutor', 'danger');
+        });
+    }
+}
+
+function salvarInstrutor() {
+    const form = document.getElementById('formInstrutor');
+    const formData = new FormData(form);
+    
+    // Validações básicas
+    if (!formData.get('nome').trim() || !formData.get('cpf').trim() || !formData.get('cnh').trim() || 
+        !formData.get('data_nascimento') || !formData.get('email').trim() || !formData.get('usuario_id') || 
+        !formData.get('cfc_id') || !formData.get('credencial').trim()) {
+        mostrarAlerta('Preencha todos os campos obrigatórios', 'warning');
+        return;
+    }
+    
+    // Preparar dados para envio
+    const categoriasSelecionadas = formData.getAll('categorias[]');
+    if (categoriasSelecionadas.length === 0) {
+        mostrarAlerta('Selecione pelo menos uma categoria de habilitação', 'warning');
+        return;
+    }
+    
+    const instrutorData = {
+        nome: formData.get('nome').trim(),
+        cpf: formData.get('cpf').trim(),
+        cnh: formData.get('cnh').trim(),
+        data_nascimento: formData.get('data_nascimento'),
+        email: formData.get('email').trim(),
+        usuario_id: formData.get('usuario_id'),
+        cfc_id: formData.get('cfc_id'),
+        credencial: formData.get('credencial').trim(),
+        categoria_habilitacao: categoriasSelecionadas.join(','),
+        telefone: formData.get('telefone') || '',
+        endereco: formData.get('endereco') || '',
+        cidade: formData.get('cidade') || '',
+        uf: formData.get('uf') || '',
+        ativo: formData.get('ativo') === '1',
+        tipo_carga: formData.get('tipo_carga') || '',
+        validade_credencial: formData.get('validade_credencial') || '',
+        observacoes: formData.get('observacoes') || '',
+        dias_semana: formData.getAll('dias_semana[]').join(','),
+        horario_inicio: formData.get('horario_inicio') || '',
+        horario_fim: formData.get('horario_fim') || ''
+    };
+    
+    const acao = formData.get('acao');
+    const instrutor_id = formData.get('instrutor_id');
+    
+    if (acao === 'editar' && instrutor_id) {
+        instrutorData.id = instrutor_id;
+    }
+    
+    // Mostrar loading
+    const btnSalvar = document.getElementById('btnSalvarInstrutor');
+    const originalText = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Salvando...';
+    btnSalvar.disabled = true;
+    
+    // Fazer requisição para a API - URL CORRIGIDA
+    const url = API_CONFIG.getRelativeApiUrl('INSTRUTORES');
+    const method = acao === 'editar' ? 'PUT' : 'POST';
+    
+    fetch(url, {
+        method: method,
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(instrutorData)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta(data.message || 'Instrutor salvo com sucesso!', 'success');
+            
+            // Fechar modal
+            fecharModalInstrutor();
+            
+            // Limpar formulário
+            form.reset();
+            
+            // Recarregar página para mostrar dados atualizados
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            mostrarAlerta(data.error || 'Erro ao salvar instrutor', 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        mostrarAlerta('Erro ao salvar instrutor. Tente novamente.', 'danger');
+    })
+    .finally(() => {
+        // Restaurar botão
+        btnSalvar.innerHTML = originalText;
+        btnSalvar.disabled = false;
+    });
+}
+
+function mostrarAlerta(mensagem, tipo) {
+    // Criar alerta personalizado
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 10000; min-width: 300px;';
+    alertDiv.innerHTML = `
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    document.body.appendChild(alertDiv);
+    
+    // Auto-remover após 5 segundos
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+function filtrarInstrutores() {
+    const status = document.getElementById('filtroStatus').value;
+    const cfc = document.getElementById('filtroCFC').value;
+    const categoria = document.getElementById('filtroCategoria').value;
+    const busca = document.getElementById('buscaInstrutor').value.toLowerCase();
+    
+    // Implementar filtros aqui
+    console.log('Filtrando:', { status, cfc, categoria, busca });
+}
+
+function limparFiltros() {
+    document.getElementById('filtroStatus').value = '';
+    document.getElementById('filtroCFC').value = '';
+    document.getElementById('filtroCategoria').value = '';
+    document.getElementById('buscaInstrutor').value = '';
+    
+    // Recarregar todos os instrutores
+    carregarInstrutores();
+}
+
+function exportarInstrutores() {
+    // Implementar exportação para CSV/Excel
+    mostrarAlerta('Funcionalidade de exportação será implementada em breve!', 'info');
+}
+
+function imprimirInstrutores() {
+    // Implementar impressão
+    mostrarAlerta('Funcionalidade de impressão será implementada em breve!', 'info');
+}
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    // Carregar dados iniciais
+    carregarInstrutores();
+    carregarCFCs();
+    carregarUsuarios();
+    
+    // Adicionar listener para fechar modal ao clicar fora
+    const modal = document.getElementById('modalInstrutor');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                fecharModalInstrutor();
+            }
+        });
+        
+        // Adicionar listener para tecla ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'block') {
+                fecharModalInstrutor();
+            }
+        });
+    }
+});
+
+function carregarInstrutores() {
+    console.log('🔍 Iniciando carregamento de instrutores...');
+    
+    // DEBUG: Verificar configuração
+    console.log('🔧 API_CONFIG:', API_CONFIG);
+    console.log('🔧 typeof API_CONFIG:', typeof API_CONFIG);
+    
+    const urlInstrutores = API_CONFIG.getRelativeApiUrl('INSTRUTORES');
+    console.log('🌐 URL construída para Instrutores:', urlInstrutores);
+    
+    // Carregar instrutores para a tabela
+    fetch(urlInstrutores)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                preencherTabelaInstrutores(data.data);
+                atualizarEstatisticas(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar instrutores:', error);
+        });
+}
+
+function preencherTabelaInstrutores(instrutores) {
+    const tbody = document.querySelector('#tabelaInstrutores tbody');
+    tbody.innerHTML = '';
+    
+    instrutores.forEach(instrutor => {
+        const row = document.createElement('tr');
+        
+        // Usar o nome correto (nome_usuario se nome estiver vazio)
+        const nomeExibicao = instrutor.nome || instrutor.nome_usuario || 'N/A';
+        const cfcExibicao = instrutor.cfc_nome || 'N/A';
+        
+        row.innerHTML = `
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                        <span class="text-white fw-bold">${nomeExibicao.charAt(0).toUpperCase()}</span>
+                    </div>
+                    ${nomeExibicao}
+                </div>
+            </td>
+            <td>${instrutor.email || 'N/A'}</td>
+            <td>${cfcExibicao}</td>
+            <td>${instrutor.credencial || 'N/A'}</td>
+            <td>
+                <span class="badge bg-info">${instrutor.categoria_habilitacao || 'N/A'}</span>
+            </td>
+            <td>
+                <span class="badge ${instrutor.ativo ? 'bg-success' : 'bg-danger'}">
+                    ${instrutor.ativo ? 'ATIVO' : 'INATIVO'}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group-vertical btn-group-sm">
+                    <button class="btn btn-primary btn-sm" onclick="editarInstrutor(${instrutor.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="excluirInstrutor(${instrutor.id})" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function atualizarEstatisticas(instrutores) {
+    const total = instrutores.length;
+    const ativos = instrutores.filter(i => i.ativo).length;
+    
+    document.getElementById('totalInstrutores').textContent = total;
+    document.getElementById('instrutoresAtivos').textContent = ativos;
+}
+
+function carregarCFCs() {
+    console.log('🔍 Iniciando carregamento de CFCs...');
+    
+    // DEBUG: Verificar configuração
+    console.log('🔧 API_CONFIG:', API_CONFIG);
+    console.log('🔧 typeof API_CONFIG:', typeof API_CONFIG);
+    
+    const urlCFC = API_CONFIG.getRelativeApiUrl('CFCs');
+    console.log('🌐 URL construída para CFCs:', urlCFC);
+    
+    // Carregar CFCs para o select
+    fetch(urlCFC)
+        .then(response => {
+            console.log('📡 Resposta da API CFCs:', response.status, response.statusText);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 Dados recebidos da API CFCs:', data);
+            
+            if (data.success) {
+                const selectCFC = document.getElementById('cfc_id');
+                const filtroCFC = document.getElementById('filtroCFC');
+                
+                console.log('🎯 Select CFC encontrado:', selectCFC);
+                console.log('🎯 Filtro CFC encontrado:', filtroCFC);
+                
+                if (selectCFC) {
+                    selectCFC.innerHTML = '<option value="">Selecione um CFC</option>';
+                    
+                    data.data.forEach(cfc => {
+                        const option = document.createElement('option');
+                        option.value = cfc.id;
+                        option.textContent = cfc.nome;
+                        selectCFC.appendChild(option);
+                        console.log('✅ CFC adicionado:', cfc.nome);
+                    });
+                }
+                
+                // Também preencher o filtro
+                if (filtroCFC) {
+                    filtroCFC.innerHTML = '<option value="">Todos</option>';
+                    data.data.forEach(cfc => {
+                        const option = document.createElement('option');
+                        option.value = cfc.id;
+                        option.textContent = cfc.nome;
+                        filtroCFC.appendChild(option);
+                    });
+                }
+                
+                console.log('✅ CFCs carregados com sucesso!');
+            } else {
+                console.error('❌ Erro na API CFCs:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar CFCs:', error);
+        });
+}
+
+function carregarUsuarios() {
+    console.log('🔍 Iniciando carregamento de usuários...');
+    
+    // DEBUG: Verificar configuração
+    console.log('🔧 API_CONFIG:', API_CONFIG);
+    console.log('🔧 typeof API_CONFIG:', typeof API_CONFIG);
+    
+    const urlUsuarios = API_CONFIG.getRelativeApiUrl('USUARIOS');
+    console.log('🌐 URL construída para Usuários:', urlUsuarios);
+    
+    // Carregar usuários para o select
+    fetch(urlUsuarios)
+        .then(response => {
+            console.log('📡 Resposta da API Usuários:', response.status, response.statusText);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 Dados recebidos da API Usuários:', data);
+            
+            if (data.success) {
+                const selectUsuario = document.getElementById('usuario_id');
+                console.log('🎯 Select Usuário encontrado:', selectUsuario);
+                
+                if (selectUsuario) {
+                    selectUsuario.innerHTML = '<option value="">Selecione um usuário</option>';
+                    
+                    data.data.forEach(usuario => {
+                        const option = document.createElement('option');
+                        option.value = usuario.id;
+                        option.textContent = `${usuario.nome} (${usuario.email})`;
+                        selectUsuario.appendChild(option);
+                        console.log('✅ Usuário adicionado:', usuario.nome);
+                    });
+                    
+                    console.log('✅ Usuários carregados com sucesso!');
+                } else {
+                    console.error('❌ Select de usuário não encontrado!');
+                }
+            } else {
+                console.error('❌ Erro na API Usuários:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar usuários:', error);
+        });
+}
+
+console.log('📋 Arquivo instrutores-page.js carregado com sucesso!');

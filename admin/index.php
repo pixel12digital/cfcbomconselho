@@ -963,6 +963,7 @@ define('ADMIN_ROUTING', true);
     <!-- JavaScript das Funcionalidades Específicas -->
     <script src="assets/js/cfcs.js"></script>
     <script src="assets/js/instrutores.js"></script>
+    <script src="assets/js/instrutores-page.js"></script>
     <script src="assets/js/alunos.js"></script>
 </body>
 </html>

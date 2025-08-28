@@ -158,6 +158,26 @@ Após as correções, o sistema deve:
   - Log da URL construída antes de fazer a requisição
   - Debug detalhado para identificar origem do problema `/admin/admin/`
 
+## 🚨 **PROBLEMA FINAL IDENTIFICADO E RESOLVIDO!**
+
+### **Causa Raiz Encontrada:**
+O JavaScript inline na página `instrutores.php` estava sendo executado **ANTES** do `config.js` ser carregado, causando:
+- `API_CONFIG` não disponível quando as funções eram executadas
+- URLs incorretas sendo construídas
+- Erros 404 nas APIs
+
+### **Solução Aplicada:**
+1. **Criado arquivo externo**: `admin/assets/js/instrutores-page.js`
+2. **Removido script inline**: Da página `instrutores.php`
+3. **Incluído na ordem correta**: Após `config.js` no `admin/index.php`
+4. **Garantida disponibilidade**: `API_CONFIG` sempre disponível quando necessário
+
+### **Arquivos Modificados:**
+- ✅ `admin/assets/js/config.js` - Simplificado e corrigido
+- ✅ `admin/pages/instrutores.php` - Script inline removido
+- ✅ `admin/assets/js/instrutores-page.js` - **NOVO ARQUIVO CRIADO**
+- ✅ `admin/index.php` - Ordem de scripts corrigida
+
 ---
 
 *Documentação criada para facilitar futuras manutenções e troubleshooting*
