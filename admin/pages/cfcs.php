@@ -1096,42 +1096,102 @@ function excluirCFC(id) {
     console.log('Função excluirCFC chamada com ID:', id);
     console.log('Evento recebido:', event);
     
-    const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este CFC?';
-    
-    if (confirm(mensagem)) {
-        console.log('Usuário confirmou exclusão do CFC ID:', id);
-        
-        // Mostrar loading - usar o botão correto
-        let btnExcluir;
-        if (event && event.target) {
-            btnExcluir = event.target;
+    // Verificar se há registros vinculados primeiro
+    verificarRegistrosVinculados(id).then(hasVinculados => {
+        if (hasVinculados) {
+            // Perguntar se deseja exclusão em cascata
+            const mensagemCascata = '⚠️ ATENÇÃO: Este CFC possui registros vinculados!\n\n' +
+                'Opções:\n' +
+                '1. Exclusão em cascata: Remove o CFC e TODOS os registros vinculados\n' +
+                '2. Cancelar: Mantém o CFC e os registros\n\n' +
+                'Deseja continuar com exclusão em cascata?';
+            
+            if (confirm(mensagemCascata)) {
+                excluirCFCCascata(id);
+            }
         } else {
-            // Fallback: procurar o botão pelo ID
-            btnExcluir = document.querySelector(`button[onclick*="excluirCFC(${id})"]`);
+            // Exclusão normal
+            const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este CFC?';
+            if (confirm(mensagem)) {
+                excluirCFCNormal(id);
+            }
         }
-        
-        if (!btnExcluir) {
-            console.error('❌ Botão de exclusão não encontrado');
-            mostrarAlerta('Erro: Botão não encontrado', 'danger');
-            return;
-        }
-        
-        console.log('Botão encontrado:', btnExcluir);
-        
-        const originalText = btnExcluir.innerHTML;
-        btnExcluir.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Excluindo...';
-        btnExcluir.disabled = true;
-        
-        console.log('Fazendo requisição DELETE para:', `../admin/api/cfcs.php?id=${id}`);
-        
-        fetch(`../admin/api/cfcs.php?id=${id}`, {
+    });
+}
+
+// Função para verificar se há registros vinculados
+async function verificarRegistrosVinculados(id) {
+    try {
+        const response = await fetch(`../admin/api/cfcs.php?id=${id}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
                 'X-Requested-With': 'XMLHttpRequest'
             },
             credentials: 'same-origin'
-        })
+        });
+        
+        if (response.status === 400) {
+            const data = await response.json();
+            return data.details && (data.details.instrutores > 0 || data.details.alunos > 0 || 
+                                   data.details.veiculos > 0 || data.details.aulas > 0);
+        }
+        return false;
+    } catch (error) {
+        console.error('Erro ao verificar registros vinculados:', error);
+        return false;
+    }
+}
+
+// Função para exclusão normal (sem registros vinculados)
+function excluirCFCNormal(id) {
+    console.log('Exclusão normal do CFC ID:', id);
+    executarExclusao(id, false);
+}
+
+// Função para exclusão em cascata
+function excluirCFCCascata(id) {
+    console.log('Exclusão em cascata do CFC ID:', id);
+    executarExclusao(id, true);
+}
+
+// Função principal de exclusão
+function executarExclusao(id, cascade = false) {
+    // Mostrar loading - usar o botão correto
+    let btnExcluir;
+    if (event && event.target) {
+        btnExcluir = event.target;
+    } else {
+        // Fallback: procurar o botão pelo ID
+        btnExcluir = document.querySelector(`button[onclick*="excluirCFC(${id})"]`);
+    }
+    
+    if (!btnExcluir) {
+        console.error('❌ Botão de exclusão não encontrado');
+        mostrarAlerta('Erro: Botão não encontrado', 'danger');
+        return;
+    }
+    
+    console.log('Botão encontrado:', btnExcluir);
+    
+    const originalText = btnExcluir.innerHTML;
+    btnExcluir.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Excluindo...';
+    btnExcluir.disabled = true;
+    
+    const url = cascade ? 
+        `../admin/api/cfcs.php?id=${id}&cascade=true` : 
+        `../admin/api/cfcs.php?id=${id}`;
+    
+    console.log('Fazendo requisição DELETE para:', url);
+    
+    fetch(url, {
+        method: 'DELETE',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        credentials: 'same-origin'
+    })
         .then(response => {
             console.log('Resposta recebida:', response);
             console.log('Status:', response.status);
@@ -1146,10 +1206,25 @@ function excluirCFC(id) {
             console.log('Dados recebidos:', data);
             
             if (data.success) {
-                mostrarAlerta('CFC excluído com sucesso!', 'success');
+                let mensagem = 'CFC excluído com sucesso!';
+                
+                // Se foi exclusão em cascata, mostrar detalhes
+                if (data.details) {
+                    const detalhes = [];
+                    if (data.details.instrutores_removidos > 0) detalhes.push(`${data.details.instrutores_removidos} instrutor(es)`);
+                    if (data.details.alunos_removidos > 0) detalhes.push(`${data.details.alunos_removidos} aluno(s)`);
+                    if (data.details.veiculos_removidos > 0) detalhes.push(`${data.details.veiculos_removidos} veículo(s)`);
+                    if (data.details.aulas_removidas > 0) detalhes.push(`${data.details.aulas_removidas} aula(s)`);
+                    
+                    if (detalhes.length > 0) {
+                        mensagem += `\n\nRegistros removidos em cascata:\n• ${detalhes.join('\n• ')}`;
+                    }
+                }
+                
+                mostrarAlerta(mensagem, 'success');
                 setTimeout(() => {
                     location.reload();
-                }, 1500);
+                }, 3000); // Mais tempo para ler a mensagem
             } else {
                 mostrarAlerta(data.error || 'Erro ao excluir CFC', 'danger');
             }

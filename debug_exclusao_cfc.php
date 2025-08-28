@@ -1,93 +1,142 @@
 <?php
-// Debug da função de exclusão de CFC
+// Script de debug para verificar registros vinculados ao CFC
 error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
-echo "<h1>🔍 Debug da Função de Exclusão de CFC</h1>";
+// Usar o novo sistema de caminhos
+require_once __DIR__ . '/includes/paths.php';
+require_once INCLUDES_PATH . '/config.php';
+require_once INCLUDES_PATH . '/database.php';
 
-// Verificar se o arquivo cfcs.php existe
-$cfcFile = 'admin/pages/cfcs.php';
-if (file_exists($cfcFile)) {
-    echo "<p>✅ Arquivo cfcs.php encontrado</p>";
+try {
+    $db = Database::getInstance();
     
-    // Verificar tamanho do arquivo
-    $fileSize = filesize($cfcFile);
-    echo "<p>📏 Tamanho do arquivo: " . number_format($fileSize) . " bytes</p>";
+    // ID do CFC que está sendo tentado excluir
+    $cfc_id = 30;
     
-    // Verificar se a função excluirCFC está no arquivo
-    $fileContent = file_get_contents($cfcFile);
-    if (strpos($fileContent, 'function excluirCFC') !== false) {
-        echo "<p>✅ Função excluirCFC encontrada no arquivo</p>";
-        
-        // Extrair a função para verificar
-        preg_match('/function excluirCFC\([^)]*\)\s*\{[^}]*\}/s', $fileContent, $matches);
-        if (!empty($matches)) {
-            echo "<p>✅ Função extraída com sucesso</p>";
-            echo "<details>";
-            echo "<summary>📋 Ver função excluirCFC</summary>";
-            echo "<pre>" . htmlspecialchars($matches[0]) . "</pre>";
-            echo "</details>";
-        } else {
-            echo "<p>❌ Não foi possível extrair a função</p>";
-        }
-        
-        // Verificar se há erros de sintaxe JavaScript
-        preg_match('/<script>(.*?)<\/script>/s', $fileContent, $scriptMatches);
-        if (!empty($scriptMatches)) {
-            echo "<p>✅ Tag script encontrada</p>";
-            
-            // Verificar se há problemas com aspas ou caracteres especiais
-            $scriptContent = $scriptMatches[1];
-            if (strpos($scriptContent, 'console.log') !== false) {
-                echo "<p>✅ Console.log encontrado no script</p>";
-            }
-            
-            // Verificar se há problemas com aspas
-            $singleQuotes = substr_count($scriptContent, "'");
-            $doubleQuotes = substr_count($scriptContent, '"');
-            echo "<p>📊 Contagem de aspas: Simples: {$singleQuotes}, Duplas: {$doubleQuotes}</p>";
-            
-        } else {
-            echo "<p>❌ Tag script não encontrada</p>";
-        }
-        
+    echo "<h2>Debug de Exclusão do CFC ID: {$cfc_id}</h2>";
+    echo "<p><strong>Caminho base do projeto:</strong> " . PROJECT_BASE_PATH . "</p>";
+    
+    // Verificar se o CFC existe
+    $cfc = $db->fetch("SELECT * FROM cfcs WHERE id = ?", [$cfc_id]);
+    if (!$cfc) {
+        echo "<p style='color: red;'>CFC não encontrado!</p>";
+        exit;
+    }
+    
+    echo "<h3>Informações do CFC:</h3>";
+    echo "<pre>" . print_r($cfc, true) . "</pre>";
+    
+    // Verificar registros vinculados
+    echo "<h3>Verificando registros vinculados:</h3>";
+    
+    // Instrutores
+    $instrutores = $db->fetchAll("SELECT * FROM instrutores WHERE cfc_id = ?", [$cfc_id]);
+    echo "<h4>Instrutores ({$db->count('instrutores', 'cfc_id = ?', [$cfc_id])}):</h4>";
+    if (!empty($instrutores)) {
+        echo "<pre>" . print_r($instrutores, true) . "</pre>";
     } else {
-        echo "<p>❌ Função excluirCFC não encontrada no arquivo</p>";
+        echo "<p>Nenhum instrutor vinculado</p>";
+    }
+    
+    // Alunos
+    $alunos = $db->fetchAll("SELECT * FROM alunos WHERE cfc_id = ?", [$cfc_id]);
+    echo "<h4>Alunos ({$db->count('alunos', 'cfc_id = ?', [$cfc_id])}):</h4>";
+    if (!empty($alunos)) {
+        echo "<pre>" . print_r($alunos, true) . "</pre>";
+    } else {
+        echo "<p>Nenhum aluno vinculado</p>";
+    }
+    
+    // Veículos
+    $veiculos = $db->fetchAll("SELECT * FROM veiculos WHERE cfc_id = ?", [$cfc_id]);
+    echo "<h4>Veículos ({$db->count('veiculos', 'cfc_id = ?', [$cfc_id])}):</h4>";
+    if (!empty($veiculos)) {
+        echo "<pre>" . print_r($veiculos, true) . "</pre>";
+    } else {
+        echo "<p>Nenhum veículo vinculado</p>";
+    }
+    
+    // Aulas
+    $aulas = $db->fetchAll("SELECT * FROM aulas WHERE cfc_id = ?", [$cfc_id]);
+    echo "<h4>Aulas ({$db->count('aulas', 'cfc_id = ?', [$cfc_id])}):</h4>";
+    if (!empty($aulas)) {
+        echo "<pre>" . print_r($aulas, true) . "</pre>";
+    } else {
+        echo "<p>Nenhuma aula vinculada</p>";
+    }
+    
+    // Verificar se há outras tabelas que possam ter referência ao CFC
+    echo "<h3>Verificando outras possíveis referências:</h3>";
+    
+    // Listar todas as tabelas do banco
+    $tables = $db->fetchAll("SHOW TABLES");
+    echo "<h4>Tabelas no banco:</h4>";
+    echo "<ul>";
+    foreach ($tables as $table) {
+        $tableName = array_values($table)[0];
+        echo "<li>{$tableName}</li>";
+    }
+    echo "</ul>";
+    
+    // Verificar se há outras tabelas com cfc_id
+    echo "<h4>Verificando outras tabelas com cfc_id:</h4>";
+    foreach ($tables as $table) {
+        $tableName = array_values($table)[0];
         
-        // Procurar por variações
-        if (strpos($fileContent, 'excluirCFC') !== false) {
-            echo "<p>⚠️ String 'excluirCFC' encontrada, mas não como função</p>";
+        // Verificar se a tabela tem coluna cfc_id
+        $columns = $db->fetchAll("SHOW COLUMNS FROM {$tableName}");
+        $hasCfcId = false;
+        foreach ($columns as $column) {
+            if ($column['Field'] === 'cfc_id') {
+                $hasCfcId = true;
+                break;
+            }
+        }
+        
+        if ($hasCfcId) {
+            $count = $db->count($tableName, 'cfc_id = ?', [$cfc_id]);
+            if ($count > 0) {
+                echo "<p><strong>{$tableName}:</strong> {$count} registro(s)</p>";
+                $records = $db->fetchAll("SELECT * FROM {$tableName} WHERE cfc_id = ?", [$cfc_id]);
+                echo "<pre>" . print_r($records, true) . "</pre>";
+            }
         }
     }
     
-    // Verificar as últimas linhas do arquivo
-    $lines = file($cfcFile);
-    $lastLines = array_slice($lines, -10);
-    echo "<details>";
-    echo "<summary>📋 Últimas 10 linhas do arquivo</summary>";
-    echo "<pre>";
-    foreach ($lastLines as $i => $line) {
-        $lineNum = count($lines) - 10 + $i + 1;
-        echo sprintf("%4d: %s", $lineNum, htmlspecialchars($line));
+    // Testar a função count diretamente
+    echo "<h3>Testando função count diretamente:</h3>";
+    try {
+        $instr_count = $db->count('instrutores', 'cfc_id = ?', [$cfc_id]);
+        echo "<p>Count instrutores: {$instr_count}</p>";
+    } catch (Exception $e) {
+        echo "<p style='color: red;'>Erro ao contar instrutores: " . $e->getMessage() . "</p>";
     }
-    echo "</pre>";
-    echo "</details>";
     
-} else {
-    echo "<p>❌ Arquivo cfcs.php não encontrado</p>";
+    try {
+        $alunos_count = $db->count('alunos', 'cfc_id = ?', [$cfc_id]);
+        echo "<p>Count alunos: {$alunos_count}</p>";
+    } catch (Exception $e) {
+        echo "<p style='color: red;'>Erro ao contar alunos: " . $e->getMessage() . "</p>";
+    }
+    
+    try {
+        $veiculos_count = $db->count('veiculos', 'cfc_id = ?', [$cfc_id]);
+        echo "<p>Count veículos: {$veiculos_count}</p>";
+    } catch (Exception $e) {
+        echo "<p style='color: red;'>Erro ao contar veículos: " . $e->getMessage() . "</p>";
+    }
+    
+    try {
+        $aulas_count = $db->count('aulas', 'cfc_id = ?', [$cfc_id]);
+        echo "<p>Count aulas: {$aulas_count}</p>";
+    } catch (Exception $e) {
+        echo "<p style='color: red;'>Erro ao contar aulas: " . $e->getMessage() . "</p>";
+    }
+    
+} catch (Exception $e) {
+    echo "<p style='color: red;'>Erro: " . $e->getMessage() . "</p>";
+    echo "<p>Arquivo: " . $e->getFile() . "</p>";
+    echo "<p>Linha: " . $e->getLine() . "</p>";
 }
-
-// Verificar se há problemas de permissão
-if (file_exists($cfcFile)) {
-    $perms = fileperms($cfcFile);
-    echo "<p>🔐 Permissões do arquivo: " . substr(sprintf('%o', $perms), -4) . "</p>";
-}
-
-echo "<hr>";
-echo "<h2>🧪 Próximos Passos</h2>";
-echo "<p>1. Abra a página de CFCs no navegador</p>";
-echo "<p>2. Abra o console do navegador (F12)</p>";
-echo "<p>3. Verifique se há erros JavaScript</p>";
-echo "<p>4. Teste o botão de exclusão</p>";
-echo "<p>5. Verifique se a função excluirCFC está disponível no console</p>";
 ?>

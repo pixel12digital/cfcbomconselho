@@ -14,19 +14,23 @@ try {
         error_log('[API CFCs] Iniciando carregamento dos includes...');
     }
     
-    // Usar caminho absoluto para garantir que funcione
-    $basePath = dirname(dirname(__DIR__));
-    require_once $basePath . '/includes/config.php';
+    // Usar o novo sistema de caminhos
+    require_once __DIR__ . '/../../includes/paths.php';
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] paths.php carregado');
+    }
+    
+    require_once INCLUDES_PATH . '/config.php';
     if (function_exists('error_log')) {
         error_log('[API CFCs] config.php carregado');
     }
     
-    require_once $basePath . '/includes/database.php';
+    require_once INCLUDES_PATH . '/database.php';
     if (function_exists('error_log')) {
         error_log('[API CFCs] database.php carregado');
     }
     
-    require_once $basePath . '/includes/auth.php';
+    require_once INCLUDES_PATH . '/auth.php';
     if (function_exists('error_log')) {
         error_log('[API CFCs] auth.php carregado');
     }
@@ -34,6 +38,7 @@ try {
 } catch (Exception $e) {
     if (function_exists('error_log')) {
         error_log('[API CFCs] Erro ao carregar includes: ' . $e->getMessage());
+        error_log('[API CFCs] Caminho base: ' . (defined('PROJECT_BASE_PATH') ? PROJECT_BASE_PATH : 'não definido'));
     }
     http_response_code(500);
     echo json_encode(['success' => false, 'error' => 'Erro de configuração: ' . $e->getMessage()]);
@@ -313,6 +318,7 @@ try {
             // Excluir CFC
             if (isset($_GET['id'])) {
                 $id = (int)$_GET['id'];
+                $cascade = isset($_GET['cascade']) && $_GET['cascade'] === 'true';
                 
                 // Verificar se CFC existe
                 $existingCFC = $db->fetch("SELECT id FROM cfcs WHERE id = ?", [$id]);
@@ -329,34 +335,108 @@ try {
                 $aulas = $db->count('aulas', 'cfc_id = ?', [$id]);
                 
                 if ($instrutores > 0 || $alunos > 0 || $veiculos > 0 || $aulas > 0) {
-                    $vinculados = [];
-                    if ($instrutores > 0) $vinculados[] = "{$instrutores} instrutor(es)";
-                    if ($alunos > 0) $vinculados[] = "{$alunos} aluno(s)";
-                    if ($veiculos > 0) $vinculados[] = "{$veiculos} veículo(s)";
-                    if ($aulas > 0) $vinculados[] = "{$aulas} aula(s)";
-                    
-                    http_response_code(400);
-                    echo json_encode([
-                        'success' => false, 
-                        'error' => 'Não é possível excluir CFC com registros vinculados: ' . implode(', ', $vinculados) . '. Remova primeiro os registros vinculados.',
-                        'details' => [
-                            'instrutores' => $instrutores,
-                            'alunos' => $alunos,
-                            'veiculos' => $veiculos,
-                            'aulas' => $aulas
-                        ]
-                    ]);
-                    exit;
-                }
-                
-                // Excluir CFC
-                $result = $db->delete('cfcs', 'id = ?', [$id]);
-                
-                if ($result) {
-                    echo json_encode(['success' => true, 'message' => 'CFC excluído com sucesso']);
+                    if ($cascade) {
+                        // Exclusão em cascata
+                        if (function_exists('error_log')) {
+                            error_log("[API CFCs] Iniciando exclusão em cascata para CFC ID: {$id}");
+                        }
+                        
+                        try {
+                            $db->getConnection()->beginTransaction();
+                            
+                            // Remover aulas primeiro (dependem de instrutores, alunos e veículos)
+                            if ($aulas > 0) {
+                                $db->delete('aulas', 'cfc_id = ?', [$id]);
+                                if (function_exists('error_log')) {
+                                    error_log("[API CFCs] Removidas {$aulas} aulas do CFC ID: {$id}");
+                                }
+                            }
+                            
+                            // Remover instrutores
+                            if ($instrutores > 0) {
+                                $db->delete('instrutores', 'cfc_id = ?', [$id]);
+                                if (function_exists('error_log')) {
+                                    error_log("[API CFCs] Removidos {$instrutores} instrutores do CFC ID: {$id}");
+                                }
+                            }
+                            
+                            // Remover alunos
+                            if ($alunos > 0) {
+                                $db->delete('alunos', 'cfc_id = ?', [$id]);
+                                if (function_exists('error_log')) {
+                                    error_log("[API CFCs] Removidos {$alunos} alunos do CFC ID: {$id}");
+                                }
+                            }
+                            
+                            // Remover veículos
+                            if ($veiculos > 0) {
+                                $db->delete('veiculos', 'cfc_id = ?', [$id]);
+                                if (function_exists('error_log')) {
+                                    error_log("[API CFCs] Removidos {$veiculos} veículos do CFC ID: {$id}");
+                                }
+                            }
+                            
+                            // Agora excluir o CFC
+                            $result = $db->delete('cfcs', 'id = ?', [$id]);
+                            
+                            if ($result) {
+                                $db->getConnection()->commit();
+                                echo json_encode([
+                                    'success' => true, 
+                                    'message' => 'CFC excluído com sucesso em cascata',
+                                    'details' => [
+                                        'aulas_removidas' => $aulas,
+                                        'instrutores_removidos' => $instrutores,
+                                        'alunos_removidos' => $alunos,
+                                        'veiculos_removidos' => $veiculos
+                                    ]
+                                ]);
+                            } else {
+                                throw new Exception('Erro ao excluir CFC após remoção dos registros vinculados');
+                            }
+                            
+                        } catch (Exception $e) {
+                            $db->getConnection()->rollBack();
+                            if (function_exists('error_log')) {
+                                error_log("[API CFCs] Erro na exclusão em cascata: " . $e->getMessage());
+                            }
+                            http_response_code(500);
+                            echo json_encode(['success' => false, 'error' => 'Erro na exclusão em cascata: ' . $e->getMessage()]);
+                            exit;
+                        }
+                        
+                    } else {
+                        // Exclusão normal - impedir se há registros vinculados
+                        $vinculados = [];
+                        if ($instrutores > 0) $vinculados[] = "{$instrutores} instrutor(es)";
+                        if ($alunos > 0) $vinculados[] = "{$alunos} aluno(s)";
+                        if ($veiculos > 0) $vinculados[] = "{$veiculos} veículo(s)";
+                        if ($aulas > 0) $vinculados[] = "{$aulas} aula(s)";
+                        
+                        http_response_code(400);
+                        echo json_encode([
+                            'success' => false, 
+                            'error' => 'Não é possível excluir CFC com registros vinculados: ' . implode(', ', $vinculados) . '. Remova primeiro os registros vinculados ou use cascade=true para exclusão em cascata.',
+                            'details' => [
+                                'instrutores' => $instrutores,
+                                'alunos' => $alunos,
+                                'veiculos' => $veiculos,
+                                'aulas' => $aulas
+                            ],
+                            'solution' => 'Use ?cascade=true para excluir automaticamente todos os registros vinculados'
+                        ]);
+                        exit;
+                    }
                 } else {
-                    http_response_code(500);
-                    echo json_encode(['success' => false, 'error' => 'Erro ao excluir CFC']);
+                    // Nenhum registro vinculado, excluir diretamente
+                    $result = $db->delete('cfcs', 'id = ?', [$id]);
+                    
+                    if ($result) {
+                        echo json_encode(['success' => true, 'message' => 'CFC excluído com sucesso']);
+                    } else {
+                        http_response_code(500);
+                        echo json_encode(['success' => false, 'error' => 'Erro ao excluir CFC']);
+                    }
                 }
             } else {
                 http_response_code(400);
