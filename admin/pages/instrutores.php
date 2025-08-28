@@ -782,8 +782,17 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function carregarInstrutores() {
+    console.log('🔍 Iniciando carregamento de instrutores...');
+    
+    // DEBUG: Verificar configuração
+    console.log('🔧 API_CONFIG:', API_CONFIG);
+    console.log('🔧 typeof API_CONFIG:', typeof API_CONFIG);
+    
+    const urlInstrutores = API_CONFIG.getRelativeApiUrl('INSTRUTORES');
+    console.log('🌐 URL construída para Instrutores:', urlInstrutores);
+    
     // Carregar instrutores para a tabela
-    fetch(API_CONFIG.getRelativeApiUrl('INSTRUTORES'))
+    fetch(urlInstrutores)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -853,8 +862,15 @@ function atualizarEstatisticas(instrutores) {
 function carregarCFCs() {
     console.log('🔍 Iniciando carregamento de CFCs...');
     
+    // DEBUG: Verificar configuração
+    console.log('🔧 API_CONFIG:', API_CONFIG);
+    console.log('🔧 typeof API_CONFIG:', typeof API_CONFIG);
+    
+    const urlCFC = API_CONFIG.getRelativeApiUrl('CFCs');
+    console.log('🌐 URL construída para CFCs:', urlCFC);
+    
     // Carregar CFCs para o select
-    fetch(API_CONFIG.getRelativeApiUrl('CFCs'))
+    fetch(urlCFC)
         .then(response => {
             console.log('📡 Resposta da API CFCs:', response.status, response.statusText);
             return response.json();
@@ -905,8 +921,15 @@ function carregarCFCs() {
 function carregarUsuarios() {
     console.log('🔍 Iniciando carregamento de usuários...');
     
+    // DEBUG: Verificar configuração
+    console.log('🔧 API_CONFIG:', API_CONFIG);
+    console.log('🔧 typeof API_CONFIG:', typeof API_CONFIG);
+    
+    const urlUsuarios = API_CONFIG.getRelativeApiUrl('USUARIOS');
+    console.log('🌐 URL construída para Usuários:', urlUsuarios);
+    
     // Carregar usuários para o select
-    fetch(API_CONFIG.getRelativeApiUrl('USUARIOS'))
+    fetch(urlUsuarios)
         .then(response => {
             console.log('📡 Resposta da API Usuários:', response.status, response.statusText);
             return response.json();

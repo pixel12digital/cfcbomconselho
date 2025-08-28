@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Debug API Runtime - Sistema CFC</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; background: #f5f5f5; }
+        .container { max-width: 1200px; margin: 0 auto; }
+        .card { background: white; padding: 20px; margin: 20px 0; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .success { color: #28a745; }
+        .error { color: #dc3545; }
+        .warning { color: #ffc107; }
+        .info { color: #17a2b8; }
+        pre { background: #f8f9fa; padding: 15px; border-radius: 4px; overflow-x: auto; }
+        .btn { padding: 10px 20px; margin: 5px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-success { background: #28a745; color: white; }
+        .btn-danger { background: #dc3545; color: white; }
+        .log-item { padding: 5px 0; border-bottom: 1px solid #eee; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Debug API Runtime - Sistema CFC</h1>
+        
+        <div class="card">
+            <h3>📍 Localização e Contexto</h3>
+            <div id="locationInfo"></div>
+        </div>
+        
+        <div class="card">
+            <h3>🔧 Configuração API_CONFIG</h3>
+            <div id="apiConfigInfo"></div>
+        </div>
+        
+        <div class="card">
+            <h3>🧪 Teste de URLs em Tempo Real</h3>
+            <button class="btn btn-primary" onclick="testarURLsTempoReal()">Testar URLs</button>
+            <div id="urlTestResults"></div>
+        </div>
+        
+        <div class="card">
+            <h3>📡 Interceptar Requisições fetch()</h3>
+            <button class="btn btn-success" onclick="interceptarFetch()">Ativar Interceptação</button>
+            <button class="btn btn-danger" onclick="pararInterceptacao()">Parar Interceptação</button>
+            <div id="fetchInterceptResults"></div>
+        </div>
+        
+        <div class="card">
+            <h3>📊 Log de Debug</h3>
+            <div id="debugLog"></div>
+        </div>
+    </div>
+
+    <script>
+        let originalFetch = null;
+        let interceptandoFetch = false;
+        
+        function addLog(message, type = 'info') {
+            const log = document.getElementById('debugLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const item = document.createElement('div');
+            item.className = `log-item ${type}`;
+            item.innerHTML = `<strong>[${timestamp}]</strong> ${message}`;
+            log.appendChild(item);
+            console.log(`[${timestamp}] ${message}`);
+        }
+        
+        function mostrarLocalização() {
+            const info = document.getElementById('locationInfo');
+            const data = {
+                'URL Completa': window.location.href,
+                'Origin': window.location.origin,
+                'Pathname': window.location.pathname,
+                'Search': window.location.search,
+                'Hash': window.location.hash,
+                'Base URL Detectada': detectarBaseURL()
+            };
+            
+            let html = '<ul>';
+            for (const [key, value] of Object.entries(data)) {
+                html += `<li><strong>${key}:</strong> <code>${value}</code></li>`;
+            }
+            html += '</ul>';
+            info.innerHTML = html;
+        }
+        
+        function detectarBaseURL() {
+            const origin = window.location.origin;
+            const pathname = window.location.pathname;
+            
+            // Tentar diferentes métodos de detecção
+            if (pathname.includes('/admin/')) {
+                const basePath = pathname.substring(0, pathname.lastIndexOf('/admin/'));
+                return origin + basePath;
+            }
+            
+            if (pathname.includes('/')) {
+                const basePath = pathname.substring(0, pathname.lastIndexOf('/'));
+                return origin + basePath;
+            }
+            
+            return origin;
+        }
+        
+        function mostrarConfiguracao() {
+            const info = document.getElementById('apiConfigInfo');
+            
+            if (typeof API_CONFIG !== 'undefined') {
+                addLog('✅ API_CONFIG encontrada!', 'success');
+                
+                let html = '<h4>✅ API_CONFIG Encontrada:</h4>';
+                html += `<pre>${JSON.stringify(API_CONFIG, null, 2)}</pre>`;
+                
+                // Testar cada endpoint
+                html += '<h4>🧪 Teste de Endpoints:</h4><ul>';
+                for (const [key, endpoint] of Object.entries(API_CONFIG.ENDPOINTS || {})) {
+                    const relativeUrl = API_CONFIG.getRelativeApiUrl ? API_CONFIG.getRelativeApiUrl(key) : 'N/A';
+                    const fullUrl = API_CONFIG.getApiUrl ? API_CONFIG.getApiUrl(key) : 'N/A';
+                    
+                    html += `<li><strong>${key}:</strong>`;
+                    html += `<br>&nbsp;&nbsp;Endpoint: <code>${endpoint}</code>`;
+                    html += `<br>&nbsp;&nbsp;Relative URL: <code>${relativeUrl}</code>`;
+                    html += `<br>&nbsp;&nbsp;Full URL: <code>${fullUrl}</code>`;
+                    html += '</li>';
+                }
+                html += '</ul>';
+                
+                info.innerHTML = html;
+            } else {
+                addLog('❌ API_CONFIG não encontrada!', 'error');
+                info.innerHTML = '<div class="error"><strong>❌ API_CONFIG não encontrada!</strong><br>O arquivo config.js pode não ter sido carregado.</div>';
+            }
+        }
+        
+        function testarURLsTempoReal() {
+            const results = document.getElementById('urlTestResults');
+            addLog('🧪 Iniciando teste de URLs em tempo real...', 'info');
+            
+            let html = '<h4>🧪 Resultados dos Testes:</h4>';
+            
+            if (typeof API_CONFIG !== 'undefined') {
+                const endpoints = ['INSTRUTORES', 'USUARIOS', 'CFCs'];
+                
+                html += '<table border="1" style="width: 100%; border-collapse: collapse;">';
+                html += '<tr><th>Endpoint</th><th>URL Relativa</th><th>URL Construída</th><th>Status</th></tr>';
+                
+                endpoints.forEach(endpoint => {
+                    try {
+                        const relativeUrl = API_CONFIG.getRelativeApiUrl(endpoint);
+                        const fullUrl = API_CONFIG.getApiUrl ? API_CONFIG.getApiUrl(endpoint) : relativeUrl;
+                        
+                        let status = '✅ OK';
+                        if (fullUrl.includes('/admin/admin/')) {
+                            status = '❌ DUPLICAÇÃO';
+                        }
+                        
+                        html += `<tr>`;
+                        html += `<td><strong>${endpoint}</strong></td>`;
+                        html += `<td><code>${relativeUrl}</code></td>`;
+                        html += `<td><code>${fullUrl}</code></td>`;
+                        html += `<td>${status}</td>`;
+                        html += `</tr>`;
+                        
+                        addLog(`${endpoint}: ${fullUrl}`, status.includes('❌') ? 'error' : 'success');
+                    } catch (error) {
+                        html += `<tr><td>${endpoint}</td><td colspan="3">❌ Erro: ${error.message}</td></tr>`;
+                        addLog(`Erro no endpoint ${endpoint}: ${error.message}`, 'error');
+                    }
+                });
+                
+                html += '</table>';
+            } else {
+                html += '<div class="error">❌ API_CONFIG não está disponível para teste.</div>';
+            }
+            
+            results.innerHTML = html;
+        }
+        
+        function interceptarFetch() {
+            if (interceptandoFetch) {
+                addLog('⚠️ Interceptação já está ativa!', 'warning');
+                return;
+            }
+            
+            originalFetch = window.fetch;
+            interceptandoFetch = true;
+            
+            window.fetch = function(...args) {
+                const url = args[0];
+                const options = args[1] || {};
+                
+                addLog(`📡 FETCH INTERCEPTADO: ${url}`, 'info');
+                
+                // Verificar se há duplicação de admin
+                if (typeof url === 'string' && url.includes('/admin/admin/')) {
+                    addLog(`🚨 DUPLICAÇÃO DETECTADA: ${url}`, 'error');
+                }
+                
+                // Adicionar à lista de interceptações
+                const results = document.getElementById('fetchInterceptResults');
+                const item = document.createElement('div');
+                item.className = 'log-item';
+                item.innerHTML = `
+                    <strong>URL:</strong> <code>${url}</code><br>
+                    <strong>Method:</strong> ${options.method || 'GET'}<br>
+                    <strong>Status:</strong> ${url.includes('/admin/admin/') ? '❌ DUPLICAÇÃO' : '✅ OK'}
+                `;
+                results.appendChild(item);
+                
+                return originalFetch.apply(this, args);
+            };
+            
+            addLog('✅ Interceptação de fetch() ativada!', 'success');
+        }
+        
+        function pararInterceptacao() {
+            if (!interceptandoFetch) {
+                addLog('⚠️ Interceptação não está ativa!', 'warning');
+                return;
+            }
+            
+            window.fetch = originalFetch;
+            interceptandoFetch = false;
+            
+            addLog('🛑 Interceptação de fetch() parada!', 'info');
+        }
+        
+        // Inicializar quando a página carregar
+        document.addEventListener('DOMContentLoaded', function() {
+            addLog('🚀 Debug Runtime iniciado!', 'info');
+            mostrarLocalização();
+            
+            // Aguardar um pouco para garantir que scripts foram carregados
+            setTimeout(() => {
+                mostrarConfiguracao();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

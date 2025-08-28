@@ -145,6 +145,19 @@ Após as correções, o sistema deve:
 - Sistema de notificações funcionando via `window.notifications`
 - Font Awesome funcionando no contexto do admin
 
+## 🔍 Debug e Investigação Adicional
+
+### **Arquivo criado**: `debug_api_runtime.html`
+- **Função**: Ferramenta para debug em tempo real das URLs de API
+- **Recursos**: Interceptação de requisições fetch(), análise da configuração API_CONFIG, logs detalhados
+
+### **Logs de debug adicionados**: `admin/pages/instrutores.php`
+- **Função**: Verificar em tempo real como as URLs estão sendo construídas
+- **Logs adicionados**:
+  - Verificação do tipo e conteúdo do `API_CONFIG`
+  - Log da URL construída antes de fazer a requisição
+  - Debug detalhado para identificar origem do problema `/admin/admin/`
+
 ---
 
 *Documentação criada para facilitar futuras manutenções e troubleshooting*
