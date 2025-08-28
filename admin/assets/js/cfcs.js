@@ -6,6 +6,71 @@
 // Cache para o caminho da API
 let caminhoAPICache = null;
 
+// Função para sanitizar dados de entrada
+function sanitizarDados(texto) {
+    if (typeof texto !== 'string') {
+        return texto;
+    }
+    
+    // Remover tags HTML e scripts
+    const div = document.createElement('div');
+    div.textContent = texto;
+    return div.innerHTML
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#x27;')
+        .replace(/\//g, '&#x2F;');
+}
+
+// Função para validar CNPJ
+function validarCNPJ(cnpj) {
+    // Remove caracteres não numéricos
+    cnpj = cnpj.replace(/\D/g, '');
+    
+    // Verifica se tem 14 dígitos
+    if (cnpj.length !== 14) {
+        return false;
+    }
+    
+    // Verifica se todos os dígitos são iguais
+    if (/^(\d)\1+$/.test(cnpj)) {
+        return false;
+    }
+    
+    // Validação dos dígitos verificadores
+    let soma = 0;
+    let peso = 2;
+    
+    // Primeiro dígito verificador
+    for (let i = 11; i >= 0; i--) {
+        soma += parseInt(cnpj.charAt(i)) * peso;
+        peso = peso === 9 ? 2 : peso + 1;
+    }
+    
+    let digito = 11 - (soma % 11);
+    if (digito > 9) digito = 0;
+    
+    if (parseInt(cnpj.charAt(12)) !== digito) {
+        return false;
+    }
+    
+    // Segundo dígito verificador
+    soma = 0;
+    peso = 2;
+    
+    for (let i = 12; i >= 0; i--) {
+        soma += parseInt(cnpj.charAt(i)) * peso;
+        peso = peso === 9 ? 2 : peso + 1;
+    }
+    
+    digito = 11 - (soma % 11);
+    if (digito > 9) digito = 0;
+    
+    return parseInt(cnpj.charAt(13)) === digito;
+}
+
 // Função para detectar o caminho correto da API
 async function detectarCaminhoAPI() {
     if (caminhoAPICache) {
@@ -39,7 +104,8 @@ async function fetchAPI(endpoint = '', options = {}) {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
         },
-        credentials: 'same-origin'
+        credentials: 'same-origin',
+        signal: AbortSignal.timeout(30000) // Timeout de 30 segundos
     };
     
     const mergedOptions = {
@@ -55,14 +121,71 @@ async function fetchAPI(endpoint = '', options = {}) {
         const response = await fetch(url, mergedOptions);
         
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+            
+            // Tentar obter detalhes do erro da resposta
+            try {
+                const errorData = await response.json();
+                if (errorData.error) {
+                    errorMessage += ` - ${errorData.error}`;
+                }
+            } catch (e) {
+                // Se não conseguir ler JSON, usar status text
+            }
+            
+            throw new Error(errorMessage);
         }
         
         return response;
     } catch (error) {
         console.error('❌ Erro na requisição:', error);
+        
+        // Se for erro de timeout, tentar novamente uma vez
+        if (error.name === 'TimeoutError') {
+            console.log('⏰ Timeout detectado, tentando novamente...');
+            try {
+                const retryOptions = { ...mergedOptions };
+                delete retryOptions.signal; // Remover timeout para retry
+                
+                const retryResponse = await fetch(url, retryOptions);
+                if (!retryResponse.ok) {
+                    throw new Error(`HTTP ${retryResponse.status}: ${retryResponse.statusText}`);
+                }
+                return retryResponse;
+            } catch (retryError) {
+                console.error('❌ Erro no retry:', retryError);
+                throw new Error(`Falha após retry: ${retryError.message}`);
+            }
+        }
+        
         throw error;
     }
+}
+
+// Função para verificar compatibilidade do navegador
+function verificarCompatibilidade() {
+    const compatibilidade = {
+        fetch: typeof fetch !== 'undefined',
+        abortSignal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout,
+        bootstrap: typeof bootstrap !== 'undefined' && bootstrap.Modal,
+        formData: typeof FormData !== 'undefined'
+    };
+    
+    console.log('🔍 Verificando compatibilidade:', compatibilidade);
+    
+    if (!compatibilidade.fetch) {
+        console.error('❌ Fetch API não suportada neste navegador');
+        alert('Seu navegador não suporta as funcionalidades necessárias. Atualize para uma versão mais recente.');
+        return false;
+    }
+    
+    if (!compatibilidade.formData) {
+        console.error('❌ FormData não suportado neste navegador');
+        alert('Seu navegador não suporta FormData. Atualize para uma versão mais recente.');
+        return false;
+    }
+    
+    return true;
 }
 
 // Função para abrir modal de CFC
@@ -135,58 +258,68 @@ window.salvarCFC = async function() {
         
         const formData = new FormData(form);
         
-        // Validações
-        if (!formData.get('nome').trim()) {
+        // Validações básicas dos campos obrigatórios
+        if (!formData.get('nome') || !formData.get('nome').trim()) {
             alert('Nome do CFC é obrigatório');
             return;
         }
         
-        if (!formData.get('cnpj').trim()) {
+        if (!formData.get('cnpj') || !formData.get('cnpj').trim()) {
             alert('CNPJ é obrigatório');
             return;
         }
         
-        if (!formData.get('cidade').trim()) {
-            alert('Cidade é obrigatória');
+        // Validação básica de CNPJ (formato)
+        const cnpj = formData.get('cnpj').trim().replace(/\D/g, '');
+        if (cnpj.length !== 14) {
+            alert('CNPJ deve ter 14 dígitos');
             return;
         }
         
-        if (!formData.get('uf')) {
-            alert('UF é obrigatória');
+        // Validação completa do CNPJ
+        if (!validarCNPJ(formData.get('cnpj').trim())) {
+            alert('CNPJ inválido. Verifique os dígitos verificadores.');
+            return;
+        }
+        
+        // Validação básica de email se fornecido
+        const email = formData.get('email')?.trim();
+        if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            alert('E-mail inválido');
             return;
         }
         
         // Preparar dados baseado na estrutura real do banco
         // Campos reais: id, nome, cnpj, endereco, telefone, email, responsavel, status, created_at, updated_at, responsavel_id, ativo
         const cfcData = {
-            nome: formData.get('nome').trim(),
-            cnpj: formData.get('cnpj').trim(),
-            endereco: formData.get('endereco').trim(),
-            telefone: formData.get('telefone').trim(),
-            email: formData.get('email').trim(),
+            nome: sanitizarDados(formData.get('nome').trim()),
+            cnpj: sanitizarDados(formData.get('cnpj').trim()),
+            endereco: sanitizarDados(formData.get('endereco')?.trim() || ''),
+            telefone: sanitizarDados(formData.get('telefone')?.trim() || ''),
+            email: sanitizarDados(email || ''),
             responsavel_id: formData.get('responsavel_id') || null,
             ativo: formData.get('ativo') === '1'
         };
         
         // Adicionar campos opcionais se existirem no banco
         if (formData.get('cep')) {
-            cfcData.cep = formData.get('cep').trim();
+            cfcData.cep = sanitizarDados(formData.get('cep').trim());
         }
         
         if (formData.get('bairro')) {
-            cfcData.bairro = formData.get('bairro').trim();
+            cfcData.bairro = sanitizarDados(formData.get('bairro').trim());
         }
         
         if (formData.get('cidade')) {
-            cfcData.cidade = formData.get('cidade').trim();
+            cfcData.cidade = sanitizarDados(formData.get('cidade').trim());
         }
         
         if (formData.get('uf')) {
-            cfcData.uf = formData.get('uf');
+            cfcData.uf = sanitizarDados(formData.get('uf'));
         }
         
         if (formData.get('observacoes')) {
-            cfcData.observacoes = formData.get('observacoes').trim();
+            cfcData.observacoes = sanitizarDados(formData.get('observacoes').trim());
         }
         
         console.log('📤 Dados preparados para envio:', cfcData);
@@ -242,6 +375,58 @@ window.salvarCFC = async function() {
     }
 };
 
+// Função para debug em produção
+window.debugCFC = function() {
+    console.group('🐛 Debug do Sistema CFC');
+    
+    // Verificar elementos
+    const elementos = {
+        modalCFC: document.getElementById('modalCFC'),
+        formCFC: document.getElementById('formCFC'),
+        btnSalvarCFC: document.getElementById('btnSalvarCFC'),
+        modalVisualizarCFC: document.getElementById('modalVisualizarCFC'),
+        modalVisualizarCFCBody: document.getElementById('modalVisualizarCFCBody')
+    };
+    
+    console.log('🔍 Elementos encontrados:', elementos);
+    
+    // Verificar compatibilidade
+    const compatibilidade = {
+        fetch: typeof fetch !== 'undefined',
+        abortSignal: typeof AbortSignal !== 'undefined' && AbortSignal.timeout,
+        bootstrap: typeof bootstrap !== 'undefined' && bootstrap.Modal,
+        formData: typeof FormData !== 'undefined'
+    };
+    
+    console.log('🔍 Compatibilidade:', compatibilidade);
+    
+    // Verificar cache da API
+    console.log('🌐 Cache da API:', caminhoAPICache);
+    
+    // Verificar variáveis globais
+    console.log('🌍 Variáveis globais:', {
+        cfcVisualizacaoAtual: window.cfcVisualizacaoAtual,
+        abrirModalCFC: typeof window.abrirModalCFC,
+        fecharModalCFC: typeof window.fecharModalCFC,
+        salvarCFC: typeof window.salvarCFC,
+        editarCFC: typeof window.editarCFC,
+        excluirCFC: typeof window.excluirCFC
+    });
+    
+    console.groupEnd();
+    
+    // Mostrar alerta com informações básicas
+    const elementosFaltando = Object.entries(elementos)
+        .filter(([nome, elemento]) => !elemento)
+        .map(([nome]) => nome);
+    
+    if (elementosFaltando.length > 0) {
+        alert(`⚠️ Elementos faltando: ${elementosFaltando.join(', ')}\n\nVerifique o console para mais detalhes.`);
+    } else {
+        alert('✅ Todos os elementos encontrados!\n\nVerifique o console para mais detalhes.');
+    }
+};
+
 // Função para testar a API
 window.testarAPICFC = async function() {
     console.log('🧪 Testando API de CFCs...');
@@ -290,6 +475,21 @@ window.editarCFC = async function(id) {
             if (form) {
                 // Limpar formulário primeiro
                 form.reset();
+                
+                // Declarar todas as variáveis dos campos do formulário
+                const nomeField = document.getElementById('nome');
+                const cnpjField = document.getElementById('cnpj');
+                const razaoSocialField = document.getElementById('razao_social');
+                const emailField = document.getElementById('email');
+                const telefoneField = document.getElementById('telefone');
+                const cepField = document.getElementById('cep');
+                const enderecoField = document.getElementById('endereco');
+                const bairroField = document.getElementById('bairro');
+                const cidadeField = document.getElementById('cidade');
+                const ufField = document.getElementById('uf');
+                const responsavelField = document.getElementById('responsavel_id');
+                const ativoField = document.getElementById('ativo');
+                const observacoesField = document.getElementById('observacoes');
                 
                 // Mapear campos do banco para os campos do formulário
                 // Baseado na estrutura real do banco (cfcs table)
@@ -595,30 +795,52 @@ window.gerenciarCFC = function(id) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando sistema de CFCs...');
     
+    // Verificar compatibilidade do navegador
+    if (!verificarCompatibilidade()) {
+        console.error('❌ Sistema não pode ser inicializado devido a incompatibilidade');
+        return;
+    }
+    
+    // Verificar elementos essenciais
+    const elementosEssenciais = {
+        modalCFC: document.getElementById('modalCFC'),
+        formCFC: document.getElementById('formCFC'),
+        btnSalvarCFC: document.getElementById('btnSalvarCFC')
+    };
+    
+    console.log('🔍 Verificando elementos essenciais:', elementosEssenciais);
+    
+    // Verificar se todos os elementos essenciais estão presentes
+    const elementosFaltando = Object.entries(elementosEssenciais)
+        .filter(([nome, elemento]) => !elemento)
+        .map(([nome]) => nome);
+    
+    if (elementosFaltando.length > 0) {
+        console.error('❌ Elementos essenciais não encontrados:', elementosFaltando);
+        console.warn('⚠️ Algumas funcionalidades podem não funcionar corretamente');
+    }
+    
     // Event listeners para o modal
-    const modal = document.getElementById('modalCFC');
-    if (modal) {
+    if (elementosEssenciais.modalCFC) {
         // Fechar modal ao clicar fora
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
+        elementosEssenciais.modalCFC.addEventListener('click', function(e) {
+            if (e.target === elementosEssenciais.modalCFC) {
                 fecharModalCFC();
             }
         });
     }
     
     // Event listener para o formulário
-    const form = document.getElementById('formCFC');
-    if (form) {
-        form.addEventListener('submit', function(e) {
+    if (elementosEssenciais.formCFC) {
+        elementosEssenciais.formCFC.addEventListener('submit', function(e) {
             e.preventDefault();
             salvarCFC();
         });
     }
     
     // Event listener para o botão de salvar
-    const btnSalvar = document.getElementById('btnSalvarCFC');
-    if (btnSalvar) {
-        btnSalvar.addEventListener('click', function(e) {
+    if (elementosEssenciais.btnSalvarCFC) {
+        elementosEssenciais.btnSalvarCFC.addEventListener('click', function(e) {
             e.preventDefault();
             salvarCFC();
         });
@@ -628,7 +850,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             const modal = document.getElementById('modalCFC');
-            if (modal && modal.style.display === 'block') {
+            if (modal && (modal.style.display === 'block' || modal.classList.contains('show'))) {
                 fecharModalCFC();
             }
         }
