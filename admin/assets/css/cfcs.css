@@ -5,10 +5,10 @@
 
 /* Modal principal de CFC - Aumentar largura e melhorar espaçamento */
 #modalCFC .modal-dialog {
-    max-width: 99.5vw !important;
-    width: 99.5vw !important;
-    margin: 0.25rem auto !important;
-    max-height: 85vh !important;
+    max-width: 95vw !important;
+    width: 95vw !important;
+    margin: 1rem auto !important;
+    max-height: 90vh !important;
 }
 
 #modalCFC .modal-content {
@@ -109,62 +109,36 @@
 }
 
 /* Colunas específicas para melhor distribuição */
-#modalCFC .col-md-2 {
-    flex: 0 0 auto !important;
-    width: 16.666667% !important;
-    min-width: 140px !important;
-    padding-right: 0.5rem !important;
-}
-
-#modalCFC .col-md-4 {
-    flex: 0 0 auto !important;
-    width: 33.333333% !important;
-    min-width: 250px !important;
-    padding-right: 0.5rem !important;
-}
-
-#modalCFC .col-md-6 {
-    flex: 0 0 auto !important;
-    width: 50% !important;
-    min-width: 350px !important;
-    padding-right: 0.5rem !important;
-}
-
+#modalCFC .col-md-2,
+#modalCFC .col-md-4,
+#modalCFC .col-md-6,
 #modalCFC .col-md-12 {
-    flex: 0 0 auto !important;
-    width: 100% !important;
-    min-width: 100% !important;
-    padding-right: 0 !important;
+    padding-right: 0.75rem !important;
+    padding-left: 0.75rem !important;
 }
 
-/* Garantir que o container tenha largura suficiente */
+/* Container principal do formulário */
 #modalCFC .container-fluid {
-    min-width: 100% !important;
-    overflow-x: hidden !important;
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+    padding: 0 !important;
 }
 
-/* Ajustar padding das linhas para evitar cortes */
+/* Seções do formulário - Melhor espaçamento */
 #modalCFC .row {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    padding-left: 0.5rem !important;
-    padding-right: 0.5rem !important;
+    margin-bottom: 2rem !important;
 }
 
 /* Responsividade para telas menores */
 @media (max-width: 1200px) {
     #modalCFC .modal-dialog {
-        max-width: 99.8vw !important;
-        width: 99.8vw !important;
-        margin: 0.1rem auto !important;
-        max-height: 90vh !important;
+        max-width: 98vw !important;
+        width: 98vw !important;
+        margin: 0.5rem auto !important;
+        max-height: 92vh !important;
     }
     
     #modalCFC .modal-body {
         padding: 1rem !important;
-        max-height: calc(90vh - 160px) !important;
+        max-height: calc(92vh - 180px) !important;
     }
     
     #modalCFC .col-md-2,
@@ -177,9 +151,9 @@
 
 @media (max-width: 768px) {
     #modalCFC .modal-dialog {
-        max-width: 100vw !important;
-        width: 100vw !important;
-        margin: 0 !important;
+        max-width: 99vw !important;
+        width: 99vw !important;
+        margin: 0.25rem auto !important;
         max-height: 95vh !important;
     }
     
@@ -250,17 +224,10 @@
     justify-content: center !important;
 }
 
-/* Forçar largura máxima para evitar cortes */
+/* Garantir que o modal seja sempre visível */
 #modalCFC .modal-content {
     width: 100% !important;
     max-width: 100% !important;
-    overflow-x: hidden !important;
-}
-
-/* Garantir que o body não tenha overflow horizontal */
-#modalCFC .modal-body {
-    overflow-x: hidden !important;
-    width: 100% !important;
 }
 
 /* Animações suaves */
