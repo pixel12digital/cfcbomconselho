@@ -516,7 +516,7 @@ function fecharModalInstrutor() {
 
 function editarInstrutor(id) {
     // Buscar dados do instrutor
-    fetch(`/cfc-bom-conselho/admin/api/instrutores.php?id=${id}`)
+    fetch(`${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -588,7 +588,7 @@ function preencherFormularioInstrutor(instrutor) {
 
 function excluirInstrutor(id) {
     if (confirm('Tem certeza que deseja excluir este instrutor?')) {
-        fetch(`/cfc-bom-conselho/admin/api/instrutores.php?id=${id}`, {
+        fetch(`${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -666,7 +666,7 @@ function salvarInstrutor() {
     btnSalvar.disabled = true;
     
     // Fazer requisição para a API - URL CORRIGIDA
-    const url = '/cfc-bom-conselho/admin/api/instrutores.php';
+    const url = API_CONFIG.getRelativeApiUrl('INSTRUTORES');
     const method = acao === 'editar' ? 'PUT' : 'POST';
     
     fetch(url, {
@@ -783,7 +783,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function carregarInstrutores() {
     // Carregar instrutores para a tabela
-    fetch('/cfc-bom-conselho/admin/api/instrutores.php')
+    fetch(API_CONFIG.getRelativeApiUrl('INSTRUTORES'))
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -854,7 +854,7 @@ function carregarCFCs() {
     console.log('🔍 Iniciando carregamento de CFCs...');
     
     // Carregar CFCs para o select
-    fetch('/cfc-bom-conselho/admin/api/cfcs.php')
+    fetch(API_CONFIG.getRelativeApiUrl('CFCs'))
         .then(response => {
             console.log('📡 Resposta da API CFCs:', response.status, response.statusText);
             return response.json();
@@ -906,7 +906,7 @@ function carregarUsuarios() {
     console.log('🔍 Iniciando carregamento de usuários...');
     
     // Carregar usuários para o select
-    fetch('/cfc-bom-conselho/admin/api/usuarios.php')
+    fetch(API_CONFIG.getRelativeApiUrl('USUARIOS'))
         .then(response => {
             console.log('📡 Resposta da API Usuários:', response.status, response.statusText);
             return response.json();
