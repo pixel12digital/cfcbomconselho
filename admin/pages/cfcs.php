@@ -25,6 +25,9 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
         <button type="button" class="btn btn-info ms-2" onclick="testarCaminhosManual()" title="Testar caminhos da API">
             <i class="fas fa-cog me-1"></i>Testar API
         </button>
+        <button type="button" class="btn btn-warning ms-2" onclick="limparCacheAPI()" title="Limpar cache da API">
+            <i class="fas fa-broom me-1"></i>Limpar Cache
+        </button>
     </div>
 </div>
 
@@ -514,6 +517,80 @@ async function testarCaminhosAPI() {
     return baseUrl + '/admin/api/cfcs.php';
 }
 
+// Função para limpar cache e forçar novo teste
+function limparCacheAPI() {
+    console.log('🧹 Limpando cache da API...');
+    caminhoAPICache = null;
+}
+
+// Função para testar múltiplos caminhos da API com mais opções
+async function testarCaminhosAPI() {
+    const baseUrl = window.location.origin;
+    const pathname = window.location.pathname;
+    
+    // Lista expandida de possíveis caminhos para testar
+    const caminhos = [
+        // Caminhos absolutos
+        baseUrl + '/admin/api/cfcs.php',
+        baseUrl + '/api/cfcs.php',
+        baseUrl + '/cfc-bom-conselho/admin/api/cfcs.php',
+        baseUrl + '/cfc-bom-conselho/api/cfcs.php',
+        
+        // Caminhos relativos ao pathname atual
+        baseUrl + pathname.replace('/admin/index.php', '') + '/admin/api/cfcs.php',
+        baseUrl + pathname.replace('/admin/index.php', '') + '/api/cfcs.php',
+        
+        // Caminhos relativos simples
+        'admin/api/cfcs.php',
+        'api/cfcs.php',
+        '../admin/api/cfcs.php',
+        '../api/cfcs.php',
+        
+        // Caminhos com subdiretório
+        baseUrl + '/public_html/admin/api/cfcs.php',
+        baseUrl + '/public_html/api/cfcs.php',
+        
+        // Caminhos alternativos do Hostinger
+        baseUrl + '/htdocs/cfc-bom-conselho/admin/api/cfcs.php',
+        baseUrl + '/htdocs/cfc-bom-conselho/api/cfcs.php'
+    ];
+    
+    console.log('🧪 Testando caminhos da API...');
+    console.log('📍 URL atual:', window.location.href);
+    console.log('🌐 Base URL:', baseUrl);
+    console.log('📁 Pathname:', pathname);
+    
+    for (const caminho of caminhos) {
+        try {
+            console.log(`🔍 Testando: ${caminho}`);
+            const response = await fetch(caminho, {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                // Adicionar timeout para evitar travamento
+                signal: AbortSignal.timeout(5000)
+            });
+            
+            if (response.ok) {
+                console.log(`✅ Caminho funcionando: ${caminho}`);
+                return caminho;
+            } else {
+                console.log(`❌ Caminho falhou (${response.status}): ${caminho}`);
+            }
+        } catch (error) {
+            console.log(`❌ Caminho com erro: ${caminho} - ${error.message}`);
+        }
+    }
+    
+    // Se nenhum caminho funcionar, usar o padrão e mostrar alerta
+    console.log('⚠️ Nenhum caminho funcionou, usando padrão');
+    alert('⚠️ ATENÇÃO: Não foi possível detectar o caminho correto da API!\n\n' +
+          'URL atual: ' + window.location.href + '\n' +
+          'Base URL: ' + baseUrl + '\n\n' +
+          'Por favor, verifique se o arquivo admin/api/cfcs.php existe no servidor.');
+    
+    return baseUrl + '/admin/api/cfcs.php';
+}
+
 // Função para testar múltiplos caminhos da API
 async function testarCaminhosAPI() {
     const baseUrl = window.location.origin;
@@ -849,6 +926,33 @@ async function testarCaminhosManual() {
         }
     } catch (error) {
         alert(`❌ Erro ao testar API: ${error.message}`);
+    }
+}
+
+// Função para teste avançado da API
+async function testarAPICompleta() {
+    console.log('🧪 Teste completo da API...');
+    
+    try {
+        // Testar GET
+        const responseGET = await fetchAPI('', { method: 'GET' });
+        console.log('✅ GET funcionando:', responseGET.status);
+        
+        // Testar POST (sem dados)
+        const responsePOST = await fetchAPI('', { 
+            method: 'POST',
+            body: JSON.stringify({ teste: true })
+        });
+        console.log('✅ POST funcionando:', responsePOST.status);
+        
+        // Testar DELETE (sem dados)
+        const responseDELETE = await fetchAPI('?id=999', { method: 'DELETE' });
+        console.log('✅ DELETE funcionando:', responseDELETE.status);
+        
+        alert('✅ Todos os métodos da API estão funcionando!');
+    } catch (error) {
+        console.error('❌ Erro no teste completo:', error);
+        alert(`❌ Erro no teste: ${error.message}`);
     }
 }
 
@@ -1273,7 +1377,7 @@ function alterarStatusCFC(id, status) {
     }
 }
 
-async function salvarCFC() {
+async async function salvarCFC() {
     console.log('🚀 Função salvarCFC chamada!');
     
     try {
@@ -1486,9 +1590,9 @@ function salvarCFCDireto() {
             
             console.log('🔄 Fazendo requisição para a API...');
             
-                    // Fazer requisição para a API
-        const url = await detectarCaminhoAPI();
-        const method = acao === 'editar' ? 'PUT' : 'POST';
+            // Fazer requisição para a API
+            const url = await detectarCaminhoAPI();
+            const method = acao === 'editar' ? 'PUT' : 'POST';
             
             fetch(url, {
                 method: method,
@@ -1646,7 +1750,7 @@ function executarExclusao(id, cascade = false) {
     
             const url = cascade ? 
                 `${await detectarCaminhoAPI()}?id=${id}&cascade=true` :
-        `${await detectarCaminhoAPI()}?id=${id}`;
+                `${await detectarCaminhoAPI()}?id=${id}`;
     
     console.log('Fazendo requisição DELETE para:', url);
     
