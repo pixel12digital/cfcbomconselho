@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste Modal Corrigido - Instrutores</title>
+    <title>Solução Campos de Data - Instrutores</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; }
         .header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .solution-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .demo-section { background: white; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; font-size: 14px; }
         .btn-primary { background-color: #007bff; color: white; }
         .btn-secondary { background-color: #6c757d; color: white; }
         .btn-success { background-color: #28a745; color: white; }
-        .btn-danger { background-color: #dc3545; color: white; }
+        .btn-info { background-color: #17a2b8; color: white; }
         
         /* Modal Styles */
         .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.4); }
@@ -38,32 +40,131 @@
         .success { background-color: #d4edda; border-color: #c3e6cb; color: #155724; }
         .warning { background-color: #fff3cd; border-color: #ffeaa7; color: #856404; }
         .error { background-color: #f8d7da; border-color: #f5c6cb; color: #721c24; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; color: #0c5460; }
+        
+        .feature-list { list-style: none; padding: 0; }
+        .feature-list li { padding: 8px 0; border-bottom: 1px solid #eee; }
+        .feature-list li:before { content: "✅ "; margin-right: 10px; }
+        .feature-list li.warning:before { content: "⚠️ "; }
+        .feature-list li.error:before { content: "❌ "; }
+        
+        .comparison-table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        .comparison-table th, .comparison-table td { border: 1px solid #ddd; padding: 12px; text-align: left; }
+        .comparison-table th { background-color: #f8f9fa; font-weight: bold; }
+        .comparison-table .good { background-color: #d4edda; }
+        .comparison-table .bad { background-color: #f8d7da; }
+        .comparison-table .mixed { background-color: #fff3cd; }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🧪 Teste Modal Corrigido - Instrutores</h1>
-            <p>Este teste simula o modal real de instrutores para verificar se as correções das máscaras de data funcionaram.</p>
+            <h1>🎯 Solução para Campos de Data - Instrutores</h1>
+            <p>Resolvendo o problema de digitação manual em campos de data HTML5</p>
         </div>
         
-        <div style="text-align: center; margin-bottom: 20px;">
-            <button class="btn btn-primary" onclick="abrirModalInstrutor()">🪟 Abrir Modal de Instrutor</button>
-            <button class="btn btn-secondary" onclick="limparLog()">🧹 Limpar Log</button>
-            <button class="btn btn-success" onclick="testarCamposData()">🧪 Testar Campos de Data</button>
+        <div class="solution-section">
+            <h2>🔍 Problema Identificado</h2>
+            <p>Os campos <code>type="date"</code> do HTML5 têm limitações para digitação manual:</p>
+            <ul class="feature-list">
+                <li class="error">A ordem de digitação deve ser <strong>ano → mês → dia</strong></li>
+                <li class="error">Se digitar dia/mês primeiro, o campo pode "zerar" ou ficar confuso</li>
+                <li class="error">Formato padrão é <code>aaaa-mm-dd</code> (não intuitivo para brasileiros)</li>
+                <li class="warning">Calendário funciona perfeitamente, mas digitação manual é problemática</li>
+            </ul>
         </div>
         
-        <div class="log" id="log">
-            <strong>📋 Log de Eventos:</strong><br>
-            [Aguardando ações...]
+        <div class="solution-section">
+            <h2>✅ Solução Implementada</h2>
+            <p>Criamos uma solução híbrida que combina o melhor dos dois mundos:</p>
+            <ul class="feature-list">
+                <li><strong>Campo de texto auxiliar</strong> para digitação manual no formato brasileiro (dd/mm/aaaa)</li>
+                <li><strong>Campo date nativo</strong> para o calendário funcionar perfeitamente</li>
+                <li><strong>Sincronização automática</strong> entre os dois campos</li>
+                <li><strong>Máscara automática</strong> que formata enquanto digita</li>
+                <li><strong>Validação em tempo real</strong> para garantir datas válidas</li>
+            </ul>
+        </div>
+        
+        <div class="solution-section">
+            <h2>📊 Comparação de Soluções</h2>
+            <table class="comparison-table">
+                <thead>
+                    <tr>
+                        <th>Aspecto</th>
+                        <th>Campo Date Puro</th>
+                        <th>Campo Texto + Máscara</th>
+                        <th>Nossa Solução Híbrida</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Calendário nativo</td>
+                        <td class="good">✅ Perfeito</td>
+                        <td class="bad">❌ Não funciona</td>
+                        <td class="good">✅ Perfeito</td>
+                    </tr>
+                    <tr>
+                        <td>Digitação manual</td>
+                        <td class="bad">❌ Confuso (ano/mês/dia)</td>
+                        <td class="good">✅ Intuitivo (dd/mm/aaaa)</td>
+                        <td class="good">✅ Intuitivo (dd/mm/aaaa)</td>
+                    </tr>
+                    <tr>
+                        <td>Validação</td>
+                        <td class="mixed">⚠️ Básica</td>
+                        <td class="mixed">⚠️ Depende da implementação</td>
+                        <td class="good">✅ Robusta e em tempo real</td>
+                    </tr>
+                    <tr>
+                        <td>Compatibilidade</td>
+                        <td class="good">✅ HTML5 padrão</td>
+                        <td class="good">✅ Universal</td>
+                        <td class="good">✅ Melhor dos dois</td>
+                    </tr>
+                    <tr>
+                        <td>Experiência do usuário</td>
+                        <td class="bad">❌ Frustrante para digitação</td>
+                        <td class="mixed">⚠️ Funcional mas sem calendário</td>
+                        <td class="good">✅ Excelente em todos os aspectos</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <div class="demo-section">
+            <h2>🧪 Demonstração da Solução</h2>
+            <p>Teste a solução híbrida abaixo:</p>
+            
+            <div style="text-align: center; margin-bottom: 20px;">
+                <button class="btn btn-primary" onclick="abrirModalInstrutor()">🪟 Abrir Modal de Instrutor</button>
+                <button class="btn btn-info" onclick="mostrarInstrucoes()">📖 Ver Instruções</button>
+                <button class="btn btn-secondary" onclick="limparLog()">🧹 Limpar Log</button>
+            </div>
+            
+            <div class="log" id="log">
+                <strong>📋 Log de Eventos:</strong><br>
+                [Clique em "Abrir Modal de Instrutor" para testar]
+            </div>
+        </div>
+        
+        <div class="solution-section">
+            <h2>🔧 Como Implementar no Sistema Real</h2>
+            <p>Para aplicar esta solução no sistema de instrutores:</p>
+            <ol>
+                <li><strong>Atualizar o HTML</strong> dos modais para incluir campos de texto auxiliares</li>
+                <li><strong>Modificar o JavaScript</strong> para sincronizar os campos</li>
+                <li><strong>Corrigir o components.js</strong> para não aplicar máscaras em campos date</li>
+                <li><strong>Testar</strong> em todos os formulários que usam campos de data</li>
+            </ol>
         </div>
     </div>
 
-    <!-- Modal de Instrutor (Simulado) -->
+    <!-- Modal de Instrutor (Solução Híbrida) -->
     <div id="modalInstrutor" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">Novo Instrutor</h3>
+                <h3 id="modalTitle">Novo Instrutor - Solução Híbrida</h3>
                 <span class="close" onclick="fecharModalInstrutor()">&times;</span>
             </div>
             
@@ -87,28 +188,28 @@
                         </div>
                     </div>
                     
-                                         <div class="row">
-                         <div class="col-6">
-                             <div class="form-group">
-                                 <label for="data_nascimento" class="form-label">Data de Nascimento *</label>
-                                 <div style="display: flex; gap: 10px; align-items: center;">
-                                     <input type="text" class="form-control" id="data_nascimento_text" placeholder="dd/mm/aaaa" style="flex: 1;">
-                                     <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required style="flex: 1;">
-                                 </div>
-                                 <small class="text-muted">Digite no formato dd/mm/aaaa ou use o calendário</small>
-                             </div>
-                         </div>
-                         <div class="col-6">
-                             <div class="form-group">
-                                 <label for="validade_credencial" class="form-label">Validade da Credencial</label>
-                                 <div style="display: flex; gap: 10px; align-items: center;">
-                                     <input type="text" class="form-control" id="validade_credencial_text" placeholder="dd/mm/aaaa" style="flex: 1;">
-                                     <input type="date" class="form-control" id="validade_credencial" name="validade_credencial" style="flex: 1;">
-                                 </div>
-                                 <small class="text-muted">Digite no formato dd/mm/aaaa ou use o calendário</small>
-                             </div>
-                         </div>
-                     </div>
+                    <div class="row">
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="data_nascimento" class="form-label">Data de Nascimento *</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <input type="text" class="form-control" id="data_nascimento_text" placeholder="dd/mm/aaaa" style="flex: 1;">
+                                    <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required style="flex: 1;">
+                                </div>
+                                <small class="text-muted">💡 Digite no formato dd/mm/aaaa OU use o calendário</small>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="form-group">
+                                <label for="validade_credencial" class="form-label">Validade da Credencial</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <input type="text" class="form-control" id="validade_credencial_text" placeholder="dd/mm/aaaa" style="flex: 1;">
+                                    <input type="date" class="form-control" id="validade_credencial" name="validade_credencial" style="flex: 1;">
+                                </div>
+                                <small class="text-muted">💡 Digite no formato dd/mm/aaaa OU use o calendário</small>
+                            </div>
+                        </div>
+                    </div>
                     
                     <div class="row">
                         <div class="col-6">
@@ -431,7 +532,7 @@
         }
 
         function abrirModalInstrutor() {
-            document.getElementById('modalTitle').textContent = 'Novo Instrutor';
+            document.getElementById('modalTitle').textContent = 'Novo Instrutor - Solução Híbrida';
             document.getElementById('acaoInstrutor').value = 'novo';
             document.getElementById('instrutor_id').value = '';
             
@@ -442,12 +543,14 @@
             modal.style.display = 'block';
             modal.classList.add('show');
             
-            adicionarLog('Modal de instrutor aberto', 'success');
+            adicionarLog('Modal de instrutor aberto com solução híbrida', 'success');
             
             // Configurar campos de data após abrir o modal
             setTimeout(() => {
                 configurarCamposData();
-                adicionarLog('Campos de data configurados', 'success');
+                adicionarLog('Campos de data configurados com sincronização', 'success');
+                adicionarLog('💡 Teste: Digite uma data no formato dd/mm/aaaa no campo de texto', 'info');
+                adicionarLog('💡 Teste: Ou use o calendário no campo date', 'info');
             }, 100);
         }
 
@@ -487,37 +590,14 @@
             adicionarLog(`Validade Credencial (texto): ${validadeCredencialTexto || 'Não informada'}`);
         }
 
-        function testarCamposData() {
-            adicionarLog('🧪 Iniciando teste dos campos de data...', 'info');
-            
-            const camposData = ['data_nascimento', 'validade_credencial'];
-            
-            camposData.forEach(campoId => {
-                const campo = document.getElementById(campoId);
-                const campoTexto = document.getElementById(campoId + '_text');
-                
-                if (campo) {
-                    const tipo = campo.type;
-                    const valor = campo.value;
-                    const editavel = !campo.readOnly && !campo.disabled;
-                    const valido = !valor || isValidDate(valor);
-                    
-                    adicionarLog(`📋 Campo ${campoId}:`, 'info');
-                    adicionarLog(`   Tipo: ${tipo}`, 'info');
-                    adicionarLog(`   Valor: "${valor}"`, 'info');
-                    adicionarLog(`   Editável: ${editavel}`, 'info');
-                    adicionarLog(`   Data válida: ${valido}`, 'info');
-                }
-                
-                if (campoTexto) {
-                    adicionarLog(`📋 Campo ${campoId}_text:`, 'info');
-                    adicionarLog(`   Tipo: ${campoTexto.type}`, 'info');
-                    adicionarLog(`   Valor: "${campoTexto.value}"`, 'info');
-                    adicionarLog(`   Editável: ${!campoTexto.readOnly && !campoTexto.disabled}`, 'info');
-                }
-            });
-            
-            adicionarLog('✅ Teste concluído!', 'success');
+        function mostrarInstrucoes() {
+            adicionarLog('📖 INSTRUÇÕES DE TESTE:', 'info');
+            adicionarLog('1. Abra o modal de instrutor', 'info');
+            adicionarLog('2. No campo "Data de Nascimento":', 'info');
+            adicionarLog('   - Digite no formato dd/mm/aaaa (ex: 15/03/1990)', 'info');
+            adicionarLog('   - OU use o calendário no campo date', 'info');
+            adicionarLog('3. Observe a sincronização automática entre os campos', 'info');
+            adicionarLog('4. Teste validações (datas futuras, formatos inválidos)', 'info');
         }
 
         function limparLog() {
@@ -534,12 +614,14 @@
 
         // Inicializar quando a página carregar
         document.addEventListener('DOMContentLoaded', function() {
-            adicionarLog('🚀 Página de teste carregada', 'success');
+            adicionarLog('🚀 Página de solução carregada', 'success');
             
             // Inicializar máscaras (versão corrigida)
             const inputMask = new InputMask();
             adicionarLog('🔧 Sistema de máscaras inicializado (versão corrigida)', 'success');
             adicionarLog('📝 Máscaras NÃO serão aplicadas em campos type="date"', 'success');
+            
+            adicionarLog('💡 Clique em "Ver Instruções" para saber como testar', 'info');
         });
     </script>
 </body>
