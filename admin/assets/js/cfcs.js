@@ -448,6 +448,58 @@ if (window.cfcsSystemLoaded) {
         }
     };
 
+    // Função para testar campos do formulário
+    window.testarCamposFormulario = function() {
+        console.group('🧪 Teste de Campos do Formulário');
+        
+        const campos = {
+            nome: document.getElementById('nome'),
+            cnpj: document.getElementById('cnpj'),
+            razao_social: document.getElementById('razao_social'),
+            email: document.getElementById('email'),
+            telefone: document.getElementById('telefone'),
+            cep: document.getElementById('cep'),
+            endereco: document.getElementById('endereco'),
+            bairro: document.getElementById('bairro'),
+            cidade: document.getElementById('cidade'),
+            uf: document.getElementById('uf'),
+            responsavel_id: document.getElementById('responsavel_id'),
+            ativo: document.getElementById('ativo'),
+            observacoes: document.getElementById('observacoes')
+        };
+        
+        console.log('🔍 Verificando campos do formulário:');
+        
+        Object.entries(campos).forEach(([nome, campo]) => {
+            if (campo) {
+                console.log(`✅ ${nome}: Encontrado (tipo: ${campo.type || 'select/textarea'})`);
+            } else {
+                console.error(`❌ ${nome}: NÃO ENCONTRADO!`);
+            }
+        });
+        
+        // Verificar se o modal está visível
+        const modal = document.getElementById('modalCFC');
+        if (modal) {
+            const isVisible = modal.classList.contains('show') || modal.style.display === 'block';
+            console.log(`📱 Modal CFC: ${isVisible ? 'VISÍVEL' : 'NÃO VISÍVEL'}`);
+            console.log(`📱 Classes do modal:`, modal.className);
+            console.log(`📱 Estilo display:`, modal.style.display);
+        }
+        
+        console.groupEnd();
+        
+        // Mostrar resumo
+        const camposEncontrados = Object.values(campos).filter(campo => !!campo).length;
+        const totalCampos = Object.keys(campos).length;
+        
+        if (camposEncontrados === totalCampos) {
+            alert(`✅ Todos os ${totalCampos} campos foram encontrados!`);
+        } else {
+            alert(`⚠️ Apenas ${camposEncontrados} de ${totalCampos} campos foram encontrados!\n\nVerifique o console para detalhes.`);
+        }
+    };
+
     // Função para editar CFC
     window.editarCFC = async function(id) {
         console.log('✏️ Editando CFC ID:', id);
@@ -483,68 +535,100 @@ if (window.cfcsSystemLoaded) {
                     const ativoField = document.getElementById('ativo');
                     const observacoesField = document.getElementById('observacoes');
                     
+                    console.log('🔍 Campos encontrados:', {
+                        nome: !!nomeField,
+                        cnpj: !!cnpjField,
+                        razao_social: !!razaoSocialField,
+                        email: !!emailField,
+                        telefone: !!telefoneField,
+                        cep: !!cepField,
+                        endereco: !!enderecoField,
+                        bairro: !!bairroField,
+                        cidade: !!cidadeField,
+                        uf: !!ufField,
+                        responsavel_id: !!responsavelField,
+                        ativo: !!ativoField,
+                        observacoes: !!observacoesField
+                    });
+                    
                     // Mapear campos do banco para os campos do formulário
                     // Baseado na estrutura real do banco (cfcs table)
-                    // Campos reais: id, nome, cnpj, endereco, telefone, email, responsavel, status, created_at, updated_at, responsavel_id, ativo
                     
                     if (nomeField) {
                         nomeField.value = cfc.nome || '';
                         console.log('✅ Campo nome preenchido:', cfc.nome);
+                    } else {
+                        console.error('❌ Campo nome não encontrado!');
                     }
                     
                     if (cnpjField) {
                         cnpjField.value = cfc.cnpj || '';
                         console.log('✅ Campo CNPJ preenchido:', cfc.cnpj);
+                    } else {
+                        console.error('❌ Campo CNPJ não encontrado!');
                     }
                     
                     if (razaoSocialField) {
-                        // Campo razao_social não existe no banco, usar nome como fallback
-                        razaoSocialField.value = cfc.nome || '';
-                        console.log('✅ Campo razão social preenchido (fallback para nome):', cfc.nome);
+                        razaoSocialField.value = cfc.razao_social || '';
+                        console.log('✅ Campo razão social preenchido:', cfc.razao_social);
+                    } else {
+                        console.error('❌ Campo razão social não encontrado!');
                     }
                     
                     if (emailField) {
                         emailField.value = cfc.email || '';
                         console.log('✅ Campo email preenchido:', cfc.email);
+                    } else {
+                        console.error('❌ Campo email não encontrado!');
                     }
                     
                     if (telefoneField) {
                         telefoneField.value = cfc.telefone || '';
                         console.log('✅ Campo telefone preenchido:', cfc.telefone);
+                    } else {
+                        console.error('❌ Campo telefone não encontrado!');
                     }
                     
                     if (cepField) {
-                        // Campo CEP existe no banco
                         cepField.value = cfc.cep || '';
                         console.log('✅ Campo CEP preenchido:', cfc.cep);
+                    } else {
+                        console.error('❌ Campo CEP não encontrado!');
                     }
                     
                     if (enderecoField) {
                         enderecoField.value = cfc.endereco || '';
                         console.log('✅ Campo endereço preenchido:', cfc.endereco);
+                    } else {
+                        console.error('❌ Campo endereço não encontrado!');
                     }
                     
                     if (bairroField) {
-                        // Campo bairro existe no banco
                         bairroField.value = cfc.bairro || '';
                         console.log('✅ Campo bairro preenchido:', cfc.bairro);
+                    } else {
+                        console.error('❌ Campo bairro não encontrado!');
                     }
                     
                     if (cidadeField) {
-                        // Campo cidade existe no banco
                         cidadeField.value = cfc.cidade || '';
                         console.log('✅ Campo cidade preenchido:', cfc.cidade);
+                    } else {
+                        console.error('❌ Campo cidade não encontrado!');
                     }
                     
                     if (ufField) {
-                        // Campo UF existe no banco
                         ufField.value = cfc.uf || '';
                         console.log('✅ Campo UF preenchido:', cfc.uf);
+                    } else {
+                        console.error('❌ Campo UF não encontrado!');
                     }
                     
                     if (responsavelField) {
                         responsavelField.value = cfc.responsavel_id || '';
                         console.log('✅ Campo responsável preenchido:', cfc.responsavel_id);
+                    } else {
+                        console.error('❌ Campo responsável não encontrado!');
                     }
                     
                     if (ativoField) {
@@ -552,12 +636,15 @@ if (window.cfcsSystemLoaded) {
                         const ativoValue = cfc.ativo ? '1' : '0';
                         ativoField.value = ativoValue;
                         console.log('✅ Campo ativo preenchido:', ativoValue, '(', cfc.ativo, ')');
+                    } else {
+                        console.error('❌ Campo ativo não encontrado!');
                     }
                     
                     if (observacoesField) {
-                        // Campo observações existe no banco
                         observacoesField.value = cfc.observacoes || '';
                         console.log('✅ Campo observações preenchido:', cfc.observacoes);
+                    } else {
+                        console.error('❌ Campo observações não encontrado!');
                     }
                     
                     // Configurar modal para edição
