@@ -211,8 +211,8 @@ define('DB_CACHE_PREFIX', 'cfc_');
 define('SESSION_NAME', 'CFC_SESSION');
 define('SESSION_COOKIE_LIFETIME', 0);
 define('SESSION_COOKIE_PATH', '/');
-define('SESSION_COOKIE_DOMAIN', '');
-define('SESSION_COOKIE_SECURE', false); // false para permitir HTTP em desenvolvimento
+define('SESSION_COOKIE_DOMAIN', $environment === 'production' ? '.hostingersite.com' : '');
+define('SESSION_COOKIE_SECURE', $environment === 'production'); // true para HTTPS em produção, false para HTTP em desenvolvimento
 define('SESSION_COOKIE_HTTPONLY', true);
 
 // Configurações de Timeout baseadas no ambiente
