@@ -478,8 +478,14 @@ if (typeof window.saveUser !== 'function') {
 function deleteUser(userId) {
     console.log('Funcao deleteUser chamada para usuario ID: ' + userId);
     
-    if (confirm('Tem certeza que deseja excluir este usuario?')) {
-        console.log('Confirmacao recebida, excluindo usuario...');
+    if (!userId || userId === '' || userId === 0) {
+        console.error('ID de usuario invalido:', userId);
+        showNotification('ID de usuário inválido', 'error');
+        return;
+    }
+    
+    if (confirm('⚠️ ATENÇÃO!\n\nTem certeza que deseja excluir este usuário?\n\nEsta ação NÃO pode ser desfeita!')) {
+        console.log('Confirmacao recebida, excluindo usuario ID:', userId);
         
         // Mostrar loading
         const loadingEl = document.querySelector('.card-body');
@@ -487,33 +493,107 @@ function deleteUser(userId) {
             loadingEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Excluindo usuario...</p></div>';
         }
         
+        // URL da API
+        const apiUrl = '../admin/api/usuarios.php?id=' + encodeURIComponent(userId);
+        console.log('Fazendo requisicao DELETE para:', apiUrl);
+        
         // Fazer requisição para a API
-        fetch('../admin/api/usuarios.php?id=' + userId, {
-            method: 'DELETE'
+        fetch(apiUrl, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            credentials: 'same-origin'
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('Resposta recebida. Status:', response.status);
+            
+            // Verificar se a resposta é válida
+            if (!response.ok) {
+                throw new Error(`HTTP Error: ${response.status} - ${response.statusText}`);
+            }
+            
+            // Verificar se o content-type é JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Resposta não é JSON válido');
+            }
+            
+            return response.json();
+        })
         .then(data => {
+            console.log('Dados recebidos da API:', data);
+            
             if (data.success) {
-                showNotification(data.message || 'Usuario excluido com sucesso!', 'success');
+                console.log('Usuario excluido com sucesso');
+                showNotification(data.message || 'Usuário excluído com sucesso!', 'success');
                 
-                // Recarregar página
+                // Recarregar página após sucesso
                 setTimeout(function() {
+                    console.log('Recarregando pagina...');
                     window.location.reload();
                 }, 1500);
             } else {
-                showNotification(data.error || 'Erro ao excluir usuario', 'error');
+                console.error('Erro retornado pela API:', data);
+                let errorMessage = data.error || 'Erro desconhecido ao excluir usuário';
+                
+                // Melhorar mensagens de erro baseadas no código
+                switch (data.code) {
+                    case 'NOT_LOGGED_IN':
+                        errorMessage = 'Sessão expirada. Faça login novamente.';
+                        setTimeout(() => window.location.href = '../index.php', 2000);
+                        break;
+                    case 'NOT_ADMIN':
+                        errorMessage = 'Acesso negado. Apenas administradores podem excluir usuários.';
+                        break;
+                    case 'USER_NOT_FOUND':
+                        errorMessage = 'Usuário não encontrado.';
+                        break;
+                    case 'SELF_DELETE':
+                        errorMessage = 'Você não pode excluir o próprio usuário.';
+                        break;
+                    case 'HAS_CFCS':
+                        errorMessage = 'Este usuário possui CFCs vinculados. Remova os vínculos antes de excluir.';
+                        break;
+                }
+                
+                showNotification(errorMessage, 'error');
             }
         })
         .catch(error => {
-            console.error('Erro:', error);
-            showNotification('Erro ao excluir usuario. Tente novamente.', 'error');
+            console.error('Erro na requisicao:', error);
+            
+            let errorMessage = 'Erro de conexão ao excluir usuário.';
+            
+            if (error.message.includes('HTTP Error: 401')) {
+                errorMessage = 'Sessão expirada. Faça login novamente.';
+                setTimeout(() => window.location.href = '../index.php', 2000);
+            } else if (error.message.includes('HTTP Error: 403')) {
+                errorMessage = 'Acesso negado. Você não tem permissão para esta ação.';
+            } else if (error.message.includes('HTTP Error: 404')) {
+                errorMessage = 'Usuário não encontrado.';
+            } else if (error.message.includes('HTTP Error: 500')) {
+                errorMessage = 'Erro interno do servidor. Tente novamente.';
+            } else if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+                errorMessage = 'Erro de conexão. Verifique sua internet e tente novamente.';
+            }
+            
+            showNotification(errorMessage, 'error');
         })
         .finally(() => {
-            // Restaurar conteúdo da página
-            if (loadingEl) {
-                window.location.reload();
+            console.log('Finalizando operacao de exclusao');
+            
+            // Restaurar conteúdo da página se ainda estiver em loading
+            if (loadingEl && loadingEl.innerHTML.includes('Excluindo usuario')) {
+                setTimeout(() => {
+                    console.log('Recarregando pagina no finally...');
+                    window.location.reload();
+                }, 2000);
             }
         });
+    } else {
+        console.log('Exclusao cancelada pelo usuario');
     }
 }
 
@@ -809,6 +889,56 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.error('Funcao deleteUser NAO esta disponivel');
     }
+    
+    // Configurar event listeners para botões de exclusão
+    const deleteButtons = document.querySelectorAll('.btn-excluir-usuario');
+    console.log('Encontrados ' + deleteButtons.length + ' botoes de exclusao');
+    
+    deleteButtons.forEach(function(button, index) {
+        const userId = button.getAttribute('data-user-id');
+        console.log('Configurando botao de exclusao ' + (index + 1) + ' para usuario ID: ' + userId);
+        
+        // Adicionar event listener
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const userIdFromButton = this.getAttribute('data-user-id');
+            console.log('Botao de exclusao clicado para usuario ID: ' + userIdFromButton);
+            
+            if (typeof deleteUser === 'function') {
+                deleteUser(userIdFromButton);
+            } else {
+                console.error('Funcao deleteUser nao esta disponivel!');
+                showNotification('Erro: Função de exclusão não está disponível. Recarregue a página.', 'error');
+            }
+        });
+    });
+    
+    // Configurar event listeners para botões de edição
+    const editButtons = document.querySelectorAll('.btn-editar-usuario');
+    console.log('Encontrados ' + editButtons.length + ' botoes de edicao');
+    
+    editButtons.forEach(function(button, index) {
+        const userId = button.getAttribute('data-user-id');
+        console.log('Configurando botao de edicao ' + (index + 1) + ' para usuario ID: ' + userId);
+        
+        // Adicionar event listener
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const userIdFromButton = this.getAttribute('data-user-id');
+            console.log('Botao de edicao clicado para usuario ID: ' + userIdFromButton);
+            
+            if (typeof editUser === 'function') {
+                editUser(userIdFromButton);
+            } else {
+                console.error('Funcao editUser nao esta disponivel!');
+                showNotification('Erro: Função de edição não está disponível. Recarregue a página.', 'error');
+            }
+        });
+    });
     
     // Adicionar event listeners para os botões
     const novoUsuarioBtn = document.getElementById('btnNovoUsuario');
