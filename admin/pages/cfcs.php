@@ -19,7 +19,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                 <i class="fas fa-print me-1"></i>Imprimir
             </button>
         </div>
-        <button type="button" class="btn btn-primary" onclick="abrirModalCFC()">
+        <button type="button" class="btn btn-primary" onclick="abrirModalCFC('criar')">
             <i class="fas fa-plus me-1"></i>Novo CFC
         </button>
         <button type="button" class="btn btn-info ms-2" onclick="testarCaminhosManual()" title="Testar caminhos da API">
@@ -92,7 +92,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                         <td colspan="9" class="text-center text-muted py-4">
                             <i class="fas fa-inbox fa-3x mb-3"></i>
                             <p>Nenhum CFC cadastrado ainda.</p>
-                            <button class="btn btn-primary" onclick="abrirModalCFC()">
+                            <button class="btn btn-primary" onclick="abrirModalCFC('criar')">
                                 <i class="fas fa-plus me-1"></i>Cadastrar Primeiro CFC
                             </button>
                         </td>

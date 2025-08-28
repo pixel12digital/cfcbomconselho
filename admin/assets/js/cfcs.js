@@ -195,8 +195,8 @@ if (window.cfcsSystemLoaded) {
     }
 
     // Função para abrir modal de CFC
-    window.abrirModalCFC = function() {
-        console.log('🚀 Abrindo modal de CFC...');
+    window.abrirModalCFC = function(modo = 'criar') {
+        console.log('🚀 Abrindo modal de CFC em modo:', modo);
         
         const modal = document.getElementById('modalCFC');
         if (!modal) {
@@ -205,17 +205,19 @@ if (window.cfcsSystemLoaded) {
             return;
         }
         
-        // Limpar formulário
-        const form = document.getElementById('formCFC');
-        if (form) {
-            form.reset();
-            const acaoField = document.getElementById('acaoCFC');
-            const cfcIdField = document.getElementById('cfc_id');
-            const modalTitle = document.getElementById('modalTitle');
-            
-            if (acaoField) acaoField.value = 'criar';
-            if (cfcIdField) cfcIdField.value = '';
-            if (modalTitle) modalTitle.textContent = 'Novo CFC';
+        // Limpar formulário apenas se for para criar novo CFC
+        if (modo === 'criar') {
+            const form = document.getElementById('formCFC');
+            if (form) {
+                form.reset();
+                const acaoField = document.getElementById('acaoCFC');
+                const cfcIdField = document.getElementById('cfc_id');
+                const modalTitle = document.getElementById('modalTitle');
+                
+                if (acaoField) acaoField.value = 'criar';
+                if (cfcIdField) cfcIdField.value = '';
+                if (modalTitle) modalTitle.textContent = 'Novo CFC';
+            }
         }
         
         // Mostrar modal usando Bootstrap
@@ -669,7 +671,19 @@ if (window.cfcsSystemLoaded) {
                     
                     // Abrir modal
                     console.log('🚀 Abrindo modal de edição...');
-                    abrirModalCFC();
+                    
+                    // Abrir modal diretamente usando Bootstrap em vez de chamar abrirModalCFC
+                    const modal = document.getElementById('modalCFC');
+                    if (modal && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                        const bootstrapModal = new bootstrap.Modal(modal);
+                        bootstrapModal.show();
+                        console.log('✅ Modal de edição aberto com Bootstrap');
+                    } else {
+                        // Fallback para modal customizado
+                        modal.style.display = 'block';
+                        document.body.style.overflow = 'hidden';
+                        console.log('✅ Modal de edição aberto com fallback');
+                    }
                     
                     console.log('✅ Formulário preenchido com dados do CFC:', cfc);
                 } else {
@@ -940,6 +954,40 @@ if (window.cfcsSystemLoaded) {
 
     console.log('📋 Arquivo cfcs.js carregado!');
 }
+
+// Função para testar edição de CFC
+window.testarEdicaoCFC = async function(id = 35) {
+    console.group('🧪 Teste de Edição de CFC');
+    console.log('🎯 Testando edição do CFC ID:', id);
+    
+    try {
+        // Simular clique no botão editar
+        console.log('📱 Simulando edição...');
+        await editarCFC(id);
+        
+        // Aguardar um pouco e verificar estado do modal
+        setTimeout(() => {
+            const modal = document.getElementById('modalCFC');
+            if (modal) {
+                const isVisible = modal.classList.contains('show') || modal.style.display === 'block';
+                console.log(`📱 Modal CFC visível: ${isVisible ? 'SIM' : 'NÃO'}`);
+                console.log(`📱 Classes do modal:`, modal.className);
+                console.log(`📱 Estilo display:`, modal.style.display);
+                
+                if (isVisible) {
+                    console.log('✅ Modal está visível - edição funcionando!');
+                } else {
+                    console.error('❌ Modal não está visível - problema na edição!');
+                }
+            }
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Erro no teste de edição:', error);
+    }
+    
+    console.groupEnd();
+};
 
 // Função para verificar scripts duplicados
 window.verificarScriptsDuplicados = function() {
