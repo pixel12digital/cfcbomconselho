@@ -213,22 +213,8 @@ define('ADMIN_ROUTING', true);
         .nav-arrow i.fa-chevron-down { transform: rotate(0deg); }
     </style>
     
-    <!-- Font Awesome para ícones - via Google Fonts -->
-    <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons" crossorigin="anonymous">
-    <style>
-        /* CSS inline para ícones básicos */
-        .fas, .fa-solid { font-family: 'Material Icons'; font-weight: normal; font-style: normal; }
-        .fa-edit:before { content: 'edit'; }
-        .fa-eye:before { content: 'visibility'; }
-        .fa-calendar-plus:before { content: 'event'; }
-        .fa-history:before { content: 'history'; }
-        .fa-ban:before { content: 'block'; }
-        .fa-check:before { content: 'check'; }
-        .fa-trash:before { content: 'delete'; }
-        .fa-plus:before { content: 'add'; }
-        .fa-filter:before { content: 'filter_list'; }
-        .fa-search:before { content: 'search'; }
-    </style>
+    <!-- Font Awesome para ícones -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     
     <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="../assets/logo.png">
@@ -956,5 +942,17 @@ define('ADMIN_ROUTING', true);
     
     <!-- Bootstrap JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- Font Awesome para ícones -->
+    <script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+    
+    <!-- JavaScript Principal do Admin -->
+    <script src="assets/js/admin.js"></script>
+    <script src="assets/js/components.js"></script>
+    
+    <!-- JavaScript das Funcionalidades Específicas -->
+    <script src="assets/js/cfcs.js"></script>
+    <script src="assets/js/instrutores.js"></script>
+    <script src="assets/js/alunos.js"></script>
 </body>
 </html>
