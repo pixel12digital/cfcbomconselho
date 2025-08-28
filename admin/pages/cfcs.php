@@ -1482,9 +1482,6 @@ function executarExclusao(id, cascade = false) {
                 btnExcluir.disabled = false;
             }
         });
-    } else {
-        console.log('Usuário cancelou a exclusão do CFC ID:', id);
-    }
 }
 
 function exportarCFCs() {
