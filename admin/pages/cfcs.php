@@ -1,5 +1,5 @@
 ﻿<?php
-// Verificar se as variÃ¡veis estÃ£o definidas
+// Verificar se as variáveis estão definidas
 if (!isset($cfcs)) $cfcs = [];
 if (!isset($usuarios)) $usuarios = [];
 if (!isset($mensagem)) $mensagem = '';
@@ -8,7 +8,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
-        <i class="fas fa-building me-2"></i>GestÃ£o de CFCs
+        <i class="fas fa-building me-2"></i>Gestão de CFCs
     </h1>
     <div class="btn-toolbar mb-2 mb-md-0">
         <div class="btn-group me-2">
@@ -60,7 +60,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
     <div class="col-md-3">
         <select class="form-select" id="filtroCidade">
             <option value="">Todas as Cidades</option>
-            <!-- SerÃ¡ preenchido via JavaScript -->
+            <!-- Será preenchido via JavaScript -->
         </select>
     </div>
 </div>
@@ -80,10 +80,10 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                         <th>CNPJ</th>
                         <th>Cidade/UF</th>
                         <th>Telefone</th>
-                        <th>ResponsÃ¡vel</th>
+                        <th>Responsável</th>
                         <th>Status</th>
                         <th>Alunos</th>
-                        <th>AÃ§Ãµes</th>
+                        <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -114,7 +114,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                 <?php if ($cfc['cidade'] && $cfc['uf']): ?>
                                     <?php echo htmlspecialchars($cfc['cidade']) . '/' . htmlspecialchars($cfc['uf']); ?>
                                 <?php else: ?>
-                                    <span class="text-muted">NÃ£o informado</span>
+                                    <span class="text-muted">Não informado</span>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -123,14 +123,14 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                         <i class="fas fa-phone me-1"></i><?php echo htmlspecialchars($cfc['telefone']); ?>
                                     </a>
                                 <?php else: ?>
-                                    <span class="text-muted">NÃ£o informado</span>
+                                    <span class="text-muted">Não informado</span>
                                 <?php endif; ?>
                             </td>
                             <td>
                                 <?php if ($cfc['responsavel_nome']): ?>
                                     <span class="badge bg-info"><?php echo htmlspecialchars($cfc['responsavel_nome']); ?></span>
                                 <?php else: ?>
-                                    <span class="text-muted">NÃ£o definido</span>
+                                    <span class="text-muted">Não definido</span>
                                 <?php endif; ?>
                             </td>
                             <td>
@@ -145,7 +145,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                             </td>
                             <td>
                                 <div class="action-buttons-container">
-                                    <!-- BotÃµes principais em linha -->
+                                    <!-- Botões principais em linha -->
                                     <div class="action-buttons-primary">
                                         <button type="button" class="btn btn-edit action-btn" 
                                                 onclick="editarCFC(<?php echo $cfc['id']; ?>)" 
@@ -159,33 +159,33 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                         </button>
                                         <button type="button" class="btn btn-manage action-btn" 
                                                 onclick="gerenciarCFC(<?php echo $cfc['id']; ?>)" 
-                                                title="Gerenciar instrutores, alunos e veÃ­culos">
+                                                title="Gerenciar instrutores, alunos e veículos">
                                             <i class="fas fa-cogs me-1"></i>Gerenciar
                                         </button>
                                     </div>
                                     
-                                    <!-- BotÃµes secundÃ¡rios em linha -->
+                                    <!-- Botões secundários em linha -->
                                     <div class="action-buttons-secondary">
                                         <?php if ($cfc['ativo']): ?>
                                         <button type="button" class="btn btn-toggle action-btn" 
                                                 onclick="desativarCFC(<?php echo $cfc['id']; ?>)" 
-                                                title="Desativar CFC (nÃ£o poderÃ¡ operar)">
+                                                title="Desativar CFC (não poderá operar)">
                                             <i class="fas fa-ban me-1"></i>Desativar
                                         </button>
                                         <?php else: ?>
                                         <button type="button" class="btn btn-schedule action-btn" 
                                                 onclick="ativarCFC(<?php echo $cfc['id']; ?>)" 
-                                                title="Reativar CFC para operaÃ§Ã£o">
+                                                title="Reativar CFC para operação">
                                             <i class="fas fa-check me-1"></i>Ativar
                                         </button>
                                         <?php endif; ?>
                                     </div>
                                     
-                                    <!-- BotÃ£o de exclusÃ£o destacado -->
+                                    <!-- Botão de exclusão destacado -->
                                     <div class="action-buttons-danger">
                                         <button type="button" class="btn btn-delete action-btn" 
                                                 onclick="excluirCFC(<?php echo $cfc['id']; ?>)" 
-                                                title="âš ï¸ EXCLUIR CFC - Esta aÃ§Ã£o nÃ£o pode ser desfeita!">
+                                                title="⚠️ EXCLUIR CFC - Esta ação não pode ser desfeita!">
                                             <i class="fas fa-trash me-1"></i>Excluir
                                         </button>
                                     </div>

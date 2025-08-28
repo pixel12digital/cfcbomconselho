@@ -1,6 +1,15 @@
 <?php
 // Definir caminho base
 $base_path = dirname(__DIR__);
+
+// Forçar charset UTF-8 para evitar problemas de codificação
+if (!headers_sent()) {
+    header('Content-Type: text/html; charset=UTF-8');
+    header('Cache-Control: no-cache, no-store, must-revalidate');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+}
+
 require_once '../includes/config.php';
 require_once '../includes/database.php';
 require_once '../includes/auth.php';

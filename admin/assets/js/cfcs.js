@@ -61,8 +61,8 @@ let caminhoAPICache = null;
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#x27;')
-            .replace(/\//g, '&#x2F;');
+            .replace(/'/g, '&#x27;');
+            // Removido .replace(/\//g, '&#x2F;') para não converter barras em CNPJs
     }
 
     // Função para validar CNPJ

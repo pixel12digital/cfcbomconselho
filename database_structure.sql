@@ -25,7 +25,7 @@ CREATE TABLE usuarios (
 CREATE TABLE cfcs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     nome VARCHAR(200) NOT NULL,
-    cnpj VARCHAR(18) UNIQUE NOT NULL,
+    cnpj VARCHAR(20) UNIQUE NOT NULL,
     razao_social VARCHAR(200),
     endereco TEXT,
     bairro VARCHAR(100),
