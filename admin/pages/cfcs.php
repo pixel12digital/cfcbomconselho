@@ -422,6 +422,98 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 
 <!-- Scripts específicos para CFCs -->
 <script>
+// DEFINIÇÕES GLOBAIS IMEDIATAS - GARANTIR QUE FUNCIONEM
+console.log('🔧 Inicializando funções globais de CFCs...');
+
+// Função excluirCFC - definição global imediata
+window.excluirCFC = function(id) {
+    console.log('🚀 excluirCFC chamada globalmente com ID:', id);
+    
+    if (typeof verificarRegistrosVinculados === 'function') {
+        verificarRegistrosVinculados(id).then(hasVinculados => {
+            if (hasVinculados) {
+                const mensagemCascata = '⚠️ ATENÇÃO: Este CFC possui registros vinculados!\n\n' +
+                    'Opções:\n' +
+                    '1. Exclusão em cascata: Remove o CFC e TODOS os registros vinculados\n' +
+                    '2. Cancelar: Mantém o CFC e os registros\n\n' +
+                    'Deseja continuar com exclusão em cascata?';
+                
+                if (confirm(mensagemCascata)) {
+                    if (typeof excluirCFCCascata === 'function') {
+                        excluirCFCCascata(id);
+                    } else {
+                        alert('Função de exclusão em cascata não disponível');
+                    }
+                }
+            } else {
+                const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este CFC?';
+                if (confirm(mensagem)) {
+                    if (typeof excluirCFCNormal === 'function') {
+                        excluirCFCNormal(id);
+                    } else {
+                        alert('Função de exclusão normal não disponível');
+                    }
+                }
+            }
+        });
+    } else {
+        console.error('❌ verificarRegistrosVinculados não disponível');
+        alert('Erro: Função de verificação não disponível');
+    }
+};
+
+// Função editarCFC - definição global imediata
+window.editarCFC = function(id) {
+    console.log('🚀 editarCFC chamada globalmente com ID:', id);
+    if (typeof editarCFCInterno === 'function') {
+        editarCFCInterno(id);
+    } else {
+        alert('Função de edição não disponível');
+    }
+};
+
+// Função visualizarCFC - definição global imediata
+window.visualizarCFC = function(id) {
+    console.log('🚀 visualizarCFC chamada globalmente com ID:', id);
+    if (typeof visualizarCFCInterno === 'function') {
+        visualizarCFCInterno(id);
+    } else {
+        alert('Função de visualização não disponível');
+    }
+};
+
+// Função gerenciarCFC - definição global imediata
+window.gerenciarCFC = function(id) {
+    console.log('🚀 gerenciarCFC chamada globalmente com ID:', id);
+    window.location.href = `pages/gerenciar-cfc.php?id=${id}`;
+};
+
+// Função ativarCFC - definição global imediata
+window.ativarCFC = function(id) {
+    console.log('🚀 ativarCFC chamada globalmente com ID:', id);
+    if (confirm('Deseja realmente ativar este CFC?')) {
+        if (typeof alterarStatusCFC === 'function') {
+            alterarStatusCFC(id, 1);
+        } else {
+            alert('Função de ativação não disponível');
+        }
+    }
+};
+
+// Função desativarCFC - definição global imediata
+window.desativarCFC = function(id) {
+    console.log('🚀 desativarCFC chamada globalmente com ID:', id);
+    if (confirm('Deseja realmente desativar este CFC? Esta ação pode afetar alunos e instrutores vinculados.')) {
+        if (typeof alterarStatusCFC === 'function') {
+            alterarStatusCFC(id, 0);
+        } else {
+            alert('Função de desativação não disponível');
+        }
+    }
+};
+
+console.log('✅ Funções globais de CFCs inicializadas!');
+
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar máscaras
     inicializarMascarasCFC();
@@ -595,8 +687,8 @@ function inicializarBuscaCFC() {
     document.getElementById('buscaCFC').addEventListener('input', filtrarCFCs);
 }
 
-function editarCFC(id) {
-    console.log('🚀 editarCFC chamada com ID:', id);
+function editarCFCInterno(id) {
+    console.log('🚀 editarCFCInterno chamada com ID:', id);
     
     // Verificar se os elementos necessários existem
     const modalElement = document.getElementById('modalCFC');
@@ -691,7 +783,7 @@ function preencherFormularioCFC(cfc) {
     document.getElementById('observacoes').value = cfc.observacoes || '';
 }
 
-function visualizarCFC(id) {
+function visualizarCFCInterno(id) {
     fetch(`api/cfcs.php?id=${id}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
