@@ -80,14 +80,24 @@ window.abrirModalCFC = function() {
     const form = document.getElementById('formCFC');
     if (form) {
         form.reset();
-        document.getElementById('acaoCFC').value = 'criar';
-        document.getElementById('cfc_id').value = '';
-        document.getElementById('modalTitle').textContent = 'Novo CFC';
+        const acaoField = document.getElementById('acaoCFC');
+        const cfcIdField = document.getElementById('cfc_id');
+        const modalTitle = document.getElementById('modalTitle');
+        
+        if (acaoField) acaoField.value = 'criar';
+        if (cfcIdField) cfcIdField.value = '';
+        if (modalTitle) modalTitle.textContent = 'Novo CFC';
     }
     
-    // Mostrar modal
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
+    // Mostrar modal usando Bootstrap
+    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const bootstrapModal = new bootstrap.Modal(modal);
+        bootstrapModal.show();
+    } else {
+        // Fallback para modal customizado
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
     
     console.log('✅ Modal aberto com sucesso!');
 };
@@ -98,8 +108,17 @@ window.fecharModalCFC = function() {
     
     const modal = document.getElementById('modalCFC');
     if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
+        // Fechar modal usando Bootstrap
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            const bootstrapModal = bootstrap.Modal.getInstance(modal);
+            if (bootstrapModal) {
+                bootstrapModal.hide();
+            }
+        } else {
+            // Fallback para modal customizado
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
         console.log('✅ Modal fechado!');
     }
 };
@@ -217,27 +236,56 @@ window.editarCFC = async function(id) {
             const cfc = data.data;
             
             // Preencher formulário
-            document.getElementById('nome').value = cfc.nome || '';
-            document.getElementById('cnpj').value = cfc.cnpj || '';
-            document.getElementById('razao_social').value = cfc.razao_social || '';
-            document.getElementById('email').value = cfc.email || '';
-            document.getElementById('telefone').value = cfc.telefone || '';
-            document.getElementById('cep').value = cfc.cep || '';
-            document.getElementById('endereco').value = cfc.endereco || '';
-            document.getElementById('bairro').value = cfc.bairro || '';
-            document.getElementById('cidade').value = cfc.cidade || '';
-            document.getElementById('uf').value = cfc.uf || '';
-            document.getElementById('responsavel_id').value = cfc.responsavel_id || '';
-            document.getElementById('ativo').value = cfc.ativo ? '1' : '0';
-            document.getElementById('observacoes').value = cfc.observacoes || '';
-            
-            // Configurar modal para edição
-            document.getElementById('modalTitle').textContent = 'Editar CFC';
-            document.getElementById('acaoCFC').value = 'editar';
-            document.getElementById('cfc_id').value = id;
-            
-            // Abrir modal
-            abrirModalCFC();
+            const form = document.getElementById('formCFC');
+            if (form) {
+                // Limpar formulário primeiro
+                form.reset();
+                
+                // Preencher campos
+                const nomeField = document.getElementById('nome');
+                const cnpjField = document.getElementById('cnpj');
+                const razaoSocialField = document.getElementById('razao_social');
+                const emailField = document.getElementById('email');
+                const telefoneField = document.getElementById('telefone');
+                const cepField = document.getElementById('cep');
+                const enderecoField = document.getElementById('endereco');
+                const bairroField = document.getElementById('bairro');
+                const cidadeField = document.getElementById('cidade');
+                const ufField = document.getElementById('uf');
+                const responsavelField = document.getElementById('responsavel_id');
+                const ativoField = document.getElementById('ativo');
+                const observacoesField = document.getElementById('observacoes');
+                
+                if (nomeField) nomeField.value = cfc.nome || '';
+                if (cnpjField) cnpjField.value = cfc.cnpj || '';
+                if (razaoSocialField) razaoSocialField.value = cfc.razao_social || '';
+                if (emailField) emailField.value = cfc.email || '';
+                if (telefoneField) telefoneField.value = cfc.telefone || '';
+                if (cepField) cepField.value = cfc.cep || '';
+                if (enderecoField) enderecoField.value = cfc.endereco || '';
+                if (bairroField) bairroField.value = cfc.bairro || '';
+                if (cidadeField) cidadeField.value = cfc.cidade || '';
+                if (ufField) ufField.value = cfc.uf || '';
+                if (responsavelField) responsavelField.value = cfc.responsavel_id || '';
+                if (ativoField) ativoField.value = cfc.ativo ? '1' : '0';
+                if (observacoesField) observacoesField.value = cfc.observacoes || '';
+                
+                // Configurar modal para edição
+                const modalTitle = document.getElementById('modalTitle');
+                const acaoField = document.getElementById('acaoCFC');
+                const cfcIdField = document.getElementById('cfc_id');
+                
+                if (modalTitle) modalTitle.textContent = 'Editar CFC';
+                if (acaoField) acaoField.value = 'editar';
+                if (cfcIdField) cfcIdField.value = id;
+                
+                // Abrir modal
+                abrirModalCFC();
+                
+                console.log('✅ Formulário preenchido com dados do CFC:', cfc);
+            } else {
+                throw new Error('Formulário não encontrado');
+            }
         } else {
             alert('Erro ao carregar dados do CFC: ' + (data.error || 'Erro desconhecido'));
         }
@@ -251,6 +299,7 @@ window.editarCFC = async function(id) {
 window.excluirCFC = async function(id) {
     console.log('🗑️ Excluindo CFC ID:', id);
     
+    // Usar confirm nativo do navegador em vez de createModal
     if (!confirm('⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este CFC?')) {
         return;
     }
@@ -278,9 +327,37 @@ window.excluirCFC = async function(id) {
     }
 };
 
+// Função para editar CFC da visualização
+window.editarCFCDaVisualizacao = function() {
+    console.log('✏️ Editando CFC da visualização...');
+    
+    // Fechar modal de visualização
+    const modalVisualizacao = document.getElementById('modalVisualizarCFC');
+    if (modalVisualizacao && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+        const modal = bootstrap.Modal.getInstance(modalVisualizacao);
+        if (modal) {
+            modal.hide();
+        }
+    }
+    
+    // Obter ID do CFC do botão (vamos armazenar temporariamente)
+    const cfcId = window.cfcVisualizacaoAtual;
+    if (cfcId) {
+        // Aguardar um pouco para o modal fechar antes de abrir o de edição
+        setTimeout(() => {
+            editarCFC(cfcId);
+        }, 300);
+    } else {
+        alert('Erro: ID do CFC não encontrado');
+    }
+};
+
 // Função para visualizar CFC
 window.visualizarCFC = async function(id) {
     console.log('👁️ Visualizando CFC ID:', id);
+    
+    // Armazenar ID para uso na edição
+    window.cfcVisualizacaoAtual = id;
     
     try {
         const response = await fetchAPI(`?id=${id}`);
@@ -295,30 +372,59 @@ window.visualizarCFC = async function(id) {
                 modalBody.innerHTML = `
                     <div class="row">
                         <div class="col-md-6">
-                            <h6>Informações Básicas</h6>
+                            <h6 class="fw-bold text-primary">Informações Básicas</h6>
                             <p><strong>Nome:</strong> ${cfc.nome || 'Não informado'}</p>
                             <p><strong>CNPJ:</strong> ${cfc.cnpj || 'Não informado'}</p>
                             <p><strong>Razão Social:</strong> ${cfc.razao_social || 'Não informado'}</p>
+                            <p><strong>Status:</strong> 
+                                <span class="badge ${cfc.ativo ? 'bg-success' : 'bg-danger'}">
+                                    ${cfc.ativo ? 'ATIVO' : 'INATIVO'}
+                                </span>
+                            </p>
                         </div>
                         <div class="col-md-6">
-                            <h6>Contato</h6>
+                            <h6 class="fw-bold text-primary">Contato</h6>
                             <p><strong>E-mail:</strong> ${cfc.email || 'Não informado'}</p>
                             <p><strong>Telefone:</strong> ${cfc.telefone || 'Não informado'}</p>
                         </div>
-                        <div class="col-12">
-                            <h6>Endereço</h6>
+                    </div>
+                    <div class="row mt-3">
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-primary">Endereço</h6>
+                            <p><strong>CEP:</strong> ${cfc.cep || 'Não informado'}</p>
                             <p><strong>Endereço:</strong> ${cfc.endereco || 'Não informado'}</p>
                             <p><strong>Bairro:</strong> ${cfc.bairro || 'Não informado'}</p>
-                            <p><strong>Cidade/UF:</strong> ${cfc.cidade || 'Não informado'}/${cfc.uf || 'Não informado'}</p>
-                            <p><strong>CEP:</strong> ${cfc.cep || 'Não informado'}</p>
+                            <p><strong>Cidade:</strong> ${cfc.cidade || 'Não informado'}</p>
+                            <p><strong>UF:</strong> ${cfc.uf || 'Não informado'}</p>
+                        </div>
+                        <div class="col-md-6">
+                            <h6 class="fw-bold text-primary">Informações Adicionais</h6>
+                            <p><strong>Responsável:</strong> ${cfc.responsavel_nome || 'Não definido'}</p>
+                            <p><strong>Criado em:</strong> ${cfc.criado_em ? new Date(cfc.criado_em).toLocaleDateString('pt-BR') : 'Não informado'}</p>
+                            <p><strong>Observações:</strong> ${cfc.observacoes || 'Nenhuma observação'}</p>
                         </div>
                     </div>
                 `;
+                
+                // Abrir modal de visualização usando Bootstrap
+                const modalElement = document.getElementById('modalVisualizarCFC');
+                if (modalElement) {
+                    if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                        const modal = new bootstrap.Modal(modalElement);
+                        modal.show();
+                    } else {
+                        // Fallback para modal customizado
+                        modalElement.style.display = 'block';
+                        document.body.style.overflow = 'hidden';
+                    }
+                    
+                    console.log('✅ Modal de visualização aberto com dados do CFC:', cfc);
+                } else {
+                    throw new Error('Elemento do modal de visualização não encontrado');
+                }
+            } else {
+                throw new Error('Corpo do modal de visualização não encontrado');
             }
-            
-            // Abrir modal de visualização usando Bootstrap
-            const modal = new bootstrap.Modal(document.getElementById('modalVisualizarCFC'));
-            modal.show();
         } else {
             alert('Erro ao carregar dados do CFC: ' + (data.error || 'Erro desconhecido'));
         }

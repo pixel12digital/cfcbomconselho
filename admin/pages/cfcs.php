@@ -197,34 +197,34 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
     </div>
 </div>
 
-<!-- Modal Customizado para Cadastro/EdiÃ§Ã£o de CFC -->
-<div id="modalCFC" class="custom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999;">
-    <div class="custom-modal-dialog" style="position: fixed; top: 2rem; left: 2rem; right: 2rem; bottom: 2rem; width: auto; height: auto; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center;">
-        <div class="custom-modal-content" style="width: 100%; height: 100%; max-width: 95vw; max-height: 95vh; background: white; border: none; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column;">
+<!-- Modal Bootstrap para Cadastro/Edição de CFC -->
+<div class="modal fade" id="modalCFC" tabindex="-1" aria-labelledby="modalCFCLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
             <form id="formCFC" onsubmit="return false;">
-                <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
+                <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; border-bottom: none;">
                     <h5 class="modal-title" id="modalTitle" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
                         <i class="fas fa-building me-2"></i>Novo CFC
                     </h5>
-                    <button type="button" class="btn-close" onclick="fecharModalCFC()" style="filter: invert(1); background: none; border: none; font-size: 1.25rem; color: white; opacity: 0.8; cursor: pointer;">&times;</button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
                 </div>
-                <div class="modal-body" style="overflow-y: auto; padding: 1rem; flex: 1; min-height: 0;">
+                <div class="modal-body" style="overflow-y: auto; padding: 1rem;">
                     <input type="hidden" name="acao" id="acaoCFC" value="criar">
                     <input type="hidden" name="cfc_id" id="cfc_id" value="">
                     
                     <div class="container-fluid" style="padding: 0;">
-                        <!-- SeÃ§Ã£o 1: InformaÃ§Ãµes BÃ¡sicas -->
+                        <!-- Seção 1: Informações Básicas -->
                         <div class="row mb-2">
                             <div class="col-12">
                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                                    <i class="fas fa-building me-1"></i>InformaÃ§Ãµes BÃ¡sicas
+                                    <i class="fas fa-building me-1"></i>Informações Básicas
                                 </h6>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-1">
                                     <label for="nome" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nome do CFC *</label>
                                     <input type="text" class="form-control" id="nome" name="nome" required 
-                                           placeholder="Nome completo do Centro de FormaÃ§Ã£o de Condutores" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="Nome completo do Centro de Formação de Condutores" style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -239,14 +239,14 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                         <div class="row mb-2">
                             <div class="col-md-12">
                                 <div class="mb-1">
-                                    <label for="razao_social" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">RazÃ£o Social</label>
+                                    <label for="razao_social" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Razão Social</label>
                                     <input type="text" class="form-control" id="razao_social" name="razao_social" 
-                                           placeholder="RazÃ£o social da empresa (opcional)" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="Razão social da empresa (opcional)" style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- SeÃ§Ã£o 2: Contato -->
+                        <!-- Seção 2: Contato -->
                         <div class="row mb-2">
                             <div class="col-12">
                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
@@ -269,11 +269,11 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                             </div>
                         </div>
                         
-                        <!-- SeÃ§Ã£o 3: EndereÃ§o -->
+                        <!-- Seção 3: Endereço -->
                         <div class="row mb-2">
                             <div class="col-12">
                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                                    <i class="fas fa-map-marker-alt me-1"></i>EndereÃ§o
+                                    <i class="fas fa-map-marker-alt me-1"></i>Endereço
                                 </h6>
                             </div>
                             <div class="col-md-2">
@@ -285,9 +285,9 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-1">
-                                    <label for="endereco" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">EndereÃ§o</label>
+                                    <label for="endereco" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Endereço</label>
                                     <input type="text" class="form-control" id="endereco" name="endereco" 
-                                           placeholder="Rua, Avenida, nÃºmero, etc." style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="Rua, Avenida, número, etc." style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
                             <div class="col-md-2">
@@ -311,29 +311,29 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                         <option value="">Selecione...</option>
                                         <option value="AC">Acre</option>
                                         <option value="AL">Alagoas</option>
-                                        <option value="AP">AmapÃ¡</option>
+                                        <option value="AP">Amapá</option>
                                         <option value="AM">Amazonas</option>
                                         <option value="BA">Bahia</option>
-                                        <option value="CE">CearÃ¡</option>
+                                        <option value="CE">Ceará</option>
                                         <option value="DF">Distrito Federal</option>
-                                        <option value="ES">EspÃ­rito Santo</option>
-                                        <option value="GO">GoiÃ¡s</option>
-                                        <option value="MA">MaranhÃ£o</option>
+                                        <option value="ES">Espírito Santo</option>
+                                        <option value="GO">Goiás</option>
+                                        <option value="MA">Maranhão</option>
                                         <option value="MT">Mato Grosso</option>
                                         <option value="MS">Mato Grosso do Sul</option>
                                         <option value="MG">Minas Gerais</option>
-                                        <option value="PA">ParÃ¡</option>
-                                        <option value="PB">ParaÃ­ba</option>
-                                        <option value="PR">ParanÃ¡</option>
+                                        <option value="PA">Pará</option>
+                                        <option value="PB">Paraíba</option>
+                                        <option value="PR">Paraná</option>
                                         <option value="PE">Pernambuco</option>
-                                        <option value="PI">PiauÃ­</option>
+                                        <option value="PI">Piauí</option>
                                         <option value="RJ">Rio de Janeiro</option>
                                         <option value="RN">Rio Grande do Norte</option>
                                         <option value="RS">Rio Grande do Sul</option>
-                                        <option value="RO">RondÃ´nia</option>
+                                        <option value="RO">Rondônia</option>
                                         <option value="RR">Roraima</option>
                                         <option value="SC">Santa Catarina</option>
-                                        <option value="SP">SÃ£o Paulo</option>
+                                        <option value="SP">São Paulo</option>
                                         <option value="SE">Sergipe</option>
                                         <option value="TO">Tocantins</option>
                                     </select>
@@ -341,18 +341,18 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                             </div>
                         </div>
                         
-                        <!-- SeÃ§Ã£o 4: ConfiguraÃ§Ãµes -->
+                        <!-- Seção 4: Configurações -->
                         <div class="row mb-2">
                             <div class="col-12">
                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                                    <i class="fas fa-cog me-1"></i>ConfiguraÃ§Ãµes
+                                    <i class="fas fa-cog me-1"></i>Configurações
                                 </h6>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-1">
-                                    <label for="responsavel_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">ResponsÃ¡vel</label>
+                                    <label for="responsavel_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Responsável</label>
                                     <select class="form-select" id="responsavel_id" name="responsavel_id" style="padding: 0.4rem; font-size: 0.85rem;">
-                                        <option value="">Selecione um usuÃ¡rio...</option>
+                                        <option value="">Selecione um usuário...</option>
                                         <?php foreach ($usuarios as $usuario): ?>
                                             <?php if ($usuario['tipo'] === 'admin' || $usuario['tipo'] === 'instrutor'): ?>
                                             <option value="<?php echo $usuario['id']; ?>">
@@ -375,23 +375,23 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                             </div>
                         </div>
                         
-                        <!-- SeÃ§Ã£o 5: ObservaÃ§Ãµes -->
+                        <!-- Seção 5: Observações -->
                         <div class="row">
                             <div class="col-12">
                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                                    <i class="fas fa-sticky-note me-1"></i>ObservaÃ§Ãµes
+                                    <i class="fas fa-sticky-note me-1"></i>Observações
                                 </h6>
                                 <div class="mb-1">
-                                    <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">ObservaÃ§Ãµes</label>
+                                    <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Observações</label>
                                     <textarea class="form-control" id="observacoes" name="observacoes" rows="2" 
-                                              placeholder="InformaÃ§Ãµes adicionais sobre o CFC..." style="padding: 0.4rem; font-size: 0.85rem; resize: vertical;"></textarea>
+                                              placeholder="Informações adicionais sobre o CFC..." style="padding: 0.4rem; font-size: 0.85rem; resize: vertical;"></textarea>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding: 0.75rem 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; flex-shrink: 0;">
-                    <button type="button" class="btn btn-secondary" onclick="fecharModalCFC()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding: 0.75rem 1.5rem;">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
                         <i class="fas fa-times me-1"></i>Cancelar
                     </button>
                     <button type="submit" class="btn btn-primary" id="btnSalvarCFC" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
@@ -418,7 +418,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-primary" id="btnEditarVisualizacao">
+                <button type="button" class="btn btn-primary" id="btnEditarVisualizacao" onclick="editarCFCDaVisualizacao()">
                     <i class="fas fa-edit me-1"></i>Editar CFC
                 </button>
             </div>
