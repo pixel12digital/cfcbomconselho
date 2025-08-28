@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Campo de Data - Sistema CFC</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .test-section { margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 5px; }
+        .success { background-color: #d4edda; border-color: #c3e6cb; }
+        .error { background-color: #f8d7da; border-color: #f5c6cb; }
+        .info { background-color: #d1ecf1; border-color: #bee5eb; }
+        .form-group { margin: 15px 0; }
+        .form-label { display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-control { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .log { background-color: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Teste Campo de Data - Sistema CFC</h1>
+    
+    <div class="test-section info">
+        <h3>📍 Teste de Campo de Data</h3>
+        <p>Este teste verifica se o campo de data está funcionando corretamente.</p>
+    </div>
+
+    <div class="test-section">
+        <h3>📝 Formulário de Teste</h3>
+        
+        <div class="form-group">
+            <label for="data_nascimento" class="form-label">Data de Nascimento *</label>
+            <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required>
+        </div>
+        
+        <div class="form-group">
+            <button class="btn btn-primary" onclick="testarCampoData()">🧪 Testar Campo</button>
+            <button class="btn btn-secondary" onclick="limparCampoData()">🧹 Limpar Campo</button>
+            <button class="btn btn-secondary" onclick="definirDataAtual()">📅 Data Atual</button>
+        </div>
+        
+        <div class="form-group">
+            <label for="data_texto" class="form-label">Data como Texto (para comparação)</label>
+            <input type="text" class="form-control" id="data_texto" name="data_texto" placeholder="dd/mm/aaaa">
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h3>📊 Resultados dos Testes</h3>
+        <div id="resultados"></div>
+    </div>
+
+    <div class="test-section">
+        <h3>🔍 Log de Eventos</h3>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        // Função para adicionar log
+        function adicionarLog(mensagem) {
+            const logDiv = document.getElementById('log');
+            const timestamp = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `[${timestamp}] ${mensagem}<br>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+
+        // Função para testar o campo de data
+        function testarCampoData() {
+            const campoData = document.getElementById('data_nascimento');
+            const resultadosDiv = document.getElementById('resultados');
+            
+            adicionarLog('🧪 Iniciando teste do campo de data...');
+            
+            // Verificar se o campo existe
+            if (!campoData) {
+                adicionarLog('❌ Campo de data não encontrado!');
+                resultadosDiv.innerHTML = '<div class="error">❌ Campo de data não encontrado!</div>';
+                return;
+            }
+            
+            // Verificar tipo do campo
+            const tipo = campoData.type;
+            adicionarLog(`📋 Tipo do campo: ${tipo}`);
+            
+            // Verificar valor atual
+            const valor = campoData.value;
+            adicionarLog(`📅 Valor atual: "${valor}"`);
+            
+            // Verificar se é editável
+            const editavel = !campoData.readOnly && !campoData.disabled;
+            adicionarLog(`✏️ Campo editável: ${editavel}`);
+            
+            // Verificar atributos
+            const atributos = {
+                required: campoData.required,
+                min: campoData.min,
+                max: campoData.max,
+                step: campoData.step
+            };
+            adicionarLog(`🔧 Atributos: ${JSON.stringify(atributos)}`);
+            
+            // Verificar estilos
+            const estilos = {
+                display: window.getComputedStyle(campoData).display,
+                visibility: window.getComputedStyle(campoData).visibility,
+                opacity: window.getComputedStyle(campoData).opacity
+            };
+            adicionarLog(`🎨 Estilos: ${JSON.stringify(estilos)}`);
+            
+            // Resultado do teste
+            let resultado = '<div class="success">';
+            resultado += '<h4>✅ Teste Concluído</h4>';
+            resultado += `<p><strong>Tipo:</strong> ${tipo}</p>`;
+            resultado += `<p><strong>Valor:</strong> "${valor}"</p>`;
+            resultado += `<p><strong>Editável:</strong> ${editavel}</p>`;
+            resultado += `<p><strong>Atributos:</strong> ${JSON.stringify(atributos, null, 2)}</p>`;
+            resultado += `<p><strong>Estilos:</strong> ${JSON.stringify(estilos, null, 2)}</p>`;
+            resultado += '</div>';
+            
+            resultadosDiv.innerHTML = resultado;
+            adicionarLog('✅ Teste concluído com sucesso!');
+        }
+
+        // Função para limpar o campo de data
+        function limparCampoData() {
+            const campoData = document.getElementById('data_nascimento');
+            if (campoData) {
+                campoData.value = '';
+                adicionarLog('🧹 Campo de data limpo');
+            }
+        }
+
+        // Função para definir data atual
+        function definirDataAtual() {
+            const campoData = document.getElementById('data_nascimento');
+            if (campoData) {
+                const hoje = new Date();
+                const dataFormatada = hoje.toISOString().split('T')[0];
+                campoData.value = dataFormatada;
+                adicionarLog(`📅 Data atual definida: ${dataFormatada}`);
+            }
+        }
+
+        // Adicionar event listeners para monitorar mudanças
+        document.addEventListener('DOMContentLoaded', function() {
+            const campoData = document.getElementById('data_nascimento');
+            
+            if (campoData) {
+                // Evento de mudança
+                campoData.addEventListener('change', function() {
+                    adicionarLog(`📅 Data alterada para: "${this.value}"`);
+                });
+                
+                // Evento de input
+                campoData.addEventListener('input', function() {
+                    adicionarLog(`✏️ Input detectado: "${this.value}"`);
+                });
+                
+                // Evento de focus
+                campoData.addEventListener('focus', function() {
+                    adicionarLog('🎯 Campo de data recebeu foco');
+                });
+                
+                // Evento de blur
+                campoData.addEventListener('blur', function() {
+                    adicionarLog('👋 Campo de data perdeu foco');
+                });
+                
+                adicionarLog('🚀 Event listeners configurados para o campo de data');
+            }
+        });
+
+        // Log inicial
+        adicionarLog('🚀 Página de teste carregada');
+        adicionarLog('📋 Campo de data configurado para testes');
+    </script>
+</body>
+</html>

@@ -6,7 +6,9 @@ function abrirModalInstrutor() {
     document.getElementById('modalTitle').textContent = 'Novo Instrutor';
     document.getElementById('acaoInstrutor').value = 'novo';
     document.getElementById('instrutor_id').value = '';
-    document.getElementById('formInstrutor').reset();
+    
+    // Limpar campos manualmente para evitar problemas com campos de data
+    limparCamposFormulario();
     
     const modal = document.getElementById('modalInstrutor');
     modal.style.display = 'block';
@@ -37,6 +39,53 @@ function fecharModalInstrutor() {
     setTimeout(() => {
         modal.style.display = 'none';
     }, 300);
+}
+
+// Função para limpar campos do formulário de forma segura
+function limparCamposFormulario() {
+    // Campos de texto
+    const camposTexto = ['nome', 'cpf', 'cnh', 'email', 'credencial', 'telefone', 'endereco', 'cidade'];
+    camposTexto.forEach(campo => {
+        const elemento = document.getElementById(campo);
+        if (elemento) elemento.value = '';
+    });
+    
+    // Campo de data - limpar de forma segura
+    const campoData = document.getElementById('data_nascimento');
+    if (campoData) {
+        campoData.value = '';
+        campoData.type = 'date'; // Garantir que seja do tipo date
+    }
+    
+    // Campos de select
+    const camposSelect = ['usuario_id', 'cfc_id', 'uf', 'ativo'];
+    camposSelect.forEach(campo => {
+        const elemento = document.getElementById(campo);
+        if (elemento) {
+            if (campo === 'ativo') {
+                elemento.value = '1'; // Manter "Ativo" como padrão
+            } else {
+                elemento.value = '';
+            }
+        }
+    });
+    
+    // Limpar checkboxes
+    document.querySelectorAll('input[name="categorias[]"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[name="dias_semana[]"]').forEach(cb => cb.checked = false);
+    
+    // Limpar campos de horário
+    const horarioInicio = document.getElementById('horario_inicio');
+    const horarioFim = document.getElementById('horario_fim');
+    if (horarioInicio) horarioInicio.value = '';
+    if (horarioFim) horarioFim.value = '';
+    
+    // Limpar outros campos se existirem
+    const outrosCampos = ['tipo_carga', 'validade_credencial', 'observacoes'];
+    outrosCampos.forEach(campo => {
+        const elemento = document.getElementById(campo);
+        if (elemento) elemento.value = '';
+    });
 }
 
 function editarInstrutor(id) {
