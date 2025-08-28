@@ -50,11 +50,24 @@ function limparCamposFormulario() {
         if (elemento) elemento.value = '';
     });
     
-    // Campo de data - limpar de forma segura
-    const campoData = document.getElementById('data_nascimento');
-    if (campoData) {
-        campoData.value = '';
-        campoData.type = 'date'; // Garantir que seja do tipo date
+    // Campo de data de nascimento - limpar de forma segura
+    const campoDataNascimento = document.getElementById('data_nascimento');
+    if (campoDataNascimento) {
+        campoDataNascimento.value = '';
+        campoDataNascimento.type = 'date'; // Garantir que seja do tipo date
+        // Remover qualquer valor inválido que possa estar causando problemas
+        campoDataNascimento.removeAttribute('min');
+        campoDataNascimento.removeAttribute('max');
+    }
+    
+    // Campo de validade da credencial - limpar de forma segura
+    const campoValidadeCredencial = document.getElementById('validade_credencial');
+    if (campoValidadeCredencial) {
+        campoValidadeCredencial.value = '';
+        campoValidadeCredencial.type = 'date'; // Garantir que seja do tipo date
+        // Remover qualquer valor inválido que possa estar causando problemas
+        campoValidadeCredencial.removeAttribute('min');
+        campoValidadeCredencial.removeAttribute('max');
     }
     
     // Campos de select
@@ -81,11 +94,23 @@ function limparCamposFormulario() {
     if (horarioFim) horarioFim.value = '';
     
     // Limpar outros campos se existirem
-    const outrosCampos = ['tipo_carga', 'validade_credencial', 'observacoes'];
+    const outrosCampos = ['tipo_carga', 'observacoes'];
     outrosCampos.forEach(campo => {
         const elemento = document.getElementById(campo);
         if (elemento) elemento.value = '';
     });
+    
+    // Garantir que os campos de data estejam funcionando corretamente
+    setTimeout(() => {
+        if (campoDataNascimento) {
+            campoDataNascimento.focus();
+            campoDataNascimento.blur();
+        }
+        if (campoValidadeCredencial) {
+            campoValidadeCredencial.focus();
+            campoValidadeCredencial.blur();
+        }
+    }, 100);
 }
 
 function editarInstrutor(id) {
@@ -115,7 +140,18 @@ function preencherFormularioInstrutor(instrutor) {
     document.getElementById('nome').value = instrutor.nome || instrutor.nome_usuario || '';
     document.getElementById('cpf').value = instrutor.cpf || '';
     document.getElementById('cnh').value = instrutor.cnh || '';
-    document.getElementById('data_nascimento').value = instrutor.data_nascimento || '';
+    
+    // Preencher campo de data de nascimento de forma segura
+    const campoDataNascimento = document.getElementById('data_nascimento');
+    if (campoDataNascimento) {
+        if (instrutor.data_nascimento && isValidDate(instrutor.data_nascimento)) {
+            campoDataNascimento.value = instrutor.data_nascimento;
+        } else {
+            campoDataNascimento.value = '';
+        }
+        campoDataNascimento.type = 'date';
+    }
+    
     document.getElementById('email').value = instrutor.email || '';
     document.getElementById('usuario_id').value = instrutor.usuario_id || '';
     document.getElementById('cfc_id').value = instrutor.cfc_id || '';
@@ -126,7 +162,18 @@ function preencherFormularioInstrutor(instrutor) {
     document.getElementById('uf').value = instrutor.uf || '';
     document.getElementById('ativo').value = instrutor.ativo ? '1' : '0';
     document.getElementById('tipo_carga').value = instrutor.tipo_carga || '';
-    document.getElementById('validade_credencial').value = instrutor.validade_credencial || '';
+    
+    // Preencher campo de validade da credencial de forma segura
+    const campoValidadeCredencial = document.getElementById('validade_credencial');
+    if (campoValidadeCredencial) {
+        if (instrutor.validade_credencial && isValidDate(instrutor.validade_credencial)) {
+            campoValidadeCredencial.value = instrutor.validade_credencial;
+        } else {
+            campoValidadeCredencial.value = '';
+        }
+        campoValidadeCredencial.type = 'date';
+    }
+    
     document.getElementById('observacoes').value = instrutor.observacoes || '';
     
     // Limpar checkboxes primeiro
@@ -337,6 +384,9 @@ document.addEventListener('DOMContentLoaded', function() {
     carregarCFCs();
     carregarUsuarios();
     
+    // Configurar campos de data para funcionarem corretamente
+    configurarCamposData();
+    
     // Adicionar listener para fechar modal ao clicar fora
     const modal = document.getElementById('modalInstrutor');
     if (modal) {
@@ -354,6 +404,61 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Função para configurar campos de data
+function configurarCamposData() {
+    const camposData = ['data_nascimento', 'validade_credencial'];
+    
+    camposData.forEach(campoId => {
+        const campo = document.getElementById(campoId);
+        if (campo) {
+            // Garantir que seja do tipo date
+            campo.type = 'date';
+            
+            // Remover valores inválidos
+            if (campo.value && !isValidDate(campo.value)) {
+                campo.value = '';
+            }
+            
+            // Adicionar event listener para validar formato
+            campo.addEventListener('change', function() {
+                if (this.value && !isValidDate(this.value)) {
+                    console.warn(`Data inválida no campo ${campoId}: ${this.value}`);
+                    this.value = '';
+                }
+            });
+            
+            // Adicionar event listener para input
+            campo.addEventListener('input', function() {
+                // Permitir apenas entrada de data válida
+                if (this.value && this.value.length > 10) {
+                    this.value = this.value.substring(0, 10);
+                }
+            });
+        }
+    });
+}
+
+// Função para validar se uma data é válida
+function isValidDate(dateString) {
+    if (!dateString) return false;
+    
+    // Verificar formato yyyy-MM-dd
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(dateString)) return false;
+    
+    // Verificar se é uma data válida
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return false;
+    
+    // Verificar se a data não é muito antiga (antes de 1900)
+    if (date.getFullYear() < 1900) return false;
+    
+    // Verificar se a data não é no futuro (para data de nascimento)
+    if (dateString === 'data_nascimento' && date > new Date()) return false;
+    
+    return true;
+}
 
 function carregarInstrutores() {
     console.log('🔍 Iniciando carregamento de instrutores...');
