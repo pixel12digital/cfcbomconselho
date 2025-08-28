@@ -440,6 +440,80 @@ async function detectarCaminhoAPI() {
     return caminhoAPICache;
 }
 
+// Função para limpar cache e forçar novo teste
+function limparCacheAPI() {
+    console.log('🧹 Limpando cache da API...');
+    caminhoAPICache = null;
+}
+
+// Função para testar múltiplos caminhos da API com mais opções
+async function testarCaminhosAPI() {
+    const baseUrl = window.location.origin;
+    const pathname = window.location.pathname;
+    
+    // Lista expandida de possíveis caminhos para testar
+    const caminhos = [
+        // Caminhos absolutos
+        baseUrl + '/admin/api/cfcs.php',
+        baseUrl + '/api/cfcs.php',
+        baseUrl + '/cfc-bom-conselho/admin/api/cfcs.php',
+        baseUrl + '/cfc-bom-conselho/api/cfcs.php',
+        
+        // Caminhos relativos ao pathname atual
+        baseUrl + pathname.replace('/admin/index.php', '') + '/admin/api/cfcs.php',
+        baseUrl + pathname.replace('/admin/index.php', '') + '/api/cfcs.php',
+        
+        // Caminhos relativos simples
+        'admin/api/cfcs.php',
+        'api/cfcs.php',
+        '../admin/api/cfcs.php',
+        '../api/cfcs.php',
+        
+        // Caminhos com subdiretório
+        baseUrl + '/public_html/admin/api/cfcs.php',
+        baseUrl + '/public_html/api/cfcs.php',
+        
+        // Caminhos alternativos do Hostinger
+        baseUrl + '/htdocs/cfc-bom-conselho/admin/api/cfcs.php',
+        baseUrl + '/htdocs/cfc-bom-conselho/api/cfcs.php'
+    ];
+    
+    console.log('🧪 Testando caminhos da API...');
+    console.log('📍 URL atual:', window.location.href);
+    console.log('🌐 Base URL:', baseUrl);
+    console.log('📁 Pathname:', pathname);
+    
+    for (const caminho of caminhos) {
+        try {
+            console.log(`🔍 Testando: ${caminho}`);
+            const response = await fetch(caminho, {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                // Adicionar timeout para evitar travamento
+                signal: AbortSignal.timeout(5000)
+            });
+            
+            if (response.ok) {
+                console.log(`✅ Caminho funcionando: ${caminho}`);
+                return caminho;
+            } else {
+                console.log(`❌ Caminho falhou (${response.status}): ${caminho}`);
+            }
+        } catch (error) {
+            console.log(`❌ Caminho com erro: ${caminho} - ${error.message}`);
+        }
+    }
+    
+    // Se nenhum caminho funcionar, usar o padrão e mostrar alerta
+    console.log('⚠️ Nenhum caminho funcionou, usando padrão');
+    alert('⚠️ ATENÇÃO: Não foi possível detectar o caminho correto da API!\n\n' +
+          'URL atual: ' + window.location.href + '\n' +
+          'Base URL: ' + baseUrl + '\n\n' +
+          'Por favor, verifique se o arquivo admin/api/cfcs.php existe no servidor.');
+    
+    return baseUrl + '/admin/api/cfcs.php';
+}
+
 // Função para testar múltiplos caminhos da API
 async function testarCaminhosAPI() {
     const baseUrl = window.location.origin;
@@ -503,13 +577,16 @@ async function fetchAPI(endpoint, options = {}) {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest',
                 ...options.headers
-            }
+            },
+            // Adicionar timeout para evitar travamento
+            signal: AbortSignal.timeout(10000)
         });
         
         if (!response.ok) {
             // Se der erro 404, pode ser que o caminho mudou, testar novamente
             if (response.status === 404) {
                 console.log('🔄 Erro 404 - testando caminhos novamente...');
+                caminhoAPICache = null; // Limpar cache para forçar novo teste
                 caminhoAPICache = await testarCaminhosAPI();
                 const novaUrl = caminhoAPICache + endpoint;
                 console.log('🔄 Tentando nova URL:', novaUrl);
@@ -519,7 +596,8 @@ async function fetchAPI(endpoint, options = {}) {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         ...options.headers
-                    }
+                    },
+                    signal: AbortSignal.timeout(10000)
                 });
                 
                 if (!novaResponse.ok) {
@@ -535,6 +613,36 @@ async function fetchAPI(endpoint, options = {}) {
         return response;
     } catch (error) {
         console.error('❌ Erro na requisição:', error);
+        
+        // Se for erro de timeout ou rede, tentar novamente
+        if (error.name === 'TimeoutError' || error.name === 'TypeError') {
+            console.log('🔄 Erro de rede/timeout - testando caminhos novamente...');
+            caminhoAPICache = null;
+            caminhoAPICache = await testarCaminhosAPI();
+            const novaUrl = caminhoAPICache + endpoint;
+            console.log('🔄 Tentando nova URL:', novaUrl);
+            
+            try {
+                const novaResponse = await fetch(novaUrl, {
+                    ...options,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...options.headers
+                    },
+                    signal: AbortSignal.timeout(10000)
+                });
+                
+                if (!novaResponse.ok) {
+                    throw new Error(`HTTP ${novaResponse.status}: ${novaResponse.statusText}`);
+                }
+                
+                return novaResponse;
+            } catch (retryError) {
+                console.error('❌ Erro na segunda tentativa:', retryError);
+                throw retryError;
+            }
+        }
+        
         throw error;
     }
 }
@@ -1165,7 +1273,7 @@ function alterarStatusCFC(id, status) {
     }
 }
 
-function salvarCFC() {
+async function salvarCFC() {
     console.log('🚀 Função salvarCFC chamada!');
     
     try {
@@ -1241,9 +1349,9 @@ function salvarCFC() {
             
             console.log('🔄 Fazendo requisição para a API...');
             
-                    // Fazer requisição para a API
-        const url = await detectarCaminhoAPI();
-        const method = acao === 'editar' ? 'PUT' : 'POST';
+            // Fazer requisição para a API
+            const url = await detectarCaminhoAPI();
+            const method = acao === 'editar' ? 'PUT' : 'POST';
             
             fetch(url, {
                 method: method,
