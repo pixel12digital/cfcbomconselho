@@ -516,27 +516,6 @@ async function testarCaminhosAPI() {
     
     return baseUrl + '/admin/api/cfcs.php';
 }
-
-// Função para limpar cache e forçar novo teste
-function limparCacheAPI() {
-    console.log('🧹 Limpando cache da API...');
-    caminhoAPICache = null;
-}
-
-// Função para testar múltiplos caminhos da API com mais opções
-async function testarCaminhosAPI() {
-    const baseUrl = window.location.origin;
-    const pathname = window.location.pathname;
-    
-    // Lista expandida de possíveis caminhos para testar
-    const caminhos = [
-        // Caminhos absolutos
-        baseUrl + '/admin/api/cfcs.php',
-        baseUrl + '/api/cfcs.php',
-        baseUrl + '/cfc-bom-conselho/admin/api/cfcs.php',
-        baseUrl + '/cfc-bom-conselho/api/cfcs.php',
-        
-        // Caminhos relativos ao pathname atual
         baseUrl + pathname.replace('/admin/index.php', '') + '/admin/api/cfcs.php',
         baseUrl + pathname.replace('/admin/index.php', '') + '/api/cfcs.php',
         
@@ -591,48 +570,7 @@ async function testarCaminhosAPI() {
     return baseUrl + '/admin/api/cfcs.php';
 }
 
-// Função para testar múltiplos caminhos da API
-async function testarCaminhosAPI() {
-    const baseUrl = window.location.origin;
-    const pathname = window.location.pathname;
-    
-    // Lista de possíveis caminhos para testar
-    const caminhos = [
-        baseUrl + '/admin/api/cfcs.php',
-        baseUrl + '/api/cfcs.php',
-        baseUrl + pathname.replace('/admin/index.php', '') + '/admin/api/cfcs.php',
-        baseUrl + pathname.replace('/admin/index.php', '') + '/api/cfcs.php',
-        'admin/api/cfcs.php',
-        'api/cfcs.php',
-        '../admin/api/cfcs.php',
-        '../api/cfcs.php'
-    ];
-    
-    console.log('🧪 Testando caminhos da API...');
-    
-    for (const caminho of caminhos) {
-        try {
-            console.log(`🔍 Testando: ${caminho}`);
-            const response = await fetch(caminho, {
-                method: 'GET',
-                headers: { 'X-Requested-With': 'XMLHttpRequest' }
-            });
-            
-            if (response.ok) {
-                console.log(`✅ Caminho funcionando: ${caminho}`);
-                return caminho;
-            } else {
-                console.log(`❌ Caminho falhou (${response.status}): ${caminho}`);
-            }
-        } catch (error) {
-            console.log(`❌ Caminho com erro: ${caminho} - ${error.message}`);
-        }
-    }
-    
-    // Se nenhum caminho funcionar, usar o padrão
-    console.log('⚠️ Nenhum caminho funcionou, usando padrão');
-    return baseUrl + '/admin/api/cfcs.php';
-}
+
 
 // Cache para o caminho da API
 let caminhoAPICache = null;
@@ -1377,7 +1315,7 @@ function alterarStatusCFC(id, status) {
     }
 }
 
-async async function salvarCFC() {
+async function salvarCFC() {
     console.log('🚀 Função salvarCFC chamada!');
     
     try {
