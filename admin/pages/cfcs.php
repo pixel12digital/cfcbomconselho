@@ -22,6 +22,9 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
         <button type="button" class="btn btn-primary" onclick="abrirModalCFC()">
             <i class="fas fa-plus me-1"></i>Novo CFC
         </button>
+        <button type="button" class="btn btn-info ms-2" onclick="testarCaminhosManual()" title="Testar caminhos da API">
+            <i class="fas fa-cog me-1"></i>Testar API
+        </button>
     </div>
 </div>
 
@@ -426,24 +429,72 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 console.log('🔧 Inicializando funções globais de CFCs...');
 
 // Função para detectar o caminho correto da API
-function detectarCaminhoAPI() {
+async function detectarCaminhoAPI() {
+    // Se temos o caminho em cache, usar ele
+    if (caminhoAPICache) {
+        return caminhoAPICache;
+    }
+    
+    // Se não temos cache, testar todos os caminhos
+    caminhoAPICache = await testarCaminhosAPI();
+    return caminhoAPICache;
+}
+
+// Função para testar múltiplos caminhos da API
+async function testarCaminhosAPI() {
     const baseUrl = window.location.origin;
     const pathname = window.location.pathname;
     
-    // Se estamos em /admin/index.php, a API deve estar em /admin/api/
-    if (pathname.includes('/admin/')) {
-        return baseUrl + '/admin/api/cfcs.php';
+    // Lista de possíveis caminhos para testar
+    const caminhos = [
+        baseUrl + '/admin/api/cfcs.php',
+        baseUrl + '/api/cfcs.php',
+        baseUrl + pathname.replace('/admin/index.php', '') + '/admin/api/cfcs.php',
+        baseUrl + pathname.replace('/admin/index.php', '') + '/api/cfcs.php',
+        'admin/api/cfcs.php',
+        'api/cfcs.php',
+        '../admin/api/cfcs.php',
+        '../api/cfcs.php'
+    ];
+    
+    console.log('🧪 Testando caminhos da API...');
+    
+    for (const caminho of caminhos) {
+        try {
+            console.log(`🔍 Testando: ${caminho}`);
+            const response = await fetch(caminho, {
+                method: 'GET',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            });
+            
+            if (response.ok) {
+                console.log(`✅ Caminho funcionando: ${caminho}`);
+                return caminho;
+            } else {
+                console.log(`❌ Caminho falhou (${response.status}): ${caminho}`);
+            }
+        } catch (error) {
+            console.log(`❌ Caminho com erro: ${caminho} - ${error.message}`);
+        }
     }
     
-    // Se estamos em um subdiretório, tentar caminho relativo
-    return 'api/cfcs.php';
+    // Se nenhum caminho funcionar, usar o padrão
+    console.log('⚠️ Nenhum caminho funcionou, usando padrão');
+    return baseUrl + '/admin/api/cfcs.php';
 }
+
+// Cache para o caminho da API
+let caminhoAPICache = null;
 
 // Função para fazer requisições com caminho automático
 async function fetchAPI(endpoint, options = {}) {
-    const baseUrl = detectarCaminhoAPI();
-    const url = baseUrl + endpoint;
+    // Se não temos o caminho em cache, testar todos os caminhos
+    if (!caminhoAPICache) {
+        console.log('🔍 Primeira requisição - testando caminhos da API...');
+        caminhoAPICache = await testarCaminhosAPI();
+    }
     
+    const url = caminhoAPICache + endpoint;
     console.log('🌐 Fazendo requisição para:', url);
     
     try {
@@ -456,6 +507,28 @@ async function fetchAPI(endpoint, options = {}) {
         });
         
         if (!response.ok) {
+            // Se der erro 404, pode ser que o caminho mudou, testar novamente
+            if (response.status === 404) {
+                console.log('🔄 Erro 404 - testando caminhos novamente...');
+                caminhoAPICache = await testarCaminhosAPI();
+                const novaUrl = caminhoAPICache + endpoint;
+                console.log('🔄 Tentando nova URL:', novaUrl);
+                
+                const novaResponse = await fetch(novaUrl, {
+                    ...options,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        ...options.headers
+                    }
+                });
+                
+                if (!novaResponse.ok) {
+                    throw new Error(`HTTP ${novaResponse.status}: ${novaResponse.statusText}`);
+                }
+                
+                return novaResponse;
+            }
+            
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
@@ -644,7 +717,43 @@ window.ajustarModalResponsivo = function() {
 
 console.log('✅ Funções globais de CFCs inicializadas!');
 
-document.addEventListener('DOMContentLoaded', function() {
+// Função para teste manual dos caminhos da API
+async function testarCaminhosManual() {
+    console.log('🧪 Teste manual dos caminhos da API...');
+    
+    // Limpar cache para forçar novo teste
+    caminhoAPICache = null;
+    
+    try {
+        const caminho = await testarCaminhosAPI();
+        alert(`✅ Caminho da API detectado: ${caminho}`);
+        
+        // Testar uma requisição real
+        const response = await fetch(caminho, {
+            method: 'GET',
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        
+        if (response.ok) {
+            alert(`✅ API funcionando! Status: ${response.status}`);
+        } else {
+            alert(`⚠️ API respondeu mas com erro: ${response.status}`);
+        }
+    } catch (error) {
+        alert(`❌ Erro ao testar API: ${error.message}`);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', async function() {
+    // Testar caminhos da API primeiro
+    console.log('🚀 Inicializando sistema de CFCs...');
+    try {
+        caminhoAPICache = await testarCaminhosAPI();
+        console.log('✅ Caminho da API detectado:', caminhoAPICache);
+    } catch (error) {
+        console.error('❌ Erro ao detectar caminho da API:', error);
+    }
+    
     // Inicializar máscaras
     inicializarMascarasCFC();
     
@@ -1132,9 +1241,9 @@ function salvarCFC() {
             
             console.log('🔄 Fazendo requisição para a API...');
             
-            // Fazer requisição para a API
-            const url = detectarCaminhoAPI();
-            const method = acao === 'editar' ? 'PUT' : 'POST';
+                    // Fazer requisição para a API
+        const url = await detectarCaminhoAPI();
+        const method = acao === 'editar' ? 'PUT' : 'POST';
             
             fetch(url, {
                 method: method,
@@ -1270,7 +1379,7 @@ function salvarCFCDireto() {
             console.log('🔄 Fazendo requisição para a API...');
             
                     // Fazer requisição para a API
-        const url = detectarCaminhoAPI();
+        const url = await detectarCaminhoAPI();
         const method = acao === 'editar' ? 'PUT' : 'POST';
             
             fetch(url, {
@@ -1427,9 +1536,9 @@ function executarExclusao(id, cascade = false) {
     btnExcluir.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>Excluindo...';
     btnExcluir.disabled = true;
     
-    const url = cascade ? 
-                `${detectarCaminhoAPI()}?id=${id}&cascade=true` :
-        `${detectarCaminhoAPI()}?id=${id}`;
+            const url = cascade ? 
+                `${await detectarCaminhoAPI()}?id=${id}&cascade=true` :
+        `${await detectarCaminhoAPI()}?id=${id}`;
     
     console.log('Fazendo requisição DELETE para:', url);
     
