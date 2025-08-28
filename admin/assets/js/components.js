@@ -155,8 +155,8 @@ class InputMask {
             this.mask(input, this.masks.cep);
         });
 
-        // Data
-        document.querySelectorAll('input[data-mask="data"], input[type="date"], input[name*="data"]').forEach(input => {
+        // Data - NÃO aplicar máscara em campos type="date" (HTML5 nativo)
+        document.querySelectorAll('input[data-mask="data"], input[name*="data"]:not([type="date"])').forEach(input => {
             this.mask(input, this.masks.data);
         });
 

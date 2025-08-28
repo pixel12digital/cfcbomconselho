@@ -417,6 +417,7 @@ function configurarCamposData() {
             
             // Remover valores inválidos
             if (campo.value && !isValidDate(campo.value)) {
+                console.warn(`Valor inválido removido do campo ${campoId}: ${campo.value}`);
                 campo.value = '';
             }
             
@@ -425,6 +426,27 @@ function configurarCamposData() {
                 if (this.value && !isValidDate(this.value)) {
                     console.warn(`Data inválida no campo ${campoId}: ${this.value}`);
                     this.value = '';
+                } else if (this.value) {
+                    // Validações específicas por campo
+                    if (campoId === 'data_nascimento') {
+                        const data = new Date(this.value);
+                        if (data > new Date()) {
+                            console.warn('Data de nascimento não pode ser no futuro');
+                            this.value = '';
+                            return;
+                        }
+                    }
+                    
+                    if (campoId === 'validade_credencial') {
+                        const data = new Date(this.value);
+                        if (data < new Date()) {
+                            console.warn('Validade da credencial deve ser no futuro');
+                            this.value = '';
+                            return;
+                        }
+                    }
+                    
+                    console.log(`✅ Data válida definida no campo ${campoId}: ${this.value}`);
                 }
             });
             
@@ -434,6 +456,16 @@ function configurarCamposData() {
                 if (this.value && this.value.length > 10) {
                     this.value = this.value.substring(0, 10);
                 }
+                
+                // Log para debug
+                if (this.value) {
+                    console.log(`✏️ Input detectado no campo ${campoId}: "${this.value}"`);
+                }
+            });
+            
+            // Adicionar event listener para focus
+            campo.addEventListener('focus', function() {
+                console.log(`🎯 Campo ${campoId} recebeu foco`);
             });
         }
     });
@@ -455,7 +487,7 @@ function isValidDate(dateString) {
     if (date.getFullYear() < 1900) return false;
     
     // Verificar se a data não é no futuro (para data de nascimento)
-    if (dateString === 'data_nascimento' && date > new Date()) return false;
+    // Esta validação será feita na função configurarCamposData
     
     return true;
 }
