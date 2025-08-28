@@ -5,15 +5,21 @@ Header always set Access-Control-Allow-Origin "*"
 Header always set Access-Control-Allow-Methods "GET, POST, PUT, DELETE, OPTIONS"
 Header always set Access-Control-Allow-Headers "Content-Type, Authorization"
 
-# Roteamento para APIs específicas
-RewriteRule ^usuarios/(.*)$ usuarios.php [QSA,L]
-RewriteRule ^cfcs/(.*)$ cfcs.php [QSA,L]
-RewriteRule ^instrutores/(.*)$ instrutores.php [QSA,L]
-RewriteRule ^alunos/(.*)$ alunos.php [QSA,L]
-RewriteRule ^agendamento/(.*)$ agendamento.php [QSA,L]
-
 # Permitir acesso direto aos arquivos PHP
-# RewriteRule ^(.*)$ agendamento.php [QSA,L]
+RewriteCond %{REQUEST_FILENAME} -f
+RewriteRule ^(.*\.php)$ $1 [QSA,L]
+
+# Roteamento para APIs específicas (apenas se não for arquivo direto)
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^usuarios/(.*)$ usuarios.php [QSA,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^cfcs/(.*)$ cfcs.php [QSA,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^instrutores/(.*)$ instrutores.php [QSA,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^alunos/(.*)$ alunos.php [QSA,L]
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteRule ^agendamento/(.*)$ agendamento.php [QSA,L]
 
 # Configurações de segurança
 <Files "*.php">

@@ -212,13 +212,13 @@ define('SESSION_NAME', 'CFC_SESSION');
 define('SESSION_COOKIE_LIFETIME', 0);
 define('SESSION_COOKIE_PATH', '/');
 define('SESSION_COOKIE_DOMAIN', '');
-define('SESSION_COOKIE_SECURE', $environment === 'production'); // true para produção, false para local
+define('SESSION_COOKIE_SECURE', false); // false para permitir HTTP em desenvolvimento
 define('SESSION_COOKIE_HTTPONLY', true);
 
 // Configurações de Timeout baseadas no ambiente
 define('REQUEST_TIMEOUT', $environment === 'production' ? 30 : 60); // 30 segundos para produção, 60 para local
 define('SCRIPT_TIMEOUT', $environment === 'production' ? 300 : 600); // 5 minutos para produção, 10 para local
-define('DB_TIMEOUT', $environment === 'production' ? 10 : 30); // 10 segundos para produção, 30 para local
+define('DB_TIMEOUT', $environment === 'production' ? 30 : 60); // 30 segundos para produção, 60 para local
 
 // Configurações de Arquivos
 define('FILE_UPLOAD_TEMP_DIR', sys_get_temp_dir());
@@ -286,7 +286,7 @@ if ($environment === 'local' && file_exists(__DIR__ . '/../config_local.php')) {
 }
 
 // Configurações de Sessão ANTES de iniciar a sessão
-if (!headers_sent()) {
+if (!headers_sent() && session_status() === PHP_SESSION_NONE) {
     ini_set('session.gc_maxlifetime', SESSION_TIMEOUT);
     ini_set('session.cookie_lifetime', SESSION_COOKIE_LIFETIME);
     ini_set('session.cookie_path', SESSION_COOKIE_PATH);
@@ -295,8 +295,8 @@ if (!headers_sent()) {
     ini_set('session.cookie_httponly', SESSION_COOKIE_HTTPONLY);
 }
 
-// INICIAR SESSÃO IMEDIATAMENTE após todas as definições
-if (session_status() === PHP_SESSION_NONE) {
+// INICIAR SESSÃO IMEDIATAMENTE após todas as definições (apenas se headers não foram enviados)
+if (session_status() === PHP_SESSION_NONE && !headers_sent()) {
     session_name(SESSION_NAME);
     session_start();
 }

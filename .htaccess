@@ -81,7 +81,12 @@ RewriteEngine On
 # Regras de rewrite
 RewriteCond %{REQUEST_FILENAME} !-f
 RewriteCond %{REQUEST_FILENAME} !-d
-RewriteRule ^api/(.*)$ api/index.php [QSA,L]
+
+# Permitir que APIs do admin funcionem - CORRIGIDO
+# COMENTADO TEMPORARIAMENTE - pode estar causando redirecionamento infinito
+# RewriteCond %{REQUEST_URI} !^/admin/api/
+# RewriteCond %{REQUEST_URI} !^/cfc-bom-conselho/admin/api/
+# RewriteRule ^api/(.*)$ api/index.php [QSA,L]
 
 # Redirecionar erros
 ErrorDocument 404 /404.php

@@ -15,7 +15,7 @@ if (!isset($ultimas_atividades)) $ultimas_atividades = [];
             <i class="fas fa-chart-bar"></i>
             Ver Relatórios
         </button>
-        <button class="btn btn-success" onclick="window.location.href='index.php?page=aulas&action=create'">
+        <button class="btn btn-success" onclick="window.location.href='index.php?page=alunos&action=list'">
             <i class="fas fa-plus"></i>
             Nova Aula
         </button>
@@ -200,7 +200,7 @@ if (!isset($ultimas_atividades)) $ultimas_atividades = [];
             <div class="action-label">Novo Instrutor</div>
         </a>
         
-        <a href="index.php?page=aulas&action=create" class="action-card">
+        <a href="index.php?page=alunos&action=list" class="action-card">
             <div class="action-icon">
                 <i class="fas fa-calendar-plus"></i>
             </div>

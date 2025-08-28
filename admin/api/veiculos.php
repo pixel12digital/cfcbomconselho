@@ -8,6 +8,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+// Usar caminho relativo que sabemos que funciona
 require_once '../../includes/config.php';
 require_once '../../includes/database.php';
 

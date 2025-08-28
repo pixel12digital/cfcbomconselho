@@ -50,6 +50,27 @@ class Database {
         }
     }
     
+    private function reconnect() {
+        try {
+            // Fechar conexão atual se existir
+            $this->connection = null;
+            
+            // Aguardar um pouco antes de reconectar
+            usleep(100000); // 100ms
+            
+            // Reconectar
+            $this->connect();
+            
+            if (LOG_ENABLED) {
+                error_log('Reconexão com banco de dados estabelecida com sucesso');
+            }
+            
+        } catch (Exception $e) {
+            $this->logError('Erro na reconexão com banco de dados: ' . $e->getMessage());
+            throw new Exception('Erro na reconexão com banco de dados');
+        }
+    }
+    
     public function getConnection() {
         return $this->connection;
     }
@@ -78,6 +99,38 @@ class Database {
             return $this->statement;
             
         } catch (PDOException $e) {
+            // Verificar se é erro de conexão perdida
+            if ($e->getCode() == 2006 || strpos($e->getMessage(), 'MySQL server has gone away') !== false) {
+                $this->logError('Conexão perdida, tentando reconectar...');
+                $this->reconnect();
+                
+                // Tentar executar a query novamente
+                try {
+                    $this->statement = $this->connection->prepare($sql);
+                    if (!$this->statement) {
+                        throw new Exception('Erro na preparação da query após reconexão');
+                    }
+                    
+                    $this->statement->execute($params);
+                    $this->queryCount++;
+                    
+                    $endTime = microtime(true);
+                    $this->queryTime += ($endTime - $startTime);
+                    
+                    if (LOG_ENABLED && LOG_LEVEL === 'DEBUG') {
+                        $this->logQuery($sql, $params, ($endTime - $startTime));
+                    }
+                    
+                    return $this->statement;
+                    
+                } catch (PDOException $e2) {
+                    $this->logError('Erro na execução da query após reconexão: ' . $e2->getMessage());
+                    $this->logError('SQL: ' . $sql);
+                    $this->logError('Parâmetros: ' . json_encode($params));
+                    throw new Exception('Erro na execução da query após reconexão');
+                }
+            }
+            
             $this->logError('Erro na execução da query: ' . $e->getMessage());
             $this->logError('SQL: ' . $sql);
             $this->logError('Parâmetros: ' . json_encode($params));
@@ -175,12 +228,32 @@ class Database {
     
     public function update($table, $data, $where, $whereParams = []) {
         $setParts = [];
-        foreach ($fields = array_keys($data) as $field) {
-            $setParts[] = "{$field} = :{$field}";
+        $newParams = [];
+        $counter = 0;
+        
+        foreach (array_keys($data) as $field) {
+            $paramName = "set_{$counter}";
+            $setParts[] = "{$field} = :{$paramName}";
+            $newParams[$paramName] = $data[$field];
+            $counter++;
         }
         
-        $sql = "UPDATE {$table} SET " . implode(', ', $setParts) . " WHERE {$where}";
-        $params = array_merge($data, $whereParams);
+        // Converter whereParams para parâmetros nomeados se necessário
+        $whereParamsNamed = [];
+        $whereSql = $where;
+        
+        if (!empty($whereParams)) {
+            $whereCounter = 0;
+            foreach ($whereParams as $param) {
+                $whereParamName = "where_{$whereCounter}";
+                $whereSql = str_replace('?', ":{$whereParamName}", $whereSql);
+                $whereParamsNamed[$whereParamName] = $param;
+                $whereCounter++;
+            }
+        }
+        
+        $sql = "UPDATE {$table} SET " . implode(', ', $setParts) . " WHERE {$whereSql}";
+        $params = array_merge($newParams, $whereParamsNamed);
         
         return $this->query($sql, $params);
     }

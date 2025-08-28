@@ -1,531 +1,472 @@
 <?php
-// Verificar se as variáveis estão definidas
-if (!isset($instrutores)) $instrutores = [];
-if (!isset($cfcs)) $cfcs = [];
-if (!isset($usuarios)) $usuarios = [];
-if (!isset($mensagem)) $mensagem = '';
-if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
+// Página de gerenciamento de instrutores - VERSÃO CORRIGIDA
+// Os includes já são feitos pelo admin/index.php
+// Apenas verificar se as funções estão disponíveis
+if (!function_exists('isLoggedIn') || !function_exists('hasPermission')) {
+    die('Funções de autenticação não disponíveis');
+}
+
+$pageTitle = 'Gestão de Instrutores';
 ?>
 
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">
-        <i class="fas fa-chalkboard-teacher me-2"></i>Gestão de Instrutores
-    </h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportarInstrutores()">
-                <i class="fas fa-download me-1"></i>Exportar
-            </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirInstrutores()">
-                <i class="fas fa-print me-1"></i>Imprimir
-            </button>
-        </div>
-        <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalInstrutor">
-            <i class="fas fa-plus me-1"></i>Novo Instrutor
-        </button>
-    </div>
-</div>
+<!-- Incluir CSS do modal -->
+<link rel="stylesheet" href="assets/css/modal-instrutores.css">
 
-<!-- Mensagens de Feedback -->
-<?php if (!empty($mensagem)): ?>
-<div class="alert alert-<?php echo $tipo_mensagem; ?> alert-dismissible fade show" role="alert">
-    <?php echo htmlspecialchars($mensagem); ?>
-    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-</div>
-<?php endif; ?>
-
-<!-- Filtros e Busca -->
-<div class="row mb-4">
-    <div class="col-md-4">
-        <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-search"></i></span>
-            <input type="text" class="form-control" id="buscaInstrutor" placeholder="Buscar instrutor por nome, credencial ou CFC...">
-        </div>
-    </div>
-    <div class="col-md-2">
-        <select class="form-select" id="filtroStatus">
-            <option value="">Todos os Status</option>
-            <option value="ativo">Ativo</option>
-            <option value="inativo">Inativo</option>
-        </select>
-    </div>
-    <div class="col-md-2">
-        <select class="form-select" id="filtroCFC">
-            <option value="">Todos os CFCs</option>
-            <?php foreach ($cfcs as $cfc): ?>
-                <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="col-md-2">
-        <select class="form-select" id="filtroCategoria">
-            <option value="">Todas as Categorias</option>
-            <option value="A">Categoria A</option>
-            <option value="B">Categoria B</option>
-            <option value="C">Categoria C</option>
-            <option value="D">Categoria D</option>
-            <option value="E">Categoria E</option>
-            <option value="AB">Categoria AB</option>
-            <option value="AC">Categoria AC</option>
-            <option value="AD">Categoria AD</option>
-            <option value="AE">Categoria AE</option>
-        </select>
-    </div>
-    <div class="col-md-2">
-        <button type="button" class="btn btn-outline-info w-100" onclick="limparFiltros()">
-            <i class="fas fa-times me-1"></i>Limpar
-        </button>
-    </div>
-</div>
-
-<!-- Cards de Estatísticas -->
-<div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-primary shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                            Total de Instrutores
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalInstrutores">
-                            <?php echo count($instrutores); ?>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-chalkboard-teacher fa-2x text-gray-300"></i>
-                    </div>
-                </div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h1 class="h3 mb-0">Gestão de Instrutores</h1>
+                <button class="btn btn-primary" onclick="abrirModalInstrutor()">
+                    <i class="fas fa-plus"></i> Novo Instrutor
+                </button>
             </div>
-        </div>
-    </div>
 
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Instrutores Ativos
+            <!-- Filtros -->
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <label for="filtroStatus" class="form-label">Status</label>
+                            <select id="filtroStatus" class="form-select" onchange="filtrarInstrutores()">
+                                <option value="">Todos</option>
+                                <option value="1">Ativo</option>
+                                <option value="0">Inativo</option>
+                            </select>
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="instrutoresAtivos">
-                            <?php echo count(array_filter($instrutores, function($i) { return $i['ativo']; })); ?>
+                        <div class="col-md-3">
+                            <label for="filtroCFC" class="form-label">CFC</label>
+                            <select id="filtroCFC" class="form-select" onchange="filtrarInstrutores()">
+                                <option value="">Todos</option>
+                                <!-- Preencher com CFCs -->
+                            </select>
                         </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-info shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                            Aulas Hoje
+                        <div class="col-md-3">
+                            <label for="filtroCategoria" class="form-label">Categoria</label>
+                            <select id="filtroCategoria" class="form-select" onchange="filtrarInstrutores()">
+                                <option value="">Todas</option>
+                                <option value="A">A</option>
+                                <option value="B">B</option>
+                                <option value="C">C</option>
+                                <option value="D">D</option>
+                                <option value="E">E</option>
+                            </select>
                         </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="aulasHoje">
-                            <?php echo array_sum(array_column($instrutores, 'aulas_hoje')); ?>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-calendar-day fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="col-xl-3 col-md-6 mb-4">
-        <div class="card border-left-warning shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            Total de Alunos
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalAlunos">
-                            <?php echo array_sum(array_column($instrutores, 'total_alunos')); ?>
+                        <div class="col-md-3">
+                            <label for="buscaInstrutor" class="form-label">Buscar</label>
+                            <input type="text" id="buscaInstrutor" class="form-control" placeholder="Nome ou credencial..." oninput="filtrarInstrutores()">
                         </div>
                     </div>
-                    <div class="col-auto">
-                        <i class="fas fa-user-graduate fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Tabela de Instrutores -->
-<div class="card shadow">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Instrutores</h5>
-    </div>
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-striped table-hover" id="tabelaInstrutores">
-                <thead class="table-dark">
-                    <tr>
-                        <th>ID</th>
-                        <th>Instrutor</th>
-                        <th>Credencial</th>
-                        <th>CFC</th>
-                        <th>Categorias</th>
-                        <th>Status</th>
-                        <th>Disponibilidade</th>
-                        <th>Alunos</th>
-                        <th>Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($instrutores)): ?>
-                    <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
-                            <i class="fas fa-inbox fa-3x mb-3"></i>
-                            <p>Nenhum instrutor cadastrado ainda.</p>
-                            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalInstrutor">
-                                <i class="fas fa-plus me-1"></i>Cadastrar Primeiro Instrutor
+                    <div class="row mt-3">
+                        <div class="col-12">
+                            <button class="btn btn-outline-secondary" onclick="limparFiltros()">
+                                <i class="fas fa-times"></i> Limpar Filtros
                             </button>
-                        </td>
-                    </tr>
-                    <?php else: ?>
-                        <?php foreach ($instrutores as $instrutor): ?>
-                        <tr data-instrutor-id="<?php echo $instrutor['id']; ?>">
-                            <td><?php echo $instrutor['id']; ?></td>
-                            <td>
-                                <div class="d-flex align-items-center">
-                                    <div class="avatar-sm me-3">
-                                        <div class="avatar-title bg-primary rounded-circle">
-                                            <?php echo strtoupper(substr($instrutor['nome'], 0, 1)); ?>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <strong><?php echo htmlspecialchars($instrutor['nome']); ?></strong>
-                                        <?php if ($instrutor['email']): ?>
-                                        <br><small class="text-muted"><?php echo htmlspecialchars($instrutor['email']); ?></small>
-                                        <?php endif; ?>
-                                    </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Estatísticas -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card bg-primary text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0" id="totalInstrutores">0</h4>
+                                    <small>Total de Instrutores</small>
                                 </div>
-                            </td>
-                            <td>
-                                <code><?php echo htmlspecialchars($instrutor['credencial']); ?></code>
-                            </td>
-                            <td>
-                                <span class="badge bg-info"><?php echo htmlspecialchars($instrutor['cfc_nome'] ?? 'N/A'); ?></span>
-                            </td>
-                            <td>
-                                <?php 
-                                $categorias = explode(',', $instrutor['categoria_habilitacao']);
-                                foreach ($categorias as $cat): 
-                                    $cat = trim($cat);
-                                    if (!empty($cat)):
-                                ?>
-                                    <span class="badge bg-secondary me-1"><?php echo htmlspecialchars($cat); ?></span>
-                                <?php 
-                                    endif;
-                                endforeach; 
-                                ?>
-                            </td>
-                            <td>
-                                <?php if ($instrutor['ativo']): ?>
-                                    <span class="badge bg-success">Ativo</span>
-                                <?php else: ?>
-                                    <span class="badge bg-danger">Inativo</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <?php if ($instrutor['disponivel']): ?>
-                                    <span class="badge bg-success">Disponível</span>
-                                <?php else: ?>
-                                    <span class="badge bg-warning">Ocupado</span>
-                                <?php endif; ?>
-                                <br><small class="text-muted">
-                                    <?php echo $instrutor['aulas_hoje']; ?> aulas hoje
-                                </small>
-                            </td>
-                            <td>
-                                <span class="badge bg-primary"><?php echo $instrutor['total_alunos'] ?? 0; ?></span>
-                            </td>
-                            <td>
-                                <div class="action-buttons-container">
-                                    <!-- Botões principais em linha -->
-                                    <div class="action-buttons-primary">
-                                        <button type="button" class="btn btn-edit action-btn" 
-                                                onclick="editarInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                                title="Editar dados do instrutor">
-                                            <i class="fas fa-edit me-1"></i>Editar
-                                        </button>
-                                        <button type="button" class="btn btn-view action-btn" 
-                                                onclick="visualizarInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                                title="Ver detalhes completos do instrutor">
-                                            <i class="fas fa-eye me-1"></i>Ver
-                                        </button>
-                                        <button type="button" class="btn btn-schedule action-btn" 
-                                                onclick="agendarAula(<?php echo $instrutor['id']; ?>)" 
-                                                title="Agendar nova aula com este instrutor">
-                                            <i class="fas fa-calendar-plus me-1"></i>Agendar
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Botões secundários em linha -->
-                                    <div class="action-buttons-secondary">
-                                        <button type="button" class="btn btn-history action-btn" 
-                                                onclick="historicoInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                                title="Visualizar histórico de aulas e desempenho">
-                                            <i class="fas fa-history me-1"></i>Histórico
-                                        </button>
-                                        <?php if ($instrutor['ativo']): ?>
-                                        <button type="button" class="btn btn-toggle action-btn" 
-                                                onclick="desativarInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                                title="Desativar instrutor (não poderá dar aulas)">
-                                            <i class="fas fa-ban me-1"></i>Desativar
-                                        </button>
-                                        <?php else: ?>
-                                        <button type="button" class="btn btn-schedule action-btn" 
-                                                onclick="ativarInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                                title="Reativar instrutor para dar aulas">
-                                            <i class="fas fa-check me-1"></i>Ativar
-                                        </button>
-                                        <?php endif; ?>
-                                    </div>
-                                    
-                                    <!-- Botão de exclusão destacado -->
-                                    <div class="action-buttons-danger">
-                                        <button type="button" class="btn btn-delete action-btn" 
-                                                onclick="excluirInstrutor(<?php echo $instrutor['id']; ?>)" 
-                                                title="⚠️ EXCLUIR INSTRUTOR - Esta ação não pode ser desfeita!">
-                                            <i class="fas fa-trash me-1"></i>Excluir
-                                        </button>
-                                    </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-users fa-2x"></i>
                                 </div>
-                            </td>
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card bg-success text-white">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between">
+                                <div>
+                                    <h4 class="mb-0" id="instrutoresAtivos">0</h4>
+                                    <small>Instrutores Ativos</small>
+                                </div>
+                                <div class="align-self-center">
+                                    <i class="fas fa-check-circle fa-2x"></i>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tabela de Instrutores -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Lista de Instrutores</h5>
+                        <div>
+                            <button class="btn btn-outline-success btn-sm" onclick="exportarInstrutores()">
+                                <i class="fas fa-download"></i> Exportar
+                            </button>
+                            <button class="btn btn-outline-info btn-sm" onclick="imprimirInstrutores()">
+                                <i class="fas fa-print"></i> Imprimir
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table id="tabelaInstrutores" class="table table-striped table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>Email</th>
+                                    <th>CFC</th>
+                                    <th>Credencial</th>
+                                    <th>Categorias</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <!-- Preencher via JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Modal para Cadastro/Edição de Instrutor -->
-<div class="modal fade" id="modalInstrutor" tabindex="-1" aria-labelledby="modalInstrutorLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <form id="formInstrutor" method="POST" action="admin/pages/instrutores.php">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="modalInstrutorLabel">
-                        <i class="fas fa-chalkboard-teacher me-2"></i><span id="modalTitle">Novo Instrutor</span>
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Modal Customizado para Cadastro/Edição de Instrutor -->
+<div id="modalInstrutor" class="custom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; overflow: auto;">
+    <div class="custom-modal-dialog" style="position: relative; width: 95%; max-width: 1200px; margin: 20px auto; background: white; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: block;">
+        <form id="formInstrutor" onsubmit="return false;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
+                <h5 class="modal-title" id="modalTitle" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
+                    <i class="fas fa-user-tie me-2"></i>Novo Instrutor
+                </h5>
+                <button type="button" class="btn-close" onclick="fecharModalInstrutor()" style="filter: invert(1); background: none; border: none; font-size: 1.25rem; color: white; opacity: 0.8; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; padding: 1rem; max-height: 70vh;">
+                <input type="hidden" name="acao" id="acaoInstrutor" value="novo">
+                <input type="hidden" name="instrutor_id" id="instrutor_id" value="">
+                
+                <div class="container-fluid" style="padding: 0;">
+                                                 <!-- Seção 1: Informações Básicas -->
+                         <div class="row mb-2">
+                             <div class="col-12">
+                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                                     <i class="fas fa-user-tie me-1"></i>Informações Básicas
+                                 </h6>
+                             </div>
+                             <div class="col-md-4">
+                                 <div class="mb-1">
+                                     <label for="nome" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nome Completo *</label>
+                                     <input type="text" class="form-control" id="nome" name="nome" required 
+                                            placeholder="Nome completo" style="padding: 0.4rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                             <div class="col-md-4">
+                                 <div class="mb-1">
+                                     <label for="cpf" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CPF *</label>
+                                     <input type="text" class="form-control" id="cpf" name="cpf" required 
+                                            placeholder="000.000.000-00" style="padding: 0.4rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                             <div class="col-md-4">
+                                 <div class="mb-1">
+                                     <label for="cnh" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CNH *</label>
+                                     <input type="text" class="form-control" id="cnh" name="cnh" required 
+                                            placeholder="Número da CNH" style="padding: 0.4rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                         </div>
+                         
+                         <div class="row mb-2">
+                             <div class="col-md-4">
+                                 <div class="mb-1">
+                                     <label for="data_nascimento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Data Nascimento *</label>
+                                     <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required 
+                                            style="padding: 0.4rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                             <div class="col-md-4">
+                                 <div class="mb-1">
+                                     <label for="email" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Email *</label>
+                                     <input type="email" class="form-control" id="email" name="email" required 
+                                            placeholder="email@exemplo.com" style="padding: 0.4rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                             <div class="col-md-4">
+                                 <div class="mb-1">
+                                     <label for="telefone" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Telefone *</label>
+                                     <input type="text" class="form-control" id="telefone" name="telefone" required 
+                                            placeholder="(00) 00000-0000" style="padding: 0.4rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                         </div>
+                         
+                         <div class="row mb-2">
+                             <div class="col-md-6">
+                                 <div class="mb-1">
+                                     <label for="usuario_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Usuário *</label>
+                                     <select id="usuario_id" name="usuario_id" class="form-select" required style="padding: 0.4rem; font-size: 0.85rem;">
+                                         <option value="">Selecione um usuário</option>
+                                         <!-- Preencher com usuários -->
+                                     </select>
+                                 </div>
+                             </div>
+                             <div class="col-md-6">
+                                 <div class="mb-1">
+                                     <label for="cfc_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CFC *</label>
+                                     <select id="cfc_id" name="cfc_id" class="form-select" required style="padding: 0.4rem; font-size: 0.85rem;">
+                                         <option value="">Selecione um CFC</option>
+                                         <!-- Preencher com CFCs -->
+                                     </select>
+                                 </div>
+                             </div>
+                         </div>
+                        
+                        <div class="row mb-2">
+                            <div class="col-md-6">
+                                <div class="mb-1">
+                                    <label for="credencial" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Credencial *</label>
+                                    <input type="text" class="form-control" id="credencial" name="credencial" required 
+                                           placeholder="Número da credencial" style="padding: 0.4rem; font-size: 0.85rem;">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-1">
+                                    <label for="ativo" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status</label>
+                                    <select class="form-select" id="ativo" name="ativo" style="padding: 0.4rem; font-size: 0.85rem;">
+                                        <option value="1">Ativo</option>
+                                        <option value="0">Inativo</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Seção 2: Categorias de Habilitação -->
+                        <div class="row mb-1">
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-1 mb-1" style="font-size: 0.9rem; margin-bottom: 0.3rem !important;">
+                                    <i class="fas fa-car me-1"></i>Categorias de Habilitação *
+                                </h6>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="row">
+                                    <div class="col-md-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="categorias[]" value="A" id="catA" style="margin-top: 0.2rem;">
+                                            <label class="form-check-label" for="catA" style="font-size: 0.85rem;">A</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="categorias[]" value="B" id="catB" style="margin-top: 0.2rem;">
+                                            <label class="form-check-label" for="catB" style="font-size: 0.85rem;">B</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="categorias[]" value="C" id="catC" style="margin-top: 0.2rem;">
+                                            <label class="form-check-label" for="catC" style="font-size: 0.85rem;">C</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="categorias[]" value="D" id="catD" style="margin-top: 0.2rem;">
+                                            <label class="form-check-label" for="catD" style="font-size: 0.85rem;">D</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="categorias[]" value="E" id="catE" style="margin-top: 0.2rem;">
+                                            <label class="form-check-label" for="catE" style="font-size: 0.85rem;">E</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+
+                         
+                         <!-- Seção 3: Horários Disponíveis -->
+                         <div class="row mb-1">
+                             <div class="col-12">
+                                 <h6 class="text-primary border-bottom pb-1 mb-1" style="font-size: 0.8rem; margin-bottom: 0.3rem !important;">
+                                     <i class="fas fa-clock me-1"></i>Horários Disponíveis
+                                 </h6>
+                             </div>
+                             <div class="col-md-12">
+                                 <div class="row">
+                                     <div class="col-md-2">
+                                         <div class="form-check">
+                                             <input class="form-check-input" type="checkbox" name="dias_semana[]" value="segunda" id="segunda" style="margin-top: 0.2rem;">
+                                             <label class="form-check-label" for="segunda" style="font-size: 0.85rem;">Segunda</label>
+                                         </div>
+                                     </div>
+                                     <div class="col-md-2">
+                                         <div class="form-check">
+                                             <input class="form-check-input" type="checkbox" name="dias_semana[]" value="terca" id="terca" style="margin-top: 0.2rem;">
+                                             <label class="form-check-label" for="terca" style="font-size: 0.85rem;">Terça</label>
+                                         </div>
+                                     </div>
+                                     <div class="col-md-2">
+                                         <div class="form-check">
+                                             <input class="form-check-input" type="checkbox" name="dias_semana[]" value="quarta" id="quarta" style="margin-top: 0.2rem;">
+                                             <label class="form-check-label" for="quarta" style="font-size: 0.85rem;">Quarta</label>
+                                         </div>
+                                     </div>
+                                     <div class="col-md-2">
+                                         <div class="form-check">
+                                             <input class="form-check-input" type="checkbox" name="dias_semana[]" value="quinta" id="quinta" style="margin-top: 0.2rem;">
+                                             <label class="form-check-label" for="quinta" style="font-size: 0.85rem;">Quinta</label>
+                                         </div>
+                                     </div>
+                                     <div class="col-md-2">
+                                         <div class="form-check">
+                                             <input class="form-check-input" type="checkbox" name="dias_semana[]" value="sexta" id="sexta" style="margin-top: 0.2rem;">
+                                             <label class="form-check-label" for="sexta" style="font-size: 0.85rem;">Sexta</label>
+                                         </div>
+                                     </div>
+                                     <div class="col-md-2">
+                                         <div class="form-check">
+                                             <input class="form-check-input" type="checkbox" name="dias_semana[]" value="sabado" id="sabado" style="margin-top: 0.2rem;">
+                                             <label class="form-check-label" for="sabado" style="font-size: 0.85rem;">Sábado</label>
+                                         </div>
+                                     </div>
+                                 </div>
+                             </div>
+                         </div>
+                         
+                         <div class="row mb-1">
+                             <div class="col-md-6">
+                                 <div class="mb-1">
+                                     <label for="horario_inicio" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Horário Início</label>
+                                     <input type="time" class="form-control" id="horario_inicio" name="horario_inicio" 
+                                            style="padding: 0.3rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                             <div class="col-md-6">
+                                 <div class="mb-1">
+                                     <label for="horario_fim" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Horário Fim</label>
+                                     <input type="time" class="form-control" id="horario_fim" name="horario_fim" 
+                                            style="padding: 0.3rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                         </div>
+                        
+                                                                                                 <!-- Seção 4: Endereço -->
+                         <div class="row mb-1">
+                             <div class="col-12">
+                                 <h6 class="text-primary border-bottom pb-1 mb-1" style="font-size: 0.9rem; margin-bottom: 0.3rem !important;">
+                                     <i class="fas fa-map-marker-alt me-1"></i>Endereço
+                                 </h6>
+                             </div>
+                            <div class="col-md-12">
+                                                                 <div class="mb-1">
+                                     <label for="endereco" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Endereço</label>
+                                     <input type="text" class="form-control" id="endereco" name="endereco" 
+                                            placeholder="Rua, Avenida, número, etc." style="padding: 0.3rem; font-size: 0.85rem;">
+                                 </div>
+                            </div>
+                        </div>
+                        
+                                                 <div class="row mb-1">
+                             <div class="col-md-6">
+                                 <div class="mb-1">
+                                     <label for="cidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Cidade</label>
+                                     <input type="text" class="form-control" id="cidade" name="cidade" 
+                                            placeholder="Nome da cidade" style="padding: 0.3rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                             <div class="col-md-6">
+                                 <div class="mb-1">
+                                     <label for="uf" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">UF</label>
+                                     <select class="form-select" id="uf" name="uf" style="padding: 0.3rem; font-size: 0.85rem;">
+                                        <option value="">Selecione...</option>
+                                        <option value="AC">Acre</option>
+                                        <option value="AL">Alagoas</option>
+                                        <option value="AP">Amapá</option>
+                                        <option value="AM">Amazonas</option>
+                                        <option value="BA">Bahia</option>
+                                        <option value="CE">Ceará</option>
+                                        <option value="DF">Distrito Federal</option>
+                                        <option value="ES">Espírito Santo</option>
+                                        <option value="GO">Goiás</option>
+                                        <option value="MA">Maranhão</option>
+                                        <option value="MT">Mato Grosso</option>
+                                        <option value="MS">Mato Grosso do Sul</option>
+                                        <option value="MG">Minas Gerais</option>
+                                        <option value="PA">Pará</option>
+                                        <option value="PB">Paraíba</option>
+                                        <option value="PR">Paraná</option>
+                                        <option value="PE">Pernambuco</option>
+                                        <option value="PI">Piauí</option>
+                                        <option value="RJ">Rio de Janeiro</option>
+                                        <option value="RN">Rio Grande do Norte</option>
+                                        <option value="RS">Rio Grande do Sul</option>
+                                        <option value="RO">Rondônia</option>
+                                        <option value="RR">Roraima</option>
+                                        <option value="SC">Santa Catarina</option>
+                                        <option value="SP">São Paulo</option>
+                                        <option value="SE">Sergipe</option>
+                                        <option value="TO">Tocantins</option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                         
+                                                   <!-- Seção 5: Especialidades e Observações -->
+                          <div class="row mb-1">
+                              <div class="col-12">
+                                  <h6 class="text-primary border-bottom pb-1 mb-1" style="font-size: 0.9rem; margin-bottom: 0.3rem !important;">
+                                      <i class="fas fa-star me-1"></i>Especialidades e Observações
+                                  </h6>
+                              </div>
+                             <div class="col-md-4">
+                                 <div class="mb-1">
+                                     <label for="tipo_carga" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Tipo de Carga</label>
+                                     <select class="form-select" id="tipo_carga" name="tipo_carga" style="padding: 0.4rem; font-size: 0.85rem;">
+                                         <option value="">Selecione...</option>
+                                         <option value="perigosa">Carga Perigosa</option>
+                                         <option value="granel">Carga Granel</option>
+                                         <option value="frigorificada">Carga Frigorificada</option>
+                                         <option value="contenores">Contêineres</option>
+                                         <option value="veiculos">Transporte de Veículos</option>
+                                         <option value="outros">Outros</option>
+                                     </select>
+                                 </div>
+                             </div>
+                             <div class="col-md-4">
+                                 <div class="mb-1">
+                                     <label for="validade_credencial" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Validade Credencial</label>
+                                     <input type="date" class="form-control" id="validade_credencial" name="validade_credencial" 
+                                            style="padding: 0.4rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                                                           <div class="col-md-4">
+                                  <div class="mb-1">
+                                      <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Observações</label>
+                                      <textarea class="form-control" id="observacoes" name="observacoes" rows="3" 
+                                                placeholder="Observações..." style="padding: 0.3rem; font-size: 0.85rem; resize: vertical;"></textarea>
+                                  </div>
+                              </div>
+                         </div>
+                         
+
+                    </div>
                 </div>
-                <div class="modal-body">
-                    <input type="hidden" name="acao" id="acaoInstrutor" value="criar">
-                    <input type="hidden" name="instrutor_id" id="instrutor_id" value="">
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="usuario_id" class="form-label">Usuário *</label>
-                                <select class="form-select" id="usuario_id" name="usuario_id" required>
-                                    <option value="">Selecione um usuário...</option>
-                                    <?php foreach ($usuarios as $usuario): ?>
-                                        <?php if ($usuario['tipo'] === 'instrutor' || $usuario['tipo'] === 'admin'): ?>
-                                        <option value="<?php echo $usuario['id']; ?>">
-                                            <?php echo htmlspecialchars($usuario['nome']); ?> 
-                                            (<?php echo ucfirst($usuario['tipo']); ?>)
-                                        </option>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="cfc_id" class="form-label">CFC *</label>
-                                <select class="form-select" id="cfc_id" name="cfc_id" required>
-                                    <option value="">Selecione um CFC...</option>
-                                    <?php foreach ($cfcs as $cfc): ?>
-                                        <?php if ($cfc['ativo']): ?>
-                                        <option value="<?php echo $cfc['id']; ?>">
-                                            <?php echo htmlspecialchars($cfc['nome']); ?>
-                                        </option>
-                                        <?php endif; ?>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="credencial" class="form-label">Credencial *</label>
-                                <input type="text" class="form-control" id="credencial" name="credencial" required 
-                                       placeholder="Número da credencial de instrutor">
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="data_credenciamento" class="form-label">Data de Credenciamento</label>
-                                <input type="date" class="form-control" id="data_credenciamento" name="data_credenciamento">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="categoria_habilitacao" class="form-label">Categorias de Habilitação *</label>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="A" id="catA" name="categorias[]">
-                                            <label class="form-check-label" for="catA">A - Motocicletas</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="B" id="catB" name="categorias[]">
-                                            <label class="form-check-label" for="catB">B - Automóveis</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="C" id="catC" name="categorias[]">
-                                            <label class="form-check-label" for="catC">C - Veículos de carga</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="D" id="catD" name="categorias[]">
-                                            <label class="form-check-label" for="catD">D - Veículos de passageiros</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="E" id="catE" name="categorias[]">
-                                            <label class="form-check-label" for="catE">E - Veículos com reboque</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="AB" id="catAB" name="categorias[]">
-                                            <label class="form-check-label" for="catAB">AB - A + B</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="AC" id="catAC" name="categorias[]">
-                                            <label class="form-check-label" for="catAC">AC - A + C</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="AD" id="catAD" name="categorias[]">
-                                            <label class="form-check-label" for="catAD">AD - A + D</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="AE" id="catAE" name="categorias[]">
-                                            <label class="form-check-label" for="catAE">AE - A + E</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="especializacoes" class="form-label">Especializações</label>
-                                <textarea class="form-control" id="especializacoes" name="especializacoes" rows="3" 
-                                          placeholder="Especializações, cursos, certificações..."></textarea>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="horario_trabalho" class="form-label">Horário de Trabalho</label>
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <label for="hora_inicio" class="form-label">Início</label>
-                                        <input type="time" class="form-control" id="hora_inicio" name="hora_inicio">
-                                    </div>
-                                    <div class="col-md-6">
-                                        <label for="hora_fim" class="form-label">Fim</label>
-                                        <input type="time" class="form-control" id="hora_fim" name="hora_fim">
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="dias_trabalho" class="form-label">Dias de Trabalho</label>
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="segunda" id="segunda" name="dias_trabalho[]">
-                                            <label class="form-check-label" for="segunda">Segunda</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="terca" id="terca" name="dias_trabalho[]">
-                                            <label class="form-check-label" for="terca">Terça</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="quarta" id="quarta" name="dias_trabalho[]">
-                                            <label class="form-check-label" for="quarta">Quarta</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="quinta" id="quinta" name="dias_trabalho[]">
-                                            <label class="form-check-label" for="quinta">Quinta</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="sexta" id="sexta" name="dias_trabalho[]">
-                                            <label class="form-check-label" for="sexta">Sexta</label>
-                                        </div>
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="sabado" id="sabado" name="dias_trabalho[]">
-                                            <label class="form-check-label" for="sabado">Sábado</label>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-4">
-                                        <div class="form-check">
-                                            <input class="form-check-input" type="checkbox" value="domingo" id="domingo" name="dias_trabalho[]">
-                                            <label class="form-check-label" for="domingo">Domingo</label>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="ativo" class="form-label">Status</label>
-                                <select class="form-select" id="ativo" name="ativo">
-                                    <option value="1">Ativo</option>
-                                    <option value="0">Inativo</option>
-                                </select>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="disponivel" class="form-label">Disponibilidade</label>
-                                <select class="form-select" id="disponivel" name="disponivel">
-                                    <option value="1">Disponível</option>
-                                    <option value="0">Ocupado</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="observacoes" class="form-label">Observações</label>
-                        <textarea class="form-control" id="observacoes" name="observacoes" rows="3" 
-                                  placeholder="Informações adicionais sobre o instrutor..."></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding: 0.75rem 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; flex-shrink: 0;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalInstrutor()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
                         <i class="fas fa-times me-1"></i>Cancelar
                     </button>
-                    <button type="submit" class="btn btn-primary" id="btnSalvarInstrutor">
+                    <button type="submit" class="btn btn-primary" id="btnSalvarInstrutor" onclick="salvarInstrutor()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
                         <i class="fas fa-save me-1"></i>Salvar Instrutor
                     </button>
                 </div>
@@ -534,123 +475,57 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
     </div>
 </div>
 
-<!-- Modal para Visualização de Instrutor -->
-<div class="modal fade" id="modalVisualizarInstrutor" tabindex="-1" aria-labelledby="modalVisualizarInstrutorLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalVisualizarInstrutorLabel">
-                    <i class="fas fa-eye me-2"></i>Detalhes do Instrutor
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="modalVisualizarInstrutorBody">
-                <!-- Conteúdo será carregado via JavaScript -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-primary" id="btnEditarVisualizacao">
-                    <i class="fas fa-edit me-1"></i>Editar Instrutor
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Scripts específicos para Instrutores -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Inicializar filtros
-    inicializarFiltrosInstrutor();
+// Funções JavaScript com URLs CORRIGIDAS
+function abrirModalInstrutor() {
+    document.getElementById('modalTitle').textContent = 'Novo Instrutor';
+    document.getElementById('acaoInstrutor').value = 'novo';
+    document.getElementById('instrutor_id').value = '';
+    document.getElementById('formInstrutor').reset();
     
-    // Inicializar busca
-    inicializarBuscaInstrutor();
+    const modal = document.getElementById('modalInstrutor');
+    modal.style.display = 'block';
+    modal.classList.add('show');
     
-    // Handler para o formulário de instrutor
-    document.getElementById('formInstrutor').addEventListener('submit', function(e) {
-        e.preventDefault();
-        salvarInstrutor();
-    });
-});
-
-function inicializarFiltrosInstrutor() {
-    // Filtro por status
-    document.getElementById('filtroStatus').addEventListener('change', filtrarInstrutores);
-    
-    // Filtro por CFC
-    document.getElementById('filtroCFC').addEventListener('change', filtrarInstrutores);
-    
-    // Filtro por categoria
-    document.getElementById('filtroCategoria').addEventListener('change', filtrarInstrutores);
+    // Garantir que o modal seja visível
+    setTimeout(() => {
+        modal.scrollTop = 0;
+        const modalDialog = modal.querySelector('.custom-modal-dialog');
+        if (modalDialog) {
+            modalDialog.style.opacity = '1';
+            modalDialog.style.transform = 'translateY(0)';
+        }
+    }, 100);
 }
 
-function filtrarInstrutores() {
-    const status = document.getElementById('filtroStatus').value;
-    const cfc = document.getElementById('filtroCFC').value;
-    const categoria = document.getElementById('filtroCategoria').value;
-    const busca = document.getElementById('buscaInstrutor').value.toLowerCase();
+function fecharModalInstrutor() {
+    const modal = document.getElementById('modalInstrutor');
+    modal.classList.remove('show');
     
-    const linhas = document.querySelectorAll('#tabelaInstrutores tbody tr');
+    // Animar o fechamento
+    const modalDialog = modal.querySelector('.custom-modal-dialog');
+    if (modalDialog) {
+        modalDialog.style.opacity = '0';
+        modalDialog.style.transform = 'translateY(-20px)';
+    }
     
-    linhas.forEach(linha => {
-        let mostrar = true;
-        
-        // Filtro por status
-        if (status) {
-            const statusLinha = linha.querySelector('td:nth-child(6) .badge').textContent;
-            if (status === 'ativo' && statusLinha !== 'Ativo') mostrar = false;
-            if (status === 'inativo' && statusLinha !== 'Inativo') mostrar = false;
-        }
-        
-        // Filtro por CFC
-        if (cfc) {
-            const cfcLinha = linha.querySelector('td:nth-child(4) .badge').textContent;
-            if (cfcLinha === 'N/A' || cfcLinha !== cfc) {
-                mostrar = false;
-            }
-        }
-        
-        // Filtro por categoria
-        if (categoria) {
-            const categoriasLinha = Array.from(linha.querySelectorAll('td:nth-child(5) .badge'))
-                .map(badge => badge.textContent);
-            if (!categoriasLinha.includes(categoria)) {
-                mostrar = false;
-            }
-        }
-        
-        // Filtro por busca
-        if (busca) {
-            const texto = linha.textContent.toLowerCase();
-            if (!texto.includes(busca)) {
-                mostrar = false;
-            }
-        }
-        
-        linha.style.display = mostrar ? '' : 'none';
-    });
-    
-    // Atualizar estatísticas
-    atualizarEstatisticas();
-}
-
-function inicializarBuscaInstrutor() {
-    document.getElementById('buscaInstrutor').addEventListener('input', filtrarInstrutores);
+    setTimeout(() => {
+        modal.style.display = 'none';
+    }, 300);
 }
 
 function editarInstrutor(id) {
     // Buscar dados do instrutor
-    fetch(`admin/api/instrutores.php?id=${id}`)
+    fetch(`/cfc-bom-conselho/admin/api/instrutores.php?id=${id}`)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                preencherFormularioInstrutor(data.instrutor);
+                preencherFormularioInstrutor(data.data);
                 document.getElementById('modalTitle').textContent = 'Editar Instrutor';
                 document.getElementById('acaoInstrutor').value = 'editar';
                 document.getElementById('instrutor_id').value = id;
                 
-                const modal = new bootstrap.Modal(document.getElementById('modalInstrutor'));
-                modal.show();
+                abrirModalInstrutor();
             } else {
                 mostrarAlerta('Erro ao carregar dados do instrutor', 'danger');
             }
@@ -662,174 +537,68 @@ function editarInstrutor(id) {
 }
 
 function preencherFormularioInstrutor(instrutor) {
+    // Preencher campos do formulário
+    document.getElementById('nome').value = instrutor.nome || instrutor.nome_usuario || '';
+    document.getElementById('cpf').value = instrutor.cpf || '';
+    document.getElementById('cnh').value = instrutor.cnh || '';
+    document.getElementById('data_nascimento').value = instrutor.data_nascimento || '';
+    document.getElementById('email').value = instrutor.email || '';
     document.getElementById('usuario_id').value = instrutor.usuario_id || '';
     document.getElementById('cfc_id').value = instrutor.cfc_id || '';
     document.getElementById('credencial').value = instrutor.credencial || '';
-    document.getElementById('data_credenciamento').value = instrutor.data_credenciamento || '';
-    document.getElementById('especializacoes').value = instrutor.especializacoes || '';
+    document.getElementById('telefone').value = instrutor.telefone || '';
+    document.getElementById('endereco').value = instrutor.endereco || '';
+    document.getElementById('cidade').value = instrutor.cidade || '';
+    document.getElementById('uf').value = instrutor.uf || '';
     document.getElementById('ativo').value = instrutor.ativo ? '1' : '0';
-    document.getElementById('disponivel').value = instrutor.disponivel ? '1' : '0';
+    document.getElementById('tipo_carga').value = instrutor.tipo_carga || '';
+    document.getElementById('validade_credencial').value = instrutor.validade_credencial || '';
     document.getElementById('observacoes').value = instrutor.observacoes || '';
     
-    // Categorias
+    // Limpar checkboxes primeiro
+    document.querySelectorAll('input[name="categorias[]"]').forEach(cb => cb.checked = false);
+    document.querySelectorAll('input[name="dias_semana[]"]').forEach(cb => cb.checked = false);
+    
+    // Marcar categorias selecionadas
     if (instrutor.categoria_habilitacao) {
-        const categorias = instrutor.categoria_habilitacao.split(',').map(cat => cat.trim());
-        document.querySelectorAll('input[name="categorias[]"]').forEach(checkbox => {
-            checkbox.checked = categorias.includes(checkbox.value);
+        const categorias = instrutor.categoria_habilitacao.split(',');
+        categorias.forEach(cat => {
+            const checkbox = document.querySelector(`input[name="categorias[]"][value="${cat.trim()}"]`);
+            if (checkbox) checkbox.checked = true;
         });
     }
     
-    // Horário de trabalho
-    if (instrutor.horario_trabalho) {
-        const horario = typeof instrutor.horario_trabalho === 'string' ? JSON.parse(instrutor.horario_trabalho) : instrutor.horario_trabalho;
-        document.getElementById('hora_inicio').value = horario.hora_inicio || '';
-        document.getElementById('hora_fim').value = horario.hora_fim || '';
-    }
-    
-    // Dias de trabalho
-    if (instrutor.dias_trabalho) {
-        const dias = typeof instrutor.dias_trabalho === 'string' ? JSON.parse(instrutor.dias_trabalho) : instrutor.dias_trabalho;
-        document.querySelectorAll('input[name="dias_trabalho[]"]').forEach(checkbox => {
-            checkbox.checked = dias.includes(checkbox.value);
+    // Marcar dias da semana selecionados
+    if (instrutor.dias_semana) {
+        const dias = instrutor.dias_semana.split(',');
+        dias.forEach(dia => {
+            const checkbox = document.querySelector(`input[name="dias_semana[]"][value="${dia.trim()}"]`);
+            if (checkbox) checkbox.checked = true;
         });
     }
-}
-
-function visualizarInstrutor(id) {
-    fetch(`admin/api/instrutores.php?id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                preencherModalVisualizacao(data.instrutor);
-                const modal = new bootstrap.Modal(document.getElementById('modalVisualizarInstrutor'));
-                modal.show();
-            } else {
-                mostrarAlerta('Erro ao carregar dados do instrutor', 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            mostrarAlerta('Erro ao carregar dados do instrutor', 'danger');
-        });
-}
-
-function preencherModalVisualizacao(instrutor) {
-    const categorias = instrutor.categoria_habilitacao ? instrutor.categoria_habilitacao.split(',').map(cat => cat.trim()) : [];
-    const horario = instrutor.horario_trabalho ? (typeof instrutor.horario_trabalho === 'string' ? JSON.parse(instrutor.horario_trabalho) : instrutor.horario_trabalho) : null;
-    const dias = instrutor.dias_trabalho ? (typeof instrutor.dias_trabalho === 'string' ? JSON.parse(instrutor.dias_trabalho) : instrutor.dias_trabalho) : [];
     
-    const html = `
-        <div class="row">
-            <div class="col-md-8">
-                <h4>${instrutor.nome}</h4>
-                <p class="text-muted">Credencial: ${instrutor.credencial}</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <span class="badge bg-${instrutor.ativo ? 'success' : 'danger'} fs-6 me-2">
-                    ${instrutor.ativo ? 'Ativo' : 'Inativo'}
-                </span>
-                <span class="badge bg-${instrutor.disponivel ? 'success' : 'warning'} fs-6">
-                    ${instrutor.disponivel ? 'Disponível' : 'Ocupado'}
-                </span>
-            </div>
-        </div>
-        
-        <hr>
-        
-        <div class="row">
-            <div class="col-md-6">
-                <h6><i class="fas fa-info-circle me-2"></i>Informações Profissionais</h6>
-                <p><strong>CFC:</strong> ${instrutor.cfc_nome || 'Não informado'}</p>
-                <p><strong>Data de Credenciamento:</strong> ${instrutor.data_credenciamento ? new Date(instrutor.data_credenciamento).toLocaleDateString('pt-BR') : 'Não informado'}</p>
-                <p><strong>E-mail:</strong> ${instrutor.email || 'Não informado'}</p>
-            </div>
-            <div class="col-md-6">
-                <h6><i class="fas fa-graduation-cap me-2"></i>Categorias de Habilitação</h6>
-                ${categorias.map(cat => `<span class="badge bg-secondary me-1">${cat}</span>`).join('')}
-                ${categorias.length === 0 ? '<p class="text-muted">Nenhuma categoria definida</p>' : ''}
-            </div>
-        </div>
-        
-        ${horario ? `
-        <hr>
-        <h6><i class="fas fa-clock me-2"></i>Horário de Trabalho</h6>
-        <p><strong>Início:</strong> ${horario.hora_inicio || 'Não informado'}</p>
-        <p><strong>Fim:</strong> ${horario.hora_fim || 'Não informado'}</p>
-        ` : ''}
-        
-        ${dias.length > 0 ? `
-        <hr>
-        <h6><i class="fas fa-calendar me-2"></i>Dias de Trabalho</h6>
-        <p>${dias.map(dia => ucfirst(dia)).join(', ')}</p>
-        ` : ''}
-        
-        ${instrutor.especializacoes ? `
-        <hr>
-        <h6><i class="fas fa-certificate me-2"></i>Especializações</h6>
-        <p>${instrutor.especializacoes}</p>
-        ` : ''}
-        
-        ${instrutor.observacoes ? `
-        <hr>
-        <h6><i class="fas fa-sticky-note me-2"></i>Observações</h6>
-        <p>${instrutor.observacoes}</p>
-        ` : ''}
-    `;
-    
-    document.getElementById('modalVisualizarInstrutorBody').innerHTML = html;
-    document.getElementById('btnEditarVisualizacao').onclick = () => {
-        bootstrap.Modal.getInstance(document.getElementById('modalVisualizarInstrutor')).hide();
-        editarInstrutor(instrutor.id);
-    };
-}
-
-function ucfirst(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
-}
-
-function agendarAula(id) {
-    // Redirecionar para página de agendamento
-    window.location.href = `pages/agendar-aula.php?instrutor_id=${id}`;
-}
-
-function historicoInstrutor(id) {
-    // Debug: verificar se a função está sendo chamada
-    console.log('Função historicoInstrutor chamada com ID:', id);
-    
-    // Redirecionar para página de histórico usando o sistema de roteamento do admin
-    window.location.href = `?page=historico-instrutor&id=${id}`;
-}
-
-function ativarInstrutor(id) {
-    if (confirm('Deseja realmente ativar este instrutor?')) {
-        alterarStatusInstrutor(id, 1);
+    // Preencher horários
+    if (instrutor.horario_inicio) {
+        document.getElementById('horario_inicio').value = instrutor.horario_inicio;
     }
-}
-
-function desativarInstrutor(id) {
-    if (confirm('Deseja realmente desativar este instrutor? Esta ação pode afetar o agendamento de aulas.')) {
-        alterarStatusInstrutor(id, 0);
+    if (instrutor.horario_fim) {
+        document.getElementById('horario_fim').value = instrutor.horario_fim;
     }
 }
 
 function excluirInstrutor(id) {
-    const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este instrutor?';
-    
-    if (confirm(mensagem)) {
-        fetch(`../api/instrutores.php`, {
+    if (confirm('Tem certeza que deseja excluir este instrutor?')) {
+        fetch(`/cfc-bom-conselho/admin/api/instrutores.php?id=${id}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ id: id })
+            }
         })
         .then(response => response.json())
         .then(data => {
             if (data.success) {
                 mostrarAlerta('Instrutor excluído com sucesso!', 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
+                carregarInstrutores(); // Recarregar tabela
             } else {
                 mostrarAlerta(data.error || 'Erro ao excluir instrutor', 'danger');
             }
@@ -841,88 +610,46 @@ function excluirInstrutor(id) {
     }
 }
 
-function alterarStatusInstrutor(id, status) {
-    if (confirm('Deseja realmente alterar o status deste instrutor?')) {
-        // Fazer requisição para a API
-        fetch(`../api/instrutores.php`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                id: id,
-                ativo: status === 1
-            })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                mostrarAlerta('Status do instrutor alterado com sucesso!', 'success');
-                setTimeout(() => {
-                    location.reload();
-                }, 1500);
-            } else {
-                mostrarAlerta(data.error || 'Erro ao alterar status do instrutor', 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            mostrarAlerta('Erro ao alterar status do instrutor', 'danger');
-        });
-    }
-}
-
-function limparFiltros() {
-    document.getElementById('filtroStatus').value = '';
-    document.getElementById('filtroCFC').value = '';
-    document.getElementById('filtroCategoria').value = '';
-    document.getElementById('buscaInstrutor').value = '';
-    filtrarInstrutores();
-}
-
-function atualizarEstatisticas() {
-    const linhasVisiveis = document.querySelectorAll('#tabelaInstrutores tbody tr:not([style*="display: none"])');
-    
-    document.getElementById('totalInstrutores').textContent = linhasVisiveis.length;
-    
-    const ativos = Array.from(linhasVisiveis).filter(linha => 
-        linha.querySelector('td:nth-child(6) .badge').textContent === 'Ativo'
-    ).length;
-    
-    document.getElementById('instrutoresAtivos').textContent = ativos;
-}
-
 function salvarInstrutor() {
     const form = document.getElementById('formInstrutor');
     const formData = new FormData(form);
     
     // Validações básicas
-    if (!formData.get('usuario_id')) {
-        mostrarAlerta('Usuário é obrigatório', 'danger');
-        return;
-    }
-    
-    if (!formData.get('cfc_id')) {
-        mostrarAlerta('CFC é obrigatório', 'danger');
-        return;
-    }
-    
-    if (!formData.get('credencial').trim()) {
-        mostrarAlerta('Credencial é obrigatória', 'danger');
+    if (!formData.get('nome').trim() || !formData.get('cpf').trim() || !formData.get('cnh').trim() || 
+        !formData.get('data_nascimento') || !formData.get('email').trim() || !formData.get('usuario_id') || 
+        !formData.get('cfc_id') || !formData.get('credencial').trim()) {
+        mostrarAlerta('Preencha todos os campos obrigatórios', 'warning');
         return;
     }
     
     // Preparar dados para envio
+    const categoriasSelecionadas = formData.getAll('categorias[]');
+    if (categoriasSelecionadas.length === 0) {
+        mostrarAlerta('Selecione pelo menos uma categoria de habilitação', 'warning');
+        return;
+    }
+    
     const instrutorData = {
+        nome: formData.get('nome').trim(),
+        cpf: formData.get('cpf').trim(),
+        cnh: formData.get('cnh').trim(),
+        data_nascimento: formData.get('data_nascimento'),
+        email: formData.get('email').trim(),
         usuario_id: formData.get('usuario_id'),
         cfc_id: formData.get('cfc_id'),
         credencial: formData.get('credencial').trim(),
-        categoria: formData.get('categoria_habilitacao') || '',
+        categoria_habilitacao: categoriasSelecionadas.join(','),
         telefone: formData.get('telefone') || '',
         endereco: formData.get('endereco') || '',
         cidade: formData.get('cidade') || '',
         uf: formData.get('uf') || '',
-        ativo: formData.get('ativo') === '1'
+        ativo: formData.get('ativo') === '1',
+        tipo_carga: formData.get('tipo_carga') || '',
+        validade_credencial: formData.get('validade_credencial') || '',
+        observacoes: formData.get('observacoes') || '',
+        dias_semana: formData.getAll('dias_semana[]').join(','),
+        horario_inicio: formData.get('horario_inicio') || '',
+        horario_fim: formData.get('horario_fim') || ''
     };
     
     const acao = formData.get('acao');
@@ -938,8 +665,8 @@ function salvarInstrutor() {
     btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Salvando...';
     btnSalvar.disabled = true;
     
-    // Fazer requisição para a API
-    const url = '../api/instrutores.php';
+    // Fazer requisição para a API - URL CORRIGIDA
+    const url = '/cfc-bom-conselho/admin/api/instrutores.php';
     const method = acao === 'editar' ? 'PUT' : 'POST';
     
     fetch(url, {
@@ -955,8 +682,7 @@ function salvarInstrutor() {
             mostrarAlerta(data.message || 'Instrutor salvo com sucesso!', 'success');
             
             // Fechar modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modalInstrutor'));
-            modal.hide();
+            fecharModalInstrutor();
             
             // Limpar formulário
             form.reset();
@@ -980,53 +706,241 @@ function salvarInstrutor() {
     });
 }
 
-function exportarInstrutores() {
-    // Buscar dados reais da API
-    fetch('../api/instrutores.php')
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                // Criar CSV
-                let csv = 'Nome,Email,CFC,Credencial,Categorias,Status\n';
-                data.data.forEach(instrutor => {
-                    csv += `"${instrutor.nome_usuario || ''}","${instrutor.email || ''}","${instrutor.nome_cfc || ''}","${instrutor.credencial || ''}","${instrutor.categoria || ''}","${instrutor.ativo ? 'Ativo' : 'Inativo'}"\n`;
-                });
-                
-                // Download do arquivo
-                const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = 'instrutores.csv';
-                link.click();
-                
-                mostrarAlerta('Exportação concluída!', 'success');
-            } else {
-                mostrarAlerta(data.error || 'Erro ao exportar instrutores', 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            mostrarAlerta('Erro ao exportar instrutores. Tente novamente.', 'danger');
-        });
-}
-
-function imprimirInstrutores() {
-    window.print();
-}
-
-// Função para mostrar alertas
 function mostrarAlerta(mensagem, tipo) {
+    // Criar alerta personalizado
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
+    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show position-fixed`;
+    alertDiv.style.cssText = 'top: 20px; right: 20px; z-index: 10000; min-width: 300px;';
     alertDiv.innerHTML = `
         ${mensagem}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     
-    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.d-flex'));
+    document.body.appendChild(alertDiv);
     
+    // Auto-remover após 5 segundos
     setTimeout(() => {
-        alertDiv.remove();
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
     }, 5000);
 }
+
+function filtrarInstrutores() {
+    const status = document.getElementById('filtroStatus').value;
+    const cfc = document.getElementById('filtroCFC').value;
+    const categoria = document.getElementById('filtroCategoria').value;
+    const busca = document.getElementById('buscaInstrutor').value.toLowerCase();
+    
+    // Implementar filtros aqui
+    console.log('Filtrando:', { status, cfc, categoria, busca });
+}
+
+function limparFiltros() {
+    document.getElementById('filtroStatus').value = '';
+    document.getElementById('filtroCFC').value = '';
+    document.getElementById('filtroCategoria').value = '';
+    document.getElementById('buscaInstrutor').value = '';
+    
+    // Recarregar todos os instrutores
+    carregarInstrutores();
+}
+
+function exportarInstrutores() {
+    // Implementar exportação para CSV/Excel
+    mostrarAlerta('Funcionalidade de exportação será implementada em breve!', 'info');
+}
+
+function imprimirInstrutores() {
+    // Implementar impressão
+    mostrarAlerta('Funcionalidade de impressão será implementada em breve!', 'info');
+}
+
+// Inicializar página
+document.addEventListener('DOMContentLoaded', function() {
+    // Carregar dados iniciais
+    carregarInstrutores();
+    carregarCFCs();
+    carregarUsuarios();
+    
+    // Adicionar listener para fechar modal ao clicar fora
+    const modal = document.getElementById('modalInstrutor');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                fecharModalInstrutor();
+            }
+        });
+        
+        // Adicionar listener para tecla ESC
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && modal.style.display === 'block') {
+                fecharModalInstrutor();
+            }
+        });
+    }
+});
+
+function carregarInstrutores() {
+    // Carregar instrutores para a tabela
+    fetch('/cfc-bom-conselho/admin/api/instrutores.php')
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                preencherTabelaInstrutores(data.data);
+                atualizarEstatisticas(data.data);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar instrutores:', error);
+        });
+}
+
+function preencherTabelaInstrutores(instrutores) {
+    const tbody = document.querySelector('#tabelaInstrutores tbody');
+    tbody.innerHTML = '';
+    
+    instrutores.forEach(instrutor => {
+        const row = document.createElement('tr');
+        
+        // Usar o nome correto (nome_usuario se nome estiver vazio)
+        const nomeExibicao = instrutor.nome || instrutor.nome_usuario || 'N/A';
+        const cfcExibicao = instrutor.cfc_nome || 'N/A';
+        
+        row.innerHTML = `
+            <td>
+                <div class="d-flex align-items-center">
+                    <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center me-2" style="width: 32px; height: 32px;">
+                        <span class="text-white fw-bold">${nomeExibicao.charAt(0).toUpperCase()}</span>
+                    </div>
+                    ${nomeExibicao}
+                </div>
+            </td>
+            <td>${instrutor.email || 'N/A'}</td>
+            <td>${cfcExibicao}</td>
+            <td>${instrutor.credencial || 'N/A'}</td>
+            <td>
+                <span class="badge bg-info">${instrutor.categoria_habilitacao || 'N/A'}</span>
+            </td>
+            <td>
+                <span class="badge ${instrutor.ativo ? 'bg-success' : 'bg-danger'}">
+                    ${instrutor.ativo ? 'ATIVO' : 'INATIVO'}
+                </span>
+            </td>
+            <td>
+                <div class="btn-group-vertical btn-group-sm">
+                    <button class="btn btn-primary btn-sm" onclick="editarInstrutor(${instrutor.id})" title="Editar">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="excluirInstrutor(${instrutor.id})" title="Excluir">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+}
+
+function atualizarEstatisticas(instrutores) {
+    const total = instrutores.length;
+    const ativos = instrutores.filter(i => i.ativo).length;
+    
+    document.getElementById('totalInstrutores').textContent = total;
+    document.getElementById('instrutoresAtivos').textContent = ativos;
+}
+
+function carregarCFCs() {
+    console.log('🔍 Iniciando carregamento de CFCs...');
+    
+    // Carregar CFCs para o select
+    fetch('/cfc-bom-conselho/admin/api/cfcs.php')
+        .then(response => {
+            console.log('📡 Resposta da API CFCs:', response.status, response.statusText);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 Dados recebidos da API CFCs:', data);
+            
+            if (data.success) {
+                const selectCFC = document.getElementById('cfc_id');
+                const filtroCFC = document.getElementById('filtroCFC');
+                
+                console.log('🎯 Select CFC encontrado:', selectCFC);
+                console.log('🎯 Filtro CFC encontrado:', filtroCFC);
+                
+                if (selectCFC) {
+                    selectCFC.innerHTML = '<option value="">Selecione um CFC</option>';
+                    
+                    data.data.forEach(cfc => {
+                        const option = document.createElement('option');
+                        option.value = cfc.id;
+                        option.textContent = cfc.nome;
+                        selectCFC.appendChild(option);
+                        console.log('✅ CFC adicionado:', cfc.nome);
+                    });
+                }
+                
+                // Também preencher o filtro
+                if (filtroCFC) {
+                    filtroCFC.innerHTML = '<option value="">Todos</option>';
+                    data.data.forEach(cfc => {
+                        const option = document.createElement('option');
+                        option.value = cfc.id;
+                        option.textContent = cfc.nome;
+                        filtroCFC.appendChild(option);
+                    });
+                }
+                
+                console.log('✅ CFCs carregados com sucesso!');
+            } else {
+                console.error('❌ Erro na API CFCs:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar CFCs:', error);
+        });
+}
+
+function carregarUsuarios() {
+    console.log('🔍 Iniciando carregamento de usuários...');
+    
+    // Carregar usuários para o select
+    fetch('/cfc-bom-conselho/admin/api/usuarios.php')
+        .then(response => {
+            console.log('📡 Resposta da API Usuários:', response.status, response.statusText);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 Dados recebidos da API Usuários:', data);
+            
+            if (data.success) {
+                const selectUsuario = document.getElementById('usuario_id');
+                console.log('🎯 Select Usuário encontrado:', selectUsuario);
+                
+                if (selectUsuario) {
+                    selectUsuario.innerHTML = '<option value="">Selecione um usuário</option>';
+                    
+                    data.data.forEach(usuario => {
+                        const option = document.createElement('option');
+                        option.value = usuario.id;
+                        option.textContent = `${usuario.nome} (${usuario.email})`;
+                        selectUsuario.appendChild(option);
+                        console.log('✅ Usuário adicionado:', usuario.nome);
+                    });
+                    
+                    console.log('✅ Usuários carregados com sucesso!');
+                } else {
+                    console.error('❌ Select de usuário não encontrado!');
+                }
+            } else {
+                console.error('❌ Erro na API Usuários:', data.error);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar usuários:', error);
+        });
+}
 </script>
+
+<!-- Fim da página de instrutores -->

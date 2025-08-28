@@ -39,12 +39,18 @@ try {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 nome VARCHAR(200) NOT NULL,
                 cnpj VARCHAR(18) UNIQUE NOT NULL,
+                razao_social VARCHAR(200),
                 endereco TEXT,
+                bairro VARCHAR(100),
+                cidade VARCHAR(100),
+                uf CHAR(2),
+                cep VARCHAR(10),
                 telefone VARCHAR(20),
                 email VARCHAR(100),
                 responsavel_id INT,
                 ativo BOOLEAN DEFAULT TRUE,
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 FOREIGN KEY (responsavel_id) REFERENCES usuarios(id)
             )
         ",

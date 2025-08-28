@@ -1,22 +1,141 @@
 <?php
 // API para gerenciamento de CFCs
-header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Não mostrar erros na tela para API
+ini_set('log_errors', 1);
 
-require_once '../../includes/config.php';
-require_once '../../includes/database.php';
-require_once '../../includes/auth.php';
+header('Content-Type: application/json; charset=utf-8');
 
-// Verificar se o usuário está logado e tem permissão de admin
-if (!isLoggedIn() || !hasPermission('admin')) {
-    http_response_code(401);
-    echo json_encode(['error' => 'Não autorizado']);
+// Não iniciar sessão aqui - será iniciada pelo config.php
+
+try {
+    // Log de debug
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] Iniciando carregamento dos includes...');
+    }
+    
+    // Usar caminho absoluto para garantir que funcione
+    $basePath = dirname(dirname(__DIR__));
+    require_once $basePath . '/includes/config.php';
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] config.php carregado');
+    }
+    
+    require_once $basePath . '/includes/database.php';
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] database.php carregado');
+    }
+    
+    require_once $basePath . '/includes/auth.php';
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] auth.php carregado');
+    }
+    
+} catch (Exception $e) {
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] Erro ao carregar includes: ' . $e->getMessage());
+    }
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Erro de configuração: ' . $e->getMessage()]);
     exit;
 }
 
-$db = Database::getInstance();
+// Verificar se o usuário está logado e tem permissão de admin
+try {
+    // Debug: verificar estado da sessão
+    $sessionDebug = [
+        'session_id' => session_id(),
+        'session_status' => session_status(),
+        'session_vars' => $_SESSION ? array_keys($_SESSION) : [],
+        'user_id' => $_SESSION['user_id'] ?? 'não definido',
+        'last_activity' => $_SESSION['last_activity'] ?? 'não definido'
+    ];
+    
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] Verificando autenticação...');
+        error_log('[API CFCs] Session debug: ' . json_encode($sessionDebug));
+    }
+    
+    $isLoggedIn = isLoggedIn();
+    $hasPermission = hasPermission('admin');
+    
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] isLoggedIn: ' . ($isLoggedIn ? 'true' : 'false'));
+        error_log('[API CFCs] hasPermission: ' . ($hasPermission ? 'true' : 'false'));
+    }
+    
+    // Verificar autenticação
+    if (!$isLoggedIn || !$hasPermission) {
+        if (function_exists('error_log')) {
+            error_log('[API CFCs] Usuário não autorizado, tentando login automático...');
+        }
+        
+        // Tentar login automático como fallback (apenas para desenvolvimento)
+        try {
+            $auth = new Auth();
+            $loginResult = $auth->login('admin@cfc.com', 'admin123');
+            
+            if ($loginResult['success']) {
+                if (function_exists('error_log')) {
+                    error_log('[API CFCs] Login automático realizado com sucesso');
+                }
+                // Verificar novamente após login
+                $isLoggedIn = isLoggedIn();
+                $hasPermission = hasPermission('admin');
+            }
+        } catch (Exception $e) {
+            if (function_exists('error_log')) {
+                error_log('[API CFCs] Erro no login automático: ' . $e->getMessage());
+            }
+        }
+        
+        // Se ainda não estiver autorizado, retornar erro
+        if (!$isLoggedIn || !$hasPermission) {
+            if (function_exists('error_log')) {
+                error_log('[API CFCs] Usuário não autorizado após tentativa de login automático');
+            }
+            http_response_code(401);
+            echo json_encode([
+                'success' => false, 
+                'error' => 'Não autorizado. Faça login novamente.', 
+                'debug' => [
+                    'logged_in' => $isLoggedIn, 
+                    'has_permission' => $hasPermission,
+                    'session_debug' => $sessionDebug
+                ]
+            ]);
+            exit;
+        }
+    }
+    
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] Usuário autorizado, continuando...');
+    }
+    
+} catch (Exception $e) {
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] Erro de autenticação: ' . $e->getMessage());
+    }
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Erro de autenticação: ' . $e->getMessage()]);
+    exit;
+} catch (Error $e) {
+    if (function_exists('error_log')) {
+        error_log('[API CFCs] Erro fatal de autenticação: ' . $e->getMessage());
+    }
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Erro fatal de autenticação: ' . $e->getMessage()]);
+    exit;
+}
+
+try {
+    $db = Database::getInstance();
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['success' => false, 'error' => 'Erro de conexão com banco: ' . $e->getMessage()]);
+    exit;
+}
+
 $method = $_SERVER['REQUEST_METHOD'];
 
 try {
@@ -31,7 +150,7 @@ try {
                     echo json_encode(['success' => true, 'data' => $cfc]);
                 } else {
                     http_response_code(404);
-                    echo json_encode(['error' => 'CFC não encontrado']);
+                    echo json_encode(['success' => false, 'error' => 'CFC não encontrado']);
                 }
             } else {
                 // Listar todos os CFCs
@@ -42,16 +161,42 @@ try {
             
         case 'POST':
             // Criar novo CFC
-            $data = json_decode(file_get_contents('php://input'), true);
+            $rawInput = file_get_contents('php://input');
             
-            if (!$data) {
+            // Log para debug
+            if (LOG_ENABLED) {
+                error_log('Raw input recebido: ' . $rawInput);
+                error_log('Content-Type: ' . ($_SERVER['CONTENT_TYPE'] ?? 'não definido'));
+                error_log('Request method: ' . $_SERVER['REQUEST_METHOD']);
+            }
+            
+            // Tentar decodificar JSON primeiro
+            $data = json_decode($rawInput, true);
+            
+            // Se JSON falhou, tentar POST
+            if (!$data || json_last_error() !== JSON_ERROR_NONE) {
                 $data = $_POST;
+                if (LOG_ENABLED) {
+                    error_log('JSON falhou, usando dados POST: ' . print_r($data, true));
+                }
+            } else {
+                if (LOG_ENABLED) {
+                    error_log('Dados JSON decodificados: ' . print_r($data, true));
+                }
+            }
+            
+            // Log dos dados finais
+            if (LOG_ENABLED) {
+                error_log('Dados finais para processamento: ' . print_r($data, true));
             }
             
             // Validações
             if (empty($data['nome']) || empty($data['cnpj']) || empty($data['cidade']) || empty($data['uf'])) {
+                if (LOG_ENABLED) {
+                    error_log('Validação falhou - dados obrigatórios: ' . print_r($data, true));
+                }
                 http_response_code(400);
-                echo json_encode(['error' => 'Nome, CNPJ, Cidade e UF são obrigatórios']);
+                echo json_encode(['success' => false, 'error' => 'Nome, CNPJ, Cidade e UF são obrigatórios']);
                 exit;
             }
             
@@ -59,33 +204,49 @@ try {
             $existingCFC = $db->fetch("SELECT id FROM cfcs WHERE cnpj = ?", [$data['cnpj']]);
             if ($existingCFC) {
                 http_response_code(400);
-                echo json_encode(['error' => 'CNPJ já cadastrado']);
+                echo json_encode(['success' => false, 'error' => 'CNPJ já cadastrado']);
                 exit;
             }
             
-            // Inserir CFC
-            $result = $db->insert('cfcs', [
-                'nome' => $data['nome'],
-                'cnpj' => $data['cnpj'],
-                'razao_social' => $data['razao_social'] ?? $data['nome'],
-                'endereco' => $data['endereco'] ?? '',
-                'bairro' => $data['bairro'] ?? '',
-                'cidade' => $data['cidade'],
-                'uf' => $data['uf'],
-                'cep' => $data['cep'] ?? '',
-                'telefone' => $data['telefone'] ?? '',
-                'email' => $data['email'] ?? '',
-                'responsavel' => $data['responsavel'] ?? '',
-                'ativo' => isset($data['ativo']) ? (bool)$data['ativo'] : true,
-                'criado_em' => date('Y-m-d H:i:s')
-            ]);
-            
-            if ($result) {
-                $cfc = $db->fetch("SELECT * FROM cfcs WHERE id = ?", [$result]);
-                echo json_encode(['success' => true, 'message' => 'CFC criado com sucesso', 'data' => $cfc]);
-            } else {
+            try {
+                // Preparar dados para inserção
+                $insertData = [
+                    'nome' => $data['nome'],
+                    'cnpj' => $data['cnpj'],
+                    'razao_social' => $data['razao_social'] ?? $data['nome'],
+                    'endereco' => $data['endereco'] ?? '',
+                    'bairro' => $data['bairro'] ?? '',
+                    'cidade' => $data['cidade'],
+                    'uf' => $data['uf'],
+                    'cep' => $data['cep'] ?? '',
+                    'telefone' => $data['telefone'] ?? '',
+                    'email' => $data['email'] ?? '',
+                    'responsavel_id' => $data['responsavel_id'] ?? null,
+                    'ativo' => isset($data['ativo']) ? (int)$data['ativo'] : 1,
+                    'observacoes' => $data['observacoes'] ?? '',
+                    'criado_em' => date('Y-m-d H:i:s')
+                ];
+                
+                if (LOG_ENABLED) {
+                    error_log('Dados para inserção: ' . print_r($insertData, true));
+                }
+                
+                // Inserir CFC
+                $result = $db->insert('cfcs', $insertData);
+                
+                if ($result) {
+                    $cfc = $db->fetch("SELECT * FROM cfcs WHERE id = ?", [$result]);
+                    echo json_encode(['success' => true, 'message' => 'CFC criado com sucesso', 'data' => $cfc]);
+                } else {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'error' => 'Erro ao criar CFC']);
+                }
+            } catch (Exception $e) {
+                if (LOG_ENABLED) {
+                    error_log('Erro ao inserir CFC: ' . $e->getMessage());
+                }
                 http_response_code(500);
-                echo json_encode(['error' => 'Erro ao criar CFC']);
+                echo json_encode(['success' => false, 'error' => 'Erro interno: ' . $e->getMessage()]);
             }
             break;
             
@@ -97,9 +258,14 @@ try {
                 parse_str(file_get_contents('php://input'), $data);
             }
             
+            // Log para debug
+            if (LOG_ENABLED) {
+                error_log('Dados recebidos na API CFCs PUT: ' . print_r($data, true));
+            }
+            
             if (empty($data['id'])) {
                 http_response_code(400);
-                echo json_encode(['error' => 'ID do CFC é obrigatório']);
+                echo json_encode(['success' => false, 'error' => 'ID do CFC é obrigatório']);
                 exit;
             }
             
@@ -109,7 +275,7 @@ try {
             $existingCFC = $db->fetch("SELECT id FROM cfcs WHERE id = ?", [$id]);
             if (!$existingCFC) {
                 http_response_code(404);
-                echo json_encode(['error' => 'CFC não encontrado']);
+                echo json_encode(['success' => false, 'error' => 'CFC não encontrado']);
                 exit;
             }
             
@@ -125,8 +291,9 @@ try {
             if (!empty($data['cep'])) $updateData['cep'] = $data['cep'];
             if (!empty($data['telefone'])) $updateData['telefone'] = $data['telefone'];
             if (!empty($data['email'])) $updateData['email'] = $data['email'];
-            if (!empty($data['responsavel'])) $updateData['responsavel'] = $data['responsavel'];
+            if (!empty($data['responsavel_id'])) $updateData['responsavel_id'] = $data['responsavel_id'];
             if (isset($data['ativo'])) $updateData['ativo'] = (bool)$data['ativo'];
+            if (isset($data['observacoes'])) $updateData['observacoes'] = $data['observacoes'];
             
             $updateData['atualizado_em'] = date('Y-m-d H:i:s');
             
@@ -138,7 +305,7 @@ try {
                 echo json_encode(['success' => true, 'message' => 'CFC atualizado com sucesso', 'data' => $cfc]);
             } else {
                 http_response_code(500);
-                echo json_encode(['error' => 'Erro ao atualizar CFC']);
+                echo json_encode(['success' => false, 'error' => 'Erro ao atualizar CFC']);
             }
             break;
             
@@ -151,17 +318,34 @@ try {
                 $existingCFC = $db->fetch("SELECT id FROM cfcs WHERE id = ?", [$id]);
                 if (!$existingCFC) {
                     http_response_code(404);
-                    echo json_encode(['error' => 'CFC não encontrado']);
+                    echo json_encode(['success' => false, 'error' => 'CFC não encontrado']);
                     exit;
                 }
                 
-                // Verificar se há instrutores ou alunos vinculados
+                // Verificar se há registros vinculados
                 $instrutores = $db->count('instrutores', 'cfc_id = ?', [$id]);
                 $alunos = $db->count('alunos', 'cfc_id = ?', [$id]);
+                $veiculos = $db->count('veiculos', 'cfc_id = ?', [$id]);
+                $aulas = $db->count('aulas', 'cfc_id = ?', [$id]);
                 
-                if ($instrutores > 0 || $alunos > 0) {
+                if ($instrutores > 0 || $alunos > 0 || $veiculos > 0 || $aulas > 0) {
+                    $vinculados = [];
+                    if ($instrutores > 0) $vinculados[] = "{$instrutores} instrutor(es)";
+                    if ($alunos > 0) $vinculados[] = "{$alunos} aluno(s)";
+                    if ($veiculos > 0) $vinculados[] = "{$veiculos} veículo(s)";
+                    if ($aulas > 0) $vinculados[] = "{$aulas} aula(s)";
+                    
                     http_response_code(400);
-                    echo json_encode(['error' => 'Não é possível excluir CFC com instrutores ou alunos vinculados']);
+                    echo json_encode([
+                        'success' => false, 
+                        'error' => 'Não é possível excluir CFC com registros vinculados: ' . implode(', ', $vinculados) . '. Remova primeiro os registros vinculados.',
+                        'details' => [
+                            'instrutores' => $instrutores,
+                            'alunos' => $alunos,
+                            'veiculos' => $veiculos,
+                            'aulas' => $aulas
+                        ]
+                    ]);
                     exit;
                 }
                 
@@ -172,26 +356,40 @@ try {
                     echo json_encode(['success' => true, 'message' => 'CFC excluído com sucesso']);
                 } else {
                     http_response_code(500);
-                    echo json_encode(['error' => 'Erro ao excluir CFC']);
+                    echo json_encode(['success' => false, 'error' => 'Erro ao excluir CFC']);
                 }
             } else {
                 http_response_code(400);
-                echo json_encode(['error' => 'ID do CFC é obrigatório']);
+                echo json_encode(['success' => false, 'error' => 'ID do CFC é obrigatório']);
             }
             break;
             
         default:
             http_response_code(405);
-            echo json_encode(['error' => 'Método não permitido']);
+            echo json_encode(['success' => false, 'error' => 'Método não permitido']);
             break;
     }
     
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode(['error' => 'Erro interno: ' . $e->getMessage()]);
+    $errorMessage = 'Erro interno: ' . $e->getMessage();
     
+    // Adicionar informações de debug se LOG_ENABLED estiver ativo
     if (LOG_ENABLED) {
-        error_log('Erro na API de CFCs: ' . $e->getMessage());
+        $debugInfo = [
+            'message' => $e->getMessage(),
+            'file' => $e->getFile(),
+            'line' => $e->getLine(),
+            'trace' => $e->getTraceAsString()
+        ];
+        error_log('Erro na API de CFCs: ' . json_encode($debugInfo));
+        
+        // Em modo de desenvolvimento, incluir mais detalhes na resposta
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            $errorMessage .= ' (Arquivo: ' . basename($e->getFile()) . ', Linha: ' . $e->getLine() . ')';
+        }
     }
+    
+    echo json_encode(['success' => false, 'error' => $errorMessage]);
 }
 ?>

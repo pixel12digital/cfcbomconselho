@@ -8,6 +8,7 @@ header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
+// Usar caminho relativo que sabemos que funciona
 require_once '../../includes/config.php';
 require_once '../../includes/database.php';
 require_once '../../includes/auth.php';

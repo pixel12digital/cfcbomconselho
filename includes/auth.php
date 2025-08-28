@@ -427,31 +427,49 @@ class Auth {
 // Funções globais de autenticação
 function isLoggedIn() {
     global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
     return $auth->isLoggedIn();
 }
 
 function getCurrentUser() {
     global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
     return $auth->getCurrentUser();
 }
 
 function hasPermission($permission) {
     global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
     return $auth->hasPermission($permission);
 }
 
 function isAdmin() {
     global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
     return $auth->isAdmin();
 }
 
 function isInstructor() {
     global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
     return $auth->isInstructor();
 }
 
 function isSecretary() {
     global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
     return $auth->isSecretary();
 }
 

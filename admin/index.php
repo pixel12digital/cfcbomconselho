@@ -16,28 +16,39 @@ $user = getCurrentUser();
 $db = Database::getInstance();
 
 // Obter estatísticas para o dashboard
-$stats = [
-    'total_alunos' => $db->count('alunos'),
-    'total_instrutores' => $db->count('instrutores'),
-    'total_aulas' => $db->count('aulas'),
-    'total_veiculos' => $db->count('veiculos'),
-    'aulas_hoje' => $db->count('aulas', 'data_aula = ?', [date('Y-m-d')]),
-    'aulas_semana' => $db->count('aulas', 'data_aula >= ?', [date('Y-m-d', strtotime('monday this week'))])
-];
+try {
+    $stats = [
+        'total_alunos' => $db->count('alunos'),
+        'total_instrutores' => $db->count('instrutores'),
+        'total_aulas' => $db->count('aulas'),
+        'total_veiculos' => $db->count('veiculos'),
+        'aulas_hoje' => $db->count('aulas', 'data_aula = ?', [date('Y-m-d')]),
+        'aulas_semana' => $db->count('aulas', 'data_aula >= ?', [date('Y-m-d', strtotime('monday this week'))])
+    ];
+} catch (Exception $e) {
+    $stats = [
+        'total_alunos' => 0,
+        'total_instrutores' => 0,
+        'total_aulas' => 0,
+        'total_veiculos' => 0,
+        'aulas_hoje' => 0,
+        'aulas_semana' => 0
+    ];
+}
 
 // Obter últimas atividades
 try {
     $ultimas_atividades = $db->fetchAll("
-        SELECT 'aluno' as tipo, nome, 'cadastrado' as acao, criado_em as data
+        (SELECT 'aluno' as tipo, nome, 'cadastrado' as acao, criado_em as data
         FROM alunos 
         ORDER BY criado_em DESC 
-        LIMIT 5
+        LIMIT 5)
         UNION ALL
-        SELECT 'instrutor' as tipo, u.nome, 'cadastrado' as acao, i.criado_em as data
+        (SELECT 'instrutor' as tipo, u.nome, 'cadastrado' as acao, i.criado_em as data
         FROM instrutores i
         JOIN usuarios u ON i.usuario_id = u.id
         ORDER BY i.criado_em DESC 
-        LIMIT 5
+        LIMIT 5)
         ORDER BY data DESC 
         LIMIT 10
     ");
@@ -321,7 +332,7 @@ define('ADMIN_ROUTING', true);
                             <span>Agendamento</span>
                             <div class="nav-badge"><?php echo $stats['total_aulas']; ?></div>
                         </a>
-                        <a href="index.php?page=aulas&action=list" class="nav-sublink <?php echo $page === 'aulas' ? 'active' : ''; ?>">
+                        <a href="index.php?page=agendar-aula&action=list" class="nav-sublink <?php echo $page === 'agendar-aula' ? 'active' : ''; ?>">
                             <i class="fas fa-clock"></i>
                             <span>Aulas</span>
                         </a>
@@ -435,68 +446,179 @@ define('ADMIN_ROUTING', true);
         <!-- Conteúdo Principal -->
         <main class="admin-main">
             <?php
+            // Inicializar variáveis padrão
+            $alunos = [];
+            $instrutores = [];
+            $cfcs = [];
+            $usuarios = [];
+            $veiculos = [];
+            
             // Carregar dados necessários baseado na página
             switch ($page) {
                 case 'alunos':
-                    $alunos = $db->fetchAll("
-                        SELECT a.*, c.nome as cfc_nome,
-                               (SELECT MAX(data_aula) FROM aulas WHERE aluno_id = a.id) as ultima_aula
-                        FROM alunos a 
-                        LEFT JOIN cfcs c ON a.cfc_id = c.id 
-                        ORDER BY a.nome ASC
-                    ");
-                    $cfcs = $db->fetchAll("SELECT id, nome FROM cfcs ORDER BY nome");
+                    try {
+                        $alunos = $db->fetchAll("
+                            SELECT a.id, a.nome, a.cpf, a.rg, a.data_nascimento, a.endereco, a.telefone, a.email, a.cfc_id, a.categoria_cnh, a.status, a.criado_em,
+                                   c.nome as cfc_nome,
+                                   NULL as ultima_aula
+                            FROM alunos a 
+                            LEFT JOIN cfcs c ON a.cfc_id = c.id 
+                            ORDER BY a.nome ASC
+                        ");
+                    } catch (Exception $e) {
+                        // Query mais simples como fallback
+                        try {
+                            $alunos = $db->fetchAll("SELECT * FROM alunos ORDER BY nome ASC");
+                        } catch (Exception $e2) {
+                            $alunos = [];
+                        }
+                    }
+                    try {
+                        $cfcs = $db->fetchAll("SELECT id, nome, ativo FROM cfcs WHERE ativo = 1 ORDER BY nome");
+                    } catch (Exception $e) {
+                        $cfcs = [];
+                    }
                     break;
                     
                 case 'instrutores':
-                    $instrutores = $db->fetchAll("
-                        SELECT i.*, u.nome as usuario_nome, c.nome as cfc_nome 
-                        FROM instrutores i 
-                        LEFT JOIN usuarios u ON i.usuario_id = u.id 
-                        LEFT JOIN cfcs c ON i.cfc_id = c.id 
-                        ORDER BY i.nome ASC
-                    ");
-                    $cfcs = $db->fetchAll("SELECT id, nome FROM cfcs ORDER BY nome");
+                    try {
+                        // Query mais simples primeiro para testar
+                        $instrutores = $db->fetchAll("
+                            SELECT i.id, i.usuario_id, i.cfc_id, i.credencial, i.categoria_habilitacao, i.ativo, i.criado_em,
+                                   u.nome, u.email, c.nome as cfc_nome,
+                                   0 as total_aulas, 0 as aulas_hoje, 1 as disponivel
+                            FROM instrutores i 
+                            LEFT JOIN usuarios u ON i.usuario_id = u.id 
+                            LEFT JOIN cfcs c ON i.cfc_id = c.id 
+                            ORDER BY u.nome ASC
+                        ");
+                    } catch (Exception $e) {
+                        // Se ainda houver erro, usar query básica
+                        try {
+                            $instrutores = $db->fetchAll("SELECT * FROM instrutores ORDER BY id ASC");
+                        } catch (Exception $e2) {
+                            $instrutores = [];
+                        }
+                    }
+                    try {
+                        $cfcs = $db->fetchAll("SELECT id, nome, ativo FROM cfcs WHERE ativo = 1 ORDER BY nome");
+                    } catch (Exception $e) {
+                        $cfcs = [];
+                    }
+                    try {
+                        $usuarios = $db->fetchAll("SELECT * FROM usuarios WHERE tipo IN ('instrutor', 'admin') ORDER BY nome");
+                    } catch (Exception $e) {
+                        $usuarios = [];
+                    }
                     break;
                     
                 case 'cfcs':
-                    $cfcs = $db->fetchAll("SELECT * FROM cfcs ORDER BY nome");
+                    try {
+                        $cfcs = $db->fetchAll("
+                            SELECT c.id, c.nome, c.cnpj, c.endereco, c.bairro, c.cidade, c.uf, c.cep, c.telefone, c.email, c.responsavel_id, c.ativo, c.criado_em,
+                                   u.nome as responsavel_nome,
+                                   0 as total_alunos
+                            FROM cfcs c 
+                            LEFT JOIN usuarios u ON c.responsavel_id = u.id 
+                            ORDER BY c.nome
+                        ");
+                    } catch (Exception $e) {
+                        // Query mais simples como fallback
+                        try {
+                            $cfcs = $db->fetchAll("SELECT * FROM cfcs ORDER BY nome");
+                        } catch (Exception $e2) {
+                            $cfcs = [];
+                        }
+                    }
                     break;
                     
                 case 'usuarios':
-                    $usuarios = $db->fetchAll("SELECT * FROM usuarios ORDER BY nome");
+                    try {
+                        $usuarios = $db->fetchAll("SELECT id, nome, email, tipo, cpf, telefone, ativo, criado_em FROM usuarios ORDER BY nome");
+                    } catch (Exception $e) {
+                        // Query mais simples como fallback
+                        try {
+                            $usuarios = $db->fetchAll("SELECT * FROM usuarios ORDER BY nome");
+                        } catch (Exception $e2) {
+                            $usuarios = [];
+                        }
+                    }
                     break;
                     
                 case 'veiculos':
-                    $veiculos = $db->fetchAll("
-                        SELECT v.*, c.nome as cfc_nome 
-                        FROM veiculos v 
-                        LEFT JOIN cfcs c ON v.cfc_id = c.id 
-                        ORDER BY v.placa ASC
-                    ");
-                    $cfcs = $db->fetchAll("SELECT id, nome FROM cfcs ORDER BY nome");
+                    try {
+                        $veiculos = $db->fetchAll("
+                            SELECT v.id, v.cfc_id, v.placa, v.modelo, v.marca, v.ano, v.categoria_cnh, v.ativo, v.criado_em,
+                                   c.nome as cfc_nome 
+                            FROM veiculos v 
+                            LEFT JOIN cfcs c ON v.cfc_id = c.id 
+                            ORDER BY v.placa ASC
+                        ");
+                    } catch (Exception $e) {
+                        // Query mais simples como fallback
+                        try {
+                            $veiculos = $db->fetchAll("SELECT * FROM veiculos ORDER BY placa ASC");
+                        } catch (Exception $e2) {
+                            $veiculos = [];
+                        }
+                    }
+                    try {
+                        $cfcs = $db->fetchAll("SELECT id, nome, ativo FROM cfcs WHERE ativo = 1 ORDER BY nome");
+                    } catch (Exception $e) {
+                        $cfcs = [];
+                    }
                     break;
                     
                 case 'agendamento':
                 case 'agendar-aula':
                     // Buscar dados necessários para agendamento
                     $aluno_id = $_GET['aluno_id'] ?? null;
+                    $aluno = null;
+                    $cfc = null;
+                    $instrutores = [];
+                    $veiculos = [];
+                    $aulas_existentes = [];
+                    
                     if ($aluno_id) {
-                        $aluno = $db->findWhere('alunos', 'id = ?', [$aluno_id], '*', null, 1);
-                        if ($aluno && is_array($aluno)) {
-                            $aluno = $aluno[0];
-                            $cfc = $db->findWhere('cfcs', 'id = ?', [$aluno['cfc_id']], '*', null, 1);
-                            $cfc = $cfc && is_array($cfc) ? $cfc[0] : null;
-                            $instrutores = $db->fetchAll("SELECT id, nome FROM instrutores WHERE ativo = 1 ORDER BY nome");
-                            $veiculos = $db->fetchAll("SELECT id, placa, modelo FROM veiculos WHERE ativo = 1 ORDER BY placa");
-                            $aulas_existentes = $db->fetchAll("
-                                SELECT a.*, i.nome as instrutor_nome, v.placa as veiculo_placa
-                                FROM aulas a
-                                LEFT JOIN instrutores i ON a.instrutor_id = i.id
-                                LEFT JOIN veiculos v ON a.veiculo_id = v.id
-                                WHERE a.aluno_id = ? AND a.data_aula >= CURDATE()
-                                ORDER BY a.data_aula ASC, a.hora_inicio ASC
-                            ", [$aluno_id]);
+                        try {
+                            $aluno = $db->findWhere('alunos', 'id = ?', [$aluno_id], '*', null, 1);
+                            if ($aluno && is_array($aluno)) {
+                                $aluno = $aluno[0];
+                                try {
+                                    $cfc = $db->findWhere('cfcs', 'id = ?', [$aluno['cfc_id']], '*', null, 1);
+                                    $cfc = $cfc && is_array($cfc) ? $cfc[0] : null;
+                                } catch (Exception $e) {
+                                    $cfc = null;
+                                }
+                            }
+                            try {
+                                $instrutores = $db->fetchAll("SELECT id, nome FROM instrutores WHERE ativo = 1 ORDER BY nome");
+                            } catch (Exception $e) {
+                                $instrutores = [];
+                            }
+                            try {
+                                $veiculos = $db->fetchAll("SELECT id, placa, modelo FROM veiculos WHERE ativo = 1 ORDER BY placa");
+                            } catch (Exception $e) {
+                                $veiculos = [];
+                            }
+                            try {
+                                $aulas_existentes = $db->fetchAll("
+                                    SELECT a.*, i.nome as instrutor_nome, v.placa as veiculo_placa
+                                    FROM aulas a
+                                    LEFT JOIN instrutores i ON a.instrutor_id = i.id
+                                    LEFT JOIN veiculos v ON a.veiculo_id = v.id
+                                    WHERE a.aluno_id = ? AND a.data_aula >= ?
+                                    ORDER BY a.data_aula ASC, a.hora_inicio ASC
+                                ", [$aluno_id, date('Y-m-d')]);
+                            } catch (Exception $e) {
+                                $aulas_existentes = [];
+                            }
+                        } catch (Exception $e) {
+                            $aluno = null;
+                            $cfc = null;
+                            $instrutores = [];
+                            $veiculos = [];
+                            $aulas_existentes = [];
                         }
                     }
                     break;
@@ -504,12 +626,27 @@ define('ADMIN_ROUTING', true);
                 case 'historico-aluno':
                     // Buscar dados do aluno para histórico
                     $aluno_id = $_GET['id'] ?? null;
+                    $aluno = null;
+                    $cfc = null;
+                    
                     if ($aluno_id) {
-                        $aluno = $db->findWhere('alunos', 'id = ?', [$aluno_id], '*', null, 1);
-                        if ($aluno && is_array($aluno)) {
-                            $aluno = $aluno[0];
-                            $cfc = $db->findWhere('cfcs', 'id = ?', [$aluno['cfc_id']], '*', null, 1);
-                            $cfc = $cfc && is_array($cfc) ? $cfc[0] : null;
+                        try {
+                            $aluno = $db->findWhere('alunos', 'id = ?', [$aluno_id], '*', null, 1);
+                            if ($aluno && is_array($aluno)) {
+                                $aluno = $aluno[0];
+                                try {
+                                    $cfc = $db->findWhere('cfcs', 'id = ?', [$aluno['cfc_id']], '*', null, 1);
+                                    $cfc = $cfc && is_array($cfc) ? $cfc[0] : null;
+                                } catch (Exception $e) {
+                                    $cfc = null;
+                                }
+                            } else {
+                                $aluno = null;
+                                $cfc = null;
+                            }
+                        } catch (Exception $e) {
+                            $aluno = null;
+                            $cfc = null;
                         }
                     }
                     break;
@@ -517,12 +654,27 @@ define('ADMIN_ROUTING', true);
                 case 'historico-instrutor':
                     // Buscar dados do instrutor para histórico
                     $instrutor_id = $_GET['id'] ?? null;
+                    $instrutor = null;
+                    $cfc = null;
+                    
                     if ($instrutor_id) {
-                        $instrutor = $db->findWhere('instrutores', 'id = ?', [$instrutor_id], '*', null, 1);
-                        if ($instrutor && is_array($instrutor)) {
-                            $instrutor = $instrutor[0];
-                            $cfc = $db->findWhere('cfcs', 'id = ?', [$instrutor['cfc_id']], '*', null, 1);
-                            $cfc = $cfc && is_array($cfc) ? $cfc[0] : null;
+                        try {
+                            $instrutor = $db->findWhere('instrutores', 'id = ?', [$instrutor_id], '*', null, 1);
+                            if ($instrutor && is_array($instrutor)) {
+                                $instrutor = $instrutor[0];
+                                try {
+                                    $cfc = $db->findWhere('cfcs', 'id = ?', [$instrutor['cfc_id']], '*', null, 1);
+                                    $cfc = $cfc && is_array($cfc) ? $cfc[0] : null;
+                                } catch (Exception $e) {
+                                    $cfc = null;
+                                }
+                            } else {
+                                $instrutor = null;
+                                $cfc = null;
+                            }
+                        } catch (Exception $e) {
+                            $instrutor = null;
+                            $cfc = null;
                         }
                     }
                     break;
