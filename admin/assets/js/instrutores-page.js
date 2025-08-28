@@ -50,6 +50,13 @@ function limparCamposFormulario() {
         if (elemento) elemento.value = '';
     });
     
+    // Campos de texto de data
+    const camposTextoData = ['data_nascimento_text', 'validade_credencial_text'];
+    camposTextoData.forEach(campo => {
+        const elemento = document.getElementById(campo);
+        if (elemento) elemento.value = '';
+    });
+    
     // Campo de data de nascimento - limpar de forma segura
     const campoDataNascimento = document.getElementById('data_nascimento');
     if (campoDataNascimento) {
@@ -411,6 +418,8 @@ function configurarCamposData() {
     
     camposData.forEach(campoId => {
         const campo = document.getElementById(campoId);
+        const campoTexto = document.getElementById(campoId + '_text');
+        
         if (campo) {
             // Garantir que seja do tipo date
             campo.type = 'date';
@@ -447,6 +456,9 @@ function configurarCamposData() {
                     }
                     
                     console.log(`✅ Data válida definida no campo ${campoId}: ${this.value}`);
+                    
+                    // Sincronizar campo de texto
+                    sincronizarCampoTexto(campoId, this.value);
                 }
             });
             
@@ -467,6 +479,11 @@ function configurarCamposData() {
             campo.addEventListener('focus', function() {
                 console.log(`🎯 Campo ${campoId} recebeu foco`);
             });
+        }
+        
+        // Configurar campo de texto auxiliar
+        if (campoTexto) {
+            configurarCampoTexto(campoId, campoTexto);
         }
     });
 }
@@ -490,6 +507,92 @@ function isValidDate(dateString) {
     // Esta validação será feita na função configurarCamposData
     
     return true;
+}
+
+// Função para configurar campo de texto auxiliar
+function configurarCampoTexto(campoId, campoTexto) {
+    // Aplicar máscara de data brasileira
+    campoTexto.addEventListener('input', function(e) {
+        let value = e.target.value.replace(/\D/g, '');
+        
+        // Aplicar máscara dd/mm/aaaa
+        if (value.length <= 2) {
+            value = value;
+        } else if (value.length <= 4) {
+            value = value.substring(0, 2) + '/' + value.substring(2);
+        } else if (value.length <= 8) {
+            value = value.substring(0, 2) + '/' + value.substring(2, 4) + '/' + value.substring(4);
+        } else {
+            value = value.substring(0, 2) + '/' + value.substring(2, 4) + '/' + value.substring(4, 8);
+        }
+        
+        e.target.value = value;
+    });
+    
+    // Sincronizar com campo date quando perder foco
+    campoTexto.addEventListener('blur', function() {
+        const valorTexto = this.value.trim();
+        if (valorTexto) {
+            const dataConvertida = converterDataBrasileiraParaISO(valorTexto);
+            if (dataConvertida) {
+                const campoDate = document.getElementById(campoId);
+                if (campoDate) {
+                    campoDate.value = dataConvertida;
+                    campoDate.dispatchEvent(new Event('change'));
+                    console.log(`✅ Data convertida e sincronizada: ${valorTexto} → ${dataConvertida}`);
+                }
+            } else {
+                console.warn(`❌ Formato de data inválido: ${valorTexto}. Use dd/mm/aaaa`);
+                this.value = '';
+            }
+        }
+    });
+    
+    // Permitir tecla Enter para confirmar
+    campoTexto.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            this.blur();
+        }
+    });
+}
+
+// Função para converter data brasileira (dd/mm/aaaa) para ISO (aaaa-mm-dd)
+function converterDataBrasileiraParaISO(dataBrasileira) {
+    // Verificar formato dd/mm/aaaa
+    const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = dataBrasileira.match(regex);
+    
+    if (!match) return null;
+    
+    const dia = parseInt(match[1]);
+    const mes = parseInt(match[2]);
+    const ano = parseInt(match[3]);
+    
+    // Validar valores
+    if (dia < 1 || dia > 31) return null;
+    if (mes < 1 || mes > 12) return null;
+    if (ano < 1900 || ano > 2100) return null;
+    
+    // Verificar se a data é válida
+    const data = new Date(ano, mes - 1, dia);
+    if (data.getDate() !== dia || data.getMonth() !== mes - 1 || data.getFullYear() !== ano) {
+        return null;
+    }
+    
+    // Retornar no formato ISO
+    return data.toISOString().split('T')[0];
+}
+
+// Função para sincronizar campo de texto com campo date
+function sincronizarCampoTexto(campoId, valorISO) {
+    const campoTexto = document.getElementById(campoId + '_text');
+    if (campoTexto && valorISO) {
+        const data = new Date(valorISO);
+        const dia = String(data.getDate()).padStart(2, '0');
+        const mes = String(data.getMonth() + 1).padStart(2, '0');
+        const ano = data.getFullYear();
+        campoTexto.value = `${dia}/${mes}/${ano}`;
+    }
 }
 
 function carregarInstrutores() {
