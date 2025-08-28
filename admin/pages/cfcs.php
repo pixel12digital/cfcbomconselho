@@ -616,10 +616,10 @@ function editarCFC(id) {
         return;
     }
     
-    console.log(`📡 Fazendo requisição para ../admin/api/cfcs.php?id=${id}`);
-    
-    // Buscar dados do CFC
-    fetch(`../admin/api/cfcs.php?id=${id}`, {
+            console.log(`📡 Fazendo requisição para api/cfcs.php?id=${id}`);
+        
+        // Buscar dados do CFC
+        fetch(`api/cfcs.php?id=${id}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         },
@@ -661,13 +661,16 @@ function editarCFC(id) {
             if (error.message.includes('401')) {
                 mostrarAlerta('Sessão expirada. Faça login novamente.', 'warning');
                 setTimeout(() => {
-                    window.location.href = '../index.php';
+                    window.location.href = 'index.php';
                 }, 2000);
             } else {
                 mostrarAlerta('Erro ao carregar dados do CFC: ' + error.message, 'danger');
             }
         });
 }
+
+// Garantir que a função esteja disponível globalmente
+window.editarCFC = editarCFC;
 
 function preencherFormularioCFC(cfc) {
     document.getElementById('nome').value = cfc.nome || '';
@@ -689,7 +692,7 @@ function preencherFormularioCFC(cfc) {
 }
 
 function visualizarCFC(id) {
-    fetch(`../admin/api/cfcs.php?id=${id}`, {
+    fetch(`api/cfcs.php?id=${id}`, {
         headers: {
             'X-Requested-With': 'XMLHttpRequest'
         },
@@ -715,13 +718,16 @@ function visualizarCFC(id) {
             if (error.message.includes('401')) {
                 mostrarAlerta('Sessão expirada. Faça login novamente.', 'warning');
                 setTimeout(() => {
-                    window.location.href = '../index.php';
+                    window.location.href = 'index.php';
                 }, 2000);
             } else {
                 mostrarAlerta('Erro ao carregar dados do CFC: ' + error.message, 'danger');
             }
         });
 }
+
+// Garantir que a função esteja disponível globalmente
+window.visualizarCFC = visualizarCFC;
 
 function preencherModalVisualizacao(cfc) {
     const html = `
@@ -771,8 +777,11 @@ function preencherModalVisualizacao(cfc) {
 
 function gerenciarCFC(id) {
     // Redirecionar para página de gerenciamento específica do CFC
-    window.location.href = `admin/pages/gerenciar-cfc.php?id=${id}`;
+    window.location.href = `pages/gerenciar-cfc.php?id=${id}`;
 }
+
+// Garantir que a função esteja disponível globalmente
+window.gerenciarCFC = gerenciarCFC;
 
 function ativarCFC(id) {
     if (confirm('Deseja realmente ativar este CFC?')) {
@@ -780,16 +789,22 @@ function ativarCFC(id) {
     }
 }
 
+// Garantir que a função esteja disponível globalmente
+window.ativarCFC = ativarCFC;
+
 function desativarCFC(id) {
     if (confirm('Deseja realmente desativar este CFC? Esta ação pode afetar alunos e instrutores vinculados.')) {
         alterarStatusCFC(id, 0);
     }
 }
 
+// Garantir que a função esteja disponível globalmente
+window.desativarCFC = desativarCFC;
+
 function alterarStatusCFC(id, status) {
     if (confirm('Deseja realmente alterar o status deste CFC?')) {
         // Fazer requisição para a API
-        fetch(`../admin/api/cfcs.php`, {
+        fetch(`api/cfcs.php`, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -896,7 +911,7 @@ function salvarCFC() {
             console.log('🔄 Fazendo requisição para a API...');
             
             // Fazer requisição para a API
-            const url = '../admin/api/cfcs.php';
+            const url = 'api/cfcs.php';
             const method = acao === 'editar' ? 'PUT' : 'POST';
             
             fetch(url, {
@@ -1033,7 +1048,7 @@ function salvarCFCDireto() {
             console.log('🔄 Fazendo requisição para a API...');
             
             // Fazer requisição para a API
-            const url = '../admin/api/cfcs.php';
+            const url = 'api/cfcs.php';
             const method = acao === 'editar' ? 'PUT' : 'POST';
             
             fetch(url, {
@@ -1119,10 +1134,22 @@ function excluirCFC(id) {
     });
 }
 
+// Garantir que a função esteja disponível globalmente
+window.excluirCFC = excluirCFC;
+
+// Fallback para excluirCFC
+if (typeof window.excluirCFC !== 'function') {
+    console.warn('Função excluirCFC não encontrada, criando fallback...');
+    window.excluirCFC = function(id) {
+        console.log('Usando função fallback excluirCFC para ID: ' + id);
+        alert('Função de exclusão não está funcionando. Tente recarregar a página.');
+    };
+}
+
 // Função para verificar se há registros vinculados
 async function verificarRegistrosVinculados(id) {
     try {
-        const response = await fetch(`../admin/api/cfcs.php?id=${id}`, {
+        const response = await fetch(`api/cfcs.php?id=${id}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -1179,8 +1206,8 @@ function executarExclusao(id, cascade = false) {
     btnExcluir.disabled = true;
     
     const url = cascade ? 
-        `../admin/api/cfcs.php?id=${id}&cascade=true` : 
-        `../admin/api/cfcs.php?id=${id}`;
+        `api/cfcs.php?id=${id}&cascade=true` : 
+        `api/cfcs.php?id=${id}`;
     
     console.log('Fazendo requisição DELETE para:', url);
     
@@ -1236,12 +1263,12 @@ function executarExclusao(id, cascade = false) {
             if (error.message.includes('401')) {
                 mostrarAlerta('Sessão expirada. Faça login novamente.', 'warning');
                 setTimeout(() => {
-                    window.location.href = '../index.php';
+                    window.location.href = 'index.php';
                 }, 2000);
             } else if (error.message.includes('400')) {
                 console.log('Erro 400 - tentando obter detalhes...');
                 // Tentar extrair detalhes do erro se disponível
-                fetch(`../admin/api/cfcs.php?id=${id}`, {
+                fetch(`api/cfcs.php?id=${id}`, {
                     method: 'DELETE',
                     credentials: 'same-origin',
                     headers: {
@@ -1281,7 +1308,7 @@ function executarExclusao(id, cascade = false) {
 
 function exportarCFCs() {
     // Buscar dados reais da API
-    fetch('../admin/api/cfcs.php', {
+    fetch('api/cfcs.php', {
         credentials: 'same-origin'
     })
         .then(response => response.json())
@@ -1459,7 +1486,7 @@ function mostrarAlerta(mensagem, tipo) {
 // Debug: Verificar se a função está disponível
 console.log('🔍 Verificando função salvarCFC...');
 console.log('🕐 Timestamp: ' + new Date().toISOString());
-console.log('📁 Arquivo: admin/pages/cfcs.php - VERSÃO ATUALIZADA');
+console.log('📁 Arquivo: pages/cfcs.php - VERSÃO ATUALIZADA');
 
 if (typeof salvarCFC === 'function') {
     console.log('✅ Função salvarCFC está disponível');

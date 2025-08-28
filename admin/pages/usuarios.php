@@ -290,7 +290,7 @@ function editUser(userId) {
     console.log('Buscando dados do usuario na API...');
     
     // Buscar dados reais da API
-    fetch('../admin/api/usuarios.php?id=' + userId)
+    fetch('api/usuarios.php?id=' + userId)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -426,7 +426,7 @@ function saveUser() {
     }
     
     // Fazer requisição para a API
-    const url = isEditMode ? '../admin/api/usuarios.php' : '../admin/api/usuarios.php';
+    const url = isEditMode ? 'api/usuarios.php' : 'api/usuarios.php';
     const method = isEditMode ? 'PUT' : 'POST';
     
     fetch(url, {
@@ -494,7 +494,7 @@ function deleteUser(userId) {
         }
         
         // URL da API
-        const apiUrl = '../admin/api/usuarios.php?id=' + encodeURIComponent(userId);
+        const apiUrl = 'api/usuarios.php?id=' + encodeURIComponent(userId);
         console.log('Fazendo requisicao DELETE para:', apiUrl);
         
         // Fazer requisição para a API
@@ -542,7 +542,7 @@ function deleteUser(userId) {
                 switch (data.code) {
                     case 'NOT_LOGGED_IN':
                         errorMessage = 'Sessão expirada. Faça login novamente.';
-                        setTimeout(() => window.location.href = '../index.php', 2000);
+                        setTimeout(() => window.location.href = 'index.php', 2000);
                         break;
                     case 'NOT_ADMIN':
                         errorMessage = 'Acesso negado. Apenas administradores podem excluir usuários.';
@@ -568,7 +568,7 @@ function deleteUser(userId) {
             
             if (error.message.includes('HTTP Error: 401')) {
                 errorMessage = 'Sessão expirada. Faça login novamente.';
-                setTimeout(() => window.location.href = '../index.php', 2000);
+                setTimeout(() => window.location.href = 'index.php', 2000);
             } else if (error.message.includes('HTTP Error: 403')) {
                 errorMessage = 'Acesso negado. Você não tem permissão para esta ação.';
             } else if (error.message.includes('HTTP Error: 404')) {
@@ -622,7 +622,7 @@ function exportUsers() {
     console.log('Buscando dados dos usuarios na API...');
     
     // Buscar dados reais da API
-    fetch('../admin/api/usuarios.php')
+    fetch('api/usuarios.php')
         .then(response => response.json())
         .then(data => {
             if (data.success) {

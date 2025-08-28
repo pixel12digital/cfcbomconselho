@@ -1105,10 +1105,10 @@ function editarAluno(id) {
         return;
     }
     
-    console.log(`📡 Fazendo requisição para ../admin/api/alunos.php?id=${id}`);
+    console.log(`📡 Fazendo requisição para api/alunos.php?id=${id}`);
     
     // Buscar dados do aluno (usando nova API funcional)
-    fetch(`../admin/api/alunos.php?id=${id}`)
+    fetch(`api/alunos.php?id=${id}`)
         .then(response => {
             console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
             if (!response.ok) {
@@ -1201,10 +1201,10 @@ function visualizarAluno(id) {
         return;
     }
 
-    console.log(`📡 Fazendo requisição para ../admin/api/alunos.php?id=${id}`);
+    console.log(`📡 Fazendo requisição para api/alunos.php?id=${id}`);
 
     // Buscar dados do aluno (usando nova API funcional)
-    fetch(`../admin/api/alunos.php?id=${id}`)
+    fetch(`api/alunos.php?id=${id}`)
         .then(response => {
             console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
             if (!response.ok) {
@@ -1338,7 +1338,7 @@ function excluirAluno(id) {
             loading.showGlobal('Excluindo aluno...');
         }
         
-        fetch(`../admin/api/alunos.php`, {
+        fetch(`api/alunos.php`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -1754,7 +1754,7 @@ function salvarAluno() {
     // Fazer requisição para a API
     console.log('Enviando dados para API:', dados);
     
-    fetch('../admin/api/alunos.php', {
+    fetch('api/alunos.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
