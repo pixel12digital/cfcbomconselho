@@ -512,6 +512,95 @@ window.desativarCFC = function(id) {
     }
 };
 
+// Função abrirModalCFC - definição global imediata
+window.abrirModalCFC = function() {
+    console.log('🚀 abrirModalCFC chamada globalmente');
+    const modal = document.getElementById('modalCFC');
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        
+        // Aplicar responsividade
+        setTimeout(() => {
+            if (typeof ajustarModalResponsivo === 'function') {
+                ajustarModalResponsivo();
+            }
+        }, 10);
+        
+        console.log('✅ Modal customizado aberto!');
+    } else {
+        console.error('❌ Modal não encontrado!');
+        alert('Erro: Modal não encontrado na página!');
+    }
+};
+
+// Função fecharModalCFC - definição global imediata
+window.fecharModalCFC = function() {
+    console.log('🚪 fecharModalCFC chamada globalmente');
+    const modal = document.getElementById('modalCFC');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        console.log('✅ Modal customizado fechado!');
+    }
+};
+
+// Função ajustarModalResponsivo - definição global imediata
+window.ajustarModalResponsivo = function() {
+    const modalDialog = document.querySelector('#modalCFC .custom-modal-dialog');
+    if (modalDialog) {
+        if (window.innerWidth <= 768) {
+            // Mobile - ocupar quase toda a tela
+            modalDialog.style.cssText = `
+                position: fixed !important;
+                top: 0.5rem !important;
+                left: 0.5rem !important;
+                right: 0.5rem !important;
+                bottom: 0.5rem !important;
+                width: auto !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            `;
+        } else if (window.innerWidth <= 1200) {
+            // Tablet - margens menores
+            modalDialog.style.cssText = `
+                position: fixed !important;
+                top: 1rem !important;
+                left: 1rem !important;
+                right: 1rem !important;
+                bottom: 1rem !important;
+                width: auto !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            `;
+        } else {
+            // Desktop - margens padrão
+            modalDialog.style.cssText = `
+                position: fixed !important;
+                top: 2rem !important;
+                left: 2rem !important;
+                right: 2rem !important;
+                bottom: 2rem !important;
+                width: auto !important;
+                height: auto !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+            `;
+        }
+    }
+};
+
 console.log('✅ Funções globais de CFCs inicializadas!');
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -1434,32 +1523,8 @@ function imprimirCFCs() {
     window.print();
 }
 
-// FUNÇÕES PARA MODAL CUSTOMIZADO
-function abrirModalCFC() {
-    console.log('🚀 Abrindo modal customizado...');
-    const modal = document.getElementById('modalCFC');
-    if (modal) {
-        modal.style.display = 'block';
-        document.body.style.overflow = 'hidden'; // Prevenir scroll do body
-        
-        // Aplicar responsividade
-        setTimeout(() => {
-            ajustarModalResponsivo();
-        }, 10);
-        
-        console.log('✅ Modal customizado aberto!');
-    }
-}
-
-function fecharModalCFC() {
-    console.log('🚪 Fechando modal customizado...');
-    const modal = document.getElementById('modalCFC');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto'; // Restaurar scroll do body
-        console.log('✅ Modal customizado fechado!');
-    }
-}
+// FUNÇÕES PARA MODAL CUSTOMIZADO - REMOVIDAS (já definidas globalmente)
+// As funções abrirModalCFC e fecharModalCFC estão definidas globalmente no início do script
 
 // Fechar modal ao clicar fora dele
 document.addEventListener('click', function(e) {
@@ -1479,61 +1544,7 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Função para ajustar modal responsivo
-function ajustarModalResponsivo() {
-    const modalDialog = document.querySelector('#modalCFC .custom-modal-dialog');
-    if (modalDialog) {
-        if (window.innerWidth <= 768) {
-            // Mobile - ocupar quase toda a tela
-            modalDialog.style.cssText = `
-                position: fixed !important;
-                top: 0.5rem !important;
-                left: 0.5rem !important;
-                right: 0.5rem !important;
-                bottom: 0.5rem !important;
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            `;
-        } else if (window.innerWidth <= 1200) {
-            // Tablet - margens menores
-            modalDialog.style.cssText = `
-                position: fixed !important;
-                top: 1rem !important;
-                left: 1rem !important;
-                right: 1rem !important;
-                bottom: 1rem !important;
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            `;
-        } else {
-            // Desktop - margens padrão
-            modalDialog.style.cssText = `
-                position: fixed !important;
-                top: 2rem !important;
-                left: 2rem !important;
-                right: 2rem !important;
-                bottom: 2rem !important;
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            `;
-        }
-    }
-}
+// Função ajustarModalResponsivo - REMOVIDA (já definida globalmente)
 
 // Aplicar responsividade no resize da janela
 window.addEventListener('resize', function() {
