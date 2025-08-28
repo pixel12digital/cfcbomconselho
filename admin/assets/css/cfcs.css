@@ -5,9 +5,9 @@
 
 /* Modal principal de CFC - Aumentar largura e melhorar espaçamento */
 #modalCFC .modal-dialog {
-    max-width: 90vw !important;
-    width: 90vw !important;
-    margin: 1rem auto !important;
+    max-width: 98vw !important;
+    width: 98vw !important;
+    margin: 0.5rem auto !important;
     max-height: 85vh !important;
 }
 
@@ -112,29 +112,39 @@
 #modalCFC .col-md-2 {
     flex: 0 0 auto !important;
     width: 16.666667% !important;
+    min-width: 120px !important;
 }
 
 #modalCFC .col-md-4 {
     flex: 0 0 auto !important;
     width: 33.333333% !important;
+    min-width: 200px !important;
 }
 
 #modalCFC .col-md-6 {
     flex: 0 0 auto !important;
     width: 50% !important;
+    min-width: 300px !important;
 }
 
 #modalCFC .col-md-12 {
     flex: 0 0 auto !important;
     width: 100% !important;
+    min-width: 100% !important;
+}
+
+/* Garantir que o container tenha largura suficiente */
+#modalCFC .container-fluid {
+    min-width: 100% !important;
+    overflow-x: hidden !important;
 }
 
 /* Responsividade para telas menores */
 @media (max-width: 1200px) {
     #modalCFC .modal-dialog {
-        max-width: 95vw !important;
-        width: 95vw !important;
-        margin: 0.5rem auto !important;
+        max-width: 99vw !important;
+        width: 99vw !important;
+        margin: 0.25rem auto !important;
         max-height: 90vh !important;
     }
     
@@ -153,9 +163,9 @@
 
 @media (max-width: 768px) {
     #modalCFC .modal-dialog {
-        max-width: 98vw !important;
-        width: 98vw !important;
-        margin: 0.25rem auto !important;
+        max-width: 100vw !important;
+        width: 100vw !important;
+        margin: 0 !important;
         max-height: 95vh !important;
     }
     
