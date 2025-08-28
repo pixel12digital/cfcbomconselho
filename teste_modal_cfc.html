@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Modal CFC - Layout Melhorado</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- CSS específico para CFCs -->
+    <link href="admin/assets/css/cfcs.css" rel="stylesheet">
+    
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding: 20px;
+        }
+        .test-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .test-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <div class="test-header">
+            <h1>🧪 Teste do Modal de CFC</h1>
+            <p>Testando o layout melhorado com espaçamento otimizado</p>
+            <button class="btn btn-primary btn-lg" onclick="abrirModalTeste()">
+                <i class="fas fa-plus me-2"></i>Abrir Modal de CFC
+            </button>
+        </div>
+    </div>
+
+    <!-- Modal Bootstrap para Cadastro/Edição de CFC -->
+    <div class="modal fade" id="modalCFC" tabindex="-1" aria-labelledby="modalCFCLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <form id="formCFC" onsubmit="return false;">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="modalTitle">
+                            <i class="fas fa-building me-2"></i>Novo CFC
+                        </h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="acao" id="acaoCFC" value="criar">
+                        <input type="hidden" name="cfc_id" id="cfc_id" value="">
+                        
+                        <div class="container-fluid">
+                            <!-- Seção 1: Informações Básicas -->
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-2">
+                                        <i class="fas fa-building me-1"></i>Informações Básicas
+                                    </h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-1">
+                                        <label for="nome" class="form-label">Nome do CFC *</label>
+                                        <input type="text" class="form-control" id="nome" name="nome" required 
+                                               placeholder="Nome completo do Centro de Formação de Condutores">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-1">
+                                        <label for="cnpj" class="form-label">CNPJ *</label>
+                                        <input type="text" class="form-control" id="cnpj" name="cnpj" required 
+                                               placeholder="00.000.000/0000-00">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row mb-2">
+                                <div class="col-md-12">
+                                    <div class="mb-1">
+                                        <label for="razao_social" class="form-label">Razão Social</label>
+                                        <input type="text" class="form-control" id="razao_social" name="razao_social" 
+                                               placeholder="Razão social da empresa (opcional)">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Seção 2: Contato -->
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-2">
+                                        <i class="fas fa-phone me-1"></i>Contato
+                                    </h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-1">
+                                        <label for="email" class="form-label">E-mail</label>
+                                        <input type="email" class="form-control" id="email" name="email" 
+                                               placeholder="contato@cfc.com.br">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-1">
+                                        <label for="telefone" class="form-label">Telefone</label>
+                                        <input type="text" class="form-control" id="telefone" name="telefone" 
+                                               placeholder="(00) 00000-0000">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Seção 3: Endereço -->
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-2">
+                                        <i class="fas fa-map-marker-alt me-1"></i>Endereço
+                                    </h6>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="mb-1">
+                                        <label for="cep" class="form-label">CEP</label>
+                                        <input type="text" class="form-control" id="cep" name="cep" 
+                                               placeholder="00000-000">
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="mb-1">
+                                        <label for="endereco" class="form-label">Endereço</label>
+                                        <input type="text" class="form-control" id="endereco" name="endereco" 
+                                               placeholder="Rua, Avenida, número, etc.">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="mb-1">
+                                        <label for="bairro" class="form-label">Bairro</label>
+                                        <input type="text" class="form-control" id="bairro" name="bairro" 
+                                               placeholder="Centro, Jardim, etc.">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="mb-1">
+                                        <label for="cidade" class="form-label">Cidade</label>
+                                        <input type="text" class="form-control" id="cidade" name="cidade" 
+                                               placeholder="Nome da cidade">
+                                    </div>
+                                </div>
+                                <div class="col-md-2">
+                                    <div class="mb-1">
+                                        <label for="uf" class="form-label">UF</label>
+                                        <select class="form-select" id="uf" name="uf">
+                                            <option value="">Selecione...</option>
+                                            <option value="AC">Acre</option>
+                                            <option value="AL">Alagoas</option>
+                                            <option value="AP">Amapá</option>
+                                            <option value="AM">Amazonas</option>
+                                            <option value="BA">Bahia</option>
+                                            <option value="CE">Ceará</option>
+                                            <option value="DF">Distrito Federal</option>
+                                            <option value="ES">Espírito Santo</option>
+                                            <option value="GO">Goiás</option>
+                                            <option value="MA">Maranhão</option>
+                                            <option value="MT">Mato Grosso</option>
+                                            <option value="MS">Mato Grosso do Sul</option>
+                                            <option value="MG">Minas Gerais</option>
+                                            <option value="PA">Pará</option>
+                                            <option value="PB">Paraíba</option>
+                                            <option value="PR">Paraná</option>
+                                            <option value="PE">Pernambuco</option>
+                                            <option value="PI">Piauí</option>
+                                            <option value="RJ">Rio de Janeiro</option>
+                                            <option value="RN">Rio Grande do Norte</option>
+                                            <option value="RS">Rio Grande do Sul</option>
+                                            <option value="RO">Rondônia</option>
+                                            <option value="RR">Roraima</option>
+                                            <option value="SC">Santa Catarina</option>
+                                            <option value="SP">São Paulo</option>
+                                            <option value="SE">Sergipe</option>
+                                            <option value="TO">Tocantins</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Seção 4: Configurações -->
+                            <div class="row mb-2">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-2">
+                                        <i class="fas fa-cog me-1"></i>Configurações
+                                    </h6>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-1">
+                                        <label for="responsavel_id" class="form-label">Responsável</label>
+                                        <select class="form-select" id="responsavel_id" name="responsavel_id">
+                                            <option value="">Selecione um usuário...</option>
+                                            <option value="1">Administrador (admin)</option>
+                                            <option value="2">João Silva (instrutor)</option>
+                                            <option value="3">Maria Santos (instrutor)</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-1">
+                                        <label for="ativo" class="form-label">Status</label>
+                                        <select class="form-select" id="ativo" name="ativo">
+                                            <option value="1">Ativo</option>
+                                            <option value="0">Inativo</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Seção 5: Observações -->
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-2">
+                                        <i class="fas fa-sticky-note me-1"></i>Observações
+                                    </h6>
+                                    <div class="mb-1">
+                                        <label for="observacoes" class="form-label">Observações</label>
+                                        <textarea class="form-control" id="observacoes" name="observacoes" rows="3" 
+                                                  placeholder="Informações adicionais sobre o CFC..."></textarea>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </button>
+                        <button type="submit" class="btn btn-primary" id="btnSalvarCFC">
+                            <i class="fas fa-save me-1"></i>Salvar CFC
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        function abrirModalTeste() {
+            const modal = new bootstrap.Modal(document.getElementById('modalCFC'));
+            modal.show();
+        }
+        
+        // Testar funcionalidade do formulário
+        document.getElementById('formCFC').addEventListener('submit', function(e) {
+            e.preventDefault();
+            alert('✅ Formulário enviado com sucesso!\n\nEste é apenas um teste para verificar o layout do modal.');
+        });
+        
+        console.log('🧪 Página de teste do modal CFC carregada com sucesso!');
+        console.log('📱 Modal configurado com CSS personalizado para melhor espaçamento');
+    </script>
+</body>
+</html>

@@ -205,36 +205,36 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
     <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <form id="formCFC" onsubmit="return false;">
-                <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; border-bottom: none;">
-                    <h5 class="modal-title" id="modalTitle" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">
                         <i class="fas fa-building me-2"></i>Novo CFC
                     </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" style="filter: invert(1);"></button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body" style="overflow-y: auto; padding: 1rem;">
+                <div class="modal-body">
                     <input type="hidden" name="acao" id="acaoCFC" value="criar">
                     <input type="hidden" name="cfc_id" id="cfc_id" value="">
                     
-                    <div class="container-fluid" style="padding: 0;">
+                    <div class="container-fluid">
                         <!-- Seção 1: Informações Básicas -->
                         <div class="row mb-2">
                             <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                                <h6 class="text-primary border-bottom pb-1 mb-2">
                                     <i class="fas fa-building me-1"></i>Informações Básicas
                                 </h6>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-1">
-                                    <label for="nome" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nome do CFC *</label>
+                                    <label for="nome" class="form-label">Nome do CFC *</label>
                                     <input type="text" class="form-control" id="nome" name="nome" required 
-                                           placeholder="Nome completo do Centro de Formação de Condutores" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="Nome completo do Centro de Formação de Condutores">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-1">
-                                    <label for="cnpj" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CNPJ *</label>
+                                    <label for="cnpj" class="form-label">CNPJ *</label>
                                     <input type="text" class="form-control" id="cnpj" name="cnpj" required 
-                                           placeholder="00.000.000/0000-00" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="00.000.000/0000-00">
                                 </div>
                             </div>
                         </div>
@@ -242,9 +242,9 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                         <div class="row mb-2">
                             <div class="col-md-12">
                                 <div class="mb-1">
-                                    <label for="razao_social" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Razão Social</label>
+                                    <label for="razao_social" class="form-label">Razão Social</label>
                                     <input type="text" class="form-control" id="razao_social" name="razao_social" 
-                                           placeholder="Razão social da empresa (opcional)" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="Razão social da empresa (opcional)">
                                 </div>
                             </div>
                         </div>
@@ -252,22 +252,22 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                         <!-- Seção 2: Contato -->
                         <div class="row mb-2">
                             <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                                <h6 class="text-primary border-bottom pb-1 mb-2">
                                     <i class="fas fa-phone me-1"></i>Contato
                                 </h6>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-1">
-                                    <label for="email" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">E-mail</label>
+                                    <label for="email" class="form-label">E-mail</label>
                                     <input type="email" class="form-control" id="email" name="email" 
-                                           placeholder="contato@cfc.com.br" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="contato@cfc.com.br">
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-1">
-                                    <label for="telefone" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Telefone</label>
+                                    <label for="telefone" class="form-label">Telefone</label>
                                     <input type="text" class="form-control" id="telefone" name="telefone" 
-                                           placeholder="(00) 00000-0000" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="(00) 00000-0000">
                                 </div>
                             </div>
                         </div>
@@ -275,42 +275,42 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                         <!-- Seção 3: Endereço -->
                         <div class="row mb-2">
                             <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                                <h6 class="text-primary border-bottom pb-1 mb-2">
                                     <i class="fas fa-map-marker-alt me-1"></i>Endereço
                                 </h6>
                             </div>
                             <div class="col-md-2">
                                 <div class="mb-1">
-                                    <label for="cep" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CEP</label>
+                                    <label for="cep" class="form-label">CEP</label>
                                     <input type="text" class="form-control" id="cep" name="cep" 
-                                           placeholder="00000-000" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="00000-000">
                                 </div>
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-1">
-                                    <label for="endereco" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Endereço</label>
+                                    <label for="endereco" class="form-label">Endereço</label>
                                     <input type="text" class="form-control" id="endereco" name="endereco" 
-                                           placeholder="Rua, Avenida, número, etc." style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="Rua, Avenida, número, etc.">
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="mb-1">
-                                    <label for="bairro" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Bairro</label>
+                                    <label for="bairro" class="form-label">Bairro</label>
                                     <input type="text" class="form-control" id="bairro" name="bairro" 
-                                           placeholder="Centro, Jardim, etc." style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="Centro, Jardim, etc.">
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="mb-1">
-                                    <label for="cidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Cidade</label>
+                                    <label for="cidade" class="form-label">Cidade</label>
                                     <input type="text" class="form-control" id="cidade" name="cidade" 
-                                           placeholder="Nome da cidade" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="Nome da cidade">
                                 </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="mb-1">
-                                    <label for="uf" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">UF</label>
-                                    <select class="form-select" id="uf" name="uf" style="padding: 0.4rem; font-size: 0.85rem;">
+                                    <label for="uf" class="form-label">UF</label>
+                                    <select class="form-select" id="uf" name="uf">
                                         <option value="">Selecione...</option>
                                         <option value="AC">Acre</option>
                                         <option value="AL">Alagoas</option>
@@ -347,14 +347,14 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                         <!-- Seção 4: Configurações -->
                         <div class="row mb-2">
                             <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                                <h6 class="text-primary border-bottom pb-1 mb-2">
                                     <i class="fas fa-cog me-1"></i>Configurações
                                 </h6>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-1">
-                                    <label for="responsavel_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Responsável</label>
-                                    <select class="form-select" id="responsavel_id" name="responsavel_id" style="padding: 0.4rem; font-size: 0.85rem;">
+                                    <label for="responsavel_id" class="form-label">Responsável</label>
+                                    <select class="form-select" id="responsavel_id" name="responsavel_id">
                                         <option value="">Selecione um usuário...</option>
                                         <?php foreach ($usuarios as $usuario): ?>
                                             <?php if ($usuario['tipo'] === 'admin' || $usuario['tipo'] === 'instrutor'): ?>
@@ -369,8 +369,8 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-1">
-                                    <label for="ativo" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status</label>
-                                    <select class="form-select" id="ativo" name="ativo" style="padding: 0.4rem; font-size: 0.85rem;">
+                                    <label for="ativo" class="form-label">Status</label>
+                                    <select class="form-select" id="ativo" name="ativo">
                                         <option value="1">Ativo</option>
                                         <option value="0">Inativo</option>
                                     </select>
@@ -381,23 +381,23 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                         <!-- Seção 5: Observações -->
                         <div class="row">
                             <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                                <h6 class="text-primary border-bottom pb-1 mb-2">
                                     <i class="fas fa-sticky-note me-1"></i>Observações
                                 </h6>
                                 <div class="mb-1">
-                                    <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Observações</label>
-                                    <textarea class="form-control" id="observacoes" name="observacoes" rows="2" 
-                                              placeholder="Informações adicionais sobre o CFC..." style="padding: 0.4rem; font-size: 0.85rem; resize: vertical;"></textarea>
+                                    <label for="observacoes" class="form-label">Observações</label>
+                                    <textarea class="form-control" id="observacoes" name="observacoes" rows="3" 
+                                              placeholder="Informações adicionais sobre o CFC..."></textarea>
                                 </div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding: 0.75rem 1.5rem;">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
                         <i class="fas fa-times me-1"></i>Cancelar
                     </button>
-                    <button type="submit" class="btn btn-primary" id="btnSalvarCFC" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    <button type="submit" class="btn btn-primary" id="btnSalvarCFC">
                         <i class="fas fa-save me-1"></i>Salvar CFC
                     </button>
                 </div>
@@ -428,6 +428,9 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
         </div>
     </div>
 </div>
+
+<!-- CSS específico para CFCs -->
+<link href="assets/css/cfcs.css" rel="stylesheet">
 
 <!-- JavaScript específico para CFCs -->
 <script src="assets/js/cfcs.js"></script>
