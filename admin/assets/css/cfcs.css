@@ -5,9 +5,9 @@
 
 /* Modal principal de CFC - Aumentar largura e melhorar espaçamento */
 #modalCFC .modal-dialog {
-    max-width: 98vw !important;
-    width: 98vw !important;
-    margin: 0.5rem auto !important;
+    max-width: 99.5vw !important;
+    width: 99.5vw !important;
+    margin: 0.25rem auto !important;
     max-height: 85vh !important;
 }
 
@@ -112,39 +112,53 @@
 #modalCFC .col-md-2 {
     flex: 0 0 auto !important;
     width: 16.666667% !important;
-    min-width: 120px !important;
+    min-width: 140px !important;
+    padding-right: 0.5rem !important;
 }
 
 #modalCFC .col-md-4 {
     flex: 0 0 auto !important;
     width: 33.333333% !important;
-    min-width: 200px !important;
+    min-width: 250px !important;
+    padding-right: 0.5rem !important;
 }
 
 #modalCFC .col-md-6 {
     flex: 0 0 auto !important;
     width: 50% !important;
-    min-width: 300px !important;
+    min-width: 350px !important;
+    padding-right: 0.5rem !important;
 }
 
 #modalCFC .col-md-12 {
     flex: 0 0 auto !important;
     width: 100% !important;
     min-width: 100% !important;
+    padding-right: 0 !important;
 }
 
 /* Garantir que o container tenha largura suficiente */
 #modalCFC .container-fluid {
     min-width: 100% !important;
     overflow-x: hidden !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+/* Ajustar padding das linhas para evitar cortes */
+#modalCFC .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
 }
 
 /* Responsividade para telas menores */
 @media (max-width: 1200px) {
     #modalCFC .modal-dialog {
-        max-width: 99vw !important;
-        width: 99vw !important;
-        margin: 0.25rem auto !important;
+        max-width: 99.8vw !important;
+        width: 99.8vw !important;
+        margin: 0.1rem auto !important;
         max-height: 90vh !important;
     }
     
@@ -234,6 +248,19 @@
     display: flex !important;
     align-items: center !important;
     justify-content: center !important;
+}
+
+/* Forçar largura máxima para evitar cortes */
+#modalCFC .modal-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+/* Garantir que o body não tenha overflow horizontal */
+#modalCFC .modal-body {
+    overflow-x: hidden !important;
+    width: 100% !important;
 }
 
 /* Animações suaves */
