@@ -94,6 +94,9 @@ function limparCamposFormulario() {
     
     // Garantir que os campos de data estejam funcionando corretamente
     setTimeout(() => {
+        const campoDataNascimento = document.getElementById('data_nascimento');
+        const campoValidadeCredencial = document.getElementById('validade_credencial');
+        
         if (campoDataNascimento) {
             campoDataNascimento.focus();
             campoDataNascimento.blur();

@@ -368,13 +368,18 @@ try {
                     
                     error_log("Instrutor ID $id excluído com sucesso");
                     
-                    // Excluir usuário
-                    $result = $db->delete('usuarios', 'id = ?', [$existingInstrutor['usuario_id']]);
+                    // SOFT DELETE: Marcar usuário como inativo em vez de excluí-lo
+                    $result = $db->update('usuarios', [
+                        'ativo' => false,
+                        'atualizado_em' => date('Y-m-d H:i:s')
+                    ], 'id = ?', [$existingInstrutor['usuario_id']]);
+                    
                     if (!$result) {
-                        throw new Exception('Erro ao excluir usuário');
+                        error_log("AVISO: Não foi possível marcar usuário como inativo");
+                        // Não falhar se não conseguir marcar como inativo
                     }
                     
-                    error_log("Usuário ID {$existingInstrutor['usuario_id']} excluído com sucesso");
+                    error_log("Usuário ID {$existingInstrutor['usuario_id']} marcado como INATIVO (soft delete)");
                     
                     $db->commit();
                     echo json_encode(['success' => true, 'message' => 'Instrutor excluído com sucesso']);
