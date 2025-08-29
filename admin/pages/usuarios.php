@@ -194,12 +194,13 @@ if ($action === 'list') {
 // Verificar se as funções estão sendo definidas
 console.log('Iniciando carregamento da pagina de usuarios...');
 
-// Garantir que o modal esteja fechado imediatamente
+// Verificar se o modal existe
 (function() {
     const modal = document.getElementById('userModal');
     if (modal) {
-        modal.classList.remove('show');
-        console.log('Modal fechado imediatamente ao carregar');
+        console.log('Modal de usuário encontrado e pronto para uso');
+    } else {
+        console.warn('Modal de usuário não encontrado');
     }
 })();
 
@@ -864,11 +865,12 @@ window.testModalEvents = testModalEvents;
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM carregado, verificando funcoes...');
     
-    // Garantir que o modal esteja fechado ao carregar a página
+    // Verificar se o modal está disponível
     const modal = document.getElementById('userModal');
     if (modal) {
-        modal.classList.remove('show');
-        console.log('Modal fechado ao carregar a pagina');
+        console.log('Modal de usuário disponível e pronto para uso');
+    } else {
+        console.warn('Modal de usuário não encontrado');
     }
     
     // Verificar se as funções estão definidas

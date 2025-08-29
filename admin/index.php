@@ -961,9 +961,17 @@ define('ADMIN_ROUTING', true);
     <script src="assets/js/components.js"></script>
     
     <!-- JavaScript das Funcionalidades Específicas -->
-    <script src="assets/js/cfcs.js"></script>
-    <script src="assets/js/instrutores.js"></script>
-    <script src="assets/js/instrutores-page.js"></script>
-    <script src="assets/js/alunos.js"></script>
+    <?php if ($page === 'cfcs'): ?>
+        <script src="assets/js/cfcs.js"></script>
+    <?php endif; ?>
+    
+    <?php if ($page === 'instrutores'): ?>
+        <script src="assets/js/instrutores.js"></script>
+        <script src="assets/js/instrutores-page.js"></script>
+    <?php endif; ?>
+    
+    <?php if ($page === 'alunos'): ?>
+        <script src="assets/js/alunos.js"></script>
+    <?php endif; ?>
 </body>
 </html>
