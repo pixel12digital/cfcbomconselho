@@ -451,22 +451,22 @@ function isValidDate(dateString) {
     return true;
 }
 
-// Função para configurar campo de data híbrido (texto + calendário)
+// Função para configurar campo de data com máscara e calendário discreto
 function configurarCampoDataHibrido(campoId, campo) {
     // Garantir que seja do tipo texto
     campo.type = 'text';
     
-    // Criar wrapper para o campo
+    // Criar wrapper para o campo com posicionamento relativo
     const wrapper = document.createElement('div');
     wrapper.style.position = 'relative';
-    wrapper.style.display = 'flex';
-    wrapper.style.alignItems = 'center';
+    wrapper.style.display = 'inline-block';
+    wrapper.style.width = '100%';
     
     // Mover o campo para dentro do wrapper
     campo.parentNode.insertBefore(wrapper, campo);
     wrapper.appendChild(campo);
     
-    // Criar botão do calendário
+    // Criar botão do calendário discreto
     const btnCalendario = document.createElement('button');
     btnCalendario.type = 'button';
     btnCalendario.innerHTML = '📅';
@@ -475,33 +475,38 @@ function configurarCampoDataHibrido(campoId, campo) {
         right: 8px;
         top: 50%;
         transform: translateY(-50%);
-        background: none;
+        background: transparent;
         border: none;
-        font-size: 16px;
+        font-size: 14px;
         cursor: pointer;
-        padding: 4px;
-        border-radius: 4px;
+        padding: 2px 4px;
+        border-radius: 3px;
         color: #6c757d;
-        z-index: 10;
+        z-index: 5;
+        opacity: 0.7;
+        transition: all 0.2s ease;
     `;
     btnCalendario.title = 'Abrir calendário';
     
     // Adicionar botão ao wrapper
     wrapper.appendChild(btnCalendario);
     
-    // Aplicar máscara de data brasileira
+    // Aplicar máscara de data brasileira em tempo real
     campo.addEventListener('input', function(e) {
         let value = e.target.value.replace(/\D/g, '');
         
-        // Aplicar máscara dd/mm/aaaa
+        // Limitar a 8 dígitos
+        if (value.length > 8) {
+            value = value.substring(0, 8);
+        }
+        
+        // Aplicar máscara dd/mm/aaaa automaticamente
         if (value.length <= 2) {
             value = value;
         } else if (value.length <= 4) {
             value = value.substring(0, 2) + '/' + value.substring(2);
         } else if (value.length <= 8) {
             value = value.substring(0, 2) + '/' + value.substring(2, 4) + '/' + value.substring(4);
-        } else {
-            value = value.substring(0, 2) + '/' + value.substring(2, 4) + '/' + value.substring(4, 8);
         }
         
         e.target.value = value;
@@ -547,7 +552,7 @@ function configurarCampoDataHibrido(campoId, campo) {
         }
     });
     
-    // Funcionalidade do calendário
+    // Funcionalidade do calendário discreto
     btnCalendario.addEventListener('click', function() {
         // Criar campo date temporário para o calendário
         const campoDateTemp = document.createElement('input');
@@ -608,13 +613,29 @@ function configurarCampoDataHibrido(campoId, campo) {
     
     // Hover effects para o botão do calendário
     btnCalendario.addEventListener('mouseenter', function() {
+        this.style.opacity = '1';
         this.style.backgroundColor = '#f8f9fa';
         this.style.color = '#495057';
     });
     
     btnCalendario.addEventListener('mouseleave', function() {
+        this.style.opacity = '0.7';
         this.style.backgroundColor = 'transparent';
         this.style.color = '#6c757d';
+    });
+    
+    // Mostrar botão quando o campo receber foco
+    campo.addEventListener('focus', function() {
+        btnCalendario.style.opacity = '1';
+    });
+    
+    // Ocultar botão quando o campo perder foco (se não estiver sendo usado)
+    campo.addEventListener('blur', function() {
+        setTimeout(() => {
+            if (!btnCalendario.matches(':hover')) {
+                btnCalendario.style.opacity = '0.7';
+            }
+        }, 200);
     });
 }
 
