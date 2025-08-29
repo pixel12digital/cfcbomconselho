@@ -271,6 +271,7 @@ function salvarInstrutor() {
         cfc_id: formData.get('cfc_id'),
         credencial: formData.get('credencial').trim(),
         categoria_habilitacao: categoriasSelecionadas.join(','),
+        categorias: categoriasSelecionadas, // ✅ Campo para categorias_json
         telefone: formData.get('telefone') || '',
         endereco: formData.get('endereco') || '',
         cidade: formData.get('cidade') || '',
@@ -279,7 +280,7 @@ function salvarInstrutor() {
         tipo_carga: formData.get('tipo_carga') || '',
         validade_credencial: validadeCredencial || '',
         observacoes: formData.get('observacoes') || '',
-        dias_semana: formData.getAll('dias_semana[]').join(','),
+        dias_semana: formData.getAll('dias_semana[]'), // ✅ Array para dias_semana JSON
         horario_inicio: formData.get('horario_inicio') || '',
         horario_fim: formData.get('horario_fim') || ''
     };

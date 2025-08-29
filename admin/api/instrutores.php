@@ -118,9 +118,9 @@ try {
             
             // Se não tiver usuario_id, precisa criar usuário
             if (empty($data['usuario_id'])) {
-                if (empty($data['nome']) || empty($data['email']) || empty($data['senha'])) {
+                if (empty($data['nome']) || empty($data['email']) || empty($data['senha']) || empty($data['cpf'])) {
                     http_response_code(400);
-                    echo json_encode(['error' => 'Para novo usuário: Nome, E-mail e Senha são obrigatórios']);
+                    echo json_encode(['error' => 'Para novo usuário: Nome, E-mail, CPF e Senha são obrigatórios']);
                     exit;
                 }
             }
@@ -140,25 +140,27 @@ try {
                 // Verificar se é usuário novo ou existente
                 if (empty($data['usuario_id'])) {
                     // Criar novo usuário
-                    if (empty($data['nome']) || empty($data['email']) || empty($data['senha'])) {
-                        throw new Exception('Para novo usuário: Nome, E-mail e Senha são obrigatórios');
-                    }
+                                    if (empty($data['nome']) || empty($data['email']) || empty($data['senha']) || empty($data['cpf'])) {
+                    throw new Exception('Para novo usuário: Nome, E-mail, CPF e Senha são obrigatórios');
+                }
                     
-                    // Verificar se email já existe
-                    $existingUser = $db->fetch("SELECT id FROM usuarios WHERE email = ?", [$data['email']]);
+                    // Verificar se email ou CPF já existe
+                    $existingUser = $db->fetch("SELECT id FROM usuarios WHERE email = ? OR cpf = ?", [$data['email'], $data['cpf']]);
                     if ($existingUser) {
-                        throw new Exception('E-mail já cadastrado');
+                        throw new Exception('E-mail ou CPF já cadastrado');
                     }
                     
                     // Hash da senha
                     $senha_hash = password_hash($data['senha'], PASSWORD_DEFAULT);
                     
-                    // Criar usuário
+                    // Criar usuário com todos os campos
                     $usuario_id = $db->insert('usuarios', [
                         'nome' => $data['nome'],
                         'email' => $data['email'],
                         'senha' => $senha_hash,
                         'tipo' => 'instrutor',
+                        'cpf' => $data['cpf'] ?? '',
+                        'telefone' => $data['telefone'] ?? '',
                         'ativo' => isset($data['ativo']) ? (bool)$data['ativo'] : true,
                         'criado_em' => date('Y-m-d H:i:s')
                     ]);
@@ -177,24 +179,31 @@ try {
                     throw new Exception('Erro ao criar usuário');
                 }
                 
-                // Criar instrutor com todos os campos
+                // Criar instrutor com TODOS os campos
                 $instrutorData = [
+                    'nome' => $data['nome'] ?? '',
+                    'cpf' => $data['cpf'] ?? '',
+                    'cnh' => $data['cnh'] ?? '',
+                    'data_nascimento' => $data['data_nascimento'] ?? '',
+                    'email' => $data['email'] ?? '',
+                    'telefone' => $data['telefone'] ?? '',
+                    'endereco' => $data['endereco'] ?? '',
+                    'cidade' => $data['cidade'] ?? '',
+                    'uf' => $data['uf'] ?? '',
                     'usuario_id' => $usuario_id,
                     'cfc_id' => $data['cfc_id'],
                     'credencial' => $data['credencial'] ?? '',
                     'categoria_habilitacao' => $data['categoria_habilitacao'] ?? '',
+                    'categorias_json' => json_encode($data['categorias'] ?? []),
+                    'tipo_carga' => $data['tipo_carga'] ?? '',
+                    'validade_credencial' => $data['validade_credencial'] ?? '',
+                    'observacoes' => $data['observacoes'] ?? '',
+                    'dias_semana' => json_encode($data['dias_semana'] ?? []),
+                    'horario_inicio' => $data['horario_inicio'] ?? '',
+                    'horario_fim' => $data['horario_fim'] ?? '',
                     'ativo' => isset($data['ativo']) ? (bool)$data['ativo'] : true,
                     'criado_em' => date('Y-m-d H:i:s')
                 ];
-                
-                // Adicionar campos opcionais se existirem
-                if (!empty($data['telefone'])) $instrutorData['telefone'] = $data['telefone'];
-                if (!empty($data['endereco'])) $instrutorData['endereco'] = $data['endereco'];
-                if (!empty($data['cidade'])) $instrutorData['cidade'] = $data['cidade'];
-                if (!empty($data['uf'])) $instrutorData['uf'] = $data['uf'];
-                if (!empty($data['cpf'])) $instrutorData['cpf'] = $data['cpf'];
-                if (!empty($data['cnh'])) $instrutorData['cnh'] = $data['cnh'];
-                if (!empty($data['data_nascimento'])) $instrutorData['data_nascimento'] = $data['data_nascimento'];
                 
                 $instrutor_id = $db->insert('instrutores', $instrutorData);
                 
@@ -257,9 +266,11 @@ try {
             try {
                 // Atualizar dados do usuário
                 $updateUserData = [];
-                if (!empty($data['nome'])) $updateUserData['nome'] = $data['nome'];
-                if (!empty($data['email'])) $updateUserData['email'] = $data['email'];
-                if (!empty($data['senha'])) {
+                if (isset($data['nome'])) $updateUserData['nome'] = $data['nome'];
+                if (isset($data['email'])) $updateUserData['email'] = $data['email'];
+                if (isset($data['cpf'])) $updateUserData['cpf'] = $data['cpf'];
+                if (isset($data['telefone'])) $updateUserData['telefone'] = $data['telefone'];
+                if (isset($data['senha']) && !empty($data['senha'])) {
                     $updateUserData['senha'] = password_hash($data['senha'], PASSWORD_DEFAULT);
                 }
                 if (isset($data['ativo'])) $updateUserData['ativo'] = (bool)$data['ativo'];
@@ -272,22 +283,31 @@ try {
                     }
                 }
                 
-                // Atualizar dados do instrutor
+                // Atualizar dados do instrutor com TODOS os campos
                 $updateInstrutorData = [];
-                if (!empty($data['cfc_id'])) $updateInstrutorData['cfc_id'] = $data['cfc_id'];
-                if (!empty($data['credencial'])) $updateInstrutorData['credencial'] = $data['credencial'];
-                if (!empty($data['categoria_habilitacao'])) $updateInstrutorData['categoria_habilitacao'] = $data['categoria_habilitacao'];
-                if (!empty($data['telefone'])) $updateInstrutorData['telefone'] = $data['telefone'];
-                if (!empty($data['endereco'])) $updateInstrutorData['endereco'] = $data['endereco'];
-                if (!empty($data['cidade'])) $updateInstrutorData['cidade'] = $data['cidade'];
-                if (!empty($data['uf'])) $updateInstrutorData['uf'] = $data['uf'];
-                if (!empty($data['cpf'])) $updateInstrutorData['cpf'] = $data['cpf'];
-                if (!empty($data['cnh'])) $updateInstrutorData['cnh'] = $data['cnh'];
-                if (!empty($data['data_nascimento'])) $updateInstrutorData['data_nascimento'] = $data['data_nascimento'];
+                if (isset($data['nome'])) $updateInstrutorData['nome'] = $data['nome'];
+                if (isset($data['cpf'])) $updateInstrutorData['cpf'] = $data['cpf'];
+                if (isset($data['cnh'])) $updateInstrutorData['cnh'] = $data['cnh'];
+                if (isset($data['data_nascimento'])) $updateInstrutorData['data_nascimento'] = $data['data_nascimento'];
+                if (isset($data['email'])) $updateInstrutorData['email'] = $data['email'];
+                if (isset($data['telefone'])) $updateInstrutorData['telefone'] = $data['telefone'];
+                if (isset($data['endereco'])) $updateInstrutorData['endereco'] = $data['endereco'];
+                if (isset($data['cidade'])) $updateInstrutorData['cidade'] = $data['cidade'];
+                if (isset($data['uf'])) $updateInstrutorData['uf'] = $data['uf'];
+                if (isset($data['cfc_id'])) $updateInstrutorData['cfc_id'] = $data['cfc_id'];
+                if (isset($data['credencial'])) $updateInstrutorData['credencial'] = $data['credencial'];
+                if (isset($data['categoria_habilitacao'])) $updateInstrutorData['categoria_habilitacao'] = $data['categoria_habilitacao'];
+                if (isset($data['categorias'])) $updateInstrutorData['categorias_json'] = json_encode($data['categorias']);
+                if (isset($data['tipo_carga'])) $updateInstrutorData['tipo_carga'] = $data['tipo_carga'];
+                if (isset($data['validade_credencial'])) $updateInstrutorData['validade_credencial'] = $data['validade_credencial'];
+                if (isset($data['observacoes'])) $updateInstrutorData['observacoes'] = $data['observacoes'];
+                if (isset($data['dias_semana'])) $updateInstrutorData['dias_semana'] = json_encode($data['dias_semana']);
+                if (isset($data['horario_inicio'])) $updateInstrutorData['horario_inicio'] = $data['horario_inicio'];
+                if (isset($data['horario_fim'])) $updateInstrutorData['horario_fim'] = $data['horario_fim'];
                 if (isset($data['ativo'])) $updateInstrutorData['ativo'] = (bool)$data['ativo'];
                 
                 if (!empty($updateInstrutorData)) {
-                    $updateInstrutorData['atualizado_em'] = date('Y-m-d H:i:s');
+                    $updateInstrutorData['updated_at'] = date('Y-m-d H:i:s');
                     $result = $db->update('instrutores', $updateInstrutorData, 'id = ?', [$id]);
                     if (!$result) {
                         throw new Exception('Erro ao atualizar instrutor');
