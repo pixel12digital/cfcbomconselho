@@ -190,13 +190,9 @@ $pageTitle = 'Gestão de Instrutores';
                              <div class="col-md-4">
                                  <div class="mb-1">
                                      <label for="data_nascimento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Data Nascimento *</label>
-                                     <div style="display: flex; gap: 8px; align-items: center;">
-                                         <input type="text" class="form-control" id="data_nascimento_text" placeholder="dd/mm/aaaa" 
-                                                style="padding: 0.4rem; font-size: 0.85rem; flex: 1;">
-                                         <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required 
-                                                style="padding: 0.4rem; font-size: 0.85rem; flex: 1;">
-                                     </div>
-                                     <small class="text-muted" style="font-size: 0.75rem;">💡 Digite dd/mm/aaaa OU use o calendário</small>
+                                     <input type="text" class="form-control" id="data_nascimento" name="data_nascimento" required 
+                                            placeholder="dd/mm/aaaa" style="padding: 0.4rem; font-size: 0.85rem;">
+                                     <small class="text-muted" style="font-size: 0.75rem;">💡 Digite dd/mm/aaaa OU clique no ícone do calendário</small>
                                  </div>
                              </div>
                              <div class="col-md-4">

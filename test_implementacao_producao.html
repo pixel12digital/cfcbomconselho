@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste Implementação Produção - Solução Híbrida</title>
+    <title>Teste Implementação Produção - Solução Híbrida SEM Duplicação</title>
     <style>
         body { font-family: Arial, sans-serif; margin: 20px; background-color: #f5f5f5; }
         .container { max-width: 1200px; margin: 0 auto; }
@@ -46,23 +46,45 @@
         .feature-list li:before { content: "✅ "; margin-right: 10px; }
         .feature-list li.warning:before { content: "⚠️ "; }
         .feature-list li.error:before { content: "❌ "; }
+        
+        /* Campo de data híbrido */
+        .campo-data-hibrido { position: relative; display: flex; align-items: center; }
+        .btn-calendario { 
+            position: absolute; 
+            right: 8px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            background: none; 
+            border: none; 
+            font-size: 16px; 
+            cursor: pointer; 
+            padding: 4px; 
+            border-radius: 4px; 
+            color: #6c757d; 
+            z-index: 10; 
+        }
+        .btn-calendario:hover { 
+            background-color: #f8f9fa; 
+            color: #495057; 
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
-            <h1>🧪 Teste Implementação Produção - Solução Híbrida</h1>
-            <p>Verificando se a solução híbrida para campos de data está funcionando no sistema real</p>
+            <h1>🧪 Teste Implementação Produção - Solução Híbrida SEM Duplicação</h1>
+            <p>Verificando a nova solução híbrida onde um único campo permite digitação E calendário</p>
         </div>
         
         <div class="test-section">
             <h2>🔍 Status da Implementação</h2>
-            <p>Verificando se todos os componentes da solução híbrida estão funcionando:</p>
+            <p>Verificando se a nova solução híbrida está funcionando:</p>
             <ul class="feature-list">
-                <li><strong>HTML atualizado</strong> - Campos de texto auxiliares adicionados</li>
-                <li><strong>JavaScript sincronização</strong> - Funções de sincronização implementadas</li>
-                <li><strong>Components.js corrigido</strong> - Máscaras não aplicadas em campos date</li>
+                <li><strong>HTML limpo</strong> - Apenas um campo por data (sem duplicação)</li>
+                <li><strong>Campo híbrido</strong> - Permite digitação manual + calendário</li>
+                <li><strong>Máscara automática</strong> - Formato dd/mm/aaaa aplicado automaticamente</li>
                 <li><strong>Validação em tempo real</strong> - Sistema de validação funcionando</li>
+                <li><strong>Botão calendário</strong> - Ícone 📅 para abrir o calendário nativo</li>
             </ul>
         </div>
         
@@ -89,24 +111,38 @@
                 <li><strong>Abrir o modal</strong> de instrutor</li>
                 <li><strong>Campo Data de Nascimento:</strong>
                     <ul>
-                        <li>Digite no campo de texto: <code>15</code> → <code>15/</code> → <code>15/03</code> → <code>15/03/1990</code></li>
-                        <li>Observe se o campo date é preenchido automaticamente</li>
-                        <li>Verifique se NUNCA "zera" o que você digitou</li>
+                        <li><strong>Digitação manual:</strong> Digite <code>15</code> → <code>15/</code> → <code>15/03</code> → <code>15/03/1990</code></li>
+                        <li><strong>Calendário:</strong> Clique no ícone 📅 para abrir o calendário</li>
+                        <li><strong>Verificar:</strong> NUNCA "zera" o que você digitou</li>
                     </ul>
                 </li>
                 <li><strong>Campo Validade da Credencial:</strong>
                     <ul>
-                        <li>Digite no campo de texto: <code>15</code> → <code>15/</code> → <code>15/12</code> → <code>15/12/2025</code></li>
-                        <li>Observe a sincronização automática</li>
+                        <li><strong>Digitação manual:</strong> Digite <code>15</code> → <code>15/</code> → <code>15/12</code> → <code>15/12/2025</code></li>
+                        <li><strong>Calendário:</strong> Clique no ícone 📅 para abrir o calendário</li>
                     </ul>
                 </li>
-                <li><strong>Teste reverso:</strong>
+                <li><strong>Funcionalidades:</strong>
                     <ul>
-                        <li>Use o calendário no campo date</li>
-                        <li>Observe se o campo de texto é atualizado</li>
+                        <li>✅ <strong>Máscara automática</strong> enquanto digita</li>
+                        <li>✅ <strong>Validação em tempo real</strong> para datas válidas</li>
+                        <li>✅ <strong>Calendário nativo</strong> funcionando perfeitamente</li>
+                        <li>✅ <strong>Sem duplicação</strong> de campos</li>
                     </ul>
                 </li>
             </ol>
+        </div>
+        
+        <div class="test-section">
+            <h2>🎯 Como Funciona a Nova Solução</h2>
+            <p><strong>Campo Único Híbrido:</strong></p>
+            <ul>
+                <li><strong>Digitação:</strong> Digite normalmente no formato dd/mm/aaaa</li>
+                <li><strong>Máscara:</strong> Aplicada automaticamente enquanto você digita</li>
+                <li><strong>Calendário:</strong> Clique no ícone 📅 para abrir o calendário nativo</li>
+                <li><strong>Validação:</strong> Verifica se a data é válida quando você termina de digitar</li>
+                <li><strong>Conversão:</strong> Converte automaticamente para formato ISO ao salvar</li>
+            </ul>
         </div>
     </div>
 
@@ -114,7 +150,7 @@
     <div id="modalInstrutor" class="modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3 id="modalTitle">Novo Instrutor - Solução Híbrida</h3>
+                <h3 id="modalTitle">Novo Instrutor - Solução Híbrida SEM Duplicação</h3>
                 <span class="close" onclick="fecharModalInstrutor()">&times;</span>
             </div>
             
@@ -142,21 +178,21 @@
                         <div class="col-6">
                             <div class="form-group">
                                 <label for="data_nascimento" class="form-label">Data de Nascimento *</label>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <input type="text" class="form-control" id="data_nascimento_text" placeholder="dd/mm/aaaa" style="flex: 1;">
-                                    <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required style="flex: 1;">
+                                <div class="campo-data-hibrido">
+                                    <input type="text" class="form-control" id="data_nascimento" name="data_nascimento" placeholder="dd/mm/aaaa" required>
+                                    <button type="button" class="btn-calendario" onclick="abrirCalendario('data_nascimento')" title="Abrir calendário">📅</button>
                                 </div>
-                                <small class="text-muted">💡 Digite no formato dd/mm/aaaa OU use o calendário</small>
+                                <small class="text-muted">💡 Digite dd/mm/aaaa OU clique no ícone do calendário</small>
                             </div>
                         </div>
                         <div class="col-6">
                             <div class="form-group">
                                 <label for="validade_credencial" class="form-label">Validade da Credencial</label>
-                                <div style="display: flex; gap: 10px; align-items: center;">
-                                    <input type="text" class="form-control" id="validade_credencial_text" placeholder="dd/mm/aaaa" style="flex: 1;">
-                                    <input type="date" class="form-control" id="validade_credencial" name="validade_credencial" style="flex: 1;">
+                                <div class="campo-data-hibrido">
+                                    <input type="text" class="form-control" id="validade_credencial" name="validade_credencial" placeholder="dd/mm/aaaa">
+                                    <button type="button" class="btn-calendario" onclick="abrirCalendario('validade_credencial')" title="Abrir calendário">📅</button>
                                 </div>
-                                <small class="text-muted">💡 Digite no formato dd/mm/aaaa OU use o calendário</small>
+                                <small class="text-muted">💡 Digite dd/mm/aaaa OU clique no ícone do calendário</small>
                             </div>
                         </div>
                     </div>
@@ -277,93 +313,27 @@
             return true;
         }
 
-        // Função para configurar campos de data
+        // Função para configurar campos de data híbridos
         function configurarCamposData() {
             const camposData = ['data_nascimento', 'validade_credencial'];
             
             camposData.forEach(campoId => {
                 const campo = document.getElementById(campoId);
-                const campoTexto = document.getElementById(campoId + '_text');
                 
                 if (campo) {
-                    // Garantir que seja do tipo date
-                    campo.type = 'date';
-                    
-                    // Remover valores inválidos
-                    if (campo.value && !isValidDate(campo.value)) {
-                        console.warn(`Valor inválido removido do campo ${campoId}: ${campo.value}`);
-                        campo.value = '';
-                        adicionarLog(`Valor inválido removido do campo ${campoId}: ${campo.value}`, 'warning');
-                    }
-                    
-                    // Adicionar event listener para validar formato
-                    campo.addEventListener('change', function() {
-                        if (this.value && !isValidDate(this.value)) {
-                            console.warn(`Data inválida no campo ${campoId}: ${this.value}`);
-                            this.value = '';
-                            adicionarLog(`Data inválida removida do campo ${campoId}: ${this.value}`, 'error');
-                        } else if (this.value) {
-                            // Validações específicas por campo
-                            if (campoId === 'data_nascimento') {
-                                const data = new Date(this.value);
-                                if (data > new Date()) {
-                                    console.warn('Data de nascimento não pode ser no futuro');
-                                    this.value = '';
-                                    adicionarLog('Data de nascimento não pode ser no futuro', 'error');
-                                    return;
-                                }
-                            }
-                            
-                            if (campoId === 'validade_credencial') {
-                                const data = new Date(this.value);
-                                if (data < new Date()) {
-                                    console.warn('Validade da credencial deve ser no futuro');
-                                    this.value = '';
-                                    adicionarLog('Validade da credencial deve ser no futuro', 'error');
-                                    return;
-                                }
-                            }
-                            
-                            console.log(`✅ Data válida definida no campo ${campoId}: ${this.value}`);
-                            adicionarLog(`Data válida definida no campo ${campoId}: ${this.value}`, 'success');
-                            
-                            // Sincronizar campo de texto
-                            sincronizarCampoTexto(campoId, this.value);
-                        }
-                    });
-                    
-                    // Adicionar event listener para input
-                    campo.addEventListener('input', function() {
-                        // Permitir apenas entrada de data válida
-                        if (this.value && this.value.length > 10) {
-                            this.value = this.value.substring(0, 10);
-                        }
-                        
-                        // Log para debug
-                        if (this.value) {
-                            console.log(`✏️ Input detectado no campo ${campoId}: "${this.value}"`);
-                            adicionarLog(`Input detectado no campo ${campoId}: "${this.value}"`);
-                        }
-                    });
-                    
-                    // Adicionar event listener para focus
-                    campo.addEventListener('focus', function() {
-                        console.log(`🎯 Campo ${campoId} recebeu foco`);
-                        adicionarLog(`Campo ${campoId} recebeu foco`);
-                    });
-                }
-                
-                // Configurar campo de texto auxiliar
-                if (campoTexto) {
-                    configurarCampoTexto(campoId, campoTexto);
+                    // Configurar campo híbrido (texto + calendário)
+                    configurarCampoDataHibrido(campoId, campo);
                 }
             });
         }
         
-        // Função para configurar campo de texto auxiliar
-        function configurarCampoTexto(campoId, campoTexto) {
+        // Função para configurar campo de data híbrido (texto + calendário)
+        function configurarCampoDataHibrido(campoId, campo) {
+            // Garantir que seja do tipo texto
+            campo.type = 'text';
+            
             // Aplicar máscara de data brasileira
-            campoTexto.addEventListener('input', function(e) {
+            campo.addEventListener('input', function(e) {
                 let value = e.target.value.replace(/\D/g, '');
                 
                 // Aplicar máscara dd/mm/aaaa
@@ -380,27 +350,45 @@
                 e.target.value = value;
             });
             
-            // Sincronizar com campo date quando perder foco
-            campoTexto.addEventListener('blur', function() {
+            // Validar data quando perder foco
+            campo.addEventListener('blur', function() {
                 const valorTexto = this.value.trim();
                 if (valorTexto) {
-                    const dataConvertida = converterDataBrasileiraParaISO(valorTexto);
-                    if (dataConvertida) {
-                        const campoDate = document.getElementById(campoId);
-                        if (campoDate) {
-                            campoDate.value = dataConvertida;
-                            campoDate.dispatchEvent(new Event('change'));
-                            adicionarLog(`Data convertida e sincronizada: ${valorTexto} → ${dataConvertida}`, 'success');
-                        }
-                    } else {
+                    if (!converterDataBrasileiraParaISO(valorTexto)) {
+                        console.warn(`❌ Formato de data inválido: ${valorTexto}. Use dd/mm/aaaa`);
                         adicionarLog(`Formato de data inválido: ${valorTexto}. Use dd/mm/aaaa`, 'error');
                         this.value = '';
+                        return;
                     }
+                    
+                    // Validações específicas por campo
+                    if (campoId === 'data_nascimento') {
+                        const data = converterDataBrasileiraParaISO(valorTexto);
+                        if (data && new Date(data) > new Date()) {
+                            console.warn('Data de nascimento não pode ser no futuro');
+                            adicionarLog('Data de nascimento não pode ser no futuro', 'error');
+                            this.value = '';
+                            return;
+                        }
+                    }
+                    
+                    if (campoId === 'validade_credencial') {
+                        const data = converterDataBrasileiraParaISO(valorTexto);
+                        if (data && new Date(data) < new Date()) {
+                            console.warn('Validade da credencial deve ser no futuro');
+                            adicionarLog('Validade da credencial deve ser no futuro', 'error');
+                            this.value = '';
+                            return;
+                        }
+                    }
+                    
+                    console.log(`✅ Data válida definida no campo ${campoId}: ${valorTexto}`);
+                    adicionarLog(`Data válida definida no campo ${campoId}: ${valorTexto}`, 'success');
                 }
             });
             
             // Permitir tecla Enter para confirmar
-            campoTexto.addEventListener('keypress', function(e) {
+            campo.addEventListener('keypress', function(e) {
                 if (e.key === 'Enter') {
                     this.blur();
                 }
@@ -433,17 +421,68 @@
             // Retornar no formato ISO
             return data.toISOString().split('T')[0];
         }
-        
-        // Função para sincronizar campo de texto com campo date
-        function sincronizarCampoTexto(campoId, valorISO) {
-            const campoTexto = document.getElementById(campoId + '_text');
-            if (campoTexto && valorISO) {
-                const data = new Date(valorISO);
-                const dia = String(data.getDate()).padStart(2, '0');
-                const mes = String(data.getMonth() + 1).padStart(2, '0');
-                const ano = data.getFullYear();
-                campoTexto.value = `${dia}/${mes}/${ano}`;
+
+        // Função para abrir calendário
+        function abrirCalendario(campoId) {
+            const campo = document.getElementById(campoId);
+            if (!campo) return;
+            
+            // Criar campo date temporário para o calendário
+            const campoDateTemp = document.createElement('input');
+            campoDateTemp.type = 'date';
+            campoDateTemp.style.cssText = `
+                position: absolute;
+                left: -9999px;
+                opacity: 0;
+            `;
+            
+            // Definir valor atual se existir
+            const valorAtual = campo.value.trim();
+            if (valorAtual) {
+                const dataConvertida = converterDataBrasileiraParaISO(valorAtual);
+                if (dataConvertida) {
+                    campoDateTemp.value = dataConvertida;
+                }
             }
+            
+            // Adicionar ao DOM temporariamente
+            document.body.appendChild(campoDateTemp);
+            
+            // Focar no campo date para abrir o calendário
+            campoDateTemp.focus();
+            campoDateTemp.click();
+            
+            // Listener para quando uma data for selecionada
+            campoDateTemp.addEventListener('change', function() {
+                if (this.value) {
+                    // Converter de volta para formato brasileiro
+                    const data = new Date(this.value);
+                    const dia = String(data.getDate()).padStart(2, '0');
+                    const mes = String(data.getMonth() + 1).padStart(2, '0');
+                    const ano = data.getFullYear();
+                    const dataBrasileira = `${dia}/${mes}/${ano}`;
+                    
+                    // Atualizar o campo de texto
+                    campo.value = dataBrasileira;
+                    campo.dispatchEvent(new Event('input'));
+                    campo.dispatchEvent(new Event('blur'));
+                    
+                    console.log(`✅ Data selecionada no calendário: ${dataBrasileira}`);
+                    adicionarLog(`Data selecionada no calendário: ${dataBrasileira}`, 'success');
+                }
+                
+                // Remover campo temporário
+                document.body.removeChild(campoDateTemp);
+            });
+            
+            // Listener para quando o campo perder foco sem seleção
+            campoDateTemp.addEventListener('blur', function() {
+                setTimeout(() => {
+                    if (document.body.contains(campoDateTemp)) {
+                        document.body.removeChild(campoDateTemp);
+                    }
+                }, 100);
+            });
         }
 
         // Função para limpar campos do formulário
@@ -455,34 +494,19 @@
                 if (elemento) elemento.value = '';
             });
             
-            // Campos de texto de data
-            const camposTextoData = ['data_nascimento_text', 'validade_credencial_text'];
-            camposTextoData.forEach(campo => {
-                const elemento = document.getElementById(campo);
-                if (elemento) elemento.value = '';
+            // Campos de data - limpar de forma segura
+            const camposData = ['data_nascimento', 'validade_credencial'];
+            camposData.forEach(campoId => {
+                const campo = document.getElementById(campoId);
+                if (campo) {
+                    campo.value = '';
+                    campo.type = 'text'; // Manter como texto para a solução híbrida
+                }
             });
-            
-            // Campo de data de nascimento - limpar de forma segura
-            const campoDataNascimento = document.getElementById('data_nascimento');
-            if (campoDataNascimento) {
-                campoDataNascimento.value = '';
-                campoDataNascimento.type = 'date';
-                campoDataNascimento.removeAttribute('min');
-                campoDataNascimento.removeAttribute('max');
-            }
-            
-            // Campo de validade da credencial - limpar de forma segura
-            const campoValidadeCredencial = document.getElementById('validade_credencial');
-            if (campoValidadeCredencial) {
-                campoValidadeCredencial.value = '';
-                campoValidadeCredencial.type = 'date';
-                campoValidadeCredencial.removeAttribute('min');
-                campoValidadeCredencial.removeAttribute('max');
-            }
         }
 
         function abrirModalInstrutor() {
-            document.getElementById('modalTitle').textContent = 'Novo Instrutor - Solução Híbrida';
+            document.getElementById('modalTitle').textContent = 'Novo Instrutor - Solução Híbrida SEM Duplicação';
             document.getElementById('acaoInstrutor').value = 'novo';
             document.getElementById('instrutor_id').value = '';
             
@@ -493,14 +517,14 @@
             modal.style.display = 'block';
             modal.classList.add('show');
             
-            adicionarLog('Modal de instrutor aberto com solução híbrida', 'success');
+            adicionarLog('Modal de instrutor aberto com solução híbrida SEM duplicação', 'success');
             
             // Configurar campos de data após abrir o modal
             setTimeout(() => {
                 configurarCamposData();
-                adicionarLog('Campos de data configurados com sincronização', 'success');
-                adicionarLog('💡 Teste: Digite uma data no formato dd/mm/aaaa no campo de texto', 'info');
-                adicionarLog('💡 Teste: Ou use o calendário no campo date', 'info');
+                adicionarLog('Campos de data configurados com funcionalidade híbrida', 'success');
+                adicionarLog('💡 Teste: Digite uma data no formato dd/mm/aaaa', 'info');
+                adicionarLog('💡 Teste: Ou clique no ícone 📅 para abrir o calendário', 'info');
             }, 100);
         }
 
@@ -526,26 +550,30 @@
                 return;
             }
             
+            // Converter datas do formato brasileiro para ISO
+            const dataNascimento = converterDataBrasileiraParaISO(formData.get('data_nascimento'));
+            const validadeCredencial = converterDataBrasileiraParaISO(formData.get('validade_credencial'));
+            
+            if (!dataNascimento) {
+                adicionarLog('Data de nascimento inválida. Use o formato dd/mm/aaaa', 'warning');
+                return;
+            }
+            
             adicionarLog('Formulário validado com sucesso!', 'success');
             adicionarLog(`Nome: ${formData.get('nome')}`);
             adicionarLog(`CPF: ${formData.get('cpf')}`);
-            adicionarLog(`Data Nascimento: ${formData.get('data_nascimento')}`);
+            adicionarLog(`Data Nascimento (texto): ${formData.get('data_nascimento')}`);
+            adicionarLog(`Data Nascimento (ISO): ${dataNascimento}`);
             adicionarLog(`Email: ${formData.get('email')}`);
-            adicionarLog(`Validade Credencial: ${formData.get('validade_credencial') || 'Não informada'}`);
-            
-            // Mostrar também os valores dos campos de texto
-            const dataNascimentoTexto = document.getElementById('data_nascimento_text').value;
-            const validadeCredencialTexto = document.getElementById('validade_credencial_text').value;
-            adicionarLog(`Data Nascimento (texto): ${dataNascimentoTexto || 'Não informada'}`);
-            adicionarLog(`Validade Credencial (texto): ${validadeCredencialTexto || 'Não informada'}`);
+            adicionarLog(`Validade Credencial (texto): ${formData.get('validade_credencial') || 'Não informada'}`);
+            adicionarLog(`Validade Credencial (ISO): ${validadeCredencial || 'Não informada'}`);
         }
 
         function verificarImplementacao() {
-            adicionarLog('🔍 Verificando implementação da solução híbrida...', 'info');
+            adicionarLog('🔍 Verificando implementação da solução híbrida SEM duplicação...', 'info');
             
             // Verificar se os campos existem
             const camposData = ['data_nascimento', 'validade_credencial'];
-            const camposTexto = ['data_nascimento_text', 'validade_credencial_text'];
             
             let todosCamposExistem = true;
             
@@ -559,19 +587,10 @@
                 }
             });
             
-            camposTexto.forEach(campoId => {
-                const campo = document.getElementById(campoId);
-                if (campo) {
-                    adicionarLog(`✅ Campo ${campoId} encontrado (tipo: ${campo.type})`, 'success');
-                } else {
-                    adicionarLog(`❌ Campo ${campoId} NÃO encontrado`, 'error');
-                    todosCamposExistem = false;
-                }
-            });
-            
             if (todosCamposExistem) {
                 adicionarLog('🎉 Todos os campos da solução híbrida estão implementados!', 'success');
                 adicionarLog('💡 Abra o modal para testar a funcionalidade', 'info');
+                adicionarLog('💡 Agora você tem um campo único que permite digitação E calendário', 'info');
             } else {
                 adicionarLog('⚠️ Alguns campos não foram encontrados. Verifique a implementação.', 'warning');
             }
