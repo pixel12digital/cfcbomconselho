@@ -2,7 +2,9 @@
 // Este arquivo é carregado APÓS o config.js, garantindo que API_CONFIG esteja disponível
 
 // Funções JavaScript com URLs CORRIGIDAS
-function abrirModalInstrutor() {
+async function abrirModalInstrutor() {
+    console.log('🚀 Abrindo modal de instrutor...');
+    
     document.getElementById('modalTitle').textContent = 'Novo Instrutor';
     document.getElementById('acaoInstrutor').value = 'novo';
     document.getElementById('instrutor_id').value = '';
@@ -15,12 +17,53 @@ function abrirModalInstrutor() {
     modal.classList.add('show');
     
     // Garantir que o modal seja visível
-    setTimeout(() => {
+    setTimeout(async () => {
         modal.scrollTop = 0;
         const modalDialog = modal.querySelector('.custom-modal-dialog');
         if (modalDialog) {
             modalDialog.style.opacity = '1';
             modalDialog.style.transform = 'translateY(0)';
+        }
+        
+        // CARREGAR DADOS APÓS O MODAL ESTAR ABERTO
+        console.log('📋 Modal aberto, carregando dados dos selects...');
+        
+        try {
+            // Debug: verificar status dos selects
+            verificarStatusSelects();
+            
+            // Testar APIs primeiro
+            await testarAPIs();
+            
+            // Carregar dados dos selects COM RETRY MAIS ROBUSTO
+            await carregarCFCsComRetry();
+            await carregarUsuariosComRetry();
+            
+            // VERIFICAÇÃO FINAL - Se ainda não carregou, tentar novamente
+            setTimeout(async () => {
+                const cfcSelect = document.getElementById('cfc_id');
+                const usuarioSelect = document.getElementById('usuario_id');
+                
+                if (cfcSelect && cfcSelect.options.length <= 1) {
+                    console.log('⚠️ CFCs não carregaram, tentando novamente...');
+                    await carregarCFCsComRetry();
+                } else if (cfcSelect && cfcSelect.options.length > 1) {
+                    console.log('✅ CFCs carregados com sucesso!');
+                }
+                
+                if (usuarioSelect && usuarioSelect.options.length <= 1) {
+                    console.log('⚠️ Usuários não carregaram, tentando novamente...');
+                    await carregarUsuariosComRetry();
+                } else if (usuarioSelect && usuarioSelect.options.length > 1) {
+                    console.log('✅ Usuários carregados com sucesso!');
+                }
+                
+                // Debug: verificar status após carregamento
+                verificarStatusSelects();
+            }, 500);
+            
+        } catch (error) {
+            console.error('❌ Erro ao carregar dados do modal:', error);
         }
     }, 100);
 }
@@ -108,33 +151,92 @@ function limparCamposFormulario() {
     }, 100);
 }
 
-function editarInstrutor(id) {
-    // Buscar dados do instrutor
-    fetch(`${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                preencherFormularioInstrutor(data.data);
-                document.getElementById('modalTitle').textContent = 'Editar Instrutor';
-                document.getElementById('acaoInstrutor').value = 'editar';
-                document.getElementById('instrutor_id').value = id;
-                
-                abrirModalInstrutor();
-            } else {
-                mostrarAlerta('Erro ao carregar dados do instrutor', 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            mostrarAlerta('Erro ao carregar dados do instrutor', 'danger');
-        });
+async function editarInstrutor(id) {
+    console.log('🔧 Editando instrutor ID:', id);
+    
+    try {
+        // 1. Abrir modal primeiro
+        document.getElementById('modalTitle').textContent = 'Editar Instrutor';
+        document.getElementById('acaoInstrutor').value = 'editar';
+        document.getElementById('instrutor_id').value = id;
+        
+        // Abrir modal
+        abrirModalInstrutor();
+        
+        // 2. Aguardar carregamento dos selects
+        console.log('📋 Aguardando carregamento dos selects...');
+        await carregarCFCsComRetry();
+        await carregarUsuariosComRetry();
+        
+        // 3. Buscar dados do instrutor
+        console.log('🔍 Buscando dados do instrutor...');
+        const response = await fetch(`${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`);
+        console.log('📡 Resposta da API:', response.status, response.statusText);
+        
+        const data = await response.json();
+        console.log('📊 Dados recebidos:', data);
+        
+        if (data.success && data.data) {
+            console.log('✅ Dados do instrutor carregados, preenchendo formulário...');
+            preencherFormularioInstrutor(data.data);
+        } else {
+            console.error('❌ Erro na API:', data.error);
+            mostrarAlerta('Erro ao carregar dados do instrutor: ' + (data.error || 'Dados não encontrados'), 'danger');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar instrutor:', error);
+        mostrarAlerta('Erro ao carregar dados do instrutor: ' + error.message, 'danger');
+    }
 }
 
 function preencherFormularioInstrutor(instrutor) {
+    console.log('🔄 Preenchendo formulário com dados:', instrutor);
+    
+    // Verificar se os selects estão carregados antes de preencher
+    const cfcSelect = document.getElementById('cfc_id');
+    const usuarioSelect = document.getElementById('usuario_id');
+    
+    if (cfcSelect && cfcSelect.options.length <= 1) {
+        console.warn('⚠️ Select CFC ainda não carregado, aguardando...');
+        setTimeout(() => preencherFormularioInstrutor(instrutor), 200);
+        return;
+    }
+    
+    if (usuarioSelect && usuarioSelect.options.length <= 1) {
+        console.warn('⚠️ Select Usuário ainda não carregado, aguardando...');
+        setTimeout(() => preencherFormularioInstrutor(instrutor), 200);
+        return;
+    }
+    
+    console.log('✅ Selects carregados, preenchendo formulário...');
+    
     // Preencher campos do formulário
-    document.getElementById('nome').value = instrutor.nome || instrutor.nome_usuario || '';
-    document.getElementById('cpf').value = instrutor.cpf || '';
-    document.getElementById('cnh').value = instrutor.cnh || '';
+    const nomeField = document.getElementById('nome');
+    if (nomeField) {
+        nomeField.value = instrutor.nome || instrutor.nome_usuario || '';
+        console.log('✅ Campo nome preenchido:', nomeField.value);
+    }
+    
+    const cpfField = document.getElementById('cpf');
+    if (cpfField) {
+        cpfField.value = instrutor.cpf || '';
+        console.log('✅ Campo cpf preenchido:', cpfField.value);
+        
+        // Verificar se o valor foi realmente aplicado
+        setTimeout(() => {
+            if (cpfField.value !== instrutor.cpf) {
+                console.warn('⚠️ Valor do CPF não foi aplicado corretamente, tentando novamente...');
+                cpfField.value = instrutor.cpf || '';
+                cpfField.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, 100);
+    }
+    
+    const cnhField = document.getElementById('cnh');
+    if (cnhField) {
+        cnhField.value = instrutor.cnh || '';
+        console.log('✅ Campo cnh preenchido:', cnhField.value);
+    }
     
     // Preencher campo de data de nascimento de forma segura
     const campoDataNascimento = document.getElementById('data_nascimento');
@@ -146,22 +248,155 @@ function preencherFormularioInstrutor(instrutor) {
             const mes = String(data.getMonth() + 1).padStart(2, '0');
             const ano = data.getFullYear();
             campoDataNascimento.value = `${dia}/${mes}/${ano}`;
+            console.log('✅ Campo data_nascimento preenchido:', campoDataNascimento.value);
         } else {
             campoDataNascimento.value = '';
+            console.log('⚠️ Campo data_nascimento vazio ou inválido');
         }
         campoDataNascimento.type = 'text';
     }
     
-    document.getElementById('email').value = instrutor.email || '';
-    document.getElementById('usuario_id').value = instrutor.usuario_id || '';
-    document.getElementById('cfc_id').value = instrutor.cfc_id || '';
-    document.getElementById('credencial').value = instrutor.credencial || '';
-    document.getElementById('telefone').value = instrutor.telefone || '';
-    document.getElementById('endereco').value = instrutor.endereco || '';
-    document.getElementById('cidade').value = instrutor.cidade || '';
-    document.getElementById('uf').value = instrutor.uf || '';
-    document.getElementById('ativo').value = instrutor.ativo ? '1' : '0';
-    document.getElementById('tipo_carga').value = instrutor.tipo_carga || '';
+    const emailField = document.getElementById('email');
+    if (emailField) {
+        emailField.value = instrutor.email || '';
+        console.log('✅ Campo email preenchido:', emailField.value);
+    }
+    
+    // Preencher selects com verificação de valores
+    const usuarioField = document.getElementById('usuario_id');
+    if (usuarioField && instrutor.usuario_id) {
+        // Converter para número para garantir compatibilidade
+        const usuarioId = parseInt(instrutor.usuario_id);
+        console.log('🔍 Debug - Tentando preencher usuário ID:', usuarioId);
+        console.log('🔍 Debug - Opções disponíveis:', Array.from(usuarioField.options).map(opt => ({value: opt.value, text: opt.textContent})));
+        
+        // Verificar se o valor existe nas opções antes de definir
+        const usuarioOption = usuarioField.querySelector(`option[value="${usuarioId}"]`);
+        if (usuarioOption) {
+            console.log('🔍 Debug - Opção encontrada:', usuarioOption.textContent);
+            
+            // Remover temporariamente o evento onchange para evitar interferência
+            const originalOnChange = usuarioField.getAttribute('onchange');
+            usuarioField.removeAttribute('onchange');
+            
+            usuarioField.value = usuarioId;
+            console.log('✅ Campo usuario_id preenchido:', usuarioId);
+            console.log('🔍 Debug - Valor após preenchimento:', usuarioField.value);
+            
+            // Forçar reflow visual para garantir que o valor seja exibido
+            usuarioField.style.display = 'none';
+            usuarioField.offsetHeight; // Força reflow
+            usuarioField.style.display = '';
+            
+            // Restaurar o evento onchange após um delay
+            setTimeout(() => {
+                if (originalOnChange) {
+                    usuarioField.setAttribute('onchange', originalOnChange);
+                    console.log('🔍 Debug - Evento onchange restaurado');
+                }
+            }, 200);
+            
+            // Verificação adicional após um delay
+            setTimeout(() => {
+                console.log('🔍 Debug - Verificação após 100ms - Valor atual:', usuarioField.value);
+                if (usuarioField.value !== usuarioId.toString()) {
+                    console.warn('⚠️ Valor do usuário não foi aplicado, tentando novamente...');
+                    usuarioField.value = usuarioId;
+                    console.log('🔍 Debug - Valor reaplicado:', usuarioField.value);
+                }
+            }, 100);
+        } else {
+            console.warn('⚠️ Opção de usuário não encontrada para ID:', usuarioId);
+            console.log('🔍 Opções disponíveis:', Array.from(usuarioField.options).map(opt => ({value: opt.value, text: opt.textContent})));
+        }
+    }
+    
+    const cfcField = document.getElementById('cfc_id');
+    if (cfcField && instrutor.cfc_id) {
+        // Converter para número para garantir compatibilidade
+        const cfcId = parseInt(instrutor.cfc_id);
+        console.log('🔍 Debug - Tentando preencher CFC ID:', cfcId);
+        console.log('🔍 Debug - Opções disponíveis:', Array.from(cfcField.options).map(opt => ({value: opt.value, text: opt.textContent})));
+        
+        // Verificar se o valor existe nas opções antes de definir
+        const cfcOption = cfcField.querySelector(`option[value="${cfcId}"]`);
+        if (cfcOption) {
+            console.log('🔍 Debug - Opção encontrada:', cfcOption.textContent);
+            
+            cfcField.value = cfcId;
+            console.log('✅ Campo cfc_id preenchido:', cfcId);
+            console.log('🔍 Debug - Valor após preenchimento:', cfcField.value);
+            
+            // Forçar reflow visual para garantir que o valor seja exibido
+            cfcField.style.display = 'none';
+            cfcField.offsetHeight; // Força reflow
+            cfcField.style.display = '';
+            
+            // Verificação adicional após um delay
+            setTimeout(() => {
+                console.log('🔍 Debug - Verificação após 100ms - Valor atual:', cfcField.value);
+                if (cfcField.value !== cfcId.toString()) {
+                    console.warn('⚠️ Valor do CFC não foi aplicado, tentando novamente...');
+                    cfcField.value = cfcId;
+                    console.log('🔍 Debug - Valor reaplicado:', cfcField.value);
+                }
+            }, 100);
+        } else {
+            console.warn('⚠️ Opção de CFC não encontrada para ID:', cfcId);
+            console.log('🔍 Opções disponíveis:', Array.from(cfcField.options).map(opt => ({value: opt.value, text: opt.textContent})));
+        }
+    }
+    
+    const credencialField = document.getElementById('credencial');
+    if (credencialField) {
+        credencialField.value = instrutor.credencial || '';
+        console.log('✅ Campo credencial preenchido:', credencialField.value);
+    }
+    
+    const telefoneField = document.getElementById('telefone');
+    if (telefoneField) {
+        telefoneField.value = instrutor.telefone || '';
+        console.log('✅ Campo telefone preenchido:', telefoneField.value);
+        
+        // Verificar se o valor foi realmente aplicado
+        setTimeout(() => {
+            if (telefoneField.value !== instrutor.telefone) {
+                console.warn('⚠️ Valor do telefone não foi aplicado corretamente, tentando novamente...');
+                telefoneField.value = instrutor.telefone || '';
+                telefoneField.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+        }, 100);
+    }
+    
+    const enderecoField = document.getElementById('endereco');
+    if (enderecoField) {
+        enderecoField.value = instrutor.endereco || '';
+        console.log('✅ Campo endereco preenchido:', enderecoField.value);
+    }
+    
+    const cidadeField = document.getElementById('cidade');
+    if (cidadeField) {
+        cidadeField.value = instrutor.cidade || '';
+        console.log('✅ Campo cidade preenchido:', cidadeField.value);
+    }
+    
+    const ufField = document.getElementById('uf');
+    if (ufField) {
+        ufField.value = instrutor.uf || '';
+        console.log('✅ Campo uf preenchido:', ufField.value);
+    }
+    
+    const ativoField = document.getElementById('ativo');
+    if (ativoField) {
+        ativoField.value = instrutor.ativo ? '1' : '0';
+        console.log('✅ Campo ativo preenchido:', ativoField.value);
+    }
+    
+    const tipoCargaField = document.getElementById('tipo_carga');
+    if (tipoCargaField) {
+        tipoCargaField.value = instrutor.tipo_carga || '';
+        console.log('✅ Campo tipo_carga preenchido:', tipoCargaField.value);
+    }
     
     // Preencher campo de validade da credencial de forma segura
     const campoValidadeCredencial = document.getElementById('validade_credencial');
@@ -173,43 +408,121 @@ function preencherFormularioInstrutor(instrutor) {
             const mes = String(data.getMonth() + 1).padStart(2, '0');
             const ano = data.getFullYear();
             campoValidadeCredencial.value = `${dia}/${mes}/${ano}`;
+            console.log('✅ Campo validade_credencial preenchido:', campoValidadeCredencial.value);
         } else {
             campoValidadeCredencial.value = '';
+            console.log('⚠️ Campo validade_credencial vazio ou inválido');
         }
         campoValidadeCredencial.type = 'text';
     }
     
-    document.getElementById('observacoes').value = instrutor.observacoes || '';
+    const observacoesField = document.getElementById('observacoes');
+    if (observacoesField) {
+        observacoesField.value = instrutor.observacoes || '';
+        console.log('✅ Campo observacoes preenchido:', observacoesField.value);
+    }
     
     // Limpar checkboxes primeiro
     document.querySelectorAll('input[name="categorias[]"]').forEach(cb => cb.checked = false);
     document.querySelectorAll('input[name="dias_semana[]"]').forEach(cb => cb.checked = false);
     
     // Marcar categorias selecionadas
-    if (instrutor.categoria_habilitacao) {
-        const categorias = instrutor.categoria_habilitacao.split(',');
-        categorias.forEach(cat => {
-            const checkbox = document.querySelector(`input[name="categorias[]"][value="${cat.trim()}"]`);
-            if (checkbox) checkbox.checked = true;
-        });
+    if (instrutor.categoria_habilitacao && instrutor.categoria_habilitacao.trim() !== '' && instrutor.categoria_habilitacao !== '[]' && instrutor.categoria_habilitacao !== '""') {
+        try {
+            // Tentar fazer parse se for JSON
+            let categorias;
+            if (instrutor.categoria_habilitacao.startsWith('[') && instrutor.categoria_habilitacao.endsWith(']')) {
+                categorias = JSON.parse(instrutor.categoria_habilitacao);
+            } else {
+                // Se não for JSON, tratar como string separada por vírgula
+                categorias = instrutor.categoria_habilitacao.split(',');
+            }
+            
+            categorias.forEach(cat => {
+                const catTrim = cat.trim().replace(/"/g, ''); // Remover aspas
+                if (catTrim && catTrim !== '' && catTrim !== '""') {
+                    const checkbox = document.querySelector(`input[name="categorias[]"][value="${catTrim}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        console.log('✅ Categoria marcada:', catTrim);
+                    } else {
+                        console.warn('⚠️ Checkbox categoria não encontrado:', catTrim);
+                    }
+                }
+            });
+        } catch (error) {
+            console.warn('⚠️ Erro ao processar categorias:', error);
+        }
+    } else {
+        console.warn('⚠️ Nenhuma categoria encontrada no instrutor ou campo vazio');
     }
     
     // Marcar dias da semana selecionados
-    if (instrutor.dias_semana) {
-        const dias = instrutor.dias_semana.split(',');
-        dias.forEach(dia => {
-            const checkbox = document.querySelector(`input[name="dias_semana[]"][value="${dia.trim()}"]`);
-            if (checkbox) checkbox.checked = true;
-        });
+    if (instrutor.dias_semana && instrutor.dias_semana.trim() !== '' && instrutor.dias_semana !== '[]' && instrutor.dias_semana !== '""') {
+        try {
+            // Tentar fazer parse se for JSON
+            let dias;
+            if (instrutor.dias_semana.startsWith('[') && instrutor.dias_semana.endsWith(']')) {
+                dias = JSON.parse(instrutor.dias_semana);
+            } else {
+                // Se não for JSON, tratar como string separada por vírgula
+                dias = instrutor.dias_semana.split(',');
+            }
+            
+            dias.forEach(dia => {
+                const diaTrim = dia.trim().replace(/"/g, ''); // Remover aspas
+                if (diaTrim && diaTrim !== '' && diaTrim !== '""') {
+                    const checkbox = document.querySelector(`input[name="dias_semana[]"][value="${diaTrim}"]`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                        console.log('✅ Dia da semana marcado:', diaTrim);
+                    } else {
+                        console.warn('⚠️ Checkbox dia da semana não encontrado:', diaTrim);
+                    }
+                }
+            });
+        } catch (error) {
+            console.warn('⚠️ Erro ao processar dias da semana:', error);
+        }
+    } else {
+        console.warn('⚠️ Nenhum dia da semana encontrado no instrutor ou campo vazio');
     }
     
     // Preencher horários
-    if (instrutor.horario_inicio) {
-        document.getElementById('horario_inicio').value = instrutor.horario_inicio;
+    const horarioInicioField = document.getElementById('horario_inicio');
+    if (horarioInicioField && instrutor.horario_inicio) {
+        // Converter formato HH:MM:SS para HH:MM
+        let horarioInicio = instrutor.horario_inicio;
+        if (horarioInicio && horarioInicio.includes(':')) {
+            const partes = horarioInicio.split(':');
+            if (partes.length >= 2) {
+                horarioInicio = `${partes[0]}:${partes[1]}`;
+            }
+        }
+        horarioInicioField.value = horarioInicio;
+        console.log('✅ Campo horario_inicio preenchido:', horarioInicioField.value);
     }
-    if (instrutor.horario_fim) {
-        document.getElementById('horario_fim').value = instrutor.horario_fim;
+    
+    const horarioFimField = document.getElementById('horario_fim');
+    if (horarioFimField && instrutor.horario_fim) {
+        // Converter formato HH:MM:SS para HH:MM
+        let horarioFim = instrutor.horario_fim;
+        if (horarioFim && horarioFim.includes(':')) {
+            const partes = horarioFim.split(':');
+            if (partes.length >= 2) {
+                horarioFim = `${partes[0]}:${partes[1]}`;
+            }
+        }
+        horarioFimField.value = horarioFim;
+        console.log('✅ Campo horario_fim preenchido:', horarioFimField.value);
     }
+    
+    console.log('✅ Formulário preenchido com sucesso!');
+    
+    // Verificação final dos selects após um pequeno delay
+    setTimeout(() => {
+        verificarVinculacaoSelects(instrutor);
+    }, 200);
 }
 
 function excluirInstrutor(id) {
@@ -237,109 +550,153 @@ function excluirInstrutor(id) {
 }
 
 function salvarInstrutor() {
-    const form = document.getElementById('formInstrutor');
-    const formData = new FormData(form);
+    console.log('💾 Salvando instrutor...');
     
-    // Validações básicas
-    if (!formData.get('nome').trim() || !formData.get('cpf').trim() || !formData.get('cnh').trim() || 
-        !formData.get('data_nascimento') || !formData.get('email').trim() || !formData.get('usuario_id') || 
-        !formData.get('cfc_id') || !formData.get('credencial').trim()) {
-        mostrarAlerta('Preencha todos os campos obrigatórios', 'warning');
-        return;
-    }
-    
-    // Preparar dados para envio
-    const categoriasSelecionadas = formData.getAll('categorias[]');
-    if (categoriasSelecionadas.length === 0) {
-        mostrarAlerta('Selecione pelo menos uma categoria de habilitação', 'warning');
-        return;
-    }
-    
-    // Converter datas do formato brasileiro para ISO
-    const dataNascimento = converterDataBrasileiraParaISO(formData.get('data_nascimento'));
-    const validadeCredencial = converterDataBrasileiraParaISO(formData.get('validade_credencial'));
-    
-    if (!dataNascimento) {
-        mostrarAlerta('Data de nascimento inválida. Use o formato dd/mm/aaaa', 'warning');
-        return;
-    }
-    
-    const instrutorData = {
-        nome: formData.get('nome').trim(),
-        cpf: formData.get('cpf').trim(),
-        cnh: formData.get('cnh').trim(),
-        data_nascimento: dataNascimento,
-        email: formData.get('email').trim(),
-        usuario_id: formData.get('usuario_id'),
-        cfc_id: formData.get('cfc_id'),
-        credencial: formData.get('credencial').trim(),
-        categoria_habilitacao: categoriasSelecionadas.join(','),
-        categorias: categoriasSelecionadas, // ✅ Campo para categorias_json
-        telefone: formData.get('telefone') || '',
-        endereco: formData.get('endereco') || '',
-        cidade: formData.get('cidade') || '',
-        uf: formData.get('uf') || '',
-        ativo: formData.get('ativo') === '1',
-        tipo_carga: formData.get('tipo_carga') || '',
-        validade_credencial: validadeCredencial || '',
-        observacoes: formData.get('observacoes') || '',
-        dias_semana: formData.getAll('dias_semana[]'), // ✅ Array para dias_semana JSON
-        horario_inicio: formData.get('horario_inicio') || '',
-        horario_fim: formData.get('horario_fim') || ''
-    };
-    
-    const acao = formData.get('acao');
-    const instrutor_id = formData.get('instrutor_id');
-    
-    if (acao === 'editar' && instrutor_id) {
-        instrutorData.id = instrutor_id;
-    }
-    
-    // Mostrar loading
+    // Proteção contra múltiplos cliques
     const btnSalvar = document.getElementById('btnSalvarInstrutor');
-    const originalText = btnSalvar.innerHTML;
-    btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Salvando...';
-    btnSalvar.disabled = true;
+    if (btnSalvar.disabled) {
+        console.log('⚠️ Salvamento já em andamento, ignorando clique...');
+        return;
+    }
     
-    // Fazer requisição para a API - URL CORRIGIDA
-    const url = API_CONFIG.getRelativeApiUrl('INSTRUTORES');
-    const method = acao === 'editar' ? 'PUT' : 'POST';
-    
-    fetch(url, {
-        method: method,
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(instrutorData)
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            mostrarAlerta(data.message || 'Instrutor salvo com sucesso!', 'success');
-            
-            // Fechar modal
-            fecharModalInstrutor();
-            
-            // Limpar formulário
-            form.reset();
-            
-            // Recarregar página para mostrar dados atualizados
-            setTimeout(() => {
-                window.location.reload();
-            }, 1500);
-        } else {
-            mostrarAlerta(data.error || 'Erro ao salvar instrutor', 'danger');
+    try {
+        // Validar formulário usando a nova validação inteligente
+        if (!validarFormularioInstrutor()) {
+            return;
         }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        mostrarAlerta('Erro ao salvar instrutor. Tente novamente.', 'danger');
-    })
-    .finally(() => {
-        // Restaurar botão
+        
+        // Preparar dados usando a nova função
+        const formData = prepararDadosFormulario();
+        
+        console.log('📋 Dados preparados:', Object.fromEntries(formData));
+        
+        // Preparar dados para envio
+        const categoriasSelecionadas = formData.get('categoria_habilitacao') ? formData.get('categoria_habilitacao').split(',') : [];
+        const diasSemanaSelecionados = formData.get('dias_semana') ? formData.get('dias_semana').split(',') : [];
+        
+        console.log('📋 Categorias do FormData:', formData.get('categoria_habilitacao'));
+        console.log('📋 Dias da semana do FormData:', formData.get('dias_semana'));
+        console.log('📋 Categorias processadas:', categoriasSelecionadas);
+        console.log('📋 Dias processados:', diasSemanaSelecionados);
+        
+        // Converter datas do formato brasileiro para ISO (se existirem)
+        const dataNascimento = formData.get('data_nascimento') ? converterDataBrasileiraParaISO(formData.get('data_nascimento')) : '';
+        const validadeCredencial = formData.get('validade_credencial') ? converterDataBrasileiraParaISO(formData.get('validade_credencial')) : '';
+        
+        const instrutorData = {
+            nome: formData.get('nome').trim(),
+            email: formData.get('email').trim(),
+            cpf: formData.get('cpf') || '',
+            cnh: formData.get('cnh') || '',
+            telefone: formData.get('telefone') || '',
+            cfc_id: formData.get('cfc_id'),
+            credencial: formData.get('credencial').trim(),
+            categoria_habilitacao: categoriasSelecionadas.join(','),
+            categorias: categoriasSelecionadas,
+            dias_semana: diasSemanaSelecionados,
+            ativo: formData.get('ativo') === '1',
+            endereco: formData.get('endereco') || '',
+            cidade: formData.get('cidade') || '',
+            uf: formData.get('uf') || '',
+            tipo_carga: formData.get('tipo_carga') || '',
+            validade_credencial: validadeCredencial || '',
+            observacoes: formData.get('observacoes') || '',
+            horario_inicio: formData.get('horario_inicio') || '',
+            horario_fim: formData.get('horario_fim') || ''
+        };
+        
+        // Adicionar dados condicionais
+        if (formData.get('usuario_id')) {
+            instrutorData.usuario_id = formData.get('usuario_id');
+        } else {
+            // Novo usuário
+            instrutorData.senha = formData.get('senha');
+            instrutorData.cpf = formData.get('cpf_usuario'); // Usar cpf_usuario para novo usuário
+        }
+        
+        // Garantir que CPF seja enviado (pode vir do campo cpf ou cpf_usuario)
+        if (!instrutorData.cpf && formData.get('cpf')) {
+            instrutorData.cpf = formData.get('cpf');
+        }
+        
+        // Garantir que CNH seja enviado
+        if (formData.get('cnh')) {
+            instrutorData.cnh = formData.get('cnh');
+        }
+        
+        // Garantir que data de nascimento seja enviado
+        if (dataNascimento) {
+            instrutorData.data_nascimento = dataNascimento;
+        }
+        
+        const acao = formData.get('acao');
+        const instrutor_id = formData.get('instrutor_id');
+        
+        console.log('🔍 Debug - Ação detectada:', acao);
+        console.log('🔍 Debug - ID do instrutor:', instrutor_id);
+        console.log('🔍 Debug - Campo acaoInstrutor.value:', document.getElementById('acaoInstrutor')?.value);
+        
+        if (acao === 'editar' && instrutor_id) {
+            instrutorData.id = instrutor_id;
+            console.log('✅ Modo EDITAÇÃO detectado, ID:', instrutor_id);
+        } else {
+            console.log('⚠️ Modo CRIAÇÃO detectado ou ID não encontrado');
+        }
+        
+        // Mostrar loading
+        const btnSalvar = document.getElementById('btnSalvarInstrutor');
+        const originalText = btnSalvar.innerHTML;
+        btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Salvando...';
+        btnSalvar.disabled = true;
+        
+        // Fazer requisição para a API - URL CORRIGIDA
+        const url = API_CONFIG.getRelativeApiUrl('INSTRUTORES');
+        const method = acao === 'editar' ? 'PUT' : 'POST';
+        
+        fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(instrutorData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                mostrarAlerta(data.message || 'Instrutor salvo com sucesso!', 'success');
+                
+                // Fechar modal
+                fecharModalInstrutor();
+                
+                // Limpar formulário
+                const form = document.getElementById('formInstrutor');
+                if (form) form.reset();
+                
+                // Recarregar página para mostrar dados atualizados
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
+            } else {
+                mostrarAlerta(data.error || 'Erro ao salvar instrutor', 'danger');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao salvar instrutor:', error);
+            mostrarAlerta('Erro ao salvar instrutor: ' + error.message, 'danger');
+        })
+        .finally(() => {
+            // Restaurar botão
+            btnSalvar.innerHTML = originalText;
+            btnSalvar.disabled = false;
+        });
+    } catch (error) {
+        console.error('❌ Erro na preparação dos dados:', error);
+        mostrarAlerta('Erro na preparação dos dados: ' + error.message, 'danger');
+        
+        // Restaurar botão em caso de erro
         btnSalvar.innerHTML = originalText;
         btnSalvar.disabled = false;
-    });
+    }
 }
 
 function mostrarAlerta(mensagem, tipo) {
@@ -396,8 +753,6 @@ function imprimirInstrutores() {
 document.addEventListener('DOMContentLoaded', function() {
     // Carregar dados iniciais
     carregarInstrutores();
-    carregarCFCs();
-    carregarUsuarios();
     
     // Configurar campos de data para funcionarem corretamente
     configurarCamposData();
@@ -720,7 +1075,7 @@ function preencherTabelaInstrutores(instrutores) {
             <td>${cfcExibicao}</td>
             <td>${instrutor.credencial || 'N/A'}</td>
             <td>
-                <span class="badge bg-info">${instrutor.categoria_habilitacao || 'N/A'}</span>
+                <span class="badge bg-info">${formatarCategorias(instrutor.categorias_json) || 'N/A'}</span>
             </td>
             <td>
                 <span class="badge ${instrutor.ativo ? 'bg-success' : 'bg-danger'}">
@@ -742,6 +1097,71 @@ function preencherTabelaInstrutores(instrutores) {
     });
 }
 
+// Função para formatar categorias de habilitação
+function formatarCategorias(categoriasJson) {
+    if (!categoriasJson) return '';
+    
+    try {
+        let categorias = [];
+        
+        // Se for string JSON, fazer parse
+        if (typeof categoriasJson === 'string') {
+            if (categoriasJson.trim() === '') return '';
+            categorias = JSON.parse(categoriasJson);
+        } else if (Array.isArray(categoriasJson)) {
+            // Se já for array
+            categorias = categoriasJson;
+        } else {
+            return '';
+        }
+        
+        // Retornar categorias formatadas
+        return categorias.join(', ');
+        
+    } catch (error) {
+        console.warn('⚠️ Erro ao formatar categorias:', error);
+        return '';
+    }
+}
+
+// Função para formatar categorias do JSON
+function formatarCategorias(categoriasJson) {
+    if (!categoriasJson) return '';
+    
+    try {
+        let categorias;
+        
+        // Se já é um array
+        if (Array.isArray(categoriasJson)) {
+            categorias = categoriasJson;
+        }
+        // Se é uma string JSON
+        else if (typeof categoriasJson === 'string') {
+            if (categoriasJson.trim() === '') return '';
+            categorias = JSON.parse(categoriasJson);
+        }
+        // Se é uma string separada por vírgulas
+        else if (typeof categoriasJson === 'string' && categoriasJson.includes(',')) {
+            categorias = categoriasJson.split(',').map(cat => cat.trim());
+        }
+        else {
+            return categoriasJson.toString();
+        }
+        
+        // Verificar se é um array válido
+        if (!Array.isArray(categorias)) {
+            return categoriasJson.toString();
+        }
+        
+        // Retornar categorias formatadas
+        return categorias.join(', ');
+        
+    } catch (error) {
+        console.warn('⚠️ Erro ao formatar categorias:', error);
+        return categoriasJson.toString();
+    }
+}
+
 function atualizarEstatisticas(instrutores) {
     const total = instrutores.length;
     const ativos = instrutores.filter(i => i.ativo).length;
@@ -750,110 +1170,390 @@ function atualizarEstatisticas(instrutores) {
     document.getElementById('instrutoresAtivos').textContent = ativos;
 }
 
-function carregarCFCs() {
-    console.log('🔍 Iniciando carregamento de CFCs...');
+// Função com retry para carregar CFCs
+async function carregarCFCsComRetry() {
+    const maxTentativas = 5;
+    let tentativa = 0;
     
-    // DEBUG: Verificar configuração
-    console.log('🔧 API_CONFIG:', API_CONFIG);
-    console.log('🔧 typeof API_CONFIG:', typeof API_CONFIG);
-    
-    const urlCFC = API_CONFIG.getRelativeApiUrl('CFCs');
-    console.log('🌐 URL construída para CFCs:', urlCFC);
-    
-    // Carregar CFCs para o select
-    fetch(urlCFC)
-        .then(response => {
-            console.log('📡 Resposta da API CFCs:', response.status, response.statusText);
-            return response.json();
-        })
-        .then(data => {
-            console.log('📊 Dados recebidos da API CFCs:', data);
-            
-            if (data.success) {
-                const selectCFC = document.getElementById('cfc_id');
-                const filtroCFC = document.getElementById('filtroCFC');
-                
-                console.log('🎯 Select CFC encontrado:', selectCFC);
-                console.log('🎯 Filtro CFC encontrado:', filtroCFC);
-                
-                if (selectCFC) {
-                    selectCFC.innerHTML = '<option value="">Selecione um CFC</option>';
-                    
-                    data.data.forEach(cfc => {
-                        const option = document.createElement('option');
-                        option.value = cfc.id;
-                        option.textContent = cfc.nome;
-                        selectCFC.appendChild(option);
-                        console.log('✅ CFC adicionado:', cfc.nome);
-                    });
-                }
-                
-                // Também preencher o filtro
-                if (filtroCFC) {
-                    filtroCFC.innerHTML = '<option value="">Todos</option>';
-                    data.data.forEach(cfc => {
-                        const option = document.createElement('option');
-                        option.value = cfc.id;
-                        option.textContent = cfc.nome;
-                        filtroCFC.appendChild(option);
-                    });
-                }
-                
-                console.log('✅ CFCs carregados com sucesso!');
-            } else {
-                console.error('❌ Erro na API CFCs:', data.error);
-            }
-        })
-        .catch(error => {
-            console.error('❌ Erro ao carregar CFCs:', error);
-        });
+    while (tentativa < maxTentativas) {
+        const select = document.getElementById('cfc_id');
+        if (select) {
+            console.log('✅ Select CFC encontrado, carregando dados...');
+            await carregarCFCs();
+            return;
+        }
+        tentativa++;
+        console.log(`⏳ Tentativa ${tentativa}: Aguardando select CFC...`);
+        await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    console.error('❌ Select CFC não encontrado após todas as tentativas');
 }
 
-function carregarUsuarios() {
-    console.log('🔍 Iniciando carregamento de usuários...');
-    
-    // DEBUG: Verificar configuração
-    console.log('🔧 API_CONFIG:', API_CONFIG);
-    console.log('🔧 typeof API_CONFIG:', typeof API_CONFIG);
-    
-    const urlUsuarios = API_CONFIG.getRelativeApiUrl('USUARIOS');
-    console.log('🌐 URL construída para Usuários:', urlUsuarios);
-    
-    // Carregar usuários para o select
-    fetch(urlUsuarios)
-        .then(response => {
-            console.log('📡 Resposta da API Usuários:', response.status, response.statusText);
-            return response.json();
-        })
-        .then(data => {
-            console.log('📊 Dados recebidos da API Usuários:', data);
+async function carregarCFCs() {
+    try {
+        const url = API_CONFIG.getRelativeApiUrl('CFCs');
+        console.log('📡 Carregando CFCs de:', url);
+        
+        const response = await fetch(url);
+        console.log('📡 Resposta da API CFCs:', response.status, response.statusText);
+        
+        const data = await response.json();
+        console.log('📊 Dados recebidos da API CFCs:', data);
+        
+        if (data.success && data.data) {
+            const selectCFC = document.getElementById('cfc_id');
+            const filtroCFC = document.getElementById('filtroCFC');
             
-            if (data.success) {
-                const selectUsuario = document.getElementById('usuario_id');
-                console.log('🎯 Select Usuário encontrado:', selectUsuario);
+            if (selectCFC) {
+                selectCFC.innerHTML = '<option value="">Selecione um CFC</option>';
                 
-                if (selectUsuario) {
-                    selectUsuario.innerHTML = '<option value="">Selecione um usuário</option>';
-                    
-                    data.data.forEach(usuario => {
-                        const option = document.createElement('option');
-                        option.value = usuario.id;
-                        option.textContent = `${usuario.nome} (${usuario.email})`;
-                        selectUsuario.appendChild(option);
-                        console.log('✅ Usuário adicionado:', usuario.nome);
-                    });
-                    
-                    console.log('✅ Usuários carregados com sucesso!');
-                } else {
-                    console.error('❌ Select de usuário não encontrado!');
-                }
-            } else {
-                console.error('❌ Erro na API Usuários:', data.error);
+                data.data.forEach(cfc => {
+                    const option = document.createElement('option');
+                    option.value = cfc.id;
+                    option.textContent = cfc.nome;
+                    selectCFC.appendChild(option);
+                    console.log('✅ CFC adicionado:', cfc.nome);
+                });
+                
+                // FORÇAR ATUALIZAÇÃO VISUAL
+                selectCFC.style.display = 'none';
+                selectCFC.offsetHeight; // Trigger reflow
+                selectCFC.style.display = '';
             }
-        })
-        .catch(error => {
-            console.error('❌ Erro ao carregar usuários:', error);
-        });
+            
+            // Também preencher o filtro
+            if (filtroCFC) {
+                filtroCFC.innerHTML = '<option value="">Todos</option>';
+                data.data.forEach(cfc => {
+                    const option = document.createElement('option');
+                    option.value = cfc.id;
+                    option.textContent = cfc.nome;
+                    filtroCFC.appendChild(option);
+                });
+            }
+            
+            console.log(`✅ ${data.data.length} CFCs carregados com sucesso!`);
+        } else {
+            console.error('❌ Erro na API CFCs:', data.error);
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar CFCs:', error);
+    }
+}
+
+// Função com retry para carregar usuários
+async function carregarUsuariosComRetry() {
+    const maxTentativas = 5;
+    let tentativa = 0;
+    
+    while (tentativa < maxTentativas) {
+        const select = document.getElementById('usuario_id');
+        if (select) {
+            console.log('✅ Select Usuário encontrado, carregando dados...');
+            await carregarUsuarios();
+            return;
+        }
+        tentativa++;
+        console.log(`⏳ Tentativa ${tentativa}: Aguardando select Usuário...`);
+        await new Promise(resolve => setTimeout(resolve, 200));
+    }
+    console.error('❌ Select Usuário não encontrado após todas as tentativas');
+}
+
+async function carregarUsuarios() {
+    try {
+        const url = API_CONFIG.getRelativeApiUrl('USUARIOS');
+        console.log('📡 Carregando usuários de:', url);
+        
+        const response = await fetch(url);
+        console.log('📡 Resposta da API Usuários:', response.status, response.statusText);
+        
+        const data = await response.json();
+        console.log('📊 Dados recebidos da API Usuários:', data);
+        
+        if (data.success && data.data) {
+            const select = document.getElementById('usuario_id');
+            if (select) {
+                select.innerHTML = '<option value="">Criar novo usuário</option>';
+                
+                data.data.forEach(usuario => {
+                    const option = document.createElement('option');
+                    option.value = usuario.id;
+                    option.textContent = `${usuario.nome} (${usuario.email})`;
+                    select.appendChild(option);
+                    console.log('✅ Usuário adicionado:', usuario.nome);
+                });
+                
+                // FORÇAR ATUALIZAÇÃO VISUAL
+                select.style.display = 'none';
+                select.offsetHeight; // Trigger reflow
+                select.style.display = '';
+                
+                console.log(`✅ ${data.data.length} usuários carregados com sucesso!`);
+            } else {
+                console.error('❌ Select de usuário não encontrado!');
+            }
+        } else {
+            console.error('❌ Erro na API Usuários:', data.error);
+        }
+    } catch (error) {
+        console.error('❌ Erro ao carregar usuários:', error);
+    }
+}
+
+// Função para validar formulário de forma inteligente
+function validarFormularioInstrutor() {
+    const usuarioSelect = document.getElementById('usuario_id');
+    const nomeField = document.getElementById('nome');
+    const emailField = document.getElementById('email');
+    const cfcSelect = document.getElementById('cfc_id');
+    const credencialField = document.getElementById('credencial');
+    
+    let erros = [];
+    
+    // Validações básicas sempre obrigatórias
+    if (!nomeField.value.trim()) {
+        erros.push('Nome é obrigatório');
+    }
+    
+    if (!emailField.value.trim()) {
+        erros.push('Email é obrigatório');
+    }
+    
+    if (!usuarioSelect.value) {
+        erros.push('Usuário é obrigatório');
+    }
+    
+    if (!cfcSelect.value) {
+        erros.push('CFC é obrigatório');
+    }
+    
+    if (!credencialField.value.trim()) {
+        erros.push('Credencial é obrigatória');
+    }
+    
+    // Validar formato de email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailField.value)) {
+        erros.push('Email deve ter formato válido');
+    }
+    
+    // Validar categorias de habilitação
+    const categoriasSelecionadas = document.querySelectorAll('input[name="categorias[]"]:checked');
+    if (categoriasSelecionadas.length === 0) {
+        erros.push('Pelo menos uma categoria de habilitação deve ser selecionada');
+    }
+    
+    if (erros.length > 0) {
+        alert('Erros de validação:\n' + erros.join('\n'));
+        return false;
+    }
+    
+    return true;
+}
+
+// Função para preparar dados do formulário
+function prepararDadosFormulario() {
+    const formData = new FormData();
+    
+    // Dados básicos sempre enviados
+    formData.append('nome', document.getElementById('nome').value);
+    formData.append('email', document.getElementById('email').value);
+    formData.append('telefone', document.getElementById('telefone').value);
+    formData.append('cpf', document.getElementById('cpf').value);
+    formData.append('cnh', document.getElementById('cnh').value);
+    formData.append('data_nascimento', document.getElementById('data_nascimento').value);
+    formData.append('usuario_id', document.getElementById('usuario_id').value);
+    formData.append('cfc_id', document.getElementById('cfc_id').value);
+    formData.append('credencial', document.getElementById('credencial').value);
+    formData.append('ativo', document.getElementById('ativo').value);
+    
+    // Categorias de habilitação
+    const categorias = [];
+    document.querySelectorAll('input[name="categorias[]"]:checked').forEach(cb => {
+        categorias.push(cb.value);
+    });
+    formData.append('categoria_habilitacao', categorias.join(','));
+    console.log('📋 Categorias selecionadas:', categorias);
+    
+    // Dias da semana
+    const diasSemana = [];
+    document.querySelectorAll('input[name="dias_semana[]"]:checked').forEach(cb => {
+        diasSemana.push(cb.value);
+    });
+    formData.append('dias_semana', diasSemana.join(','));
+    console.log('📋 Dias da semana selecionados:', diasSemana);
+    
+    // Outros campos se existirem
+    const outrosCampos = ['endereco', 'cidade', 'uf', 'tipo_carga', 'validade_credencial', 'observacoes', 'horario_inicio', 'horario_fim'];
+    outrosCampos.forEach(campo => {
+        const elemento = document.getElementById(campo);
+        if (elemento) {
+            formData.append(campo, elemento.value);
+        }
+    });
+    
+    // Adicionar ação e ID se for edição
+    const acaoInstrutor = document.getElementById('acaoInstrutor');
+    const instrutorId = document.getElementById('instrutor_id');
+    
+    if (acaoInstrutor) {
+        formData.append('acao', acaoInstrutor.value);
+    }
+    
+    if (instrutorId && instrutorId.value) {
+        formData.append('instrutor_id', instrutorId.value);
+    }
+    
+    console.log('📋 Dados preparados:', Object.fromEntries(formData));
+    
+    return formData;
+}
+
+// Função para verificar status dos selects (debug)
+function verificarStatusSelects() {
+    const cfcSelect = document.getElementById('cfc_id');
+    const usuarioSelect = document.getElementById('usuario_id');
+    
+    console.log('🔍 Status dos Selects:');
+    console.log('CFC Select:', cfcSelect ? 'Encontrado' : 'Não encontrado');
+    console.log('CFC Options:', cfcSelect ? cfcSelect.options.length : 'N/A');
+    console.log('Usuário Select:', usuarioSelect ? 'Encontrado' : 'Não encontrado');
+    console.log('Usuário Options:', usuarioSelect ? usuarioSelect.options.length : 'N/A');
+    
+    // Verificar URLs das APIs
+    console.log('🔧 URLs das APIs:');
+    console.log('CFCs URL:', API_CONFIG.getRelativeApiUrl('CFCs'));
+    console.log('USUARIOS URL:', API_CONFIG.getRelativeApiUrl('USUARIOS'));
+}
+
+// Função para testar APIs diretamente
+async function testarAPIs() {
+    console.log('🧪 Testando APIs...');
+    
+    try {
+        // Testar API de CFCs
+        const urlCFCs = API_CONFIG.getRelativeApiUrl('CFCs');
+        console.log('📡 Testando CFCs:', urlCFCs);
+        const responseCFCs = await fetch(urlCFCs);
+        const dataCFCs = await responseCFCs.json();
+        console.log('📊 Resposta CFCs:', dataCFCs);
+        
+        // Testar API de Usuários
+        const urlUsuarios = API_CONFIG.getRelativeApiUrl('USUARIOS');
+        console.log('📡 Testando Usuários:', urlUsuarios);
+        const responseUsuarios = await fetch(urlUsuarios);
+        const dataUsuarios = await responseUsuarios.json();
+        console.log('📊 Resposta Usuários:', dataUsuarios);
+        
+    } catch (error) {
+        console.error('❌ Erro ao testar APIs:', error);
+    }
+}
+
+// Função para verificar e corrigir vinculação dos selects
+function verificarVinculacaoSelects(instrutor) {
+    console.log('🔍 Verificando vinculação dos selects...');
+    
+    // Verificar CFC
+    const cfcField = document.getElementById('cfc_id');
+    if (cfcField && instrutor.cfc_id) {
+        const cfcId = parseInt(instrutor.cfc_id);
+        if (cfcField.value !== cfcId.toString()) {
+            console.warn('⚠️ CFC não vinculado corretamente, tentando novamente...');
+            const cfcOption = cfcField.querySelector(`option[value="${cfcId}"]`);
+            if (cfcOption) {
+                // Remover temporariamente o evento onchange se existir
+                const originalOnChange = cfcField.getAttribute('onchange');
+                if (originalOnChange) {
+                    cfcField.removeAttribute('onchange');
+                }
+                
+                cfcField.value = cfcId;
+                console.log('✅ CFC vinculado com sucesso:', cfcId);
+                
+                // Restaurar o evento onchange após um delay
+                setTimeout(() => {
+                    if (originalOnChange) {
+                        cfcField.setAttribute('onchange', originalOnChange);
+                    }
+                }, 200);
+            } else {
+                console.error('❌ Opção de CFC não encontrada para ID:', cfcId);
+                console.log('🔍 Opções disponíveis:', Array.from(cfcField.options).map(opt => ({value: opt.value, text: opt.textContent})));
+            }
+        } else {
+            console.log('✅ CFC já vinculado corretamente');
+        }
+    }
+    
+    // Verificar Usuário
+    const usuarioField = document.getElementById('usuario_id');
+    if (usuarioField && instrutor.usuario_id) {
+        const usuarioId = parseInt(instrutor.usuario_id);
+        if (usuarioField.value !== usuarioId.toString()) {
+            console.warn('⚠️ Usuário não vinculado corretamente, tentando novamente...');
+            const usuarioOption = usuarioField.querySelector(`option[value="${usuarioId}"]`);
+            if (usuarioOption) {
+                // Remover temporariamente o evento onchange se existir
+                const originalOnChange = usuarioField.getAttribute('onchange');
+                if (originalOnChange) {
+                    usuarioField.removeAttribute('onchange');
+                }
+                
+                usuarioField.value = usuarioId;
+                console.log('✅ Usuário vinculado com sucesso:', usuarioId);
+                
+                // Restaurar o evento onchange após um delay
+                setTimeout(() => {
+                    if (originalOnChange) {
+                        usuarioField.setAttribute('onchange', originalOnChange);
+                    }
+                }, 200);
+            } else {
+                console.error('❌ Opção de usuário não encontrada para ID:', usuarioId);
+                console.log('🔍 Opções disponíveis:', Array.from(usuarioField.options).map(opt => ({value: opt.value, text: opt.textContent})));
+            }
+        } else {
+            console.log('✅ Usuário já vinculado corretamente');
+        }
+    }
 }
 
 console.log('📋 Arquivo instrutores-page.js carregado com sucesso!');
+
+// Função de inicialização automática
+async function inicializarDadosInstrutores() {
+    console.log('🚀 Inicializando dados de instrutores...');
+    
+    try {
+        // Carregar CFCs no filtro
+        await carregarCFCsComRetry();
+        
+        // Carregar usuários no filtro (se existir)
+        const filtroCFC = document.getElementById('filtroCFC');
+        if (filtroCFC) {
+            console.log('✅ Filtro CFC encontrado, populando...');
+            const cfcSelect = document.getElementById('cfc_id');
+            if (cfcSelect && cfcSelect.options.length > 1) {
+                filtroCFC.innerHTML = '<option value="">Todos</option>';
+                for (let i = 1; i < cfcSelect.options.length; i++) {
+                    const option = cfcSelect.options[i].cloneNode(true);
+                    filtroCFC.appendChild(option);
+                }
+            }
+        }
+        
+        console.log('✅ Inicialização concluída!');
+    } catch (error) {
+        console.error('❌ Erro na inicialização:', error);
+    }
+}
+
+// Executar inicialização quando o DOM estiver pronto
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', inicializarDadosInstrutores);
+} else {
+    inicializarDadosInstrutores();
+}
+

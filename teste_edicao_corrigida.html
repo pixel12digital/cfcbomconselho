@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Teste - Correções Finais</title>
+    <title>Teste - Edição Corrigida</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -72,22 +72,21 @@
 </head>
 <body>
     <div class="container">
-        <h1>🔧 Teste - Correções Finais</h1>
+        <h1>🔧 Teste - Edição Corrigida</h1>
         
         <div class="test-section success">
             <h3>✅ Correções Implementadas</h3>
-            <p><strong>1. Erro de Seletor:</strong> Validação de campos vazios e arrays vazios</p>
-            <p><strong>2. Sobrescrita de CPF/Telefone:</strong> Priorização dos dados do instrutor</p>
-            <p><strong>3. Race Conditions:</strong> Melhor sincronização de selects</p>
-            <p><strong>Status:</strong> Pronto para teste final</p>
+            <p><strong>Problema:</strong> Erro de seletor inválido com valores vazios</p>
+            <p><strong>Solução:</strong> Validação de campos vazios antes de criar seletores</p>
+            <p><strong>Status:</strong> Pronto para teste</p>
         </div>
 
         <div class="test-section">
             <h3>🧪 Teste de Edição</h3>
             <div>
-                <button class="btn btn-success" onclick="testarEdicaoCompleta()">Testar Edição Completa</button>
-                <button class="btn btn-warning" onclick="testarCamposVazios()">Testar Campos Vazios</button>
-                <button class="btn btn-danger" onclick="verificarSistema()">Verificar Sistema</button>
+                <button class="btn btn-success" onclick="testarEdicaoID23()">Testar Edição ID 23</button>
+                <button class="btn btn-warning" onclick="testarEdicaoVazio()">Testar Campos Vazios</button>
+                <button class="btn btn-danger" onclick="verificarLogs()">Verificar Logs</button>
                 <button class="btn" onclick="limparLogs()">Limpar Logs</button>
             </div>
         </div>
@@ -98,13 +97,12 @@
         </div>
 
         <div class="test-section warning">
-            <h3>📋 Instruções para Teste Final</h3>
+            <h3>📋 Instruções para Teste</h3>
             <ol>
-                <li><strong>Testar Edição Completa:</strong> Verifica se a edição funciona sem erros</li>
+                <li><strong>Testar Edição ID 23:</strong> Verifica se a edição funciona sem erro</li>
                 <li><strong>Testar Campos Vazios:</strong> Simula campos vazios para verificar validação</li>
                 <li><strong>Verificar no Sistema:</strong> Teste a edição no sistema principal</li>
-                <li><strong>Confirmar:</strong> CPF e telefone aparecem e não são sobrescritos</li>
-                <li><strong>Verificar:</strong> Não há mais erros de seletor no console</li>
+                <li><strong>Confirmar:</strong> CPF e telefone aparecem na edição</li>
             </ol>
         </div>
     </div>
@@ -120,8 +118,8 @@
             logsDiv.scrollTop = logsDiv.scrollHeight;
         }
 
-        async function testarEdicaoCompleta() {
-            log('🧪 Testando edição completa do instrutor ID 23...', 'warning');
+        async function testarEdicaoID23() {
+            log('🧪 Testando edição do instrutor ID 23...', 'warning');
             
             try {
                 const response = await fetch('/cfc-bom-conselho/admin/api/instrutores.php?id=23', {
@@ -152,15 +150,15 @@
             }
         }
 
-        async function testarCamposVazios() {
+        async function testarEdicaoVazio() {
             log('🧪 Testando edição com campos vazios...', 'warning');
             
             // Simular dados com campos vazios
             const dadosVazios = {
                 id: 999,
                 nome: 'Teste Vazio',
-                cpf: '123.456.789-00',
-                telefone: '(11) 99999-8888',
+                cpf: '',
+                telefone: '',
                 categoria_habilitacao: '',
                 dias_semana: '',
                 email: 'teste@vazio.com',
@@ -183,11 +181,11 @@
             log('📋 Email: ' + (instrutor.email || 'VAZIO'), 'info');
             
             // Simular categorias
-            if (instrutor.categoria_habilitacao && instrutor.categoria_habilitacao.trim() !== '' && instrutor.categoria_habilitacao !== '[]') {
+            if (instrutor.categoria_habilitacao && instrutor.categoria_habilitacao.trim() !== '') {
                 const categorias = instrutor.categoria_habilitacao.split(',');
                 categorias.forEach(cat => {
                     const catTrim = cat.trim();
-                    if (catTrim && catTrim !== '') {
+                    if (catTrim) {
                         log('✅ Categoria seria marcada: ' + catTrim, 'success');
                     }
                 });
@@ -196,11 +194,11 @@
             }
             
             // Simular dias da semana
-            if (instrutor.dias_semana && instrutor.dias_semana.trim() !== '' && instrutor.dias_semana !== '[]') {
+            if (instrutor.dias_semana && instrutor.dias_semana.trim() !== '') {
                 const dias = instrutor.dias_semana.split(',');
                 dias.forEach(dia => {
                     const diaTrim = dia.trim();
-                    if (diaTrim && diaTrim !== '') {
+                    if (diaTrim) {
                         log('✅ Dia da semana seria marcado: ' + diaTrim, 'success');
                     }
                 });
@@ -211,15 +209,13 @@
             log('✅ Simulação concluída sem erros!', 'success');
         }
 
-        function verificarSistema() {
-            log('🔍 Verificando sistema principal...', 'warning');
-            log('📋 Para verificar se as correções funcionaram:', 'info');
+        function verificarLogs() {
+            log('🔍 Verificando logs do sistema...', 'warning');
+            log('📋 Para verificar se a edição está funcionando:', 'info');
             log('1. Abra o sistema principal', 'info');
             log('2. Clique em "Editar" em qualquer instrutor', 'info');
-            log('3. Verifique se NÃO há erros no console', 'info');
+            log('3. Verifique se não há erros no console', 'info');
             log('4. Confirme se CPF e telefone aparecem', 'info');
-            log('5. Confirme se não são sobrescritos pelos dados do usuário', 'info');
-            log('6. Verifique se não há mais erros de seletor', 'info');
         }
 
         function limparLogs() {
@@ -228,8 +224,8 @@
         }
 
         // Log inicial
-        log('🚀 Teste de correções finais iniciado');
-        log('📋 Verificando se todos os problemas foram resolvidos');
+        log('🚀 Teste de edição corrigida iniciado');
+        log('📋 Verificando se o erro de seletor foi corrigido');
     </script>
 </body>
 </html>

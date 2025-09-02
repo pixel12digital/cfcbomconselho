@@ -62,7 +62,7 @@ try {
                 $id = (int)$_GET['id'];
                 error_log('[USUARIOS API] Buscando usuário ID: ' . $id);
                 
-                $usuario = $db->fetch("SELECT id, nome, email, tipo, ativo, criado_em FROM usuarios WHERE id = ?", [$id]);
+                $usuario = $db->fetch("SELECT id, nome, email, cpf, telefone, tipo, ativo, criado_em FROM usuarios WHERE id = ?", [$id]);
                 
                 if ($usuario) {
                     error_log('[USUARIOS API] Usuário encontrado: ' . $usuario['email']);

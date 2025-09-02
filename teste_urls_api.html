@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste URLs API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        .url-test {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste de URLs das APIs</h1>
+        
+        <div class="test-section info">
+            <h3>📋 Problema Identificado</h3>
+            <p><strong>Erro:</strong> APIs retornando 404 (Not Found)</p>
+            <p><strong>URLs incorretas:</strong> :8080/admin/api/cfcs.php</p>
+            <p><strong>Causa:</strong> Configuração de URLs não funcionando no ambiente local</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Teste de Configuração</h3>
+            <button onclick="testarConfiguracao()">Testar Configuração</button>
+            <button onclick="testarURLs()">Testar URLs</button>
+            <button onclick="testarAPIs()">Testar APIs</button>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Resultados</h3>
+            <div id="resultados"></div>
+        </div>
+
+        <div class="test-section success">
+            <h3>✅ Correção Aplicada</h3>
+            <p><strong>Arquivo:</strong> admin/assets/js/config.js</p>
+            <p><strong>Mudança:</strong> Função getRelativeApiUrl corrigida para funcionar em ambos os ambientes</p>
+            <ul>
+                <li>Produção: URLs absolutas</li>
+                <li>Desenvolvimento: URLs relativas ao projeto</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Simular a configuração do config.js
+        const API_CONFIG = {
+            isProduction: window.location.hostname.includes('hostinger') || window.location.hostname.includes('hstgr.io'),
+            
+            ENDPOINTS: {
+                INSTRUTORES: 'admin/api/instrutores.php',
+                USUARIOS: 'admin/api/usuarios.php',
+                CFCs: 'admin/api/cfcs.php',
+                ALUNOS: 'admin/api/alunos.php',
+                VEICULOS: 'admin/api/veiculos.php',
+                AGENDAMENTO: 'admin/api/agendamento.php',
+                HISTORICO: 'admin/api/historico.php'
+            },
+
+            getRelativeApiUrl: function(endpoint) {
+                if (this.isProduction) {
+                    return window.location.origin + '/' + this.ENDPOINTS[endpoint];
+                } else {
+                    const currentPath = window.location.pathname;
+                    
+                    // Extrair o caminho do projeto corretamente
+                    let projectPath;
+                    if (currentPath.includes('/admin/')) {
+                        // Se estamos em uma página admin, pegar o caminho até /admin/
+                        projectPath = currentPath.split('/admin/')[0];
+                    } else if (currentPath.includes('/cfc-bom-conselho/')) {
+                        // Se estamos em uma página do projeto, pegar o caminho do projeto
+                        projectPath = '/cfc-bom-conselho';
+                    } else {
+                        // Fallback: usar o caminho atual sem o arquivo
+                        projectPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+                    }
+                    
+                    return projectPath + '/' + this.ENDPOINTS[endpoint];
+                }
+            }
+        };
+
+        function log(message, type = 'info') {
+            const resultadosDiv = document.getElementById('resultados');
+            const div = document.createElement('div');
+            div.className = `url-test ${type}`;
+            div.textContent = message;
+            resultadosDiv.appendChild(div);
+        }
+
+        function testarConfiguracao() {
+            log('🔧 Testando configuração...');
+            log(`🌍 Ambiente: ${API_CONFIG.isProduction ? 'PRODUÇÃO' : 'DESENVOLVIMENTO'}`);
+            log(`🔍 Hostname: ${window.location.hostname}`);
+            log(`🔍 Pathname: ${window.location.pathname}`);
+            log(`🔍 Origin: ${window.location.origin}`);
+        }
+
+        function testarURLs() {
+            log('🌐 Testando URLs das APIs...');
+            
+            const endpoints = ['INSTRUTORES', 'USUARIOS', 'CFCs', 'ALUNOS'];
+            
+            endpoints.forEach(endpoint => {
+                const url = API_CONFIG.getRelativeApiUrl(endpoint);
+                log(`📡 ${endpoint}: ${url}`);
+            });
+            
+            // Teste adicional para verificar a lógica de extração do caminho
+            log('🔍 Teste de extração do caminho do projeto:');
+            const currentPath = window.location.pathname;
+            log(`   Caminho atual: ${currentPath}`);
+            
+            let projectPath;
+            if (currentPath.includes('/admin/')) {
+                projectPath = currentPath.split('/admin/')[0];
+                log(`   Encontrado /admin/ - Projeto: ${projectPath}`);
+            } else if (currentPath.includes('/cfc-bom-conselho/')) {
+                projectPath = '/cfc-bom-conselho';
+                log(`   Encontrado /cfc-bom-conselho/ - Projeto: ${projectPath}`);
+            } else {
+                projectPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+                log(`   Fallback - Projeto: ${projectPath}`);
+            }
+        }
+
+        function testarAPIs() {
+            log('🚀 Testando APIs...');
+            
+            // Testar API CFCs
+            const urlCFC = API_CONFIG.getRelativeApiUrl('CFCs');
+            log(`📡 Testando: ${urlCFC}`);
+            
+            fetch(urlCFC)
+                .then(response => {
+                    log(`✅ Status: ${response.status} ${response.statusText}`, 'success');
+                    return response.json();
+                })
+                .then(data => {
+                    log(`📊 Dados: ${JSON.stringify(data).substring(0, 100)}...`, 'success');
+                })
+                .catch(error => {
+                    log(`❌ Erro: ${error.message}`, 'error');
+                });
+            
+            // Testar API Usuários
+            const urlUsuarios = API_CONFIG.getRelativeApiUrl('USUARIOS');
+            log(`📡 Testando: ${urlUsuarios}`);
+            
+            fetch(urlUsuarios)
+                .then(response => {
+                    log(`✅ Status: ${response.status} ${response.statusText}`, 'success');
+                    return response.json();
+                })
+                .then(data => {
+                    log(`📊 Dados: ${JSON.stringify(data).substring(0, 100)}...`, 'success');
+                })
+                .catch(error => {
+                    log(`❌ Erro: ${error.message}`, 'error');
+                });
+        }
+
+        // Log inicial
+        log('🚀 Sistema de teste iniciado');
+        log('📋 Configuração corrigida no arquivo config.js');
+    </script>
+</body>
+</html>

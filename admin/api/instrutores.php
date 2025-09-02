@@ -6,9 +6,10 @@ error_reporting(E_ALL);
 
 // API para gerenciamento de instrutores
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Origin: http://localhost:8080');  // Especificar origem específica
+header('Access-Control-Allow-Credentials: true');  // Permitir credenciais
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
+header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');
 
 // Incluir arquivos na ordem correta
 require_once '../../includes/config.php';
@@ -109,6 +110,9 @@ try {
                 $data = $_POST;
             }
             
+            // Debug: Log dos dados recebidos
+            error_log('Dados recebidos na API: ' . json_encode($data));
+            
             // Validações - verificar se é usuário novo ou existente
             if (empty($data['cfc_id'])) {
                 http_response_code(400);
@@ -133,50 +137,32 @@ try {
                 exit;
             }
             
+            // Verificar se já existe instrutor com este usuário
+            if (!empty($data['usuario_id'])) {
+                $existingInstrutor = $db->fetch("SELECT id FROM instrutores WHERE usuario_id = ?", [$data['usuario_id']]);
+                if ($existingInstrutor) {
+                    error_log('POST - Usuário já tem instrutor: ' . $data['usuario_id']);
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Já existe um instrutor cadastrado para este usuário']);
+                    exit;
+                }
+            }
+            
             // Iniciar transação
             $db->beginTransaction();
             
             try {
-                // Verificar se é usuário novo ou existente
+                // Verificar se usuário foi selecionado
                 if (empty($data['usuario_id'])) {
-                    // Criar novo usuário
-                                    if (empty($data['nome']) || empty($data['email']) || empty($data['senha']) || empty($data['cpf'])) {
-                    throw new Exception('Para novo usuário: Nome, E-mail, CPF e Senha são obrigatórios');
-                }
-                    
-                    // Verificar se email ou CPF já existe
-                    $existingUser = $db->fetch("SELECT id FROM usuarios WHERE email = ? OR cpf = ?", [$data['email'], $data['cpf']]);
-                    if ($existingUser) {
-                        throw new Exception('E-mail ou CPF já cadastrado');
-                    }
-                    
-                    // Hash da senha
-                    $senha_hash = password_hash($data['senha'], PASSWORD_DEFAULT);
-                    
-                    // Criar usuário com todos os campos
-                    $usuario_id = $db->insert('usuarios', [
-                        'nome' => $data['nome'],
-                        'email' => $data['email'],
-                        'senha' => $senha_hash,
-                        'tipo' => 'instrutor',
-                        'cpf' => $data['cpf'] ?? '',
-                        'telefone' => $data['telefone'] ?? '',
-                        'ativo' => isset($data['ativo']) ? (bool)$data['ativo'] : true,
-                        'criado_em' => date('Y-m-d H:i:s')
-                    ]);
-                } else {
-                    // Usar usuário existente
-                    $usuario_id = $data['usuario_id'];
-                    
-                    // Verificar se usuário existe
-                    $existingUser = $db->fetch("SELECT id FROM usuarios WHERE id = ?", [$usuario_id]);
-                    if (!$existingUser) {
-                        throw new Exception('Usuário não encontrado');
-                    }
+                    throw new Exception('Usuário é obrigatório');
                 }
                 
-                if (!$usuario_id) {
-                    throw new Exception('Erro ao criar usuário');
+                $usuario_id = $data['usuario_id'];
+                
+                // Verificar se usuário existe
+                $existingUser = $db->fetch("SELECT id FROM usuarios WHERE id = ?", [$usuario_id]);
+                if (!$existingUser) {
+                    throw new Exception('Usuário não encontrado');
                 }
                 
                 // Criar instrutor com TODOS os campos
@@ -184,7 +170,7 @@ try {
                     'nome' => $data['nome'] ?? '',
                     'cpf' => $data['cpf'] ?? '',
                     'cnh' => $data['cnh'] ?? '',
-                    'data_nascimento' => $data['data_nascimento'] ?? '',
+                    'data_nascimento' => !empty($data['data_nascimento']) ? $data['data_nascimento'] : null,
                     'email' => $data['email'] ?? '',
                     'telefone' => $data['telefone'] ?? '',
                     'endereco' => $data['endereco'] ?? '',
@@ -193,10 +179,9 @@ try {
                     'usuario_id' => $usuario_id,
                     'cfc_id' => $data['cfc_id'],
                     'credencial' => $data['credencial'] ?? '',
-                    'categoria_habilitacao' => $data['categoria_habilitacao'] ?? '',
-                    'categorias_json' => json_encode($data['categorias'] ?? []),
+                    'categorias_json' => json_encode($data['categoria_habilitacao'] ?? []),
                     'tipo_carga' => $data['tipo_carga'] ?? '',
-                    'validade_credencial' => $data['validade_credencial'] ?? '',
+                    'validade_credencial' => !empty($data['validade_credencial']) ? $data['validade_credencial'] : null,
                     'observacoes' => $data['observacoes'] ?? '',
                     'dias_semana' => json_encode($data['dias_semana'] ?? []),
                     'horario_inicio' => $data['horario_inicio'] ?? '',
@@ -205,10 +190,16 @@ try {
                     'criado_em' => date('Y-m-d H:i:s')
                 ];
                 
+                // Debug: Log dos dados que serão inseridos
+                error_log('Dados do instrutor para inserção: ' . json_encode($instrutorData));
+                error_log('Categoria habilitação: ' . ($data['categoria_habilitacao'] ?? 'VAZIO'));
+                error_log('Dias da semana: ' . ($data['dias_semana'] ?? 'VAZIO'));
+                
                 $instrutor_id = $db->insert('instrutores', $instrutorData);
                 
                 if (!$instrutor_id) {
-                    throw new Exception('Erro ao criar instrutor');
+                    error_log('Erro na inserção do instrutor. Último erro SQL: ' . $db->getLastError());
+                    throw new Exception('Erro na execução da query: ' . $db->getLastError());
                 }
                 
                 $db->commit();
@@ -230,6 +221,7 @@ try {
                 
             } catch (Exception $e) {
                 $db->rollback();
+                error_log('Erro na criação do instrutor: ' . $e->getMessage());
                 http_response_code(500);
                 echo json_encode(['error' => 'Erro ao criar instrutor: ' . $e->getMessage()]);
                 exit;
@@ -243,6 +235,9 @@ try {
             if (!$data) {
                 parse_str(file_get_contents('php://input'), $data);
             }
+            
+            // Debug: Log dos dados recebidos
+            error_log('PUT - Dados recebidos na API: ' . json_encode($data));
             
             if (empty($data['id'])) {
                 http_response_code(400);
@@ -288,7 +283,7 @@ try {
                 if (isset($data['nome'])) $updateInstrutorData['nome'] = $data['nome'];
                 if (isset($data['cpf'])) $updateInstrutorData['cpf'] = $data['cpf'];
                 if (isset($data['cnh'])) $updateInstrutorData['cnh'] = $data['cnh'];
-                if (isset($data['data_nascimento'])) $updateInstrutorData['data_nascimento'] = $data['data_nascimento'];
+                if (isset($data['data_nascimento'])) $updateInstrutorData['data_nascimento'] = !empty($data['data_nascimento']) ? $data['data_nascimento'] : null;
                 if (isset($data['email'])) $updateInstrutorData['email'] = $data['email'];
                 if (isset($data['telefone'])) $updateInstrutorData['telefone'] = $data['telefone'];
                 if (isset($data['endereco'])) $updateInstrutorData['endereco'] = $data['endereco'];
@@ -296,15 +291,19 @@ try {
                 if (isset($data['uf'])) $updateInstrutorData['uf'] = $data['uf'];
                 if (isset($data['cfc_id'])) $updateInstrutorData['cfc_id'] = $data['cfc_id'];
                 if (isset($data['credencial'])) $updateInstrutorData['credencial'] = $data['credencial'];
-                if (isset($data['categoria_habilitacao'])) $updateInstrutorData['categoria_habilitacao'] = $data['categoria_habilitacao'];
-                if (isset($data['categorias'])) $updateInstrutorData['categorias_json'] = json_encode($data['categorias']);
+                if (isset($data['categoria_habilitacao'])) $updateInstrutorData['categorias_json'] = json_encode($data['categoria_habilitacao']);
                 if (isset($data['tipo_carga'])) $updateInstrutorData['tipo_carga'] = $data['tipo_carga'];
-                if (isset($data['validade_credencial'])) $updateInstrutorData['validade_credencial'] = $data['validade_credencial'];
+                if (isset($data['validade_credencial'])) $updateInstrutorData['validade_credencial'] = !empty($data['validade_credencial']) ? $data['validade_credencial'] : null;
                 if (isset($data['observacoes'])) $updateInstrutorData['observacoes'] = $data['observacoes'];
                 if (isset($data['dias_semana'])) $updateInstrutorData['dias_semana'] = json_encode($data['dias_semana']);
                 if (isset($data['horario_inicio'])) $updateInstrutorData['horario_inicio'] = $data['horario_inicio'];
                 if (isset($data['horario_fim'])) $updateInstrutorData['horario_fim'] = $data['horario_fim'];
                 if (isset($data['ativo'])) $updateInstrutorData['ativo'] = (bool)$data['ativo'];
+                
+                // Debug: Log dos dados que serão atualizados
+                error_log('PUT - Dados do instrutor para atualização: ' . json_encode($updateInstrutorData));
+                error_log('PUT - Categorias recebidas: ' . (isset($data['categorias']) ? json_encode($data['categorias']) : 'NÃO DEFINIDO'));
+                error_log('PUT - Dias da semana recebidos: ' . (isset($data['dias_semana']) ? json_encode($data['dias_semana']) : 'NÃO DEFINIDO'));
                 
                 if (!empty($updateInstrutorData)) {
                     $updateInstrutorData['updated_at'] = date('Y-m-d H:i:s');

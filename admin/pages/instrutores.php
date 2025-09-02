@@ -211,14 +211,21 @@ $pageTitle = 'Gestão de Instrutores';
                              </div>
                          </div>
                          
+                         <!-- Seção: Dados de Acesso -->
                          <div class="row mb-2">
+                             <div class="col-12">
+                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.3rem !important;">
+                                     <i class="fas fa-user me-1"></i>Dados de Acesso
+                                 </h6>
+                             </div>
                              <div class="col-md-6">
                                  <div class="mb-1">
                                      <label for="usuario_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Usuário *</label>
-                                     <select id="usuario_id" name="usuario_id" class="form-select" required style="padding: 0.4rem; font-size: 0.85rem;">
+                                     <select id="usuario_id" name="usuario_id" class="form-select" style="padding: 0.4rem; font-size: 0.85rem;">
                                          <option value="">Selecione um usuário</option>
-                                         <!-- Preencher com usuários -->
+                                         <!-- Preencher com usuários existentes -->
                                      </select>
+                                     <small class="form-text text-muted">Selecione um usuário existente para associar ao instrutor</small>
                                  </div>
                              </div>
                              <div class="col-md-6">
@@ -231,25 +238,31 @@ $pageTitle = 'Gestão de Instrutores';
                                  </div>
                              </div>
                          </div>
-                        
-                        <div class="row mb-2">
-                            <div class="col-md-6">
-                                <div class="mb-1">
-                                    <label for="credencial" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Credencial *</label>
-                                    <input type="text" class="form-control" id="credencial" name="credencial" required 
-                                           placeholder="Número da credencial" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-1">
-                                    <label for="ativo" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status</label>
-                                    <select class="form-select" id="ativo" name="ativo" style="padding: 0.4rem; font-size: 0.85rem;">
-                                        <option value="1">Ativo</option>
-                                        <option value="0">Inativo</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
+                         
+                         <!-- Seção: Dados do Instrutor -->
+                         <div class="row mb-2">
+                             <div class="col-12">
+                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.3rem !important;">
+                                     <i class="fas fa-id-card me-1"></i>Dados do Instrutor
+                                 </h6>
+                             </div>
+                             <div class="col-md-6">
+                                 <div class="mb-1">
+                                     <label for="credencial" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Credencial *</label>
+                                     <input type="text" class="form-control" id="credencial" name="credencial" required 
+                                            placeholder="Número da credencial" style="padding: 0.4rem; font-size: 0.85rem;">
+                                 </div>
+                             </div>
+                             <div class="col-md-6">
+                                 <div class="mb-1">
+                                     <label for="ativo" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status</label>
+                                     <select class="form-select" id="ativo" name="ativo" style="padding: 0.4rem; font-size: 0.85rem;">
+                                         <option value="1">Ativo</option>
+                                         <option value="0">Inativo</option>
+                                     </select>
+                                 </div>
+                             </div>
+                         </div>
                         
                         <!-- Seção 2: Categorias de Habilitação -->
                         <div class="row mb-1">

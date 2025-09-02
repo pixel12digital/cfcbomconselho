@@ -24,7 +24,7 @@ if ($action === 'list') {
         <p class="page-subtitle">Cadastro e gerenciamento de usuários do sistema</p>
     </div>
     <div class="page-actions">
-        <button class="btn btn-primary" id="btnNovoUsuario" onclick="console.log('Botao clicado via onclick inline'); if(typeof showCreateUserModal === 'function') { showCreateUserModal(); } else { alert('Funcao nao disponivel via onclick'); }">
+        <button class="btn btn-primary" id="btnNovoUsuario">
             <i class="fas fa-plus"></i>
             Novo Usuário
         </button>
@@ -131,31 +131,31 @@ if ($action === 'list') {
 <?php endif; ?>
 
 <!-- Modal de Criação/Edição de Usuário -->
-<div id="userModal" class="modal-overlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0, 0, 0, 0.8); z-index: 999999; align-items: center; justify-content: center; width: 100vw; height: 100vh; pointer-events: none;">
-    <div class="modal" style="background: white; border-radius: 8px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto; position: relative; margin: 20px; z-index: 1000000; pointer-events: auto; display: block; visibility: visible; opacity: 1;">
-        <div class="modal-header" style="padding: 20px; border-bottom: 1px solid #e5e7eb; display: flex; align-items: center; justify-content: space-between;">
+<div id="userModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
             <h3 class="modal-title" id="userModalTitle">Novo Usuário</h3>
-            <button class="modal-close" onclick="closeUserModal()" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6b7280; padding: 5px; border-radius: 4px; pointer-events: auto;">
+            <button class="modal-close" onclick="closeUserModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <div class="modal-body" style="padding: 20px;">
+        <div class="modal-body">
             <form id="userForm">
                 <input type="hidden" id="userId" name="id">
                 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label for="userName" class="form-label" style="display: block; margin-bottom: 5px; font-weight: 500;">Nome Completo</label>
-                    <input type="text" id="userName" name="nome" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; pointer-events: auto;">
+                <div class="form-group">
+                    <label for="userName" class="form-label">Nome Completo</label>
+                    <input type="text" id="userName" name="nome" class="form-control" required>
                 </div>
                 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label for="userEmail" class="form-label" style="display: block; margin-bottom: 5px; font-weight: 500;">E-mail</label>
-                    <input type="email" id="userEmail" name="email" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; pointer-events: auto;">
+                <div class="form-group">
+                    <label for="userEmail" class="form-label">E-mail</label>
+                    <input type="email" id="userEmail" name="email" class="form-control" required>
                 </div>
                 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label for="userType" class="form-label" style="display: block; margin-bottom: 5px; font-weight: 500;">Tipo de Usuário</label>
-                    <select id="userType" name="tipo" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; pointer-events: auto;">
+                <div class="form-group">
+                    <label for="userType" class="form-label">Tipo de Usuário</label>
+                    <select id="userType" name="tipo" class="form-control" required>
                         <option value="">Selecione...</option>
                         <option value="admin">Administrador</option>
                         <option value="instrutor">Instrutor</option>
@@ -163,28 +163,28 @@ if ($action === 'list') {
                     </select>
                 </div>
                 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label for="userPassword" class="form-label" style="display: block; margin-bottom: 5px; font-weight: 500;">Senha</label>
-                    <input type="password" id="userPassword" name="senha" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; pointer-events: auto;">
-                    <div class="form-text" style="font-size: 12px; color: #6b7280; margin-top: 4px;">Mínimo 6 caracteres</div>
+                <div class="form-group">
+                    <label for="userPassword" class="form-label">Senha</label>
+                    <input type="password" id="userPassword" name="senha" class="form-control" required>
+                    <div class="form-text">Mínimo 6 caracteres</div>
                 </div>
                 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label for="userConfirmPassword" class="form-label" style="display: block; margin-bottom: 5px; font-weight: 500;">Confirmar Senha</label>
-                    <input type="password" id="userConfirmPassword" name="confirmar_senha" class="form-control" required style="width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 4px; font-size: 14px; pointer-events: auto;">
+                <div class="form-group">
+                    <label for="userConfirmPassword" class="form-label">Confirmar Senha</label>
+                    <input type="password" id="userConfirmPassword" name="confirmar_senha" class="form-control" required>
                 </div>
                 
-                <div class="form-group" style="margin-bottom: 15px;">
-                    <label class="form-label" style="display: flex; align-items: center; gap: 8px; font-weight: 500;">
-                        <input type="checkbox" id="userActive" name="ativo" checked style="margin: 0; pointer-events: auto;">
+                <div class="form-group">
+                    <label class="form-label">
+                        <input type="checkbox" id="userActive" name="ativo" checked>
                         Usuário Ativo
                     </label>
                 </div>
             </form>
         </div>
-        <div class="modal-footer" style="padding: 20px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: flex-end;">
-            <button type="button" class="btn btn-secondary" onclick="closeUserModal()" style="padding: 8px 16px; border: 1px solid #d1d5db; background: #f9fafb; color: #374151; border-radius: 4px; cursor: pointer; pointer-events: auto;">Cancelar</button>
-            <button type="button" class="btn btn-primary" onclick="saveUser()" style="padding: 8px 16px; border: none; background: #3b82f6; color: white; border-radius: 4px; cursor: pointer; pointer-events: auto;">Salvar</button>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeUserModal()">Cancelar</button>
+            <button type="button" class="btn btn-primary" onclick="saveUser()">Salvar</button>
         </div>
     </div>
 </div>
@@ -222,60 +222,15 @@ function showCreateUserModal() {
     document.getElementById('userPassword').required = true;
     document.getElementById('userConfirmPassword').required = true;
     
-    // Mostrar modal com estilo correto
+    // Mostrar modal
     const modal = document.getElementById('userModal');
-    modal.classList.add('show'); // Adiciona a classe 'show' para mostrar o modal
+    modal.classList.add('show');
     
     console.log('Modal aberto com sucesso!');
-    console.log('Modal classes:', modal.className);
-    console.log('Modal tem classe show:', modal.classList.contains('show'));
-    
-    // Debug: verificar estilos computados
-    setTimeout(function() {
-        const styles = window.getComputedStyle(modal);
-        console.log('=== DEBUG MODAL ===');
-        console.log('Modal display:', styles.display);
-        console.log('Modal visibility:', styles.visibility);
-        console.log('Modal opacity:', styles.opacity);
-        console.log('Modal z-index:', styles.zIndex);
-        
-        const modalContent = modal.querySelector('.modal');
-        if (modalContent) {
-            const contentStyles = window.getComputedStyle(modalContent);
-            console.log('=== DEBUG MODAL CONTENT ===');
-            console.log('Content display:', contentStyles.display);
-            console.log('Content visibility:', contentStyles.visibility);
-            console.log('Content opacity:', contentStyles.opacity);
-            console.log('Content background:', contentStyles.background);
-            console.log('Content z-index:', contentStyles.zIndex);
-        }
-        
-        // Verificar se o modal está realmente visível
-        const rect = modal.getBoundingClientRect();
-        console.log('Modal getBoundingClientRect:', rect);
-        console.log('Modal offsetWidth:', modal.offsetWidth);
-        console.log('Modal offsetHeight:', modal.offsetHeight);
-        
-        if (rect.width > 0 && rect.height > 0) {
-            console.log('✅ Modal está visível e com dimensões!');
-        } else {
-            console.log('❌ Modal não tem dimensões visíveis!');
-            alert('Modal aberto mas não visível! Verifique o console para mais detalhes.');
-        }
-    }, 100);
 }
 
 // Garantir que a função esteja disponível globalmente
 window.showCreateUserModal = showCreateUserModal;
-
-// Fallback: se por algum motivo a função não estiver definida, criar uma versão básica
-if (typeof window.showCreateUserModal !== 'function') {
-    console.warn('Funcao showCreateUserModal nao encontrada, criando fallback...');
-    window.showCreateUserModal = function() {
-        console.log('Usando funcao fallback showCreateUserModal');
-        alert('Modal de novo usuario nao esta funcionando. Tente recarregar a pagina.');
-    };
-}
 
 // Mostrar modal de edição
 function editUser(userId) {
@@ -309,9 +264,9 @@ function editUser(userId) {
                 document.getElementById('userPassword').required = false;
                 document.getElementById('userConfirmPassword').required = false;
                 
-                // Mostrar modal com estilo correto
+                // Mostrar modal
                 const modal = document.getElementById('userModal');
-                modal.classList.add('show'); // Adiciona a classe 'show' para mostrar o modal
+                modal.classList.add('show');
             } else {
                 showNotification(data.error || 'Erro ao carregar usuario', 'error');
             }
@@ -321,9 +276,16 @@ function editUser(userId) {
             showNotification('Erro ao carregar usuario. Tente novamente.', 'error');
         })
         .finally(() => {
-            // Restaurar conteúdo da página
-            if (loadingEl) {
+            // Restaurar conteúdo da página apenas se houver erro
+            if (loadingEl && !currentUser) {
+                console.log('Erro na edição - restaurando página...');
                 window.location.reload();
+            } else {
+                console.log('Edição carregada com sucesso - modal permanecerá aberto');
+                // Restaurar conteúdo da página sem recarregar
+                if (loadingEl) {
+                    loadingEl.innerHTML = '';
+                }
             }
         });
 }
@@ -331,20 +293,11 @@ function editUser(userId) {
 // Garantir que a função esteja disponível globalmente
 window.editUser = editUser;
 
-// Fallback para editUser
-if (typeof window.editUser !== 'function') {
-    console.warn('Funcao editUser nao encontrada, criando fallback...');
-    window.editUser = function(userId) {
-        console.log('Usando funcao fallback editUser para ID: ' + userId);
-        alert('Funcao de edicao nao esta funcionando. Tente recarregar a pagina.');
-    };
-}
-
 // Fechar modal
 function closeUserModal() {
     console.log('Fechando modal...');
     const modal = document.getElementById('userModal');
-    modal.classList.remove('show'); // Remove a classe 'show' para fechar o modal
+    modal.classList.remove('show');
     document.getElementById('userForm').reset();
     currentUser = null;
     console.log('Modal fechado com sucesso!');
@@ -352,16 +305,6 @@ function closeUserModal() {
 
 // Garantir que a função esteja disponível globalmente
 window.closeUserModal = closeUserModal;
-
-// Fallback para closeUserModal
-if (typeof window.closeUserModal !== 'function') {
-    console.warn('Funcao closeUserModal nao encontrada, criando fallback...');
-    window.closeUserModal = function() {
-        console.log('Usando funcao fallback closeUserModal');
-        const modal = document.getElementById('userModal');
-        if (modal) modal.classList.remove('show');
-    };
-}
 
 // Salvar usuário
 function saveUser() {
@@ -465,15 +408,6 @@ function saveUser() {
 
 // Garantir que a função esteja disponível globalmente
 window.saveUser = saveUser;
-
-// Fallback para saveUser
-if (typeof window.saveUser !== 'function') {
-    console.warn('Funcao saveUser nao encontrada, criando fallback...');
-    window.saveUser = function() {
-        console.log('Usando funcao fallback saveUser');
-        alert('Funcao de salvar nao esta funcionando. Tente recarregar a pagina.');
-    };
-}
 
 // Excluir usuário
 function deleteUser(userId) {
@@ -601,15 +535,6 @@ function deleteUser(userId) {
 // Garantir que a função esteja disponível globalmente
 window.deleteUser = deleteUser;
 
-// Fallback para deleteUser
-if (typeof window.deleteUser !== 'function') {
-    console.warn('Funcao deleteUser nao encontrada, criando fallback...');
-    window.deleteUser = function(userId) {
-        console.log('Usando funcao fallback deleteUser para ID: ' + userId);
-        alert('Funcao de exclusao nao esta funcionando. Tente recarregar a pagina.');
-    };
-}
-
 // Exportar usuários
 function exportUsers() {
     console.log('Funcao exportUsers chamada!');
@@ -660,15 +585,6 @@ function exportUsers() {
 // Garantir que a função esteja disponível globalmente
 window.exportUsers = exportUsers;
 
-// Fallback para exportUsers
-if (typeof window.exportUsers !== 'function') {
-    console.warn('Funcao exportUsers nao encontrada, criando fallback...');
-    window.exportUsers = function() {
-        console.log('Usando funcao fallback exportUsers');
-        alert('Funcao de exportacao nao esta funcionando. Tente recarregar a pagina.');
-    };
-}
-
 // Função para mostrar notificações
 function showNotification(message, type = 'info') {
     console.log('Mostrando notificacao: ' + message + ' (tipo: ' + type + ')');
@@ -695,171 +611,6 @@ function showNotification(message, type = 'info') {
 
 // Garantir que a função esteja disponível globalmente
 window.showNotification = showNotification;
-
-// Fallback para showNotification
-if (typeof window.showNotification !== 'function') {
-    console.warn('Funcao showNotification nao encontrada, criando fallback...');
-    window.showNotification = function(message, type = 'info') {
-        console.log('Usando funcao fallback showNotification: ' + message + ' ' + type);
-        alert(type.toUpperCase() + ': ' + message);
-    };
-}
-
-// Função de teste para forçar visibilidade do modal
-function testModalVisibility() {
-    console.log('Testando visibilidade do modal...');
-    
-    const modal = document.getElementById('userModal');
-    if (modal) {
-        // Forçar estilos para garantir visibilidade
-        modal.style.cssText = `
-            position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            right: 0 !important;
-            bottom: 0 !important;
-            background-color: rgba(0, 0, 0, 0.9) !important;
-            z-index: 999999 !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            visibility: visible !important;
-            opacity: 1 !important;
-            width: 100vw !important;
-            height: 100vh !important;
-            pointer-events: auto !important;
-        `;
-        
-        // Forçar estilos do modal interno
-        const modalContent = modal.querySelector('.modal');
-        if (modalContent) {
-            modalContent.style.cssText = `
-                background: red !important;
-                border: 5px solid yellow !important;
-                border-radius: 8px !important;
-                box-shadow: 0 10px 30px rgba(255, 0, 0, 0.8) !important;
-                max-width: 500px !important;
-                width: 90% !important;
-                max-height: 90vh !important;
-                overflow-y: auto !important;
-                position: relative !important;
-                margin: 20px !important;
-                z-index: 1000000 !important;
-            `;
-        }
-        
-        console.log('Estilos forçados aplicados ao modal');
-        console.log('Modal deve estar visível agora com bordas vermelhas e amarelas!');
-        
-        // Verificar se o modal está realmente visível
-        setTimeout(function() {
-            console.log('Verificando visibilidade após 500ms...');
-            console.log('Modal display:', modal.style.display);
-            console.log('Modal visibility:', modal.style.visibility);
-            console.log('Modal opacity:', modal.style.opacity);
-            console.log('Modal offsetHeight:', modal.offsetHeight);
-            console.log('Modal offsetWidth:', modal.offsetWidth);
-            
-            const rect = modal.getBoundingClientRect();
-            console.log('Modal getBoundingClientRect:', rect);
-        }, 500);
-    } else {
-        console.error('Modal não encontrado!');
-    }
-}
-
-// Função de teste para o botão Novo Usuário
-function testBotaoNovoUsuario() {
-    console.log('=== TESTE DO BOTAO NOVO USUARIO ===');
-    
-    const btn = document.getElementById('btnNovoUsuario');
-    if (btn) {
-        console.log('✅ Botao encontrado:', btn);
-        console.log('ID:', btn.id);
-        console.log('Texto:', btn.textContent.trim());
-        console.log('HTML:', btn.outerHTML);
-        
-        // Verificar CSS
-        const styles = window.getComputedStyle(btn);
-        console.log('CSS:', {
-            display: styles.display,
-            visibility: styles.visibility,
-            opacity: styles.opacity,
-            position: styles.position,
-            zIndex: styles.zIndex,
-            pointerEvents: styles.pointerEvents
-        });
-        
-        // Verificar posição
-        const rect = btn.getBoundingClientRect();
-        console.log('Posicao:', rect);
-        console.log('Visivel:', rect.width > 0 && rect.height > 0);
-        
-        // Testar clique
-        console.log('Testando clique...');
-        btn.click();
-        
-        return true;
-    } else {
-        console.error('❌ Botao NAO encontrado!');
-        return false;
-    }
-}
-
-// Função de teste para verificar se os eventos estão funcionando no modal
-function testModalEvents() {
-    console.log('=== TESTE DE EVENTOS DO MODAL ===');
-    
-    const modal = document.getElementById('userModal');
-    if (modal) {
-        // Verificar se o modal está visível
-        const styles = window.getComputedStyle(modal);
-        console.log('Modal visivel:', styles.display !== 'none');
-        
-        // Verificar pointer-events
-        console.log('Modal pointer-events:', styles.pointerEvents);
-        
-        // Testar clique no botão de fechar
-        const closeBtn = modal.querySelector('.modal-close');
-        if (closeBtn) {
-            console.log('Botao de fechar encontrado:', closeBtn);
-            console.log('Botao de fechar pointer-events:', window.getComputedStyle(closeBtn).pointerEvents);
-            
-            // Simular clique
-            console.log('Simulando clique no botao de fechar...');
-            closeBtn.click();
-        }
-        
-        // Testar clique no botão Salvar
-        const saveBtn = modal.querySelector('button[onclick="saveUser()"]');
-        if (saveBtn) {
-            console.log('Botao Salvar encontrado:', saveBtn);
-            console.log('Botao Salvar pointer-events:', window.getComputedStyle(saveBtn).pointerEvents);
-        }
-        
-        // Testar clique no botão Cancelar
-        const cancelBtn = modal.querySelector('button[onclick="closeUserModal()"]');
-        if (cancelBtn) {
-            console.log('Botao Cancelar encontrado:', cancelBtn);
-            console.log('Botao Cancelar pointer-events:', window.getComputedStyle(cancelBtn).pointerEvents);
-        }
-        
-        // Testar campos de input
-        const inputs = modal.querySelectorAll('input, select');
-        console.log('Total de campos de input:', inputs.length);
-        inputs.forEach((input, index) => {
-            console.log(`Campo ${index + 1}:`, input.type || input.tagName, 'pointer-events:', window.getComputedStyle(input).pointerEvents);
-        });
-        
-    } else {
-        console.error('Modal não encontrado!');
-    }
-}
-
-// Garantir que as funções estejam disponíveis globalmente
-window.testModalVisibility = testModalVisibility;
-window.testBotaoNovoUsuario = testBotaoNovoUsuario;
-window.testModalEvents = testModalEvents;
 
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
@@ -1019,8 +770,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             console.log('Modal deve estar visível!');
                         } else {
                             console.log('Modal NAO esta visivel!');
-                            console.log('Tentando forçar visibilidade...');
-                            testModalVisibility();
                         }
                     } else {
                         console.error('Modal NAO encontrado!');
@@ -1038,12 +787,7 @@ document.addEventListener('DOMContentLoaded', function() {
         btnTesteEventos.addEventListener('click', function(e) {
             e.preventDefault();
             console.log('Botao Teste Eventos clicado via event listener');
-            if (typeof testModalEvents === 'function') {
-                testModalEvents();
-            } else {
-                console.error('Funcao testModalEvents ainda nao esta disponivel');
-                alert('Erro: Funcao nao disponivel. Tente recarregar a pagina.');
-            }
+            alert('Teste de eventos funcionando!');
         });
     }
     
@@ -1069,18 +813,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('- z-index:', styles.zIndex);
                 console.log('- pointer-events:', styles.pointerEvents);
                 
-                const modalContent = modal.querySelector('.modal');
-                if (modalContent) {
-                    const contentStyles = window.getComputedStyle(modalContent);
-                    console.log('Modal Content CSS computado:');
-                    console.log('- display:', contentStyles.display);
-                    console.log('- visibility:', contentStyles.visibility);
-                    console.log('- opacity:', contentStyles.opacity);
-                    console.log('- background:', contentStyles.background);
-                    console.log('- z-index:', contentStyles.zIndex);
-                    console.log('- pointer-events:', contentStyles.pointerEvents);
-                }
-                
                 // Forçar abertura do modal para teste
                 console.log('Forçando abertura do modal para teste...');
                 modal.classList.add('show');
@@ -1095,6 +827,14 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.log('- display:', newStyles.display);
                     console.log('- visibility:', newStyles.visibility);
                     console.log('- opacity:', newStyles.opacity);
+                    
+                    // Verificar se está realmente visível
+                    if (newStyles.display === 'flex' && newStyles.visibility === 'visible') {
+                        console.log('✅ Modal está visível!');
+                        alert('Modal aberto! Agora teste se ele fecha automaticamente.');
+                    } else {
+                        console.log('❌ Modal ainda não está visível!');
+                    }
                 }, 100);
             } else {
                 console.error('Modal não encontrado!');
@@ -1170,6 +910,7 @@ document.addEventListener('DOMContentLoaded', function() {
             width: 100vw !important;
             height: 100vh !important;
             pointer-events: none !important;
+            transition: all 0.3s ease !important;
         }
         
         #userModal.show {
@@ -1202,10 +943,14 @@ document.addEventListener('DOMContentLoaded', function() {
             display: flex !important;
             align-items: center !important;
             justify-content: space-between !important;
+            background: white !important;
+            color: #000 !important;
         }
         
         #userModal .modal-body {
             padding: 20px !important;
+            background: white !important;
+            color: #000 !important;
         }
         
         #userModal .modal-footer {
@@ -1214,6 +959,8 @@ document.addEventListener('DOMContentLoaded', function() {
             display: flex !important;
             gap: 10px !important;
             justify-content: flex-end !important;
+            background: white !important;
+            color: #000 !important;
         }
         
         #userModal .form-group {
@@ -1224,6 +971,7 @@ document.addEventListener('DOMContentLoaded', function() {
             display: block !important;
             margin-bottom: 5px !important;
             font-weight: 500 !important;
+            color: #000 !important;
         }
         
         #userModal .form-control {
@@ -1232,6 +980,8 @@ document.addEventListener('DOMContentLoaded', function() {
             border: 1px solid #d1d5db !important;
             border-radius: 4px !important;
             font-size: 14px !important;
+            background: white !important;
+            color: #000 !important;
         }
         
         #userModal .btn {
@@ -1262,43 +1012,29 @@ document.addEventListener('DOMContentLoaded', function() {
             padding: 5px !important;
             border-radius: 4px !important;
         }
+        
+        /* Garantir que o título seja visível */
+        #userModal .modal-title {
+            color: #000 !important;
+            font-weight: bold !important;
+            font-size: 18px !important;
+        }
+        
+        /* Garantir que o texto de ajuda seja visível */
+        #userModal .form-text {
+            color: #6b7280 !important;
+            font-size: 12px !important;
+        }
+        
+        /* Forçar visibilidade de todos os elementos filhos */
+        #userModal.show * {
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
     `;
     document.head.appendChild(style);
     
     console.log('Pagina de usuarios inicializada com sucesso!');
-    
-    // Teste adicional após delay para verificar se o botão está funcionando
-    setTimeout(function() {
-        console.log('Teste adicional após 1 segundo...');
-        const btnNovoUsuario = document.getElementById('btnNovoUsuario');
-        if (btnNovoUsuario) {
-            console.log('Botao ainda encontrado após 1 segundo:', btnNovoUsuario);
-            
-            // Verificar CSS do botão
-            const styles = window.getComputedStyle(btnNovoUsuario);
-            console.log('CSS do botao:');
-            console.log('- display:', styles.display);
-            console.log('- visibility:', styles.visibility);
-            console.log('- opacity:', styles.opacity);
-            console.log('- position:', styles.position);
-            console.log('- z-index:', styles.zIndex);
-            console.log('- pointer-events:', styles.pointerEvents);
-            
-            // Verificar se o botão está visível e clicável
-            const rect = btnNovoUsuario.getBoundingClientRect();
-            console.log('Posicao do botao:', rect);
-            console.log('Botao visivel:', rect.width > 0 && rect.height > 0);
-            
-            // Testar se o event listener foi aplicado
-            const eventos = btnNovoUsuario.onclick;
-            console.log('Eventos onclick do botao:', eventos);
-            
-            // NÃO testar clique automaticamente - apenas verificar se está funcionando
-            console.log('Botao verificado - nao testando clique automatico');
-        } else {
-            console.error('Botao NAO encontrado após 1 segundo!');
-        }
-    }, 1000);
 });
 
 // Verificação adicional após carregamento completo
@@ -1321,6 +1057,111 @@ window.addEventListener('load', function() {
     } else {
         console.log('Todas as funções estão disponíveis!');
     }
+    
+    // 🛡️ SISTEMA DE PROTEÇÃO CONTRA FECHAMENTO AUTOMÁTICO
+    console.log('🔒 Iniciando sistema de proteção do modal...');
+    
+    // Proteger a função closeUserModal original
+    const originalCloseUserModal = window.closeUserModal;
+    
+         // Substituir por versão protegida
+     window.closeUserModal = function() {
+         console.log('🔒 Tentativa de fechar modal interceptada!');
+         console.log('🔒 Stack trace:', new Error().stack);
+         
+         // Verificar se é uma chamada legítima (do usuário)
+         const caller = arguments.callee.caller;
+         if (caller && caller.name === 'saveUser') {
+             console.log('✅ Fechamento legítimo - salvando usuário');
+             return originalCloseUserModal();
+         }
+         
+         // Verificar se é uma chamada direta do usuário (clique no botão)
+         if (event && event.target && event.target.onclick) {
+             console.log('✅ Fechamento legítimo - clique do usuário');
+             return originalCloseUserModal();
+         }
+         
+         // Verificar se é uma chamada do HTML (onclick)
+         const stack = new Error().stack;
+         if (stack.includes('onclick') || stack.includes('HTMLButtonElement')) {
+             console.log('✅ Fechamento legítimo - onclick do HTML');
+             return originalCloseUserModal();
+         }
+         
+         // Bloquear fechamentos automáticos
+         console.log('🚫 Fechamento automático bloqueado!');
+         console.log('🚫 Modal permanecerá aberto');
+         
+         // Forçar modal a permanecer aberto
+         const modal = document.getElementById('userModal');
+         if (modal) {
+             modal.classList.add('show');
+             modal.style.display = 'flex';
+             modal.style.visibility = 'visible';
+             modal.style.opacity = '1';
+             modal.style.pointerEvents = 'auto';
+         }
+         
+         return false;
+     };
+    
+         // Proteger contra remoção da classe 'show' apenas se não for fechamento manual
+     const modal = document.getElementById('userModal');
+     if (modal) {
+         // Monitorar mudanças na classe
+         const observer = new MutationObserver(function(mutations) {
+             mutations.forEach(function(mutation) {
+                 if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                     if (!modal.classList.contains('show')) {
+                         // Verificar se é fechamento manual
+                         const stack = new Error().stack;
+                         if (stack.includes('onclick') || stack.includes('HTMLButtonElement') || stack.includes('closeUserModal')) {
+                             console.log('✅ Fechamento manual detectado - permitindo');
+                             return;
+                         }
+                         
+                         console.log('🚫 Tentativa de remover classe "show" detectada!');
+                         console.log('🚫 Restaurando classe "show"');
+                         modal.classList.add('show');
+                     }
+                 }
+             });
+         });
+         
+         observer.observe(modal, {
+             attributes: true,
+             attributeFilter: ['class']
+         });
+         
+         console.log('🔒 Observer configurado para proteger classe "show"');
+     }
+     
+     // Proteger contra mudanças de estilo apenas se não for fechamento manual
+     let modalProtectionInterval = setInterval(function() {
+         const modal = document.getElementById('userModal');
+         if (modal && modal.classList.contains('show')) {
+             // Verificar se modal ainda está visível
+             const styles = window.getComputedStyle(modal);
+             if (styles.display !== 'flex' || styles.visibility !== 'visible') {
+                 // Verificar se é fechamento manual
+                 const stack = new Error().stack;
+                 if (stack.includes('onclick') || stack.includes('HTMLButtonElement') || stack.includes('closeUserModal')) {
+                     console.log('✅ Fechamento manual detectado - permitindo');
+                     return;
+                 }
+                 
+                 console.log('🚫 Modal perdeu visibilidade - restaurando...');
+                 modal.style.display = 'flex';
+                 modal.style.visibility = 'visible';
+                 modal.style.opacity = '1';
+                 modal.style.pointerEvents = 'auto';
+             }
+         }
+     }, 1000);
+    
+    console.log('🔒 Sistema de proteção ativado!');
+    console.log('🔒 Modal não fechará automaticamente');
 });
 
 // Timeout adicional para garantir que as funções sejam definidas

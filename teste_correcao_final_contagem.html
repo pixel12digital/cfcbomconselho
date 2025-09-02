@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Final - Correção de Contagem</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .form-control, .form-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🎯 Teste Final - Correção de Contagem</h1>
+        
+        <div class="test-section success">
+            <h3>✅ Problema Identificado e Corrigido</h3>
+            <p><strong>Diagnóstico:</strong> O sistema estava contando incorretamente as opções dos selects.</p>
+            <p><strong>Problema:</strong> 1 CFC carregado = 2 opções (padrão + CFC), mas o sistema esperava > 1.</p>
+            <p><strong>Solução:</strong> Corrigida a lógica de verificação para reconhecer carregamento correto.</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Teste da Correção de Contagem</h3>
+            <div>
+                <button class="btn btn-success" onclick="testarCorrecaoContagem()">Testar Correção de Contagem</button>
+                <button class="btn" onclick="verificarContagem()">Verificar Contagem</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Simulação do Modal com Correção</h3>
+            
+            <div class="form-group">
+                <label class="form-label">CFC *</label>
+                <select class="form-select" id="cfc_id" required>
+                    <option value="">Selecione um CFC</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">Usuário *</label>
+                <select class="form-select" id="usuario_id">
+                    <option value="">Criar novo usuário</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Logs de Debug</h3>
+            <div id="logs" class="log"></div>
+        </div>
+
+        <div class="test-section warning">
+            <h3>📋 Instruções para Teste no Sistema Principal</h3>
+            <ol>
+                <li><strong>Abrir o sistema principal:</strong> `admin/pages/instrutores.php`</li>
+                <li><strong>Abrir o console:</strong> F12 → Console</li>
+                <li><strong>Clicar "Novo Instrutor"</strong></li>
+                <li><strong>Verificar os logs:</strong> Deve mostrar "✅ CFCs carregados com sucesso!"</li>
+                <li><strong>Verificar os selects:</strong> Devem mostrar as opções carregadas</li>
+                <li><strong>Não deve mais tentar recarregar:</strong> Sem mensagens de "tentando novamente"</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        // Simular API_CONFIG
+        const API_CONFIG = {
+            isProduction: false,
+            ENDPOINTS: {
+                'CFCs': 'admin/api/cfcs.php',
+                'USUARIOS': 'admin/api/usuarios.php'
+            },
+            getRelativeApiUrl: function(endpoint) {
+                const currentPath = window.location.pathname;
+                let projectPath;
+                if (currentPath.includes('/cfc-bom-conselho/')) {
+                    projectPath = '/cfc-bom-conselho';
+                } else {
+                    projectPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+                }
+                return projectPath + '/' + this.ENDPOINTS[endpoint];
+            }
+        };
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#007bff';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        async function carregarCFCs() {
+            try {
+                const url = API_CONFIG.getRelativeApiUrl('CFCs');
+                log(`📡 Carregando CFCs de: ${url}`);
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const selectCFC = document.getElementById('cfc_id');
+                    
+                    if (selectCFC) {
+                        selectCFC.innerHTML = '<option value="">Selecione um CFC</option>';
+                        
+                        data.data.forEach(cfc => {
+                            const option = document.createElement('option');
+                            option.value = cfc.id;
+                            option.textContent = cfc.nome;
+                            selectCFC.appendChild(option);
+                            log(`✅ CFC adicionado: ${cfc.nome}`, 'success');
+                        });
+                        
+                        // CORREÇÃO VISUAL
+                        selectCFC.style.display = 'none';
+                        selectCFC.offsetHeight;
+                        selectCFC.style.display = '';
+                        
+                        log(`✅ ${data.data.length} CFCs carregados com sucesso!`, 'success');
+                        log(`📊 Total de opções no select: ${selectCFC.options.length}`, 'info');
+                    }
+                }
+            } catch (error) {
+                log(`❌ Erro ao carregar CFCs: ${error.message}`, 'error');
+            }
+        }
+
+        async function carregarUsuarios() {
+            try {
+                const url = API_CONFIG.getRelativeApiUrl('USUARIOS');
+                log(`📡 Carregando usuários de: ${url}`);
+                
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                if (data.success && data.data) {
+                    const select = document.getElementById('usuario_id');
+                    if (select) {
+                        select.innerHTML = '<option value="">Criar novo usuário</option>';
+                        
+                        data.data.forEach(usuario => {
+                            const option = document.createElement('option');
+                            option.value = usuario.id;
+                            option.textContent = `${usuario.nome} (${usuario.email})`;
+                            select.appendChild(option);
+                            log(`✅ Usuário adicionado: ${usuario.nome}`, 'success');
+                        });
+                        
+                        // CORREÇÃO VISUAL
+                        select.style.display = 'none';
+                        select.offsetHeight;
+                        select.style.display = '';
+                        
+                        log(`✅ ${data.data.length} usuários carregados com sucesso!`, 'success');
+                        log(`📊 Total de opções no select: ${select.options.length}`, 'info');
+                    }
+                }
+            } catch (error) {
+                log(`❌ Erro ao carregar usuários: ${error.message}`, 'error');
+            }
+        }
+
+        async function testarCorrecaoContagem() {
+            log('🚀 Testando correção de contagem...', 'warning');
+            
+            await carregarCFCs();
+            await carregarUsuarios();
+            
+            // Verificação final com lógica corrigida
+            setTimeout(() => {
+                const cfcSelect = document.getElementById('cfc_id');
+                const usuarioSelect = document.getElementById('usuario_id');
+                
+                log('🔍 Verificação final com lógica corrigida:', 'warning');
+                log(`CFC Select options: ${cfcSelect ? cfcSelect.options.length : 'N/A'}`);
+                log(`Usuário Select options: ${usuarioSelect ? usuarioSelect.options.length : 'N/A'}`);
+                
+                // LÓGICA CORRIGIDA
+                if (cfcSelect && cfcSelect.options.length <= 1) {
+                    log('⚠️ CFCs não carregaram completamente, tentando novamente...', 'warning');
+                } else if (cfcSelect && cfcSelect.options.length > 1) {
+                    log('✅ CFCs carregados com sucesso!', 'success');
+                }
+                
+                if (usuarioSelect && usuarioSelect.options.length <= 1) {
+                    log('⚠️ Usuários não carregaram completamente, tentando novamente...', 'warning');
+                } else if (usuarioSelect && usuarioSelect.options.length > 1) {
+                    log('✅ Usuários carregados com sucesso!', 'success');
+                }
+            }, 1000);
+        }
+
+        function verificarContagem() {
+            const cfcSelect = document.getElementById('cfc_id');
+            const usuarioSelect = document.getElementById('usuario_id');
+            
+            log('🔍 Verificando contagem atual...');
+            log(`CFC Select options: ${cfcSelect ? cfcSelect.options.length : 'N/A'}`);
+            log(`Usuário Select options: ${usuarioSelect ? usuarioSelect.options.length : 'N/A'}`);
+            
+            if (cfcSelect) {
+                log('📋 Opções do CFC Select:');
+                for (let i = 0; i < cfcSelect.options.length; i++) {
+                    log(`  ${i}: "${cfcSelect.options[i].text}" (${cfcSelect.options[i].value})`);
+                }
+            }
+            
+            if (usuarioSelect) {
+                log('📋 Opções do Usuário Select:');
+                for (let i = 0; i < usuarioSelect.options.length; i++) {
+                    log(`  ${i}: "${usuarioSelect.options[i].text}" (${usuarioSelect.options[i].value})`);
+                }
+            }
+        }
+
+        // Log inicial
+        log('🚀 Teste de correção de contagem iniciado');
+        log('📋 Verificando se a lógica de contagem está correta');
+    </script>
+</body>
+</html>

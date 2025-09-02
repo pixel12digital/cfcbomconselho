@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Campos Salvos</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste - Campos Salvos</h1>
+        
+        <div class="test-section success">
+            <h3>✅ Correções Implementadas</h3>
+            <p><strong>Problema:</strong> Campos preenchidos não estavam sendo salvos</p>
+            <p><strong>Solução:</strong> Adicionados todos os campos na função prepararDadosFormulario</p>
+            <p><strong>Status:</strong> Pronto para teste</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Teste de Salvamento</h3>
+            <div>
+                <button class="btn btn-warning" onclick="testarPreparacaoDados()">Testar Preparação</button>
+                <button class="btn btn-success" onclick="simularSalvamento()">Simular Salvamento</button>
+                <button class="btn btn-danger" onclick="verificarCampos()">Verificar Campos</button>
+                <button class="btn" onclick="limparLogs()">Limpar Logs</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📋 Formulário de Teste</h3>
+            <div class="form-group">
+                <label class="form-label">Nome Completo *</label>
+                <input type="text" class="form-control" id="nome" value="Robson Wagner Alves Vieira">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CPF *</label>
+                <input type="text" class="form-control" id="cpf" value="000.000.000-00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CNH *</label>
+                <input type="text" class="form-control" id="cnh" value="12345678901">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Data Nascimento *</label>
+                <input type="text" class="form-control" id="data_nascimento" value="07/10/1981">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Email *</label>
+                <input type="email" class="form-control" id="email" value="rwavieira@hotmail.com">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Telefone *</label>
+                <input type="text" class="form-control" id="telefone" value="(11) 99999-9999">
+            </div>
+            <div class="form-group">
+                <label class="form-label">CFC *</label>
+                <select class="form-control" id="cfc_id">
+                    <option value="">Selecione um CFC</option>
+                    <option value="36" selected>CFC BOM CONSELHO</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Usuário *</label>
+                <select class="form-control" id="usuario_id">
+                    <option value="">Criar novo usuário</option>
+                    <option value="1">Administrador</option>
+                    <option value="15" selected>Robson Wagner Alves Vieira</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Credencial *</label>
+                <input type="text" class="form-control" id="credencial" value="12312312313">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Endereço</label>
+                <input type="text" class="form-control" id="endereco" value="Rua Cristina, 167">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Cidade</label>
+                <input type="text" class="form-control" id="cidade" value="Blumenau">
+            </div>
+            <div class="form-group">
+                <label class="form-label">UF</label>
+                <select class="form-control" id="uf">
+                    <option value="">Selecione...</option>
+                    <option value="SC" selected>Santa Catarina</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Tipo de Carga</label>
+                <select class="form-control" id="tipo_carga">
+                    <option value="">Selecione...</option>
+                    <option value="granel" selected>Carga Granel</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Validade Credencial</label>
+                <input type="text" class="form-control" id="validade_credencial" value="07/12/2026">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Observações</label>
+                <textarea class="form-control" id="observacoes">teste</textarea>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Horário Início</label>
+                <input type="text" class="form-control" id="horario_inicio" value="00:00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Horário Fim</label>
+                <input type="text" class="form-control" id="horario_fim" value="00:00">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Categorias de Habilitação</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="categorias[]" value="A" id="cat_a">
+                        <label for="cat_a">A</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="categorias[]" value="B" id="cat_b" checked>
+                        <label for="cat_b">B</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="categorias[]" value="C" id="cat_c">
+                        <label for="cat_c">C</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="categorias[]" value="D" id="cat_d">
+                        <label for="cat_d">D</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="categorias[]" value="E" id="cat_e">
+                        <label for="cat_e">E</label>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Dias da Semana</label>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="dias_semana[]" value="segunda" id="dia_segunda">
+                        <label for="dia_segunda">Segunda</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="dias_semana[]" value="terca" id="dia_terca" checked>
+                        <label for="dia_terca">Terça</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="dias_semana[]" value="quarta" id="dia_quarta">
+                        <label for="dia_quarta">Quarta</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="dias_semana[]" value="quinta" id="dia_quinta">
+                        <label for="dia_quinta">Quinta</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="dias_semana[]" value="sexta" id="dia_sexta">
+                        <label for="dia_sexta">Sexta</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" name="dias_semana[]" value="sabado" id="dia_sabado">
+                        <label for="dia_sabado">Sábado</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Logs de Debug</h3>
+            <div id="logs" class="log"></div>
+        </div>
+
+        <div class="test-section warning">
+            <h3>📋 Instruções para Teste no Sistema Principal</h3>
+            <ol>
+                <li><strong>Abrir o sistema principal:</strong> `admin/pages/instrutores.php`</li>
+                <li><strong>Abrir o console:</strong> F12 → Console</li>
+                <li><strong>Preencher todos os campos</strong> no modal de novo instrutor</li>
+                <li><strong>Clicar "Salvar Instrutor"</strong></li>
+                <li><strong>Verificar logs:</strong> Deve mostrar "📋 Dados preparados: {...}"</li>
+                <li><strong>Verificar no banco:</strong> Todos os campos devem estar salvos</li>
+                <li><strong>Reportar resultados:</strong> Me informar quais campos não foram salvos</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#007bff';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        // Função para preparar dados do formulário (como no sistema principal)
+        function prepararDadosFormulario() {
+            const formData = new FormData();
+            const usuarioSelect = document.getElementById('usuario_id');
+            
+            // Dados básicos sempre enviados
+            formData.append('nome', document.getElementById('nome').value);
+            formData.append('email', document.getElementById('email').value);
+            formData.append('telefone', document.getElementById('telefone').value);
+            formData.append('cpf', document.getElementById('cpf').value);
+            formData.append('cnh', document.getElementById('cnh').value);
+            formData.append('data_nascimento', document.getElementById('data_nascimento').value);
+            formData.append('cfc_id', document.getElementById('cfc_id').value);
+            formData.append('credencial', document.getElementById('credencial').value);
+            formData.append('ativo', '1');
+            
+            // Dados condicionais para novo usuário
+            if (usuarioSelect.value === '') {
+                formData.append('senha', document.getElementById('senha')?.value || '');
+                formData.append('cpf_usuario', document.getElementById('cpf_usuario')?.value || '');
+            } else {
+                formData.append('usuario_id', usuarioSelect.value);
+            }
+            
+            // Categorias de habilitação
+            const categorias = [];
+            document.querySelectorAll('input[name="categorias[]"]:checked').forEach(cb => {
+                categorias.push(cb.value);
+            });
+            formData.append('categoria_habilitacao', categorias.join(','));
+            
+            // Dias da semana
+            const diasSemana = [];
+            document.querySelectorAll('input[name="dias_semana[]"]:checked').forEach(cb => {
+                diasSemana.push(cb.value);
+            });
+            formData.append('dias_semana', diasSemana.join(','));
+            
+            // Outros campos se existirem
+            const outrosCampos = ['endereco', 'cidade', 'uf', 'tipo_carga', 'validade_credencial', 'observacoes', 'horario_inicio', 'horario_fim'];
+            outrosCampos.forEach(campo => {
+                const elemento = document.getElementById(campo);
+                if (elemento) {
+                    formData.append(campo, elemento.value);
+                }
+            });
+            
+            console.log('📋 Dados preparados:', Object.fromEntries(formData));
+            
+            return formData;
+        }
+
+        function testarPreparacaoDados() {
+            log('🧪 Testando preparação de dados...', 'warning');
+            
+            try {
+                const formData = prepararDadosFormulario();
+                const dados = Object.fromEntries(formData);
+                
+                log('✅ Dados preparados com sucesso!', 'success');
+                log(`📊 Total de campos: ${Object.keys(dados).length}`, 'info');
+                
+                // Verificar campos obrigatórios
+                const camposObrigatorios = ['nome', 'email', 'cpf', 'cnh', 'data_nascimento', 'cfc_id', 'credencial'];
+                camposObrigatorios.forEach(campo => {
+                    if (dados[campo]) {
+                        log(`✅ ${campo}: ${dados[campo]}`, 'success');
+                    } else {
+                        log(`❌ ${campo}: FALTANDO`, 'error');
+                    }
+                });
+                
+                // Verificar campos opcionais
+                const camposOpcionais = ['telefone', 'endereco', 'cidade', 'uf', 'tipo_carga', 'validade_credencial', 'observacoes', 'horario_inicio', 'horario_fim'];
+                camposOpcionais.forEach(campo => {
+                    if (dados[campo]) {
+                        log(`✅ ${campo}: ${dados[campo]}`, 'success');
+                    } else {
+                        log(`⚠️ ${campo}: vazio`, 'warning');
+                    }
+                });
+                
+                // Verificar arrays
+                if (dados.categoria_habilitacao) {
+                    log(`✅ categorias: ${dados.categoria_habilitacao}`, 'success');
+                }
+                if (dados.dias_semana) {
+                    log(`✅ dias_semana: ${dados.dias_semana}`, 'success');
+                }
+                
+            } catch (error) {
+                log(`❌ Erro ao preparar dados: ${error.message}`, 'error');
+            }
+        }
+
+        function simularSalvamento() {
+            log('💾 Simulando salvamento...', 'warning');
+            
+            try {
+                const formData = prepararDadosFormulario();
+                const dados = Object.fromEntries(formData);
+                
+                // Simular dados que seriam enviados para a API
+                const instrutorData = {
+                    nome: dados.nome?.trim(),
+                    email: dados.email?.trim(),
+                    cpf: dados.cpf || '',
+                    cnh: dados.cnh || '',
+                    telefone: dados.telefone || '',
+                    cfc_id: dados.cfc_id,
+                    credencial: dados.credencial?.trim(),
+                    categoria_habilitacao: dados.categoria_habilitacao || '',
+                    ativo: true,
+                    endereco: dados.endereco || '',
+                    cidade: dados.cidade || '',
+                    uf: dados.uf || '',
+                    tipo_carga: dados.tipo_carga || '',
+                    validade_credencial: dados.validade_credencial || '',
+                    observacoes: dados.observacoes || '',
+                    dias_semana: dados.dias_semana || '',
+                    horario_inicio: dados.horario_inicio || '',
+                    horario_fim: dados.horario_fim || ''
+                };
+                
+                if (dados.usuario_id) {
+                    instrutorData.usuario_id = dados.usuario_id;
+                } else {
+                    instrutorData.senha = dados.senha;
+                    instrutorData.cpf = dados.cpf_usuario;
+                }
+                
+                log('📤 Dados que seriam enviados para a API:', 'info');
+                log(JSON.stringify(instrutorData, null, 2), 'info');
+                
+                log('✅ Simulação de salvamento concluída!', 'success');
+                
+            } catch (error) {
+                log(`❌ Erro na simulação: ${error.message}`, 'error');
+            }
+        }
+
+        function verificarCampos() {
+            log('🔍 Verificando campos do formulário...', 'warning');
+            
+            const campos = [
+                'nome', 'email', 'cpf', 'cnh', 'data_nascimento', 'telefone', 
+                'cfc_id', 'usuario_id', 'credencial', 'endereco', 'cidade', 
+                'uf', 'tipo_carga', 'validade_credencial', 'observacoes', 
+                'horario_inicio', 'horario_fim'
+            ];
+            
+            campos.forEach(campoId => {
+                const campo = document.getElementById(campoId);
+                if (campo) {
+                    log(`✅ Campo ${campoId}: "${campo.value}"`, 'success');
+                } else {
+                    log(`❌ Campo ${campoId}: NÃO ENCONTRADO`, 'error');
+                }
+            });
+            
+            // Verificar checkboxes
+            const categorias = document.querySelectorAll('input[name="categorias[]"]:checked');
+            const diasSemana = document.querySelectorAll('input[name="dias_semana[]"]:checked');
+            
+            log(`✅ Categorias selecionadas: ${categorias.length}`, 'success');
+            log(`✅ Dias da semana selecionados: ${diasSemana.length}`, 'success');
+        }
+
+        function limparLogs() {
+            document.getElementById('logs').innerHTML = '';
+            log('🧹 Logs limpos', 'info');
+        }
+
+        // Log inicial
+        log('🚀 Teste de campos salvos iniciado');
+        log('📋 Verificando se todos os campos são enviados corretamente');
+    </script>
+</body>
+</html>

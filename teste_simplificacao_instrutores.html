@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Simplificação - Formulário de Instrutores</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background-color: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        .form-section {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .form-control, .form-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        .form-text {
+            font-size: 0.8rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-success:hover {
+            background-color: #218838;
+        }
+        .hidden {
+            display: none;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Teste de Simplificação - Formulário de Instrutores</h1>
+        
+        <div class="test-section info">
+            <h3>📋 Objetivo da Simplificação</h3>
+            <p><strong>Problema:</strong> Formulário redundante com dados duplicados entre usuário e instrutor</p>
+            <p><strong>Solução:</strong> Formulário único com campos condicionais baseados na seleção de usuário</p>
+            <ul>
+                <li>✅ Campos condicionais (mostrar/ocultar)</li>
+                <li>✅ Validação inteligente</li>
+                <li>✅ Interface mais limpa</li>
+                <li>✅ Experiência do usuário melhorada</li>
+            </ul>
+        </div>
+
+        <div class="test-section">
+            <h3>🔧 Formulário Simplificado</h3>
+            
+            <form id="formInstrutor">
+                <!-- Seção: Dados Pessoais -->
+                <div class="form-section">
+                    <h4>👤 Dados Pessoais</h4>
+                    <div class="form-group">
+                        <label class="form-label">Nome *</label>
+                        <input type="text" class="form-control" id="nome" name="nome" placeholder="Nome completo" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="email" name="email" placeholder="email@exemplo.com" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Telefone</label>
+                        <input type="text" class="form-control" id="telefone" name="telefone" placeholder="(00) 00000-0000">
+                    </div>
+                </div>
+
+                <!-- Seção: Dados de Acesso -->
+                <div class="form-section">
+                    <h4>🔐 Dados de Acesso</h4>
+                    <div class="form-group">
+                        <label class="form-label">Usuário *</label>
+                        <select class="form-select" id="usuario_id" name="usuario_id" onchange="toggleUsuarioFields()">
+                            <option value="">Criar novo usuário</option>
+                            <option value="1">Administrador (admin@cfc.com)</option>
+                            <option value="2">João Silva (joao@exemplo.com)</option>
+                            <option value="3">Maria Santos (maria@exemplo.com)</option>
+                        </select>
+                        <div class="form-text">Selecione um usuário existente ou deixe vazio para criar novo</div>
+                    </div>
+                    
+                    <!-- Campos de usuário novo (inicialmente visíveis) -->
+                    <div id="campos-usuario-novo">
+                        <div class="form-group">
+                            <label class="form-label">Senha *</label>
+                            <input type="password" class="form-control" id="senha" name="senha" placeholder="Senha de acesso">
+                            <div class="form-text">Obrigatório apenas para novos usuários</div>
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">CPF *</label>
+                            <input type="text" class="form-control" id="cpf" name="cpf" placeholder="000.000.000-00">
+                            <div class="form-text">Obrigatório apenas para novos usuários</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Seção: Dados do Instrutor -->
+                <div class="form-section">
+                    <h4>🎓 Dados do Instrutor</h4>
+                    <div class="form-group">
+                        <label class="form-label">CFC *</label>
+                        <select class="form-select" id="cfc_id" name="cfc_id" required>
+                            <option value="">Selecione um CFC</option>
+                            <option value="1">CFC BOM CONSELHO</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Credencial *</label>
+                        <input type="text" class="form-control" id="credencial" name="credencial" placeholder="Número da credencial" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Status</label>
+                        <select class="form-select" id="ativo" name="ativo">
+                            <option value="1">Ativo</option>
+                            <option value="0">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Seção: Categorias -->
+                <div class="form-section">
+                    <h4>🚗 Categorias de Habilitação *</h4>
+                    <div style="display: flex; gap: 20px;">
+                        <label><input type="checkbox" name="categorias[]" value="A"> A</label>
+                        <label><input type="checkbox" name="categorias[]" value="B"> B</label>
+                        <label><input type="checkbox" name="categorias[]" value="C"> C</label>
+                        <label><input type="checkbox" name="categorias[]" value="D"> D</label>
+                        <label><input type="checkbox" name="categorias[]" value="E"> E</label>
+                    </div>
+                </div>
+
+                <div style="text-align: center; margin-top: 20px;">
+                    <button type="button" class="btn btn-success" onclick="testarFormulario()">Testar Formulário</button>
+                    <button type="button" class="btn" onclick="limparFormulario()">Limpar</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Logs de Teste</h3>
+            <div id="logs" class="log"></div>
+        </div>
+
+        <div class="test-section success">
+            <h3>✅ Melhorias Implementadas</h3>
+            <ul>
+                <li><strong>Formulário único:</strong> Dados de usuário e instrutor em um só lugar</li>
+                <li><strong>Campos condicionais:</strong> Senha e CPF só aparecem para novos usuários</li>
+                <li><strong>Validação inteligente:</strong> Regras diferentes para usuário novo vs existente</li>
+                <li><strong>Interface organizada:</strong> Seções claras e bem definidas</li>
+                <li><strong>Feedback visual:</strong> Textos explicativos para cada campo</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : '#007bff';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function toggleUsuarioFields() {
+            const usuarioSelect = document.getElementById('usuario_id');
+            const camposUsuarioNovo = document.getElementById('campos-usuario-novo');
+            const senhaField = document.getElementById('senha');
+            const cpfField = document.getElementById('cpf');
+            
+            if (usuarioSelect.value === '') {
+                // Criar novo usuário - mostrar campos obrigatórios
+                camposUsuarioNovo.style.display = 'block';
+                senhaField.required = true;
+                cpfField.required = true;
+                log('🔧 Modo: Criar novo usuário - campos obrigatórios ativados', 'success');
+            } else {
+                // Usuário existente - ocultar campos obrigatórios
+                camposUsuarioNovo.style.display = 'none';
+                senhaField.required = false;
+                cpfField.required = false;
+                senhaField.value = '';
+                cpfField.value = '';
+                log('🔧 Modo: Usuário existente - campos ocultados', 'info');
+            }
+        }
+
+        function validarFormularioInstrutor() {
+            const usuarioSelect = document.getElementById('usuario_id');
+            const nomeField = document.getElementById('nome');
+            const emailField = document.getElementById('email');
+            const senhaField = document.getElementById('senha');
+            const cpfField = document.getElementById('cpf');
+            const cfcSelect = document.getElementById('cfc_id');
+            const credencialField = document.getElementById('credencial');
+            
+            let erros = [];
+            
+            // Validações básicas sempre obrigatórias
+            if (!nomeField.value.trim()) {
+                erros.push('Nome é obrigatório');
+            }
+            
+            if (!emailField.value.trim()) {
+                erros.push('Email é obrigatório');
+            }
+            
+            if (!cfcSelect.value) {
+                erros.push('CFC é obrigatório');
+            }
+            
+            if (!credencialField.value.trim()) {
+                erros.push('Credencial é obrigatória');
+            }
+            
+            // Validações condicionais para novo usuário
+            if (usuarioSelect.value === '') {
+                if (!senhaField.value.trim()) {
+                    erros.push('Senha é obrigatória para novos usuários');
+                }
+                
+                if (!cpfField.value.trim()) {
+                    erros.push('CPF é obrigatório para novos usuários');
+                }
+                
+                // Validar formato de email
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (!emailRegex.test(emailField.value)) {
+                    erros.push('Email deve ter formato válido');
+                }
+                
+                // Validar formato de CPF (básico)
+                const cpfRegex = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
+                if (!cpfRegex.test(cpfField.value)) {
+                    erros.push('CPF deve ter formato válido (000.000.000-00)');
+                }
+            }
+            
+            // Validar categorias de habilitação
+            const categoriasSelecionadas = document.querySelectorAll('input[name="categorias[]"]:checked');
+            if (categoriasSelecionadas.length === 0) {
+                erros.push('Pelo menos uma categoria de habilitação deve ser selecionada');
+            }
+            
+            return erros;
+        }
+
+        function testarFormulario() {
+            log('🧪 Testando validação do formulário...');
+            
+            const erros = validarFormularioInstrutor();
+            
+            if (erros.length > 0) {
+                log('❌ Erros encontrados:', 'error');
+                erros.forEach(erro => {
+                    log(`   - ${erro}`, 'error');
+                });
+            } else {
+                log('✅ Formulário válido!', 'success');
+                log('📋 Dados que seriam enviados:', 'info');
+                
+                const formData = new FormData(document.getElementById('formInstrutor'));
+                for (let [key, value] of formData.entries()) {
+                    if (value) {
+                        log(`   ${key}: ${value}`, 'info');
+                    }
+                }
+            }
+        }
+
+        function limparFormulario() {
+            document.getElementById('formInstrutor').reset();
+            toggleUsuarioFields();
+            log('🧹 Formulário limpo', 'info');
+        }
+
+        // Log inicial
+        log('🚀 Sistema de teste iniciado');
+        log('📋 Formulário simplificado carregado');
+        log('🔧 Campos condicionais funcionando');
+    </script>
+</body>
+</html>

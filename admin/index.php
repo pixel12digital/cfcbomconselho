@@ -967,7 +967,7 @@ define('ADMIN_ROUTING', true);
     
     <?php if ($page === 'instrutores'): ?>
         <script src="assets/js/instrutores.js"></script>
-        <script src="assets/js/instrutores-page.js"></script>
+        <!-- instrutores-page.js é carregado diretamente na página -->
     <?php endif; ?>
     
     <?php if ($page === 'alunos'): ?>

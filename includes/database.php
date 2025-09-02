@@ -637,6 +637,14 @@ class Database {
         
         return $results;
     }
+    
+    public function getLastError() {
+        if ($this->statement) {
+            $errorInfo = $this->statement->errorInfo();
+            return $errorInfo[2] ?? 'Erro desconhecido';
+        }
+        return 'Nenhum erro disponível';
+    }
 }
 
 // Função global para obter instância do banco

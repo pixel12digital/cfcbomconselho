@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Modal Instrutores - Edição</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .form-control, .form-select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal-content {
+            background: white;
+            margin: 50px auto;
+            padding: 20px;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 8px;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #ddd;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .close {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #aaa;
+        }
+        .close:hover {
+            color: #000;
+        }
+        .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin: 0 -10px;
+        }
+        .col-md-6 {
+            flex: 0 0 50%;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        .col-md-4 {
+            flex: 0 0 33.333%;
+            padding: 0 10px;
+            box-sizing: border-box;
+        }
+        .mb-3 {
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste Modal Instrutores - Edição</h1>
+        
+        <div class="test-section warning">
+            <h3>⚠️ Problema Identificado</h3>
+            <p><strong>Issue:</strong> Dados não estão sendo carregados no modal de instrutores quando seleciona edição.</p>
+            <p><strong>Status:</strong> Modal abre, mas campos não são preenchidos com dados do banco.</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Teste de Diagnóstico</h3>
+            <div>
+                <button class="btn btn-warning" onclick="testarEdicaoInstrutor()">Testar Edição Instrutor</button>
+                <button class="btn btn-success" onclick="testarAPIs()">Testar APIs</button>
+                <button class="btn btn-danger" onclick="diagnosticarProblema()">Diagnosticar</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Dados de Teste</h3>
+            <p>Instrutor ID: 23 (teste 001)</p>
+            <p>CFC ID: 36 (CFC BOM CONSELHO)</p>
+            <p>Usuário ID: 14</p>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Logs de Debug</h3>
+            <div id="logs" class="log"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Teste -->
+    <div id="modalInstrutor" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">Editar Instrutor</h3>
+                <button class="close" onclick="fecharModal()">&times;</button>
+            </div>
+            
+            <form id="formInstrutor">
+                <input type="hidden" id="acaoInstrutor" value="editar">
+                <input type="hidden" id="instrutor_id" value="23">
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Nome Completo *</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Email *</label>
+                        <input type="email" class="form-control" id="email" name="email" required>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">CPF *</label>
+                        <input type="text" class="form-control" id="cpf" name="cpf" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">CNH *</label>
+                        <input type="text" class="form-control" id="cnh" name="cnh" required>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Data Nascimento *</label>
+                        <input type="text" class="form-control" id="data_nascimento" name="data_nascimento" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Telefone *</label>
+                        <input type="text" class="form-control" id="telefone" name="telefone" required>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Usuário *</label>
+                        <select id="usuario_id" name="usuario_id" class="form-select" onchange="toggleUsuarioFields()">
+                            <option value="">Criar novo usuário</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">CFC *</label>
+                        <select id="cfc_id" name="cfc_id" class="form-select" required>
+                            <option value="">Selecione um CFC</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Credencial *</label>
+                        <input type="text" class="form-control" id="credencial" name="credencial" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Status</label>
+                        <select id="ativo" name="ativo" class="form-select">
+                            <option value="1">Ativo</option>
+                            <option value="0">Inativo</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">Endereço</label>
+                        <input type="text" class="form-control" id="endereco" name="endereco">
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Cidade</label>
+                        <input type="text" class="form-control" id="cidade" name="cidade">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <label class="form-label">UF</label>
+                        <select id="uf" name="uf" class="form-select">
+                            <option value="">Selecione...</option>
+                            <option value="SC">Santa Catarina</option>
+                            <option value="SP">São Paulo</option>
+                            <option value="RJ">Rio de Janeiro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label">Validade Credencial</label>
+                        <input type="text" class="form-control" id="validade_credencial" name="validade_credencial">
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-12">
+                        <label class="form-label">Observações</label>
+                        <textarea class="form-control" id="observacoes" name="observacoes" rows="3"></textarea>
+                    </div>
+                </div>
+                
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
+                    <button type="button" class="btn btn-primary" onclick="salvarInstrutor()">Salvar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Simular API_CONFIG do sistema principal
+        const API_CONFIG = {
+            isProduction: false,
+            ENDPOINTS: {
+                'CFCs': 'admin/api/cfcs.php',
+                'USUARIOS': 'admin/api/usuarios.php',
+                'INSTRUTORES': 'admin/api/instrutores.php'
+            },
+            getRelativeApiUrl: function(endpoint) {
+                if (this.isProduction) {
+                    return window.location.origin + '/' + this.ENDPOINTS[endpoint];
+                } else {
+                    const currentPath = window.location.pathname;
+                    let projectPath;
+                    if (currentPath.includes('/admin/')) {
+                        projectPath = currentPath.split('/admin/')[0];
+                    } else if (currentPath.includes('/cfc-bom-conselho/')) {
+                        projectPath = '/cfc-bom-conselho';
+                    } else {
+                        projectPath = currentPath.substring(0, currentPath.lastIndexOf('/'));
+                    }
+                    return projectPath + '/' + this.ENDPOINTS[endpoint];
+                }
+            }
+        };
+
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#007bff';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        function fecharModal() {
+            document.getElementById('modalInstrutor').style.display = 'none';
+        }
+
+        function toggleUsuarioFields() {
+            const usuarioSelect = document.getElementById('usuario_id');
+            log(`Usuário selecionado: ${usuarioSelect.value}`, 'info');
+        }
+
+        async function testarEdicaoInstrutor() {
+            log('🚀 Iniciando teste de edição de instrutor...', 'warning');
+            
+            try {
+                // 1. Abrir modal
+                document.getElementById('modalInstrutor').style.display = 'block';
+                log('✅ Modal aberto', 'success');
+                
+                // 2. Carregar dados dos selects primeiro
+                log('📋 Carregando dados dos selects...', 'info');
+                await carregarCFCsComRetry();
+                await carregarUsuariosComRetry();
+                
+                // 3. Buscar dados do instrutor
+                log('🔍 Buscando dados do instrutor ID: 23', 'info');
+                const url = `${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=23`;
+                log(`📡 URL: ${url}`, 'info');
+                
+                const response = await fetch(url);
+                log(`📡 Resposta: ${response.status} ${response.statusText}`, 'info');
+                
+                const data = await response.json();
+                log(`📊 Dados recebidos: ${JSON.stringify(data)}`, 'success');
+                
+                if (data.success && data.data) {
+                    log('✅ Dados do instrutor carregados, preenchendo formulário...', 'success');
+                    preencherFormularioInstrutor(data.data);
+                } else {
+                    log(`❌ Erro na API: ${data.error}`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Erro no teste: ${error.message}`, 'error');
+            }
+        }
+
+        async function carregarCFCsComRetry() {
+            const maxTentativas = 5;
+            let tentativa = 0;
+            
+            while (tentativa < maxTentativas) {
+                const select = document.getElementById('cfc_id');
+                if (select) {
+                    log('✅ Select CFC encontrado, carregando dados...', 'success');
+                    await carregarCFCs();
+                    return;
+                }
+                tentativa++;
+                log(`⏳ Tentativa ${tentativa}: Aguardando select CFC...`, 'warning');
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            log('❌ Select CFC não encontrado após todas as tentativas', 'error');
+        }
+
+        async function carregarCFCs() {
+            try {
+                const url = API_CONFIG.getRelativeApiUrl('CFCs');
+                log(`📡 Carregando CFCs de: ${url}`, 'info');
+                
+                const response = await fetch(url);
+                log(`📡 Resposta da API CFCs: ${response.status} ${response.statusText}`, 'info');
+                
+                const data = await response.json();
+                log(`📊 Dados recebidos da API CFCs: ${JSON.stringify(data)}`, 'success');
+                
+                if (data.success && data.data) {
+                    const selectCFC = document.getElementById('cfc_id');
+                    
+                    if (selectCFC) {
+                        selectCFC.innerHTML = '<option value="">Selecione um CFC</option>';
+                        
+                        data.data.forEach(cfc => {
+                            const option = document.createElement('option');
+                            option.value = cfc.id;
+                            option.textContent = cfc.nome;
+                            selectCFC.appendChild(option);
+                            log(`✅ CFC adicionado: ${cfc.nome}`, 'success');
+                        });
+                        
+                        log(`✅ ${data.data.length} CFCs carregados com sucesso!`, 'success');
+                    } else {
+                        log('❌ Select de CFC não encontrado!', 'error');
+                    }
+                } else {
+                    log(`❌ Erro na API CFCs: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erro ao carregar CFCs: ${error.message}`, 'error');
+            }
+        }
+
+        async function carregarUsuariosComRetry() {
+            const maxTentativas = 5;
+            let tentativa = 0;
+            
+            while (tentativa < maxTentativas) {
+                const select = document.getElementById('usuario_id');
+                if (select) {
+                    log('✅ Select Usuário encontrado, carregando dados...', 'success');
+                    await carregarUsuarios();
+                    return;
+                }
+                tentativa++;
+                log(`⏳ Tentativa ${tentativa}: Aguardando select Usuário...`, 'warning');
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+            log('❌ Select Usuário não encontrado após todas as tentativas', 'error');
+        }
+
+        async function carregarUsuarios() {
+            try {
+                const url = API_CONFIG.getRelativeApiUrl('USUARIOS');
+                log(`📡 Carregando usuários de: ${url}`, 'info');
+                
+                const response = await fetch(url);
+                log(`📡 Resposta da API Usuários: ${response.status} ${response.statusText}`, 'info');
+                
+                const data = await response.json();
+                log(`📊 Dados recebidos da API Usuários: ${JSON.stringify(data)}`, 'success');
+                
+                if (data.success && data.data) {
+                    const select = document.getElementById('usuario_id');
+                    if (select) {
+                        select.innerHTML = '<option value="">Criar novo usuário</option>';
+                        
+                        data.data.forEach(usuario => {
+                            const option = document.createElement('option');
+                            option.value = usuario.id;
+                            option.textContent = `${usuario.nome} (${usuario.email})`;
+                            select.appendChild(option);
+                            log(`✅ Usuário adicionado: ${usuario.nome}`, 'success');
+                        });
+                        
+                        log(`✅ ${data.data.length} usuários carregados com sucesso!`, 'success');
+                    } else {
+                        log('❌ Select de usuário não encontrado!', 'error');
+                    }
+                } else {
+                    log(`❌ Erro na API Usuários: ${data.error}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Erro ao carregar usuários: ${error.message}`, 'error');
+            }
+        }
+
+        function preencherFormularioInstrutor(instrutor) {
+            log('🔄 Preenchendo formulário com dados:', 'info');
+            log(`📋 Dados do instrutor: ${JSON.stringify(instrutor)}`, 'info');
+            
+            // Verificar se os selects estão carregados antes de preencher
+            const cfcSelect = document.getElementById('cfc_id');
+            const usuarioSelect = document.getElementById('usuario_id');
+            
+            if (cfcSelect && cfcSelect.options.length <= 1) {
+                log('⚠️ Select CFC ainda não carregado, aguardando...', 'warning');
+                setTimeout(() => preencherFormularioInstrutor(instrutor), 200);
+                return;
+            }
+            
+            if (usuarioSelect && usuarioSelect.options.length <= 1) {
+                log('⚠️ Select Usuário ainda não carregado, aguardando...', 'warning');
+                setTimeout(() => preencherFormularioInstrutor(instrutor), 200);
+                return;
+            }
+            
+            log('✅ Selects carregados, preenchendo formulário...', 'success');
+            
+            // Preencher campos do formulário
+            const campos = {
+                'nome': instrutor.nome || instrutor.nome_usuario || '',
+                'email': instrutor.email || '',
+                'cpf': instrutor.cpf || '',
+                'cnh': instrutor.cnh || '',
+                'telefone': instrutor.telefone || '',
+                'endereco': instrutor.endereco || '',
+                'cidade': instrutor.cidade || '',
+                'credencial': instrutor.credencial || '',
+                'observacoes': instrutor.observacoes || ''
+            };
+            
+            // Preencher cada campo
+            Object.keys(campos).forEach(campoId => {
+                const campo = document.getElementById(campoId);
+                if (campo) {
+                    campo.value = campos[campoId];
+                    log(`✅ Campo ${campoId} preenchido: ${campos[campoId]}`, 'success');
+                } else {
+                    log(`⚠️ Campo ${campoId} não encontrado`, 'warning');
+                }
+            });
+            
+            // Preencher campo de data de nascimento
+            const campoDataNascimento = document.getElementById('data_nascimento');
+            if (campoDataNascimento && instrutor.data_nascimento) {
+                // Converter formato ISO para brasileiro
+                const data = new Date(instrutor.data_nascimento);
+                const dia = String(data.getDate()).padStart(2, '0');
+                const mes = String(data.getMonth() + 1).padStart(2, '0');
+                const ano = data.getFullYear();
+                campoDataNascimento.value = `${dia}/${mes}/${ano}`;
+                log(`✅ Campo data_nascimento preenchido: ${campoDataNascimento.value}`, 'success');
+            }
+            
+            // Preencher campo de validade da credencial
+            const campoValidadeCredencial = document.getElementById('validade_credencial');
+            if (campoValidadeCredencial && instrutor.validade_credencial) {
+                // Converter formato ISO para brasileiro
+                const data = new Date(instrutor.validade_credencial);
+                const dia = String(data.getDate()).padStart(2, '0');
+                const mes = String(data.getMonth() + 1).padStart(2, '0');
+                const ano = data.getFullYear();
+                campoValidadeCredencial.value = `${dia}/${mes}/${ano}`;
+                log(`✅ Campo validade_credencial preenchido: ${campoValidadeCredencial.value}`, 'success');
+            }
+            
+            // Preencher selects
+            const usuarioField = document.getElementById('usuario_id');
+            if (usuarioField && instrutor.usuario_id) {
+                usuarioField.value = instrutor.usuario_id;
+                log(`✅ Campo usuario_id preenchido: ${instrutor.usuario_id}`, 'success');
+            }
+            
+            const cfcField = document.getElementById('cfc_id');
+            if (cfcField && instrutor.cfc_id) {
+                cfcField.value = instrutor.cfc_id;
+                log(`✅ Campo cfc_id preenchido: ${instrutor.cfc_id}`, 'success');
+            }
+            
+            const ufField = document.getElementById('uf');
+            if (ufField && instrutor.uf) {
+                ufField.value = instrutor.uf;
+                log(`✅ Campo uf preenchido: ${instrutor.uf}`, 'success');
+            }
+            
+            const ativoField = document.getElementById('ativo');
+            if (ativoField) {
+                ativoField.value = instrutor.ativo ? '1' : '0';
+                log(`✅ Campo ativo preenchido: ${ativoField.value}`, 'success');
+            }
+            
+            log('✅ Formulário preenchido com sucesso!', 'success');
+        }
+
+        async function testarAPIs() {
+            log('🧪 Testando APIs...', 'warning');
+            
+            try {
+                // Testar API de CFCs
+                const urlCFCs = API_CONFIG.getRelativeApiUrl('CFCs');
+                log(`📡 Testando CFCs: ${urlCFCs}`, 'info');
+                const responseCFCs = await fetch(urlCFCs);
+                const dataCFCs = await responseCFCs.json();
+                log(`📊 Resposta CFCs: ${JSON.stringify(dataCFCs)}`, 'success');
+                
+                // Testar API de Usuários
+                const urlUsuarios = API_CONFIG.getRelativeApiUrl('USUARIOS');
+                log(`📡 Testando Usuários: ${urlUsuarios}`, 'info');
+                const responseUsuarios = await fetch(urlUsuarios);
+                const dataUsuarios = await responseUsuarios.json();
+                log(`📊 Resposta Usuários: ${JSON.stringify(dataUsuarios)}`, 'success');
+                
+                // Testar API de Instrutores
+                const urlInstrutores = API_CONFIG.getRelativeApiUrl('INSTRUTORES');
+                log(`📡 Testando Instrutores: ${urlInstrutores}`, 'info');
+                const responseInstrutores = await fetch(urlInstrutores);
+                const dataInstrutores = await responseInstrutores.json();
+                log(`📊 Resposta Instrutores: ${JSON.stringify(dataInstrutores)}`, 'success');
+                
+            } catch (error) {
+                log(`❌ Erro ao testar APIs: ${error.message}`, 'error');
+            }
+        }
+
+        async function diagnosticarProblema() {
+            log('🔍 Iniciando diagnóstico do problema...', 'warning');
+            
+            // Verificar se elementos existem
+            const cfcSelect = document.getElementById('cfc_id');
+            const usuarioSelect = document.getElementById('usuario_id');
+            
+            log(`CFC Select existe: ${cfcSelect ? 'SIM' : 'NÃO'}`);
+            log(`Usuário Select existe: ${usuarioSelect ? 'SIM' : 'NÃO'}`);
+            
+            if (cfcSelect) {
+                log(`CFC Select options: ${cfcSelect.options.length}`);
+            }
+            if (usuarioSelect) {
+                log(`Usuário Select options: ${usuarioSelect.options.length}`);
+            }
+            
+            // Verificar API_CONFIG
+            log(`API_CONFIG existe: ${typeof API_CONFIG !== 'undefined' ? 'SIM' : 'NÃO'}`);
+            if (typeof API_CONFIG !== 'undefined') {
+                log(`CFCs URL: ${API_CONFIG.getRelativeApiUrl('CFCs')}`);
+                log(`USUARIOS URL: ${API_CONFIG.getRelativeApiUrl('USUARIOS')}`);
+                log(`INSTRUTORES URL: ${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}`);
+            }
+            
+            // Testar APIs
+            try {
+                const urlCFCs = API_CONFIG.getRelativeApiUrl('CFCs');
+                const responseCFCs = await fetch(urlCFCs);
+                const dataCFCs = await responseCFCs.json();
+                log(`API CFCs funcionando: ${dataCFCs.success ? 'SIM' : 'NÃO'}`);
+                
+                const urlUsuarios = API_CONFIG.getRelativeApiUrl('USUARIOS');
+                const responseUsuarios = await fetch(urlUsuarios);
+                const dataUsuarios = await responseUsuarios.json();
+                log(`API Usuários funcionando: ${dataUsuarios.success ? 'SIM' : 'NÃO'}`);
+                
+                const urlInstrutores = API_CONFIG.getRelativeApiUrl('INSTRUTORES');
+                const responseInstrutores = await fetch(urlInstrutores);
+                const dataInstrutores = await responseInstrutores.json();
+                log(`API Instrutores funcionando: ${dataInstrutores.success ? 'SIM' : 'NÃO'}`);
+                
+            } catch (error) {
+                log(`❌ Erro ao testar APIs: ${error.message}`, 'error');
+            }
+        }
+
+        function salvarInstrutor() {
+            log('💾 Salvando instrutor...', 'info');
+            // Implementar salvamento se necessário
+        }
+
+        // Log inicial
+        log('🚀 Teste do modal de instrutores iniciado');
+        log('📋 Verificando carregamento de dados na edição');
+    </script>
+</body>
+</html>

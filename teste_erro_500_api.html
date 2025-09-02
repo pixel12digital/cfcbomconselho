@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Erro 500 API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        .btn {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        .btn-success {
+            background-color: #28a745;
+        }
+        .btn-danger {
+            background-color: #dc3545;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: #212529;
+        }
+        .log {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            border-radius: 5px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste - Erro 500 API</h1>
+        
+        <div class="test-section error">
+            <h3>❌ Problema Identificado</h3>
+            <p><strong>Erro:</strong> POST 500 (Internal Server Error)</p>
+            <p><strong>Causa:</strong> Problema na API admin/api/instrutores.php</p>
+            <p><strong>Status:</strong> Investigando erro na query</p>
+        </div>
+
+        <div class="test-section">
+            <h3>🧪 Teste de API</h3>
+            <div>
+                <button class="btn btn-warning" onclick="testarAPIDireto()">Testar API Direto</button>
+                <button class="btn btn-success" onclick="testarDadosMinimos()">Testar Dados Mínimos</button>
+                <button class="btn btn-danger" onclick="verificarLogs()">Verificar Logs</button>
+                <button class="btn" onclick="limparLogs()">Limpar Logs</button>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h3>📊 Logs de Debug</h3>
+            <div id="logs" class="log"></div>
+        </div>
+
+        <div class="test-section warning">
+            <h3>📋 Instruções para Debug</h3>
+            <ol>
+                <li><strong>Verificar logs do servidor:</strong> XAMPP → Apache → Logs → error.log</li>
+                <li><strong>Verificar logs do PHP:</strong> XAMPP → PHP → php.ini → error_log</li>
+                <li><strong>Testar API diretamente:</strong> Usar o botão "Testar API Direto"</li>
+                <li><strong>Verificar estrutura da tabela:</strong> phpMyAdmin → instrutores → Estrutura</li>
+                <li><strong>Reportar resultados:</strong> Me informar os logs de erro encontrados</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.color = type === 'error' ? '#dc3545' : type === 'success' ? '#28a745' : type === 'warning' ? '#ffc107' : '#007bff';
+            logEntry.textContent = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+        }
+
+        async function testarAPIDireto() {
+            log('🧪 Testando API diretamente...', 'warning');
+            
+            const dadosTeste = {
+                nome: 'Teste API',
+                email: 'teste@api.com',
+                cpf: '123.456.789-00',
+                cnh: '12345678901',
+                telefone: '(11) 99999-9999',
+                cfc_id: '36',
+                credencial: '123123123',
+                categoria_habilitacao: 'A,B',
+                ativo: true,
+                usuario_id: '15' // Usar usuário existente
+            };
+            
+            try {
+                const response = await fetch('/cfc-bom-conselho/admin/api/instrutores.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(dadosTeste)
+                });
+                
+                log(`📡 Status: ${response.status} ${response.statusText}`, 'info');
+                
+                const data = await response.text();
+                log(`📊 Resposta: ${data}`, 'info');
+                
+                if (response.ok) {
+                    log('✅ API funcionando corretamente!', 'success');
+                } else {
+                    log('❌ Erro na API!', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Erro na requisição: ${error.message}`, 'error');
+            }
+        }
+
+        async function testarDadosMinimos() {
+            log('🧪 Testando com dados mínimos...', 'warning');
+            
+            const dadosMinimos = {
+                nome: 'Teste Mínimo',
+                email: 'minimo@teste.com',
+                cfc_id: '36',
+                credencial: '123',
+                usuario_id: '15'
+            };
+            
+            try {
+                const response = await fetch('/cfc-bom-conselho/admin/api/instrutores.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(dadosMinimos)
+                });
+                
+                log(`📡 Status: ${response.status} ${response.statusText}`, 'info');
+                
+                const data = await response.text();
+                log(`📊 Resposta: ${data}`, 'info');
+                
+                if (response.ok) {
+                    log('✅ Dados mínimos funcionaram!', 'success');
+                } else {
+                    log('❌ Erro mesmo com dados mínimos!', 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Erro na requisição: ${error.message}`, 'error');
+            }
+        }
+
+        function verificarLogs() {
+            log('🔍 Verificando logs...', 'warning');
+            log('📋 Para verificar logs do servidor:', 'info');
+            log('1. Abra o XAMPP Control Panel', 'info');
+            log('2. Clique em "Logs" → "Apache" → "error.log"', 'info');
+            log('3. Procure por erros relacionados a instrutores.php', 'info');
+            log('4. Ou verifique: C:\\xampp\\apache\\logs\\error.log', 'info');
+            log('', 'info');
+            log('📋 Para verificar logs do PHP:', 'info');
+            log('1. Abra: C:\\xampp\\php\\php.ini', 'info');
+            log('2. Procure por "error_log" e "log_errors"', 'info');
+            log('3. Verifique o arquivo de log especificado', 'info');
+        }
+
+        function limparLogs() {
+            document.getElementById('logs').innerHTML = '';
+            log('🧹 Logs limpos', 'info');
+        }
+
+        // Log inicial
+        log('🚀 Teste de erro 500 iniciado');
+        log('📋 Investigando problema na API de instrutores');
+    </script>
+</body>
+</html>

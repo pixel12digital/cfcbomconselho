@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Modal Instrutor - Debug</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background-color: white; margin: 5% auto; padding: 20px; width: 80%; max-width: 600px; border-radius: 5px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .debug-info { background-color: #f8f9fa; padding: 10px; border-radius: 4px; margin: 10px 0; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>Teste Modal Instrutor - Debug</h1>
+    
+    <button class="btn btn-primary" onclick="testarModal()">Testar Modal</button>
+    <button class="btn btn-secondary" onclick="limparLogs()">Limpar Logs</button>
+    
+    <div id="debugOutput" class="debug-info">
+        <h3>Logs de Debug:</h3>
+        <div id="logs"></div>
+    </div>
+    
+    <!-- Modal de Teste -->
+    <div id="modalInstrutor" class="modal">
+        <div class="modal-content">
+            <h2 id="modalTitle">Editar Instrutor</h2>
+            
+            <input type="hidden" id="acaoInstrutor" value="editar">
+            <input type="hidden" id="instrutor_id" value="23">
+            
+            <div class="form-group">
+                <label for="nome">Nome:</label>
+                <input type="text" id="nome" value="Usuário teste 001">
+            </div>
+            
+            <div class="form-group">
+                <label for="usuario_id">Usuário:</label>
+                <select id="usuario_id" onchange="toggleUsuarioFields()">
+                    <option value="">Criar novo usuário</option>
+                    <option value="14">Usuário teste 001</option>
+                    <option value="15">Robson Wagner Alves Vieira</option>
+                    <option value="16">VINICIUS RICARDO PONTES VIEIRA</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="cfc_id">CFC:</label>
+                <select id="cfc_id">
+                    <option value="">Selecione um CFC</option>
+                    <option value="36">CFC BOM CONSELHO</option>
+                    <option value="37">CFC TESTE</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label for="cpf">CPF:</label>
+                <input type="text" id="cpf" value="034.547.699-90">
+            </div>
+            
+            <div class="form-group">
+                <label for="email">Email:</label>
+                <input type="email" id="email" value="teste@teste.com.br">
+            </div>
+            
+            <div class="form-group">
+                <label for="telefone">Telefone:</label>
+                <input type="text" id="telefone" value="(47) 99616-4699">
+            </div>
+            
+            <div class="form-group">
+                <label for="credencial">Credencial:</label>
+                <input type="text" id="credencial" value="123123123">
+            </div>
+            
+            <div class="form-group">
+                <label for="data_nascimento">Data de Nascimento:</label>
+                <input type="text" id="data_nascimento" value="07/10/1981">
+            </div>
+            
+            <div class="form-group">
+                <label for="horario_inicio">Horário Início:</label>
+                <input type="time" id="horario_inicio" value="08:00">
+            </div>
+            
+            <div class="form-group">
+                <label for="horario_fim">Horário Fim:</label>
+                <input type="time" id="horario_fim" value="18:00">
+            </div>
+            
+            <div class="form-group">
+                <label>Categorias de Habilitação:</label>
+                <div>
+                    <input type="checkbox" name="categoria_habilitacao[]" value="A" id="cat_a"> <label for="cat_a">A</label>
+                    <input type="checkbox" name="categoria_habilitacao[]" value="B" id="cat_b"> <label for="cat_b">B</label>
+                    <input type="checkbox" name="categoria_habilitacao[]" value="C" id="cat_c"> <label for="cat_c">C</label>
+                    <input type="checkbox" name="categoria_habilitacao[]" value="D" id="cat_d"> <label for="cat_d">D</label>
+                    <input type="checkbox" name="categoria_habilitacao[]" value="E" id="cat_e"> <label for="cat_e">E</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label>Dias da Semana:</label>
+                <div>
+                    <input type="checkbox" name="dias_semana[]" value="Segunda" id="dia_seg"> <label for="dia_seg">Segunda</label>
+                    <input type="checkbox" name="dias_semana[]" value="Terça" id="dia_ter"> <label for="dia_ter">Terça</label>
+                    <input type="checkbox" name="dias_semana[]" value="Quarta" id="dia_qua"> <label for="dia_qua">Quarta</label>
+                    <input type="checkbox" name="dias_semana[]" value="Quinta" id="dia_qui"> <label for="dia_qui">Quinta</label>
+                    <input type="checkbox" name="dias_semana[]" value="Sexta" id="dia_sex"> <label for="dia_sex">Sexta</label>
+                    <input type="checkbox" name="dias_semana[]" value="Sábado" id="dia_sab"> <label for="dia_sab">Sábado</label>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <button class="btn btn-primary" onclick="verificarValores()">Verificar Valores</button>
+                <button class="btn btn-secondary" onclick="fecharModal()">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function log(message, type = 'info') {
+            const logsDiv = document.getElementById('logs');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : type === 'warning' ? 'warning' : '';
+            const logEntry = document.createElement('div');
+            logEntry.className = className;
+            logEntry.innerHTML = `[${timestamp}] ${message}`;
+            logsDiv.appendChild(logEntry);
+            logsDiv.scrollTop = logsDiv.scrollHeight;
+            console.log(message);
+        }
+
+        function limparLogs() {
+            document.getElementById('logs').innerHTML = '';
+        }
+
+        function testarModal() {
+            log('🚀 Iniciando teste do modal...', 'success');
+            
+            // Abrir modal
+            const modal = document.getElementById('modalInstrutor');
+            modal.style.display = 'block';
+            
+            // Simular dados do instrutor ID 23
+            const instrutor = {
+                id: 23,
+                nome: 'Usuário teste 001',
+                cpf: '034.547.699-90',
+                cnh: '123123123',
+                data_nascimento: '1981-10-08',
+                telefone: '(47) 99616-4699',
+                email: 'teste@teste.com.br',
+                credencial: '123123123',
+                usuario_id: 14,
+                cfc_id: 36,
+                horario_inicio: '08:00:00',
+                horario_fim: '18:00:00',
+                categoria_habilitacao: 'A,B,C',
+                dias_semana: 'Segunda,Terça,Quarta'
+            };
+            
+            log('📋 Dados do instrutor preparados:', 'info');
+            log(JSON.stringify(instrutor, null, 2), 'info');
+            
+            // Preencher formulário
+            setTimeout(() => {
+                preencherFormularioInstrutor(instrutor);
+            }, 100);
+        }
+
+        function preencherFormularioInstrutor(instrutor) {
+            log('🔄 Preenchendo formulário com dados:', 'info');
+            
+            // Verificar se os selects estão carregados
+            const cfcSelect = document.getElementById('cfc_id');
+            const usuarioSelect = document.getElementById('usuario_id');
+            
+            log(`🔍 CFC Select options: ${cfcSelect.options.length}`, 'info');
+            log(`🔍 Usuário Select options: ${usuarioSelect.options.length}`, 'info');
+            
+            if (cfcSelect && cfcSelect.options.length <= 1) {
+                log('⚠️ Select CFC ainda não carregado, aguardando...', 'warning');
+                setTimeout(() => preencherFormularioInstrutor(instrutor), 200);
+                return;
+            }
+            
+            if (usuarioSelect && usuarioSelect.options.length <= 1) {
+                log('⚠️ Select Usuário ainda não carregado, aguardando...', 'warning');
+                setTimeout(() => preencherFormularioInstrutor(instrutor), 200);
+                return;
+            }
+            
+            log('✅ Selects carregados, preenchendo formulário...', 'success');
+            
+            // Preencher campos básicos
+            const nomeField = document.getElementById('nome');
+            if (nomeField) {
+                nomeField.value = instrutor.nome || '';
+                log(`✅ Campo nome preenchido: ${nomeField.value}`, 'success');
+            }
+            
+            const cpfField = document.getElementById('cpf');
+            if (cpfField) {
+                cpfField.value = instrutor.cpf || '';
+                log(`✅ Campo cpf preenchido: ${cpfField.value}`, 'success');
+            }
+            
+            const emailField = document.getElementById('email');
+            if (emailField) {
+                emailField.value = instrutor.email || '';
+                log(`✅ Campo email preenchido: ${emailField.value}`, 'success');
+            }
+            
+            const telefoneField = document.getElementById('telefone');
+            if (telefoneField) {
+                telefoneField.value = instrutor.telefone || '';
+                log(`✅ Campo telefone preenchido: ${telefoneField.value}`, 'success');
+            }
+            
+            const credencialField = document.getElementById('credencial');
+            if (credencialField) {
+                credencialField.value = instrutor.credencial || '';
+                log(`✅ Campo credencial preenchido: ${credencialField.value}`, 'success');
+            }
+            
+            // Preencher data de nascimento
+            const campoDataNascimento = document.getElementById('data_nascimento');
+            if (campoDataNascimento && instrutor.data_nascimento) {
+                const data = new Date(instrutor.data_nascimento);
+                const dia = String(data.getDate()).padStart(2, '0');
+                const mes = String(data.getMonth() + 1).padStart(2, '0');
+                const ano = data.getFullYear();
+                campoDataNascimento.value = `${dia}/${mes}/${ano}`;
+                log(`✅ Campo data_nascimento preenchido: ${campoDataNascimento.value}`, 'success');
+            }
+            
+            // Preencher horários
+            const horarioInicioField = document.getElementById('horario_inicio');
+            if (horarioInicioField && instrutor.horario_inicio) {
+                const horario = instrutor.horario_inicio.substring(0, 5); // Converter HH:MM:SS para HH:MM
+                horarioInicioField.value = horario;
+                log(`✅ Campo horario_inicio preenchido: ${horarioInicioField.value}`, 'success');
+            }
+            
+            const horarioFimField = document.getElementById('horario_fim');
+            if (horarioFimField && instrutor.horario_fim) {
+                const horario = instrutor.horario_fim.substring(0, 5); // Converter HH:MM:SS para HH:MM
+                horarioFimField.value = horario;
+                log(`✅ Campo horario_fim preenchido: ${horarioFimField.value}`, 'success');
+            }
+            
+            // Preencher selects com verificação de valores
+            const usuarioField = document.getElementById('usuario_id');
+            if (usuarioField && instrutor.usuario_id) {
+                const usuarioId = parseInt(instrutor.usuario_id);
+                log(`🔍 Debug - Tentando preencher usuário ID: ${usuarioId}`, 'info');
+                log(`🔍 Debug - Opções disponíveis: ${Array.from(usuarioField.options).map(opt => `{value: "${opt.value}", text: "${opt.textContent}"}`).join(', ')}`, 'info');
+                
+                const usuarioOption = usuarioField.querySelector(`option[value="${usuarioId}"]`);
+                if (usuarioOption) {
+                    log(`🔍 Debug - Opção encontrada: ${usuarioOption.textContent}`, 'success');
+                    
+                    // Remover temporariamente o evento onchange para evitar interferência
+                    const originalOnChange = usuarioField.getAttribute('onchange');
+                    usuarioField.removeAttribute('onchange');
+                    
+                    usuarioField.value = usuarioId;
+                    log(`✅ Campo usuario_id preenchido: ${usuarioId}`, 'success');
+                    log(`🔍 Debug - Valor após preenchimento: ${usuarioField.value}`, 'info');
+                    
+                    // Forçar reflow visual para garantir que o valor seja exibido
+                    usuarioField.style.display = 'none';
+                    usuarioField.offsetHeight; // Força reflow
+                    usuarioField.style.display = '';
+                    
+                    // Restaurar o evento onchange após um delay
+                    setTimeout(() => {
+                        if (originalOnChange) {
+                            usuarioField.setAttribute('onchange', originalOnChange);
+                            log('🔍 Debug - Evento onchange restaurado', 'info');
+                        }
+                    }, 200);
+                    
+                    // Verificação adicional após um delay
+                    setTimeout(() => {
+                        log(`🔍 Debug - Verificação após 100ms - Valor atual: ${usuarioField.value}`, 'info');
+                        if (usuarioField.value !== usuarioId.toString()) {
+                            log('⚠️ Valor do usuário não foi aplicado, tentando novamente...', 'warning');
+                            usuarioField.value = usuarioId;
+                            log(`🔍 Debug - Valor reaplicado: ${usuarioField.value}`, 'info');
+                        }
+                    }, 100);
+                } else {
+                    log(`⚠️ Opção de usuário não encontrada para ID: ${usuarioId}`, 'error');
+                    log(`🔍 Opções disponíveis: ${Array.from(usuarioField.options).map(opt => `{value: "${opt.value}", text: "${opt.textContent}"}`).join(', ')}`, 'info');
+                }
+            }
+            
+            const cfcField = document.getElementById('cfc_id');
+            if (cfcField && instrutor.cfc_id) {
+                const cfcId = parseInt(instrutor.cfc_id);
+                log(`🔍 Debug - Tentando preencher CFC ID: ${cfcId}`, 'info');
+                log(`🔍 Debug - Opções disponíveis: ${Array.from(cfcField.options).map(opt => `{value: "${opt.value}", text: "${opt.textContent}"}`).join(', ')}`, 'info');
+                
+                const cfcOption = cfcField.querySelector(`option[value="${cfcId}"]`);
+                if (cfcOption) {
+                    log(`🔍 Debug - Opção encontrada: ${cfcOption.textContent}`, 'success');
+                    
+                    cfcField.value = cfcId;
+                    log(`✅ Campo cfc_id preenchido: ${cfcId}`, 'success');
+                    log(`🔍 Debug - Valor após preenchimento: ${cfcField.value}`, 'info');
+                    
+                    // Forçar reflow visual para garantir que o valor seja exibido
+                    cfcField.style.display = 'none';
+                    cfcField.offsetHeight; // Força reflow
+                    cfcField.style.display = '';
+                    
+                    // Verificação adicional após um delay
+                    setTimeout(() => {
+                        log(`🔍 Debug - Verificação após 100ms - Valor atual: ${cfcField.value}`, 'info');
+                        if (cfcField.value !== cfcId.toString()) {
+                            log('⚠️ Valor do CFC não foi aplicado, tentando novamente...', 'warning');
+                            cfcField.value = cfcId;
+                            log(`🔍 Debug - Valor reaplicado: ${cfcField.value}`, 'info');
+                        }
+                    }, 100);
+                } else {
+                    log(`⚠️ Opção de CFC não encontrada para ID: ${cfcId}`, 'error');
+                    log(`🔍 Opções disponíveis: ${Array.from(cfcField.options).map(opt => `{value: "${opt.value}", text: "${opt.textContent}"}`).join(', ')}`, 'info');
+                }
+            }
+            
+            // Preencher categorias
+            if (instrutor.categoria_habilitacao) {
+                let categorias = [];
+                try {
+                    categorias = instrutor.categoria_habilitacao.split(',');
+                } catch (e) {
+                    log(`⚠️ Erro ao processar categorias: ${e.message}`, 'warning');
+                }
+                
+                categorias.forEach(categoria => {
+                    const categoriaLimpa = categoria.trim().replace(/"/g, '');
+                    if (categoriaLimpa) {
+                        const checkbox = document.querySelector(`input[name="categoria_habilitacao[]"][value="${categoriaLimpa}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            log(`✅ Categoria ${categoriaLimpa} marcada`, 'success');
+                        } else {
+                            log(`⚠️ Checkbox para categoria ${categoriaLimpa} não encontrado`, 'warning');
+                        }
+                    }
+                });
+            }
+            
+            // Preencher dias da semana
+            if (instrutor.dias_semana) {
+                let dias = [];
+                try {
+                    dias = instrutor.dias_semana.split(',');
+                } catch (e) {
+                    log(`⚠️ Erro ao processar dias da semana: ${e.message}`, 'warning');
+                }
+                
+                dias.forEach(dia => {
+                    const diaLimpo = dia.trim().replace(/"/g, '');
+                    if (diaLimpo) {
+                        const checkbox = document.querySelector(`input[name="dias_semana[]"][value="${diaLimpo}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                            log(`✅ Dia ${diaLimpo} marcado`, 'success');
+                        } else {
+                            log(`⚠️ Checkbox para dia ${diaLimpo} não encontrado`, 'warning');
+                        }
+                    }
+                });
+            }
+            
+            log('✅ Formulário preenchido com sucesso!', 'success');
+            
+            // Verificação final após 1 segundo
+            setTimeout(() => {
+                verificarValores();
+            }, 1000);
+        }
+
+        function toggleUsuarioFields() {
+            const usuarioSelect = document.getElementById('usuario_id');
+            const acaoInstrutor = document.getElementById('acaoInstrutor');
+            
+            const isModoEdicao = acaoInstrutor && acaoInstrutor.value === 'editar';
+            
+            if (usuarioSelect.value === '') {
+                log('🔧 Criar novo usuário selecionado', 'info');
+            } else {
+                log(`🔧 Usuário existente selecionado: ${usuarioSelect.value}`, 'info');
+                
+                if (!isModoEdicao) {
+                    log('🔧 Buscando dados do usuário automaticamente', 'info');
+                    // buscarDadosUsuario(usuarioSelect.value);
+                } else {
+                    log('🔧 Modo de edição detectado - não buscando dados do usuário automaticamente', 'info');
+                }
+            }
+        }
+
+        function verificarValores() {
+            log('🔍 Verificando valores atuais dos campos...', 'info');
+            
+            const campos = {
+                'nome': document.getElementById('nome').value,
+                'cpf': document.getElementById('cpf').value,
+                'email': document.getElementById('email').value,
+                'telefone': document.getElementById('telefone').value,
+                'credencial': document.getElementById('credencial').value,
+                'data_nascimento': document.getElementById('data_nascimento').value,
+                'usuario_id': document.getElementById('usuario_id').value,
+                'cfc_id': document.getElementById('cfc_id').value,
+                'horario_inicio': document.getElementById('horario_inicio').value,
+                'horario_fim': document.getElementById('horario_fim').value
+            };
+            
+            log('📊 Valores atuais:', 'info');
+            Object.entries(campos).forEach(([campo, valor]) => {
+                const status = valor ? '✅' : '❌';
+                log(`${status} ${campo}: "${valor}"`, valor ? 'success' : 'error');
+            });
+            
+            // Verificar checkboxes
+            const categorias = Array.from(document.querySelectorAll('input[name="categoria_habilitacao[]"]:checked')).map(cb => cb.value);
+            const dias = Array.from(document.querySelectorAll('input[name="dias_semana[]"]:checked')).map(cb => cb.value);
+            
+            log(`📊 Categorias marcadas: ${categorias.join(', ') || 'Nenhuma'}`, categorias.length > 0 ? 'success' : 'warning');
+            log(`📊 Dias marcados: ${dias.join(', ') || 'Nenhum'}`, dias.length > 0 ? 'success' : 'warning');
+        }
+
+        function fecharModal() {
+            document.getElementById('modalInstrutor').style.display = 'none';
+            log('🔒 Modal fechado', 'info');
+        }
+    </script>
+</body>
+</html>
