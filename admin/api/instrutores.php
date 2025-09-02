@@ -66,7 +66,7 @@ try {
             if (isset($_GET['id'])) {
                 $id = (int)$_GET['id'];
                 $instrutor = $db->fetch("
-                    SELECT i.*, u.nome as nome_usuario, u.email, c.nome as cfc_nome 
+                    SELECT i.*, u.nome as nome_usuario, u.email as email_usuario, c.nome as cfc_nome 
                     FROM instrutores i 
                     LEFT JOIN usuarios u ON i.usuario_id = u.id 
                     LEFT JOIN cfcs c ON i.cfc_id = c.id 
@@ -75,8 +75,9 @@ try {
                 
                 if ($instrutor) {
                     // Adicionar campos para compatibilidade com o frontend
-                    $instrutor['nome'] = $instrutor['nome_usuario'];
-                    $instrutor['cfc_nome'] = $instrutor['cfc_nome'];
+                    $instrutor['nome'] = $instrutor['nome'] ?: ($instrutor['nome_usuario'] ?: 'N/A');
+                    $instrutor['email'] = $instrutor['email'] ?: ($instrutor['email_usuario'] ?: 'N/A');
+                    $instrutor['cfc_nome'] = $instrutor['cfc_nome'] ?: 'N/A';
                     echo json_encode(['success' => true, 'data' => $instrutor]);
                 } else {
                     http_response_code(404);
@@ -85,17 +86,19 @@ try {
             } else {
                 // Listar todos os instrutores
                 $instrutores = $db->fetchAll("
-                    SELECT i.*, u.nome as nome_usuario, u.email, c.nome as cfc_nome 
+                    SELECT i.*, u.nome as nome_usuario, u.email as email_usuario, c.nome as cfc_nome 
                     FROM instrutores i 
                     LEFT JOIN usuarios u ON i.usuario_id = u.id 
                     LEFT JOIN cfcs c ON i.cfc_id = c.id 
-                    ORDER BY u.nome
+                    ORDER BY i.nome
                 ");
                 
                 // Adicionar campos para compatibilidade com o frontend
                 foreach ($instrutores as &$instrutor) {
-                    $instrutor['nome'] = $instrutor['nome_usuario'];
-                    $instrutor['cfc_nome'] = $instrutor['cfc_nome'];
+                    // Usar o nome do instrutor (i.nome) como principal, fallback para nome_usuario se necessário
+                    $instrutor['nome'] = $instrutor['nome'] ?: ($instrutor['nome_usuario'] ?: 'N/A');
+                    $instrutor['email'] = $instrutor['email'] ?: ($instrutor['email_usuario'] ?: 'N/A');
+                    $instrutor['cfc_nome'] = $instrutor['cfc_nome'] ?: 'N/A';
                 }
                 
                 echo json_encode(['success' => true, 'data' => $instrutores]);
@@ -112,57 +115,67 @@ try {
             
             // Debug: Log dos dados recebidos
             error_log('Dados recebidos na API: ' . json_encode($data));
+            error_log('Campo usuario_id: ' . ($data['usuario_id'] ?? 'VAZIO'));
+            error_log('Campo cfc_id: ' . ($data['cfc_id'] ?? 'VAZIO'));
+            error_log('Campo nome: ' . ($data['nome'] ?? 'VAZIO'));
+            error_log('Campo credencial: ' . ($data['credencial'] ?? 'VAZIO'));
+            error_log('Campo id: ' . ($data['id'] ?? 'VAZIO'));
             
-            // Validações - verificar se é usuário novo ou existente
+            // Validações - verificar campos obrigatórios
             if (empty($data['cfc_id'])) {
                 http_response_code(400);
                 echo json_encode(['error' => 'CFC é obrigatório']);
                 exit;
             }
             
-            // Se não tiver usuario_id, precisa criar usuário
-            if (empty($data['usuario_id'])) {
-                if (empty($data['nome']) || empty($data['email']) || empty($data['senha']) || empty($data['cpf'])) {
-                    http_response_code(400);
-                    echo json_encode(['error' => 'Para novo usuário: Nome, E-mail, CPF e Senha são obrigatórios']);
-                    exit;
-                }
+            if (empty($data['nome'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Nome é obrigatório']);
+                exit;
+            }
+            
+            if (empty($data['credencial'])) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Credencial é obrigatória']);
+                exit;
+            }
+            
+            // Verificar se credencial já existe (única validação necessária)
+            $existingCredencial = $db->fetch("SELECT id FROM instrutores WHERE credencial = ?", [$data['credencial']]);
+            if ($existingCredencial) {
+                error_log('POST - Credencial já existe: ' . $data['credencial']);
+                http_response_code(400);
+                echo json_encode(['error' => 'Credencial já cadastrada para outro instrutor']);
+                exit;
             }
             
             // Verificar se CFC existe
             $existingCFC = $db->fetch("SELECT id FROM cfcs WHERE id = ?", [$data['cfc_id']]);
             if (!$existingCFC) {
+                error_log('POST - CFC não encontrado: ' . $data['cfc_id']);
                 http_response_code(400);
                 echo json_encode(['error' => 'CFC não encontrado']);
                 exit;
             }
+            error_log('POST - CFC encontrado: ' . $data['cfc_id']);
             
-            // Verificar se já existe instrutor com este usuário
-            if (!empty($data['usuario_id'])) {
-                $existingInstrutor = $db->fetch("SELECT id FROM instrutores WHERE usuario_id = ?", [$data['usuario_id']]);
-                if ($existingInstrutor) {
-                    error_log('POST - Usuário já tem instrutor: ' . $data['usuario_id']);
-                    http_response_code(400);
-                    echo json_encode(['error' => 'Já existe um instrutor cadastrado para este usuário']);
-                    exit;
-                }
-            }
+            // Remover validação de usuário - não é mais necessária
             
             // Iniciar transação
             $db->beginTransaction();
             
             try {
-                // Verificar se usuário foi selecionado
-                if (empty($data['usuario_id'])) {
-                    throw new Exception('Usuário é obrigatório');
-                }
+                // Verificar se usuário foi selecionado (opcional agora)
+                $usuario_id = $data['usuario_id'] ?? null;
                 
-                $usuario_id = $data['usuario_id'];
-                
-                // Verificar se usuário existe
-                $existingUser = $db->fetch("SELECT id FROM usuarios WHERE id = ?", [$usuario_id]);
-                if (!$existingUser) {
-                    throw new Exception('Usuário não encontrado');
+                // Se usuário foi fornecido, verificar se existe
+                if ($usuario_id) {
+                    $existingUser = $db->fetch("SELECT id FROM usuarios WHERE id = ?", [$usuario_id]);
+                    if (!$existingUser) {
+                        error_log('POST - Usuário não encontrado: ' . $usuario_id);
+                        throw new Exception('Usuário não encontrado');
+                    }
+                    error_log('POST - Usuário encontrado: ' . $usuario_id);
                 }
                 
                 // Criar instrutor com TODOS os campos
@@ -192,8 +205,8 @@ try {
                 
                 // Debug: Log dos dados que serão inseridos
                 error_log('Dados do instrutor para inserção: ' . json_encode($instrutorData));
-                error_log('Categoria habilitação: ' . ($data['categoria_habilitacao'] ?? 'VAZIO'));
-                error_log('Dias da semana: ' . ($data['dias_semana'] ?? 'VAZIO'));
+                error_log('Categoria habilitação: ' . json_encode($data['categoria_habilitacao'] ?? 'VAZIO'));
+                error_log('Dias da semana: ' . json_encode($data['dias_semana'] ?? 'VAZIO'));
                 
                 $instrutor_id = $db->insert('instrutores', $instrutorData);
                 
@@ -206,7 +219,7 @@ try {
                 
                 // Buscar instrutor criado
                 $instrutor = $db->fetch("
-                    SELECT i.*, u.nome as nome_usuario, u.email, c.nome as cfc_nome 
+                    SELECT i.*, u.nome as nome_usuario, u.email as email_usuario, c.nome as cfc_nome 
                     FROM instrutores i 
                     LEFT JOIN usuarios u ON i.usuario_id = u.id 
                     LEFT JOIN cfcs c ON i.cfc_id = c.id 
@@ -214,8 +227,9 @@ try {
                 ", [$instrutor_id]);
                 
                 // Adicionar campos para compatibilidade com o frontend
-                $instrutor['nome'] = $instrutor['nome_usuario'];
-                $instrutor['cfc_nome'] = $instrutor['cfc_nome'];
+                $instrutor['nome'] = $instrutor['nome'] ?: ($instrutor['nome_usuario'] ?: 'N/A');
+                $instrutor['email'] = $instrutor['email'] ?: ($instrutor['email_usuario'] ?: 'N/A');
+                $instrutor['cfc_nome'] = $instrutor['cfc_nome'] ?: 'N/A';
                 
                 echo json_encode(['success' => true, 'message' => 'Instrutor criado com sucesso', 'data' => $instrutor]);
                 
@@ -402,11 +416,32 @@ try {
     }
     
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode(['error' => 'Erro interno: ' . $e->getMessage()]);
+    error_log('Erro na API de instrutores: ' . $e->getMessage());
+    error_log('Stack trace: ' . $e->getTraceAsString());
     
-    if (LOG_ENABLED) {
-        error_log('Erro na API de instrutores: ' . $e->getMessage());
+    // Garantir que a resposta seja JSON válido
+    if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
     }
+    
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Erro interno do servidor: ' . $e->getMessage()
+    ]);
+} catch (Error $e) {
+    error_log('Erro fatal na API de instrutores: ' . $e->getMessage());
+    error_log('Stack trace: ' . $e->getTraceAsString());
+    
+    // Garantir que a resposta seja JSON válido
+    if (!headers_sent()) {
+        header('Content-Type: application/json; charset=utf-8');
+    }
+    
+    http_response_code(500);
+    echo json_encode([
+        'success' => false,
+        'error' => 'Erro fatal do servidor: ' . $e->getMessage()
+    ]);
 }
 ?>

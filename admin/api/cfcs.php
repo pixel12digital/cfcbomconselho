@@ -1,6 +1,6 @@
 <?php
 // API para gerenciamento de CFCs
-error_reporting(E_ALL);
+// Configuração para produção
 ini_set('display_errors', 0); // Não mostrar erros na tela para API
 ini_set('log_errors', 1);
 

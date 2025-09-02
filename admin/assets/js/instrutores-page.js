@@ -1171,7 +1171,7 @@ function atualizarEstatisticas(instrutores) {
 }
 
 // Função com retry para carregar CFCs
-async function carregarCFCsComRetry() {
+window.carregarCFCsComRetry = async function() {
     const maxTentativas = 5;
     let tentativa = 0;
     
@@ -1242,7 +1242,7 @@ async function carregarCFCs() {
 }
 
 // Função com retry para carregar usuários
-async function carregarUsuariosComRetry() {
+window.carregarUsuariosComRetry = async function() {
     const maxTentativas = 5;
     let tentativa = 0;
     
@@ -1260,7 +1260,7 @@ async function carregarUsuariosComRetry() {
     console.error('❌ Select Usuário não encontrado após todas as tentativas');
 }
 
-async function carregarUsuarios() {
+window.carregarUsuarios = async function() {
     try {
         const url = API_CONFIG.getRelativeApiUrl('USUARIOS');
         console.log('📡 Carregando usuários de:', url);
@@ -1274,7 +1274,7 @@ async function carregarUsuarios() {
         if (data.success && data.data) {
             const select = document.getElementById('usuario_id');
             if (select) {
-                select.innerHTML = '<option value="">Criar novo usuário</option>';
+                select.innerHTML = '<option value="">Selecione um usuário (opcional)</option>';
                 
                 data.data.forEach(usuario => {
                     const option = document.createElement('option');

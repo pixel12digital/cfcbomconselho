@@ -122,7 +122,15 @@ async function fetchAPIInstrutores(endpoint = '', options = {}) {
         if (!response.ok) {
             const errorText = await response.text();
             console.error('❌ Resposta não OK:', response.status, errorText);
-            throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+            
+            // Tentar fazer parse do erro se for JSON
+            try {
+                const errorData = JSON.parse(errorText);
+                throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorData.error || errorText}`);
+            } catch (parseError) {
+                // Se não for JSON, usar o texto como está
+                throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
+            }
         }
         
         console.log('✅ Requisição bem-sucedida');
@@ -142,7 +150,7 @@ async function fetchAPIInstrutores(endpoint = '', options = {}) {
 }
 
 // Função para abrir modal de instrutor
-window.abrirModalInstrutor = function() {
+window.abrirModalInstrutor = async function() {
     console.log('🚀 Abrindo modal de instrutor...');
     
     const modal = document.getElementById('modalInstrutor');
@@ -159,11 +167,47 @@ window.abrirModalInstrutor = function() {
         document.getElementById('acaoInstrutor').value = 'novo';
         document.getElementById('instrutor_id').value = '';
         document.getElementById('modalTitle').textContent = 'Novo Instrutor';
+        
+        // Debug para verificar se os campos foram definidos corretamente
+        console.log('🔍 Debug - Campo acao definido como:', document.getElementById('acaoInstrutor').value);
+        console.log('🔍 Debug - Campo instrutor_id definido como:', document.getElementById('instrutor_id').value);
     }
     
     // Mostrar modal
     modal.style.display = 'block';
     document.body.style.overflow = 'hidden';
+    
+    // Carregar dados necessários para novo instrutor
+    try {
+        console.log('🔄 Carregando dados para novo instrutor...');
+        
+        // Verificar se as funções estão disponíveis
+        console.log('🔍 Verificando disponibilidade das funções:');
+        console.log('🔍 carregarUsuariosComRetry:', typeof carregarUsuariosComRetry);
+        console.log('🔍 carregarCFCsComRetry:', typeof carregarCFCsComRetry);
+        
+        // Carregar usuários se a função existir
+        if (typeof carregarUsuariosComRetry === 'function') {
+            console.log('🔄 Carregando usuários...');
+            await carregarUsuariosComRetry();
+            console.log('✅ Usuários carregados com sucesso!');
+        } else {
+            console.warn('⚠️ Função carregarUsuariosComRetry não encontrada');
+        }
+        
+        // Carregar CFCs se a função existir
+        if (typeof carregarCFCsComRetry === 'function') {
+            console.log('🔄 Carregando CFCs...');
+            await carregarCFCsComRetry();
+            console.log('✅ CFCs carregados com sucesso!');
+        } else {
+            console.warn('⚠️ Função carregarCFCsComRetry não encontrada');
+        }
+        
+        console.log('✅ Dados carregados com sucesso!');
+    } catch (error) {
+        console.error('❌ Erro ao carregar dados:', error);
+    }
     
     console.log('✅ Modal aberto com sucesso!');
 };
@@ -210,6 +254,11 @@ window.salvarInstrutor = async function() {
         
         if (!formData.get('credencial').trim()) {
             alert('Credencial é obrigatória');
+            return;
+        }
+        
+        if (!formData.get('cfc_id')) {
+            alert('CFC é obrigatório');
             return;
         }
         
@@ -260,6 +309,14 @@ window.salvarInstrutor = async function() {
         
         console.log('📋 Dados do instrutor para salvar:', instrutorData);
         
+        // Debug adicional para verificar campos específicos
+        console.log('🔍 Debug - usuario_id:', formData.get('usuario_id'));
+        console.log('🔍 Debug - cfc_id:', formData.get('cfc_id'));
+        console.log('🔍 Debug - nome:', formData.get('nome'));
+        console.log('🔍 Debug - credencial:', formData.get('credencial'));
+        console.log('🔍 Debug - acao:', formData.get('acao'));
+        console.log('🔍 Debug - instrutor_id:', formData.get('instrutor_id'));
+        
         // Mostrar loading no botão
         const btnSalvar = document.getElementById('btnSalvarInstrutor');
         if (btnSalvar) {
@@ -276,7 +333,18 @@ window.salvarInstrutor = async function() {
                     body: JSON.stringify(instrutorData)
                 });
                 
-                const data = await response.json();
+                // Verificar se a resposta é válida antes de tentar fazer parse
+                const responseText = await response.text();
+                console.log('📡 Resposta bruta da API:', responseText);
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (parseError) {
+                    console.error('❌ Erro ao fazer parse da resposta JSON:', parseError);
+                    console.error('❌ Resposta recebida:', responseText);
+                    throw new Error('Resposta inválida do servidor: ' + responseText.substring(0, 100));
+                }
                 
                 if (data.success) {
                     alert(data.message || 'Instrutor salvo com sucesso!');
@@ -670,14 +738,14 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Event listener para o botão de salvar
-    const btnSalvar = document.getElementById('btnSalvarInstrutor');
-    if (btnSalvar) {
-        btnSalvar.addEventListener('click', function(e) {
-            e.preventDefault();
-            salvarInstrutor();
-        });
-    }
+    // Event listener para o botão de salvar (removido para evitar dupla execução)
+    // const btnSalvar = document.getElementById('btnSalvarInstrutor');
+    // if (btnSalvar) {
+    //     btnSalvar.addEventListener('click', function(e) {
+    //         e.preventDefault();
+    //         salvarInstrutor();
+    //     });
+    // }
     
     // Event listener para ESC fechar modal
     document.addEventListener('keydown', function(e) {

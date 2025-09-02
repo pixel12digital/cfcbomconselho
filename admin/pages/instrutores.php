@@ -218,16 +218,16 @@ $pageTitle = 'Gestão de Instrutores';
                                      <i class="fas fa-user me-1"></i>Dados de Acesso
                                  </h6>
                              </div>
-                             <div class="col-md-6">
-                                 <div class="mb-1">
-                                     <label for="usuario_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Usuário *</label>
-                                     <select id="usuario_id" name="usuario_id" class="form-select" style="padding: 0.4rem; font-size: 0.85rem;">
-                                         <option value="">Selecione um usuário</option>
-                                         <!-- Preencher com usuários existentes -->
-                                     </select>
-                                     <small class="form-text text-muted">Selecione um usuário existente para associar ao instrutor</small>
-                                 </div>
-                             </div>
+                                                           <div class="col-md-6">
+                                  <div class="mb-1">
+                                      <label for="usuario_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Usuário (Opcional)</label>
+                                      <select id="usuario_id" name="usuario_id" class="form-select" style="padding: 0.4rem; font-size: 0.85rem;">
+                                          <option value="">Selecione um usuário (opcional)</option>
+                                          <!-- Preencher com usuários existentes -->
+                                      </select>
+                                      <small class="form-text text-muted">Associar a um usuário do sistema (opcional)</small>
+                                  </div>
+                              </div>
                              <div class="col-md-6">
                                  <div class="mb-1">
                                      <label for="cfc_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CFC *</label>
@@ -481,7 +481,7 @@ $pageTitle = 'Gestão de Instrutores';
                     <button type="button" class="btn btn-secondary" onclick="fecharModalInstrutor()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
                         <i class="fas fa-times me-1"></i>Cancelar
                     </button>
-                    <button type="submit" class="btn btn-primary" id="btnSalvarInstrutor" onclick="salvarInstrutor()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    <button type="submit" class="btn btn-primary" id="btnSalvarInstrutor" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
                         <i class="fas fa-save me-1"></i>Salvar Instrutor
                     </button>
                 </div>
@@ -492,5 +492,6 @@ $pageTitle = 'Gestão de Instrutores';
 
 <!-- JavaScript da página de instrutores - Carregado externamente para garantir ordem correta -->
 <script src="assets/js/instrutores-page.js"></script>
+<!-- instrutores.js já é carregado no index.php, não precisa carregar novamente -->
 
 <!-- Fim da página de instrutores -->
