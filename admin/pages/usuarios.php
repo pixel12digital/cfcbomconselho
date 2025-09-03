@@ -154,12 +154,16 @@ if ($action === 'list') {
                 </div>
                 
                 <div class="form-group">
-                    <label for="userType" class="form-label">Tipo de Usuário</label>
+                    <label for="userType" class="form-label">Função</label>
                     <select id="userType" name="tipo" class="form-control" required>
                         <option value="">Selecione...</option>
                         <option value="admin">Administrador</option>
-                        <option value="instrutor">Instrutor</option>
-                        <option value="aluno">Aluno</option>
+                        <option value="recepcao">Recepção</option>
+                        <option value="instrutor_pratico">Instrutor prático</option>
+                        <option value="instrutor_teorico">Instrutor teórico</option>
+                        <option value="diretor_geral">Diretor geral</option>
+                        <option value="diretor_ensino">Diretor de ensino</option>
+                        <option value="tecnico_informatica">Técnico em informática</option>
                     </select>
                 </div>
                 
@@ -1055,113 +1059,8 @@ window.addEventListener('load', function() {
         console.error('Funções faltando:', funcoesFaltando);
         alert('Atenção: As seguintes funções não estão funcionando: ' + funcoesFaltando.join(', ') + '. Tente recarregar a página.');
     } else {
-        console.log('Todas as funções estão disponíveis!');
-    }
-    
-    // 🛡️ SISTEMA DE PROTEÇÃO CONTRA FECHAMENTO AUTOMÁTICO
-    console.log('🔒 Iniciando sistema de proteção do modal...');
-    
-    // Proteger a função closeUserModal original
-    const originalCloseUserModal = window.closeUserModal;
-    
-         // Substituir por versão protegida
-     window.closeUserModal = function() {
-         console.log('🔒 Tentativa de fechar modal interceptada!');
-         console.log('🔒 Stack trace:', new Error().stack);
-         
-         // Verificar se é uma chamada legítima (do usuário)
-         const caller = arguments.callee.caller;
-         if (caller && caller.name === 'saveUser') {
-             console.log('✅ Fechamento legítimo - salvando usuário');
-             return originalCloseUserModal();
-         }
-         
-         // Verificar se é uma chamada direta do usuário (clique no botão)
-         if (event && event.target && event.target.onclick) {
-             console.log('✅ Fechamento legítimo - clique do usuário');
-             return originalCloseUserModal();
-         }
-         
-         // Verificar se é uma chamada do HTML (onclick)
-         const stack = new Error().stack;
-         if (stack.includes('onclick') || stack.includes('HTMLButtonElement')) {
-             console.log('✅ Fechamento legítimo - onclick do HTML');
-             return originalCloseUserModal();
-         }
-         
-         // Bloquear fechamentos automáticos
-         console.log('🚫 Fechamento automático bloqueado!');
-         console.log('🚫 Modal permanecerá aberto');
-         
-         // Forçar modal a permanecer aberto
-         const modal = document.getElementById('userModal');
-         if (modal) {
-             modal.classList.add('show');
-             modal.style.display = 'flex';
-             modal.style.visibility = 'visible';
-             modal.style.opacity = '1';
-             modal.style.pointerEvents = 'auto';
-         }
-         
-         return false;
-     };
-    
-         // Proteger contra remoção da classe 'show' apenas se não for fechamento manual
-     const modal = document.getElementById('userModal');
-     if (modal) {
-         // Monitorar mudanças na classe
-         const observer = new MutationObserver(function(mutations) {
-             mutations.forEach(function(mutation) {
-                 if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-                     if (!modal.classList.contains('show')) {
-                         // Verificar se é fechamento manual
-                         const stack = new Error().stack;
-                         if (stack.includes('onclick') || stack.includes('HTMLButtonElement') || stack.includes('closeUserModal')) {
-                             console.log('✅ Fechamento manual detectado - permitindo');
-                             return;
-                         }
-                         
-                         console.log('🚫 Tentativa de remover classe "show" detectada!');
-                         console.log('🚫 Restaurando classe "show"');
-                         modal.classList.add('show');
-                     }
-                 }
-             });
-         });
-         
-         observer.observe(modal, {
-             attributes: true,
-             attributeFilter: ['class']
-         });
-         
-         console.log('🔒 Observer configurado para proteger classe "show"');
-     }
-     
-     // Proteger contra mudanças de estilo apenas se não for fechamento manual
-     let modalProtectionInterval = setInterval(function() {
-         const modal = document.getElementById('userModal');
-         if (modal && modal.classList.contains('show')) {
-             // Verificar se modal ainda está visível
-             const styles = window.getComputedStyle(modal);
-             if (styles.display !== 'flex' || styles.visibility !== 'visible') {
-                 // Verificar se é fechamento manual
-                 const stack = new Error().stack;
-                 if (stack.includes('onclick') || stack.includes('HTMLButtonElement') || stack.includes('closeUserModal')) {
-                     console.log('✅ Fechamento manual detectado - permitindo');
-                     return;
-                 }
-                 
-                 console.log('🚫 Modal perdeu visibilidade - restaurando...');
-                 modal.style.display = 'flex';
-                 modal.style.visibility = 'visible';
-                 modal.style.opacity = '1';
-                 modal.style.pointerEvents = 'auto';
-             }
-         }
-     }, 1000);
-    
-    console.log('🔒 Sistema de proteção ativado!');
-    console.log('🔒 Modal não fechará automaticamente');
+             console.log('Todas as funções estão disponíveis!');
+ }
 });
 
 // Timeout adicional para garantir que as funções sejam definidas

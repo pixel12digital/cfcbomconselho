@@ -459,7 +459,7 @@ $pageTitle = 'Gestão de Instrutores';
                              </div>
                                                            <div class="col-md-4">
                                   <div class="mb-1">
-                                      <label for="validade_credencial" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Validade Credencial</label>
+                                      <label for="validade_credencial" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Validade da Habilitação</label>
                                       <input type="text" class="form-control" id="validade_credencial" name="validade_credencial" 
                                              placeholder="dd/mm/aaaa" style="padding: 0.4rem; font-size: 0.85rem;">
                                       <small class="text-muted" style="font-size: 0.75rem;">💡 Digite dd/mm/aaaa OU clique no calendário</small>

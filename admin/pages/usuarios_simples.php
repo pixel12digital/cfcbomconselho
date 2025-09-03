@@ -127,12 +127,16 @@ if ($action === 'list') {
                 </div>
                 
                 <div class="form-group">
-                    <label for="userType" class="form-label">Tipo de Usuário</label>
+                    <label for="userType" class="form-label">Função</label>
                     <select id="userType" name="tipo" class="form-control" required>
                         <option value="">Selecione...</option>
                         <option value="admin">Administrador</option>
-                        <option value="instrutor">Instrutor</option>
-                        <option value="aluno">Aluno</option>
+                        <option value="recepcao">Recepção</option>
+                        <option value="instrutor_pratico">Instrutor prático</option>
+                        <option value="instrutor_teorico">Instrutor teórico</option>
+                        <option value="diretor_geral">Diretor geral</option>
+                        <option value="diretor_ensino">Diretor de ensino</option>
+                        <option value="tecnico_informatica">Técnico em informática</option>
                     </select>
                 </div>
                 
