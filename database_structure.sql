@@ -102,8 +102,21 @@ CREATE TABLE veiculos (
     marca VARCHAR(100),
     ano INT,
     categoria_cnh VARCHAR(10),
+    cor VARCHAR(50) NULL COMMENT 'Cor do veículo',
+    chassi VARCHAR(50) NULL COMMENT 'Número do chassi',
+    renavam VARCHAR(20) NULL COMMENT 'Número do RENAVAM',
+    combustivel ENUM('gasolina', 'etanol', 'flex', 'diesel', 'eletrico', 'hibrido') NULL COMMENT 'Tipo de combustível',
+    quilometragem INT NULL DEFAULT 0 COMMENT 'Quilometragem atual em km',
+    km_manutencao INT NULL COMMENT 'Quilometragem para próxima manutenção',
+    data_aquisicao DATE NULL COMMENT 'Data de aquisição do veículo',
+    valor_aquisicao DECIMAL(10,2) NULL COMMENT 'Valor de aquisição',
+    proxima_manutencao DATE NULL COMMENT 'Data da próxima manutenção',
+    disponivel BOOLEAN DEFAULT TRUE COMMENT 'Disponibilidade do veículo',
+    observacoes TEXT NULL COMMENT 'Observações sobre o veículo',
+    status ENUM('ativo', 'inativo', 'manutencao') DEFAULT 'ativo' COMMENT 'Status do veículo',
     ativo BOOLEAN DEFAULT TRUE,
     criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     FOREIGN KEY (cfc_id) REFERENCES cfcs(id)
 );
 
@@ -149,3 +162,10 @@ CREATE INDEX idx_aulas_data ON aulas(data_aula);
 CREATE INDEX idx_aulas_status ON aulas(status);
 CREATE INDEX idx_sessoes_token ON sessoes(token);
 CREATE INDEX idx_sessoes_expira ON sessoes(expira_em);
+
+-- Índices para veículos
+CREATE INDEX idx_veiculos_placa ON veiculos(placa);
+CREATE INDEX idx_veiculos_status ON veiculos(status);
+CREATE INDEX idx_veiculos_disponivel ON veiculos(disponivel);
+CREATE INDEX idx_veiculos_cfc ON veiculos(cfc_id);
+CREATE INDEX idx_veiculos_categoria ON veiculos(categoria_cnh);

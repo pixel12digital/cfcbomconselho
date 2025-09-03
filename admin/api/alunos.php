@@ -171,12 +171,24 @@ try {
         case 'GET':
             $id = $_GET['id'] ?? null;
             
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] GET - ID solicitado: ' . $id);
+            }
+            
             if ($id) {
                 // Buscar aluno específico
                 $aluno = $db->findWhere('alunos', 'id = ?', [$id], '*', null, 1);
                 if ($aluno && is_array($aluno)) {
                     $aluno = $aluno[0]; // Pegar o primeiro resultado
                 }
+                
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] GET - Aluno encontrado: ' . ($aluno ? 'sim' : 'não'));
+                    if ($aluno) {
+                        error_log('[API Alunos] GET - Dados do aluno: ' . json_encode($aluno));
+                    }
+                }
+                
                 if (!$aluno) {
                     http_response_code(404);
                     echo json_encode(['success' => false, 'error' => 'Aluno não encontrado']);
@@ -190,7 +202,13 @@ try {
                 }
                 $aluno['cfc_nome'] = $cfc ? $cfc['nome'] : 'N/A';
                 
-                echo json_encode(['success' => true, 'aluno' => $aluno]);
+                $response = ['success' => true, 'aluno' => $aluno];
+                
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] GET - Resposta final: ' . json_encode($response));
+                }
+                
+                echo json_encode($response);
             } else {
                 // Listar todos os alunos
                 $alunos = $db->fetchAll("
@@ -245,9 +263,17 @@ try {
             }
             
             // Validações básicas
-            if (empty($data['nome']) || empty($data['cpf']) || empty($data['cfc_id'])) {
+            if (empty($data['nome']) || empty($data['cpf']) || empty($data['cfc_id']) || empty($data['categoria_cnh'])) {
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] Validação falhou - campos obrigatórios: ' . print_r([
+                        'nome' => !empty($data['nome']),
+                        'cpf' => !empty($data['cpf']),
+                        'cfc_id' => !empty($data['cfc_id']),
+                        'categoria_cnh' => !empty($data['categoria_cnh'])
+                    ], true));
+                }
                 http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Nome, CPF e CFC são obrigatórios']);
+                echo json_encode(['success' => false, 'error' => 'Nome, CPF, CFC e Categoria CNH são obrigatórios']);
                 exit;
             }
             
@@ -257,6 +283,9 @@ try {
                 $cpfExistente = $cpfExistente[0]; // Pegar o primeiro resultado
             }
             if ($cpfExistente) {
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] CPF já existe: ' . $data['cpf']);
+                }
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'CPF já cadastrado']);
                 exit;
@@ -329,7 +358,15 @@ try {
             $input = json_decode(file_get_contents('php://input'), true);
             $id = $_GET['id'] ?? null;
             
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] PUT - ID recebido: ' . $id);
+                error_log('[API Alunos] PUT - Input recebido: ' . json_encode($input));
+            }
+            
             if (!$id || !$input) {
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] PUT - Dados inválidos - ID: ' . $id . ', Input: ' . json_encode($input));
+                }
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'ID e dados são obrigatórios']);
                 exit;
@@ -340,6 +377,11 @@ try {
             if ($alunoExistente && is_array($alunoExistente)) {
                 $alunoExistente = $alunoExistente[0]; // Pegar o primeiro resultado
             }
+            
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] PUT - Aluno existente encontrado: ' . ($alunoExistente ? 'sim' : 'não'));
+            }
+            
             if (!$alunoExistente) {
                 http_response_code(404);
                 echo json_encode(['success' => false, 'error' => 'Aluno não encontrado']);
@@ -353,6 +395,9 @@ try {
                     $cpfExistente = $cpfExistente[0]; // Pegar o primeiro resultado
                 }
                 if ($cpfExistente) {
+                    if (LOG_ENABLED) {
+                        error_log('[API Alunos] PUT - CPF já existe: ' . $input['cpf']);
+                    }
                     http_response_code(400);
                     echo json_encode(['success' => false, 'error' => 'CPF já cadastrado']);
                     exit;
@@ -366,26 +411,54 @@ try {
                     $cfc = $cfc[0]; // Pegar o primeiro resultado
                 }
                 if (!$cfc) {
+                    if (LOG_ENABLED) {
+                        error_log('[API Alunos] PUT - CFC não encontrado: ' . $input['cfc_id']);
+                    }
                     http_response_code(400);
                     echo json_encode(['success' => false, 'error' => 'CFC não encontrado']);
                     exit;
                 }
             }
             
+            // Preparar dados para atualização
             $alunoData = array_filter($input, function($value) {
                 return $value !== null && $value !== '';
             });
             
-            $alunoData['atualizado_em'] = date('Y-m-d H:i:s');
+            // Remover campos que não devem ser atualizados
+            unset($alunoData['id']); // Não atualizar o ID
+            unset($alunoData['criado_em']); // Não atualizar data de criação
+            unset($alunoData['cfc_nome']); // Campo calculado, não existe na tabela
+            unset($alunoData['atualizado_em']); // Campo não existe na tabela
             
-            $resultado = $db->update('alunos', $alunoData, 'id = ?', [$id]);
-            if (!$resultado) {
-                http_response_code(500);
-                echo json_encode(['success' => false, 'error' => 'Erro ao atualizar aluno']);
-                exit;
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] PUT - Dados para atualização: ' . json_encode($alunoData));
             }
             
-            echo json_encode(['success' => true, 'message' => 'Aluno atualizado com sucesso']);
+            try {
+                $resultado = $db->update('alunos', $alunoData, 'id = ?', [$id]);
+                
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] PUT - Resultado da atualização: ' . ($resultado ? 'sucesso' : 'falha'));
+                }
+                
+                if (!$resultado) {
+                    http_response_code(500);
+                    echo json_encode(['success' => false, 'error' => 'Erro ao atualizar aluno']);
+                    exit;
+                }
+                
+                echo json_encode(['success' => true, 'message' => 'Aluno atualizado com sucesso']);
+                
+            } catch (Exception $e) {
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] PUT - Erro na atualização: ' . $e->getMessage());
+                    error_log('[API Alunos] PUT - Stack trace: ' . $e->getTraceAsString());
+                }
+                http_response_code(500);
+                echo json_encode(['success' => false, 'error' => 'Erro interno: ' . $e->getMessage()]);
+                exit;
+            }
             break;
             
         case 'DELETE':

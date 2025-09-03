@@ -161,11 +161,6 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
     box-shadow: 0 0 0 0.1rem rgba(13, 110, 253, 0.1) !important;
 }
 
-/* Melhorar aparência do slider de progresso */
-.modal#modalAluno .form-range {
-    background: linear-gradient(to right, #0d6efd 0%, #0d6efd var(--value, 0%), #e9ecef var(--value, 0%), #e9ecef 100%) !important;
-}
-
 /* Estilo para seções com melhor hierarquia visual */
 .modal#modalAluno .row.mb-4 h6 {
     background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
@@ -583,14 +578,13 @@ body.modal-open #modalAluno .modal-dialog {
                         <th>Categoria</th>
                         <th>Status</th>
                         <th>Última Aula</th>
-                        <th>Progresso</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($alunos)): ?>
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
+                        <td colspan="8" class="text-center text-muted py-4">
                             <i class="fas fa-inbox fa-3x mb-3"></i>
                             <p>Nenhum aluno cadastrado ainda.</p>
                             <button class="btn btn-primary" onclick="abrirModalAluno()">
@@ -649,20 +643,6 @@ body.modal-open #modalAluno .modal-dialog {
                                 <?php else: ?>
                                     <span class="text-muted">Nunca</span>
                                 <?php endif; ?>
-                            </td>
-                            <td>
-                                <div class="progress" style="height: 20px;">
-                                    <?php 
-                                    $progresso = isset($aluno['progresso']) ? $aluno['progresso'] : 0;
-                                    $progresso = min(100, max(0, $progresso));
-                                    ?>
-                                    <div class="progress-bar" role="progressbar" 
-                                         style="width: <?php echo $progresso; ?>%" 
-                                         aria-valuenow="<?php echo $progresso; ?>" 
-                                         aria-valuemin="0" aria-valuemax="100">
-                                        <?php echo $progresso; ?>%
-                                    </div>
-                                </div>
                             </td>
                             <td>
                                 <div class="action-buttons-container">
@@ -802,16 +782,6 @@ body.modal-open #modalAluno .modal-dialog {
                                     <label for="telefone" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Telefone</label>
                                     <input type="text" class="form-control" id="telefone" name="telefone" 
                                            placeholder="(00) 00000-0000" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-1">
-                                    <label for="progresso" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Progresso (%)</label>
-                                    <input type="range" class="form-range" id="progresso" name="progresso" 
-                                           min="0" max="100" value="0" style="margin: 0.1rem 0;">
-                                    <div class="text-center">
-                                        <span id="progressoValor" style="font-size: 0.75rem;">0%</span>
-                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -999,8 +969,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar busca
     inicializarBuscaAluno();
     
-    // Inicializar controle de progresso
-    inicializarProgresso();
+    // Inicializar controles do modal
+inicializarModalAluno();
     
     // Adicionar event listener para o formulário
     const formAluno = document.getElementById('formAluno');
@@ -1075,12 +1045,27 @@ function inicializarBuscaAluno() {
     document.getElementById('buscaAluno').addEventListener('input', filtrarAlunos);
 }
 
-function inicializarProgresso() {
-    const progressoRange = document.getElementById('progresso');
-    const progressoValor = document.getElementById('progressoValor');
+// Função para inicializar controles do modal
+function inicializarModalAluno() {
+    // Event listeners para o modal
+    const modal = document.getElementById('modalAluno');
+    if (modal) {
+        // Fechar modal ao clicar fora
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                fecharModalAluno();
+            }
+        });
+    }
     
-    progressoRange.addEventListener('input', function() {
-        progressoValor.textContent = this.value + '%';
+    // Event listener para ESC fechar modal
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('modalAluno');
+            if (modal && modal.style.display === 'block') {
+                fecharModalAluno();
+            }
+        }
     });
 }
 
@@ -1167,8 +1152,6 @@ function preencherFormularioAluno(aluno) {
     document.getElementById('cfc_id').value = aluno.cfc_id || '';
     document.getElementById('categoria_cnh').value = aluno.categoria_cnh || '';
     document.getElementById('status').value = aluno.status || 'ativo';
-    document.getElementById('progresso').value = aluno.progresso || 0;
-    document.getElementById('progressoValor').textContent = (aluno.progresso || 0) + '%';
     
     // Endereço
     if (aluno.endereco) {
@@ -1278,7 +1261,6 @@ function preencherModalVisualizacao(aluno) {
                 <h6><i class="fas fa-graduation-cap me-2"></i>Informações Acadêmicas</h6>
                 <p><strong>CFC:</strong> ${aluno.cfc_nome || 'Não informado'}</p>
                 <p><strong>Categoria:</strong> <span class="badge bg-secondary">${aluno.categoria_cnh}</span></p>
-                <p><strong>Progresso:</strong> ${aluno.progresso || 0}%</p>
             </div>
         </div>
         
@@ -1731,7 +1713,6 @@ function salvarAluno() {
         email: formData.get('email'),
         telefone: formData.get('telefone'),
         status: formData.get('status'),
-        progresso: parseInt(formData.get('progresso')) || 0, // Converter para número
         cfc_id: formData.get('cfc_id'),
         categoria_cnh: formData.get('categoria_cnh'),
         cep: formData.get('cep'),

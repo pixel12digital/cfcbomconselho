@@ -165,14 +165,14 @@ class InputMask {
             this.mask(input, this.masks.hora);
         });
 
-        // Placa
+        // Placa - permitindo letras e números
         document.querySelectorAll('input[data-mask="placa"], input[name*="placa"]').forEach(input => {
-            this.mask(input, this.masks.placa);
+            this.maskPlaca(input);
         });
 
-        // Valor
-        document.querySelectorAll('input[data-mask="valor"], input[name*="valor"], input[name*="preco"]').forEach(input => {
-            this.mask(input, this.masks.valor);
+        // Valor - formato brasileiro com ponto automático
+        document.querySelectorAll('input[data-mask="valor"], input[name*="valor"], input[name*="preco"], input[name*="valor_aquisicao"]').forEach(input => {
+            this.maskValor(input);
         });
     }
 
@@ -197,6 +197,50 @@ class InputMask {
             }
 
             e.target.value = result;
+        });
+
+        // Aplicar máscara ao carregar
+        if (input.value) {
+            input.dispatchEvent(new Event('input'));
+        }
+    }
+
+    maskPlaca(input) {
+        input.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^A-Za-z0-9]/g, '');
+            let result = '';
+            
+            // Aplicar formato AAA-0000 permitindo letras e números
+            for (let i = 0; i < value.length && i < 7; i++) {
+                if (i === 3) {
+                    result += '-';
+                }
+                result += value[i].toUpperCase();
+            }
+
+            e.target.value = result;
+        });
+
+        // Aplicar máscara ao carregar
+        if (input.value) {
+            input.dispatchEvent(new Event('input'));
+        }
+    }
+
+    maskValor(input) {
+        input.addEventListener('input', (e) => {
+            let value = e.target.value.replace(/[^\d]/g, '');
+            
+            // Converter para número
+            let number = parseInt(value) / 100;
+            
+            // Formatar como moeda brasileira
+            let formatted = new Intl.NumberFormat('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
+            }).format(number);
+            
+            e.target.value = formatted;
         });
 
         // Aplicar máscara ao carregar

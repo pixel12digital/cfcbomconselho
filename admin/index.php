@@ -73,6 +73,114 @@ $action = $_GET['action'] ?? 'list';
 
 // Definir constante para indicar que o roteamento está ativo
 define('ADMIN_ROUTING', true);
+
+// Processamento de formulários POST - DEVE VIR ANTES DE QUALQUER SAÍDA HTML
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
+    // Processar formulário de veículos diretamente
+    try {
+        $acao = $_POST['acao'] ?? '';
+        
+        if ($acao === 'criar') {
+            // Criar novo veículo
+            $dados = [
+                'cfc_id' => $_POST['cfc_id'] ?? null,
+                'placa' => $_POST['placa'] ?? '',
+                'marca' => $_POST['marca'] ?? '',
+                'modelo' => $_POST['modelo'] ?? '',
+                'ano' => $_POST['ano'] ?? null,
+                'categoria_cnh' => $_POST['categoria_cnh'] ?? '',
+                'cor' => $_POST['cor'] ?? null,
+                'chassi' => $_POST['chassi'] ?? null,
+                'renavam' => $_POST['renavam'] ?? null,
+                'combustivel' => $_POST['combustivel'] ?? null,
+                'quilometragem' => $_POST['quilometragem'] ?? 0,
+                'km_manutencao' => $_POST['km_manutencao'] ?? null,
+                'data_aquisicao' => $_POST['data_aquisicao'] ?? null,
+                'valor_aquisicao' => $_POST['valor_aquisicao'] ? str_replace(',', '.', str_replace('.', '', $_POST['valor_aquisicao'])) : null,
+                'proxima_manutencao' => $_POST['proxima_manutencao'] ?? null,
+                'disponivel' => $_POST['disponivel'] ?? 1,
+                'observacoes' => $_POST['observacoes'] ?? null,
+                'status' => $_POST['status'] ?? 'ativo',
+                'ativo' => 1,
+                'criado_em' => date('Y-m-d H:i:s')
+            ];
+            
+            // Validar campos obrigatórios
+            if (empty($dados['placa']) || empty($dados['marca']) || empty($dados['modelo']) || empty($dados['cfc_id'])) {
+                throw new Exception('Placa, marca, modelo e CFC são obrigatórios');
+            }
+            
+            // Verificar se a placa já existe
+            $placaExistente = $db->fetch("SELECT id FROM veiculos WHERE placa = ?", [$dados['placa']]);
+            if ($placaExistente) {
+                throw new Exception('Placa já cadastrada no sistema');
+            }
+            
+            $id = $db->insert('veiculos', $dados);
+            
+            if ($id) {
+                header('Location: index.php?page=veiculos&msg=success&msg_text=' . urlencode('Veículo cadastrado com sucesso!'));
+                exit;
+            } else {
+                throw new Exception('Erro ao cadastrar veículo');
+            }
+            
+        } elseif ($acao === 'editar') {
+            // Editar veículo existente
+            $veiculo_id = $_POST['veiculo_id'] ?? 0;
+            
+            if (!$veiculo_id) {
+                throw new Exception('ID do veículo não informado');
+            }
+            
+            $dados = [
+                'cfc_id' => $_POST['cfc_id'] ?? null,
+                'placa' => $_POST['placa'] ?? '',
+                'marca' => $_POST['marca'] ?? '',
+                'modelo' => $_POST['modelo'] ?? '',
+                'ano' => $_POST['ano'] ?? null,
+                'categoria_cnh' => $_POST['categoria_cnh'] ?? '',
+                'cor' => $_POST['cor'] ?? null,
+                'chassi' => $_POST['chassi'] ?? null,
+                'renavam' => $_POST['renavam'] ?? null,
+                'combustivel' => $_POST['combustivel'] ?? null,
+                'quilometragem' => $_POST['quilometragem'] ?? 0,
+                'km_manutencao' => $_POST['km_manutencao'] ?? null,
+                'data_aquisicao' => $_POST['data_aquisicao'] ?? null,
+                'valor_aquisicao' => $_POST['valor_aquisicao'] ? str_replace(',', '.', str_replace('.', '', $_POST['valor_aquisicao'])) : null,
+                'proxima_manutencao' => $_POST['proxima_manutencao'] ?? null,
+                'disponivel' => $_POST['disponivel'] ?? 1,
+                'observacoes' => $_POST['observacoes'] ?? null,
+                'status' => $_POST['status'] ?? 'ativo',
+                'atualizado_em' => date('Y-m-d H:i:s')
+            ];
+            
+            // Validar campos obrigatórios
+            if (empty($dados['placa']) || empty($dados['marca']) || empty($dados['modelo']) || empty($dados['cfc_id'])) {
+                throw new Exception('Placa, marca, modelo e CFC são obrigatórios');
+            }
+            
+            // Verificar se a placa já existe em outro veículo
+            $placaExistente = $db->fetch("SELECT id FROM veiculos WHERE placa = ? AND id != ?", [$dados['placa'], $veiculo_id]);
+            if ($placaExistente) {
+                throw new Exception('Placa já cadastrada em outro veículo');
+            }
+            
+            $resultado = $db->update('veiculos', $dados, 'id = ?', [$veiculo_id]);
+            
+            if ($resultado) {
+                header('Location: index.php?page=veiculos&msg=success&msg_text=' . urlencode('Veículo atualizado com sucesso!'));
+                exit;
+            } else {
+                throw new Exception('Erro ao atualizar veículo');
+            }
+        }
+        
+    } catch (Exception $e) {
+        header('Location: index.php?page=veiculos&msg=danger&msg_text=' . urlencode('Erro: ' . $e->getMessage()));
+        exit;
+    }
+}
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -86,6 +194,7 @@ define('ADMIN_ROUTING', true);
     
     <!-- CSS Principal -->
     <link href="assets/css/admin.css" rel="stylesheet">
+    <link href="assets/css/modal-veiculos.css" rel="stylesheet">
     
     <!-- CSS dos Botões de Ação -->
     <link href="assets/css/action-buttons.css" rel="stylesheet">
@@ -951,6 +1060,9 @@ define('ADMIN_ROUTING', true);
     
     <!-- Bootstrap JavaScript -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- IMask para máscaras de input -->
+    <script src="https://unpkg.com/imask@6.4.3/dist/imask.min.js"></script>
     
     <!-- Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />

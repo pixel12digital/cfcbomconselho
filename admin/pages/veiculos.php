@@ -4,6 +4,34 @@ if (!isset($veiculos)) $veiculos = [];
 if (!isset($cfcs)) $cfcs = [];
 if (!isset($mensagem)) $mensagem = '';
 if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
+
+// Processar mensagens de sucesso vindas do redirecionamento
+if (isset($_GET['msg']) && $_GET['msg'] === 'success' && isset($_GET['msg_text'])) {
+    $mensagem = urldecode($_GET['msg_text']);
+    $tipo_mensagem = 'success';
+}
+
+// Carregar dados para a página
+try {
+    $db = Database::getInstance();
+    
+    // Carregar veículos
+    $veiculos = $db->fetchAll("
+        SELECT v.*, c.nome as cfc_nome 
+        FROM veiculos v 
+        LEFT JOIN cfcs c ON v.cfc_id = c.id 
+        ORDER BY v.marca, v.modelo
+    ");
+    
+    // Carregar CFCs
+    $cfcs = $db->fetchAll("SELECT id, nome FROM cfcs WHERE ativo = 1 ORDER BY nome");
+    
+} catch (Exception $e) {
+    $veiculos = [];
+    $cfcs = [];
+    $mensagem = 'Erro ao carregar dados: ' . $e->getMessage();
+    $tipo_mensagem = 'danger';
+}
 ?>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -319,21 +347,21 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 </div>
 
 <!-- Modal Customizado para Cadastro/Edição de Veículo -->
-<div id="modalVeiculo" class="custom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999;">
-    <div class="custom-modal-dialog" style="position: fixed; top: 2rem; left: 2rem; right: 2rem; bottom: 2rem; width: auto; height: auto; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center;">
-        <div class="custom-modal-content" style="width: 100%; height: 100%; max-width: 95vw; max-height: 95vh; background: white; border: none; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column;">
-            <form id="formVeiculo" method="POST" action="admin/pages/veiculos.php">
-                <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
-                    <h5 class="modal-title" id="modalTitle" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
+<div id="modalVeiculo" class="custom-modal">
+    <div class="custom-modal-dialog">
+        <div class="custom-modal-content">
+            <form id="formVeiculo" method="POST" action="index.php?page=veiculos">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalTitle">
                         <i class="fas fa-car me-2"></i>Novo Veículo
                     </h5>
-                    <button type="button" class="btn-close" onclick="fecharModalVeiculo()" style="filter: invert(1); background: none; border: none; font-size: 1.25rem; color: white; opacity: 0.8; cursor: pointer;">&times;</button>
+                    <button type="button" class="btn-close" onclick="fecharModalVeiculo()">&times;</button>
                 </div>
-                <div class="modal-body" style="overflow-y: auto; padding: 1rem; flex: 1; min-height: 0;">
+                <div class="modal-body">
                     <input type="hidden" name="acao" id="acaoVeiculo" value="criar">
                     <input type="hidden" name="veiculo_id" id="veiculo_id" value="">
                     
-                    <div class="container-fluid" style="padding: 0;">
+                    <div class="container-fluid">
                         <!-- Seção 1: Informações Básicas -->
                         <div class="row mb-2">
                             <div class="col-12">
@@ -344,16 +372,14 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                             <div class="col-md-6">
                                 <div class="mb-1">
                                     <label for="cfc_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CFC *</label>
-                                    <select class="form-select" id="cfc_id" name="cfc_id" required style="padding: 0.4rem; font-size: 0.85rem;">
-                                        <option value="">Selecione um CFC...</option>
-                                        <?php foreach ($cfcs as $cfc): ?>
-                                            <?php if ($cfc['ativo']): ?>
-                                            <option value="<?php echo $cfc['id']; ?>">
-                                                <?php echo htmlspecialchars($cfc['nome']); ?>
-                                            </option>
-                                            <?php endif; ?>
-                                        <?php endforeach; ?>
-                                    </select>
+                                                                         <select class="form-select" id="cfc_id" name="cfc_id" required style="padding: 0.4rem; font-size: 0.85rem;">
+                                         <option value="">Selecione um CFC...</option>
+                                         <?php foreach ($cfcs as $cfc): ?>
+                                             <option value="<?php echo $cfc['id']; ?>">
+                                                 <?php echo htmlspecialchars($cfc['nome']); ?>
+                                             </option>
+                                         <?php endforeach; ?>
+                                     </select>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -550,11 +576,11 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding: 0.75rem 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; flex-shrink: 0;">
-                    <button type="button" class="btn btn-secondary" onclick="fecharModalVeiculo()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModalVeiculo()">
                         <i class="fas fa-times me-1"></i>Cancelar
                     </button>
-                    <button type="submit" class="btn btn-primary" id="btnSalvarVeiculo" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    <button type="submit" class="btn btn-primary" id="btnSalvarVeiculo">
                         <i class="fas fa-save me-1"></i>Salvar Veículo
                     </button>
                 </div>
@@ -600,20 +626,28 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function inicializarMascarasVeiculo() {
-    // Máscara para placa
+    // Máscara para placa - permitindo letras e números
     if (typeof IMask !== 'undefined') {
         new IMask(document.getElementById('placa'), {
-            mask: 'aaa-0000'
+            mask: 'aaa-0000',
+            definitions: {
+                'a': {
+                    mask: /[A-Za-z0-9]/
+                }
+            }
         });
         
-        // Máscara para valor
+        // Máscara para valor de aquisição - formato brasileiro com ponto automático
         new IMask(document.getElementById('valor_aquisicao'), {
             mask: Number,
             scale: 2,
             thousandsSeparator: '.',
-            padFractionalZeros: true,
+            padFractionalZeros: false,
             radix: ',',
-            mapToRadix: ['.']
+            mapToRadix: ['.'],
+            normalizeZeros: true,
+            min: 0,
+            max: 999999999.99
         });
     }
 }
@@ -698,16 +732,23 @@ function editarVeiculo(id) {
         return;
     }
     
-    console.log(`📡 Fazendo requisição para admin/api/veiculos.php?id=${id}`);
+    console.log(`📡 Fazendo requisição para api/veiculos.php?id=${id}`);
     
     // Buscar dados do veículo
-    fetch(`admin/api/veiculos.php?id=${id}`)
+    fetch(`api/veiculos.php?id=${id}`)
         .then(response => {
             console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-            return response.json();
+            return response.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ Erro ao fazer parse do JSON:', text);
+                    throw new Error('Resposta inválida do servidor');
+                }
+            });
         })
         .then(data => {
             console.log('📄 Dados recebidos:', data);
@@ -716,7 +757,7 @@ function editarVeiculo(id) {
                 console.log('✅ Success = true, abrindo modal...');
                 
                 // Preencher formulário
-                preencherFormularioVeiculo(data.veiculo);
+                preencherFormularioVeiculo(data.data);
                 console.log('✅ Formulário preenchido');
                 
                 // Configurar modal
@@ -740,6 +781,9 @@ function editarVeiculo(id) {
 }
 
 function preencherFormularioVeiculo(veiculo) {
+    console.log('📝 Preenchendo formulário com dados:', veiculo);
+    
+    // Preencher campos
     document.getElementById('cfc_id').value = veiculo.cfc_id || '';
     document.getElementById('placa').value = veiculo.placa || '';
     document.getElementById('marca').value = veiculo.marca || '';
@@ -758,14 +802,38 @@ function preencherFormularioVeiculo(veiculo) {
     document.getElementById('proxima_manutencao').value = veiculo.proxima_manutencao || '';
     document.getElementById('km_manutencao').value = veiculo.km_manutencao || '';
     document.getElementById('observacoes').value = veiculo.observacoes || '';
+    
+    // Garantir que todos os campos estejam habilitados após o preenchimento
+    const modal = document.getElementById('modalVeiculo');
+    if (modal) {
+        const campos = modal.querySelectorAll('input, select, textarea');
+        campos.forEach(campo => {
+            campo.disabled = false;
+            campo.readOnly = false;
+        });
+    }
+    
+    console.log('✅ Formulário preenchido e campos habilitados');
 }
 
 function visualizarVeiculo(id) {
-    fetch(`admin/api/veiculos.php?id=${id}`)
-        .then(response => response.json())
+    fetch(`api/veiculos.php?id=${id}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ Erro ao fazer parse do JSON:', text);
+                    throw new Error('Resposta inválida do servidor');
+                }
+            });
+        })
         .then(data => {
             if (data.success) {
-                preencherModalVisualizacao(data.veiculo);
+                preencherModalVisualizacao(data.data);
                 const modal = new bootstrap.Modal(document.getElementById('modalVisualizarVeiculo'));
                 modal.show();
             } else {
@@ -961,12 +1029,15 @@ function abrirModalVeiculo() {
     const modal = document.getElementById('modalVeiculo');
     if (modal) {
         modal.style.display = 'block';
+        modal.classList.add('show');
         document.body.style.overflow = 'hidden'; // Prevenir scroll do body
         
-        // Aplicar responsividade
-        setTimeout(() => {
-            ajustarModalResponsivo();
-        }, 10);
+        // Garantir que todos os campos estejam habilitados
+        const campos = modal.querySelectorAll('input, select, textarea');
+        campos.forEach(campo => {
+            campo.disabled = false;
+            campo.readOnly = false;
+        });
         
         console.log('✅ Modal customizado aberto!');
     }
@@ -977,6 +1048,7 @@ function fecharModalVeiculo() {
     const modal = document.getElementById('modalVeiculo');
     if (modal) {
         modal.style.display = 'none';
+        modal.classList.remove('show');
         document.body.style.overflow = 'auto'; // Restaurar scroll do body
         console.log('✅ Modal customizado fechado!');
     }
@@ -1000,71 +1072,18 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
-// Função para ajustar modal responsivo
-function ajustarModalResponsivo() {
-    const modalDialog = document.querySelector('#modalVeiculo .custom-modal-dialog');
-    if (modalDialog) {
-        if (window.innerWidth <= 768) {
-            // Mobile - ocupar quase toda a tela
-            modalDialog.style.cssText = `
-                position: fixed !important;
-                top: 0.5rem !important;
-                left: 0.5rem !important;
-                right: 0.5rem !important;
-                bottom: 0.5rem !important;
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            `;
-        } else if (window.innerWidth <= 1200) {
-            // Tablet - margens menores
-            modalDialog.style.cssText = `
-                position: fixed !important;
-                top: 1rem !important;
-                left: 1rem !important;
-                right: 1rem !important;
-                bottom: 1rem !important;
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            `;
-        } else {
-            // Desktop - margens padrão
-            modalDialog.style.cssText = `
-                position: fixed !important;
-                top: 2rem !important;
-                left: 2rem !important;
-                right: 2rem !important;
-                bottom: 2rem !important;
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            `;
-        }
-    }
-}
-
-// Aplicar responsividade no resize da janela
-window.addEventListener('resize', function() {
-    if (document.getElementById('modalVeiculo').style.display === 'block') {
-        ajustarModalResponsivo();
-    }
-});
-
 // Função para mostrar alertas
 function mostrarAlerta(mensagem, tipo) {
+    // Verificar se já existe um container de alertas
+    let alertContainer = document.getElementById('alertContainer');
+    if (!alertContainer) {
+        alertContainer = document.createElement('div');
+        alertContainer.id = 'alertContainer';
+        alertContainer.className = 'position-fixed top-0 end-0 p-3';
+        alertContainer.style.zIndex = '9999';
+        document.body.appendChild(alertContainer);
+    }
+    
     const alertDiv = document.createElement('div');
     alertDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
     alertDiv.innerHTML = `
@@ -1072,10 +1091,13 @@ function mostrarAlerta(mensagem, tipo) {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     
-    document.querySelector('.container-fluid').insertBefore(alertDiv, document.querySelector('.d-flex'));
+    alertContainer.appendChild(alertDiv);
     
+    // Auto-remover após 5 segundos
     setTimeout(() => {
-        alertDiv.remove();
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
     }, 5000);
 }
 </script>

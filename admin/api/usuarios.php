@@ -215,12 +215,82 @@ try {
                     exit;
                 }
                 
-                // Verificar se o usuário tem CFCs vinculados
-                $cfcsVinculados = $db->fetch("SELECT COUNT(*) as total FROM cfcs WHERE responsavel_id = ?", [$id]);
-                if ($cfcsVinculados['total'] > 0) {
-                    error_log('[USUARIOS API] Usuário tem CFCs vinculados - não pode ser excluído');
+                // Verificar todas as dependências do usuário
+                $dependencias = [];
+                
+                // Verificar CFCs vinculados
+                $cfcsVinculados = $db->fetchAll("SELECT id, nome FROM cfcs WHERE responsavel_id = ?", [$id]);
+                if (count($cfcsVinculados) > 0) {
+                    $dependencias[] = [
+                        'tipo' => 'CFCs',
+                        'quantidade' => count($cfcsVinculados),
+                        'itens' => $cfcsVinculados,
+                        'instrucao' => 'Remova ou altere o responsável dos CFCs antes de excluir o usuário.'
+                    ];
+                }
+                
+                // Verificar registros de instrutor
+                $instrutoresVinculados = $db->fetchAll("SELECT id, cfc_id FROM instrutores WHERE usuario_id = ?", [$id]);
+                if (count($instrutoresVinculados) > 0) {
+                    $dependencias[] = [
+                        'tipo' => 'Registros de Instrutor',
+                        'quantidade' => count($instrutoresVinculados),
+                        'itens' => $instrutoresVinculados,
+                        'instrucao' => 'Remova os registros de instrutor antes de excluir o usuário.'
+                    ];
+                }
+                
+                // Verificar aulas como instrutor
+                $aulasComoInstrutor = $db->fetchAll("
+                    SELECT a.id, a.data_aula, a.tipo_aula FROM aulas a 
+                    INNER JOIN instrutores i ON a.instrutor_id = i.id 
+                    WHERE i.usuario_id = ?
+                ", [$id]);
+                if (count($aulasComoInstrutor) > 0) {
+                    $dependencias[] = [
+                        'tipo' => 'Aulas como Instrutor',
+                        'quantidade' => count($aulasComoInstrutor),
+                        'itens' => $aulasComoInstrutor,
+                        'instrucao' => 'Remova ou altere as aulas onde o usuário é instrutor antes de excluí-lo.'
+                    ];
+                }
+                
+                // Verificar sessões e logs (apenas informativo, serão removidos automaticamente)
+                $sessoes = $db->fetch("SELECT COUNT(*) as total FROM sessoes WHERE usuario_id = ?", [$id]);
+                $logs = $db->fetch("SELECT COUNT(*) as total FROM logs WHERE usuario_id = ?", [$id]);
+                
+                if ($sessoes['total'] > 0 || $logs['total'] > 0) {
+                    $dependencias[] = [
+                        'tipo' => 'Dados de Sistema',
+                        'quantidade' => $sessoes['total'] + $logs['total'],
+                        'itens' => [
+                            'sessoes' => $sessoes['total'],
+                            'logs' => $logs['total']
+                        ],
+                        'instrucao' => 'Sessões e logs serão removidos automaticamente durante a exclusão.'
+                    ];
+                }
+                
+                // Se há dependências, retornar erro com instruções detalhadas
+                if (!empty($dependencias)) {
+                    error_log('[USUARIOS API] Usuário tem dependências - não pode ser excluído');
+                    
+                    $mensagem = "Não é possível excluir o usuário pois ele possui vínculos ativos:\n\n";
+                    foreach ($dependencias as $dep) {
+                        $mensagem .= "• {$dep['tipo']}: {$dep['quantidade']} registro(s)\n";
+                        $mensagem .= "  Instrução: {$dep['instrucao']}\n\n";
+                    }
+                    $mensagem .= "Resolva todos os vínculos antes de tentar excluir o usuário novamente.";
+                    
                     http_response_code(400);
-                    echo json_encode(['error' => 'Usuário possui CFCs vinculados. Remova os vínculos antes de excluir.', 'code' => 'HAS_CFCS']);
+                    echo json_encode([
+                        'error' => $mensagem,
+                        'code' => 'HAS_DEPENDENCIES',
+                        'dependencias' => $dependencias,
+                        'instrucoes' => array_map(function($dep) {
+                            return $dep['instrucao'];
+                        }, $dependencias)
+                    ]);
                     exit;
                 }
                 
@@ -228,15 +298,21 @@ try {
                     // Começar transação
                     $db->beginTransaction();
                     
+                    // Excluir logs do usuário
+                    error_log('[USUARIOS API] Excluindo logs do usuário');
+                    $db->query("DELETE FROM logs WHERE usuario_id = ?", [$id]);
+                    
                     // Excluir sessões do usuário
                     error_log('[USUARIOS API] Excluindo sessões do usuário');
                     $db->query("DELETE FROM sessoes WHERE usuario_id = ?", [$id]);
                     
-                    // Excluir usuário
+                    // Excluir usuário usando PDO diretamente
                     error_log('[USUARIOS API] Excluindo usuário da tabela usuarios');
-                    $result = $db->delete('usuarios', 'id = ?', [$id]);
+                    $pdo = $db->getConnection();
+                    $stmt = $pdo->prepare("DELETE FROM usuarios WHERE id = ?");
+                    $result = $stmt->execute([$id]);
                     
-                    if ($result) {
+                    if ($result && $stmt->rowCount() > 0) {
                         $db->commit();
                         error_log('[USUARIOS API] Usuário excluído com sucesso - ID: ' . $id . ' (' . $existingUser['email'] . ')');
                         echo json_encode(['success' => true, 'message' => 'Usuário excluído com sucesso']);

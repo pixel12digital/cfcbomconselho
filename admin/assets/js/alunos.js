@@ -6,6 +6,30 @@
 // Cache para o caminho da API
 let caminhoAPIAlunosCache = null;
 
+// Função para converter data de DD/MM/YYYY para YYYY-MM-DD (MySQL)
+function converterDataParaMySQL(dataString) {
+    if (!dataString || dataString.trim() === '') {
+        return null; // Retorna null para campos vazios
+    }
+    
+    // Verificar se já está no formato YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dataString)) {
+        return dataString;
+    }
+    
+    // Converter de DD/MM/YYYY para YYYY-MM-DD
+    const match = dataString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (match) {
+        const [, dia, mes, ano] = match;
+        const dataMySQL = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+        console.log(`✅ Data convertida: ${dataString} → ${dataMySQL}`);
+        return dataMySQL;
+    }
+    
+    console.warn(`⚠️ Formato de data inválido: ${dataString}`);
+    return null;
+}
+
 // Função para detectar o caminho correto da API
 async function detectarCaminhoAPIAlunos() {
     if (caminhoAPIAlunosCache) {
@@ -33,6 +57,8 @@ async function fetchAPIAlunos(endpoint = '', options = {}) {
     const url = baseApiUrl + endpoint;
     
     console.log('📡 Fazendo requisição para:', url);
+    console.log('📡 Método:', options.method || 'GET');
+    console.log('📡 Opções:', options);
     
     const defaultOptions = {
         headers: {
@@ -52,12 +78,26 @@ async function fetchAPIAlunos(endpoint = '', options = {}) {
     };
     
     try {
+        console.log('📡 Iniciando fetch...');
         const response = await fetch(url, mergedOptions);
         
+        console.log('📡 Resposta recebida:', response.status, response.statusText);
+        
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            // Tentar ler o corpo da resposta para mais detalhes
+            let errorText = '';
+            try {
+                const errorBody = await response.text();
+                errorText = errorBody;
+                console.log('📡 Corpo da resposta de erro:', errorText);
+            } catch (e) {
+                errorText = 'Não foi possível ler o corpo da resposta';
+            }
+            
+            throw new Error(`HTTP ${response.status}: ${response.statusText} - ${errorText}`);
         }
         
+        console.log('✅ Requisição bem-sucedida');
         return response;
     } catch (error) {
         console.error('❌ Erro na requisição:', error);
@@ -76,13 +116,22 @@ window.abrirModalAluno = function() {
         return;
     }
     
-    // Limpar formulário
+    // Verificar se está em modo de edição
+    const acaoAluno = document.getElementById('acaoAluno');
+    const isEditing = acaoAluno && acaoAluno.value === 'editar';
+    
+    console.log('📋 Modo de edição:', isEditing);
+    
+    // Limpar formulário apenas se não estiver editando
     const form = document.getElementById('formAluno');
-    if (form) {
+    if (form && !isEditing) {
+        console.log('🧹 Limpando formulário para novo aluno');
         form.reset();
         document.getElementById('acaoAluno').value = 'criar';
         document.getElementById('aluno_id').value = '';
         document.getElementById('modalTitle').textContent = 'Novo Aluno';
+    } else if (isEditing) {
+        console.log('✏️ Mantendo dados do formulário para edição');
     }
     
     // Mostrar modal
@@ -117,12 +166,12 @@ window.salvarAluno = async function() {
         const formData = new FormData(form);
         
         // Validações
-        if (!formData.get('nome').trim()) {
+        if (!formData.get('nome') || !formData.get('nome').trim()) {
             alert('Nome do aluno é obrigatório');
             return;
         }
         
-        if (!formData.get('cpf').trim()) {
+        if (!formData.get('cpf') || !formData.get('cpf').trim()) {
             alert('CPF é obrigatório');
             return;
         }
@@ -134,16 +183,22 @@ window.salvarAluno = async function() {
         
         // Preparar dados
         const alunoData = {
-            nome: formData.get('nome').trim(),
-            cpf: formData.get('cpf').trim(),
-            rg: formData.get('rg').trim(),
-            data_nascimento: formData.get('data_nascimento'),
-            endereco: formData.get('endereco').trim(),
-            telefone: formData.get('telefone').trim(),
-            email: formData.get('email').trim(),
+            nome: (formData.get('nome') || '').trim(),
+            cpf: (formData.get('cpf') || '').trim(),
+            rg: (formData.get('rg') || '').trim(),
+            data_nascimento: formData.get('data_nascimento') || null,
+            endereco: (formData.get('logradouro') || '').trim(),
+            numero: (formData.get('numero') || '').trim(),
+            bairro: (formData.get('bairro') || '').trim(),
+            cidade: (formData.get('cidade') || '').trim(),
+            estado: (formData.get('uf') || '').trim(),
+            cep: (formData.get('cep') || '').trim(),
+            telefone: (formData.get('telefone') || '').trim(),
+            email: (formData.get('email') || '').trim(),
             categoria_cnh: formData.get('categoria_cnh'),
             cfc_id: formData.get('cfc_id') || null,
-            status: formData.get('status') || 'ativo'
+            status: formData.get('status') || 'ativo',
+            observacoes: (formData.get('observacoes') || '').trim()
         };
         
         const acao = formData.get('acao');
@@ -203,30 +258,101 @@ window.editarAluno = async function(id) {
     
     try {
         const response = await fetchAPIAlunos(`?id=${id}`);
-        const data = await response.json();
+        
+        // Debug: verificar se a resposta tem conteúdo
+        const responseText = await response.text();
+        console.log('📋 Resposta bruta da API:', responseText);
+        
+        // Tentar fazer parse do JSON
+        let data;
+        try {
+            data = JSON.parse(responseText);
+            console.log('📋 JSON parseado com sucesso:', data);
+        } catch (parseError) {
+            console.error('❌ Erro ao fazer parse do JSON:', parseError);
+            throw new Error(`Resposta inválida da API: ${responseText}`);
+        }
         
         if (data.success) {
-            const aluno = data.data;
+            const aluno = data.aluno;
             
-            // Preencher formulário
-            document.getElementById('nome').value = aluno.nome || '';
-            document.getElementById('cpf').value = aluno.cpf || '';
-            document.getElementById('rg').value = aluno.rg || '';
-            document.getElementById('data_nascimento').value = aluno.data_nascimento || '';
-            document.getElementById('endereco').value = aluno.endereco || '';
-            document.getElementById('telefone').value = aluno.telefone || '';
-            document.getElementById('email').value = aluno.email || '';
-            document.getElementById('categoria_cnh').value = aluno.categoria_cnh || '';
-            document.getElementById('cfc_id').value = aluno.cfc_id || '';
-            document.getElementById('status').value = aluno.status || 'ativo';
+            // Debug: verificar estrutura da resposta
+            console.log('📋 Resposta da API:', data);
+            console.log('📋 Dados do aluno:', aluno);
             
-            // Configurar modal para edição
+            if (!aluno) {
+                throw new Error('Dados do aluno não encontrados na resposta da API');
+            }
+            
+            // Configurar modal para edição ANTES de abrir
             document.getElementById('modalTitle').textContent = 'Editar Aluno';
             document.getElementById('acaoAluno').value = 'editar';
             document.getElementById('aluno_id').value = id;
             
-            // Abrir modal
-            abrirModalAluno();
+            // Abrir modal SEM limpar formulário
+            const modal = document.getElementById('modalAluno');
+            if (!modal) {
+                throw new Error('Modal não encontrado');
+            }
+            
+            // Mostrar modal
+            modal.style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            
+            console.log('✅ Modal aberto para edição');
+            
+            // Preencher formulário DEPOIS de abrir o modal
+            console.log('📝 Preenchendo campos do formulário...');
+            
+            // Aguardar um pouco para garantir que o DOM esteja pronto
+            setTimeout(() => {
+                // Campos básicos
+                const nomeField = document.getElementById('nome');
+                const cpfField = document.getElementById('cpf');
+                const rgField = document.getElementById('rg');
+                const dataNascField = document.getElementById('data_nascimento');
+                const statusField = document.getElementById('status');
+                const emailField = document.getElementById('email');
+                const telefoneField = document.getElementById('telefone');
+                
+                // Campos acadêmicos
+                const cfcField = document.getElementById('cfc_id');
+                const categoriaField = document.getElementById('categoria_cnh');
+                
+                // Campos de endereço
+                const cepField = document.getElementById('cep');
+                const logradouroField = document.getElementById('logradouro');
+                const numeroField = document.getElementById('numero');
+                const bairroField = document.getElementById('bairro');
+                const ufField = document.getElementById('uf');
+                const cidadeField = document.getElementById('cidade');
+                
+                // Campo de observações
+                const obsField = document.getElementById('observacoes');
+                
+                // Verificar se os campos existem antes de preencher
+                if (nomeField) nomeField.value = aluno.nome || '';
+                if (cpfField) cpfField.value = aluno.cpf || '';
+                if (rgField) rgField.value = aluno.rg || '';
+                if (dataNascField) dataNascField.value = aluno.data_nascimento || '';
+                if (statusField) statusField.value = aluno.status || 'ativo';
+                if (emailField) emailField.value = aluno.email || '';
+                if (telefoneField) telefoneField.value = aluno.telefone || '';
+                if (cfcField) cfcField.value = aluno.cfc_id || '';
+                if (categoriaField) categoriaField.value = aluno.categoria_cnh || '';
+                if (cepField) cepField.value = aluno.cep || '';
+                if (logradouroField) logradouroField.value = aluno.endereco || '';
+                if (numeroField) numeroField.value = aluno.numero || '';
+                if (bairroField) bairroField.value = aluno.bairro || '';
+                if (ufField) ufField.value = aluno.estado || '';
+                if (cidadeField) cidadeField.value = aluno.cidade || '';
+                if (obsField) obsField.value = aluno.observacoes || '';
+                
+                console.log('✅ Campos preenchidos com sucesso');
+                console.log('📋 Nome preenchido:', nomeField ? nomeField.value : 'campo não encontrado');
+                console.log('📋 CPF preenchido:', cpfField ? cpfField.value : 'campo não encontrado');
+            }, 100);
+            
         } else {
             alert('Erro ao carregar dados do aluno: ' + (data.error || 'Erro desconhecido'));
         }

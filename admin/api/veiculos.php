@@ -13,19 +13,19 @@ require_once '../../includes/config.php';
 require_once '../../includes/database.php';
 
 try {
-    $db = new Database();
+    $db = Database::getInstance();
     
     switch ($_SERVER['REQUEST_METHOD']) {
         case 'GET':
             // Listar veículos ou buscar por ID
             if (isset($_GET['id'])) {
                 $id = (int)$_GET['id'];
-                $veiculo = $db->query("
+                $veiculo = $db->fetch("
                     SELECT v.*, c.nome as cfc_nome 
                     FROM veiculos v 
                     LEFT JOIN cfcs c ON v.cfc_id = c.id 
                     WHERE v.id = ?
-                ", [$id])->fetch(PDO::FETCH_ASSOC);
+                ", [$id]);
                 
                 if ($veiculo) {
                     echo json_encode(['success' => true, 'data' => $veiculo]);
@@ -34,12 +34,12 @@ try {
                 }
             } else {
                 // Listar todos os veículos
-                $veiculos = $db->query("
+                $veiculos = $db->fetchAll("
                     SELECT v.*, c.nome as cfc_nome 
                     FROM veiculos v 
                     LEFT JOIN cfcs c ON v.cfc_id = c.id 
                     ORDER BY v.marca, v.modelo
-                ")->fetchAll(PDO::FETCH_ASSOC);
+                ");
                 
                 echo json_encode(['success' => true, 'data' => $veiculos]);
             }
@@ -59,7 +59,7 @@ try {
             }
             
             // Verificar se a placa já existe
-            $placaExistente = $db->query("SELECT id FROM veiculos WHERE placa = ?", [$input['placa']])->fetch();
+            $placaExistente = $db->fetch("SELECT id FROM veiculos WHERE placa = ?", [$input['placa']]);
             if ($placaExistente) {
                 throw new Exception('Placa já cadastrada no sistema');
             }
@@ -105,14 +105,14 @@ try {
             $id = (int)$input['id'];
             
             // Verificar se o veículo existe
-            $veiculoExistente = $db->query("SELECT id FROM veiculos WHERE id = ?", [$id])->fetch();
+            $veiculoExistente = $db->fetch("SELECT id FROM veiculos WHERE id = ?", [$id]);
             if (!$veiculoExistente) {
                 throw new Exception('Veículo não encontrado');
             }
             
             // Verificar se a placa já existe em outro veículo
             if (isset($input['placa'])) {
-                $placaExistente = $db->query("SELECT id FROM veiculos WHERE placa = ? AND id != ?", [$input['placa'], $id])->fetch();
+                $placaExistente = $db->fetch("SELECT id FROM veiculos WHERE placa = ? AND id != ?", [$input['placa'], $id]);
                 if ($placaExistente) {
                     throw new Exception('Placa já cadastrada em outro veículo');
                 }
@@ -153,13 +153,13 @@ try {
             $id = (int)$input['id'];
             
             // Verificar se o veículo existe
-            $veiculoExistente = $db->query("SELECT id, placa FROM veiculos WHERE id = ?", [$id])->fetch();
+            $veiculoExistente = $db->fetch("SELECT id, placa FROM veiculos WHERE id = ?", [$id]);
             if (!$veiculoExistente) {
                 throw new Exception('Veículo não encontrado');
             }
             
             // Verificar se há aulas vinculadas
-            $aulasVinculadas = $db->query("SELECT COUNT(*) as total FROM aulas WHERE veiculo_id = ?", [$id])->fetch();
+            $aulasVinculadas = $db->fetch("SELECT COUNT(*) as total FROM aulas WHERE veiculo_id = ?", [$id]);
             if ($aulasVinculadas['total'] > 0) {
                 throw new Exception('Não é possível excluir veículo com aulas vinculadas');
             }
