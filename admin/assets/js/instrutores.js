@@ -6,6 +6,42 @@
 // Cache para o caminho da API
 let caminhoAPIInstrutoresCache = null;
 
+// Função para converter data brasileira (dd/mm/aaaa) para ISO (aaaa-mm-dd) - CORRIGIDA
+function converterDataBrasileiraParaISO(dataBrasileira) {
+    if (!dataBrasileira || dataBrasileira.trim() === '') {
+        return null;
+    }
+    
+    // Verificar se já está no formato YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dataBrasileira)) {
+        return dataBrasileira;
+    }
+    
+    // Verificar formato dd/mm/aaaa
+    const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+    const match = dataBrasileira.match(regex);
+    
+    if (!match) return null;
+    
+    const dia = parseInt(match[1]);
+    const mes = parseInt(match[2]);
+    const ano = parseInt(match[3]);
+    
+    // Validar valores
+    if (dia < 1 || dia > 31) return null;
+    if (mes < 1 || mes > 12) return null;
+    if (ano < 1900 || ano > 2100) return null;
+    
+    // Verificar se a data é válida
+    const data = new Date(ano, mes - 1, dia);
+    if (data.getDate() !== dia || data.getMonth() !== mes - 1 || data.getFullYear() !== ano) {
+        return null;
+    }
+    
+    // Retornar no formato ISO sem conversão de fuso horário
+    return `${ano}-${mes.toString().padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
+}
+
 // Função para converter data de DD/MM/YYYY para YYYY-MM-DD (MySQL)
 function converterDataParaMySQL(dataString) {
     if (!dataString || dataString.trim() === '') {
@@ -17,17 +53,8 @@ function converterDataParaMySQL(dataString) {
         return dataString;
     }
     
-    // Converter de DD/MM/YYYY para YYYY-MM-DD
-    const match = dataString.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-    if (match) {
-        const [, dia, mes, ano] = match;
-        const dataMySQL = `${ano}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
-        console.log(`✅ Data convertida: ${dataString} → ${dataMySQL}`);
-        return dataMySQL;
-    }
-    
-    console.warn(`⚠️ Formato de data inválido: ${dataString}`);
-    return null;
+    // Usar a função corrigida para conversão
+    return converterDataBrasileiraParaISO(dataString);
 }
 
 // Função para converter data de YYYY-MM-DD para DD/MM/YYYY
@@ -37,13 +64,23 @@ function converterDataParaExibicao(dataString) {
     }
     
     try {
+        // Verificar se está no formato YYYY-MM-DD
+        const match = dataString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (match) {
+            const [, ano, mes, dia] = match;
+            const dataFormatada = `${dia}/${mes}/${ano}`;
+            console.log(`✅ Data convertida para exibição: ${dataString} → ${dataFormatada}`);
+            return dataFormatada;
+        }
+        
+        // Fallback para outras conversões usando Date
         const data = new Date(dataString);
         if (!isNaN(data.getTime())) {
             const dia = String(data.getDate()).padStart(2, '0');
             const mes = String(data.getMonth() + 1).padStart(2, '0');
             const ano = data.getFullYear();
             const dataFormatada = `${dia}/${mes}/${ano}`;
-            console.log(`✅ Data convertida para exibição: ${dataString} → ${dataFormatada}`);
+            console.log(`✅ Data convertida para exibição (fallback): ${dataString} → ${dataFormatada}`);
             return dataFormatada;
         } else {
             console.warn(`⚠️ Data inválida para conversão: ${dataString}`);

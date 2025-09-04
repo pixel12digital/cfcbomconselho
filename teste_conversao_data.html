@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Conversão de Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .test-case {
+            margin: 20px 0;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-color: #ffeaa7;
+        }
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 3px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>Teste de Conversão de Data - Correção de Fuso Horário</h1>
+    <p>Este teste verifica se as correções implementadas resolvem o problema de datas sendo salvas com um dia anterior.</p>
+
+    <div id="results"></div>
+
+    <script>
+        // Funções corrigidas do arquivo instrutores-page.js
+        function compararDatas(data1, data2) {
+            const data1ISO = typeof data1 === 'string' ? data1 : data1.toISOString().split('T')[0];
+            const data2ISO = typeof data2 === 'string' ? data2 : data2.toISOString().split('T')[0];
+            return data1ISO.localeCompare(data2ISO);
+        }
+
+        function getDataAtual() {
+            const hoje = new Date();
+            const ano = hoje.getFullYear();
+            const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+            const dia = String(hoje.getDate()).padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        }
+
+        function converterDataBrasileiraParaISO(dataBrasileira) {
+            if (!dataBrasileira || dataBrasileira.trim() === '') {
+                return null;
+            }
+            
+            if (/^\d{4}-\d{2}-\d{2}$/.test(dataBrasileira)) {
+                return dataBrasileira;
+            }
+            
+            const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+            const match = dataBrasileira.match(regex);
+            
+            if (!match) return null;
+            
+            const dia = parseInt(match[1]);
+            const mes = parseInt(match[2]);
+            const ano = parseInt(match[3]);
+            
+            if (dia < 1 || dia > 31) return null;
+            if (mes < 1 || mes > 12) return null;
+            if (ano < 1900 || ano > 2100) return null;
+            
+            const data = new Date(ano, mes - 1, dia);
+            if (data.getDate() !== dia || data.getMonth() !== mes - 1 || data.getFullYear() !== ano) {
+                return null;
+            }
+            
+            return `${ano}-${mes.toString().padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
+        }
+
+        // Função antiga (problemática) para comparação
+        function converterDataBrasileiraParaISO_ANTIGA(dataBrasileira) {
+            const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+            const match = dataBrasileira.match(regex);
+            
+            if (!match) return null;
+            
+            const dia = parseInt(match[1]);
+            const mes = parseInt(match[2]);
+            const ano = parseInt(match[3]);
+            
+            if (dia < 1 || dia > 31) return null;
+            if (mes < 1 || mes > 12) return null;
+            if (ano < 1900 || ano > 2100) return null;
+            
+            const data = new Date(ano, mes - 1, dia);
+            if (data.getDate() !== dia || data.getMonth() !== mes - 1 || data.getFullYear() !== ano) {
+                return null;
+            }
+            
+            return data.toISOString().split('T')[0];
+        }
+
+        // Função para converter ISO para brasileiro
+        function converterISOparaBrasileira(dataISO) {
+            if (!dataISO) return '';
+            const partes = dataISO.split('-');
+            const ano = partes[0];
+            const mes = partes[1];
+            const dia = partes[2];
+            return `${dia}/${mes}/${ano}`;
+        }
+
+        // Testes
+        const testCases = [
+            {
+                name: "Data de vencimento da habilitação - 03/12/2031",
+                input: "03/12/2031",
+                expected: "2031-12-03",
+                description: "Testa se a data 03/12/2031 é convertida corretamente para 2031-12-03"
+            },
+            {
+                name: "Data de nascimento - 15/06/1985",
+                input: "15/06/1985",
+                expected: "1985-06-15",
+                description: "Testa se a data 15/06/1985 é convertida corretamente para 1985-06-15"
+            },
+            {
+                name: "Data com zeros à esquerda - 05/09/2025",
+                input: "05/09/2025",
+                expected: "2025-09-05",
+                description: "Testa se a data 05/09/2025 é convertida corretamente para 2025-09-05"
+            },
+            {
+                name: "Data já no formato ISO",
+                input: "2031-12-03",
+                expected: "2031-12-03",
+                description: "Testa se uma data já no formato ISO é retornada sem alteração"
+            },
+            {
+                name: "Campo vazio",
+                input: "",
+                expected: null,
+                description: "Testa se um campo vazio retorna null"
+            },
+            {
+                name: "Data inválida - 32/13/2025",
+                input: "32/13/2025",
+                expected: null,
+                description: "Testa se uma data inválida retorna null"
+            }
+        ];
+
+        function runTests() {
+            const resultsDiv = document.getElementById('results');
+            let html = '<h2>Resultados dos Testes</h2>';
+
+            testCases.forEach((testCase, index) => {
+                const resultNova = converterDataBrasileiraParaISO(testCase.input);
+                const resultAntiga = converterDataBrasileiraParaISO_ANTIGA(testCase.input);
+                
+                const isSuccess = resultNova === testCase.expected;
+                const hasDifference = resultNova !== resultAntiga;
+                
+                let className = 'test-case';
+                let status = '';
+                
+                if (isSuccess) {
+                    className += ' success';
+                    status = '✅ PASSOU';
+                } else {
+                    className += ' error';
+                    status = '❌ FALHOU';
+                }
+
+                if (hasDifference && testCase.input.includes('/')) {
+                    className += ' warning';
+                    status += ' ⚠️ DIFERENÇA DETECTADA';
+                }
+
+                html += `
+                    <div class="${className}">
+                        <h3>${index + 1}. ${testCase.name} - ${status}</h3>
+                        <p><strong>Descrição:</strong> ${testCase.description}</p>
+                        <p><strong>Entrada:</strong> "${testCase.input}"</p>
+                        <p><strong>Esperado:</strong> "${testCase.expected}"</p>
+                        <p><strong>Resultado Nova Função:</strong> "${resultNova}"</p>
+                        <p><strong>Resultado Função Antiga:</strong> "${resultAntiga}"</p>
+                        ${hasDifference && testCase.input.includes('/') ? 
+                            `<p><strong>⚠️ Diferença detectada!</strong> A função antiga pode ter problemas de fuso horário.</p>` : ''}
+                    </div>
+                `;
+            });
+
+            // Teste adicional - verificar se há diferença de fuso horário
+            html += `
+                <div class="test-case">
+                    <h3>${testCases.length + 1}. Teste de Fuso Horário</h3>
+                    <p><strong>Descrição:</strong> Verifica se há diferença entre as funções antiga e nova</p>
+                    <p><strong>Data de teste:</strong> 03/12/2031</p>
+                    <p><strong>Nova função:</strong> "${converterDataBrasileiraParaISO('03/12/2031')}"</p>
+                    <p><strong>Função antiga:</strong> "${converterDataBrasileiraParaISO_ANTIGA('03/12/2031')}"</p>
+                    <p><strong>Diferença:</strong> ${converterDataBrasileiraParaISO('03/12/2031') !== converterDataBrasileiraParaISO_ANTIGA('03/12/2031') ? 'SIM ⚠️' : 'NÃO ✅'}</p>
+                </div>
+            `;
+
+            resultsDiv.innerHTML = html;
+        }
+
+        // Executar testes quando a página carregar
+        window.addEventListener('load', runTests);
+    </script>
+</body>
+</html>

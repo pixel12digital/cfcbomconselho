@@ -242,11 +242,11 @@ function preencherFormularioInstrutor(instrutor) {
     const campoDataNascimento = document.getElementById('data_nascimento');
     if (campoDataNascimento) {
         if (instrutor.data_nascimento && isValidDate(instrutor.data_nascimento)) {
-            // Converter formato ISO para brasileiro
-            const data = new Date(instrutor.data_nascimento);
-            const dia = String(data.getDate()).padStart(2, '0');
-            const mes = String(data.getMonth() + 1).padStart(2, '0');
-            const ano = data.getFullYear();
+            // Converter formato ISO para brasileiro sem problemas de fuso horário
+            const partes = instrutor.data_nascimento.split('-');
+            const ano = partes[0];
+            const mes = partes[1];
+            const dia = partes[2];
             campoDataNascimento.value = `${dia}/${mes}/${ano}`;
             console.log('✅ Campo data_nascimento preenchido:', campoDataNascimento.value);
         } else {
@@ -402,11 +402,11 @@ function preencherFormularioInstrutor(instrutor) {
     const campoValidadeCredencial = document.getElementById('validade_credencial');
     if (campoValidadeCredencial) {
         if (instrutor.validade_credencial && isValidDate(instrutor.validade_credencial)) {
-            // Converter formato ISO para brasileiro
-            const data = new Date(instrutor.validade_credencial);
-            const dia = String(data.getDate()).padStart(2, '0');
-            const mes = String(data.getMonth() + 1).padStart(2, '0');
-            const ano = data.getFullYear();
+            // Converter formato ISO para brasileiro sem problemas de fuso horário
+            const partes = instrutor.validade_credencial.split('-');
+            const ano = partes[0];
+            const mes = partes[1];
+            const dia = partes[2];
             campoValidadeCredencial.value = `${dia}/${mes}/${ano}`;
             console.log('✅ Campo validade_credencial preenchido:', campoValidadeCredencial.value);
         } else {
@@ -797,15 +797,22 @@ function isValidDate(dateString) {
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!dateRegex.test(dateString)) return false;
     
-    // Verificar se é uma data válida
-    const date = new Date(dateString);
-    if (isNaN(date.getTime())) return false;
+    // Extrair partes da data
+    const partes = dateString.split('-');
+    const ano = parseInt(partes[0]);
+    const mes = parseInt(partes[1]);
+    const dia = parseInt(partes[2]);
     
-    // Verificar se a data não é muito antiga (antes de 1900)
-    if (date.getFullYear() < 1900) return false;
+    // Validar valores básicos
+    if (ano < 1900 || ano > 2100) return false;
+    if (mes < 1 || mes > 12) return false;
+    if (dia < 1 || dia > 31) return false;
     
-    // Verificar se a data não é no futuro (para data de nascimento)
-    // Esta validação será feita na função configurarCamposData
+    // Verificar se é uma data válida usando Date apenas para validação
+    const date = new Date(ano, mes - 1, dia);
+    if (date.getDate() !== dia || date.getMonth() !== mes - 1 || date.getFullYear() !== ano) {
+        return false;
+    }
     
     return true;
 }
@@ -884,7 +891,7 @@ function configurarCampoDataHibrido(campoId, campo) {
             // Validações específicas por campo
             if (campoId === 'data_nascimento') {
                 const data = converterDataBrasileiraParaISO(valorTexto);
-                if (data && new Date(data) > new Date()) {
+                if (data && compararDatas(data, getDataAtual()) > 0) {
                     console.warn('Data de nascimento não pode ser no futuro');
                     this.value = '';
                     return;
@@ -893,7 +900,7 @@ function configurarCampoDataHibrido(campoId, campo) {
             
             if (campoId === 'validade_credencial') {
                 const data = converterDataBrasileiraParaISO(valorTexto);
-                if (data && new Date(data) < new Date()) {
+                if (data && compararDatas(data, getDataAtual()) < 0) {
                     console.warn('Validade da credencial deve ser no futuro');
                     this.value = '';
                     return;
@@ -941,11 +948,11 @@ function configurarCampoDataHibrido(campoId, campo) {
         // Listener para quando uma data for selecionada
         campoDateTemp.addEventListener('change', function() {
             if (this.value) {
-                // Converter de volta para formato brasileiro
-                const data = new Date(this.value);
-                const dia = String(data.getDate()).padStart(2, '0');
-                const mes = String(data.getMonth() + 1).padStart(2, '0');
-                const ano = data.getFullYear();
+                // Converter de volta para formato brasileiro sem problemas de fuso horário
+                const partes = this.value.split('-');
+                const ano = partes[0];
+                const mes = partes[1];
+                const dia = partes[2];
                 const dataBrasileira = `${dia}/${mes}/${ano}`;
                 
                 // Atualizar o campo de texto
@@ -998,8 +1005,33 @@ function configurarCampoDataHibrido(campoId, campo) {
     });
 }
 
-// Função para converter data brasileira (dd/mm/aaaa) para ISO (aaaa-mm-dd)
+// Função para comparar datas sem problemas de fuso horário
+function compararDatas(data1, data2) {
+    // Converter ambas as datas para YYYY-MM-DD se necessário
+    const data1ISO = typeof data1 === 'string' ? data1 : data1.toISOString().split('T')[0];
+    const data2ISO = typeof data2 === 'string' ? data2 : data2.toISOString().split('T')[0];
+    
+    return data1ISO.localeCompare(data2ISO);
+}
+
+// Função para obter data atual no formato YYYY-MM-DD
+function getDataAtual() {
+    const hoje = new Date();
+    const ano = hoje.getFullYear();
+    const mes = String(hoje.getMonth() + 1).padStart(2, '0');
+    const dia = String(hoje.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+}
 function converterDataBrasileiraParaISO(dataBrasileira) {
+    if (!dataBrasileira || dataBrasileira.trim() === '') {
+        return null; // Retorna null para campos vazios
+    }
+    
+    // Verificar se já está no formato YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dataBrasileira)) {
+        return dataBrasileira;
+    }
+    
     // Verificar formato dd/mm/aaaa
     const regex = /^(\d{2})\/(\d{2})\/(\d{4})$/;
     const match = dataBrasileira.match(regex);
@@ -1021,8 +1053,8 @@ function converterDataBrasileiraParaISO(dataBrasileira) {
         return null;
     }
     
-    // Retornar no formato ISO
-    return data.toISOString().split('T')[0];
+    // Retornar no formato ISO sem conversão de fuso horário
+    return `${ano}-${mes.toString().padStart(2, '0')}-${dia.toString().padStart(2, '0')}`;
 }
 
 
