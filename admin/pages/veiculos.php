@@ -929,15 +929,34 @@ function excluirVeiculo(id) {
     const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este veículo?';
     
     if (confirm(mensagem)) {
-        fetch(`../api/veiculos.php`, {
+        console.log('🗑️ Excluindo veículo ID:', id);
+        
+        fetch(`api/veiculos.php`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify({ id: id })
         })
-        .then(response => response.json())
+        .then(response => {
+            console.log('📡 Resposta recebida:', response.status, response.statusText);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ Erro ao fazer parse do JSON:', text);
+                    throw new Error('Resposta inválida do servidor');
+                }
+            });
+        })
         .then(data => {
+            console.log('📄 Dados recebidos:', data);
+            
             if (data.success) {
                 mostrarAlerta('Veículo excluído com sucesso!', 'success');
                 setTimeout(() => {
@@ -948,8 +967,8 @@ function excluirVeiculo(id) {
             }
         })
         .catch(error => {
-            console.error('Erro:', error);
-            mostrarAlerta('Erro ao excluir veículo', 'danger');
+            console.error('❌ Erro:', error);
+            mostrarAlerta('Erro ao excluir veículo: ' + error.message, 'danger');
         });
     }
 }
