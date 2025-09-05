@@ -443,35 +443,21 @@ $pageTitle = 'Gestão de Instrutores';
                                       <i class="fas fa-star me-1"></i>Especialidades e Observações
                                   </h6>
                               </div>
-                             <div class="col-md-4">
+                             <div class="col-md-6">
                                  <div class="mb-1">
-                                     <label for="tipo_carga" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Tipo de Carga</label>
-                                     <select class="form-select" id="tipo_carga" name="tipo_carga" style="padding: 0.4rem; font-size: 0.85rem;">
-                                         <option value="">Selecione...</option>
-                                         <option value="perigosa">Carga Perigosa</option>
-                                         <option value="granel">Carga Granel</option>
-                                         <option value="frigorificada">Carga Frigorificada</option>
-                                         <option value="contenores">Contêineres</option>
-                                         <option value="veiculos">Transporte de Veículos</option>
-                                         <option value="outros">Outros</option>
-                                     </select>
+                                     <label for="validade_credencial" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Validade da Habilitação</label>
+                                     <input type="text" class="form-control" id="validade_credencial" name="validade_credencial" 
+                                            placeholder="dd/mm/aaaa" style="padding: 0.4rem; font-size: 0.85rem;">
+                                     <small class="text-muted" style="font-size: 0.75rem;">💡 Digite dd/mm/aaaa OU clique no calendário</small>
                                  </div>
                              </div>
-                                                           <div class="col-md-4">
-                                  <div class="mb-1">
-                                      <label for="validade_credencial" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Validade da Habilitação</label>
-                                      <input type="text" class="form-control" id="validade_credencial" name="validade_credencial" 
-                                             placeholder="dd/mm/aaaa" style="padding: 0.4rem; font-size: 0.85rem;">
-                                      <small class="text-muted" style="font-size: 0.75rem;">💡 Digite dd/mm/aaaa OU clique no calendário</small>
-                                  </div>
-                              </div>
-                                                           <div class="col-md-4">
-                                  <div class="mb-1">
-                                      <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Observações</label>
-                                      <textarea class="form-control" id="observacoes" name="observacoes" rows="3" 
-                                                placeholder="Observações..." style="padding: 0.3rem; font-size: 0.85rem; resize: vertical;"></textarea>
-                                  </div>
-                              </div>
+                             <div class="col-md-6">
+                                 <div class="mb-1">
+                                     <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Observações</label>
+                                     <textarea class="form-control" id="observacoes" name="observacoes" rows="3" 
+                                               placeholder="Observações..." style="padding: 0.3rem; font-size: 0.85rem; resize: vertical;"></textarea>
+                                 </div>
+                             </div>
                          </div>
                          
 
