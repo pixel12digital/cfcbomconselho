@@ -525,6 +525,76 @@ function preencherFormularioInstrutor(instrutor) {
     }, 200);
 }
 
+function visualizarInstrutor(id) {
+    console.log('👁️ Visualizando instrutor ID:', id);
+    
+    try {
+        // Buscar dados do instrutor
+        fetch(`${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data) {
+                    abrirModalVisualizacao(data.data);
+                } else {
+                    mostrarAlerta('Erro ao carregar dados do instrutor: ' + (data.error || 'Dados não encontrados'), 'danger');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro ao carregar instrutor:', error);
+                mostrarAlerta('Erro ao carregar dados do instrutor: ' + error.message, 'danger');
+            });
+    } catch (error) {
+        console.error('❌ Erro na função visualizarInstrutor:', error);
+        mostrarAlerta('Erro interno: ' + error.message, 'danger');
+    }
+}
+
+function abrirModalVisualizacao(instrutor) {
+    console.log('📋 Abrindo modal de visualização para instrutor:', instrutor);
+    
+    // Verificar se há outros modais abertos e fechá-los primeiro
+    fecharOutrosModais();
+    
+    // Criar modal se não existir
+    let modal = document.getElementById('modalVisualizacaoInstrutor');
+    if (!modal) {
+        modal = criarModalVisualizacao();
+        document.body.appendChild(modal);
+    }
+    
+    // Preencher dados do instrutor
+    preencherModalVisualizacao(instrutor);
+    
+    // Mostrar modal
+    modal.style.display = 'block';
+    modal.classList.add('show');
+    
+    // Animar abertura
+    setTimeout(() => {
+        const modalDialog = modal.querySelector('.custom-modal-dialog');
+        if (modalDialog) {
+            modalDialog.style.opacity = '1';
+            modalDialog.style.transform = 'translateY(0)';
+        }
+    }, 100);
+}
+
+function fecharOutrosModais() {
+    // Fechar modal de instrutor se estiver aberto
+    const modalInstrutor = document.getElementById('modalInstrutor');
+    if (modalInstrutor && modalInstrutor.style.display === 'block') {
+        if (typeof fecharModalInstrutor === 'function') {
+            fecharModalInstrutor();
+        }
+    }
+    
+    // Fechar modal de visualização se estiver aberto
+    const modalVisualizacao = document.getElementById('modalVisualizacaoInstrutor');
+    if (modalVisualizacao && modalVisualizacao.style.display === 'block') {
+        fecharModalVisualizacao();
+    }
+}
+
 function excluirInstrutor(id) {
     if (confirm('Tem certeza que deseja excluir este instrutor?')) {
         fetch(`${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`, {
@@ -1116,6 +1186,9 @@ function preencherTabelaInstrutores(instrutores) {
             </td>
             <td>
                 <div class="btn-group-vertical btn-group-sm">
+                    <button class="btn btn-info btn-sm" onclick="visualizarInstrutor(${instrutor.id})" title="Visualizar">
+                        <i class="fas fa-eye"></i>
+                    </button>
                     <button class="btn btn-primary btn-sm" onclick="editarInstrutor(${instrutor.id})" title="Editar">
                         <i class="fas fa-edit"></i>
                     </button>
@@ -1549,6 +1622,340 @@ function verificarVinculacaoSelects(instrutor) {
         } else {
             console.log('✅ Usuário já vinculado corretamente');
         }
+    }
+}
+
+function criarModalVisualizacao() {
+    const modal = document.createElement('div');
+    modal.id = 'modalVisualizacaoInstrutor';
+    modal.className = 'custom-modal';
+    modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; overflow: auto;';
+    
+    modal.innerHTML = `
+        <div class="custom-modal-dialog" style="position: relative; width: 95%; max-width: 1000px; margin: 20px auto; background: white; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: block; opacity: 0; transform: translateY(-20px); transition: all 0.3s ease;">
+            <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
+                <h5 class="modal-title" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
+                    <i class="fas fa-eye me-2"></i>Visualizar Instrutor
+                </h5>
+                <button type="button" class="btn-close" onclick="fecharModalVisualizacao()" style="filter: invert(1); background: none; border: none; font-size: 1.25rem; color: white; opacity: 0.8; cursor: pointer;">&times;</button>
+            </div>
+            <div class="modal-body" style="overflow-y: auto; padding: 1.5rem; max-height: 70vh;">
+                <div id="conteudoVisualizacao">
+                    <!-- Conteúdo será preenchido dinamicamente -->
+                </div>
+            </div>
+            <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding: 0.75rem 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; flex-shrink: 0;">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalVisualizacao()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    <i class="fas fa-times me-1"></i>Fechar
+                </button>
+                <button type="button" class="btn btn-primary" id="btnEditarInstrutor" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    <i class="fas fa-edit me-1"></i>Editar
+                </button>
+            </div>
+        </div>
+    `;
+    
+    // Adicionar listener para fechar modal ao clicar fora
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            fecharModalVisualizacao();
+        }
+    });
+    
+    // Adicionar listener para tecla ESC
+    modal.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            fecharModalVisualizacao();
+        }
+    });
+    
+    return modal;
+}
+
+function preencherModalVisualizacao(instrutor) {
+    const conteudo = document.getElementById('conteudoVisualizacao');
+    if (!conteudo) return;
+    
+    // Usar o nome correto (nome_usuario se nome estiver vazio)
+    const nomeExibicao = instrutor.nome || instrutor.nome_usuario || 'N/A';
+    const cfcExibicao = instrutor.cfc_nome || 'N/A';
+    
+    // Formatar categorias
+    const categoriasFormatadas = formatarCategorias(instrutor.categorias_json) || 'N/A';
+    
+    // Formatar dias da semana
+    const diasFormatados = formatarDiasSemana(instrutor.dias_semana) || 'N/A';
+    
+    // Formatar datas
+    const dataNascimentoFormatada = instrutor.data_nascimento ? converterDataParaExibicao(instrutor.data_nascimento) : 'N/A';
+    const validadeCredencialFormatada = instrutor.validade_credencial ? converterDataParaExibicao(instrutor.validade_credencial) : 'N/A';
+    
+    // Formatar horários
+    const horarioInicioFormatado = instrutor.horario_inicio ? instrutor.horario_inicio.substring(0, 5) : 'N/A';
+    const horarioFimFormatado = instrutor.horario_fim ? instrutor.horario_fim.substring(0, 5) : 'N/A';
+    
+    conteudo.innerHTML = `
+        <div class="container-fluid" style="padding: 0;">
+            <!-- Informações Básicas -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="fas fa-user-tie me-2"></i>Informações Básicas
+                    </h6>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Nome Completo:</strong><br>
+                        <span class="text-muted">${nomeExibicao}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Email:</strong><br>
+                        <span class="text-muted">${instrutor.email || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>CPF:</strong><br>
+                        <span class="text-muted">${instrutor.cpf || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>CNH:</strong><br>
+                        <span class="text-muted">${instrutor.cnh || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Data de Nascimento:</strong><br>
+                        <span class="text-muted">${dataNascimentoFormatada}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Telefone:</strong><br>
+                        <span class="text-muted">${instrutor.telefone || 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Dados do Instrutor -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="fas fa-id-card me-2"></i>Dados do Instrutor
+                    </h6>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Credencial:</strong><br>
+                        <span class="text-muted">${instrutor.credencial || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>CFC:</strong><br>
+                        <span class="text-muted">${cfcExibicao}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Categorias de Habilitação:</strong><br>
+                        <span class="badge bg-info">${categoriasFormatadas}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Status:</strong><br>
+                        <span class="badge ${instrutor.ativo ? 'bg-success' : 'bg-danger'}">
+                            ${instrutor.ativo ? 'ATIVO' : 'INATIVO'}
+                        </span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Validade da Credencial:</strong><br>
+                        <span class="text-muted">${validadeCredencialFormatada}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Horários Disponíveis -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="fas fa-clock me-2"></i>Horários Disponíveis
+                    </h6>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Dias da Semana:</strong><br>
+                        <span class="text-muted">${diasFormatados}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Horário:</strong><br>
+                        <span class="text-muted">${horarioInicioFormatado} - ${horarioFimFormatado}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Endereço -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="fas fa-map-marker-alt me-2"></i>Endereço
+                    </h6>
+                </div>
+                <div class="col-md-12">
+                    <div class="mb-2">
+                        <strong>Endereço:</strong><br>
+                        <span class="text-muted">${instrutor.endereco || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>Cidade:</strong><br>
+                        <span class="text-muted">${instrutor.cidade || 'N/A'}</span>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-2">
+                        <strong>UF:</strong><br>
+                        <span class="text-muted">${instrutor.uf || 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Observações -->
+            ${instrutor.observacoes ? `
+            <div class="row mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="fas fa-sticky-note me-2"></i>Observações
+                    </h6>
+                </div>
+                <div class="col-12">
+                    <div class="mb-2">
+                        <span class="text-muted">${instrutor.observacoes}</span>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+        </div>
+    `;
+    
+    // Configurar botão de editar
+    const btnEditar = document.getElementById('btnEditarInstrutor');
+    if (btnEditar) {
+        btnEditar.onclick = function() {
+            // Fechar modal de visualização primeiro
+            fecharModalVisualizacao();
+            
+            // Aguardar um pouco para garantir que o modal foi fechado antes de abrir o de edição
+            setTimeout(() => {
+                editarInstrutor(instrutor.id);
+            }, 350); // Tempo ligeiramente maior que a animação de fechamento (300ms)
+        };
+    }
+}
+
+function fecharModalVisualizacao() {
+    const modal = document.getElementById('modalVisualizacaoInstrutor');
+    if (modal) {
+        const modalDialog = modal.querySelector('.custom-modal-dialog');
+        if (modalDialog) {
+            modalDialog.style.opacity = '0';
+            modalDialog.style.transform = 'translateY(-20px)';
+        }
+        
+        // Remover classe show para garantir que não interfira com outros modais
+        modal.classList.remove('show');
+        
+        setTimeout(() => {
+            modal.style.display = 'none';
+            // Limpar o conteúdo para evitar conflitos
+            const conteudo = document.getElementById('conteudoVisualizacao');
+            if (conteudo) {
+                conteudo.innerHTML = '';
+            }
+        }, 300);
+    }
+}
+
+function formatarDiasSemana(diasSemana) {
+    if (!diasSemana) return '';
+    
+    try {
+        let dias = [];
+        
+        // Se já é um array
+        if (Array.isArray(diasSemana)) {
+            dias = diasSemana;
+        }
+        // Se é uma string JSON
+        else if (typeof diasSemana === 'string') {
+            if (diasSemana.trim() === '') return '';
+            try {
+                dias = JSON.parse(diasSemana);
+            } catch (e) {
+                // Se não for JSON, tentar split por vírgula
+                dias = diasSemana.split(',').map(dia => dia.trim()).filter(dia => dia !== '');
+            }
+        }
+        
+        // Mapear nomes dos dias
+        const nomesDias = {
+            'segunda': 'Segunda-feira',
+            'terca': 'Terça-feira',
+            'quarta': 'Quarta-feira',
+            'quinta': 'Quinta-feira',
+            'sexta': 'Sexta-feira',
+            'sabado': 'Sábado',
+            'domingo': 'Domingo'
+        };
+        
+        return dias.map(dia => nomesDias[dia] || dia).join(', ');
+        
+    } catch (error) {
+        console.warn('⚠️ Erro ao formatar dias da semana:', error);
+        return diasSemana.toString();
+    }
+}
+
+// Função para converter data de YYYY-MM-DD para DD/MM/YYYY
+function converterDataParaExibicao(dataString) {
+    if (!dataString || dataString === '0000-00-00' || dataString.trim() === '') {
+        return '';
+    }
+    
+    try {
+        // Verificar se está no formato YYYY-MM-DD
+        const match = dataString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (match) {
+            const [, ano, mes, dia] = match;
+            const dataFormatada = `${dia}/${mes}/${ano}`;
+            return dataFormatada;
+        }
+        
+        // Fallback para outras conversões usando Date
+        const data = new Date(dataString);
+        if (!isNaN(data.getTime())) {
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const ano = data.getFullYear();
+            const dataFormatada = `${dia}/${mes}/${ano}`;
+            return dataFormatada;
+        } else {
+            console.warn(`⚠️ Data inválida para conversão: ${dataString}`);
+            return '';
+        }
+    } catch (e) {
+        console.warn(`⚠️ Erro ao converter data: ${dataString}`, e);
+        return '';
     }
 }
 

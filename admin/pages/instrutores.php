@@ -318,40 +318,46 @@ $pageTitle = 'Gestão de Instrutores';
                              </div>
                              <div class="col-md-12">
                                  <div class="row">
-                                     <div class="col-md-2">
+                                     <div class="col-md-1 col-sm-2 col-3">
                                          <div class="form-check">
                                              <input class="form-check-input" type="checkbox" name="dias_semana[]" value="segunda" id="segunda" style="margin-top: 0.2rem;">
-                                             <label class="form-check-label" for="segunda" style="font-size: 0.85rem;">Segunda</label>
+                                             <label class="form-check-label" for="segunda" style="font-size: 0.8rem;">Seg</label>
                                          </div>
                                      </div>
-                                     <div class="col-md-2">
+                                     <div class="col-md-1 col-sm-2 col-3">
                                          <div class="form-check">
                                              <input class="form-check-input" type="checkbox" name="dias_semana[]" value="terca" id="terca" style="margin-top: 0.2rem;">
-                                             <label class="form-check-label" for="terca" style="font-size: 0.85rem;">Terça</label>
+                                             <label class="form-check-label" for="terca" style="font-size: 0.8rem;">Ter</label>
                                          </div>
                                      </div>
-                                     <div class="col-md-2">
+                                     <div class="col-md-1 col-sm-2 col-3">
                                          <div class="form-check">
                                              <input class="form-check-input" type="checkbox" name="dias_semana[]" value="quarta" id="quarta" style="margin-top: 0.2rem;">
-                                             <label class="form-check-label" for="quarta" style="font-size: 0.85rem;">Quarta</label>
+                                             <label class="form-check-label" for="quarta" style="font-size: 0.8rem;">Qua</label>
                                          </div>
                                      </div>
-                                     <div class="col-md-2">
+                                     <div class="col-md-1 col-sm-2 col-3">
                                          <div class="form-check">
                                              <input class="form-check-input" type="checkbox" name="dias_semana[]" value="quinta" id="quinta" style="margin-top: 0.2rem;">
-                                             <label class="form-check-label" for="quinta" style="font-size: 0.85rem;">Quinta</label>
+                                             <label class="form-check-label" for="quinta" style="font-size: 0.8rem;">Qui</label>
                                          </div>
                                      </div>
-                                     <div class="col-md-2">
+                                     <div class="col-md-1 col-sm-2 col-3">
                                          <div class="form-check">
                                              <input class="form-check-input" type="checkbox" name="dias_semana[]" value="sexta" id="sexta" style="margin-top: 0.2rem;">
-                                             <label class="form-check-label" for="sexta" style="font-size: 0.85rem;">Sexta</label>
+                                             <label class="form-check-label" for="sexta" style="font-size: 0.8rem;">Sex</label>
                                          </div>
                                      </div>
-                                     <div class="col-md-2">
+                                     <div class="col-md-1 col-sm-2 col-3">
                                          <div class="form-check">
                                              <input class="form-check-input" type="checkbox" name="dias_semana[]" value="sabado" id="sabado" style="margin-top: 0.2rem;">
-                                             <label class="form-check-label" for="sabado" style="font-size: 0.85rem;">Sábado</label>
+                                             <label class="form-check-label" for="sabado" style="font-size: 0.8rem;">Sáb</label>
+                                         </div>
+                                     </div>
+                                     <div class="col-md-1 col-sm-2 col-3">
+                                         <div class="form-check">
+                                             <input class="form-check-input" type="checkbox" name="dias_semana[]" value="domingo" id="domingo" style="margin-top: 0.2rem;">
+                                             <label class="form-check-label" for="domingo" style="font-size: 0.8rem;">Dom</label>
                                          </div>
                                      </div>
                                  </div>
