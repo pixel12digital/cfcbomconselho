@@ -65,21 +65,26 @@ try {
             // Listar instrutores ou buscar instrutor específico
             if (isset($_GET['id'])) {
                 $id = (int)$_GET['id'];
+                error_log('Buscando instrutor ID: ' . $id);
+                
+                // Consulta simplificada para evitar timeout
                 $instrutor = $db->fetch("
-                    SELECT i.*, u.nome as nome_usuario, u.email as email_usuario, c.nome as cfc_nome 
+                    SELECT i.*, c.nome as cfc_nome 
                     FROM instrutores i 
-                    LEFT JOIN usuarios u ON i.usuario_id = u.id 
                     LEFT JOIN cfcs c ON i.cfc_id = c.id 
                     WHERE i.id = ?
                 ", [$id]);
                 
                 if ($instrutor) {
                     // Adicionar campos para compatibilidade com o frontend
-                    $instrutor['nome'] = $instrutor['nome'] ?: ($instrutor['nome_usuario'] ?: 'N/A');
-                    $instrutor['email'] = $instrutor['email'] ?: ($instrutor['email_usuario'] ?: 'N/A');
+                    $instrutor['nome'] = $instrutor['nome'] ?: 'N/A';
+                    $instrutor['email'] = $instrutor['email'] ?: 'N/A';
                     $instrutor['cfc_nome'] = $instrutor['cfc_nome'] ?: 'N/A';
+                    
+                    error_log('Instrutor encontrado: ' . json_encode($instrutor));
                     echo json_encode(['success' => true, 'data' => $instrutor]);
                 } else {
+                    error_log('Instrutor não encontrado para ID: ' . $id);
                     http_response_code(404);
                     echo json_encode(['error' => 'Instrutor não encontrado']);
                 }
