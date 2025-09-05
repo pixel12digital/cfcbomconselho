@@ -86,16 +86,6 @@ try {
         </select>
     </div>
     <div class="col-md-2">
-        <select class="form-select" id="filtroCategoria">
-            <option value="">Todas as Categorias</option>
-            <option value="A">Categoria A</option>
-            <option value="B">Categoria B</option>
-            <option value="C">Categoria C</option>
-            <option value="D">Categoria D</option>
-            <option value="E">Categoria E</option>
-        </select>
-    </div>
-    <div class="col-md-2">
         <button type="button" class="btn btn-outline-info w-100" onclick="limparFiltros()">
             <i class="fas fa-times me-1"></i>Limpar
         </button>
@@ -199,7 +189,6 @@ try {
                         <th>Veículo</th>
                         <th>Placa</th>
                         <th>CFC</th>
-                        <th>Categoria</th>
                         <th>Status</th>
                         <th>Disponibilidade</th>
                         <th>Próxima Manutenção</th>
@@ -209,7 +198,7 @@ try {
                 <tbody>
                     <?php if (empty($veiculos)): ?>
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
+                        <td colspan="8" class="text-center text-muted py-4">
                             <i class="fas fa-inbox fa-3x mb-3"></i>
                             <p>Nenhum veículo cadastrado ainda.</p>
                             <button class="btn btn-primary" onclick="abrirModalVeiculo()">
@@ -239,9 +228,6 @@ try {
                             </td>
                             <td>
                                 <span class="badge bg-info"><?php echo htmlspecialchars($veiculo['cfc_nome'] ?? 'N/A'); ?></span>
-                            </td>
-                            <td>
-                                <span class="badge bg-secondary"><?php echo htmlspecialchars($veiculo['categoria_cnh']); ?></span>
                             </td>
                             <td>
                                 <?php
@@ -417,19 +403,6 @@ try {
                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
                                     <i class="fas fa-cogs me-1"></i>Especificações
                                 </h6>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-1">
-                                    <label for="categoria_cnh" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Categoria CNH *</label>
-                                    <select class="form-select" id="categoria_cnh" name="categoria_cnh" required style="padding: 0.4rem; font-size: 0.85rem;">
-                                        <option value="">Selecione a categoria...</option>
-                                        <option value="A">A - Motocicletas</option>
-                                        <option value="B">B - Automóveis</option>
-                                        <option value="C">C - Veículos de carga</option>
-                                        <option value="D">D - Veículos de passageiros</option>
-                                        <option value="E">E - Veículos com reboque</option>
-                                    </select>
-                                </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-1">
@@ -654,14 +627,11 @@ function inicializarFiltrosVeiculo() {
     // Filtro por CFC
     document.getElementById('filtroCFC').addEventListener('change', filtrarVeiculos);
     
-    // Filtro por categoria
-    document.getElementById('filtroCategoria').addEventListener('change', filtrarVeiculos);
 }
 
 function filtrarVeiculos() {
     const status = document.getElementById('filtroStatus').value;
     const cfc = document.getElementById('filtroCFC').value;
-    const categoria = document.getElementById('filtroCategoria').value;
     const busca = document.getElementById('buscaVeiculo').value.toLowerCase();
     
     const linhas = document.querySelectorAll('#tabelaVeiculos tbody tr');
@@ -682,10 +652,6 @@ function filtrarVeiculos() {
             }
         }
         
-        // Filtro por categoria
-        if (categoria && linha.querySelector('td:nth-child(5) .badge').textContent !== categoria) {
-            mostrar = false;
-        }
         
         // Filtro por busca
         if (busca) {
@@ -784,7 +750,6 @@ function preencherFormularioVeiculo(veiculo) {
     document.getElementById('marca').value = veiculo.marca || '';
     document.getElementById('modelo').value = veiculo.modelo || '';
     document.getElementById('ano').value = veiculo.ano || '';
-    document.getElementById('categoria_cnh').value = veiculo.categoria_cnh || '';
     document.getElementById('cor').value = veiculo.cor || '';
     document.getElementById('chassi').value = veiculo.chassi || '';
     document.getElementById('renavam').value = veiculo.renavam || '';
@@ -864,7 +829,6 @@ function preencherModalVisualizacao(veiculo) {
             <div class="col-md-6">
                 <h6><i class="fas fa-info-circle me-2"></i>Informações do Veículo</h6>
                 <p><strong>CFC:</strong> ${veiculo.cfc_nome || 'Não informado'}</p>
-                <p><strong>Categoria:</strong> <span class="badge bg-secondary">${veiculo.categoria_cnh}</span></p>
                 <p><strong>Cor:</strong> ${veiculo.cor || 'Não informado'}</p>
                 <p><strong>Combustível:</strong> ${veiculo.combustivel ? ucfirst(veiculo.combustivel) : 'Não informado'}</p>
             </div>
@@ -996,7 +960,6 @@ function alterarStatusVeiculo(id, status) {
 function limparFiltros() {
     document.getElementById('filtroStatus').value = '';
     document.getElementById('filtroCFC').value = '';
-    document.getElementById('filtroCategoria').value = '';
     document.getElementById('buscaVeiculo').value = '';
     filtrarVeiculos();
 }

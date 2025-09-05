@@ -75,7 +75,6 @@ try {
                 'combustivel' => $input['combustivel'] ?? null,
                 'quilometragem' => $input['quilometragem'] ?? 0,
                 'km_manutencao' => $input['km_manutencao'] ?? null,
-                'categoria_cnh' => $input['categoria_cnh'] ?? 'B',
                 'cfc_id' => $input['cfc_id'] ?? null,
                 'status' => $input['status'] ?? 'ativo',
                 'disponivel' => $input['disponivel'] ?? true,
@@ -121,7 +120,7 @@ try {
             // Preparar dados para atualização
             $dadosAtualizacao = [];
             $campos = ['placa', 'marca', 'modelo', 'ano', 'cor', 'chassi', 'renavam', 'combustivel', 
-                      'quilometragem', 'km_manutencao', 'categoria_cnh', 'cfc_id', 'status', 
+                      'quilometragem', 'km_manutencao', 'cfc_id', 'status', 
                       'disponivel', 'data_aquisicao', 'valor_aquisicao', 'proxima_manutencao', 
                       'observacoes', 'ativo'];
             
