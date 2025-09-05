@@ -298,20 +298,15 @@ try {
                                                 title="Ver detalhes completos do veículo">
                                             <i class="fas fa-eye me-1"></i>Ver
                                         </button>
-                                        <button type="button" class="btn btn-schedule action-btn" 
-                                                onclick="agendarAula(<?php echo $veiculo['id']; ?>)" 
-                                                title="Agendar aula usando este veículo">
-                                            <i class="fas fa-calendar-plus me-1"></i>Agendar
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Botões secundários em linha -->
-                                    <div class="action-buttons-secondary">
                                         <button type="button" class="btn btn-maintenance action-btn" 
                                                 onclick="agendarManutencao(<?php echo $veiculo['id']; ?>)" 
                                                 title="Agendar manutenção para este veículo">
                                             <i class="fas fa-tools me-1"></i>Manutenção
                                         </button>
+                                    </div>
+                                    
+                                    <!-- Botões secundários em linha -->
+                                    <div class="action-buttons-secondary">
                                         <?php if ($veiculo['ativo']): ?>
                                         <button type="button" class="btn btn-toggle action-btn" 
                                                 onclick="desativarVeiculo(<?php echo $veiculo['id']; ?>)" 
@@ -913,14 +908,9 @@ function ucfirst(str) {
     return str.charAt(0).toUpperCase() + str.slice(1);
 }
 
-function agendarAula(id) {
-    // Redirecionar para página de agendamento
-    window.location.href = `pages/agendar-aula.php?veiculo_id=${id}`;
-}
-
 function agendarManutencao(id) {
     // Redirecionar para página de agendamento de manutenção
-    window.location.href = `admin/pages/agendar-manutencao.php?veiculo_id=${id}`;
+    window.location.href = `?page=agendar-manutencao&veiculo_id=${id}`;
 }
 
 function ativarVeiculo(id) {

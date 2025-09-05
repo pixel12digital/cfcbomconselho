@@ -727,6 +727,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     }
                     break;
                     
+                case 'agendar-manutencao':
+                    // Buscar dados necessários para agendamento de manutenção
+                    $veiculo_id = $_GET['veiculo_id'] ?? null;
+                    $veiculo = null;
+                    $cfcs = [];
+                    
+                    if ($veiculo_id) {
+                        try {
+                            $veiculo = $db->fetch("
+                                SELECT v.*, c.nome as cfc_nome 
+                                FROM veiculos v 
+                                LEFT JOIN cfcs c ON v.cfc_id = c.id 
+                                WHERE v.id = ?
+                            ", [$veiculo_id]);
+                            
+                            if (!$veiculo) {
+                                throw new Exception('Veículo não encontrado');
+                            }
+                        } catch (Exception $e) {
+                            $veiculo = null;
+                        }
+                    }
+                    
+                    try {
+                        $cfcs = $db->fetchAll("SELECT id, nome, ativo FROM cfcs WHERE ativo = 1 ORDER BY nome");
+                    } catch (Exception $e) {
+                        $cfcs = [];
+                    }
+                    break;
+                    
                 case 'historico-aluno':
                     // Buscar dados do aluno para histórico
                     $aluno_id = $_GET['id'] ?? null;
