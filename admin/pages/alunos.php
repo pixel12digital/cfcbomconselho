@@ -1178,7 +1178,26 @@ function preencherFormularioAluno(aluno) {
     
     // Endereço
     if (aluno.endereco) {
-        const endereco = typeof aluno.endereco === 'string' ? JSON.parse(aluno.endereco) : aluno.endereco;
+        let endereco;
+        if (typeof aluno.endereco === 'string') {
+            try {
+                // Try to parse as JSON first
+                endereco = JSON.parse(aluno.endereco);
+            } catch (e) {
+                // If parsing fails, treat as plain string and create a simple object
+                endereco = {
+                    logradouro: aluno.endereco,
+                    numero: aluno.numero || '',
+                    bairro: aluno.bairro || '',
+                    cidade: aluno.cidade || '',
+                    uf: aluno.estado || '',
+                    cep: aluno.cep || ''
+                };
+            }
+        } else {
+            endereco = aluno.endereco;
+        }
+        
         document.getElementById('cep').value = endereco.cep || '';
         document.getElementById('logradouro').value = endereco.logradouro || '';
         document.getElementById('numero').value = endereco.numero || '';
@@ -1255,7 +1274,24 @@ function visualizarAluno(id) {
 }
 
 function preencherModalVisualizacao(aluno) {
-    const endereco = typeof aluno.endereco === 'string' ? JSON.parse(aluno.endereco) : aluno.endereco;
+    // Handle endereco field - it might be a string or an object
+    let endereco = aluno.endereco;
+    if (typeof aluno.endereco === 'string') {
+        try {
+            // Try to parse as JSON first
+            endereco = JSON.parse(aluno.endereco);
+        } catch (e) {
+            // If parsing fails, treat as plain string and create a simple object
+            endereco = {
+                logradouro: aluno.endereco,
+                numero: aluno.numero || '',
+                bairro: aluno.bairro || '',
+                cidade: aluno.cidade || '',
+                uf: aluno.estado || '',
+                cep: aluno.cep || ''
+            };
+        }
+    }
     
     const html = `
         <div class="row">
