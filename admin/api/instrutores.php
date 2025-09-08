@@ -6,7 +6,7 @@ error_reporting(E_ALL);
 
 // API para gerenciamento de instrutores
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: http://localhost:8080');  // Especificar origem específica
+header('Access-Control-Allow-Origin: http://localhost');  // Especificar origem específica
 header('Access-Control-Allow-Credentials: true');  // Permitir credenciais
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-With');

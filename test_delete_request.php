@@ -1,6 +1,6 @@
 <?php
 // Script para testar requisição DELETE
-$url = 'http://localhost:8080/cfc-bom-conselho/admin/api/test_delete.php';
+$url = 'http://localhost/cfc-bom-conselho/admin/api/test_delete.php';
 $data = json_encode(['id' => 1]);
 
 $context = stream_context_create([
@@ -33,7 +33,7 @@ echo "\n" . str_repeat("=", 50) . "\n";
 echo "Testando arquivo veiculos.php\n";
 echo str_repeat("=", 50) . "\n";
 
-$url2 = 'http://localhost:8080/cfc-bom-conselho/admin/api/veiculos.php';
+$url2 = 'http://localhost/cfc-bom-conselho/admin/api/veiculos.php';
 $data2 = json_encode(['id' => 1]);
 
 $context2 = stream_context_create([
