@@ -56,25 +56,36 @@ session_destroy();
 // Remover todos os cookies de sessão
 if (ini_get("session.use_cookies")) {
     $params = session_get_cookie_params();
+    // Ajustar parâmetros para produção (HTTPS)
+    $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
     setcookie(session_name(), '', time() - 42000,
         $params["path"], $params["domain"],
-        $params["secure"], $params["httponly"]
+        $is_https, $params["httponly"]
     );
 }
 
 // Remover cookies de "lembrar-me" se existirem
 if (isset($_COOKIE['remember_token'])) {
-    setcookie('remember_token', '', time() - 3600, '/');
+    $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+    setcookie('remember_token', '', time() - 3600, '/', '', $is_https, true);
 }
 
 // Remover cookie CFC_SESSION se existir
 if (isset($_COOKIE['CFC_SESSION'])) {
-    setcookie('CFC_SESSION', '', time() - 42000, '/');
+    $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+    setcookie('CFC_SESSION', '', time() - 42000, '/', '', $is_https, true);
 }
 
 // Redirecionar para página de login com URL absoluta para evitar problemas
-// Corrigir APP_URL que pode estar incorreto quando executado de dentro de admin/
-$base_url = 'http://localhost/cfc-bom-conselho';
+// Detectar ambiente e usar URL apropriada
+$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+if (strpos($host, 'localhost') !== false || strpos($host, '127.0.0.1') !== false) {
+    // Ambiente local
+    $base_url = 'http://localhost/cfc-bom-conselho';
+} else {
+    // Ambiente de produção
+    $base_url = 'https://linen-mantis-198436.hostingersite.com';
+}
 header('Location: ' . $base_url . '/index.php?message=logout_success');
 exit;
 ?>

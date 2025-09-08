@@ -99,7 +99,8 @@ class Auth {
         // Remover cookies de "lembrar-me" ANTES de destruir a sessão
         if (isset($_COOKIE['remember_token'])) {
             $this->removeRememberToken($_COOKIE['remember_token']);
-            setcookie('remember_token', '', time() - 3600, '/');
+            $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+            setcookie('remember_token', '', time() - 3600, '/', '', $is_https, true);
         }
         
         // Limpar todas as variáveis de sessão
@@ -116,15 +117,17 @@ class Auth {
         // Remover todos os cookies relacionados à sessão
         if (ini_get("session.use_cookies")) {
             $params = session_get_cookie_params();
+            $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
             setcookie(session_name(), '', time() - 42000,
                 $params["path"], $params["domain"],
-                $params["secure"], $params["httponly"]
+                $is_https, $params["httponly"]
             );
         }
         
         // Remover cookie CFC_SESSION se existir
         if (isset($_COOKIE['CFC_SESSION'])) {
-            setcookie('CFC_SESSION', '', time() - 42000, '/');
+            $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+            setcookie('CFC_SESSION', '', time() - 42000, '/', '', $is_https, true);
         }
         
         return ['success' => true, 'message' => 'Logout realizado com sucesso'];
