@@ -96,14 +96,35 @@ class Auth {
             }
         }
         
-        // Destruir sessão
-        session_unset();
-        session_destroy();
-        
-        // Remover cookies de "lembrar-me"
+        // Remover cookies de "lembrar-me" ANTES de destruir a sessão
         if (isset($_COOKIE['remember_token'])) {
             $this->removeRememberToken($_COOKIE['remember_token']);
             setcookie('remember_token', '', time() - 3600, '/');
+        }
+        
+        // Limpar todas as variáveis de sessão
+        $_SESSION = array();
+        
+        // Destruir a sessão
+        session_destroy();
+        
+        // Garantir que a sessão seja completamente limpa
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_regenerate_id(true);
+        }
+        
+        // Remover todos os cookies relacionados à sessão
+        if (ini_get("session.use_cookies")) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', time() - 42000,
+                $params["path"], $params["domain"],
+                $params["secure"], $params["httponly"]
+            );
+        }
+        
+        // Remover cookie CFC_SESSION se existir
+        if (isset($_COOKIE['CFC_SESSION'])) {
+            setcookie('CFC_SESSION', '', time() - 42000, '/');
         }
         
         return ['success' => true, 'message' => 'Logout realizado com sucesso'];
@@ -111,7 +132,7 @@ class Auth {
     
     // Verificar se usuário está logado
     public function isLoggedIn() {
-        // Verificar sessão
+        // Verificar sessão primeiro
         if (isset($_SESSION['user_id']) && isset($_SESSION['last_activity'])) {
             if (time() - $_SESSION['last_activity'] > SESSION_TIMEOUT) {
                 $this->logout();
@@ -121,9 +142,16 @@ class Auth {
             return true;
         }
         
-        // Verificar cookie "lembrar-me"
-        if (isset($_COOKIE['remember_token'])) {
-            return $this->validateRememberToken($_COOKIE['remember_token']);
+        // Só verificar cookie "lembrar-me" se não há sessão ativa
+        // e se o cookie realmente existe
+        if (isset($_COOKIE['remember_token']) && !empty($_COOKIE['remember_token'])) {
+            try {
+                return $this->validateRememberToken($_COOKIE['remember_token']);
+            } catch (Exception $e) {
+                // Se houver erro ao validar token, remover cookie e retornar false
+                setcookie('remember_token', '', time() - 3600, '/');
+                return false;
+            }
         }
         
         return false;

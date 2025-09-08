@@ -22,7 +22,7 @@ class LoginForm {
         this.bindEvents();
         this.setupAccessibility();
         this.loadSavedCredentials();
-        this.validateOnInput();
+        // Removido validateOnInput() para evitar validação prematura
     }
     
     bindEvents() {
@@ -34,9 +34,17 @@ class LoginForm {
             this.togglePasswordBtn.addEventListener('click', () => this.togglePassword());
         }
         
-        // Validação em tempo real
-        this.emailField.addEventListener('blur', () => this.validateEmail());
-        this.senhaField.addEventListener('blur', () => this.validateSenha());
+        // Validação apenas quando o usuário digitar algo
+        this.emailField.addEventListener('blur', () => {
+            if (this.emailField.value.trim()) {
+                this.validateEmail();
+            }
+        });
+        this.senhaField.addEventListener('blur', () => {
+            if (this.senhaField.value.trim()) {
+                this.validateSenha();
+            }
+        });
         
         // Limpar erros ao digitar
         this.emailField.addEventListener('input', () => this.clearFieldError('email'));
@@ -112,8 +120,17 @@ class LoginForm {
     }
     
     validateAllFields() {
-        const emailValid = this.validateEmail();
-        const senhaValid = this.validateSenha();
+        // Só validar se os campos não estiverem vazios
+        let emailValid = true;
+        let senhaValid = true;
+        
+        if (this.emailField.value.trim()) {
+            emailValid = this.validateEmail();
+        }
+        
+        if (this.senhaField.value.trim()) {
+            senhaValid = this.validateSenha();
+        }
         
         return emailValid && senhaValid;
     }
