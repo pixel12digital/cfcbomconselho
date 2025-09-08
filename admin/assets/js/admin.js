@@ -52,6 +52,51 @@ class AdminPanel {
         if (window.innerWidth <= 1024) {
             document.body.classList.add('mobile-view');
         }
+        this.setupSubmenuToggle();
+    }
+
+    // Configurar toggle dos submenus
+    setupSubmenuToggle() {
+        const navToggles = document.querySelectorAll('.nav-toggle');
+        
+        navToggles.forEach(toggle => {
+            toggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const group = toggle.getAttribute('data-group');
+                const submenu = document.getElementById(group);
+                const arrow = toggle.querySelector('.nav-arrow i');
+                
+                if (submenu) {
+                    // Fechar outros submenus abertos
+                    const allSubmenus = document.querySelectorAll('.nav-submenu');
+                    const allArrows = document.querySelectorAll('.nav-arrow i');
+                    
+                    allSubmenus.forEach(menu => {
+                        if (menu !== submenu) {
+                            menu.classList.remove('open');
+                        }
+                    });
+                    
+                    allArrows.forEach(arr => {
+                        if (arr !== arrow) {
+                            arr.style.transform = 'rotate(0deg)';
+                        }
+                    });
+                    
+                    // Toggle do submenu atual
+                    submenu.classList.toggle('open');
+                    
+                    // Rotacionar seta
+                    if (submenu.classList.contains('open')) {
+                        arrow.style.transform = 'rotate(180deg)';
+                    } else {
+                        arrow.style.transform = 'rotate(0deg)';
+                    }
+                }
+            });
+        });
     }
 
     // Toggle sidebar

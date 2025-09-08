@@ -492,6 +492,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         </div>
                     </div>
                     <div class="nav-submenu" id="configuracoes">
+                        <a href="index.php?page=configuracoes-categorias" class="nav-sublink <?php echo $page === 'configuracoes-categorias' ? 'active' : ''; ?>">
+                            <i class="fas fa-layer-group"></i>
+                            <span>Categorias de Habilitação</span>
+                        </a>
                         <a href="index.php?page=configuracoes&action=geral" class="nav-sublink <?php echo $page === 'configuracoes' ? 'active' : ''; ?>">
                             <i class="fas fa-sliders-h"></i>
                             <span>Configurações Gerais</span>

@@ -1,0 +1,16 @@
+# Configurações específicas para arquivos CSS
+<IfModule mod_mime.c>
+    AddType text/css .css
+</IfModule>
+
+# Headers específicos para CSS
+<IfModule mod_headers.c>
+    Header set Content-Type "text/css"
+    Header set Cache-Control "public, max-age=2592000"
+</IfModule>
+
+# Permitir acesso aos arquivos CSS
+<FilesMatch "\.css$">
+    Order Allow,Deny
+    Allow from all
+</FilesMatch>
