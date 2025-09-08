@@ -308,6 +308,8 @@ try {
                 'cpf' => $data['cpf'],
                 'rg' => $data['rg'] ?? '',
                 'data_nascimento' => $data['data_nascimento'] ?? null,
+                'naturalidade' => $data['naturalidade'] ?? '',
+                'nacionalidade' => $data['nacionalidade'] ?? 'Brasileira',
                 'telefone' => $data['telefone'] ?? '',
                 'email' => $data['email'] ?? '',
                 'endereco' => $data['endereco'] ?? '',

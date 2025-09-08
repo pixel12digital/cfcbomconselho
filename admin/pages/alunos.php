@@ -574,6 +574,7 @@ body.modal-open #modalAluno .modal-dialog {
                         <th>ID</th>
                         <th>Nome</th>
                         <th>CPF</th>
+                        <th>Naturalidade</th>
                         <th>CFC</th>
                         <th>Categoria</th>
                         <th>Status</th>
@@ -584,7 +585,7 @@ body.modal-open #modalAluno .modal-dialog {
                 <tbody>
                     <?php if (empty($alunos)): ?>
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="9" class="text-center text-muted py-4">
                             <i class="fas fa-inbox fa-3x mb-3"></i>
                             <p>Nenhum aluno cadastrado ainda.</p>
                             <button class="btn btn-primary" onclick="abrirModalAluno()">
@@ -613,6 +614,9 @@ body.modal-open #modalAluno .modal-dialog {
                             </td>
                             <td>
                                 <code><?php echo htmlspecialchars($aluno['cpf']); ?></code>
+                            </td>
+                            <td>
+                                <small><?php echo htmlspecialchars($aluno['naturalidade'] ?? 'Não informado'); ?></small>
                             </td>
                             <td>
                                 <span class="badge bg-info"><?php echo htmlspecialchars($aluno['cfc_nome'] ?? 'N/A'); ?></span>
@@ -730,7 +734,7 @@ body.modal-open #modalAluno .modal-dialog {
                                     <i class="fas fa-user me-1"></i>Informações Pessoais
                                 </h6>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-3">
                                 <div class="mb-1">
                                     <label for="nome" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nome Completo *</label>
                                     <input type="text" class="form-control" id="nome" name="nome" required 
@@ -765,6 +769,23 @@ body.modal-open #modalAluno .modal-dialog {
                                         <option value="inativo">Inativo</option>
                                         <option value="concluido">Concluído</option>
                                     </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-2">
+                            <div class="col-md-3">
+                                <div class="mb-1">
+                                    <label for="naturalidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Naturalidade</label>
+                                    <input type="text" class="form-control" id="naturalidade" name="naturalidade" 
+                                           placeholder="Cidade - UF" style="padding: 0.4rem; font-size: 0.85rem;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-1">
+                                    <label for="nacionalidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nacionalidade</label>
+                                    <input type="text" class="form-control" id="nacionalidade" name="nacionalidade" 
+                                           placeholder="Brasileira" style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
                         </div>
@@ -1147,6 +1168,8 @@ function preencherFormularioAluno(aluno) {
     document.getElementById('cpf').value = aluno.cpf || '';
     document.getElementById('rg').value = aluno.rg || '';
     document.getElementById('data_nascimento').value = aluno.data_nascimento || '';
+    document.getElementById('naturalidade').value = aluno.naturalidade || '';
+    document.getElementById('nacionalidade').value = aluno.nacionalidade || '';
     document.getElementById('email').value = aluno.email || '';
     document.getElementById('telefone').value = aluno.telefone || '';
     document.getElementById('cfc_id').value = aluno.cfc_id || '';
@@ -1254,6 +1277,8 @@ function preencherModalVisualizacao(aluno) {
                 <h6><i class="fas fa-info-circle me-2"></i>Informações Pessoais</h6>
                 <p><strong>RG:</strong> ${aluno.rg || 'Não informado'}</p>
                 <p><strong>Data de Nascimento:</strong> ${aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'Não informado'}</p>
+                <p><strong>Naturalidade:</strong> ${aluno.naturalidade || 'Não informado'}</p>
+                <p><strong>Nacionalidade:</strong> ${aluno.nacionalidade || 'Não informado'}</p>
                 <p><strong>E-mail:</strong> ${aluno.email || 'Não informado'}</p>
                 <p><strong>Telefone:</strong> ${aluno.telefone || 'Não informado'}</p>
             </div>
@@ -1423,15 +1448,15 @@ function filtrarAlunos() {
     linhas.forEach(linha => {
         const nome = linha.querySelector('td:nth-child(2)').textContent.toLowerCase();
         const cpf = linha.querySelector('td:nth-child(3)').textContent;
-        const email = linha.querySelector('td:nth-child(4)').textContent.toLowerCase();
-        const statusLinha = linha.querySelector('td:nth-child(6) .badge').textContent;
-        const categoriaLinha = linha.querySelector('td:nth-child(5)').textContent;
-        const cfcLinha = linha.querySelector('td:nth-child(7)').textContent;
+        const naturalidade = linha.querySelector('td:nth-child(4)').textContent.toLowerCase();
+        const cfcLinha = linha.querySelector('td:nth-child(5)').textContent;
+        const categoriaLinha = linha.querySelector('td:nth-child(6)').textContent;
+        const statusLinha = linha.querySelector('td:nth-child(7) .badge').textContent;
         
         let mostrar = true;
         
         // Filtro de busca
-        if (busca && !nome.includes(busca) && !cpf.includes(busca) && !email.includes(busca)) {
+        if (busca && !nome.includes(busca) && !cpf.includes(busca) && !naturalidade.includes(busca)) {
             mostrar = false;
         }
         
@@ -1469,11 +1494,11 @@ function atualizarEstatisticas() {
     document.getElementById('totalAlunos').textContent = linhasVisiveis.length;
     
     const ativos = Array.from(linhasVisiveis).filter(linha => 
-        linha.querySelector('td:nth-child(6) .badge').textContent === 'Ativo'
+        linha.querySelector('td:nth-child(7) .badge').textContent === 'Ativo'
     ).length;
     
     const concluidos = Array.from(linhasVisiveis).filter(linha => 
-        linha.querySelector('td:nth-child(6) .badge').textContent === 'Concluído'
+        linha.querySelector('td:nth-child(7) .badge').textContent === 'Concluído'
     ).length;
     
     document.getElementById('alunosAtivos').textContent = ativos;
@@ -1710,6 +1735,8 @@ function salvarAluno() {
         cpf: formData.get('cpf'),
         rg: formData.get('rg'),
         data_nascimento: formData.get('data_nascimento'),
+        naturalidade: formData.get('naturalidade'),
+        nacionalidade: formData.get('nacionalidade'),
         email: formData.get('email'),
         telefone: formData.get('telefone'),
         status: formData.get('status'),
