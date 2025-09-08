@@ -127,7 +127,13 @@ class Auth {
         // Remover cookie CFC_SESSION se existir
         if (isset($_COOKIE['CFC_SESSION'])) {
             $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+            $host = $_SERVER['HTTP_HOST'] ?? '';
+            // Tentar remover com diferentes combinações de parâmetros
             setcookie('CFC_SESSION', '', time() - 42000, '/', '', $is_https, true);
+            if (strpos($host, 'hostingersite.com') !== false) {
+                setcookie('CFC_SESSION', '', time() - 42000, '/', '.hostingersite.com', $is_https, true);
+                setcookie('CFC_SESSION', '', time() - 42000, '/', $host, $is_https, true);
+            }
         }
         
         return ['success' => true, 'message' => 'Logout realizado com sucesso'];

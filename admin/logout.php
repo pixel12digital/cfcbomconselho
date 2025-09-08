@@ -73,7 +73,10 @@ if (isset($_COOKIE['remember_token'])) {
 // Remover cookie CFC_SESSION se existir
 if (isset($_COOKIE['CFC_SESSION'])) {
     $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+    // Tentar remover com diferentes combinações de parâmetros
     setcookie('CFC_SESSION', '', time() - 42000, '/', '', $is_https, true);
+    setcookie('CFC_SESSION', '', time() - 42000, '/', '.hostingersite.com', $is_https, true);
+    setcookie('CFC_SESSION', '', time() - 42000, '/', 'linen-mantis-198436.hostingersite.com', $is_https, true);
 }
 
 // Redirecionar para página de login com URL absoluta para evitar problemas
