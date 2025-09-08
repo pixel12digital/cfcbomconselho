@@ -70,6 +70,7 @@ try {
                 'modelo' => $input['modelo'],
                 'ano' => $input['ano'] ?? null,
                 'cor' => $input['cor'] ?? null,
+                'cod_seg_crv' => $input['cod_seg_crv'] ?? null,
                 'chassi' => $input['chassi'] ?? null,
                 'renavam' => $input['renavam'] ?? null,
                 'combustivel' => $input['combustivel'] ?? null,
@@ -119,7 +120,7 @@ try {
             
             // Preparar dados para atualização
             $dadosAtualizacao = [];
-            $campos = ['placa', 'marca', 'modelo', 'ano', 'cor', 'chassi', 'renavam', 'combustivel', 
+            $campos = ['placa', 'marca', 'modelo', 'ano', 'cor', 'cod_seg_crv', 'chassi', 'renavam', 'combustivel', 
                       'quilometragem', 'km_manutencao', 'cfc_id', 'status', 
                       'disponivel', 'data_aquisicao', 'valor_aquisicao', 'proxima_manutencao', 
                       'observacoes', 'ativo'];

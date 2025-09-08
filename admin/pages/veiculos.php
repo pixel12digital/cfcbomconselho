@@ -219,7 +219,7 @@ try {
                                     </div>
                                     <div>
                                         <strong><?php echo htmlspecialchars($veiculo['marca'] . ' ' . $veiculo['modelo']); ?></strong>
-                                        <br><small class="text-muted">Ano: <?php echo $veiculo['ano']; ?></small>
+                                        <br><small class="text-muted">Ano/Modelo: <?php echo htmlspecialchars($veiculo['ano']); ?></small>
                                     </div>
                                 </div>
                             </td>
@@ -389,10 +389,9 @@ try {
                             </div>
                             <div class="col-md-4">
                                 <div class="mb-1">
-                                    <label for="ano" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Ano *</label>
-                                    <input type="number" class="form-control" id="ano" name="ano" required 
-                                           min="1900" max="<?php echo date('Y') + 1; ?>" 
-                                           value="<?php echo date('Y'); ?>" style="padding: 0.4rem; font-size: 0.85rem;">
+                                    <label for="ano" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Ano/Modelo *</label>
+                                    <input type="text" class="form-control" id="ano" name="ano" required 
+                                           placeholder="Ex: 2020/2021" style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
                         </div>
@@ -409,6 +408,13 @@ try {
                                     <label for="cor" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Cor</label>
                                     <input type="text" class="form-control" id="cor" name="cor" 
                                            placeholder="Ex: Branco, Prata, Preto..." style="padding: 0.4rem; font-size: 0.85rem;">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-1">
+                                    <label for="cod_seg_crv" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Cód. Seg. CLA</label>
+                                    <input type="text" class="form-control" id="cod_seg_crv" name="cod_seg_crv" 
+                                           placeholder="Código de Segurança do CLA" style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
                         </div>
@@ -751,6 +757,7 @@ function preencherFormularioVeiculo(veiculo) {
     document.getElementById('modelo').value = veiculo.modelo || '';
     document.getElementById('ano').value = veiculo.ano || '';
     document.getElementById('cor').value = veiculo.cor || '';
+    document.getElementById('cod_seg_crv').value = veiculo.cod_seg_crv || '';
     document.getElementById('chassi').value = veiculo.chassi || '';
     document.getElementById('renavam').value = veiculo.renavam || '';
     document.getElementById('data_aquisicao').value = veiculo.data_aquisicao || '';
@@ -811,7 +818,7 @@ function preencherModalVisualizacao(veiculo) {
         <div class="row">
             <div class="col-md-8">
                 <h4>${veiculo.marca} ${veiculo.modelo}</h4>
-                <p class="text-muted">Placa: ${veiculo.placa} | Ano: ${veiculo.ano}</p>
+                <p class="text-muted">Placa: ${veiculo.placa} | Ano/Modelo: ${veiculo.ano}</p>
             </div>
             <div class="col-md-4 text-end">
                 <span class="badge bg-${veiculo.status === 'ativo' ? 'success' : (veiculo.status === 'manutencao' ? 'warning' : 'danger')} fs-6 me-2">
@@ -830,6 +837,7 @@ function preencherModalVisualizacao(veiculo) {
                 <h6><i class="fas fa-info-circle me-2"></i>Informações do Veículo</h6>
                 <p><strong>CFC:</strong> ${veiculo.cfc_nome || 'Não informado'}</p>
                 <p><strong>Cor:</strong> ${veiculo.cor || 'Não informado'}</p>
+                <p><strong>Cód. Seg. CLA:</strong> ${veiculo.cod_seg_crv || 'Não informado'}</p>
                 <p><strong>Combustível:</strong> ${veiculo.combustivel ? ucfirst(veiculo.combustivel) : 'Não informado'}</p>
             </div>
             <div class="col-md-6">
