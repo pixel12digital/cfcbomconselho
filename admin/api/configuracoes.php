@@ -115,6 +115,28 @@ function handleGetRequest($action) {
             ]);
             break;
             
+        case 'disciplinas':
+            $categoria = $_GET['categoria'] ?? '';
+            if (empty($categoria)) {
+                http_response_code(400);
+                echo json_encode(['error' => 'Categoria não fornecida']);
+                return;
+            }
+            
+            $configManager = ConfiguracoesCategorias::getInstance();
+            $disciplinas = $configManager->getDisciplinasTeoricas($categoria);
+            if (!$disciplinas) {
+                http_response_code(404);
+                echo json_encode(['error' => 'Disciplinas não encontradas para esta categoria']);
+                return;
+            }
+            
+            echo json_encode([
+                'success' => true,
+                'disciplinas' => $disciplinas
+            ]);
+            break;
+            
         default:
             http_response_code(400);
             echo json_encode(['error' => 'Ação não reconhecida']);

@@ -451,7 +451,7 @@ $proximasAulas = db()->fetchAll("
                                     <div class="border-end">
                                         <h5 class="text-info mb-1">
                                             <i class="fas fa-book me-1"></i>
-                                            <?php echo $config['horas_teoricas']; ?>h
+                                            <?php echo $config['horas_teoricas']; ?> aulas
                                         </h5>
                                         <small class="text-muted">Teóricas</small>
                                     </div>
@@ -459,29 +459,69 @@ $proximasAulas = db()->fetchAll("
                                 <div class="col-6">
                                     <h5 class="text-success mb-1">
                                         <i class="fas fa-car me-1"></i>
-                                        <?php echo $config['horas_praticas_total']; ?>h
+                                        <?php echo $config['horas_praticas_total']; ?> aulas
                                     </h5>
                                     <small class="text-muted">Práticas</small>
                                 </div>
                             </div>
                             
+                            <!-- Disciplinas Teóricas para Categorias Combinadas -->
+                            <?php if ($config['horas_teoricas'] > 0): ?>
+                            <div class="mt-2">
+                                <h6 class="text-info mb-2">
+                                    <i class="fas fa-list me-1"></i>
+                                    Disciplinas Teóricas
+                                </h6>
+                                <div class="row">
+                                    <?php 
+                                    $disciplinas = [
+                                        'legislacao_transito_aulas' => ['nome' => 'Legislação de Trânsito', 'icone' => 'fas fa-gavel', 'cor' => 'primary'],
+                                        'primeiros_socorros_aulas' => ['nome' => 'Primeiros Socorros', 'icone' => 'fas fa-first-aid', 'cor' => 'danger'],
+                                        'meio_ambiente_cidadania_aulas' => ['nome' => 'Meio Ambiente e Cidadania', 'icone' => 'fas fa-leaf', 'cor' => 'success'],
+                                        'direcao_defensiva_aulas' => ['nome' => 'Direção Defensiva', 'icone' => 'fas fa-shield-alt', 'cor' => 'warning'],
+                                        'mecanica_basica_aulas' => ['nome' => 'Mecânica Básica', 'icone' => 'fas fa-tools', 'cor' => 'info']
+                                    ];
+                                    
+                                    foreach ($disciplinas as $campo => $info):
+                                        $aulasDisciplina = $config[$campo] ?? 0;
+                                        if ($aulasDisciplina > 0):
+                                    ?>
+                                    <div class="col-12 mb-1">
+                                        <div class="d-flex justify-content-between align-items-center p-1 border rounded bg-light">
+                                            <div class="d-flex align-items-center">
+                                                <i class="<?php echo $info['icone']; ?> text-<?php echo $info['cor']; ?> me-2" style="font-size: 0.8em;"></i>
+                                                <span class="fw-medium" style="font-size: 0.9em;"><?php echo $info['nome']; ?></span>
+                                            </div>
+                                            <span class="badge bg-<?php echo $info['cor']; ?>" style="font-size: 0.7em;">
+                                                <?php echo $aulasDisciplina; ?> aulas
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <?php 
+                                        endif;
+                                    endforeach; 
+                                    ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                            
                             <div class="mt-2">
                                 <small class="text-muted">
-                                    <strong>Detalhamento:</strong><br>
+                                    <strong>Detalhamento Prático:</strong><br>
                                     <?php if ($config['horas_praticas_moto'] > 0): ?>
-                                        🏍️ Motocicletas: <?php echo $config['horas_praticas_moto']; ?>h<br>
+                                        🏍️ Motocicletas: <?php echo $config['horas_praticas_moto']; ?> aulas<br>
                                     <?php endif; ?>
                                     <?php if ($config['horas_praticas_carro'] > 0): ?>
-                                        🚗 Automóveis: <?php echo $config['horas_praticas_carro']; ?>h<br>
+                                        🚗 Automóveis: <?php echo $config['horas_praticas_carro']; ?> aulas<br>
                                     <?php endif; ?>
                                     <?php if ($config['horas_praticas_carga'] > 0): ?>
-                                        🚛 Carga: <?php echo $config['horas_praticas_carga']; ?>h<br>
+                                        🚛 Carga: <?php echo $config['horas_praticas_carga']; ?> aulas<br>
                                     <?php endif; ?>
                                     <?php if ($config['horas_praticas_passageiros'] > 0): ?>
-                                        🚌 Passageiros: <?php echo $config['horas_praticas_passageiros']; ?>h<br>
+                                        🚌 Passageiros: <?php echo $config['horas_praticas_passageiros']; ?> aulas<br>
                                     <?php endif; ?>
                                     <?php if ($config['horas_praticas_combinacao'] > 0): ?>
-                                        🚛+🚗 Combinação: <?php echo $config['horas_praticas_combinacao']; ?>h
+                                        🚛+🚗 Combinação: <?php echo $config['horas_praticas_combinacao']; ?> aulas
                                     <?php endif; ?>
                                 </small>
                             </div>
@@ -505,7 +545,7 @@ $proximasAulas = db()->fetchAll("
                                 <div class="border-end">
                                     <h5 class="text-info mb-1">
                                         <i class="fas fa-book me-1"></i>
-                                        <?php echo $configuracaoCategoria['horas_teoricas']; ?>h
+                                        <?php echo $configuracaoCategoria['horas_teoricas']; ?> aulas
                                     </h5>
                                     <small class="text-muted">Teóricas</small>
                                 </div>
@@ -513,29 +553,69 @@ $proximasAulas = db()->fetchAll("
                             <div class="col-6">
                                 <h5 class="text-success mb-1">
                                     <i class="fas fa-car me-1"></i>
-                                    <?php echo $configuracaoCategoria['horas_praticas_total']; ?>h
+                                    <?php echo $configuracaoCategoria['horas_praticas_total']; ?> aulas
                                 </h5>
                                 <small class="text-muted">Práticas</small>
                             </div>
                         </div>
                         
+                        <!-- Detalhamento das Disciplinas Teóricas -->
+                        <?php if ($configuracaoCategoria['horas_teoricas'] > 0): ?>
+                        <div class="mt-3">
+                            <h6 class="text-info mb-2">
+                                <i class="fas fa-list me-1"></i>
+                                Disciplinas Teóricas
+                            </h6>
+                            <div class="row">
+                                <?php 
+                                $disciplinas = [
+                                    'legislacao_transito_aulas' => ['nome' => 'Legislação de Trânsito', 'icone' => 'fas fa-gavel', 'cor' => 'primary'],
+                                    'primeiros_socorros_aulas' => ['nome' => 'Primeiros Socorros', 'icone' => 'fas fa-first-aid', 'cor' => 'danger'],
+                                    'meio_ambiente_cidadania_aulas' => ['nome' => 'Meio Ambiente e Cidadania', 'icone' => 'fas fa-leaf', 'cor' => 'success'],
+                                    'direcao_defensiva_aulas' => ['nome' => 'Direção Defensiva', 'icone' => 'fas fa-shield-alt', 'cor' => 'warning'],
+                                    'mecanica_basica_aulas' => ['nome' => 'Mecânica Básica', 'icone' => 'fas fa-tools', 'cor' => 'info']
+                                ];
+                                
+                                foreach ($disciplinas as $campo => $info):
+                                    $aulasDisciplina = $configuracaoCategoria[$campo] ?? 0;
+                                    if ($aulasDisciplina > 0):
+                                ?>
+                                <div class="col-12 mb-2">
+                                    <div class="d-flex justify-content-between align-items-center p-2 border rounded bg-light">
+                                        <div class="d-flex align-items-center">
+                                            <i class="<?php echo $info['icone']; ?> text-<?php echo $info['cor']; ?> me-2"></i>
+                                            <span class="fw-medium"><?php echo $info['nome']; ?></span>
+                                        </div>
+                                        <span class="badge bg-<?php echo $info['cor']; ?>">
+                                            <?php echo $aulasDisciplina; ?> aulas
+                                        </span>
+                                    </div>
+                                </div>
+                                <?php 
+                                    endif;
+                                endforeach; 
+                                ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
                         <div class="mt-3">
                             <small class="text-muted">
                                 <strong>Detalhamento Prático:</strong><br>
                                 <?php if ($configuracaoCategoria['horas_praticas_moto'] > 0): ?>
-                                    🏍️ Motocicletas: <?php echo $configuracaoCategoria['horas_praticas_moto']; ?>h<br>
+                                    🏍️ Motocicletas: <?php echo $configuracaoCategoria['horas_praticas_moto']; ?> aulas<br>
                                 <?php endif; ?>
                                 <?php if ($configuracaoCategoria['horas_praticas_carro'] > 0): ?>
-                                    🚗 Automóveis: <?php echo $configuracaoCategoria['horas_praticas_carro']; ?>h<br>
+                                    🚗 Automóveis: <?php echo $configuracaoCategoria['horas_praticas_carro']; ?> aulas<br>
                                 <?php endif; ?>
                                 <?php if ($configuracaoCategoria['horas_praticas_carga'] > 0): ?>
-                                    🚛 Carga: <?php echo $configuracaoCategoria['horas_praticas_carga']; ?>h<br>
+                                    🚛 Carga: <?php echo $configuracaoCategoria['horas_praticas_carga']; ?> aulas<br>
                                 <?php endif; ?>
                                 <?php if ($configuracaoCategoria['horas_praticas_passageiros'] > 0): ?>
-                                    🚌 Passageiros: <?php echo $configuracaoCategoria['horas_praticas_passageiros']; ?>h<br>
+                                    🚌 Passageiros: <?php echo $configuracaoCategoria['horas_praticas_passageiros']; ?> aulas<br>
                                 <?php endif; ?>
                                 <?php if ($configuracaoCategoria['horas_praticas_combinacao'] > 0): ?>
-                                    🚛+🚗 Combinação: <?php echo $configuracaoCategoria['horas_praticas_combinacao']; ?>h
+                                    🚛+🚗 Combinação: <?php echo $configuracaoCategoria['horas_praticas_combinacao']; ?> aulas
                                 <?php endif; ?>
                             </small>
                         </div>
@@ -557,7 +637,7 @@ $proximasAulas = db()->fetchAll("
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-primary text-white">
-                        <h5 class="card-title mb-0">
+                        <h5 class="card-title mb-0" style="color: #000000 !important; font-weight: 700 !important;">
                             <i class="fas fa-calculator me-2"></i>
                             Total Geral - Todas as Categorias
                         </h5>
@@ -618,7 +698,7 @@ $proximasAulas = db()->fetchAll("
                                         </div>
                                     </div>
                                     <small class="text-muted">
-                                        Total necessário: <?php echo $totalTeoricasGeral; ?>h teóricas
+                                        Total necessário: <?php echo $totalTeoricasGeral; ?> aulas teóricas
                                     </small>
                                 </div>
                             </div>
@@ -693,7 +773,7 @@ $proximasAulas = db()->fetchAll("
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-success text-white">
-                        <h5 class="card-title mb-0">
+                        <h5 class="card-title mb-0" style="color: #000000 !important; font-weight: 700 !important;">
                             <i class="fas fa-chart-line me-2"></i>
                             Progresso Detalhado por Categoria
                         </h5>
@@ -757,7 +837,7 @@ $proximasAulas = db()->fetchAll("
                                     </div>
                                 </div>
                                 <small class="text-muted">
-                                    Total necessário: <?php echo $config['horas_praticas_total']; ?>h práticas
+                                    Total necessário: <?php echo $config['horas_praticas_total']; ?> aulas práticas
                                 </small>
                             </div>
                             
@@ -922,7 +1002,7 @@ $proximasAulas = db()->fetchAll("
                                     </div>
                                 </div>
                                 <small class="text-muted">
-                                    Total necessário: <?php echo $configuracaoCategoria['horas_praticas_total']; ?>h práticas
+                                    Total necessário: <?php echo $configuracaoCategoria['horas_praticas_total']; ?> aulas práticas
                                 </small>
                             </div>
                             
@@ -1082,7 +1162,7 @@ $proximasAulas = db()->fetchAll("
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-dark text-white">
-                        <h5 class="card-title mb-0">
+                        <h5 class="card-title mb-0" style="color: #ffffff !important; font-weight: 700 !important;">
                             <i class="fas fa-list me-2"></i>
                             Histórico Completo de Aulas
                         </h5>

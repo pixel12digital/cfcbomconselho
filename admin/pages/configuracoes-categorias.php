@@ -22,6 +22,40 @@ if (!defined('ADMIN_ROUTING')) {
 // Incluir classe de configurações
 require_once 'includes/configuracoes_categorias.php';
 
+// Função para determinar o ícone correto baseado na categoria
+function getIconForCategory($categoria, $nome) {
+    $nome_lower = strtolower($nome);
+    
+    // Mapeamento de ícones por categoria e nome
+    switch ($categoria) {
+        case 'A':
+            return 'fas fa-motorcycle'; // Motocicletas
+        case 'B':
+            return 'fas fa-car'; // Automóveis
+        case 'C':
+            return 'fas fa-truck'; // Caminhão/Carga
+        case 'D':
+            return 'fas fa-bus'; // Ônibus/Passageiros
+        case 'E':
+            return 'fas fa-truck-moving'; // Carreta/Reboque
+        default:
+            // Fallback baseado no nome
+            if (strpos($nome_lower, 'moto') !== false) {
+                return 'fas fa-motorcycle';
+            } elseif (strpos($nome_lower, 'auto') !== false || strpos($nome_lower, 'carro') !== false) {
+                return 'fas fa-car';
+            } elseif (strpos($nome_lower, 'caminh') !== false || strpos($nome_lower, 'carga') !== false) {
+                return 'fas fa-truck';
+            } elseif (strpos($nome_lower, 'ônibus') !== false || strpos($nome_lower, 'onibus') !== false || strpos($nome_lower, 'passageiros') !== false) {
+                return 'fas fa-bus';
+            } elseif (strpos($nome_lower, 'carreta') !== false || strpos($nome_lower, 'reboque') !== false || strpos($nome_lower, 'combin') !== false) {
+                return 'fas fa-truck-moving';
+            } else {
+                return 'fas fa-car'; // Ícone padrão
+            }
+    }
+}
+
 // Processar formulário
 $mensagem = '';
 $tipoMensagem = '';
@@ -29,7 +63,7 @@ $tipoMensagem = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $acao = $_POST['acao'] ?? '';
     
-    if ($acao === 'salvar') {
+    if ($acao === 'save') {
         $dados = [
             'categoria' => $_POST['categoria'] ?? '',
             'nome' => $_POST['nome'] ?? '',
@@ -41,6 +75,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'horas_praticas_carga' => (int)($_POST['horas_praticas_carga'] ?? 0),
             'horas_praticas_passageiros' => (int)($_POST['horas_praticas_passageiros'] ?? 0),
             'horas_praticas_combinacao' => (int)($_POST['horas_praticas_combinacao'] ?? 0),
+            'legislacao_transito_aulas' => (int)($_POST['legislacao_transito_aulas'] ?? 0),
+            'primeiros_socorros_aulas' => (int)($_POST['primeiros_socorros_aulas'] ?? 0),
+            'meio_ambiente_cidadania_aulas' => (int)($_POST['meio_ambiente_cidadania_aulas'] ?? 0),
+            'direcao_defensiva_aulas' => (int)($_POST['direcao_defensiva_aulas'] ?? 0),
+            'mecanica_basica_aulas' => (int)($_POST['mecanica_basica_aulas'] ?? 0),
             'observacoes' => $_POST['observacoes'] ?? ''
         ];
         
@@ -118,97 +157,226 @@ if (isset($_GET['editar'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Configurações de Categorias Base - Sistema CFC</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="assets/css/admin.css" rel="stylesheet">
+    <link href="assets/css/acessibilidade-forcada.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        .config-card {
-            transition: transform 0.2s;
+        /* CSS FORÇADO para melhorar acessibilidade - INLINE para garantir aplicação */
+        
+        /* SOBRESCREVER BOOTSTRAP COM MÁXIMA ESPECIFICIDADE */
+        html body div.card-header.bg-success.text-white small.text-white-75,
+        html body div.card-header.bg-success.text-white h5 + small,
+        html body div.card-header.bg-success.text-white .text-white-75 {
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            font-size: 0.9rem !important;
         }
-        .config-card:hover {
-            transform: translateY(-2px);
+        
+        html body div.card-header.bg-info.text-white small.text-white-75,
+        html body div.card-header.bg-info.text-white h5 + small,
+        html body div.card-header.bg-info.text-white .text-white-75 {
+            color: #ffffff !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            font-size: 0.9rem !important;
         }
+        
+        html body div.card-header.bg-warning.text-dark small.text-dark-75,
+        html body div.card-header.bg-warning.text-dark h5 + small,
+        html body div.card-header.bg-warning.text-dark .text-dark-75 {
+            color: #000000 !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* FORÇAR CORES DOS CABEÇALHOS COM MÁXIMA ESPECIFICIDADE */
+        html body div.card-header.bg-success.text-white {
+            background-color: #198754 !important;
+            color: #ffffff !important;
+        }
+        
+        html body div.card-header.bg-success.text-white h5,
+        html body div.card-header.bg-success.text-white h5.mb-0,
+        html body div.card-header.bg-success.text-white .mb-0 {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        
+        html body div.card-header.bg-info.text-white {
+            background-color: #0dcaf0 !important;
+            color: #ffffff !important;
+        }
+        
+        html body div.card-header.bg-info.text-white h5,
+        html body div.card-header.bg-info.text-white h5.mb-0,
+        html body div.card-header.bg-info.text-white .mb-0 {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        
+        html body div.card-header.bg-warning.text-dark {
+            background-color: #ffc107 !important;
+            color: #000000 !important;
+        }
+        
+        html body div.card-header.bg-warning.text-dark h5,
+        html body div.card-header.bg-warning.text-dark h5.mb-0,
+        html body div.card-header.bg-warning.text-dark .mb-0 {
+            color: #000000 !important;
+            font-weight: 700 !important;
+        }
+        
+        /* FORÇAR CONTRASTE DOS TEXTOS PEQUENOS COM MÁXIMA ESPECIFICIDADE */
+        div.card-header.bg-success.text-white small.text-white-75,
+        div.card-header.bg-success.text-white h5 + small,
+        div.card-header.bg-success.text-white .text-white-75 {
+            color: rgba(255, 255, 255, 0.95) !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            font-size: 0.9rem !important;
+        }
+        
+        div.card-header.bg-info.text-white small.text-white-75,
+        div.card-header.bg-info.text-white h5 + small,
+        div.card-header.bg-info.text-white .text-white-75 {
+            color: rgba(255, 255, 255, 0.95) !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            font-size: 0.9rem !important;
+        }
+        
+        div.card-header.bg-warning.text-dark small.text-dark-75,
+        div.card-header.bg-warning.text-dark h5 + small,
+        div.card-header.bg-warning.text-dark .text-dark-75 {
+            color: rgba(0, 0, 0, 0.9) !important;
+            font-weight: 600 !important;
+            opacity: 1 !important;
+            font-size: 0.9rem !important;
+        }
+        
+        /* FORÇAR CORES DOS CABEÇALHOS */
+        div.card-header.bg-success.text-white {
+            background-color: #198754 !important;
+            color: #ffffff !important;
+        }
+        
+        div.card-header.bg-success.text-white h5,
+        div.card-header.bg-success.text-white h5.mb-0,
+        div.card-header.bg-success.text-white .mb-0 {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        
+        div.card-header.bg-info.text-white {
+            background-color: #0dcaf0 !important;
+            color: #ffffff !important;
+        }
+        
+        div.card-header.bg-info.text-white h5,
+        div.card-header.bg-info.text-white h5.mb-0,
+        div.card-header.bg-info.text-white .mb-0 {
+            color: #ffffff !important;
+            font-weight: 700 !important;
+        }
+        
+        div.card-header.bg-warning.text-dark {
+            background-color: #ffc107 !important;
+            color: #000000 !important;
+        }
+        
+        div.card-header.bg-warning.text-dark h5,
+        div.card-header.bg-warning.text-dark h5.mb-0,
+        div.card-header.bg-warning.text-dark .mb-0 {
+            color: #000000 !important;
+            font-weight: 700 !important;
+        }
+        
+        /* MELHORAR ACESSIBILIDADE DOS CARDS */
+        div.card.config-card {
+            transition: transform 0.3s ease, box-shadow 0.3s ease !important;
+            border-radius: 10px !important;
+        }
+        
+        div.card.config-card:hover {
+            transform: translateY(-4px) !important;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.2) !important;
+        }
+        
+        div.card.config-card:focus,
+        div.card.config-card:focus-within {
+            outline: 3px solid #0d6efd !important;
+            outline-offset: 3px !important;
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, 0.3) !important;
+        }
+        
+        /* MELHORAR CONTRASTE DOS BOTÕES */
+        button.btn.btn-outline-success {
+            border-color: #198754 !important;
+            color: #198754 !important;
+            font-weight: 600 !important;
+            border-width: 2px !important;
+        }
+        
+        button.btn.btn-outline-success:hover {
+            background-color: #198754 !important;
+            border-color: #198754 !important;
+            color: #ffffff !important;
+            transform: translateY(-1px) !important;
+        }
+        
+        button.btn.btn-outline-success:focus {
+            outline: 3px solid #198754 !important;
+            outline-offset: 2px !important;
+            box-shadow: 0 0 0 4px rgba(25, 135, 84, 0.3) !important;
+        }
+        
+        button.btn.btn-outline-info {
+            border-color: #0dcaf0 !important;
+            color: #0dcaf0 !important;
+            font-weight: 600 !important;
+            border-width: 2px !important;
+        }
+        
+        button.btn.btn-outline-info:hover {
+            background-color: #0dcaf0 !important;
+            border-color: #0dcaf0 !important;
+            color: #ffffff !important;
+            transform: translateY(-1px) !important;
+        }
+        
+        button.btn.btn-outline-info:focus {
+            outline: 3px solid #0dcaf0 !important;
+            outline-offset: 2px !important;
+            box-shadow: 0 0 0 4px rgba(13, 202, 240, 0.3) !important;
+        }
+        
+        /* MELHORAR CONTRASTE DOS BADGES */
+        span.badge.bg-success {
+            background-color: #198754 !important;
+            color: #ffffff !important;
+            font-weight: 700 !important;
+            padding: 0.6em 0.8em !important;
+            font-size: 0.9em !important;
+        }
+        
+        /* FORÇAR VISIBILIDADE DOS TEXTOS PEQUENOS */
+        .card-header small {
+            opacity: 1 !important;
+            font-size: 0.9rem !important;
+            line-height: 1.5 !important;
+            display: block !important;
+            margin-top: 0.25rem !important;
+        }
+        
+        /* Estilos básicos que não conflitam com acessibilidade */
         .tipo-badge {
             font-size: 0.8em;
         }
         .horas-info {
             font-size: 0.9em;
-        }
-        
-        /* CORREÇÃO DE CORES - CONFIGURAÇÕES DE CATEGORIAS */
-        .card-header.bg-success {
-            background-color: #198754 !important;
-            color: #ffffff !important;
-        }
-        
-        .card-header.bg-info {
-            background-color: #0dcaf0 !important;
-            color: #ffffff !important;
-        }
-        
-        .card-header.bg-warning {
-            background-color: #ffc107 !important;
-            color: #000000 !important;
-        }
-        
-        /* Garantir que os badges tenham cores corretas */
-        .badge.bg-success {
-            background-color: #198754 !important;
-            color: #ffffff !important;
-        }
-        
-        .badge.bg-info {
-            background-color: #0dcaf0 !important;
-            color: #ffffff !important;
-        }
-        
-        .badge.bg-warning {
-            background-color: #ffc107 !important;
-            color: #000000 !important;
-        }
-        
-        /* Garantir que os botões tenham cores corretas */
-        .btn-success {
-            background-color: #198754 !important;
-            border-color: #198754 !important;
-            color: #ffffff !important;
-        }
-        
-        .btn-info {
-            background-color: #0dcaf0 !important;
-            border-color: #0dcaf0 !important;
-            color: #ffffff !important;
-        }
-        
-        .btn-warning {
-            background-color: #ffc107 !important;
-            border-color: #ffc107 !important;
-            color: #000000 !important;
-        }
-        
-        /* Hover states */
-        .btn-success:hover {
-            background-color: #157347 !important;
-            border-color: #146c43 !important;
-        }
-        
-        .btn-info:hover {
-            background-color: #0aa2c0 !important;
-            border-color: #0aa2c0 !important;
-        }
-        
-        .btn-warning:hover {
-            background-color: #ffca2c !important;
-            border-color: #ffc720 !important;
-        }
-        
-        /* Garantir que os botões dentro dos cards tenham estilo */
-        .card-footer .btn {
-            margin-right: 5px;
-        }
-        
-        .card-footer .btn:last-child {
-            margin-right: 0;
         }
     </style>
 </head>
@@ -258,7 +426,8 @@ if (isset($_GET['editar'])) {
                     <ul class="mb-0">
                         <li><strong>AB</strong> = A + B (Motocicletas + Automóveis)</li>
                         <li><strong>AC</strong> = A + C (Motocicletas + Carga)</li>
-                        <li><strong>ABC</strong> = A + B + C (Motocicletas + Automóveis + Carga)</li>
+                        <li><strong>AD</strong> = A + D (Motocicletas + Passageiros)</li>
+                        <li><strong>BC</strong> = B + C (Automóveis + Carga)</li>
                         <li>E assim por diante...</li>
                     </ul>
                     <hr>
@@ -278,12 +447,12 @@ if (isset($_GET['editar'])) {
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-graduation-cap me-2"></i>
+                    <div class="card-header bg-success text-white" role="banner" aria-label="Seção de configurações para primeira habilitação" style="background-color: #198754 !important; color: #ffffff !important;">
+                        <h5 class="mb-0 text-white" style="color: #000000 !important; font-weight: 700 !important;">
+                            <i class="fas fa-graduation-cap me-2" aria-hidden="true"></i>
                             <?php echo "Primeira Habilitação"; ?>
                         </h5>
-                        <small>Configurações para quem está tirando a primeira CNH</small>
+                        <small class="text-white-75" style="color: #000000 !important; font-weight: 600 !important; opacity: 1 !important;">Configurações para quem está tirando a primeira CNH</small>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -294,25 +463,26 @@ if (isset($_GET['editar'])) {
                             foreach ($primeiraHabilitacao as $config): 
                             ?>
                             <div class="col-md-6 col-lg-4 mb-3">
-                                <div class="card config-card h-100 border-success">
+                                <div class="card config-card h-100 border-success" role="article" aria-labelledby="card-title-<?php echo $config['categoria']; ?>" tabindex="0">
                                     <div class="card-header bg-light d-flex justify-content-between align-items-center">
-                                        <h6 class="mb-0">
-                                            <span class="badge bg-success me-2"><?php echo htmlspecialchars($config['categoria']); ?></span>
+                                        <h6 class="mb-0" id="card-title-<?php echo $config['categoria']; ?>">
+                                            <span class="badge bg-success me-2" aria-label="Categoria"><?php echo htmlspecialchars($config['categoria']); ?></span>
                                             <?php echo htmlspecialchars($config['nome']); ?>
                                         </h6>
                                     </div>
                                     <div class="card-body">
                                         <div class="horas-info">
-                                            <?php if ($config['horas_teoricas'] > 0): ?>
                                             <p class="mb-1">
-                                                <i class="fas fa-book text-info me-2"></i>
-                                                <strong>Teóricas:</strong> <?php echo $config['horas_teoricas']; ?>h
+                                                <i class="fas fa-book text-info me-2" aria-hidden="true"></i>
+                                                <strong>Teóricas:</strong> <?php echo $config['horas_teoricas']; ?> aulas
+                                                <?php if ($config['horas_teoricas'] > 0): ?>
+                                                <small class="text-muted">(<?php echo round(($config['horas_teoricas'] * 50) / 60, 1); ?>h)</small>
+                                                <?php endif; ?>
                                             </p>
-                                            <?php endif; ?>
                                             
                                             <p class="mb-1">
-                                                <i class="fas fa-car text-success me-2"></i>
-                                                <strong>Práticas:</strong> <?php echo $config['horas_praticas_total']; ?>h
+                                                <i class="<?php echo getIconForCategory($config['categoria'], $config['nome']); ?> text-success me-2" aria-hidden="true"></i>
+                                                <strong>Práticas:</strong> <?php echo $config['horas_praticas_total']; ?> aulas
                                             </p>
                                         </div>
                                         
@@ -326,14 +496,16 @@ if (isset($_GET['editar'])) {
                                         <?php endif; ?>
                                     </div>
                                     <div class="card-footer">
-                                        <div class="btn-group w-100" role="group">
+                                        <div class="btn-group w-100" role="group" aria-label="Ações para categoria <?php echo $config['categoria']; ?>">
                                             <button type="button" class="btn btn-outline-success btn-sm" 
-                                                    onclick="editarConfiguracao('<?php echo $config['categoria']; ?>')">
-                                                <i class="fas fa-edit me-1"></i>Editar
+                                                    onclick="editarConfiguracao('<?php echo $config['categoria']; ?>')"
+                                                    aria-label="Editar configuração da categoria <?php echo $config['categoria']; ?>">
+                                                <i class="fas fa-edit me-1" aria-hidden="true"></i>Editar
                                             </button>
                                             <button type="button" class="btn btn-outline-info btn-sm" 
-                                                    onclick="restaurarConfiguracao('<?php echo $config['categoria']; ?>')">
-                                                <i class="fas fa-undo me-1"></i>Restaurar
+                                                    onclick="restaurarConfiguracao('<?php echo $config['categoria']; ?>')"
+                                                    aria-label="Restaurar configuração padrão da categoria <?php echo $config['categoria']; ?>">
+                                                <i class="fas fa-undo me-1" aria-hidden="true"></i>Restaurar
                                             </button>
                                         </div>
                                     </div>
@@ -350,12 +522,12 @@ if (isset($_GET['editar'])) {
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0">
-                            <i class="fas fa-layer-group me-2"></i>
+                    <div class="card-header bg-info text-white" role="banner" aria-label="Seção de configurações para categorias combinadas" style="background-color: #0dcaf0 !important; color: #ffffff !important;">
+                        <h5 class="mb-0 text-white" style="color: #000000 !important; font-weight: 700 !important;">
+                            <i class="fas fa-layer-group me-2" aria-hidden="true"></i>
                             <?php echo "Categorias Combinadas"; ?>
                         </h5>
-                        <small>Configurações para quem já tem uma categoria e quer adicionar outra</small>
+                        <small class="text-white-75" style="color: #000000 !important; font-weight: 600 !important; opacity: 1 !important;">Configurações para quem já tem uma categoria e quer adicionar outra</small>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -378,12 +550,13 @@ if (isset($_GET['editar'])) {
                                             <?php if ($config['horas_teoricas'] > 0): ?>
                                             <p class="mb-1">
                                                 <i class="fas fa-book text-info me-2"></i>
-                                                <strong>Teóricas:</strong> <?php echo $config['horas_teoricas']; ?>h
+                                                <strong>Teóricas:</strong> <?php echo $config['horas_teoricas']; ?> aulas
+                                                <small class="text-muted">(<?php echo round(($config['horas_teoricas'] * 50) / 60, 1); ?>h)</small>
                                             </p>
                                             <?php endif; ?>
                                             
                                             <p class="mb-1">
-                                                <i class="fas fa-car text-info me-2"></i>
+                                                <i class="<?php echo getIconForCategory($config['categoria'], $config['nome']); ?> text-info me-2"></i>
                                                 <strong>Práticas:</strong> <?php echo $config['horas_praticas_total']; ?>h
                                             </p>
                                         </div>
@@ -422,12 +595,12 @@ if (isset($_GET['editar'])) {
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0">
-                            <i class="fas fa-plus-circle me-2"></i>
+                    <div class="card-header bg-warning text-dark" role="banner" aria-label="Seção de configurações para adição de categorias" style="background-color: #ffc107 !important; color: #000000 !important;">
+                        <h5 class="mb-0 text-dark" style="color: #000000 !important; font-weight: 700 !important;">
+                            <i class="fas fa-plus-circle me-2" aria-hidden="true"></i>
                             <?php echo "Adição de Categorias"; ?>
                         </h5>
-                        <small>Configurações para quem já tem uma categoria e quer adicionar outra</small>
+                        <small class="text-dark-75" style="color: #000000 !important; font-weight: 600 !important; opacity: 1 !important;">Configurações para quem já tem uma categoria e quer adicionar outra</small>
                     </div>
                     <div class="card-body">
                         <div class="row">
@@ -450,12 +623,13 @@ if (isset($_GET['editar'])) {
                                             <?php if ($config['horas_teoricas'] > 0): ?>
                                             <p class="mb-1">
                                                 <i class="fas fa-book text-info me-2"></i>
-                                                <strong>Teóricas:</strong> <?php echo $config['horas_teoricas']; ?>h
+                                                <strong>Teóricas:</strong> <?php echo $config['horas_teoricas']; ?> aulas
+                                                <small class="text-muted">(<?php echo round(($config['horas_teoricas'] * 50) / 60, 1); ?>h)</small>
                                             </p>
                                             <?php endif; ?>
                                             
                                             <p class="mb-1">
-                                                <i class="fas fa-car text-warning me-2"></i>
+                                                <i class="<?php echo getIconForCategory($config['categoria'], $config['nome']); ?> text-warning me-2"></i>
                                                 <strong>Práticas:</strong> <?php echo $config['horas_praticas_total']; ?>h
                                             </p>
                                         </div>
@@ -494,9 +668,9 @@ if (isset($_GET['editar'])) {
         <div class="row mt-4">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-info-circle me-2"></i>
+                    <div class="card-header bg-info text-white" role="banner" aria-label="Seção de instruções sobre como funciona o sistema" style="background-color: #0dcaf0 !important; color: #ffffff !important;">
+                        <h5 class="card-title mb-0 text-white" style="color: #000000 !important; font-weight: 700 !important;">
+                            <i class="fas fa-info-circle me-2" aria-hidden="true"></i>
                             Como Funciona
                         </h5>
                     </div>
@@ -526,7 +700,7 @@ if (isset($_GET['editar'])) {
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <form method="POST">
-                    <input type="hidden" name="acao" value="salvar">
+                    <input type="hidden" name="acao" value="save">
                     <div class="modal-header">
                         <h5 class="modal-title">Nova Configuração de Categoria</h5>
                         <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
@@ -605,7 +779,7 @@ if (isset($_GET['editar'])) {
         <div class="modal-dialog modal-lg">
             <div class="modal-content">
                 <form method="POST">
-                    <input type="hidden" name="acao" value="salvar">
+                    <input type="hidden" name="acao" value="save">
                     <input type="hidden" id="edit_categoria" name="categoria">
                     <div class="modal-header">
                         <h5 class="modal-title">Editar Configuração de Categoria</h5>
@@ -636,16 +810,80 @@ if (isset($_GET['editar'])) {
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="edit_horas_teoricas" class="form-label">Horas Teóricas</label>
+                                    <label for="edit_horas_teoricas" class="form-label">Total de Aulas Teóricas</label>
                                     <input type="number" class="form-control" id="edit_horas_teoricas" name="horas_teoricas" 
-                                           min="0" value="0">
+                                           min="0" value="0" readonly>
+                                    <small class="form-text text-muted">Calculado automaticamente baseado nas disciplinas (50 min cada aula)</small>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-                                    <label for="edit_horas_praticas_total" class="form-label">Total Horas Práticas *</label>
+                                    <label for="edit_horas_praticas_total" class="form-label">Total Aulas Práticas *</label>
                                     <input type="number" class="form-control" id="edit_horas_praticas_total" name="horas_praticas_total" 
                                            min="0" required>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Disciplinas Teóricas -->
+                        <div class="mb-4">
+                            <h6 class="mb-3">
+                                <i class="fas fa-graduation-cap me-2"></i>
+                                Disciplinas Teóricas (50 minutos cada aula)
+                            </h6>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_legislacao_transito_aulas" class="form-label">Legislação de Trânsito</label>
+                                        <input type="number" class="form-control disciplina-input" id="edit_legislacao_transito_aulas" 
+                                               name="legislacao_transito_aulas" min="0" value="0">
+                                        <small class="form-text text-muted">Aulas: <span id="legislacao_aulas_display">0</span> | Minutos: <span id="legislacao_minutos_display">0</span></small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_primeiros_socorros_aulas" class="form-label">Primeiros Socorros</label>
+                                        <input type="number" class="form-control disciplina-input" id="edit_primeiros_socorros_aulas" 
+                                               name="primeiros_socorros_aulas" min="0" value="0">
+                                        <small class="form-text text-muted">Aulas: <span id="primeiros_socorros_aulas_display">0</span> | Minutos: <span id="primeiros_socorros_minutos_display">0</span></small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_meio_ambiente_cidadania_aulas" class="form-label">Meio Ambiente e Cidadania</label>
+                                        <input type="number" class="form-control disciplina-input" id="edit_meio_ambiente_cidadania_aulas" 
+                                               name="meio_ambiente_cidadania_aulas" min="0" value="0">
+                                        <small class="form-text text-muted">Aulas: <span id="meio_ambiente_aulas_display">0</span> | Minutos: <span id="meio_ambiente_minutos_display">0</span></small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_direcao_defensiva_aulas" class="form-label">Direção Defensiva</label>
+                                        <input type="number" class="form-control disciplina-input" id="edit_direcao_defensiva_aulas" 
+                                               name="direcao_defensiva_aulas" min="0" value="0">
+                                        <small class="form-text text-muted">Aulas: <span id="direcao_defensiva_aulas_display">0</span> | Minutos: <span id="direcao_defensiva_minutos_display">0</span></small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_mecanica_basica_aulas" class="form-label">Mecânica Básica</label>
+                                        <input type="number" class="form-control disciplina-input" id="edit_mecanica_basica_aulas" 
+                                               name="mecanica_basica_aulas" min="0" value="0">
+                                        <small class="form-text text-muted">Aulas: <span id="mecanica_basica_aulas_display">0</span> | Minutos: <span id="mecanica_basica_minutos_display">0</span></small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label class="form-label">Total Calculado</label>
+                                        <div class="form-control-plaintext bg-light p-2 rounded">
+                                            <strong>Aulas:</strong> <span id="total_aulas_display">0</span> | 
+                                            <strong>Minutos:</strong> <span id="total_minutos_display">0</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -701,6 +939,27 @@ if (isset($_GET['editar'])) {
                     if (horasPraticasTotalInput) horasPraticasTotalInput.value = config.horas_praticas_total || 0;
                     if (observacoesTextarea) observacoesTextarea.value = config.observacoes || '';
                     
+                    // Preencher disciplinas teóricas
+                    const disciplinas = [
+                        { id: 'edit_legislacao_transito_aulas', value: parseInt(config.legislacao_transito_aulas) || 0 },
+                        { id: 'edit_primeiros_socorros_aulas', value: parseInt(config.primeiros_socorros_aulas) || 0 },
+                        { id: 'edit_meio_ambiente_cidadania_aulas', value: parseInt(config.meio_ambiente_cidadania_aulas) || 0 },
+                        { id: 'edit_direcao_defensiva_aulas', value: parseInt(config.direcao_defensiva_aulas) || 0 },
+                        { id: 'edit_mecanica_basica_aulas', value: parseInt(config.mecanica_basica_aulas) || 0 }
+                    ];
+                    
+                    disciplinas.forEach(disciplina => {
+                        const input = document.getElementById(disciplina.id);
+                        if (input) {
+                            input.value = disciplina.value;
+                        }
+                    });
+                    
+                    // Aguardar um pouco para garantir que os campos foram preenchidos
+                    setTimeout(() => {
+                        calcularTotaisDisciplinas();
+                    }, 100);
+                    
                     const modal = new bootstrap.Modal(document.getElementById('modalEditarConfiguracao'));
                     modal.show();
                 } else {
@@ -737,7 +996,52 @@ if (isset($_GET['editar'])) {
                     }
                 });
             }
+            
+            // Adicionar event listeners para disciplinas
+            const disciplinaInputs = document.querySelectorAll('.disciplina-input');
+            disciplinaInputs.forEach(input => {
+                input.addEventListener('input', calcularTotaisDisciplinas);
+            });
         });
+        
+        function calcularTotaisDisciplinas() {
+            const disciplinas = [
+                { input: 'edit_legislacao_transito_aulas', aulas: 'legislacao_aulas_display', minutos: 'legislacao_minutos_display' },
+                { input: 'edit_primeiros_socorros_aulas', aulas: 'primeiros_socorros_aulas_display', minutos: 'primeiros_socorros_minutos_display' },
+                { input: 'edit_meio_ambiente_cidadania_aulas', aulas: 'meio_ambiente_aulas_display', minutos: 'meio_ambiente_minutos_display' },
+                { input: 'edit_direcao_defensiva_aulas', aulas: 'direcao_defensiva_aulas_display', minutos: 'direcao_defensiva_minutos_display' },
+                { input: 'edit_mecanica_basica_aulas', aulas: 'mecanica_basica_aulas_display', minutos: 'mecanica_basica_minutos_display' }
+            ];
+            
+            let totalAulas = 0;
+            let totalMinutos = 0;
+            
+            disciplinas.forEach(disciplina => {
+                const input = document.getElementById(disciplina.input);
+                const aulasDisplay = document.getElementById(disciplina.aulas);
+                const minutosDisplay = document.getElementById(disciplina.minutos);
+                
+                if (input && aulasDisplay && minutosDisplay) {
+                    const aulas = parseInt(input.value) || 0;
+                    const minutos = aulas * 50;
+                    
+                    aulasDisplay.textContent = aulas;
+                    minutosDisplay.textContent = minutos;
+                    
+                    totalAulas += aulas;
+                    totalMinutos += minutos;
+                }
+            });
+            
+            // Atualizar totais
+            const totalAulasDisplay = document.getElementById('total_aulas_display');
+            const totalMinutosDisplay = document.getElementById('total_minutos_display');
+            const horasTeoricasInput = document.getElementById('edit_horas_teoricas');
+            
+            if (totalAulasDisplay) totalAulasDisplay.textContent = totalAulas;
+            if (totalMinutosDisplay) totalMinutosDisplay.textContent = totalMinutos;
+            if (horasTeoricasInput) horasTeoricasInput.value = totalAulas; // Mostrar total de aulas
+        }
     </script>
 </body>
 </html>

@@ -119,17 +119,29 @@ class ConfiguracoesCategorias {
         // Verificar se já existe
         $existente = $this->getConfiguracaoByCategoria($categoria);
         
+        // Calcular total de aulas teóricas
+        $totalAulasTeoricas = (int)($data['legislacao_transito_aulas'] ?? 0) +
+                              (int)($data['primeiros_socorros_aulas'] ?? 0) +
+                              (int)($data['meio_ambiente_cidadania_aulas'] ?? 0) +
+                              (int)($data['direcao_defensiva_aulas'] ?? 0) +
+                              (int)($data['mecanica_basica_aulas'] ?? 0);
+        
         $configData = [
             'categoria' => $categoria,
             'nome' => $data['nome'] ?? '',
             'tipo' => $data['tipo'] ?? 'primeira_habilitacao',
-            'horas_teoricas' => (int)($data['horas_teoricas'] ?? 0),
+            'horas_teoricas' => $totalAulasTeoricas, // Total de aulas, não horas
             'horas_praticas_total' => (int)($data['horas_praticas_total'] ?? 0),
             'horas_praticas_moto' => (int)($data['horas_praticas_moto'] ?? 0),
             'horas_praticas_carro' => (int)($data['horas_praticas_carro'] ?? 0),
             'horas_praticas_carga' => (int)($data['horas_praticas_carga'] ?? 0),
             'horas_praticas_passageiros' => (int)($data['horas_praticas_passageiros'] ?? 0),
             'horas_praticas_combinacao' => (int)($data['horas_praticas_combinacao'] ?? 0),
+            'legislacao_transito_aulas' => (int)($data['legislacao_transito_aulas'] ?? 0),
+            'primeiros_socorros_aulas' => (int)($data['primeiros_socorros_aulas'] ?? 0),
+            'meio_ambiente_cidadania_aulas' => (int)($data['meio_ambiente_cidadania_aulas'] ?? 0),
+            'direcao_defensiva_aulas' => (int)($data['direcao_defensiva_aulas'] ?? 0),
+            'mecanica_basica_aulas' => (int)($data['mecanica_basica_aulas'] ?? 0),
             'observacoes' => $data['observacoes'] ?? '',
             'ativo' => isset($data['ativo']) ? (bool)$data['ativo'] : true
         ];
@@ -175,6 +187,11 @@ class ConfiguracoesCategorias {
                 'horas_praticas_carga' => 0,
                 'horas_praticas_passageiros' => 0,
                 'horas_praticas_combinacao' => 0,
+                'legislacao_transito_aulas' => 12,
+                'primeiros_socorros_aulas' => 8,
+                'meio_ambiente_cidadania_aulas' => 8,
+                'direcao_defensiva_aulas' => 12,
+                'mecanica_basica_aulas' => 14,
                 'observacoes' => 'Configuração padrão - Motocicletas'
             ],
             'B' => [
@@ -187,6 +204,11 @@ class ConfiguracoesCategorias {
                 'horas_praticas_carga' => 0,
                 'horas_praticas_passageiros' => 0,
                 'horas_praticas_combinacao' => 0,
+                'legislacao_transito_aulas' => 12,
+                'primeiros_socorros_aulas' => 8,
+                'meio_ambiente_cidadania_aulas' => 8,
+                'direcao_defensiva_aulas' => 12,
+                'mecanica_basica_aulas' => 14,
                 'observacoes' => 'Configuração padrão - Automóveis'
             ],
             'AB' => [
@@ -199,6 +221,11 @@ class ConfiguracoesCategorias {
                 'horas_praticas_carga' => 0,
                 'horas_praticas_passageiros' => 0,
                 'horas_praticas_combinacao' => 0,
+                'legislacao_transito_aulas' => 12,
+                'primeiros_socorros_aulas' => 8,
+                'meio_ambiente_cidadania_aulas' => 8,
+                'direcao_defensiva_aulas' => 12,
+                'mecanica_basica_aulas' => 14,
                 'observacoes' => 'Configuração padrão - Motocicletas + Automóveis'
             ],
             'ACC' => [
@@ -211,6 +238,11 @@ class ConfiguracoesCategorias {
                 'horas_praticas_carga' => 0,
                 'horas_praticas_passageiros' => 0,
                 'horas_praticas_combinacao' => 0,
+                'legislacao_transito_aulas' => 12,
+                'primeiros_socorros_aulas' => 8,
+                'meio_ambiente_cidadania_aulas' => 8,
+                'direcao_defensiva_aulas' => 12,
+                'mecanica_basica_aulas' => 14,
                 'observacoes' => 'Configuração padrão - ACC'
             ],
             'C' => [
@@ -402,6 +434,73 @@ class ConfiguracoesCategorias {
      */
     public function deletarConfiguracao($categoria) {
         return $this->db->delete('configuracoes_categorias', 'categoria = ?', [$categoria]);
+    }
+    
+    /**
+     * Obter disciplinas teóricas de uma categoria
+     */
+    public function getDisciplinasTeoricas($categoria) {
+        $config = $this->getConfiguracaoByCategoria($categoria);
+        if (!$config) {
+            return null;
+        }
+        
+        return [
+            'legislacao_transito' => [
+                'nome' => 'Legislação de Trânsito',
+                'aulas' => (int)$config['legislacao_transito_aulas'],
+                'minutos' => (int)$config['legislacao_transito_aulas'] * 50
+            ],
+            'primeiros_socorros' => [
+                'nome' => 'Primeiros Socorros',
+                'aulas' => (int)$config['primeiros_socorros_aulas'],
+                'minutos' => (int)$config['primeiros_socorros_aulas'] * 50
+            ],
+            'meio_ambiente_cidadania' => [
+                'nome' => 'Meio Ambiente e Cidadania',
+                'aulas' => (int)$config['meio_ambiente_cidadania_aulas'],
+                'minutos' => (int)$config['meio_ambiente_cidadania_aulas'] * 50
+            ],
+            'direcao_defensiva' => [
+                'nome' => 'Direção Defensiva',
+                'aulas' => (int)$config['direcao_defensiva_aulas'],
+                'minutos' => (int)$config['direcao_defensiva_aulas'] * 50
+            ],
+            'mecanica_basica' => [
+                'nome' => 'Mecânica Básica',
+                'aulas' => (int)$config['mecanica_basica_aulas'],
+                'minutos' => (int)$config['mecanica_basica_aulas'] * 50
+            ]
+        ];
+    }
+    
+    /**
+     * Calcular total de aulas teóricas
+     */
+    public function calcularTotalAulasTeoricas($disciplinas) {
+        $total = 0;
+        foreach ($disciplinas as $disciplina) {
+            $total += (int)$disciplina;
+        }
+        return $total;
+    }
+    
+    /**
+     * Validar disciplinas teóricas
+     */
+    public function validarDisciplinasTeoricas($disciplinas) {
+        $erros = [];
+        
+        foreach ($disciplinas as $nome => $aulas) {
+            if ($aulas < 0) {
+                $erros[] = "A quantidade de aulas de {$nome} não pode ser negativa";
+            }
+            if ($aulas > 100) {
+                $erros[] = "A quantidade de aulas de {$nome} não pode ser maior que 100";
+            }
+        }
+        
+        return $erros;
     }
 }
 ?>
