@@ -78,7 +78,7 @@ if (!$alunoData) {
 
 // Buscar histórico de aulas
 $aulas = db()->fetchAll("
-    SELECT a.*, i.credencial, u.nome as instrutor_nome, v.placa, v.modelo, v.marca
+    SELECT a.*, i.credencial, COALESCE(u.nome, i.nome) as instrutor_nome, v.placa, v.modelo, v.marca
     FROM aulas a
     LEFT JOIN instrutores i ON a.instrutor_id = i.id
     LEFT JOIN usuarios u ON i.usuario_id = u.id
@@ -94,7 +94,18 @@ $aulasCanceladas = count(array_filter($aulas, fn($a) => $a['status'] === 'cancel
 $aulasAgendadas = count(array_filter($aulas, fn($a) => $a['status'] === 'agendada'));
 
 // Calcular estatísticas por tipo de aula
-$aulasTeoricasConcluidas = count(array_filter($aulas, fn($a) => $a['status'] === 'concluida' && $a['tipo_aula'] === 'teorica'));
+// Para teóricas, contar apenas disciplinas únicas para evitar duplicação
+$disciplinasTeoricasUnicasGerais = [];
+$aulasTeoricasConcluidas = 0;
+foreach ($aulas as $aula) {
+    if ($aula['status'] === 'concluida' && $aula['tipo_aula'] === 'teorica') {
+        $disciplina = $aula['disciplina'] ?? 'geral';
+        if (!isset($disciplinasTeoricasUnicasGerais[$disciplina])) {
+            $disciplinasTeoricasUnicasGerais[$disciplina] = true;
+            $aulasTeoricasConcluidas++;
+        }
+    }
+}
 $aulasPraticasConcluidas = count(array_filter($aulas, fn($a) => $a['status'] === 'concluida' && $a['tipo_aula'] === 'pratica'));
 
 // Calcular estatísticas por categoria de veículo (para aulas práticas)
@@ -128,11 +139,20 @@ if ($ehCategoriaCombinada) {
         $aulasTeoricasNecessarias += $config['horas_teoricas'];
         
         // Calcular aulas concluídas por tipo para esta categoria específica
-        $teoricasConcluidas = count(array_filter($aulas, function($a) use ($categoria) {
-            return $a['status'] === 'concluida' && 
-                   $a['tipo_aula'] === 'teorica' && 
-                   $a['categoria_veiculo'] === $categoria;
-        }));
+        // Para teóricas, contar apenas disciplinas únicas para evitar duplicação
+        $disciplinasTeoricasUnicas = [];
+        $teoricasConcluidas = 0;
+        foreach ($aulas as $aula) {
+            if ($aula['status'] === 'concluida' && 
+                $aula['tipo_aula'] === 'teorica' && 
+                $aula['categoria_veiculo'] === $categoria) {
+                $disciplina = $aula['disciplina'] ?? 'geral';
+                if (!isset($disciplinasTeoricasUnicas[$disciplina])) {
+                    $disciplinasTeoricasUnicas[$disciplina] = true;
+                    $teoricasConcluidas++;
+                }
+            }
+        }
         
         $praticasMotoConcluidas = count(array_filter($aulas, function($a) use ($categoria) {
             return $a['status'] === 'concluida' && 
@@ -205,13 +225,22 @@ if ($ehCategoriaCombinada) {
     }
     
     // Contar aulas concluídas por tipo para categorias combinadas
+    $aulasTeoricasContadas = []; // Para evitar duplicação de aulas teóricas
+    
     foreach ($aulas as $aula) {
         if ($aula['status'] === 'concluida') {
             if ($aula['tipo_aula'] === 'teorica') {
-                // Para teóricas, distribuir entre todas as categorias
-                foreach ($progressoDetalhado as $categoria => $dados) {
-                    if (isset($progressoDetalhado[$categoria]['teoricas'])) {
-                        $progressoDetalhado[$categoria]['teoricas']['concluidas']++;
+                // Para teóricas, contar apenas uma vez para categorias combinadas
+                // Usar disciplina como identificador único para evitar duplicação
+                $disciplina = $aula['disciplina'] ?? 'geral';
+                if (!isset($aulasTeoricasContadas[$disciplina])) {
+                    $aulasTeoricasContadas[$disciplina] = true;
+                    
+                    // Distribuir entre todas as categorias apenas uma vez
+                    foreach ($progressoDetalhado as $categoria => $dados) {
+                        if (isset($progressoDetalhado[$categoria]['teoricas'])) {
+                            $progressoDetalhado[$categoria]['teoricas']['concluidas']++;
+                        }
                     }
                 }
             } elseif ($aula['tipo_aula'] === 'pratica') {
@@ -344,7 +373,7 @@ if ($aulas) {
 
 // Buscar próximas aulas
 $proximasAulas = db()->fetchAll("
-    SELECT a.*, i.credencial, u.nome as instrutor_nome, v.placa
+    SELECT a.*, i.credencial, COALESCE(u.nome, i.nome) as instrutor_nome, v.placa
     FROM aulas a
     LEFT JOIN instrutores i ON a.instrutor_id = i.id
     LEFT JOIN usuarios u ON i.usuario_id = u.id
@@ -363,9 +392,58 @@ $proximasAulas = db()->fetchAll("
     <title>Histórico do Aluno - Sistema CFC</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="../assets/css/admin.css" rel="stylesheet">
-    <link href="../assets/css/action-buttons.css" rel="stylesheet">
+    <link href="assets/css/admin.css" rel="stylesheet">
+    <link href="assets/css/action-buttons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        /* Estilos para o modal de detalhes */
+        .modal-lg {
+            max-width: 800px;
+        }
+        
+        .modal-body .form-label {
+            color: #495057;
+            font-size: 0.9rem;
+        }
+        
+        .modal-body .text-primary {
+            color: #0d6efd !important;
+        }
+        
+        .modal-body .badge {
+            font-size: 0.8rem;
+        }
+        
+        .modal-body .alert-light {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+        }
+        
+        .modal-body hr {
+            margin: 1.5rem 0;
+        }
+        
+        .modal-body .row {
+            margin-bottom: 0.5rem;
+        }
+        
+        .modal-body .mb-3 {
+            margin-bottom: 1rem !important;
+        }
+        
+        .modal-body .text-muted {
+            font-size: 0.85rem;
+        }
+        
+        /* Animação suave para o modal */
+        .modal.fade .modal-dialog {
+            transition: transform 0.3s ease-out;
+        }
+        
+        .modal.show .modal-dialog {
+            transform: none;
+        }
+    </style>
 </head>
 <body>
     <div class="container-fluid">
@@ -439,6 +517,50 @@ $proximasAulas = db()->fetchAll("
                             </span>
                         </div>
                         
+                        <!-- Disciplinas Teóricas Compartilhadas (exibidas apenas uma vez para categorias combinadas) -->
+                        <?php 
+                        // Pegar a primeira configuração para obter as disciplinas teóricas
+                        $primeiraConfig = reset($configuracoesCategorias);
+                        if ($primeiraConfig['horas_teoricas'] > 0): 
+                        ?>
+                        <div class="border rounded p-3 mb-3 bg-light">
+                            <h6 class="text-info mb-2">
+                                <i class="fas fa-list me-1"></i>
+                                Disciplinas Teóricas (Compartilhadas)
+                            </h6>
+                            <div class="row">
+                                <?php 
+                                $disciplinas = [
+                                    'legislacao_transito_aulas' => ['nome' => 'Legislação de Trânsito', 'icone' => 'fas fa-gavel', 'cor' => 'primary'],
+                                    'primeiros_socorros_aulas' => ['nome' => 'Primeiros Socorros', 'icone' => 'fas fa-first-aid', 'cor' => 'danger'],
+                                    'meio_ambiente_cidadania_aulas' => ['nome' => 'Meio Ambiente e Cidadania', 'icone' => 'fas fa-leaf', 'cor' => 'success'],
+                                    'direcao_defensiva_aulas' => ['nome' => 'Direção Defensiva', 'icone' => 'fas fa-shield-alt', 'cor' => 'warning'],
+                                    'mecanica_basica_aulas' => ['nome' => 'Mecânica Básica', 'icone' => 'fas fa-tools', 'cor' => 'info']
+                                ];
+                                
+                                foreach ($disciplinas as $campo => $info):
+                                    $aulasDisciplina = $primeiraConfig[$campo] ?? 0;
+                                    if ($aulasDisciplina > 0):
+                                ?>
+                                <div class="col-12 mb-1">
+                                    <div class="d-flex justify-content-between align-items-center p-1 border rounded bg-white">
+                                        <div class="d-flex align-items-center">
+                                            <i class="<?php echo $info['icone']; ?> text-<?php echo $info['cor']; ?> me-2" style="font-size: 0.8em;"></i>
+                                            <span class="fw-medium" style="font-size: 0.9em;"><?php echo $info['nome']; ?></span>
+                                        </div>
+                                        <span class="badge bg-<?php echo $info['cor']; ?>" style="font-size: 0.7em;">
+                                            <?php echo $aulasDisciplina; ?> aulas
+                                        </span>
+                                    </div>
+                                </div>
+                                <?php 
+                                    endif;
+                                endforeach; 
+                                ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+
                         <?php foreach ($configuracoesCategorias as $categoria => $config): ?>
                         <div class="border rounded p-3 mb-3">
                             <h6 class="text-primary mb-2">
@@ -447,16 +569,7 @@ $proximasAulas = db()->fetchAll("
                             </h6>
                             
                             <div class="row text-center">
-                                <div class="col-6">
-                                    <div class="border-end">
-                                        <h5 class="text-info mb-1">
-                                            <i class="fas fa-book me-1"></i>
-                                            <?php echo $config['horas_teoricas']; ?> aulas
-                                        </h5>
-                                        <small class="text-muted">Teóricas</small>
-                                    </div>
-                                </div>
-                                <div class="col-6">
+                                <div class="col-12">
                                     <h5 class="text-success mb-1">
                                         <i class="fas fa-car me-1"></i>
                                         <?php echo $config['horas_praticas_total']; ?> aulas
@@ -465,26 +578,26 @@ $proximasAulas = db()->fetchAll("
                                 </div>
                             </div>
                             
-                            <!-- Disciplinas Teóricas para Categorias Combinadas -->
-                            <?php if ($config['horas_teoricas'] > 0): ?>
+                            <!-- Detalhamento Prático -->
                             <div class="mt-2">
-                                <h6 class="text-info mb-2">
-                                    <i class="fas fa-list me-1"></i>
-                                    Disciplinas Teóricas
+                                <h6 class="text-success mb-2">
+                                    <i class="fas fa-car me-1"></i>
+                                    Detalhamento Prático
                                 </h6>
                                 <div class="row">
                                     <?php 
-                                    $disciplinas = [
-                                        'legislacao_transito_aulas' => ['nome' => 'Legislação de Trânsito', 'icone' => 'fas fa-gavel', 'cor' => 'primary'],
-                                        'primeiros_socorros_aulas' => ['nome' => 'Primeiros Socorros', 'icone' => 'fas fa-first-aid', 'cor' => 'danger'],
-                                        'meio_ambiente_cidadania_aulas' => ['nome' => 'Meio Ambiente e Cidadania', 'icone' => 'fas fa-leaf', 'cor' => 'success'],
-                                        'direcao_defensiva_aulas' => ['nome' => 'Direção Defensiva', 'icone' => 'fas fa-shield-alt', 'cor' => 'warning'],
-                                        'mecanica_basica_aulas' => ['nome' => 'Mecânica Básica', 'icone' => 'fas fa-tools', 'cor' => 'info']
+                                    $tiposVeiculo = [
+                                        'moto' => ['nome' => 'Motocicleta', 'icone' => 'fas fa-motorcycle', 'cor' => 'warning'],
+                                        'carro' => ['nome' => 'Automóvel', 'icone' => 'fas fa-car', 'cor' => 'primary'],
+                                        'carga' => ['nome' => 'Caminhão', 'icone' => 'fas fa-truck', 'cor' => 'info'],
+                                        'passageiros' => ['nome' => 'Ônibus', 'icone' => 'fas fa-bus', 'cor' => 'success'],
+                                        'combinacao' => ['nome' => 'Carreta', 'icone' => 'fas fa-truck-moving', 'cor' => 'secondary']
                                     ];
                                     
-                                    foreach ($disciplinas as $campo => $info):
-                                        $aulasDisciplina = $config[$campo] ?? 0;
-                                        if ($aulasDisciplina > 0):
+                                    foreach ($tiposVeiculo as $tipo => $info):
+                                        $campoAulas = "horas_praticas_{$tipo}";
+                                        $aulasTipo = $config[$campoAulas] ?? 0;
+                                        if ($aulasTipo > 0):
                                     ?>
                                     <div class="col-12 mb-1">
                                         <div class="d-flex justify-content-between align-items-center p-1 border rounded bg-light">
@@ -493,7 +606,7 @@ $proximasAulas = db()->fetchAll("
                                                 <span class="fw-medium" style="font-size: 0.9em;"><?php echo $info['nome']; ?></span>
                                             </div>
                                             <span class="badge bg-<?php echo $info['cor']; ?>" style="font-size: 0.7em;">
-                                                <?php echo $aulasDisciplina; ?> aulas
+                                                <?php echo $aulasTipo; ?> aulas
                                             </span>
                                         </div>
                                     </div>
@@ -503,28 +616,7 @@ $proximasAulas = db()->fetchAll("
                                     ?>
                                 </div>
                             </div>
-                            <?php endif; ?>
                             
-                            <div class="mt-2">
-                                <small class="text-muted">
-                                    <strong>Detalhamento Prático:</strong><br>
-                                    <?php if ($config['horas_praticas_moto'] > 0): ?>
-                                        🏍️ Motocicletas: <?php echo $config['horas_praticas_moto']; ?> aulas<br>
-                                    <?php endif; ?>
-                                    <?php if ($config['horas_praticas_carro'] > 0): ?>
-                                        🚗 Automóveis: <?php echo $config['horas_praticas_carro']; ?> aulas<br>
-                                    <?php endif; ?>
-                                    <?php if ($config['horas_praticas_carga'] > 0): ?>
-                                        🚛 Carga: <?php echo $config['horas_praticas_carga']; ?> aulas<br>
-                                    <?php endif; ?>
-                                    <?php if ($config['horas_praticas_passageiros'] > 0): ?>
-                                        🚌 Passageiros: <?php echo $config['horas_praticas_passageiros']; ?> aulas<br>
-                                    <?php endif; ?>
-                                    <?php if ($config['horas_praticas_combinacao'] > 0): ?>
-                                        🚛+🚗 Combinação: <?php echo $config['horas_praticas_combinacao']; ?> aulas
-                                    <?php endif; ?>
-                                </small>
-                            </div>
                         </div>
                         <?php endforeach; ?>
                         
@@ -651,8 +743,11 @@ $proximasAulas = db()->fetchAll("
                         $totalPraticasConcluidasGeral = 0;
                         
                         if ($ehCategoriaCombinada) {
+                            // Para categorias combinadas, contar teóricas apenas uma vez
+                            $primeiraConfig = reset($configuracoesCategorias);
+                            $totalTeoricasGeral = $primeiraConfig['horas_teoricas'];
+                            
                             foreach ($configuracoesCategorias as $categoria => $config) {
-                                $totalTeoricasGeral += $config['horas_teoricas'];
                                 $totalTeoricasConcluidasGeral += $progressoDetalhado[$categoria]['teoricas']['concluidas'];
                                 $totalPraticasGeral += $config['horas_praticas_total']; // Somar as práticas das categorias
                                 
@@ -1197,7 +1292,7 @@ $proximasAulas = db()->fetchAll("
                                             <div>
                                                 <strong><?php echo htmlspecialchars($aula['instrutor_nome']); ?></strong>
                                                 <br>
-                                                <small class="text-muted"><?php echo htmlspecialchars($aula['credencial']); ?></small>
+                                                <small class="text-muted"><?php echo htmlspecialchars($aula['credencial'] ?? 'N/A'); ?></small>
                                             </div>
                                         </td>
                                         <td>
@@ -1279,22 +1374,331 @@ $proximasAulas = db()->fetchAll("
         </div>
     </div>
 
+    <!-- Modal de Detalhes da Aula -->
+    <div class="modal fade" id="modalDetalhesAula" tabindex="-1" aria-labelledby="modalDetalhesAulaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalDetalhesAulaLabel">
+                        <i class="fas fa-info-circle me-2"></i>Detalhes da Aula
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="modalDetalhesBody">
+                    <!-- Conteúdo será carregado via JavaScript -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-primary" id="btnEditarAula" style="display: none;">
+                        <i class="fas fa-edit me-1"></i>Editar Aula
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Cancelamento de Aula -->
+    <div class="modal fade" id="modalCancelarAula" tabindex="-1" aria-labelledby="modalCancelarAulaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCancelarAulaLabel">
+                        <i class="fas fa-times-circle me-2 text-danger"></i>Cancelar Aula
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="aulaIdCancelar">
+                    
+                    <div class="mb-3">
+                        <label for="motivoCancelamento" class="form-label required">Motivo do Cancelamento:</label>
+                        <select class="form-control" id="motivoCancelamento" required>
+                            <option value="">Selecione um motivo</option>
+                            <option value="aluno_ausente">Aluno ausente</option>
+                            <option value="instrutor_indisponivel">Instrutor indisponível</option>
+                            <option value="veiculo_quebrado">Veículo quebrado</option>
+                            <option value="condicoes_climaticas">Condições climáticas</option>
+                            <option value="problema_tecnico">Problema técnico</option>
+                            <option value="reagendamento">Reagendamento</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observacoesCancelamento" class="form-label">Observações:</label>
+                        <textarea class="form-control" id="observacoesCancelamento" rows="3" placeholder="Digite observações sobre o cancelamento..."></textarea>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Atenção:</strong> Esta ação não pode ser desfeita. A aula será marcada como cancelada.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmarCancelamento()">
+                        <i class="fas fa-times me-1"></i>Confirmar Cancelamento
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../assets/js/admin.js"></script>
     <script>
         // Funções para ações
         function verDetalhesAula(aulaId) {
-            alert('Funcionalidade de detalhes será implementada em breve!');
+            // Buscar dados da aula
+            const aula = <?php echo json_encode($aulas); ?>.find(a => a.id == aulaId);
+            
+            if (!aula) {
+                alert('Aula não encontrada!');
+                return;
+            }
+            
+            // Montar conteúdo do modal
+            const modalBody = document.getElementById('modalDetalhesBody');
+            const btnEditar = document.getElementById('btnEditarAula');
+            
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-calendar-alt me-2"></i>Informações da Aula
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Data:</label>
+                            <p class="mb-0">${formatarData(aula.data_aula)}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Horário:</label>
+                            <p class="mb-0">${aula.hora_inicio} - ${aula.hora_fim}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tipo de Aula:</label>
+                            <p class="mb-0">
+                                <span class="badge bg-${aula.tipo_aula === 'teorica' ? 'info' : 'primary'}">
+                                    ${aula.tipo_aula.toUpperCase()}
+                                </span>
+                            </p>
+                        </div>
+                        ${aula.disciplina ? `
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Disciplina:</label>
+                            <p class="mb-0">${aula.disciplina}</p>
+                        </div>
+                        ` : ''}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Status:</label>
+                            <p class="mb-0">
+                                <span class="badge bg-${getStatusColor(aula.status)}">
+                                    ${aula.status.toUpperCase()}
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-users me-2"></i>Informações dos Participantes
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Aluno:</label>
+                            <p class="mb-0">${aula.aluno_nome || 'N/A'}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Instrutor:</label>
+                            <p class="mb-0">${aula.instrutor_nome || 'N/A'}</p>
+                            ${aula.credencial ? `<small class="text-muted">${aula.credencial}</small>` : ''}
+                        </div>
+                        ${aula.placa ? `
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Veículo:</label>
+                            <p class="mb-0">${aula.placa} - ${aula.modelo || ''} ${aula.marca || ''}</p>
+                        </div>
+                        ` : `
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Veículo:</label>
+                            <p class="mb-0 text-muted">Não aplicável</p>
+                        </div>
+                        `}
+                    </div>
+                </div>
+                ${aula.observacoes ? `
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-sticky-note me-2"></i>Observações
+                        </h6>
+                        <div class="alert alert-light">
+                            <p class="mb-0">${aula.observacoes}</p>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Informações do Sistema
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <strong>Criado em:</strong> ${formatarDataHora(aula.criado_em)}
+                                </small>
+                            </div>
+                            ${aula.atualizado_em ? `
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <strong>Atualizado em:</strong> ${formatarDataHora(aula.atualizado_em)}
+                                </small>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            // Mostrar botão de editar apenas para aulas agendadas
+            if (aula.status === 'agendada') {
+                btnEditar.style.display = 'inline-block';
+                btnEditar.onclick = () => {
+                    window.location.href = `/cfc-bom-conselho/admin/index.php?page=agendar-aula&action=edit&edit=${aulaId}&t=${Date.now()}`;
+                };
+            } else {
+                btnEditar.style.display = 'none';
+            }
+            
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalDetalhesAula'));
+            modal.show();
+        }
+        
+        // Funções auxiliares
+        function formatarData(data) {
+            if (!data) return 'N/A';
+            const date = new Date(data);
+            return date.toLocaleDateString('pt-BR');
+        }
+        
+        function formatarDataHora(dataHora) {
+            if (!dataHora) return 'N/A';
+            const date = new Date(dataHora);
+            return date.toLocaleString('pt-BR');
+        }
+        
+        function getStatusColor(status) {
+            const colors = {
+                'agendada': 'warning',
+                'concluida': 'success',
+                'cancelada': 'danger',
+                'em_andamento': 'info'
+            };
+            return colors[status] || 'secondary';
         }
 
         function editarAula(aulaId) {
-            window.location.href = `agendar-aula.php?edit=${aulaId}`;
+            console.log('=== DEBUG EDIÇÃO ===');
+            console.log('aulaId recebido:', aulaId);
+            console.log('Tipo do aulaId:', typeof aulaId);
+            
+            // Verificar se o Bootstrap está carregado
+            if (typeof bootstrap === 'undefined') {
+                console.error('❌ Bootstrap não está carregado!');
+                alert('Erro: Bootstrap não está carregado. Recarregue a página.');
+                return;
+            }
+            
+            // Verificar se a função está sendo chamada
+            console.log('✅ Função editarAula chamada com sucesso');
+            
+            // Limpar cache e redirecionar com versão forçada
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(7);
+            const version = 'v' + Math.floor(Date.now() / 1000);
+            
+            const url = `index.php?page=agendar-aula&action=edit&edit=${aulaId}&t=${timestamp}&r=${random}&v=${version}`;
+            
+            console.log('URL gerada:', url);
+            console.log('Redirecionando em 1 segundo...');
+            
+            // Adicionar delay para ver o log
+            setTimeout(() => {
+                console.log('Executando redirecionamento...');
+                window.location.href = url;
+            }, 1000);
         }
 
         function cancelarAula(aulaId) {
-            if (confirm('Tem certeza que deseja cancelar esta aula?')) {
-                alert('Funcionalidade de cancelamento será implementada em breve!');
+            console.log('=== DEBUG CANCELAMENTO ===');
+            console.log('aulaId recebido:', aulaId);
+            console.log('Tipo do aulaId:', typeof aulaId);
+            
+            // Verificar se o Bootstrap está carregado
+            if (typeof bootstrap === 'undefined') {
+                console.error('❌ Bootstrap não está carregado!');
+                alert('Erro: Bootstrap não está carregado. Recarregue a página.');
+                return;
             }
+            
+            // Verificar se o modal existe
+            const modalElement = document.getElementById('modalCancelarAula');
+            if (!modalElement) {
+                console.error('❌ Modal modalCancelarAula não encontrado!');
+                alert('Erro: Modal de cancelamento não encontrado. Recarregue a página.');
+                return;
+            }
+            
+            console.log('✅ Modal encontrado:', modalElement);
+            
+            if (confirm('Tem certeza que deseja cancelar esta aula?')) {
+                console.log('✅ Usuário confirmou cancelamento');
+                
+                // Mostrar modal de cancelamento
+                const modal = new bootstrap.Modal(modalElement);
+                document.getElementById('aulaIdCancelar').value = aulaId;
+                modal.show();
+                
+                console.log('✅ Modal de cancelamento exibido');
+            } else {
+                console.log('❌ Usuário cancelou a operação');
+            }
+        }
+        
+        function confirmarCancelamento() {
+            const aulaId = document.getElementById('aulaIdCancelar').value;
+            const motivo = document.getElementById('motivoCancelamento').value;
+            const observacoes = document.getElementById('observacoesCancelamento').value;
+            
+            if (!motivo) {
+                alert('Por favor, selecione um motivo para o cancelamento.');
+                return;
+            }
+            
+            // Preparar dados
+            const formData = new FormData();
+            formData.append('aula_id', aulaId);
+            formData.append('motivo_cancelamento', motivo);
+            formData.append('observacoes', observacoes);
+            
+            // Enviar dados
+            fetch('api/cancelar-aula.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Aula cancelada com sucesso!');
+                    location.reload(); // Recarregar página para atualizar dados
+                } else {
+                    alert('Erro ao cancelar aula: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao cancelar aula: ' + error.message);
+            });
         }
     </script>
 </body>

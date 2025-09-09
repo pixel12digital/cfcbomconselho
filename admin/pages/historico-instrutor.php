@@ -154,8 +154,8 @@ $veiculosUtilizados = db()->fetchAll("
     <title>Histórico do Instrutor - Sistema CFC</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="../assets/css/admin.css" rel="stylesheet">
-    <link href="../assets/css/action-buttons.css" rel="stylesheet">
+    <link href="assets/css/admin.css" rel="stylesheet">
+    <link href="assets/css/action-buttons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
@@ -690,7 +690,6 @@ $veiculosUtilizados = db()->fetchAll("
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../assets/js/admin.js"></script>
     <script>
         // Dados para os gráficos
         const dadosStatus = {
@@ -794,13 +793,51 @@ $veiculosUtilizados = db()->fetchAll("
         }
 
         function editarAula(aulaId) {
-            window.location.href = `agendar-aula.php?edit=${aulaId}`;
+            window.location.href = `index.php?page=agendar-aula&action=edit&edit=${aulaId}`;
         }
 
         function cancelarAula(aulaId) {
             if (confirm('Tem certeza que deseja cancelar esta aula?')) {
-                alert('Funcionalidade de cancelamento será implementada em breve!');
+                // Mostrar modal de cancelamento
+                const modal = new bootstrap.Modal(document.getElementById('modalCancelarAula'));
+                document.getElementById('aulaIdCancelar').value = aulaId;
+                modal.show();
             }
+        }
+        
+        function confirmarCancelamento() {
+            const aulaId = document.getElementById('aulaIdCancelar').value;
+            const motivo = document.getElementById('motivoCancelamento').value;
+            const observacoes = document.getElementById('observacoesCancelamento').value;
+            
+            if (!motivo) {
+                alert('Por favor, selecione um motivo para o cancelamento.');
+                return;
+            }
+            
+            // Preparar dados
+            const formData = new FormData();
+            formData.append('aula_id', aulaId);
+            formData.append('motivo_cancelamento', motivo);
+            formData.append('observacoes', observacoes);
+            
+            // Enviar dados
+            fetch('api/cancelar-aula.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Aula cancelada com sucesso!');
+                    location.reload(); // Recarregar página para atualizar dados
+                } else {
+                    alert('Erro ao cancelar aula: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao cancelar aula: ' + error.message);
+            });
         }
 
         // Exportar histórico
@@ -843,5 +880,52 @@ $veiculosUtilizados = db()->fetchAll("
             }
         });
     </script>
+
+    <!-- Modal de Cancelamento de Aula -->
+    <div class="modal fade" id="modalCancelarAula" tabindex="-1" aria-labelledby="modalCancelarAulaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCancelarAulaLabel">
+                        <i class="fas fa-times-circle me-2 text-danger"></i>Cancelar Aula
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="aulaIdCancelar">
+                    
+                    <div class="mb-3">
+                        <label for="motivoCancelamento" class="form-label required">Motivo do Cancelamento:</label>
+                        <select class="form-control" id="motivoCancelamento" required>
+                            <option value="">Selecione um motivo</option>
+                            <option value="aluno_ausente">Aluno ausente</option>
+                            <option value="instrutor_indisponivel">Instrutor indisponível</option>
+                            <option value="veiculo_quebrado">Veículo quebrado</option>
+                            <option value="condicoes_climaticas">Condições climáticas</option>
+                            <option value="problema_tecnico">Problema técnico</option>
+                            <option value="reagendamento">Reagendamento</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observacoesCancelamento" class="form-label">Observações:</label>
+                        <textarea class="form-control" id="observacoesCancelamento" rows="3" placeholder="Digite observações sobre o cancelamento..."></textarea>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Atenção:</strong> Esta ação não pode ser desfeita. A aula será marcada como cancelada.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmarCancelamento()">
+                        <i class="fas fa-times me-1"></i>Confirmar Cancelamento
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </body>
 </html>

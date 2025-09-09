@@ -3,15 +3,20 @@
 // API DE AGENDAMENTO - SISTEMA CFC
 // =====================================================
 
+// Limpar qualquer output anterior
+if (ob_get_level()) {
+    ob_clean();
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
 // Usar caminho relativo que sabemos que funciona
-require_once '../../includes/config.php';
-require_once '../../includes/database.php';
-require_once '../../includes/auth.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
 
 // Verificar método HTTP
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -26,7 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 // Verificar autenticação
-session_start();
+if (!isset($_SESSION['user_id'])) {
+    session_start();
+}
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['sucesso' => false, 'mensagem' => 'Usuário não autenticado']);
@@ -44,13 +51,24 @@ try {
     $tipo_aula = $_POST['tipo_aula'] ?? null;
     $instrutor_id = $_POST['instrutor_id'] ?? null;
     $veiculo_id = $_POST['veiculo_id'] ?? null;
+    $disciplina = $_POST['disciplina'] ?? null;
     $observacoes = $_POST['observacoes'] ?? '';
-         $tipo_agendamento = $_POST['tipo_agendamento'] ?? 'unica';
-     $posicao_intervalo = $_POST['posicao_intervalo'] ?? 'depois';
+    $tipo_agendamento = $_POST['tipo_agendamento'] ?? 'unica';
+    $posicao_intervalo = $_POST['posicao_intervalo'] ?? 'depois';
     
     // Validar dados obrigatórios
     if (!$aluno_id || !$data_aula || !$hora_inicio || !$duracao || !$tipo_aula || !$instrutor_id) {
         throw new Exception('Todos os campos obrigatórios devem ser preenchidos');
+    }
+    
+    // Validar disciplina para aulas teóricas
+    if ($tipo_aula === 'teorica' && !$disciplina) {
+        throw new Exception('Disciplina é obrigatória para aulas teóricas');
+    }
+    
+    // Validar veículo para aulas práticas
+    if ($tipo_aula !== 'teorica' && !$veiculo_id) {
+        throw new Exception('Veículo é obrigatório para aulas práticas');
     }
     
     // Validar duração fixa de 50 minutos
@@ -140,8 +158,8 @@ try {
     
     // INSERIR MÚLTIPLAS AULAS NO BANCO
     $aulas_criadas = [];
-    $sql = "INSERT INTO aulas (aluno_id, instrutor_id, cfc_id, veiculo_id, tipo_aula, data_aula, hora_inicio, hora_fim, status, observacoes, criado_em) 
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'agendada', ?, NOW())";
+    $sql = "INSERT INTO aulas (aluno_id, instrutor_id, cfc_id, veiculo_id, tipo_aula, disciplina, data_aula, hora_inicio, hora_fim, status, observacoes, criado_em) 
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'agendada', ?, NOW())";
     
     foreach ($horarios_aulas as $index => $aula) {
         $params = [
@@ -150,6 +168,7 @@ try {
             $aluno['cfc_id'],
             $veiculo_id ?: null,
             $tipo_aula,
+            $disciplina ?: null,
             $data_aula,
             $aula['hora_inicio'],
             $aula['hora_fim'],

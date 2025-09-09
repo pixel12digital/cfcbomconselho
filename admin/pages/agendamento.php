@@ -9,10 +9,11 @@ if (!isset($aulas)) $aulas = [];
 if (!isset($instrutores)) $instrutores = [];
 if (!isset($veiculos)) $veiculos = [];
 if (!isset($alunos)) $alunos = [];
+if (!isset($cfcs)) $cfcs = [];
 
 // Obter dados necessários para o agendamento
 try {
-    $db = Database::getInstance();
+    $db = db();
     
     // Buscar instrutores ativos
     $instrutores = $db->fetchAll("
@@ -37,11 +38,18 @@ try {
         ORDER BY nome
     ");
     
+    // Buscar CFCs ativos
+    $cfcs = $db->fetchAll("
+        SELECT * FROM cfcs 
+        WHERE ativo = 1 
+        ORDER BY nome
+    ");
+    
     // Buscar aulas existentes para o calendário
     $aulas = $db->fetchAll("
         SELECT a.*, 
                al.nome as aluno_nome,
-               u.nome as instrutor_nome,
+               COALESCE(u.nome, i.nome) as instrutor_nome,
                v.placa, v.modelo, v.marca
         FROM aulas a
         JOIN alunos al ON a.aluno_id = al.id
@@ -59,6 +67,7 @@ try {
     $instrutores = [];
     $veiculos = [];
     $alunos = [];
+    $cfcs = [];
     $aulas = [];
 }
 ?>
@@ -96,6 +105,10 @@ try {
                     <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
                 <?php endforeach; ?>
             </select>
+            <script>
+                console.log('CFCs carregados:', <?php echo json_encode($cfcs ?? []); ?>);
+                console.log('Dropdown CFC:', document.getElementById('filter-cfc'));
+            </script>
         </div>
         
         <div class="filter-group">
@@ -511,8 +524,21 @@ function calcularHoraFim() {
 }
 
 function filtrarAgenda() {
-    // Implementar filtros do calendário
-    console.log('Aplicando filtros...');
+    // Obter valores dos filtros
+    const cfcId = document.getElementById('filter-cfc').value;
+    const instrutorId = document.getElementById('filter-instrutor').value;
+    const tipoAula = document.getElementById('filter-tipo').value;
+    const status = document.getElementById('filter-status').value;
+    
+    console.log('Aplicando filtros:', {
+        cfc: cfcId,
+        instrutor: instrutorId,
+        tipo: tipoAula,
+        status: status
+    });
+    
+    // Por enquanto, apenas log dos filtros
+    // TODO: Implementar filtragem real do calendário
 }
 
 function mudarVisualizacao(view) {

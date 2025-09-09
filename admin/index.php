@@ -1,4 +1,4 @@
-<?php
+<?php   
 // Definir caminho base
 $base_path = dirname(__DIR__);
 
@@ -681,6 +681,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     
                 case 'agendamento':
                 case 'agendar-aula':
+                    // Verificar se é edição de aula
+                    if ($action === 'edit') {
+                        $content_file = "pages/editar-aula.php";
+                        break;
+                    }
+                    
+                    // Verificar se é listagem de aulas
+                    if ($action === 'list') {
+                        // Buscar todas as aulas para listagem
+                        try {
+                            $aulas_lista = $db->fetchAll("
+                                SELECT a.*, 
+                                       al.nome as aluno_nome,
+                                       i.nome as instrutor_nome,
+                                       v.placa as veiculo_placa,
+                                       v.modelo as veiculo_modelo,
+                                       c.nome as cfc_nome
+                                FROM aulas a
+                                LEFT JOIN alunos al ON a.aluno_id = al.id
+                                LEFT JOIN instrutores i ON a.instrutor_id = i.id
+                                LEFT JOIN veiculos v ON a.veiculo_id = v.id
+                                LEFT JOIN cfcs c ON a.cfc_id = c.id
+                                WHERE a.data_aula >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+                                ORDER BY a.data_aula DESC, a.hora_inicio DESC
+                                LIMIT 100
+                            ");
+                        } catch (Exception $e) {
+                            $aulas_lista = [];
+                        }
+                        break;
+                    }
+                    
                     // Buscar dados necessários para agendamento
                     $aluno_id = $_GET['aluno_id'] ?? null;
                     $aluno = null;
@@ -825,7 +857,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             }
             
             // Carregar conteúdo dinâmico baseado na página e ação
-            $content_file = "pages/{$page}.php";
+            if ($page === 'agendar-aula' && $action === 'list') {
+                // Página específica para listagem de aulas
+                $content_file = "pages/listar-aulas.php";
+            } elseif ($page === 'agendar-aula' && $action === 'edit') {
+                // Debug: Verificar roteamento de edição
+                error_log("DEBUG: Roteamento para edição - ID: " . ($_GET['edit'] ?? 'não fornecido'));
+                error_log("DEBUG: Parâmetros GET: " . print_r($_GET, true));
+                error_log("DEBUG: Arquivo a ser carregado: pages/editar-aula.php");
+                
+                // Debug: Verificar sessão antes de carregar a página
+                error_log("DEBUG: Session ID antes de carregar editar-aula: " . session_id());
+                error_log("DEBUG: User ID antes de carregar editar-aula: " . ($_SESSION['user_id'] ?? 'não definido'));
+                error_log("DEBUG: User Type antes de carregar editar-aula: " . ($_SESSION['user_type'] ?? 'não definido'));
+                
+                // Verificar se o arquivo existe
+                if (!file_exists("pages/editar-aula.php")) {
+                    error_log("ERRO: Arquivo pages/editar-aula.php não encontrado!");
+                    echo '<div class="alert alert-danger">Erro: Arquivo de edição não encontrado.</div>';
+                    return;
+                }
+                
+                error_log("DEBUG: Arquivo pages/editar-aula.php encontrado, carregando...");
+                // Página específica para edição de aulas
+                $content_file = "pages/editar-aula.php";
+                
+                // Debug: Verificar sessão depois de definir o arquivo
+                error_log("DEBUG: Session ID depois de definir arquivo: " . session_id());
+                error_log("DEBUG: User ID depois de definir arquivo: " . ($_SESSION['user_id'] ?? 'não definido'));
+                error_log("DEBUG: User Type depois de definir arquivo: " . ($_SESSION['user_type'] ?? 'não definido'));
+            } else {
+                $content_file = "pages/{$page}.php";
+            }
+            
             if (file_exists($content_file)) {
                 include $content_file;
             } else {

@@ -93,7 +93,7 @@ $aulasPraticas = [];
 if ($isPrimeiraHabilitacao) {
     // Para primeira habilitação, buscar aulas teóricas
     $aulasTeoricas = db()->fetchAll("
-        SELECT a.*, i.credencial, u.nome as instrutor_nome
+        SELECT a.*, i.credencial, COALESCE(u.nome, i.nome) as instrutor_nome
         FROM aulas a
         LEFT JOIN instrutores i ON a.instrutor_id = i.id
         LEFT JOIN usuarios u ON i.usuario_id = u.id
@@ -104,7 +104,7 @@ if ($isPrimeiraHabilitacao) {
 
 // Buscar aulas práticas
 $aulasPraticas = db()->fetchAll("
-    SELECT a.*, i.credencial, u.nome as instrutor_nome, v.placa, v.modelo, v.marca, v.tipo_veiculo
+    SELECT a.*, i.credencial, COALESCE(u.nome, i.nome) as instrutor_nome, v.placa, v.modelo, v.marca, v.tipo_veiculo
     FROM aulas a
     LEFT JOIN instrutores i ON a.instrutor_id = i.id
     LEFT JOIN usuarios u ON i.usuario_id = u.id
@@ -157,7 +157,7 @@ $statusProgresso = CategoriasHabilitacao::getStatusProgresso($alunoData['categor
 
 // Buscar próximas aulas
 $proximasAulas = db()->fetchAll("
-    SELECT a.*, i.credencial, u.nome as instrutor_nome, v.placa, v.tipo_veiculo
+    SELECT a.*, i.credencial, COALESCE(u.nome, i.nome) as instrutor_nome, v.placa, v.tipo_veiculo
     FROM aulas a
     LEFT JOIN instrutores i ON a.instrutor_id = i.id
     LEFT JOIN usuarios u ON i.usuario_id = u.id
@@ -182,8 +182,8 @@ if ($isPrimeiraHabilitacao) {
     <title>Histórico do Aluno - Sistema CFC</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="../assets/css/admin.css" rel="stylesheet">
-    <link href="../assets/css/action-buttons.css" rel="stylesheet">
+    <link href="assets/css/admin.css" rel="stylesheet">
+    <link href="assets/css/action-buttons.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .progress-category {
@@ -497,7 +497,7 @@ if ($isPrimeiraHabilitacao) {
                                             <div>
                                                 <strong><?php echo htmlspecialchars($aula['instrutor_nome']); ?></strong>
                                                 <br>
-                                                <small class="text-muted"><?php echo htmlspecialchars($aula['credencial']); ?></small>
+                                                <small class="text-muted"><?php echo htmlspecialchars($aula['credencial'] ?? 'N/A'); ?></small>
                                             </div>
                                         </td>
                                         <td>
@@ -597,52 +597,246 @@ if ($isPrimeiraHabilitacao) {
         </div>
     </div>
 
+    <!-- Modal de Cancelamento de Aula -->
+    <div class="modal fade" id="modalCancelarAula" tabindex="-1" aria-labelledby="modalCancelarAulaLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalCancelarAulaLabel">
+                        <i class="fas fa-times-circle me-2 text-danger"></i>Cancelar Aula
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="aulaIdCancelar">
+                    
+                    <div class="mb-3">
+                        <label for="motivoCancelamento" class="form-label required">Motivo do Cancelamento:</label>
+                        <select class="form-control" id="motivoCancelamento" required>
+                            <option value="">Selecione um motivo</option>
+                            <option value="aluno_ausente">Aluno ausente</option>
+                            <option value="instrutor_indisponivel">Instrutor indisponível</option>
+                            <option value="veiculo_quebrado">Veículo quebrado</option>
+                            <option value="condicoes_climaticas">Condições climáticas</option>
+                            <option value="problema_tecnico">Problema técnico</option>
+                            <option value="reagendamento">Reagendamento</option>
+                            <option value="outros">Outros</option>
+                        </select>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="observacoesCancelamento" class="form-label">Observações:</label>
+                        <textarea class="form-control" id="observacoesCancelamento" rows="3" placeholder="Digite observações sobre o cancelamento..."></textarea>
+                    </div>
+                    
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Atenção:</strong> Esta ação não pode ser desfeita. A aula será marcada como cancelada.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-danger" onclick="confirmarCancelamento()">
+                        <i class="fas fa-times me-1"></i>Confirmar Cancelamento
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="../assets/js/admin.js"></script>
     <script>
         // Funções para ações
         function verDetalhesAula(aulaId) {
-            const modal = new bootstrap.Modal(document.getElementById('modalDetalhesAula'));
-            document.getElementById('modalDetalhesBody').innerHTML = `
-                <div class="text-center">
-                    <div class="spinner-border" role="status">
-                        <span class="visually-hidden">Carregando...</span>
+            // Buscar dados da aula
+            const aula = <?php echo json_encode($aulas); ?>.find(a => a.id == aulaId);
+            
+            if (!aula) {
+                alert('Aula não encontrada!');
+                return;
+            }
+            
+            // Montar conteúdo do modal
+            const modalBody = document.getElementById('modalDetalhesBody');
+            
+            modalBody.innerHTML = `
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-calendar-alt me-2"></i>Informações da Aula
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Data:</label>
+                            <p class="mb-0">${formatarData(aula.data_aula)}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Horário:</label>
+                            <p class="mb-0">${aula.hora_inicio} - ${aula.hora_fim}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Tipo de Aula:</label>
+                            <p class="mb-0">
+                                <span class="badge bg-${aula.tipo_aula === 'teorica' ? 'info' : 'primary'}">
+                                    ${aula.tipo_aula.toUpperCase()}
+                                </span>
+                            </p>
+                        </div>
+                        ${aula.disciplina ? `
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Disciplina:</label>
+                            <p class="mb-0">${aula.disciplina}</p>
+                        </div>
+                        ` : ''}
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Status:</label>
+                            <p class="mb-0">
+                                <span class="badge bg-${getStatusColor(aula.status)}">
+                                    ${aula.status.toUpperCase()}
+                                </span>
+                            </p>
+                        </div>
                     </div>
-                    <p class="mt-2">Carregando detalhes da aula...</p>
+                    <div class="col-md-6">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-users me-2"></i>Informações dos Participantes
+                        </h6>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Aluno:</label>
+                            <p class="mb-0">${aula.aluno_nome || 'N/A'}</p>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Instrutor:</label>
+                            <p class="mb-0">${aula.instrutor_nome || 'N/A'}</p>
+                            ${aula.credencial ? `<small class="text-muted">${aula.credencial}</small>` : ''}
+                        </div>
+                        ${aula.placa ? `
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Veículo:</label>
+                            <p class="mb-0">${aula.placa} - ${aula.modelo || ''} ${aula.marca || ''}</p>
+                        </div>
+                        ` : `
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">Veículo:</label>
+                            <p class="mb-0 text-muted">Não aplicável</p>
+                        </div>
+                        `}
+                    </div>
+                </div>
+                ${aula.observacoes ? `
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-sticky-note me-2"></i>Observações
+                        </h6>
+                        <div class="alert alert-light">
+                            <p class="mb-0">${aula.observacoes}</p>
+                        </div>
+                    </div>
+                </div>
+                ` : ''}
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Informações do Sistema
+                        </h6>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <strong>Criado em:</strong> ${formatarDataHora(aula.criado_em)}
+                                </small>
+                            </div>
+                            ${aula.atualizado_em ? `
+                            <div class="col-md-6">
+                                <small class="text-muted">
+                                    <strong>Atualizado em:</strong> ${formatarDataHora(aula.atualizado_em)}
+                                </small>
+                            </div>
+                            ` : ''}
+                        </div>
+                    </div>
                 </div>
             `;
-            modal.show();
             
-            // Simular carregamento dos dados
-            setTimeout(() => {
-                document.getElementById('modalDetalhesBody').innerHTML = `
-                    <div class="row">
-                        <div class="col-md-6">
-                            <p><strong>ID da Aula:</strong> ${aulaId}</p>
-                            <p><strong>Status:</strong> <span class="badge bg-success">Concluída</span></p>
-                            <p><strong>Tipo:</strong> Aula Prática</p>
-                        </div>
-                        <div class="col-md-6">
-                            <p><strong>Data:</strong> 15/06/2024</p>
-                            <p><strong>Horário:</strong> 14:00 - 14:50</p>
-                            <p><strong>Duração:</strong> 50 minutos</p>
-                        </div>
-                    </div>
-                    <hr>
-                    <p><strong>Observações:</strong></p>
-                    <p class="text-muted">Aluno apresentou boa evolução na direção. Necessita mais prática em balizas.</p>
-                `;
-            }, 1000);
+            // Mostrar modal
+            const modal = new bootstrap.Modal(document.getElementById('modalDetalhesAula'));
+            modal.show();
+        }
+        
+        // Funções auxiliares
+        function formatarData(data) {
+            if (!data) return 'N/A';
+            const date = new Date(data);
+            return date.toLocaleDateString('pt-BR');
+        }
+        
+        function formatarDataHora(dataHora) {
+            if (!dataHora) return 'N/A';
+            const date = new Date(dataHora);
+            return date.toLocaleString('pt-BR');
+        }
+        
+        function getStatusColor(status) {
+            const colors = {
+                'agendada': 'warning',
+                'concluida': 'success',
+                'cancelada': 'danger',
+                'em_andamento': 'info'
+            };
+            return colors[status] || 'secondary';
         }
 
         function editarAula(aulaId) {
-            window.location.href = `agendar-aula.php?edit=${aulaId}`;
+            // Limpar cache e redirecionar com versão forçada
+            const timestamp = Date.now();
+            const random = Math.random().toString(36).substring(7);
+            const version = 'v' + Math.floor(Date.now() / 1000); // Versão baseada em timestamp
+            window.location.href = `index.php?page=agendar-aula&action=edit&edit=${aulaId}&t=${timestamp}&r=${random}&v=${version}`;
         }
 
         function cancelarAula(aulaId) {
             if (confirm('Tem certeza que deseja cancelar esta aula?')) {
-                alert('Funcionalidade de cancelamento será implementada em breve!');
+                // Mostrar modal de cancelamento
+                const modal = new bootstrap.Modal(document.getElementById('modalCancelarAula'));
+                document.getElementById('aulaIdCancelar').value = aulaId;
+                modal.show();
             }
+        }
+        
+        function confirmarCancelamento() {
+            const aulaId = document.getElementById('aulaIdCancelar').value;
+            const motivo = document.getElementById('motivoCancelamento').value;
+            const observacoes = document.getElementById('observacoesCancelamento').value;
+            
+            if (!motivo) {
+                alert('Por favor, selecione um motivo para o cancelamento.');
+                return;
+            }
+            
+            // Preparar dados
+            const formData = new FormData();
+            formData.append('aula_id', aulaId);
+            formData.append('motivo_cancelamento', motivo);
+            formData.append('observacoes', observacoes);
+            
+            // Enviar dados
+            fetch('api/cancelar-aula.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Aula cancelada com sucesso!');
+                    location.reload(); // Recarregar página para atualizar dados
+                } else {
+                    alert('Erro ao cancelar aula: ' + data.message);
+                }
+            })
+            .catch(error => {
+                alert('Erro ao cancelar aula: ' + error.message);
+            });
         }
 
         // Exportar histórico

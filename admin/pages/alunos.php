@@ -58,6 +58,60 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
     padding: 1.5rem 2rem !important;
 }
 
+/* Melhorias para scroll do modal */
+.custom-modal .modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: #6c757d #f8f9fa;
+}
+
+.custom-modal .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-modal .modal-body::-webkit-scrollbar-track {
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.custom-modal .modal-body::-webkit-scrollbar-thumb {
+    background: #6c757d;
+    border-radius: 4px;
+}
+
+.custom-modal .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #495057;
+}
+
+/* Garantir que os botões sejam sempre visíveis */
+.custom-modal .modal-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    background-color: #f8f9fa !important;
+    border-top: 1px solid #dee2e6 !important;
+    z-index: 10 !important;
+}
+
+/* Responsividade para telas menores */
+@media (max-height: 768px) {
+    .custom-modal-content {
+        max-height: 85vh !important;
+    }
+    
+    .custom-modal .modal-body {
+        max-height: calc(85vh - 140px) !important;
+    }
+}
+
+@media (max-height: 600px) {
+    .custom-modal-content {
+        max-height: 80vh !important;
+    }
+    
+    .custom-modal .modal-body {
+        max-height: calc(80vh - 140px) !important;
+    }
+}
+
 /* Estilos dos formulários */
 .modal#modalAluno .form-label {
     font-weight: 600 !important;
@@ -714,7 +768,7 @@ body.modal-open #modalAluno .modal-dialog {
 <!-- Modal Customizado para Cadastro/Edição de Aluno -->
 <div id="modalAluno" class="custom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999;">
     <div class="custom-modal-dialog" style="position: fixed; top: 2rem; left: 2rem; right: 2rem; bottom: 2rem; width: auto; height: auto; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center;">
-        <div class="custom-modal-content" style="width: 100%; height: 100%; max-width: 95vw; max-height: 95vh; background: white; border: none; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column;">
+        <div class="custom-modal-content" style="width: 100%; height: auto; max-width: 95vw; max-height: 90vh; background: white; border: none; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; position: relative;">
             <form id="formAluno" method="POST">
                 <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
                     <h5 class="modal-title" id="modalTitle" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
@@ -722,7 +776,7 @@ body.modal-open #modalAluno .modal-dialog {
                     </h5>
                     <button type="button" class="btn-close" onclick="fecharModalAluno()" style="filter: invert(1); background: none; border: none; font-size: 1.25rem; color: white; opacity: 0.8; cursor: pointer;">&times;</button>
                 </div>
-                <div class="modal-body" style="overflow-y: auto; padding: 1rem; flex: 1; min-height: 0;">
+                <div class="modal-body" style="overflow-y: auto; padding: 1rem; flex: 1; min-height: 0; max-height: calc(90vh - 140px);">
                     <input type="hidden" name="acao" id="acaoAluno" value="criar">
                     <input type="hidden" name="aluno_id" id="aluno_id" value="">
                     

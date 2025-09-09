@@ -3,15 +3,20 @@
 // API DE VERIFICAÇÃO DE DISPONIBILIDADE - SISTEMA CFC
 // =====================================================
 
+// Limpar qualquer output anterior
+if (ob_get_level()) {
+    ob_clean();
+}
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
 // Usar caminho relativo que sabemos que funciona
-require_once '../../includes/config.php';
-require_once '../../includes/database.php';
-require_once '../../includes/auth.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
 
 // Verificar método HTTP
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
@@ -26,7 +31,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET' && $_SERVER['REQUEST_METHOD'] !== 'POST
 }
 
 // Verificar autenticação
-session_start();
+if (!isset($_SESSION['user_id'])) {
+    session_start();
+}
 if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
     echo json_encode(['sucesso' => false, 'mensagem' => 'Usuário não autenticado']);
@@ -153,11 +160,7 @@ try {
  */
 function verificarDisponibilidadeInstrutor($db, $instrutor_id, $data_aula, $hora_inicio, $hora_fim) {
     // Verificar conflitos de horário
-    $conflito = $db->fetch("SELECT * FROM aulas WHERE instrutor_id = ? AND data_aula = ? AND status != 'cancelada' AND (
-        (hora_inicio <= ? AND hora_fim > ?) OR
-        (hora_inicio < ? AND hora_fim >= ?) OR
-        (hora_inicio >= ? AND hora_fim <= ?)
-    )", [$instrutor_id, $data_aula, $hora_inicio, $hora_inicio, $hora_fim, $hora_fim, $hora_inicio, $hora_fim]);
+    $conflito = $db->fetch("SELECT * FROM aulas WHERE instrutor_id = ? AND data_aula = ? AND status != 'cancelada' AND ((hora_inicio <= ? AND hora_fim > ?) OR (hora_inicio < ? AND hora_fim >= ?) OR (hora_inicio >= ? AND hora_fim <= ?))", [$instrutor_id, $data_aula, $hora_inicio, $hora_inicio, $hora_fim, $hora_fim, $hora_inicio, $hora_fim]);
     
     if ($conflito) {
         return [
@@ -179,11 +182,7 @@ function verificarDisponibilidadeInstrutor($db, $instrutor_id, $data_aula, $hora
  */
 function verificarDisponibilidadeVeiculo($db, $veiculo_id, $data_aula, $hora_inicio, $hora_fim) {
     // Verificar conflitos de horário
-    $conflito = $db->fetch("SELECT * FROM aulas WHERE veiculo_id = ? AND data_aula = ? AND status != 'cancelada' AND (
-        (hora_inicio <= ? AND hora_fim > ?) OR
-        (hora_inicio < ? AND hora_fim >= ?) OR
-        (hora_inicio >= ? AND hora_fim <= ?)
-    )", [$veiculo_id, $data_aula, $hora_inicio, $hora_inicio, $hora_fim, $hora_fim, $hora_inicio, $hora_fim]);
+    $conflito = $db->fetch("SELECT * FROM aulas WHERE veiculo_id = ? AND data_aula = ? AND status != 'cancelada' AND ((hora_inicio <= ? AND hora_fim > ?) OR (hora_inicio < ? AND hora_fim >= ?) OR (hora_inicio >= ? AND hora_fim <= ?))", [$veiculo_id, $data_aula, $hora_inicio, $hora_inicio, $hora_fim, $hora_fim, $hora_inicio, $hora_fim]);
     
     if ($conflito) {
         return [

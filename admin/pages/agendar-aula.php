@@ -302,6 +302,24 @@ if (!isset($aluno) || !isset($instrutores) || !isset($veiculos)) {
                     </div>
                 </div>
                 
+                <!-- Campo Disciplina - Visível apenas para aulas teóricas -->
+                <div id="campo_disciplina" class="row" style="display: none;">
+                    <div class="col-md-6 mb-3">
+                        <label for="disciplina" class="form-label">Disciplina *</label>
+                        <select class="form-select" id="disciplina" name="disciplina">
+                            <option value="">Selecione a disciplina...</option>
+                            <option value="legislacao_transito">Legislação de Trânsito</option>
+                            <option value="direcao_defensiva">Direção Defensiva</option>
+                            <option value="primeiros_socorros">Primeiros Socorros</option>
+                            <option value="meio_ambiente">Meio Ambiente e Cidadania</option>
+                            <option value="mecanica_basica">Mecânica Básica</option>
+                            <option value="sinalizacao">Sinalização de Trânsito</option>
+                            <option value="etica_profissional">Ética Profissional</option>
+                        </select>
+                        <small class="form-text text-muted">Disciplina específica da aula teórica</small>
+                    </div>
+                </div>
+                
                 <div class="row">
                     <div class="col-md-6 mb-3">
                         <label for="instrutor_id" class="form-label">Instrutor *</label>
@@ -409,15 +427,62 @@ if (!isset($aluno) || !isset($instrutores) || !isset($veiculos)) {
             }
         });
         
-        // Validação do tipo de aula vs veículo
+        // Debug: verificar carregamento dos campos
+        console.log('Veículos carregados:', veiculo.options.length);
+        console.log('Estado inicial - Tipo de aula:', tipoAula.value);
+        
+        // Inicializar estado dos campos baseado no tipo de aula selecionado
+        const campoDisciplina = document.getElementById('campo_disciplina');
+        const disciplina = document.getElementById('disciplina');
+        
+        if (tipoAula.value === 'teorica') {
+            // Aula teórica: mostrar disciplina, ocultar veículo
+            campoDisciplina.style.display = 'block';
+            disciplina.required = true;
+            disciplina.disabled = false;
+            
+            veiculo.required = false;
+            veiculo.disabled = true;
+            veiculo.value = '';
+            console.log('Inicialização: aula teórica - disciplina habilitada, veículo desabilitado');
+        } else if (tipoAula.value !== '') {
+            // Aula prática: ocultar disciplina, mostrar veículo
+            campoDisciplina.style.display = 'none';
+            disciplina.required = false;
+            disciplina.disabled = true;
+            disciplina.value = '';
+            
+            veiculo.required = true;
+            veiculo.disabled = false;
+            console.log('Inicialização: aula prática - disciplina desabilitada, veículo habilitado');
+        }
+        
+        // Validação do tipo de aula vs veículo e disciplina
         tipoAula.addEventListener('change', function() {
+            console.log('Tipo de aula alterado para:', this.value);
+            const campoDisciplina = document.getElementById('campo_disciplina');
+            const disciplina = document.getElementById('disciplina');
+            
             if (this.value === 'teorica') {
+                // Aula teórica: mostrar disciplina, ocultar veículo
+                campoDisciplina.style.display = 'block';
+                disciplina.required = true;
+                disciplina.disabled = false;
+                
                 veiculo.required = false;
                 veiculo.disabled = true;
                 veiculo.value = '';
+                console.log('Aula teórica: disciplina habilitada, veículo desabilitado');
             } else {
+                // Aula prática: ocultar disciplina, mostrar veículo
+                campoDisciplina.style.display = 'none';
+                disciplina.required = false;
+                disciplina.disabled = true;
+                disciplina.value = '';
+                
                 veiculo.required = true;
                 veiculo.disabled = false;
+                console.log('Aula prática: disciplina desabilitada, veículo habilitado');
             }
         });
         
@@ -554,6 +619,12 @@ if (!isset($aluno) || !isset($instrutores) || !isset($veiculos)) {
                 valido = false;
             }
             
+            // Validar disciplina para aulas teóricas
+            if (tipoAula.value === 'teorica' && !disciplina.value) {
+                disciplina.classList.add('is-invalid');
+                valido = false;
+            }
+            
             // Validar veículo para aulas práticas
             if (tipoAula.value !== 'teorica' && !veiculo.value) {
                 veiculo.classList.add('is-invalid');
@@ -684,15 +755,20 @@ if (!isset($aluno) || !isset($instrutores) || !isset($veiculos)) {
         function enviarAgendamento() {
             const formData = new FormData(form);
             
-                         // Adicionar tipo de agendamento
-             const tipoAgendamento = document.querySelector('input[name="tipo_agendamento"]:checked').value;
-             formData.append('tipo_agendamento', tipoAgendamento);
-             
-             // Adicionar posição do intervalo se for 3 aulas
-             if (tipoAgendamento === 'tres') {
-                 const posicaoIntervalo = document.querySelector('input[name="posicao_intervalo"]:checked').value;
-                 formData.append('posicao_intervalo', posicaoIntervalo);
-             }
+            // Adicionar tipo de agendamento
+            const tipoAgendamento = document.querySelector('input[name="tipo_agendamento"]:checked').value;
+            formData.append('tipo_agendamento', tipoAgendamento);
+            
+            // Adicionar disciplina se for aula teórica
+            if (tipoAula.value === 'teorica' && disciplina.value) {
+                formData.append('disciplina', disciplina.value);
+            }
+            
+            // Adicionar posição do intervalo se for 3 aulas
+            if (tipoAgendamento === 'tres') {
+                const posicaoIntervalo = document.querySelector('input[name="posicao_intervalo"]:checked').value;
+                formData.append('posicao_intervalo', posicaoIntervalo);
+            }
             
             // Mostrar loading
             const btnSubmit = form.querySelector('button[type="submit"]');
