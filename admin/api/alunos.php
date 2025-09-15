@@ -155,6 +155,35 @@ try {
     if (function_exists('error_log')) {
         error_log('[API Alunos] Conexão com banco estabelecida');
     }
+    
+    // Verificar e adicionar campo tipo_servico se não existir
+    try {
+        $result = $db->query("SHOW COLUMNS FROM alunos LIKE 'tipo_servico'");
+        $rows = $result->fetchAll();
+        if (!$result || count($rows) === 0) {
+            if (function_exists('error_log')) {
+                error_log('[API Alunos] Campo tipo_servico não existe, adicionando...');
+            }
+            
+            // Adicionar campo tipo_servico
+            $db->query("ALTER TABLE alunos ADD COLUMN tipo_servico VARCHAR(50) NOT NULL DEFAULT 'primeira_habilitacao' AFTER categoria_cnh");
+            
+            // Atualizar registros existentes
+            $db->query("UPDATE alunos SET tipo_servico = 'primeira_habilitacao' WHERE categoria_cnh IN ('A', 'B', 'AB', 'ACC')");
+            $db->query("UPDATE alunos SET tipo_servico = 'adicao' WHERE categoria_cnh IN ('C', 'D', 'E')");
+            $db->query("UPDATE alunos SET tipo_servico = 'mudanca' WHERE categoria_cnh IN ('AC', 'AD', 'AE', 'BC', 'BD', 'BE', 'CD', 'CE', 'DE')");
+            
+            if (function_exists('error_log')) {
+                error_log('[API Alunos] Campo tipo_servico adicionado com sucesso');
+            }
+        }
+    } catch (Exception $e) {
+        if (function_exists('error_log')) {
+            error_log('[API Alunos] Erro ao verificar/adicionar campo tipo_servico: ' . $e->getMessage());
+        }
+        // Continuar mesmo com erro, pois pode ser problema de permissão
+    }
+    
 } catch (Exception $e) {
     if (function_exists('error_log')) {
         error_log('[API Alunos] Erro de conexão com banco: ' . $e->getMessage());
@@ -269,12 +298,29 @@ try {
                         'nome' => !empty($data['nome']),
                         'cpf' => !empty($data['cpf']),
                         'cfc_id' => !empty($data['cfc_id']),
-                        'categoria_cnh' => !empty($data['categoria_cnh'])
+                        'categoria_cnh' => !empty($data['categoria_cnh']),
+                        'tipo_servico' => !empty($data['tipo_servico'])
                     ], true));
                 }
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'Nome, CPF, CFC e Categoria CNH são obrigatórios']);
                 exit;
+            }
+            
+            // Se tipo_servico não foi enviado, determinar baseado na categoria
+            if (empty($data['tipo_servico']) && !empty($data['categoria_cnh'])) {
+                $categoria = $data['categoria_cnh'];
+                if (in_array($categoria, ['A', 'B', 'AB', 'ACC'])) {
+                    $data['tipo_servico'] = 'primeira_habilitacao';
+                } elseif (in_array($categoria, ['C', 'D', 'E'])) {
+                    $data['tipo_servico'] = 'adicao';
+                } else {
+                    $data['tipo_servico'] = 'mudanca';
+                }
+                
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] Tipo de serviço determinado automaticamente: ' . $data['tipo_servico'] . ' para categoria: ' . $categoria);
+                }
             }
             
             // Verificar se CPF já existe
@@ -318,6 +364,7 @@ try {
                 'cidade' => $data['cidade'] ?? '',
                 'estado' => $data['estado'] ?? '',
                 'cep' => $data['cep'] ?? '',
+                'tipo_servico' => $data['tipo_servico'] ?? '',
                 'categoria_cnh' => $data['categoria_cnh'] ?? 'B',
                 'status' => $data['status'] ?? 'ativo',
                 'observacoes' => $data['observacoes'] ?? '',
@@ -423,9 +470,13 @@ try {
             }
             
             // Preparar dados para atualização
-            $alunoData = array_filter($input, function($value) {
+            $alunoData = array_filter($input, function($value, $key) {
+                // Manter campos obrigatórios mesmo se vazios
+                if (in_array($key, ['tipo_servico', 'categoria_cnh', 'status'])) {
+                    return true;
+                }
                 return $value !== null && $value !== '';
-            });
+            }, ARRAY_FILTER_USE_BOTH);
             
             // Remover campos que não devem ser atualizados
             unset($alunoData['id']); // Não atualizar o ID

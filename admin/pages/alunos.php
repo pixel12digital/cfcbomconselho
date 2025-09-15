@@ -885,19 +885,25 @@ body.modal-open #modalAluno .modal-dialog {
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-1">
-                                    <label for="categoria_cnh" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Categoria CNH *</label>
-                                    <select class="form-select" id="categoria_cnh" name="categoria_cnh" required style="padding: 0.4rem; font-size: 0.85rem;">
-                                        <option value="">Selecione a categoria...</option>
-                                        <option value="A">A - Motocicletas</option>
-                                        <option value="B">B - Automóveis</option>
-                                        <option value="C">C - Veículos de carga</option>
-                                        <option value="D">D - Veículos de passageiros</option>
-                                        <option value="E">E - Veículos com reboque</option>
-                                        <option value="AB">AB - A + B</option>
-                                        <option value="AC">AC - A + C</option>
-                                        <option value="AD">AD - A + D</option>
-                                        <option value="AE">AE - A + E</option>
+                                    <label for="tipo_servico" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Tipo de Serviço *</label>
+                                    <select class="form-select" id="tipo_servico" name="tipo_servico" required style="padding: 0.4rem; font-size: 0.85rem;" onchange="carregarCategoriasCNH()">
+                                        <option value="">Selecione o tipo de serviço...</option>
+                                        <option value="primeira_habilitacao">🏍️ Primeira Habilitação</option>
+                                        <option value="adicao">➕ Adição de Categoria</option>
+                                        <option value="mudanca">🔄 Mudança de Categoria</option>
                                     </select>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row mb-2">
+                            <div class="col-md-6">
+                                <div class="mb-1">
+                                    <label for="categoria_cnh" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Categoria CNH *</label>
+                                    <select class="form-select" id="categoria_cnh" name="categoria_cnh" required style="padding: 0.4rem; font-size: 0.85rem;" disabled>
+                                        <option value="">Primeiro selecione o tipo de serviço</option>
+                                    </select>
+                                    <small class="form-text text-muted" id="categoria_info" style="font-size: 0.75rem; margin-top: 0.25rem;"></small>
                                 </div>
                             </div>
                         </div>
@@ -1227,8 +1233,31 @@ function preencherFormularioAluno(aluno) {
     document.getElementById('email').value = aluno.email || '';
     document.getElementById('telefone').value = aluno.telefone || '';
     document.getElementById('cfc_id').value = aluno.cfc_id || '';
-    document.getElementById('categoria_cnh').value = aluno.categoria_cnh || '';
     document.getElementById('status').value = aluno.status || 'ativo';
+    
+    // Preencher tipo de serviço e categoria CNH
+    if (aluno.categoria_cnh) {
+        // Determinar tipo de serviço baseado na categoria
+        let tipoServico = '';
+        if (['A', 'B', 'AB', 'ACC'].includes(aluno.categoria_cnh)) {
+            tipoServico = 'primeira_habilitacao';
+        } else if (['C', 'D', 'E'].includes(aluno.categoria_cnh)) {
+            tipoServico = 'adicao';
+        } else {
+            tipoServico = 'mudanca';
+        }
+        
+        // Definir tipo de serviço primeiro
+        document.getElementById('tipo_servico').value = tipoServico;
+        
+        // Carregar categorias para o tipo selecionado
+        carregarCategoriasCNH();
+        
+        // Definir categoria CNH após carregar as opções
+        setTimeout(() => {
+            document.getElementById('categoria_cnh').value = aluno.categoria_cnh || '';
+        }, 100);
+    }
     
     // Endereço
     if (aluno.endereco) {
@@ -1808,6 +1837,91 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+// Função para carregar categorias CNH dinamicamente
+function carregarCategoriasCNH() {
+    console.log('🔧 carregarCategoriasCNH() chamada');
+    
+    const tipoServico = document.getElementById('tipo_servico').value;
+    const selectCategoria = document.getElementById('categoria_cnh');
+    const infoCategoria = document.getElementById('categoria_info');
+    
+    console.log('🔧 Tipo de serviço selecionado:', tipoServico);
+    console.log('🔧 Select categoria encontrado:', !!selectCategoria);
+    console.log('🔧 Info categoria encontrado:', !!infoCategoria);
+    
+    // Limpar opções anteriores
+    selectCategoria.innerHTML = '<option value="">Selecione a categoria...</option>';
+    
+    if (!tipoServico) {
+        console.log('⚠️ Tipo de serviço vazio, desabilitando categoria');
+        selectCategoria.disabled = true;
+        infoCategoria.textContent = '';
+        return;
+    }
+    
+    // Definir categorias por tipo de serviço
+    const categoriasPorTipo = {
+        'primeira_habilitacao': [
+            { value: 'A', text: 'A - Motocicletas', desc: 'Motocicletas, ciclomotores e triciclos' },
+            { value: 'B', text: 'B - Automóveis', desc: 'Automóveis, caminhonetes e utilitários' },
+            { value: 'AB', text: 'AB - A + B', desc: 'Motocicletas e automóveis' },
+            { value: 'ACC', text: 'ACC - Ciclomotores', desc: 'Ciclomotores até 50cc (menores de 18 anos)' }
+        ],
+        'adicao': [
+            { value: 'C', text: 'C - Veículos de Carga', desc: 'Veículos de carga acima de 3.500kg' },
+            { value: 'D', text: 'D - Veículos de Passageiros', desc: 'Veículos de transporte de passageiros' },
+            { value: 'E', text: 'E - Combinação de Veículos', desc: 'Combinação de veículos (carreta, bitrem)' }
+        ],
+        'mudanca': [
+            { value: 'AC', text: 'AC - A + C', desc: 'Motocicletas + Veículos de Carga' },
+            { value: 'AD', text: 'AD - A + D', desc: 'Motocicletas + Veículos de Passageiros' },
+            { value: 'AE', text: 'AE - A + E', desc: 'Motocicletas + Combinação de Veículos' },
+            { value: 'BC', text: 'BC - B + C', desc: 'Automóveis + Veículos de Carga' },
+            { value: 'BD', text: 'BD - B + D', desc: 'Automóveis + Veículos de Passageiros' },
+            { value: 'BE', text: 'BE - B + E', desc: 'Automóveis + Combinação de Veículos' },
+            { value: 'CD', text: 'CD - C + D', desc: 'Veículos de Carga + Passageiros' },
+            { value: 'CE', text: 'CE - C + E', desc: 'Veículos de Carga + Combinação' },
+            { value: 'DE', text: 'DE - D + E', desc: 'Veículos de Passageiros + Combinação' }
+        ]
+    };
+    
+    const categorias = categoriasPorTipo[tipoServico] || [];
+    
+    // Adicionar opções ao select
+    console.log('🔧 Adicionando', categorias.length, 'categorias ao select');
+    categorias.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.value;
+        option.textContent = cat.text;
+        option.setAttribute('data-desc', cat.desc);
+        selectCategoria.appendChild(option);
+        console.log('✅ Adicionada opção:', cat.value, '-', cat.text);
+    });
+    
+    // Habilitar select e mostrar informações
+    selectCategoria.disabled = false;
+    console.log('✅ Select categoria habilitado com', selectCategoria.options.length, 'opções');
+    
+    // Mostrar informações sobre o tipo selecionado
+    const tiposInfo = {
+        'primeira_habilitacao': 'Para quem nunca teve habilitação. Inclui curso teórico obrigatório.',
+        'adicao': 'Para quem já possui categoria B. Não requer curso teórico.',
+        'mudanca': 'Para quem já possui outras categorias. Não requer curso teórico.'
+    };
+    
+    infoCategoria.textContent = tiposInfo[tipoServico] || '';
+    
+    // Adicionar evento para mostrar descrição da categoria selecionada
+    selectCategoria.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.value) {
+            infoCategoria.textContent = selectedOption.getAttribute('data-desc');
+        } else {
+            infoCategoria.textContent = tiposInfo[tipoServico] || '';
+        }
+    });
+}
+
 // Função para salvar aluno via AJAX
 function salvarAluno() {
     const form = document.getElementById('formAluno');
@@ -1831,6 +1945,7 @@ function salvarAluno() {
         telefone: formData.get('telefone'),
         status: formData.get('status'),
         cfc_id: formData.get('cfc_id'),
+        tipo_servico: formData.get('tipo_servico'),
         categoria_cnh: formData.get('categoria_cnh'),
         cep: formData.get('cep'),
         endereco: formData.get('logradouro'), // Mapear logradouro para endereco

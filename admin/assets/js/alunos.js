@@ -176,6 +176,11 @@ window.salvarAluno = async function() {
             return;
         }
         
+        if (!formData.get('tipo_servico')) {
+            alert('Tipo de serviço é obrigatório');
+            return;
+        }
+        
         if (!formData.get('categoria_cnh')) {
             alert('Categoria de CNH é obrigatória');
             return;
@@ -187,6 +192,8 @@ window.salvarAluno = async function() {
             cpf: (formData.get('cpf') || '').trim(),
             rg: (formData.get('rg') || '').trim(),
             data_nascimento: formData.get('data_nascimento') || null,
+            naturalidade: (formData.get('naturalidade') || '').trim(),
+            nacionalidade: (formData.get('nacionalidade') || 'Brasileira').trim(),
             endereco: (formData.get('logradouro') || '').trim(),
             numero: (formData.get('numero') || '').trim(),
             bairro: (formData.get('bairro') || '').trim(),
@@ -195,11 +202,21 @@ window.salvarAluno = async function() {
             cep: (formData.get('cep') || '').trim(),
             telefone: (formData.get('telefone') || '').trim(),
             email: (formData.get('email') || '').trim(),
+            tipo_servico: formData.get('tipo_servico'),
             categoria_cnh: formData.get('categoria_cnh'),
             cfc_id: formData.get('cfc_id') || null,
             status: formData.get('status') || 'ativo',
             observacoes: (formData.get('observacoes') || '').trim()
         };
+        
+        // Debug: verificar dados antes de enviar
+        console.log('🔧 Dados do formulário (FormData):');
+        for (let [key, value] of formData.entries()) {
+            console.log(`  ${key}: ${value}`);
+        }
+        
+        console.log('🔧 Dados preparados para API:');
+        console.log(alunoData);
         
         const acao = formData.get('acao');
         const aluno_id = formData.get('aluno_id');
@@ -311,12 +328,15 @@ window.editarAluno = async function(id) {
                 const cpfField = document.getElementById('cpf');
                 const rgField = document.getElementById('rg');
                 const dataNascField = document.getElementById('data_nascimento');
+                const naturalidadeField = document.getElementById('naturalidade');
+                const nacionalidadeField = document.getElementById('nacionalidade');
                 const statusField = document.getElementById('status');
                 const emailField = document.getElementById('email');
                 const telefoneField = document.getElementById('telefone');
                 
                 // Campos acadêmicos
                 const cfcField = document.getElementById('cfc_id');
+                const tipoServicoField = document.getElementById('tipo_servico');
                 const categoriaField = document.getElementById('categoria_cnh');
                 
                 // Campos de endereço
@@ -335,11 +355,12 @@ window.editarAluno = async function(id) {
                 if (cpfField) cpfField.value = aluno.cpf || '';
                 if (rgField) rgField.value = aluno.rg || '';
                 if (dataNascField) dataNascField.value = aluno.data_nascimento || '';
+                if (naturalidadeField) naturalidadeField.value = aluno.naturalidade || '';
+                if (nacionalidadeField) nacionalidadeField.value = aluno.nacionalidade || 'Brasileira';
                 if (statusField) statusField.value = aluno.status || 'ativo';
                 if (emailField) emailField.value = aluno.email || '';
                 if (telefoneField) telefoneField.value = aluno.telefone || '';
                 if (cfcField) cfcField.value = aluno.cfc_id || '';
-                if (categoriaField) categoriaField.value = aluno.categoria_cnh || '';
                 if (cepField) cepField.value = aluno.cep || '';
                 if (logradouroField) logradouroField.value = aluno.endereco || '';
                 if (numeroField) numeroField.value = aluno.numero || '';
@@ -347,6 +368,60 @@ window.editarAluno = async function(id) {
                 if (ufField) ufField.value = aluno.estado || '';
                 if (cidadeField) cidadeField.value = aluno.cidade || '';
                 if (obsField) obsField.value = aluno.observacoes || '';
+                
+                // Preencher tipo de serviço e categoria CNH
+                if (aluno.categoria_cnh) {
+                    // Usar o tipo de serviço salvo no banco, ou determinar baseado na categoria
+                    let tipoServico = aluno.tipo_servico || '';
+                    
+                    // Se não tiver tipo_servico salvo, determinar baseado na categoria
+                    if (!tipoServico) {
+                        if (['A', 'B', 'AB', 'ACC'].includes(aluno.categoria_cnh)) {
+                            tipoServico = 'primeira_habilitacao';
+                        } else if (['C', 'D', 'E'].includes(aluno.categoria_cnh)) {
+                            tipoServico = 'adicao';
+                        } else {
+                            tipoServico = 'mudanca';
+                        }
+                    }
+                    
+                    console.log('🔧 Tipo de serviço para edição:', tipoServico, '(salvo:', aluno.tipo_servico, ', categoria:', aluno.categoria_cnh, ')');
+                    
+                    // Definir tipo de serviço primeiro
+                    console.log('🔧 Definindo tipo de serviço:', tipoServico);
+                    if (tipoServicoField) {
+                        tipoServicoField.value = tipoServico;
+                        console.log('✅ Tipo de serviço definido:', tipoServicoField.value);
+                    } else {
+                        console.log('❌ Campo tipo_servico não encontrado!');
+                    }
+                    
+                    // Carregar categorias para o tipo selecionado
+                    console.log('🔧 Verificando função carregarCategoriasCNH...', typeof carregarCategoriasCNH);
+                    
+                    if (typeof carregarCategoriasCNH === 'function') {
+                        console.log('🔧 Chamando carregarCategoriasCNH()...');
+                        carregarCategoriasCNH();
+                        
+                        // Aguardar um pouco mais para garantir que as opções sejam carregadas
+                        setTimeout(() => {
+                            console.log('🔧 Definindo categoria CNH:', aluno.categoria_cnh);
+                            if (categoriaField) {
+                                categoriaField.value = aluno.categoria_cnh || '';
+                                console.log('✅ Categoria CNH definida:', categoriaField.value);
+                            } else {
+                                console.log('❌ Campo categoria_cnh não encontrado!');
+                            }
+                        }, 500); // Aumentar timeout para 500ms
+                    } else {
+                        console.log('⚠️ Função carregarCategoriasCNH não encontrada, usando fallback');
+                        // Fallback se a função não estiver disponível
+                        if (categoriaField) {
+                            categoriaField.value = aluno.categoria_cnh || '';
+                            console.log('✅ Categoria CNH definida (fallback):', categoriaField.value);
+                        }
+                    }
+                }
                 
                 console.log('✅ Campos preenchidos com sucesso');
                 console.log('📋 Nome preenchido:', nomeField ? nomeField.value : 'campo não encontrado');
