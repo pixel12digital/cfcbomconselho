@@ -92,7 +92,7 @@ $showCaptcha = false;
         <!-- Coluna da esquerda - Informações do sistema (Desktop) -->
         <div class="login-info-column" role="banner" aria-label="Informações do sistema">
             <div class="login-logo-container">
-                <span class="login-logo-icon">🚗</span>
+                <img src="assets/logo.png" alt="Sistema CFC" class="login-logo-icon">
                 <h1 class="login-logo-title"><?php echo APP_NAME; ?></h1>
                 <p class="login-logo-subtitle">Sistema completo para gestão de Centros de Formação de Condutores</p>
             </div>
@@ -121,7 +121,7 @@ $showCaptcha = false;
             <div class="login-form-wrapper">
                 <!-- Logo para mobile - Sempre visível -->
                 <div class="login-mobile-logo d-lg-none">
-                    <span>🚗</span>
+                    <img src="assets/logo.png" alt="Sistema CFC" class="login-mobile-logo-icon">
                     <h2><?php echo APP_NAME; ?></h2>
                 </div>
                     
