@@ -41,7 +41,7 @@ Este sistema implementa uma solução completa e flexível para gerenciar as qua
 ```sql
 - categoria: A, B, AB, C, D, E, etc.
 - nome: "Motocicletas", "Automóveis", etc.
-- tipo: primeira_habilitacao, adicao, combinada
+- tipo: primeira_habilitacao, adicao, mudanca_categoria
 - horas_teoricas: 45, 20, 0, etc.
 - horas_praticas_total: 20, 40, etc.
 - horas_praticas_moto: 20, 0, etc.

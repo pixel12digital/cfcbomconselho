@@ -122,7 +122,7 @@ $aulasConcluidas = count(array_filter($aulasPraticas, fn($a) => $a['status'] ===
 $aulasCanceladas = count(array_filter($aulasPraticas, fn($a) => $a['status'] === 'cancelada'));
 $aulasAgendadas = count(array_filter($aulasPraticas, fn($a) => $a['status'] === 'agendada'));
 
-// Calcular progresso por subcategoria (para categorias combinadas)
+// Calcular progresso por subcategoria (para categorias mudanca_categorias)
 $progressoDetalhado = [];
 if ($categoriaInfo && isset($categoriaInfo['pratica_detalhada'])) {
     foreach ($categoriaInfo['pratica_detalhada'] as $subcategoria => $horasNecessarias) {
@@ -307,7 +307,7 @@ if ($isPrimeiraHabilitacao) {
             </div>
         </div>
 
-        <!-- Progresso por Subcategoria (para categorias combinadas) -->
+        <!-- Progresso por Subcategoria (para categorias mudanca_categorias) -->
         <?php if (count($progressoDetalhado) > 1): ?>
         <div class="row mb-4">
             <div class="col-12">

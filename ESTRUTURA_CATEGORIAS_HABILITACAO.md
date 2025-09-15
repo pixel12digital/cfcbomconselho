@@ -21,7 +21,7 @@ Esta classe centraliza todas as informações sobre as categorias de habilitaç�
 - **D** - Veículos de Passageiros: 20h práticas (sem teóricas)
 - **E** - Combinação de Veículos: 20h práticas (sem teóricas)
 
-**Categorias Combinadas de Adição:**
+**Mudança de Categoria:**
 - **AC** - Moto + Carga: 40h práticas (20h moto + 20h carga)
 - **AD** - Moto + Passageiros: 40h práticas (20h moto + 20h passageiros)
 - **AE** - Moto + Combinação: 40h práticas (20h moto + 20h combinação)

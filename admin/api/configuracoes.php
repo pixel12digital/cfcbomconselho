@@ -103,11 +103,11 @@ function handleGetRequest($action) {
             ]);
             break;
             
-        case 'adicao':
+        case 'mudanca_categoria':
             $configManager = ConfiguracoesCategorias::getInstance();
             $configuracoes = $configManager->getAllConfiguracoes();
             $categorias = array_filter($configuracoes, function($c) {
-                return $c['tipo'] === 'adicao';
+                return $c['tipo'] === 'mudanca_categoria';
             });
             echo json_encode([
                 'success' => true,

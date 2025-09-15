@@ -124,12 +124,12 @@ require_once __DIR__ . '/../includes/configuracoes_categorias.php';
 $configManager = ConfiguracoesCategorias::getInstance();
 $categoriaAluno = $alunoData['categoria_cnh'];
 
-// Verificar se é uma categoria combinada (ex: AB, AC, etc.)
+// Verificar se é uma categoria mudanca_categoria (ex: AB, AC, etc.)
 $configuracoesCategorias = $configManager->getConfiguracoesParaCategoriaCombinada($categoriaAluno);
 $ehCategoriaCombinada = count($configuracoesCategorias) > 1;
 
 if ($ehCategoriaCombinada) {
-    // Para categorias combinadas, calcular progresso separadamente para cada categoria
+    // Para categorias mudanca_categorias, calcular progresso separadamente para cada categoria
     $aulasNecessarias = 0;
     $aulasTeoricasNecessarias = 0;
     $progressoDetalhado = [];
@@ -224,13 +224,13 @@ if ($ehCategoriaCombinada) {
         ];
     }
     
-    // Contar aulas concluídas por tipo para categorias combinadas
+    // Contar aulas concluídas por tipo para categorias mudanca_categorias
     $aulasTeoricasContadas = []; // Para evitar duplicação de aulas teóricas
     
     foreach ($aulas as $aula) {
         if ($aula['status'] === 'concluida') {
             if ($aula['tipo_aula'] === 'teorica') {
-                // Para teóricas, contar apenas uma vez para categorias combinadas
+                // Para teóricas, contar apenas uma vez para categorias mudanca_categorias
                 // Usar disciplina como identificador único para evitar duplicação
                 $disciplina = $aula['disciplina'] ?? 'geral';
                 if (!isset($aulasTeoricasContadas[$disciplina])) {
@@ -506,7 +506,7 @@ $proximasAulas = db()->fetchAll("
                     </div>
                     <div class="card-body">
                         <?php if ($ehCategoriaCombinada): ?>
-                        <!-- Exibição para categorias combinadas -->
+                        <!-- Exibição para categorias mudanca_categorias -->
                         <div class="text-center mb-3">
                             <h6 class="text-warning mb-2">
                                 <i class="fas fa-layer-group me-2"></i>
@@ -517,7 +517,7 @@ $proximasAulas = db()->fetchAll("
                             </span>
                         </div>
                         
-                        <!-- Disciplinas Teóricas Compartilhadas (exibidas apenas uma vez para categorias combinadas) -->
+                        <!-- Disciplinas Teóricas Compartilhadas (exibidas apenas uma vez para categorias mudanca_categorias) -->
                         <?php 
                         // Pegar a primeira configuração para obter as disciplinas teóricas
                         $primeiraConfig = reset($configuracoesCategorias);
@@ -743,7 +743,7 @@ $proximasAulas = db()->fetchAll("
                         $totalPraticasConcluidasGeral = 0;
                         
                         if ($ehCategoriaCombinada) {
-                            // Para categorias combinadas, contar teóricas apenas uma vez
+                            // Para categorias mudanca_categorias, contar teóricas apenas uma vez
                             $primeiraConfig = reset($configuracoesCategorias);
                             $totalTeoricasGeral = $primeiraConfig['horas_teoricas'];
                             
@@ -875,7 +875,7 @@ $proximasAulas = db()->fetchAll("
                     </div>
                     <div class="card-body">
                         <?php if ($ehCategoriaCombinada): ?>
-                        <!-- Progresso para categorias combinadas -->
+                        <!-- Progresso para categorias mudanca_categorias -->
                         <?php foreach ($configuracoesCategorias as $categoria => $config): ?>
                         <div class="border rounded p-3 mb-3">
                             <h6 class="text-primary mb-3">

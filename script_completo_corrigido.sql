@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS configuracoes_categorias (
     id INT PRIMARY KEY AUTO_INCREMENT,
     categoria VARCHAR(10) NOT NULL,
     nome VARCHAR(100) NOT NULL,
-    tipo ENUM('primeira_habilitacao', 'adicao', 'combinada') NOT NULL,
+    tipo ENUM('primeira_habilitacao', 'adicao', 'mudanca_categoria') NOT NULL,
     horas_teoricas INT DEFAULT 0,
     horas_praticas_total INT DEFAULT 0,
     horas_praticas_moto INT DEFAULT 0,
@@ -167,16 +167,16 @@ INSERT INTO configuracoes_categorias (
 ('D', 'Veículos de Passageiros', 'adicao', 0, 20, 0, 0, 0, 20, 0, 'Configuração padrão - Veículos de Passageiros'),
 ('E', 'Combinação de Veículos', 'adicao', 0, 20, 0, 0, 0, 0, 20, 'Configuração padrão - Combinação de Veículos'),
 
--- Categorias Combinadas
-('AC', 'Motocicletas + Carga', 'combinada', 0, 40, 20, 0, 20, 0, 0, 'Configuração padrão - Motocicletas + Carga'),
-('AD', 'Motocicletas + Passageiros', 'combinada', 0, 40, 20, 0, 0, 20, 0, 'Configuração padrão - Motocicletas + Passageiros'),
-('AE', 'Motocicletas + Combinação', 'combinada', 0, 40, 20, 0, 0, 0, 20, 'Configuração padrão - Motocicletas + Combinação'),
-('BC', 'Automóveis + Carga', 'combinada', 0, 40, 0, 20, 20, 0, 0, 'Configuração padrão - Automóveis + Carga'),
-('BD', 'Automóveis + Passageiros', 'combinada', 0, 40, 0, 20, 0, 20, 0, 'Configuração padrão - Automóveis + Passageiros'),
-('BE', 'Automóveis + Combinação', 'combinada', 0, 40, 0, 20, 0, 0, 20, 'Configuração padrão - Automóveis + Combinação'),
-('CD', 'Carga + Passageiros', 'combinada', 0, 40, 0, 0, 20, 20, 0, 'Configuração padrão - Carga + Passageiros'),
-('CE', 'Carga + Combinação', 'combinada', 0, 40, 0, 0, 20, 0, 20, 'Configuração padrão - Carga + Combinação'),
-('DE', 'Passageiros + Combinação', 'combinada', 0, 40, 0, 0, 0, 20, 20, 'Configuração padrão - Passageiros + Combinação');
+-- Mudança de Categoria
+('AC', 'Motocicletas + Carga', 'mudanca_categoria', 0, 40, 20, 0, 20, 0, 0, 'Configuração padrão - Motocicletas + Carga'),
+('AD', 'Motocicletas + Passageiros', 'mudanca_categoria', 0, 40, 20, 0, 0, 20, 0, 'Configuração padrão - Motocicletas + Passageiros'),
+('AE', 'Motocicletas + Combinação', 'mudanca_categoria', 0, 40, 20, 0, 0, 0, 20, 'Configuração padrão - Motocicletas + Combinação'),
+('BC', 'Automóveis + Carga', 'mudanca_categoria', 0, 40, 0, 20, 20, 0, 0, 'Configuração padrão - Automóveis + Carga'),
+('BD', 'Automóveis + Passageiros', 'mudanca_categoria', 0, 40, 0, 20, 0, 20, 0, 'Configuração padrão - Automóveis + Passageiros'),
+('BE', 'Automóveis + Combinação', 'mudanca_categoria', 0, 40, 0, 20, 0, 0, 20, 'Configuração padrão - Automóveis + Combinação'),
+('CD', 'Carga + Passageiros', 'mudanca_categoria', 0, 40, 0, 0, 20, 20, 0, 'Configuração padrão - Carga + Passageiros'),
+('CE', 'Carga + Combinação', 'mudanca_categoria', 0, 40, 0, 0, 20, 0, 20, 'Configuração padrão - Carga + Combinação'),
+('DE', 'Passageiros + Combinação', 'mudanca_categoria', 0, 40, 0, 0, 0, 20, 20, 'Configuração padrão - Passageiros + Combinação');
 
 -- 11. VERIFICAÇÃO FINAL
 -- Executar estas queries para verificar se tudo está correto:

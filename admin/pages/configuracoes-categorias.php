@@ -129,14 +129,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Obter apenas configurações das categorias base (A, B, C, D, E)
+// Obter todas as configurações (base + mudança de categoria)
 $configManager = ConfiguracoesCategorias::getInstance();
 $todasConfiguracoes = $configManager->getAllConfiguracoes();
 
-// Filtrar apenas categorias base
+// Filtrar categorias base (A, B, C, D, E) e categorias de mudança (AC, AD, AE, BC, BD, BE, CD, CE, DE)
 $categoriasBase = ['A', 'B', 'C', 'D', 'E'];
-$configuracoes = array_filter($todasConfiguracoes, function($config) use ($categoriasBase) {
-    return in_array($config['categoria'], $categoriasBase);
+$categoriasMudanca = ['AC', 'AD', 'AE', 'BC', 'BD', 'BE', 'CD', 'CE', 'DE'];
+$categoriasPermitidas = array_merge($categoriasBase, $categoriasMudanca);
+
+$configuracoes = array_filter($todasConfiguracoes, function($config) use ($categoriasPermitidas) {
+    return in_array($config['categoria'], $categoriasPermitidas);
 });
 
 // Ordenar por categoria
@@ -156,7 +159,7 @@ if (isset($_GET['editar'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Configurações de Categorias Base - Sistema CFC</title>
+    <title>Configurações de Categorias - Sistema CFC</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="assets/css/admin.css" rel="stylesheet">
     <link href="assets/css/acessibilidade-forcada.css" rel="stylesheet">
@@ -418,16 +421,19 @@ if (isset($_GET['editar'])) {
                         Como funciona o sistema simplificado
                     </h5>
                     <p class="mb-2">
-                        <strong>Configuramos apenas as 5 categorias base:</strong> A, B, C, D, E
+                        <strong>Configuramos as categorias base:</strong> A, B, C, D, E
                     </p>
                     <p class="mb-2">
-                        <strong>As combinações são geradas automaticamente:</strong>
+                        <strong>E as categorias de mudança:</strong> AC, AD, AE, BC, BD, BE, CD, CE, DE
+                    </p>
+                    <p class="mb-2">
+                        <strong>Exemplos de combinações:</strong>
                     </p>
                     <ul class="mb-0">
-                        <li><strong>AB</strong> = A + B (Motocicletas + Automóveis)</li>
                         <li><strong>AC</strong> = A + C (Motocicletas + Carga)</li>
                         <li><strong>AD</strong> = A + D (Motocicletas + Passageiros)</li>
                         <li><strong>BC</strong> = B + C (Automóveis + Carga)</li>
+                        <li><strong>CD</strong> = C + D (Carga + Passageiros)</li>
                         <li>E assim por diante...</li>
                     </ul>
                     <hr>
@@ -518,24 +524,24 @@ if (isset($_GET['editar'])) {
             </div>
         </div>
 
-        <!-- Categorias Combinadas -->
+        <!-- Mudança de Categoria -->
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card border-0 shadow-sm">
-                    <div class="card-header bg-info text-white" role="banner" aria-label="Seção de configurações para categorias combinadas" style="background-color: #0dcaf0 !important; color: #ffffff !important;">
+                    <div class="card-header bg-info text-white" role="banner" aria-label="Seção de configurações para mudança de categoria" style="background-color: #0dcaf0 !important; color: #ffffff !important;">
                         <h5 class="mb-0 text-white" style="color: #000000 !important; font-weight: 700 !important;">
                             <i class="fas fa-layer-group me-2" aria-hidden="true"></i>
-                            <?php echo "Categorias Combinadas"; ?>
+                            <?php echo "Mudança de Categoria"; ?>
                         </h5>
-                        <small class="text-white-75" style="color: #000000 !important; font-weight: 600 !important; opacity: 1 !important;">Configurações para quem já tem uma categoria e quer adicionar outra</small>
+                        <small class="text-white-75" style="color: #000000 !important; font-weight: 600 !important; opacity: 1 !important;">Configurações para quem já tem uma categoria e quer mudar para outra superior</small>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <?php 
-                            $combinadas = array_filter($configuracoes, function($config) {
-                                return $config['tipo'] === 'combinada';
+                            $mudancaCategoria = array_filter($configuracoes, function($config) {
+                                return $config['tipo'] === 'mudanca_categoria';
                             });
-                            foreach ($combinadas as $config): 
+                            foreach ($mudancaCategoria as $config): 
                             ?>
                             <div class="col-md-6 col-lg-4 mb-3">
                                 <div class="card config-card h-100 border-info">
@@ -559,6 +565,35 @@ if (isset($_GET['editar'])) {
                                                 <i class="<?php echo getIconForCategory($config['categoria'], $config['nome']); ?> text-info me-2"></i>
                                                 <strong>Práticas:</strong> <?php echo $config['horas_praticas_total']; ?>h
                                             </p>
+                                            
+                                            <?php 
+                                            // Mostrar detalhamento das horas práticas para categorias de mudança
+                                            $detalhesPraticas = [];
+                                            if ($config['horas_praticas_moto'] > 0) {
+                                                $detalhesPraticas[] = "Moto: {$config['horas_praticas_moto']}h";
+                                            }
+                                            if ($config['horas_praticas_carro'] > 0) {
+                                                $detalhesPraticas[] = "Carro: {$config['horas_praticas_carro']}h";
+                                            }
+                                            if ($config['horas_praticas_carga'] > 0) {
+                                                $detalhesPraticas[] = "Carga: {$config['horas_praticas_carga']}h";
+                                            }
+                                            if ($config['horas_praticas_passageiros'] > 0) {
+                                                $detalhesPraticas[] = "Passageiros: {$config['horas_praticas_passageiros']}h";
+                                            }
+                                            if ($config['horas_praticas_combinacao'] > 0) {
+                                                $detalhesPraticas[] = "Combinação: {$config['horas_praticas_combinacao']}h";
+                                            }
+                                            
+                                            if (!empty($detalhesPraticas)): 
+                                            ?>
+                                            <div class="mt-1">
+                                                <small class="text-muted">
+                                                    <i class="fas fa-list me-1"></i>
+                                                    <?php echo implode(' + ', $detalhesPraticas); ?>
+                                                </small>
+                                            </div>
+                                            <?php endif; ?>
                                         </div>
                                         
                                         <?php if ($config['observacoes']): ?>
@@ -711,12 +746,25 @@ if (isset($_GET['editar'])) {
                                 <div class="mb-3">
                                     <label for="categoria" class="form-label">Categoria Base *</label>
                                     <select class="form-select" id="categoria" name="categoria" required>
-                                        <option value="">Selecione a categoria base</option>
-                                        <option value="A">A - Motocicletas</option>
-                                        <option value="B">B - Automóveis</option>
-                                        <option value="C">C - Veículos de Carga</option>
-                                        <option value="D">D - Veículos de Passageiros</option>
-                                        <option value="E">E - Combinação de Veículos</option>
+                                        <option value="">Selecione a categoria</option>
+                                        <optgroup label="Categorias Base">
+                                            <option value="A">A - Motocicletas</option>
+                                            <option value="B">B - Automóveis</option>
+                                            <option value="C">C - Veículos de Carga</option>
+                                            <option value="D">D - Veículos de Passageiros</option>
+                                            <option value="E">E - Combinação de Veículos</option>
+                                        </optgroup>
+                                        <optgroup label="Categorias de Mudança">
+                                            <option value="AC">AC - Motocicletas + Carga</option>
+                                            <option value="AD">AD - Motocicletas + Passageiros</option>
+                                            <option value="AE">AE - Motocicletas + Combinação</option>
+                                            <option value="BC">BC - Automóveis + Carga</option>
+                                            <option value="BD">BD - Automóveis + Passageiros</option>
+                                            <option value="BE">BE - Automóveis + Combinação</option>
+                                            <option value="CD">CD - Carga + Passageiros</option>
+                                            <option value="CE">CE - Carga + Combinação</option>
+                                            <option value="DE">DE - Passageiros + Combinação</option>
+                                        </optgroup>
                                     </select>
                                     <small class="form-text text-muted">
                                         <i class="fas fa-info-circle me-1"></i>
@@ -739,6 +787,7 @@ if (isset($_GET['editar'])) {
                                 <option value="">Selecione o tipo</option>
                                 <option value="primeira_habilitacao">Primeira Habilitação</option>
                                 <option value="adicao">Adição de Categoria</option>
+                                <option value="mudanca_categoria">Mudança de Categoria</option>
                             </select>
                         </div>
                         
@@ -801,32 +850,95 @@ if (isset($_GET['editar'])) {
                                         <option value="">Selecione o tipo</option>
                                         <option value="primeira_habilitacao">Primeira Habilitação</option>
                                         <option value="adicao">Adição de Categoria</option>
-                                        <option value="combinada">Categoria Combinada</option>
+                                        <option value="mudanca_categoria">Mudança de Categoria</option>
                                     </select>
                                 </div>
                             </div>
                         </div>
                         
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="edit_horas_teoricas" class="form-label">Total de Aulas Teóricas</label>
-                                    <input type="number" class="form-control" id="edit_horas_teoricas" name="horas_teoricas" 
-                                           min="0" value="0" readonly>
-                                    <small class="form-text text-muted">Calculado automaticamente baseado nas disciplinas (50 min cada aula)</small>
+                        <!-- Campos para Primeira Habilitação e Adição -->
+                        <div id="campos-teoricos-praticos">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_horas_teoricas" class="form-label">Total de Aulas Teóricas</label>
+                                        <input type="number" class="form-control" id="edit_horas_teoricas" name="horas_teoricas" 
+                                               min="0" value="0" readonly>
+                                        <small class="form-text text-muted">Calculado automaticamente baseado nas disciplinas (50 min cada aula)</small>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_horas_praticas_total" class="form-label">Total Aulas Práticas *</label>
+                                        <input type="number" class="form-control" id="edit_horas_praticas_total" name="horas_praticas_total" 
+                                               min="0" required>
+                                    </div>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label for="edit_horas_praticas_total" class="form-label">Total Aulas Práticas *</label>
-                                    <input type="number" class="form-control" id="edit_horas_praticas_total" name="horas_praticas_total" 
-                                           min="0" required>
+                        </div>
+
+                        <!-- Campos específicos para Mudança de Categoria -->
+                        <div id="campos-mudanca-categoria" style="display: none;">
+                            <div class="alert alert-info">
+                                <i class="fas fa-info-circle me-2"></i>
+                                <strong>Mudança de Categoria:</strong> Apenas aulas práticas são necessárias. Configure as horas para cada tipo de veículo.
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_horas_praticas_moto" class="form-label">Horas Práticas - Motocicletas</label>
+                                        <input type="number" class="form-control" id="edit_horas_praticas_moto" name="horas_praticas_moto" 
+                                               min="0" value="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_horas_praticas_carro" class="form-label">Horas Práticas - Automóveis</label>
+                                        <input type="number" class="form-control" id="edit_horas_praticas_carro" name="horas_praticas_carro" 
+                                               min="0" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_horas_praticas_carga" class="form-label">Horas Práticas - Veículos de Carga</label>
+                                        <input type="number" class="form-control" id="edit_horas_praticas_carga" name="horas_praticas_carga" 
+                                               min="0" value="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_horas_praticas_passageiros" class="form-label">Horas Práticas - Veículos de Passageiros</label>
+                                        <input type="number" class="form-control" id="edit_horas_praticas_passageiros" name="horas_praticas_passageiros" 
+                                               min="0" value="0">
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_horas_praticas_combinacao" class="form-label">Horas Práticas - Combinação de Veículos</label>
+                                        <input type="number" class="form-control" id="edit_horas_praticas_combinacao" name="horas_praticas_combinacao" 
+                                               min="0" value="0">
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <label for="edit_horas_praticas_total_mudanca" class="form-label">Total Horas Práticas *</label>
+                                        <input type="number" class="form-control" id="edit_horas_praticas_total_mudanca" name="horas_praticas_total" 
+                                               min="0" required readonly>
+                                        <small class="form-text text-muted">Calculado automaticamente</small>
+                                    </div>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- Disciplinas Teóricas -->
-                        <div class="mb-4">
+                        <div class="mb-4" id="disciplinas-teoricas">
                             <h6 class="mb-3">
                                 <i class="fas fa-graduation-cap me-2"></i>
                                 Disciplinas Teóricas (50 minutos cada aula)
@@ -939,26 +1051,52 @@ if (isset($_GET['editar'])) {
                     if (horasPraticasTotalInput) horasPraticasTotalInput.value = config.horas_praticas_total || 0;
                     if (observacoesTextarea) observacoesTextarea.value = config.observacoes || '';
                     
-                    // Preencher disciplinas teóricas
-                    const disciplinas = [
-                        { id: 'edit_legislacao_transito_aulas', value: parseInt(config.legislacao_transito_aulas) || 0 },
-                        { id: 'edit_primeiros_socorros_aulas', value: parseInt(config.primeiros_socorros_aulas) || 0 },
-                        { id: 'edit_meio_ambiente_cidadania_aulas', value: parseInt(config.meio_ambiente_cidadania_aulas) || 0 },
-                        { id: 'edit_direcao_defensiva_aulas', value: parseInt(config.direcao_defensiva_aulas) || 0 },
-                        { id: 'edit_mecanica_basica_aulas', value: parseInt(config.mecanica_basica_aulas) || 0 }
-                    ];
+                    // Preencher campos específicos para mudança de categoria
+                    if (config.tipo === 'mudanca_categoria') {
+                        const camposMudanca = [
+                            { id: 'edit_horas_praticas_moto', value: config.horas_praticas_moto || 0 },
+                            { id: 'edit_horas_praticas_carro', value: config.horas_praticas_carro || 0 },
+                            { id: 'edit_horas_praticas_carga', value: config.horas_praticas_carga || 0 },
+                            { id: 'edit_horas_praticas_passageiros', value: config.horas_praticas_passageiros || 0 },
+                            { id: 'edit_horas_praticas_combinacao', value: config.horas_praticas_combinacao || 0 }
+                        ];
+                        
+                        camposMudanca.forEach(campo => {
+                            const input = document.getElementById(campo.id);
+                            if (input) {
+                                input.value = campo.value;
+                            }
+                        });
+                        
+                        // Calcular total automático
+                        calcularTotalMudancaCategoria();
+                    }
                     
-                    disciplinas.forEach(disciplina => {
-                        const input = document.getElementById(disciplina.id);
-                        if (input) {
-                            input.value = disciplina.value;
-                        }
-                    });
+                    // Preencher disciplinas teóricas (apenas para primeira habilitação e adição)
+                    if (config.tipo !== 'mudanca_categoria') {
+                        const disciplinas = [
+                            { id: 'edit_legislacao_transito_aulas', value: parseInt(config.legislacao_transito_aulas) || 0 },
+                            { id: 'edit_primeiros_socorros_aulas', value: parseInt(config.primeiros_socorros_aulas) || 0 },
+                            { id: 'edit_meio_ambiente_cidadania_aulas', value: parseInt(config.meio_ambiente_cidadania_aulas) || 0 },
+                            { id: 'edit_direcao_defensiva_aulas', value: parseInt(config.direcao_defensiva_aulas) || 0 },
+                            { id: 'edit_mecanica_basica_aulas', value: parseInt(config.mecanica_basica_aulas) || 0 }
+                        ];
+                        
+                        disciplinas.forEach(disciplina => {
+                            const input = document.getElementById(disciplina.id);
+                            if (input) {
+                                input.value = disciplina.value;
+                            }
+                        });
+                        
+                        // Aguardar um pouco para garantir que os campos foram preenchidos
+                        setTimeout(() => {
+                            calcularTotaisDisciplinas();
+                        }, 100);
+                    }
                     
-                    // Aguardar um pouco para garantir que os campos foram preenchidos
-                    setTimeout(() => {
-                        calcularTotaisDisciplinas();
-                    }, 100);
+                    // Controlar exibição dos campos baseado no tipo
+                    controlarExibicaoCampos(config.tipo);
                     
                     const modal = new bootstrap.Modal(document.getElementById('modalEditarConfiguracao'));
                     modal.show();
@@ -970,6 +1108,35 @@ if (isset($_GET['editar'])) {
                 console.error('Erro:', error);
                 alert('Erro ao carregar configuração: ' + error.message);
             });
+        }
+        
+        function controlarExibicaoCampos(tipo) {
+            const camposTeoricosPraticos = document.getElementById('campos-teoricos-praticos');
+            const camposMudancaCategoria = document.getElementById('campos-mudanca-categoria');
+            const disciplinasTeoricas = document.getElementById('disciplinas-teoricas');
+            
+            if (tipo === 'mudanca_categoria') {
+                // Mostrar apenas campos de mudança de categoria
+                camposTeoricosPraticos.style.display = 'none';
+                camposMudancaCategoria.style.display = 'block';
+                disciplinasTeoricas.style.display = 'none';
+            } else {
+                // Mostrar campos normais
+                camposTeoricosPraticos.style.display = 'block';
+                camposMudancaCategoria.style.display = 'none';
+                disciplinasTeoricas.style.display = 'block';
+            }
+        }
+        
+        function calcularTotalMudancaCategoria() {
+            const moto = parseInt(document.getElementById('edit_horas_praticas_moto').value) || 0;
+            const carro = parseInt(document.getElementById('edit_horas_praticas_carro').value) || 0;
+            const carga = parseInt(document.getElementById('edit_horas_praticas_carga').value) || 0;
+            const passageiros = parseInt(document.getElementById('edit_horas_praticas_passageiros').value) || 0;
+            const combinacao = parseInt(document.getElementById('edit_horas_praticas_combinacao').value) || 0;
+            
+            const total = moto + carro + carga + passageiros + combinacao;
+            document.getElementById('edit_horas_praticas_total_mudanca').value = total;
         }
         
         function restaurarConfiguracao(categoria) {
@@ -1001,6 +1168,22 @@ if (isset($_GET['editar'])) {
             const disciplinaInputs = document.querySelectorAll('.disciplina-input');
             disciplinaInputs.forEach(input => {
                 input.addEventListener('input', calcularTotaisDisciplinas);
+            });
+            
+            // Adicionar event listeners para campos de mudança de categoria
+            const camposMudanca = [
+                'edit_horas_praticas_moto',
+                'edit_horas_praticas_carro', 
+                'edit_horas_praticas_carga',
+                'edit_horas_praticas_passageiros',
+                'edit_horas_praticas_combinacao'
+            ];
+            
+            camposMudanca.forEach(campoId => {
+                const campo = document.getElementById(campoId);
+                if (campo) {
+                    campo.addEventListener('input', calcularTotalMudancaCategoria);
+                }
             });
         });
         
