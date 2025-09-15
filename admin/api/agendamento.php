@@ -217,6 +217,19 @@ try {
         }
     }
     
+    // =====================================================
+    // VALIDAÇÕES COMPLETAS ANTES DE CRIAR AULAS
+    // =====================================================
+    
+    // Validar cada aula do bloco antes de inserir
+    foreach ($horarios_aulas as $index => $aula) {
+        $validacao = validarAgendamento($aluno_id, $instrutor_id, $veiculo_id, $data_aula, $aula['hora_inicio'], $aula['hora_fim'], $tipo_aula, $db);
+        
+        if (!$validacao['valido']) {
+            throw new Exception($validacao['mensagem']);
+        }
+    }
+    
     // INSERIR MÚLTIPLAS AULAS NO BANCO
     $aulas_criadas = [];
     $sql = "INSERT INTO aulas (aluno_id, instrutor_id, cfc_id, veiculo_id, tipo_aula, disciplina, data_aula, hora_inicio, hora_fim, status, observacoes, criado_em) 
@@ -662,4 +675,204 @@ function buscarAulas() {
         ]);
     }
 }
+
+// =====================================================
+// FUNÇÃO DE VALIDAÇÃO COMPLETA DE AGENDAMENTOS
+// =====================================================
+
+function validarAgendamento($aluno_id, $instrutor_id, $veiculo_id, $data_aula, $hora_inicio, $hora_fim, $tipo_aula, $db) {
+    try {
+        // 1. VALIDAR SE ALUNO JÁ TEM AGENDAMENTO NO MESMO HORÁRIO
+        $aula_aluno = $db->fetch("
+            SELECT a.*, al.nome as aluno_nome 
+            FROM aulas a 
+            JOIN alunos al ON a.aluno_id = al.id 
+            WHERE a.aluno_id = ? 
+            AND a.data_aula = ? 
+            AND a.status != 'cancelada'
+            AND (
+                (a.hora_inicio < ? AND a.hora_fim > ?) OR
+                (a.hora_inicio < ? AND a.hora_fim > ?) OR
+                (a.hora_inicio >= ? AND a.hora_fim <= ?)
+            )
+        ", [$aluno_id, $data_aula, $hora_fim, $hora_inicio, $hora_inicio, $hora_fim, $hora_inicio, $hora_fim]);
+        
+        if ($aula_aluno) {
+            return [
+                'valido' => false,
+                'mensagem' => "❌ ALUNO JÁ AGENDADO: O aluno {$aula_aluno['aluno_nome']} já possui uma aula agendada no horário {$aula_aluno['hora_inicio']} - {$aula_aluno['hora_fim']} neste mesmo dia."
+            ];
+        }
+        
+        // 2. VALIDAR DISPONIBILIDADE DO INSTRUTOR
+        $aula_instrutor = $db->fetch("
+            SELECT a.*, COALESCE(u.nome, i.nome) as instrutor_nome 
+            FROM aulas a 
+            JOIN instrutores i ON a.instrutor_id = i.id 
+            LEFT JOIN usuarios u ON i.usuario_id = u.id
+            WHERE a.instrutor_id = ? 
+            AND a.data_aula = ? 
+            AND a.status != 'cancelada'
+            AND (
+                (a.hora_inicio < ? AND a.hora_fim > ?) OR
+                (a.hora_inicio < ? AND a.hora_fim > ?) OR
+                (a.hora_inicio >= ? AND a.hora_fim <= ?)
+            )
+        ", [$instrutor_id, $data_aula, $hora_fim, $hora_inicio, $hora_inicio, $hora_fim, $hora_inicio, $hora_fim]);
+        
+        if ($aula_instrutor) {
+            return [
+                'valido' => false,
+                'mensagem' => "❌ INSTRUTOR OCUPADO: O instrutor {$aula_instrutor['instrutor_nome']} já possui uma aula agendada no horário {$aula_instrutor['hora_inicio']} - {$aula_instrutor['hora_fim']} neste mesmo dia."
+            ];
+        }
+        
+        // 3. VALIDAR HORÁRIO DE TRABALHO DO INSTRUTOR
+        $instrutor = $db->fetch("
+            SELECT i.*, COALESCE(u.nome, i.nome) as instrutor_nome,
+                   TIME(?) as hora_inicio_time,
+                   TIME(?) as hora_fim_time
+            FROM instrutores i 
+            LEFT JOIN usuarios u ON i.usuario_id = u.id
+            WHERE i.id = ?
+        ", [$hora_inicio, $hora_fim, $instrutor_id]);
+        
+        if (!$instrutor) {
+            return [
+                'valido' => false,
+                'mensagem' => "❌ INSTRUTOR INVÁLIDO: Instrutor não encontrado no sistema."
+            ];
+        }
+        
+        // Verificar horário de trabalho (assumindo que instrutores trabalham das 8h às 18h)
+        $hora_inicio_time = new DateTime($hora_inicio);
+        $hora_fim_time = new DateTime($hora_fim);
+        $hora_trabalho_inicio = new DateTime('08:00:00');
+        $hora_trabalho_fim = new DateTime('18:00:00');
+        
+        if ($hora_inicio_time < $hora_trabalho_inicio || $hora_fim_time > $hora_trabalho_fim) {
+            return [
+                'valido' => false,
+                'mensagem' => "❌ FORA DO HORÁRIO DE TRABALHO: O instrutor {$instrutor['instrutor_nome']} trabalha das 08:00 às 18:00. Horário solicitado: {$hora_inicio} - {$hora_fim}"
+            ];
+        }
+        
+        // 4. VALIDAR DIA DA SEMANA DO INSTRUTOR (assumindo que trabalha de segunda a sexta)
+        $dia_semana = date('w', strtotime($data_aula)); // 0 = domingo, 6 = sábado
+        if ($dia_semana == 0 || $dia_semana == 6) {
+            return [
+                'valido' => false,
+                'mensagem' => "❌ DIA DA SEMANA INVÁLIDO: O instrutor {$instrutor['instrutor_nome']} trabalha apenas de segunda a sexta-feira. Data solicitada: " . date('d/m/Y (l)', strtotime($data_aula))
+            ];
+        }
+        
+        // 5. VALIDAR VEÍCULO OCUPADO (apenas para aulas práticas)
+        if ($tipo_aula === 'pratica' && $veiculo_id) {
+            $aula_veiculo = $db->fetch("
+                SELECT a.*, v.placa, v.modelo, v.marca 
+                FROM aulas a 
+                JOIN veiculos v ON a.veiculo_id = v.id
+                WHERE a.veiculo_id = ? 
+                AND a.data_aula = ? 
+                AND a.status != 'cancelada'
+                AND (
+                    (a.hora_inicio < ? AND a.hora_fim > ?) OR
+                    (a.hora_inicio < ? AND a.hora_fim > ?) OR
+                    (a.hora_inicio >= ? AND a.hora_fim <= ?)
+                )
+            ", [$veiculo_id, $data_aula, $hora_fim, $hora_inicio, $hora_inicio, $hora_fim, $hora_inicio, $hora_fim]);
+            
+            if ($aula_veiculo) {
+                return [
+                    'valido' => false,
+                    'mensagem' => "❌ VEÍCULO OCUPADO: O veículo {$aula_veiculo['marca']} {$aula_veiculo['modelo']} (Placa: {$aula_veiculo['placa']}) já está em uso no horário {$aula_veiculo['hora_inicio']} - {$aula_veiculo['hora_fim']} neste mesmo dia."
+                ];
+            }
+        }
+        
+        // 6. VALIDAR SE ALUNO JÁ CUMPRIU TODAS AS HORAS NECESSÁRIAS
+        $aluno = $db->fetch("SELECT * FROM alunos WHERE id = ?", [$aluno_id]);
+        if (!$aluno) {
+            return [
+                'valido' => false,
+                'mensagem' => "❌ ALUNO INVÁLIDO: Aluno não encontrado no sistema."
+            ];
+        }
+        
+        // Calcular horas já cumpridas pelo aluno
+        $horas_cumpridas = $db->fetch("
+            SELECT 
+                SUM(TIMESTAMPDIFF(MINUTE, hora_inicio, hora_fim)) as total_minutos
+            FROM aulas 
+            WHERE aluno_id = ? 
+            AND status IN ('concluida', 'em_andamento')
+        ", [$aluno_id]);
+        
+        $total_horas_cumpridas = ($horas_cumpridas['total_minutos'] ?? 0) / 60;
+        
+        // Calcular horas necessárias baseado no tipo de habilitação
+        $horas_necessarias = 20; // Padrão de 20 horas para todas as habilitações
+        
+        // Se o campo tipo_habilitacao existir, usar valores específicos
+        if (isset($aluno['tipo_habilitacao'])) {
+            switch ($aluno['tipo_habilitacao']) {
+                case 'A':
+                    $horas_necessarias = 20; // 20 horas para moto
+                    break;
+                case 'B':
+                    $horas_necessarias = 20; // 20 horas para carro
+                    break;
+                case 'AB':
+                    $horas_necessarias = 40; // 40 horas para carro + moto
+                    break;
+                case 'C':
+                    $horas_necessarias = 40; // 40 horas para caminhão
+                    break;
+                case 'D':
+                    $horas_necessarias = 40; // 40 horas para ônibus
+                    break;
+                default:
+                    $horas_necessarias = 20; // padrão
+            }
+        }
+        
+        if ($total_horas_cumpridas >= $horas_necessarias) {
+            return [
+                'valido' => false,
+                'mensagem' => "❌ HORAS JÁ CUMPRIDAS: O aluno {$aluno['nome']} já cumpriu todas as {$horas_necessarias}h necessárias" . (isset($aluno['tipo_habilitacao']) ? " para a habilitação tipo {$aluno['tipo_habilitacao']}" : "") . ". Horas cumpridas: " . number_format($total_horas_cumpridas, 1) . "h"
+            ];
+        }
+        
+        // 7. VALIDAÇÃO ADICIONAL: Verificar se não está agendando no passado
+        $data_atual = date('Y-m-d');
+        $hora_atual = date('H:i:s');
+        
+        if ($data_aula < $data_atual) {
+            return [
+                'valido' => false,
+                'mensagem' => "❌ DATA NO PASSADO: Não é possível agendar aulas para datas anteriores à data atual ({$data_atual})."
+            ];
+        }
+        
+        if ($data_aula == $data_atual && $hora_inicio < $hora_atual) {
+            return [
+                'valido' => false,
+                'mensagem' => "❌ HORÁRIO NO PASSADO: Não é possível agendar aulas para horários anteriores ao horário atual ({$hora_atual})."
+            ];
+        }
+        
+        // Se chegou até aqui, todas as validações passaram
+        return [
+            'valido' => true,
+            'mensagem' => "✅ Agendamento validado com sucesso!"
+        ];
+        
+    } catch (Exception $e) {
+        return [
+            'valido' => false,
+            'mensagem' => "❌ ERRO DE VALIDAÇÃO: " . $e->getMessage()
+        ];
+    }
+}
+
 ?>

@@ -1513,10 +1513,16 @@ function salvarNovaAula(event) {
             // Sucesso
             alert('Aula agendada com sucesso!');
             fecharModalNovaAula();
-            // Recarregar calendário
+            
+            // Recarregar calendário para mostrar dados atualizados
             if (window.calendar) {
                 window.calendar.refetchEvents();
             }
+            
+            // Recarregar página após um pequeno delay para garantir que os dados sejam atualizados
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
         } else {
             // Erro
             alert('Erro ao agendar aula: ' + data.mensagem);
