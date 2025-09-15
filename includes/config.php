@@ -365,7 +365,7 @@ if (!headers_sent()) {
         header('X-Content-Type-Options: nosniff');
         
         if (defined('APP_URL') && APP_URL) {
-            header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://kit.fontawesome.com https://unpkg.com; style-src \'self\' \'unsafe-inline\' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src \'self\' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src \'self\' data: https:; connect-src \'self\' https://viacep.com.br https://cdn.jsdelivr.net https://unpkg.com; object-src \'none\'; base-uri \'self\';');
+            header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://kit.fontawesome.com https://unpkg.com; style-src \'self\' \'unsafe-inline\' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src \'self\' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src \'self\' data: https:; connect-src \'self\' https://viacep.com.br https://cdn.jsdelivr.net https://unpkg.com; object-src \'none\'; base-uri \'self\';');
         }
     }
     
@@ -374,6 +374,9 @@ if (!headers_sent()) {
         header('X-Environment: LOCAL');
         header('X-Debug: ENABLED');
         header('X-Development: TRUE');
+        
+        // CSP para desenvolvimento local - TEMPORARIAMENTE DESABILITADO PARA DEBUG
+        // header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://kit.fontawesome.com https://unpkg.com; style-src \'self\' \'unsafe-inline\' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src \'self\' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src \'self\' data: https:; connect-src \'self\' https://viacep.com.br https://cdn.jsdelivr.net https://unpkg.com; object-src \'none\'; base-uri \'self\';');
     }
 }
 

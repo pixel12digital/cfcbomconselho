@@ -31,11 +31,11 @@ class SistemaAgendamento {
             
             // Carregar dados das APIs
             const [instrutoresRes, veiculosRes, alunosRes, cfcsRes, aulasRes] = await Promise.all([
-                fetch('api/usuarios.php?tipo=instrutor'),
+                fetch('api/instrutores.php'),
                 fetch('api/veiculos.php'),
-                fetch('api/usuarios.php?tipo=aluno'),
+                fetch('api/alunos.php'),
                 fetch('api/cfcs.php'),
-                fetch('api/agendamento.php/aulas')
+                fetch('api/agendamento.php')
             ]);
             
             // Processar respostas
