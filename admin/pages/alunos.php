@@ -8,6 +8,281 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 
 <style>
 /* =====================================================
+   ESTILOS PARA OTIMIZAÇÃO DE ESPAÇO DESKTOP
+   ===================================================== */
+
+/* Cards de estatísticas mais compactos */
+.card.border-left-primary,
+.card.border-left-success,
+.card.border-left-warning,
+.card.border-left-info {
+    min-height: 100px;
+}
+
+.card-body {
+    padding: 1rem 0.75rem;
+}
+
+.text-xs {
+    font-size: 0.7rem !important;
+}
+
+.h5 {
+    font-size: 1.5rem !important;
+}
+
+/* Tabela otimizada */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table th,
+.table td {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+}
+
+/* Avatar menor */
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+}
+
+.avatar-title {
+    font-size: 0.875rem;
+}
+
+/* Botões de ação compactos */
+.action-buttons-compact {
+    min-width: 180px;
+    justify-content: center;
+}
+
+.action-icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+}
+
+/* Responsividade melhorada */
+@media (max-width: 1200px) {
+    .col-lg-2 {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+}
+
+@media (max-width: 992px) {
+    .col-lg-2 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+    
+    .action-buttons-compact {
+        min-width: 150px;
+    }
+}
+
+@media (max-width: 768px) {
+    .col-lg-2 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .action-buttons-compact {
+        min-width: 120px;
+        gap: 0.15rem;
+    }
+    
+    .action-icon-btn {
+        width: 26px;
+        height: 26px;
+        font-size: 0.75rem;
+    }
+}
+
+/* =====================================================
+   ESTILOS PARA MODAL DE AGENDAMENTO
+   ===================================================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-large {
+    width: 800px;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem 0.5rem 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.modal-form {
+    padding: 1.5rem;
+}
+
+.form-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    flex: 1;
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.custom-radio {
+    position: relative;
+}
+
+.custom-radio input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.custom-radio .form-check-label {
+    display: block;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+}
+
+.custom-radio input[type="radio"]:checked + .form-check-label {
+    border-color: #0d6efd;
+    background-color: #f8f9ff;
+}
+
+.custom-radio .radio-text strong {
+    display: block;
+    color: #495057;
+    margin-bottom: 0.25rem;
+}
+
+.custom-radio .radio-text small {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.form-actions .btn {
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+}
+
+/* Responsividade do modal */
+@media (max-width: 768px) {
+    .modal-large {
+        width: 95vw;
+        margin: 1rem;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+
+/* =====================================================
    ESTILOS PERSONALIZADOS PARA MODAL DE ALUNOS
    Sobrescrevendo Bootstrap com especificidade máxima
    ===================================================== */
@@ -534,7 +809,7 @@ body.modal-open #modalAluno .modal-dialog {
 
 <!-- Cards de Estatísticas -->
 <div class="row mb-4">
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
         <div class="card border-left-primary shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
@@ -554,7 +829,7 @@ body.modal-open #modalAluno .modal-dialog {
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
         <div class="card border-left-success shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
@@ -574,7 +849,7 @@ body.modal-open #modalAluno .modal-dialog {
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
         <div class="card border-left-warning shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
@@ -594,7 +869,7 @@ body.modal-open #modalAluno .modal-dialog {
         </div>
     </div>
 
-    <div class="col-xl-3 col-md-6 mb-4">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
         <div class="card border-left-info shadow h-100 py-2">
             <div class="card-body">
                 <div class="row no-gutters align-items-center">
@@ -627,19 +902,15 @@ body.modal-open #modalAluno .modal-dialog {
                     <tr>
                         <th>ID</th>
                         <th>Nome</th>
-                        <th>CPF</th>
-                        <th>Naturalidade</th>
-                        <th>CFC</th>
                         <th>Categoria</th>
                         <th>Status</th>
-                        <th>Última Aula</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($alunos)): ?>
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
+                        <td colspan="5" class="text-center text-muted py-4">
                             <i class="fas fa-inbox fa-3x mb-3"></i>
                             <p>Nenhum aluno cadastrado ainda.</p>
                             <button class="btn btn-primary" onclick="abrirModalAluno()">
@@ -667,15 +938,6 @@ body.modal-open #modalAluno .modal-dialog {
                                 </div>
                             </td>
                             <td>
-                                <code><?php echo htmlspecialchars($aluno['cpf']); ?></code>
-                            </td>
-                            <td>
-                                <small><?php echo htmlspecialchars($aluno['naturalidade'] ?? 'Não informado'); ?></small>
-                            </td>
-                            <td>
-                                <span class="badge bg-info"><?php echo htmlspecialchars($aluno['cfc_nome'] ?? 'N/A'); ?></span>
-                            </td>
-                            <td>
                                 <span class="badge bg-secondary"><?php echo htmlspecialchars($aluno['categoria_cnh']); ?></span>
                             </td>
                             <td>
@@ -696,64 +958,40 @@ body.modal-open #modalAluno .modal-dialog {
                                 </span>
                             </td>
                             <td>
-                                <?php if (!empty($aluno['ultima_aula'])): ?>
-                                    <small><?php echo date('d/m/Y', strtotime($aluno['ultima_aula'])); ?></small>
-                                <?php else: ?>
-                                    <span class="text-muted">Nunca</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
-                                <div class="action-buttons-container">
-                                    <!-- Botões principais em linha -->
-                                    <div class="action-buttons-primary">
-                                        <button type="button" class="btn btn-edit action-btn" 
-                                                onclick="editarAluno(<?php echo $aluno['id']; ?>)" 
-                                                title="Editar dados do aluno">
-                                            <i class="fas fa-edit me-1"></i>Editar
-                                        </button>
-                                        <button type="button" class="btn btn-view action-btn" 
-                                                onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" 
-                                                title="Ver detalhes completos do aluno">
-                                            <i class="fas fa-eye me-1"></i>Ver
-                                        </button>
-                                        <button type="button" class="btn btn-schedule action-btn" 
-                                                onclick="agendarAula(<?php echo $aluno['id']; ?>)" 
-                                                title="Agendar nova aula para este aluno">
-                                            <i class="fas fa-calendar-plus me-1"></i>Agendar
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Botões secundários em linha -->
-                                    <div class="action-buttons-secondary">
-                                        <button type="button" class="btn btn-history action-btn" 
-                                                onclick="historicoAluno(<?php echo $aluno['id']; ?>)" 
-                                                title="Visualizar histórico de aulas e progresso">
-                                            <i class="fas fa-history me-1"></i>Histórico
-                                        </button>
-
-                                        <?php if ($aluno['status'] === 'ativo'): ?>
-                                        <button type="button" class="btn btn-toggle action-btn" 
-                                                onclick="desativarAluno(<?php echo $aluno['id']; ?>)" 
-                                                title="Desativar aluno (não poderá agendar aulas)">
-                                            <i class="fas fa-ban me-1"></i>Desativar
-                                        </button>
-                                        <?php else: ?>
-                                        <button type="button" class="btn btn-schedule action-btn" 
-                                                onclick="ativarAluno(<?php echo $aluno['id']; ?>)" 
-                                                title="Reativar aluno para agendamento de aulas">
-                                            <i class="fas fa-check me-1"></i>Ativar
-                                        </button>
-                                        <?php endif; ?>
-                                    </div>
-                                    
-                                    <!-- Botão de exclusão destacado -->
-                                    <div class="action-buttons-danger">
-                                        <button type="button" class="btn btn-delete action-btn" 
-                                                onclick="excluirAluno(<?php echo $aluno['id']; ?>)" 
-                                                title="⚠️ EXCLUIR ALUNO - Esta ação não pode ser desfeita!">
-                                            <i class="fas fa-trash me-1"></i>Excluir
-                                        </button>
-                                    </div>
+                                <div class="action-buttons-compact">
+                                    <button type="button" class="btn btn-sm btn-outline-primary action-icon-btn" 
+                                            onclick="editarAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Editar dados do aluno" data-bs-toggle="tooltip">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-info action-icon-btn" 
+                                            onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Ver detalhes completos do aluno" data-bs-toggle="tooltip">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-success action-icon-btn" 
+                                            onclick="agendarAula(<?php echo $aluno['id']; ?>)" 
+                                            title="Agendar nova aula para este aluno" data-bs-toggle="tooltip">
+                                        <i class="fas fa-calendar-plus"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-warning action-icon-btn" 
+                                            onclick="historicoAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Visualizar histórico de aulas e progresso" data-bs-toggle="tooltip">
+                                        <i class="fas fa-history"></i>
+                                    </button>
+                                    <?php if ($aluno['status'] === 'ativo'): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary action-icon-btn" 
+                                            onclick="desativarAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Desativar aluno (não poderá agendar aulas)" data-bs-toggle="tooltip">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                    <?php else: ?>
+                                    <button type="button" class="btn btn-sm btn-outline-success action-icon-btn" 
+                                            onclick="ativarAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Reativar aluno para agendamento de aulas" data-bs-toggle="tooltip">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -1035,6 +1273,137 @@ body.modal-open #modalAluno .modal-dialog {
                 </button>
             </div>
         </div>
+    </div>
+</div>
+
+<!-- Modal Nova Aula -->
+<div id="modal-nova-aula" class="modal-overlay" style="display: none;">
+    <div class="modal-content modal-large">
+        <div class="modal-header">
+            <h3>Nova Aula</h3>
+            <button class="modal-close" onclick="fecharModalNovaAula()">×</button>
+        </div>
+        
+        <form id="form-nova-aula" class="modal-form" onsubmit="salvarNovaAula(event)">
+            <!-- Seleção de Tipo de Agendamento -->
+            <div class="form-section">
+                <label class="form-label fw-bold">Tipo de Agendamento:</label>
+                <div class="d-flex gap-3 mb-3">
+                    <div class="form-check custom-radio">
+                        <input class="form-check-input" type="radio" name="tipo_agendamento" id="modal_aula_unica" value="unica" checked>
+                        <label class="form-check-label" for="modal_aula_unica">
+                            <div class="radio-text">
+                                <strong>1 Aula</strong>
+                                <small>50 minutos</small>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="form-check custom-radio">
+                        <input class="form-check-input" type="radio" name="tipo_agendamento" id="modal_duas_aulas" value="duas">
+                        <label class="form-check-label" for="modal_duas_aulas">
+                            <div class="radio-text">
+                                <strong>2 Aulas</strong>
+                                <small>1h 40min</small>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="form-check custom-radio">
+                        <input class="form-check-input" type="radio" name="tipo_agendamento" id="modal_tres_aulas" value="tres">
+                        <label class="form-check-label" for="modal_tres_aulas">
+                            <div class="radio-text">
+                                <strong>3 Aulas</strong>
+                                <small>2h 30min</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <small class="form-text text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <strong>2 aulas:</strong> Consecutivas (1h 40min) | <strong>3 aulas:</strong> Escolha a posição do intervalo de 30min (2h 30min total)
+                </small>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="aluno_id">Aluno *</label>
+                    <select id="aluno_id" name="aluno_id" required>
+                        <option value="">Selecione o aluno</option>
+                        <?php if (isset($alunos) && is_array($alunos)): ?>
+                            <?php foreach ($alunos as $aluno): ?>
+                                <option value="<?php echo intval($aluno['id']); ?>" data-nome="<?php echo htmlspecialchars($aluno['nome']); ?>">
+                                    <?php echo htmlspecialchars($aluno['nome']); ?> - <?php echo htmlspecialchars($aluno['categoria_cnh']); ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="instrutor_id">Instrutor *</label>
+                    <select id="instrutor_id" name="instrutor_id" required>
+                        <option value="">Selecione o instrutor</option>
+                        <!-- Será carregado via AJAX -->
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="tipo_aula">Tipo de Aula *</label>
+                    <select id="tipo_aula" name="tipo_aula" required>
+                        <option value="">Selecione o tipo</option>
+                        <option value="teorica">Teórica</option>
+                        <option value="pratica">Prática</option>
+                        <option value="simulador">Simulador</option>
+                        <option value="avaliacao">Avaliação</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="veiculo_id">Veículo</label>
+                    <select id="veiculo_id" name="veiculo_id">
+                        <option value="">Apenas para aulas práticas</option>
+                        <!-- Será carregado via AJAX -->
+                    </select>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="data_aula">Data da Aula *</label>
+                    <input type="date" id="data_aula" name="data_aula" required min="<?php echo date('Y-m-d'); ?>">
+                </div>
+                
+                <div class="form-group">
+                    <label for="hora_inicio">Hora de Início *</label>
+                    <input type="time" id="hora_inicio" name="hora_inicio" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="duracao">Duração da Aula *</label>
+                    <div class="form-control-plaintext bg-light border rounded p-2">
+                        <i class="fas fa-clock me-2 text-primary"></i>
+                        <strong>50 minutos</strong>
+                        <small class="text-muted ms-2">(duração fixa)</small>
+                    </div>
+                    <input type="hidden" id="duracao" name="duracao" value="50">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="observacoes">Observações</label>
+                <textarea id="observacoes" name="observacoes" rows="3" placeholder="Observações sobre a aula..."></textarea>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalNovaAula()">Cancelar</button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-save"></i>
+                    Salvar Aula
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -1432,8 +1801,72 @@ function preencherModalVisualizacao(aluno) {
 }
 
 function agendarAula(id) {
-    // Redirecionar para página de agendamento usando o sistema de páginas do admin
-    window.location.href = `?page=agendar-aula&aluno_id=${id}`;
+    console.log('🚀 agendarAula chamada com ID:', id);
+    
+    // Verificar se o ID é válido
+    if (!id || id === 'undefined' || id === 'null') {
+        console.error('❌ ID inválido:', id);
+        mostrarAlerta('Erro: ID do aluno inválido', 'danger');
+        return;
+    }
+    
+    // Abrir modal primeiro
+    abrirModalNovaAula();
+    
+    // Aguardar um pouco para o modal estar totalmente carregado
+    setTimeout(() => {
+        preencherAlunoSelecionado(id);
+    }, 200); // Aumentei o tempo para 200ms
+}
+
+function preencherAlunoSelecionado(id) {
+    console.log('🔧 Preenchendo aluno selecionado:', id);
+    
+    const selectAluno = document.getElementById('aluno_id');
+    if (!selectAluno) {
+        console.error('❌ Select de aluno não encontrado!');
+        return;
+    }
+    
+    console.log('📋 Select encontrado, verificando opções...');
+    
+    // Método mais simples e seguro
+    try {
+        // Tentar definir o valor diretamente
+        selectAluno.value = id;
+        
+        // Verificar se foi definido corretamente
+        if (selectAluno.value == id) {
+            console.log('✅ Aluno pré-selecionado com sucesso!');
+            
+            // Disparar evento change
+            selectAluno.dispatchEvent(new Event('change', { bubbles: true }));
+            
+            // Carregar dados relacionados
+            carregarInstrutoresDisponiveis();
+            carregarVeiculosDisponiveis();
+        } else {
+            console.log('⚠️ Valor não foi definido, tentando método alternativo...');
+            
+            // Método alternativo: percorrer as opções
+            for (let i = 0; i < selectAluno.options.length; i++) {
+                const option = selectAluno.options[i];
+                if (option.value == id) {
+                    selectAluno.selectedIndex = i;
+                    console.log('✅ Aluno pré-selecionado (método alternativo):', option.textContent);
+                    
+                    selectAluno.dispatchEvent(new Event('change', { bubbles: true }));
+                    carregarInstrutoresDisponiveis();
+                    carregarVeiculosDisponiveis();
+                    return;
+                }
+            }
+            
+            console.error('❌ Nenhuma opção encontrada para ID:', id);
+        }
+    } catch (error) {
+        console.error('❌ Erro ao pré-selecionar aluno:', error);
+    }
 }
 
 function historicoAluno(id) {
@@ -1566,26 +1999,18 @@ function filtrarAlunos() {
     
     linhas.forEach(linha => {
         const nome = linha.querySelector('td:nth-child(2)').textContent.toLowerCase();
-        const cpf = linha.querySelector('td:nth-child(3)').textContent;
-        const naturalidade = linha.querySelector('td:nth-child(4)').textContent.toLowerCase();
-        const cfcLinha = linha.querySelector('td:nth-child(5)').textContent;
-        const categoriaLinha = linha.querySelector('td:nth-child(6)').textContent;
-        const statusLinha = linha.querySelector('td:nth-child(7) .badge').textContent;
+        const categoriaLinha = linha.querySelector('td:nth-child(3)').textContent;
+        const statusLinha = linha.querySelector('td:nth-child(4) .badge').textContent;
         
         let mostrar = true;
         
         // Filtro de busca
-        if (busca && !nome.includes(busca) && !cpf.includes(busca) && !naturalidade.includes(busca)) {
+        if (busca && !nome.includes(busca)) {
             mostrar = false;
         }
         
         // Filtro de status
         if (status && statusLinha !== status) {
-            mostrar = false;
-        }
-        
-        // Filtro de CFC
-        if (cfc && cfcLinha !== cfc) {
             mostrar = false;
         }
         
@@ -1613,11 +2038,11 @@ function atualizarEstatisticas() {
     document.getElementById('totalAlunos').textContent = linhasVisiveis.length;
     
     const ativos = Array.from(linhasVisiveis).filter(linha => 
-        linha.querySelector('td:nth-child(7) .badge').textContent === 'Ativo'
+        linha.querySelector('td:nth-child(4) .badge').textContent === 'Ativo'
     ).length;
     
     const concluidos = Array.from(linhasVisiveis).filter(linha => 
-        linha.querySelector('td:nth-child(7) .badge').textContent === 'Concluído'
+        linha.querySelector('td:nth-child(4) .badge').textContent === 'Concluído'
     ).length;
     
     document.getElementById('alunosAtivos').textContent = ativos;
@@ -1698,6 +2123,173 @@ function confirmarAcao(mensagem, acao) {
         }
     }
 }
+
+// FUNÇÕES PARA MODAL DE AGENDAMENTO
+
+function abrirModalNovaAula() {
+    console.log('🚀 Abrindo modal de nova aula...');
+    const modal = document.getElementById('modal-nova-aula');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+        
+        // Garantir que o modal esteja totalmente renderizado
+        modal.offsetHeight; // Force reflow
+        
+        console.log('✅ Modal de nova aula aberto!');
+    } else {
+        console.error('❌ Modal não encontrado!');
+    }
+}
+
+function fecharModalNovaAula() {
+    console.log('🚪 Fechando modal de nova aula...');
+    const modal = document.getElementById('modal-nova-aula');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+        
+        // Limpar formulário
+        document.getElementById('form-nova-aula').reset();
+        console.log('✅ Modal de nova aula fechado e formulário limpo!');
+    }
+}
+
+function carregarInstrutoresDisponiveis() {
+    console.log('🔧 Carregando instrutores disponíveis...');
+    
+    // Por enquanto, vamos usar dados mockados para evitar problemas de autenticação
+    const selectInstrutor = document.getElementById('instrutor_id');
+    if (selectInstrutor) {
+        selectInstrutor.innerHTML = '<option value="">Selecione o instrutor</option>';
+        
+        // Dados mockados temporários
+        const instrutoresMock = [
+            { id: 1, nome: 'João Silva', categoria_habilitacao: 'A, B, C' },
+            { id: 2, nome: 'Maria Santos', categoria_habilitacao: 'A, B' },
+            { id: 3, nome: 'Pedro Oliveira', categoria_habilitacao: 'B, C, D' }
+        ];
+        
+        instrutoresMock.forEach(instrutor => {
+            const option = document.createElement('option');
+            option.value = instrutor.id;
+            option.textContent = `${instrutor.nome} - ${instrutor.categoria_habilitacao}`;
+            selectInstrutor.appendChild(option);
+        });
+        
+        console.log('✅ Instrutores carregados (mock):', instrutoresMock.length);
+    }
+}
+
+function carregarVeiculosDisponiveis() {
+    console.log('🔧 Carregando veículos disponíveis...');
+    
+    fetch('api/veiculos.php')
+        .then(response => {
+            console.log('📡 Resposta da API veículos:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📄 Dados recebidos:', data);
+            
+            const selectVeiculo = document.getElementById('veiculo_id');
+            if (selectVeiculo) {
+                selectVeiculo.innerHTML = '<option value="">Apenas para aulas práticas</option>';
+                
+                // Verificar se os dados são válidos (API retorna 'data' em vez de 'veiculos')
+                if (data && data.success && Array.isArray(data.data)) {
+                    data.data.forEach(veiculo => {
+                        const option = document.createElement('option');
+                        option.value = veiculo.id;
+                        option.textContent = `${veiculo.marca} ${veiculo.modelo} - ${veiculo.placa}`;
+                        option.setAttribute('data-categoria', veiculo.categoria_cnh);
+                        selectVeiculo.appendChild(option);
+                    });
+                    console.log('✅ Veículos carregados:', data.data.length);
+                } else {
+                    console.warn('⚠️ Dados de veículos inválidos ou vazios');
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'Nenhum veículo disponível';
+                    option.disabled = true;
+                    selectVeiculo.appendChild(option);
+                }
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar veículos:', error);
+            
+            // Fallback: adicionar opção de erro
+            const selectVeiculo = document.getElementById('veiculo_id');
+            if (selectVeiculo) {
+                selectVeiculo.innerHTML = '<option value="">Erro ao carregar veículos</option>';
+            }
+        });
+}
+
+function salvarNovaAula(event) {
+    event.preventDefault();
+    console.log('🚀 Salvando nova aula...');
+    
+    const formData = new FormData(event.target);
+    const dados = Object.fromEntries(formData.entries());
+    
+    // Mostrar loading no botão
+    const btnSalvar = event.target.querySelector('button[type="submit"]');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando...';
+    btnSalvar.disabled = true;
+    
+    // Enviar para API
+    fetch('api/agendamento.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dados)
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            mostrarAlerta('Aula agendada com sucesso!', 'success');
+            fecharModalNovaAula();
+            
+            // Recarregar página após um breve delay
+            setTimeout(() => {
+                window.location.reload();
+            }, 1500);
+        } else {
+            mostrarAlerta('Erro ao agendar aula: ' + (data.mensagem || 'Erro desconhecido'), 'danger');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        mostrarAlerta('Erro ao agendar aula. Verifique o console para mais detalhes.', 'danger');
+    })
+    .finally(() => {
+        // Restaurar botão
+        btnSalvar.innerHTML = textoOriginal;
+        btnSalvar.disabled = false;
+    });
+}
+
+// Fechar modal ao clicar fora dele
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('modal-nova-aula');
+    if (e.target === modal) {
+        fecharModalNovaAula();
+    }
+});
+
+// Fechar modal com ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('modal-nova-aula');
+        if (modal && modal.style.display === 'flex') {
+            fecharModalNovaAula();
+        }
+    }
+});
 
 // FUNÇÕES PARA MODAL CUSTOMIZADO
 

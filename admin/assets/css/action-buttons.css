@@ -5,6 +5,36 @@
     min-width: 200px;
 }
 
+/* Container compacto para botões de ícone */
+.action-buttons-compact {
+    display: flex;
+    gap: 0.25rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+/* Botões de ícone compactos */
+.action-icon-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease-in-out;
+    font-size: 0.875rem;
+}
+
+.action-icon-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.action-icon-btn:active {
+    transform: translateY(0);
+}
+
 /* Botões principais - primeira linha */
 .action-buttons-primary {
     display: flex;
