@@ -17,11 +17,21 @@ try {
     
     // Buscar instrutores ativos
     $instrutores = $db->fetchAll("
-        SELECT i.*, u.nome, u.email, u.telefone
+        SELECT i.*, 
+               COALESCE(u.nome, i.nome) as nome,
+               COALESCE(u.email, i.email) as email,
+               COALESCE(u.telefone, i.telefone) as telefone,
+               CASE 
+                   WHEN i.categorias_json IS NOT NULL AND i.categorias_json != '' AND i.categorias_json != '[]' THEN 
+                       REPLACE(REPLACE(REPLACE(i.categorias_json, '[', ''), ']', ''), '\"', '')
+                   WHEN i.categoria_habilitacao IS NOT NULL AND i.categoria_habilitacao != '' THEN 
+                       i.categoria_habilitacao
+                   ELSE 'Sem categoria'
+               END as categoria_habilitacao
         FROM instrutores i
-        JOIN usuarios u ON i.usuario_id = u.id
+        LEFT JOIN usuarios u ON i.usuario_id = u.id
         WHERE i.ativo = 1
-        ORDER BY u.nome
+        ORDER BY COALESCE(u.nome, i.nome)
     ");
     
     // Buscar veículos disponíveis
@@ -216,13 +226,116 @@ try {
 
 <!-- Modal Nova Aula -->
 <div id="modal-nova-aula" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
+    <div class="modal-content modal-large">
         <div class="modal-header">
             <h3>Nova Aula</h3>
             <button class="modal-close" onclick="fecharModalNovaAula()">×</button>
         </div>
         
         <form id="form-nova-aula" class="modal-form" onsubmit="salvarNovaAula(event)">
+            <!-- Seleção de Tipo de Agendamento -->
+            <div class="form-section">
+                <label class="form-label fw-bold">Tipo de Agendamento:</label>
+                <div class="d-flex gap-3 mb-3">
+                    <div class="form-check custom-radio">
+                        <input class="form-check-input" type="radio" name="tipo_agendamento" id="modal_aula_unica" value="unica" checked>
+                        <label class="form-check-label" for="modal_aula_unica">
+                            <div class="radio-text">
+                                <strong>1 Aula</strong>
+                                <small>50 minutos</small>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="form-check custom-radio">
+                        <input class="form-check-input" type="radio" name="tipo_agendamento" id="modal_duas_aulas" value="duas">
+                        <label class="form-check-label" for="modal_duas_aulas">
+                            <div class="radio-text">
+                                <strong>2 Aulas</strong>
+                                <small>1h 40min</small>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="form-check custom-radio">
+                        <input class="form-check-input" type="radio" name="tipo_agendamento" id="modal_tres_aulas" value="tres">
+                        <label class="form-check-label" for="modal_tres_aulas">
+                            <div class="radio-text">
+                                <strong>3 Aulas</strong>
+                                <small>2h 30min</small>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Opções para 3 aulas -->
+                <div id="modal_opcoesTresAulas" class="mb-3" style="display: none;">
+                    <label class="form-label fw-bold">Posição do Intervalo:</label>
+                    <div class="d-flex gap-3">
+                        <div class="form-check custom-radio">
+                            <input class="form-check-input" type="radio" name="posicao_intervalo" id="modal_intervalo_depois" value="depois" checked>
+                            <label class="form-check-label" for="modal_intervalo_depois">
+                                <div class="radio-text">
+                                    <strong>2 consecutivas + intervalo + 1 aula</strong>
+                                    <small>Primeiro bloco, depois intervalo</small>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="form-check custom-radio">
+                            <input class="form-check-input" type="radio" name="posicao_intervalo" id="modal_intervalo_antes" value="antes">
+                            <label class="form-check-label" for="modal_intervalo_antes">
+                                <div class="radio-text">
+                                    <strong>1 aula + intervalo + 2 consecutivas</strong>
+                                    <small>Primeira aula, depois intervalo</small>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                
+                <small class="form-text text-muted">
+                    <i class="fas fa-info-circle me-1"></i>
+                    <strong>2 aulas:</strong> Consecutivas (1h 40min) | <strong>3 aulas:</strong> Escolha a posição do intervalo de 30min (2h 30min total)
+                </small>
+            </div>
+            
+            <!-- Horários Calculados Automaticamente -->
+            <div id="modal_horariosCalculados" class="mb-3" style="display: none;">
+                <label class="form-label fw-bold">Horários Calculados:</label>
+                <div class="row">
+                    <div class="col-md-4">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title text-primary">1ª Aula</h6>
+                                <div id="modal_hora1" class="fw-bold">--:--</div>
+                                <small class="text-muted">50 min</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4" id="modal_coluna2" style="display: none;">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title text-success">2ª Aula</h6>
+                                <div id="modal_hora2" class="fw-bold">--:--</div>
+                                <small class="text-muted">50 min</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4" id="modal_coluna3" style="display: none;">
+                        <div class="card bg-light">
+                            <div class="card-body text-center">
+                                <h6 class="card-title text-warning">3ª Aula</h6>
+                                <div id="modal_hora3" class="fw-bold">--:--</div>
+                                <small class="text-muted">50 min</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="modal_intervaloInfo" class="mt-2 text-center" style="display: none;">
+                    <span class="badge bg-info">
+                        <i class="fas fa-clock me-1"></i>Intervalo de 30 minutos entre blocos de aulas
+                    </span>
+                </div>
+            </div>
+            
             <div class="form-row">
                 <div class="form-group">
                     <label for="aluno_id">Aluno *</label>
@@ -238,11 +351,11 @@ try {
                 
                 <div class="form-group">
                     <label for="instrutor_id">Instrutor *</label>
-                    <select id="instrutor_id" name="instrutor_id" required onchange="verificarDisponibilidadeInstrutor()">
+                    <select id="instrutor_id" name="instrutor_id" required>
                         <option value="">Selecione o instrutor</option>
                         <?php foreach ($instrutores as $instrutor): ?>
                             <option value="<?php echo $instrutor['id']; ?>">
-                                <?php echo htmlspecialchars($instrutor['nome']); ?> - <?php echo $instrutor['categoria_habilitacao']; ?>
+                                <?php echo htmlspecialchars($instrutor['nome']); ?> - <?php echo htmlspecialchars($instrutor['categoria_habilitacao']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -252,10 +365,12 @@ try {
             <div class="form-row">
                 <div class="form-group">
                     <label for="tipo_aula">Tipo de Aula *</label>
-                    <select id="tipo_aula" name="tipo_aula" required onchange="verificarDisponibilidadeVeiculo()">
+                    <select id="tipo_aula" name="tipo_aula" required>
                         <option value="">Selecione o tipo</option>
                         <option value="teorica">Teórica</option>
                         <option value="pratica">Prática</option>
+                        <option value="simulador">Simulador</option>
+                        <option value="avaliacao">Avaliação</option>
                     </select>
                 </div>
                 
@@ -272,20 +387,41 @@ try {
                 </div>
             </div>
             
+            <!-- Campo Disciplina - Visível apenas para aulas teóricas -->
+            <div id="modal_campo_disciplina" class="form-group" style="display: none;">
+                <label for="disciplina">Disciplina *</label>
+                <select id="disciplina" name="disciplina">
+                    <option value="">Selecione a disciplina...</option>
+                    <option value="legislacao_transito">Legislação de Trânsito</option>
+                    <option value="direcao_defensiva">Direção Defensiva</option>
+                    <option value="primeiros_socorros">Primeiros Socorros</option>
+                    <option value="meio_ambiente">Meio Ambiente e Cidadania</option>
+                    <option value="mecanica_basica">Mecânica Básica</option>
+                    <option value="sinalizacao">Sinalização de Trânsito</option>
+                    <option value="etica_profissional">Ética Profissional</option>
+                </select>
+                <small class="form-text text-muted">Disciplina específica da aula teórica</small>
+            </div>
+            
             <div class="form-row">
                 <div class="form-group">
                     <label for="data_aula">Data da Aula *</label>
-                    <input type="date" id="data_aula" name="data_aula" required min="<?php echo date('Y-m-d'); ?>" onchange="verificarDisponibilidade()">
+                    <input type="date" id="data_aula" name="data_aula" required min="<?php echo date('Y-m-d'); ?>" onchange="modalCalcularHorarios()">
                 </div>
                 
                 <div class="form-group">
                     <label for="hora_inicio">Hora de Início *</label>
-                    <input type="time" id="hora_inicio" name="hora_inicio" required onchange="calcularHoraFim()">
+                    <input type="time" id="hora_inicio" name="hora_inicio" required onchange="modalCalcularHorarios()">
                 </div>
                 
                 <div class="form-group">
-                    <label for="hora_fim">Hora de Fim *</label>
-                    <input type="time" id="hora_fim" name="hora_fim" required>
+                    <label for="duracao">Duração da Aula *</label>
+                    <div class="form-control-plaintext bg-light border rounded p-2">
+                        <i class="fas fa-clock me-2 text-primary"></i>
+                        <strong>50 minutos</strong>
+                        <small class="text-muted ms-2">(duração fixa)</small>
+                    </div>
+                    <input type="hidden" id="duracao" name="duracao" value="50">
                 </div>
             </div>
             
@@ -427,9 +563,88 @@ try {
     </div>
 </div>
 
+<!-- CSS específico para o modal de agendamento -->
+<style>
+    /* Modal maior para agendamento */
+    .modal-large {
+        max-width: 800px;
+        width: 90%;
+    }
+    
+    /* Radio buttons personalizados para melhor visibilidade */
+    .custom-radio {
+        margin-bottom: 0;
+    }
+    
+    .custom-radio .form-check-input {
+        width: 20px;
+        height: 20px;
+        margin-top: 0;
+        border: 3px solid #dee2e6;
+        background-color: white;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+    
+    .custom-radio .form-check-input:checked {
+        background-color: #007bff;
+        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        transform: scale(1.1);
+    }
+    
+    .custom-radio .form-check-input:focus {
+        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        border-color: #007bff;
+    }
+    
+    .custom-radio .form-check-label {
+        cursor: pointer;
+        padding: 8px 0;
+        margin-left: 8px;
+    }
+    
+    .radio-text {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .radio-text strong {
+        color: #495057;
+        font-size: 14px;
+        line-height: 1.2;
+    }
+    
+    .radio-text small {
+        color: #6c757d;
+        font-size: 12px;
+        line-height: 1.2;
+    }
+    
+    .custom-radio .form-check-input:checked + .form-check-label .radio-text strong {
+        color: #007bff;
+        font-weight: 600;
+    }
+    
+    /* Hover effects */
+    .custom-radio:hover .form-check-input:not(:checked) {
+        border-color: #adb5bd;
+        transform: scale(1.05);
+    }
+    
+    /* Form section */
+    .form-section {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        border-left: 4px solid #007bff;
+    }
+</style>
+
 <!-- Scripts específicos do agendamento -->
 <script>
-// Dados das aulas para o calendário
 const aulasData = <?php echo json_encode($aulas); ?>;
 const instrutoresData = <?php echo json_encode($instrutores); ?>;
 const veiculosData = <?php echo json_encode($veiculos); ?>;
@@ -482,10 +697,64 @@ function fecharModalConfirmacao() {
 function salvarNovaAula(event) {
     event.preventDefault();
     
-    // Implementar lógica de salvamento
+    const formData = new FormData(event.target);
+    
+    // Adicionar tipo de agendamento
+    const tipoAgendamento = document.querySelector('input[name="tipo_agendamento"]:checked').value;
+    formData.append('tipo_agendamento', tipoAgendamento);
+    
+    // Adicionar disciplina se for aula teórica
+    const tipoAula = document.getElementById('tipo_aula').value;
+    if (tipoAula === 'teorica') {
+        const disciplina = document.getElementById('disciplina').value;
+        if (disciplina) {
+            formData.append('disciplina', disciplina);
+        }
+    }
+    
+    // Adicionar posição do intervalo se for 3 aulas
+    if (tipoAgendamento === 'tres') {
+        const posicaoIntervalo = document.querySelector('input[name="posicao_intervalo"]:checked').value;
+        formData.append('posicao_intervalo', posicaoIntervalo);
+    }
+    
+    // Mostrar loading
+    const btnSubmit = event.target.querySelector('button[type="submit"]');
+    const textoOriginal = btnSubmit.innerHTML;
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Agendando...';
+    btnSubmit.disabled = true;
+    
+    fetch('api/agendamento.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            // Sucesso
     notifications.success('Aula agendada com sucesso!');
     fecharModalNovaAula();
     // Recarregar calendário
+            if (typeof recarregarCalendario === 'function') {
+                recarregarCalendario();
+            }
+        } else {
+            // Erro
+            notifications.error('Erro ao agendar aula: ' + data.mensagem);
+            
+            // Reativar botão
+            btnSubmit.innerHTML = textoOriginal;
+            btnSubmit.disabled = false;
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        notifications.error('Erro ao agendar aula. Tente novamente.');
+        
+        // Reativar botão
+        btnSubmit.innerHTML = textoOriginal;
+        btnSubmit.disabled = false;
+    });
 }
 
 function atualizarAula(event) {
@@ -510,6 +779,42 @@ function verificarDisponibilidadeInstrutor() {
 function verificarDisponibilidadeVeiculo() {
     // Implementar verificação de disponibilidade do veículo
     console.log('Verificando disponibilidade do veículo...');
+}
+
+function atualizarEstatisticas() {
+    // Implementar atualização das estatísticas
+    const hoje = new Date();
+    const inicioSemana = new Date(hoje);
+    inicioSemana.setDate(hoje.getDate() - hoje.getDay());
+    
+    // Contar aulas de hoje
+    const aulasHoje = aulasData.filter(aula => {
+        const dataAula = new Date(aula.data_aula);
+        return dataAula.toDateString() === hoje.toDateString();
+    }).length;
+    
+    // Contar aulas da semana
+    const aulasSemana = aulasData.filter(aula => {
+        const dataAula = new Date(aula.data_aula);
+        return dataAula >= inicioSemana && dataAula <= hoje;
+    }).length;
+    
+    // Contar aulas pendentes
+    const aulasPendentes = aulasData.filter(aula => aula.status === 'agendada').length;
+    
+    // Contar instrutores disponíveis
+    const instrutoresDisponiveis = instrutoresData.filter(instrutor => instrutor.ativo == 1).length;
+    
+    // Atualizar elementos na página
+    const aulasHojeEl = document.getElementById('aulas-hoje');
+    const aulasSemanaEl = document.getElementById('aulas-semana');
+    const aulasPendentesEl = document.getElementById('aulas-pendentes');
+    const instrutoresDisponiveisEl = document.getElementById('instrutores-disponiveis');
+    
+    if (aulasHojeEl) aulasHojeEl.textContent = aulasHoje;
+    if (aulasSemanaEl) aulasSemanaEl.textContent = aulasSemana;
+    if (aulasPendentesEl) aulasPendentesEl.textContent = aulasPendentes;
+    if (instrutoresDisponiveisEl) instrutoresDisponiveisEl.textContent = instrutoresDisponiveis;
 }
 
 function calcularHoraFim() {
@@ -551,17 +856,142 @@ function exportarAgenda() {
     notifications.info('Exportando agenda...');
 }
 
-function atualizarEstatisticas() {
-    // Implementar atualização das estatísticas
-    document.getElementById('aulas-hoje').textContent = '0';
-    document.getElementById('aulas-semana').textContent = '0';
-    document.getElementById('aulas-pendentes').textContent = '0';
-    document.getElementById('instrutores-disponiveis').textContent = '0';
+// Funções específicas para o modal de agendamento avançado
+function modalCalcularHorarios() {
+    const tipoAgendamento = document.querySelector('input[name="tipo_agendamento"]:checked').value;
+    const data = document.getElementById('data_aula').value;
+    const horaInicio = document.getElementById('hora_inicio').value;
+    
+    if (!data || !horaInicio) {
+        document.getElementById('modal_horariosCalculados').style.display = 'none';
+        return;
+    }
+    
+    // Converter hora de início para minutos
+    const [horas, minutos] = horaInicio.split(':').map(Number);
+    let inicioMinutos = horas * 60 + minutos;
+    
+    // Elementos do modal
+    const horariosCalculados = document.getElementById('modal_horariosCalculados');
+    const coluna2 = document.getElementById('modal_coluna2');
+    const coluna3 = document.getElementById('modal_coluna3');
+    const intervaloInfo = document.getElementById('modal_intervaloInfo');
+    const hora1 = document.getElementById('modal_hora1');
+    const hora2 = document.getElementById('modal_hora2');
+    const hora3 = document.getElementById('modal_hora3');
+    
+    // Calcular horários baseados no tipo
+    switch (tipoAgendamento) {
+        case 'unica':
+            // 1 aula: 50 minutos
+            const fim1 = inicioMinutos + 50;
+            hora1.textContent = `${Math.floor(inicioMinutos/60).toString().padStart(2,'0')}:${(inicioMinutos%60).toString().padStart(2,'0')} - ${Math.floor(fim1/60).toString().padStart(2,'0')}:${(fim1%60).toString().padStart(2,'0')}`;
+            
+            coluna2.style.display = 'none';
+            coluna3.style.display = 'none';
+            intervaloInfo.style.display = 'none';
+            horariosCalculados.style.display = 'block';
+            break;
+            
+        case 'duas':
+            // 2 aulas consecutivas: 50 + 50 = 100 minutos
+            const fim2 = inicioMinutos + 100;
+            hora1.textContent = `${Math.floor(inicioMinutos/60).toString().padStart(2,'0')}:${(inicioMinutos%60).toString().padStart(2,'0')} - ${Math.floor((inicioMinutos+50)/60).toString().padStart(2,'0')}:${((inicioMinutos+50)%60).toString().padStart(2,'0')}`;
+            hora2.textContent = `${Math.floor((inicioMinutos+50)/60).toString().padStart(2,'0')}:${((inicioMinutos+50)%60).toString().padStart(2,'0')} - ${Math.floor(fim2/60).toString().padStart(2,'0')}:${(fim2%60).toString().padStart(2,'0')}`;
+            
+            coluna2.style.display = 'block';
+            coluna3.style.display = 'none';
+            intervaloInfo.style.display = 'none';
+            horariosCalculados.style.display = 'block';
+            break;
+            
+        case 'tres':
+            // 3 aulas com intervalo de 30min = 180 minutos total
+            const fim3 = inicioMinutos + 180;
+            const posicaoIntervalo = document.querySelector('input[name="posicao_intervalo"]:checked').value;
+            
+            if (posicaoIntervalo === 'depois') {
+                // 2 consecutivas + 30min intervalo + 1 aula
+                hora1.textContent = `${Math.floor(inicioMinutos/60).toString().padStart(2,'0')}:${(inicioMinutos%60).toString().padStart(2,'0')} - ${Math.floor((inicioMinutos+50)/60).toString().padStart(2,'0')}:${((inicioMinutos+50)%60).toString().padStart(2,'0')}`;
+                hora2.textContent = `${Math.floor((inicioMinutos+50)/60).toString().padStart(2,'0')}:${((inicioMinutos+50)%60).toString().padStart(2,'0')} - ${Math.floor((inicioMinutos+100)/60).toString().padStart(2,'0')}:${((inicioMinutos+100)%60).toString().padStart(2,'0')}`;
+                hora3.textContent = `${Math.floor((inicioMinutos+130)/60).toString().padStart(2,'0')}:${((inicioMinutos+130)%60).toString().padStart(2,'0')} - ${Math.floor(fim3/60).toString().padStart(2,'0')}:${(fim3%60).toString().padStart(2,'0')}`;
+            } else {
+                // 1 aula + 30min intervalo + 2 consecutivas
+                hora1.textContent = `${Math.floor(inicioMinutos/60).toString().padStart(2,'0')}:${(inicioMinutos%60).toString().padStart(2,'0')} - ${Math.floor((inicioMinutos+50)/60).toString().padStart(2,'0')}:${((inicioMinutos+50)%60).toString().padStart(2,'0')}`;
+                hora2.textContent = `${Math.floor((inicioMinutos+80)/60).toString().padStart(2,'0')}:${((inicioMinutos+80)%60).toString().padStart(2,'0')} - ${Math.floor((inicioMinutos+130)/60).toString().padStart(2,'0')}:${((inicioMinutos+130)%60).toString().padStart(2,'0')}`;
+                hora3.textContent = `${Math.floor((inicioMinutos+130)/60).toString().padStart(2,'0')}:${((inicioMinutos+130)%60).toString().padStart(2,'0')} - ${Math.floor(fim3/60).toString().padStart(2,'0')}:${(fim3%60).toString().padStart(2,'0')}`;
+            }
+            
+            coluna2.style.display = 'block';
+            coluna3.style.display = 'block';
+            intervaloInfo.style.display = 'block';
+            horariosCalculados.style.display = 'block';
+            break;
+    }
 }
+
+// Event listeners para o modal
+document.addEventListener('DOMContentLoaded', function() {
+    // Event listeners para tipo de agendamento
+    document.querySelectorAll('input[name="tipo_agendamento"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            // Mostrar/ocultar opções de intervalo para 3 aulas
+            const opcoesTresAulas = document.getElementById('modal_opcoesTresAulas');
+            if (this.value === 'tres') {
+                opcoesTresAulas.style.display = 'block';
+            } else {
+                opcoesTresAulas.style.display = 'none';
+            }
+            modalCalcularHorarios();
+        });
+    });
+    
+    // Event listeners para posição do intervalo
+    document.querySelectorAll('input[name="posicao_intervalo"]').forEach(radio => {
+        radio.addEventListener('change', modalCalcularHorarios);
+    });
+    
+    // Event listener para tipo de aula
+    document.getElementById('tipo_aula').addEventListener('change', function() {
+        const campoDisciplina = document.getElementById('modal_campo_disciplina');
+        const disciplina = document.getElementById('disciplina');
+        const veiculo = document.getElementById('veiculo_id');
+        
+        if (this.value === 'teorica') {
+            // Aula teórica: mostrar disciplina, ocultar veículo
+            campoDisciplina.style.display = 'block';
+            disciplina.required = true;
+            disciplina.disabled = false;
+            
+            veiculo.required = false;
+            veiculo.disabled = true;
+            veiculo.value = '';
+        } else {
+            // Aula prática: ocultar disciplina, mostrar veículo
+            campoDisciplina.style.display = 'none';
+            disciplina.required = false;
+            disciplina.disabled = true;
+            disciplina.value = '';
+            
+            veiculo.required = true;
+            veiculo.disabled = false;
+        }
+    });
+});
 
 function limparFormularioNovaAula() {
     document.getElementById('form-nova-aula').reset();
+    document.getElementById('modal_opcoesTresAulas').style.display = 'none';
+    document.getElementById('modal_horariosCalculados').style.display = 'none';
+    document.getElementById('modal_campo_disciplina').style.display = 'none';
+    
+    // Resetar radio buttons
+    document.getElementById('modal_aula_unica').checked = true;
+    document.getElementById('modal_intervalo_depois').checked = true;
+    
+    // Desabilitar veículo por padrão
     document.getElementById('veiculo_id').disabled = true;
+    document.getElementById('veiculo_id').required = false;
 }
 
 function preencherFormularioEdicao(aula) {
