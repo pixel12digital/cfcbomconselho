@@ -3,8 +3,37 @@
 // Configuração para produção
 ini_set('display_errors', 0); // Não mostrar erros na tela para API
 ini_set('log_errors', 1);
+ini_set('html_errors', 0); // Desabilitar formatação HTML de erros
+
+// Limpar qualquer saída anterior
+if (ob_get_level()) {
+    ob_clean();
+}
 
 header('Content-Type: application/json; charset=utf-8');
+
+// Função para garantir resposta JSON válida
+function sendJsonResponse($data, $httpCode = 200) {
+    http_response_code($httpCode);
+    
+    // Limpar qualquer saída anterior
+    if (ob_get_level()) {
+        ob_clean();
+    }
+    
+    // Garantir que não há saída antes do JSON
+    $output = json_encode($data, JSON_UNESCAPED_UNICODE);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        $output = json_encode([
+            'success' => false, 
+            'error' => 'Erro ao codificar JSON: ' . json_last_error_msg()
+        ], JSON_UNESCAPED_UNICODE);
+    }
+    
+    echo $output;
+    exit;
+}
 
 // Não iniciar sessão aqui - será iniciada pelo config.php
 
@@ -41,8 +70,7 @@ try {
         error_log('[API Alunos] Erro ao carregar includes: ' . $e->getMessage());
     }
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Erro de configuração: ' . $e->getMessage()]);
-    exit;
+    sendJsonResponse(['success' => false, 'error' => 'Erro de configuração: ' . $e->getMessage()], 500);
 }
 
 // Verificar se está logado e tem permissão
@@ -93,9 +121,7 @@ try {
             if (function_exists('error_log')) {
                 error_log('[API Alunos] Usuário não tem permissão para gerenciar alunos');
             }
-            http_response_code(403);
-            echo json_encode(['error' => 'Acesso negado - Apenas administradores e atendentes podem gerenciar alunos']);
-            exit;
+            sendJsonResponse(['error' => 'Acesso negado - Apenas administradores e atendentes podem gerenciar alunos'], 403);
         }
         
         // Se chegou até aqui, tem permissão
@@ -111,16 +137,12 @@ try {
     if (function_exists('error_log')) {
         error_log('[API Alunos] Erro de autenticação: ' . $e->getMessage());
     }
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Erro de autenticação: ' . $e->getMessage()]);
-    exit;
+    sendJsonResponse(['success' => false, 'error' => 'Erro de autenticação: ' . $e->getMessage()], 500);
 } catch (Error $e) {
     if (function_exists('error_log')) {
         error_log('[API Alunos] Erro fatal de autenticação: ' . $e->getMessage());
     }
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Erro fatal de autenticação: ' . $e->getMessage()]);
-    exit;
+    sendJsonResponse(['success' => false, 'error' => 'Erro fatal de autenticação: ' . $e->getMessage()], 500);
 }
 
 try {
@@ -161,9 +183,7 @@ try {
     if (function_exists('error_log')) {
         error_log('[API Alunos] Erro de conexão com banco: ' . $e->getMessage());
     }
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Erro de conexão com banco: ' . $e->getMessage()]);
-    exit;
+    sendJsonResponse(['success' => false, 'error' => 'Erro de conexão com banco: ' . $e->getMessage()], 500);
 }
 
 $method = $_SERVER['REQUEST_METHOD'];
@@ -192,9 +212,7 @@ try {
                 }
                 
                 if (!$aluno) {
-                    http_response_code(404);
-                    echo json_encode(['success' => false, 'error' => 'Aluno não encontrado']);
-                    exit;
+                    sendJsonResponse(['success' => false, 'error' => 'Aluno não encontrado'], 404);
                 }
                 
                 // Buscar dados do CFC
@@ -210,7 +228,7 @@ try {
                     error_log('[API Alunos] GET - Resposta final: ' . json_encode($response));
                 }
                 
-                echo json_encode($response);
+                sendJsonResponse($response);
             } else {
                 // Listar todos os alunos
                 $alunos = $db->fetchAll("
@@ -220,7 +238,7 @@ try {
                     ORDER BY a.nome ASC
                 ");
                 
-                echo json_encode(['success' => true, 'alunos' => $alunos]);
+                sendJsonResponse(['success' => true, 'alunos' => $alunos]);
             }
             break;
             
@@ -259,9 +277,7 @@ try {
                 if (LOG_ENABLED) {
                     error_log('[API Alunos] Dados inválidos recebidos');
                 }
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Dados inválidos']);
-                exit;
+                sendJsonResponse(['success' => false, 'error' => 'Dados inválidos'], 400);
             }
             
             // Validações básicas
@@ -275,9 +291,7 @@ try {
                         'tipo_servico' => !empty($data['tipo_servico'])
                     ], true));
                 }
-                http_response_code(400);
-                echo json_encode(['success' => false, 'error' => 'Nome, CPF, CFC e Categoria CNH são obrigatórios']);
-                exit;
+                sendJsonResponse(['success' => false, 'error' => 'Nome, CPF, CFC e Categoria CNH são obrigatórios'], 400);
             }
             
             // Se tipo_servico não foi enviado, determinar baseado na categoria
@@ -407,15 +421,13 @@ try {
                     ];
                 }
                 
-                echo json_encode($response);
+                sendJsonResponse($response);
                 
             } catch (Exception $e) {
                 if (LOG_ENABLED) {
                     error_log('[API Alunos] Erro ao inserir aluno: ' . $e->getMessage());
                 }
-                http_response_code(500);
-                echo json_encode(['success' => false, 'error' => 'Erro interno: ' . $e->getMessage()]);
-                exit;
+                sendJsonResponse(['success' => false, 'error' => 'Erro interno: ' . $e->getMessage()], 500);
             }
             break;
             
@@ -517,7 +529,7 @@ try {
                     exit;
                 }
                 
-                echo json_encode(['success' => true, 'message' => 'Aluno atualizado com sucesso']);
+                sendJsonResponse(['success' => true, 'message' => 'Aluno atualizado com sucesso']);
                 
             } catch (Exception $e) {
                 if (LOG_ENABLED) {
@@ -596,13 +608,11 @@ try {
                 exit;
             }
             
-            echo json_encode(['success' => true, 'message' => 'Aluno excluído com sucesso']);
+            sendJsonResponse(['success' => true, 'message' => 'Aluno excluído com sucesso']);
             break;
             
         default:
-            http_response_code(405);
-            echo json_encode(['success' => false, 'error' => 'Método não permitido']);
-            break;
+            sendJsonResponse(['success' => false, 'error' => 'Método não permitido'], 405);
     }
     
 } catch (Exception $e) {
@@ -610,14 +620,12 @@ try {
         error_log('[API Alunos] Erro interno: ' . $e->getMessage());
         error_log('[API Alunos] Stack trace: ' . $e->getTraceAsString());
     }
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Erro interno: ' . $e->getMessage()]);
+    sendJsonResponse(['success' => false, 'error' => 'Erro interno: ' . $e->getMessage()], 500);
 } catch (Error $e) {
     if (function_exists('error_log')) {
         error_log('[API Alunos] Erro fatal: ' . $e->getMessage());
         error_log('[API Alunos] Stack trace: ' . $e->getTraceAsString());
     }
-    http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Erro fatal: ' . $e->getMessage()]);
+    sendJsonResponse(['success' => false, 'error' => 'Erro fatal: ' . $e->getMessage()], 500);
 }
 ?>

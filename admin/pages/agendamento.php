@@ -1503,11 +1503,25 @@ function salvarNovaAula(event) {
     btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Agendando...';
     btnSubmit.disabled = true;
     
-    fetch('api/agendamento.php', {
+    fetch('/cfc-bom-conselho/admin/api/agendamento.php', {
         method: 'POST',
         body: formData
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('❌ Erro ao fazer parse do JSON:', e);
+                console.error('📄 Texto que causou erro:', text);
+                throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+            }
+        });
+    })
     .then(data => {
         if (data.sucesso) {
             // Sucesso
@@ -1580,14 +1594,29 @@ function atualizarAula(event) {
     
     console.log('Dados mapeados para API:', mappedData);
     
-    fetch('api/agendamento.php', {
+    fetch('/cfc-bom-conselho/admin/api/agendamento.php', {
         method: 'POST',
+        credentials: 'include',
         headers: {
             'Content-Type': 'application/json',
         },
         body: JSON.stringify(mappedData)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('❌ Erro ao fazer parse do JSON:', e);
+                console.error('📄 Texto que causou erro:', text);
+                throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+            }
+        });
+    })
     .then(result => {
         if (result.sucesso) {
             alert('Aula atualizada com sucesso!');
@@ -1773,7 +1802,7 @@ async function consultarDisponibilidadeInstrutor(data, instrutorId, tipo, duraca
                 tipo_aula: tipo || 'pratica'
             });
             
-            const response = await fetch(`../api/verificar-disponibilidade.php?${params}`);
+            const response = await fetch(`/cfc-bom-conselho/admin/api/verificar-disponibilidade.php?${params}`);
             
             if (!response.ok) {
                 console.warn(`API não disponível para ${horario}, usando verificação manual`);
@@ -2450,8 +2479,9 @@ function cancelarAula(aulaId) {
     const confirmacao = confirm('Tem certeza que deseja cancelar esta aula?');
     if (confirmacao) {
         // Chamar API para cancelar aula
-        fetch('api/agendamento.php', {
+        fetch('/cfc-bom-conselho/admin/api/agendamento.php', {
             method: 'POST',
+            credentials: 'include',
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -2460,7 +2490,21 @@ function cancelarAula(aulaId) {
                 aula_id: aulaId
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ Erro ao fazer parse do JSON:', e);
+                    console.error('📄 Texto que causou erro:', text);
+                    throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+                }
+            });
+        })
         .then(data => {
             if (data.sucesso) {
                 alert('Aula cancelada com sucesso!');

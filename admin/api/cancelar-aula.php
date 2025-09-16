@@ -3,6 +3,12 @@
 // API DE CANCELAMENTO DE AULAS - SISTEMA CFC
 // =====================================================
 
+// Configurar tratamento de erros para API
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Não exibir erros na tela
+ini_set('log_errors', 1); // Logar erros no arquivo de log
+ini_set('html_errors', 0); // Desabilitar formatação HTML de erros
+
 // Limpar qualquer output anterior
 if (ob_get_level()) {
     ob_clean();
@@ -12,6 +18,29 @@ header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
+
+// Função para garantir resposta JSON válida
+function sendJsonResponse($data, $httpCode = 200) {
+    http_response_code($httpCode);
+    
+    // Limpar qualquer saída anterior
+    if (ob_get_level()) {
+        ob_clean();
+    }
+    
+    // Garantir que não há saída antes do JSON
+    $output = json_encode($data, JSON_UNESCAPED_UNICODE);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        $output = json_encode([
+            'success' => false, 
+            'message' => 'Erro ao codificar JSON: ' . json_last_error_msg()
+        ], JSON_UNESCAPED_UNICODE);
+    }
+    
+    echo $output;
+    exit;
+}
 
 // Usar caminho relativo que sabemos que funciona
 require_once __DIR__ . '/../../includes/config.php';
@@ -25,9 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    echo json_encode(['success' => false, 'message' => 'Método não permitido']);
-    exit();
+    sendJsonResponse(['success' => false, 'message' => 'Método não permitido'], 405);
 }
 
 // Verificar autenticação
@@ -35,9 +62,7 @@ if (!isset($_SESSION['user_id'])) {
     session_start();
 }
 if (!isset($_SESSION['user_id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'message' => 'Usuário não autenticado']);
-    exit();
+    sendJsonResponse(['success' => false, 'message' => 'Usuário não autenticado'], 401);
 }
 
 try {
@@ -123,7 +148,7 @@ try {
     }
     
     // Resposta de sucesso
-    echo json_encode([
+    sendJsonResponse([
         'success' => true,
         'message' => 'Aula cancelada com sucesso',
         'data' => [
@@ -138,11 +163,10 @@ try {
     ]);
     
 } catch (Exception $e) {
-    http_response_code(400);
-    echo json_encode([
+    sendJsonResponse([
         'success' => false,
         'message' => $e->getMessage(),
         'error' => DEBUG_MODE ? $e->getTraceAsString() : null
-    ]);
+    ], 400);
 }
 ?>

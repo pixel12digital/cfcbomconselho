@@ -2037,7 +2037,21 @@ function excluirAluno(id) {
             },
             body: JSON.stringify({ id: id })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ Erro ao fazer parse do JSON:', e);
+                    console.error('📄 Texto que causou erro:', text);
+                    throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+                }
+            });
+        })
         .then(data => {
             if (typeof loading !== 'undefined') {
                 loading.hideGlobal();
@@ -2734,7 +2748,21 @@ function salvarNovaAula(event) {
         },
         body: JSON.stringify(dados)
     })
-    .then(response => response.json())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        return response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('❌ Erro ao fazer parse do JSON:', e);
+                console.error('📄 Texto que causou erro:', text);
+                throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+            }
+        });
+    })
     .then(data => {
         if (data.success) {
             mostrarAlerta('Aula agendada com sucesso!', 'success');
@@ -3055,7 +3083,21 @@ function salvarAluno() {
     })
     .then(response => {
         console.log('Resposta da API:', response);
-        return response.json();
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // Primeiro vamos ver o texto da resposta
+        return response.text().then(text => {
+            console.log('📄 Texto da resposta:', text);
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('❌ Erro ao fazer parse do JSON:', e);
+                console.error('📄 Texto que causou erro:', text);
+                throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+            }
+        });
     })
     .then(data => {
         console.log('Dados da resposta:', data);

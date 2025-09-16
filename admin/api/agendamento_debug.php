@@ -154,18 +154,15 @@ try {
     try {
         $db = db();
         
-        // MODIFICAÇÃO: Usar php://input normalmente
-        $input = file_get_contents('php://input');
-        error_log("Input bruto: " . $input);
+        // MODIFICAÇÃO: Usar variável global em vez de php://input
+        $input = $GLOBALS['php_input_data'] ?? '';
         $data = json_decode($input, true);
-        error_log("Data decodificada: " . json_encode($data));
         
         error_log("Requisição recebida: " . json_encode($data));
         error_log("Usuário atual: " . $currentUser['email'] . " (Tipo: " . $currentUser['tipo'] . ")");
         
         if ($data && isset($data['acao'])) {
             $acao = $data['acao'];
-            error_log("Ação detectada: " . $acao);
             
             if ($acao === 'criar' && !canAddLessons()) {
                 http_response_code(403);
@@ -180,7 +177,6 @@ try {
             }
             
             if ($acao === 'cancelar' && isset($data['aula_id'])) {
-                error_log("Executando cancelamento para aula_id: " . $data['aula_id']);
                 cancelarAula($data['aula_id']);
                 exit();
             }

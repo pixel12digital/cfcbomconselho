@@ -451,7 +451,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             <div class="logo-section">
                 <img src="assets/logo.png" alt="Logo CFC" class="logo-image">
                 <p class="system-subtitle">Sistema completo para gestão de Centros de Formação de Condutores</p>
-            </div>
+        </div>
             
             <div class="user-types">
                 <?php foreach ($userTypes as $type => $config): ?>
@@ -461,14 +461,14 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                 <?php endforeach; ?>
             </div>
                 </div>
-        
+                    
         <!-- Painel Direito - Formulário de Login -->
         <div class="right-panel">
             <div class="login-header">
                 <h2 class="login-title"><?php echo $currentConfig['title']; ?></h2>
                 <p class="login-subtitle">Entre com suas credenciais para acessar o sistema</p>
-        </div>
-            
+                    </div>
+                            
                             <?php if ($error): ?>
                 <div class="alert alert-error">
                     <?php echo htmlspecialchars($error); ?>
@@ -524,7 +524,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                 
                 <button type="submit" class="btn-login">
                     Entrar no Sistema
-                </button>
+                            </button>
             </form>
             
             <div class="login-footer">
