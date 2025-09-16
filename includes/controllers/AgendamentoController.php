@@ -647,6 +647,32 @@ class AgendamentoController {
      */
     private function verificarLimiteDiarioInstrutor($instrutorId, $data, $aulaIdExcluir = null) {
         try {
+            // Buscar informações do instrutor incluindo horário de trabalho
+            $sqlInstrutor = "SELECT i.*, u.nome FROM instrutores i LEFT JOIN usuarios u ON i.usuario_id = u.id WHERE i.id = ?";
+            $stmtInstrutor = $this->db->query($sqlInstrutor, [$instrutorId]);
+            $instrutor = $stmtInstrutor->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$instrutor) {
+                return [
+                    'disponivel' => false,
+                    'motivo' => 'Instrutor não encontrado',
+                    'tipo' => 'instrutor_nao_encontrado'
+                ];
+            }
+            
+            // Verificar se o instrutor tem horário de trabalho configurado
+            $horario_inicio = $instrutor['horario_inicio'] ?? '08:00';
+            $horario_fim = $instrutor['horario_fim'] ?? '18:00';
+            
+            // Converter horários para minutos para facilitar cálculos
+            $inicio_minutos = $this->horaParaMinutos($horario_inicio);
+            $fim_minutos = $this->horaParaMinutos($horario_fim);
+            $duracao_total_minutos = $fim_minutos - $inicio_minutos;
+            
+            // Calcular quantas aulas de 50 minutos cabem no horário de trabalho
+            $max_aulas_possiveis = floor($duracao_total_minutos / 50);
+            
+            // Buscar aulas já agendadas para o dia
             $sql = "SELECT COUNT(*) as total FROM aulas 
                     WHERE instrutor_id = ? 
                     AND data_aula = ? 
@@ -663,15 +689,22 @@ class AgendamentoController {
             $resultado = $stmt->fetch(PDO::FETCH_ASSOC);
             $totalAulas = $resultado['total'];
             
-            if ($totalAulas >= 3) {
+            if ($totalAulas >= $max_aulas_possiveis) {
                 return [
                     'disponivel' => false,
-                    'motivo' => 'Instrutor já possui 3 aulas agendadas para este dia (limite máximo atingido)',
-                    'tipo' => 'limite_diario'
+                    'motivo' => "Instrutor já possui {$totalAulas} aulas agendadas para este dia. Máximo possível dentro do horário de trabalho ({$horario_inicio} às {$horario_fim}): {$max_aulas_possiveis} aulas.",
+                    'tipo' => 'limite_diario',
+                    'horario_trabalho' => "{$horario_inicio} às {$horario_fim}",
+                    'max_aulas' => $max_aulas_possiveis
                 ];
             }
             
-            return ['disponivel' => true];
+            return [
+                'disponivel' => true,
+                'horario_trabalho' => "{$horario_inicio} às {$horario_fim}",
+                'max_aulas' => $max_aulas_possiveis,
+                'aulas_restantes' => $max_aulas_possiveis - $totalAulas
+            ];
             
         } catch (Exception $e) {
             error_log("Erro ao verificar limite diário: " . $e->getMessage());

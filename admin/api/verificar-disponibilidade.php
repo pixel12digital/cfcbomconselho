@@ -127,7 +127,18 @@ try {
         }
     }
     
-    // 4. Verificar limite diário do instrutor
+    // 3. Verificar limite diário do ALUNO (máximo 3 aulas por dia)
+    if ($aluno_id) {
+        $limite_aluno = verificarLimiteDiarioAluno($db, $aluno_id, $data_aula, count($horarios_aulas));
+        $resultado['detalhes']['limite_aluno'] = $limite_aluno;
+        
+        if (!$limite_aluno['disponivel']) {
+            $resultado['disponivel'] = false;
+            $resultado['mensagem'] = $limite_aluno['mensagem'];
+        }
+    }
+    
+    // 4. Verificar limite diário do instrutor baseado no horário de trabalho
     if ($instrutor_id) {
         $limite_diario = verificarLimiteDiario($db, $instrutor_id, $data_aula, count($horarios_aulas));
         $resultado['detalhes']['limite_diario'] = $limite_diario;
@@ -251,20 +262,34 @@ function verificarPadraoAulas($db, $instrutor_id, $data_aula, $nova_hora_inicio,
 }
 
 /**
- * Verifica limite diário do instrutor
+ * Verifica limite diário do ALUNO (máximo 3 aulas por dia)
  */
-function verificarLimiteDiario($db, $instrutor_id, $data_aula, $aulas_novas = 1) {
-    $aulas_hoje = $db->fetchAll("SELECT COUNT(*) as total FROM aulas WHERE instrutor_id = ? AND data_aula = ? AND status != 'cancelada'", [$instrutor_id, $data_aula]);
+function verificarLimiteDiarioAluno($db, $aluno_id, $data_aula, $aulas_novas = 1) {
+    // Buscar informações do aluno
+    $aluno = $db->fetch("SELECT * FROM alunos WHERE id = ?", [$aluno_id]);
+    
+    if (!$aluno) {
+        return [
+            'disponivel' => false,
+            'mensagem' => 'Aluno não encontrado'
+        ];
+    }
+    
+    // Buscar aulas já agendadas para o dia
+    $aulas_hoje = $db->fetchAll("SELECT COUNT(*) as total FROM aulas WHERE aluno_id = ? AND data_aula = ? AND status != 'cancelada'", [$aluno_id, $data_aula]);
     $total_aulas = $aulas_hoje[0]['total'];
     $total_com_novas = $total_aulas + $aulas_novas;
     
-    if ($total_com_novas > 3) {
+    // Limite fixo de 3 aulas por dia para alunos
+    $limite_aluno = 3;
+    
+    if ($total_com_novas > $limite_aluno) {
         return [
             'disponivel' => false,
             'total_aulas' => $total_aulas,
             'aulas_novas' => $aulas_novas,
-            'limite' => 3,
-            'mensagem' => "Instrutor já possui {$total_aulas} aulas agendadas. Com {$aulas_novas} novas aulas, excederia o limite de 3 aulas por dia."
+            'limite' => $limite_aluno,
+            'mensagem' => "Aluno já possui {$total_aulas} aulas agendadas. Com {$aulas_novas} novas aulas, excederia o limite de {$limite_aluno} aulas por dia."
         ];
     }
     
@@ -272,9 +297,63 @@ function verificarLimiteDiario($db, $instrutor_id, $data_aula, $aulas_novas = 1)
         'disponivel' => true,
         'total_aulas' => $total_aulas,
         'aulas_novas' => $aulas_novas,
-        'limite' => 3,
-        'aulas_restantes' => 3 - $total_com_novas,
-        'mensagem' => 'Instrutor pode agendar mais ' . (3 - $total_com_novas) . ' aula(s)'
+        'limite' => $limite_aluno,
+        'aulas_restantes' => $limite_aluno - $total_com_novas,
+        'mensagem' => "Aluno pode agendar mais " . ($limite_aluno - $total_com_novas) . " aula(s) (limite: {$limite_aluno} aulas por dia)"
+    ];
+}
+
+/**
+ * Verifica disponibilidade do instrutor baseada no horário de trabalho
+ */
+function verificarLimiteDiario($db, $instrutor_id, $data_aula, $aulas_novas = 1) {
+    // Buscar informações do instrutor incluindo horário de trabalho
+    $instrutor = $db->fetch("SELECT i.*, u.nome FROM instrutores i LEFT JOIN usuarios u ON i.usuario_id = u.id WHERE i.id = ?", [$instrutor_id]);
+    
+    if (!$instrutor) {
+        return [
+            'disponivel' => false,
+            'mensagem' => 'Instrutor não encontrado'
+        ];
+    }
+    
+    // Verificar se o instrutor tem horário de trabalho configurado
+    $horario_inicio = $instrutor['horario_inicio'] ?? '08:00';
+    $horario_fim = $instrutor['horario_fim'] ?? '18:00';
+    
+    // Converter horários para minutos para facilitar cálculos
+    $inicio_minutos = horaParaMinutos($horario_inicio);
+    $fim_minutos = horaParaMinutos($horario_fim);
+    $duracao_total_minutos = $fim_minutos - $inicio_minutos;
+    
+    // Calcular quantas aulas de 50 minutos cabem no horário de trabalho
+    $max_aulas_possiveis = floor($duracao_total_minutos / 50);
+    
+    // Buscar aulas já agendadas para o dia
+    $aulas_hoje = $db->fetchAll("SELECT COUNT(*) as total FROM aulas WHERE instrutor_id = ? AND data_aula = ? AND status != 'cancelada'", [$instrutor_id, $data_aula]);
+    $total_aulas = $aulas_hoje[0]['total'];
+    $total_com_novas = $total_aulas + $aulas_novas;
+    
+    // Verificar se excede o horário de trabalho
+    if ($total_com_novas > $max_aulas_possiveis) {
+        return [
+            'disponivel' => false,
+            'total_aulas' => $total_aulas,
+            'aulas_novas' => $aulas_novas,
+            'limite' => $max_aulas_possiveis,
+            'horario_trabalho' => "{$horario_inicio} às {$horario_fim}",
+            'mensagem' => "Instrutor já possui {$total_aulas} aulas agendadas. Com {$aulas_novas} novas aulas, excederia o horário de trabalho ({$horario_inicio} às {$horario_fim}). Máximo possível: {$max_aulas_possiveis} aulas."
+        ];
+    }
+    
+    return [
+        'disponivel' => true,
+        'total_aulas' => $total_aulas,
+        'aulas_novas' => $aulas_novas,
+        'limite' => $max_aulas_possiveis,
+        'horario_trabalho' => "{$horario_inicio} às {$horario_fim}",
+        'aulas_restantes' => $max_aulas_possiveis - $total_com_novas,
+        'mensagem' => "Instrutor pode agendar mais " . ($max_aulas_possiveis - $total_com_novas) . " aula(s) dentro do horário de trabalho ({$horario_inicio} às {$horario_fim})"
     ];
 }
 

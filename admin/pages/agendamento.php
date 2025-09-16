@@ -85,7 +85,7 @@ try {
 
 <!-- Header da Página -->
 <div class="page-header">
-    <div>
+    <div class="header-content">
         <h1 class="page-title">Sistema de Agendamento</h1>
         <p class="page-subtitle">Gerencie aulas, instrutores e veículos</p>
     </div>
@@ -1326,6 +1326,18 @@ function inicializarCalendario() {
         dayMaxEventRows: 4, // Máximo de 4 linhas de eventos por dia
         moreLinkClick: 'popover', // Mostrar popover para eventos extras
         dayMaxEvents: 4, // Limitar eventos visíveis por dia
+        // Configurações de localização específicas
+        buttonText: {
+            today: 'Hoje',
+            month: 'Mês',
+            week: 'Semana',
+            day: 'Dia',
+            list: 'Lista'
+        },
+        // Traduzir texto "more" para português
+        moreLinkText: function(num) {
+            return '+ ' + num + ' mais';
+        },
         events: function(info, successCallback, failureCallback) {
             console.log('Carregando eventos para período:', info.start, 'até', info.end);
             

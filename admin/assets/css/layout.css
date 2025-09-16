@@ -216,6 +216,10 @@
     color: var(--white);
     position: relative;
     overflow: hidden;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    min-height: 120px;
 }
 
 .admin-main .page-header::before {
@@ -229,28 +233,36 @@
     pointer-events: none;
 }
 
+.admin-main .page-header .header-content {
+    flex: 1;
+    position: relative;
+    z-index: 2;
+    margin-right: var(--spacing-lg);
+}
+
 .admin-main .page-title {
     font-size: var(--font-size-3xl);
     font-weight: var(--font-weight-bold);
     margin-bottom: var(--spacing-sm);
-    position: relative;
-    z-index: 2;
+    margin-top: 0;
+    line-height: 1.2;
 }
 
 .admin-main .page-subtitle {
     font-size: var(--font-size-lg);
     opacity: 0.9;
-    position: relative;
-    z-index: 2;
+    margin-bottom: 0;
+    line-height: 1.4;
 }
 
 .admin-main .page-actions {
-    position: absolute;
-    top: var(--spacing-xl);
-    right: var(--spacing-xl);
     display: flex;
     gap: var(--spacing-md);
+    flex-shrink: 0;
+    position: relative;
     z-index: 2;
+    align-items: flex-start;
+    flex-wrap: wrap;
 }
 
 /* =====================================================
@@ -286,12 +298,52 @@
     
     .admin-main .page-header {
         padding: var(--spacing-xl) var(--spacing-md);
+        flex-direction: column;
+        align-items: stretch;
+        min-height: auto;
+    }
+    
+    .admin-main .page-header .header-content {
+        margin-right: 0;
+        margin-bottom: var(--spacing-lg);
+        text-align: center;
     }
     
     .admin-main .page-actions {
-        position: static;
-        margin-top: var(--spacing-lg);
         justify-content: center;
+        flex-wrap: wrap;
+        gap: var(--spacing-sm);
+    }
+    
+    .admin-main .page-actions .btn {
+        flex: 1;
+        min-width: 120px;
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-main .page-header {
+        padding: var(--spacing-lg) var(--spacing-sm);
+    }
+    
+    .admin-main .page-title {
+        font-size: var(--font-size-2xl);
+    }
+    
+    .admin-main .page-subtitle {
+        font-size: var(--font-size-md);
+    }
+    
+    .admin-main .page-actions {
+        flex-direction: column;
+        gap: var(--spacing-sm);
+    }
+    
+    .admin-main .page-actions .btn {
+        width: 100%;
+        min-width: auto;
     }
 }
 
