@@ -39,15 +39,24 @@ async function detectarCaminhoAPIAlunos() {
     const baseUrl = window.location.origin;
     const pathname = window.location.pathname;
     
-    // Detectar caminho baseado na URL atual
+    // Detectar caminho baseado na URL atual - usar caminho relativo
     if (pathname.includes('/admin/')) {
-        const basePath = pathname.substring(0, pathname.lastIndexOf('/admin/'));
-        caminhoAPIAlunosCache = baseUrl + basePath + '/admin/api/alunos.php';
+        // Extrair o diretório base do projeto
+        const pathParts = pathname.split('/');
+        const projectIndex = pathParts.findIndex(part => part === 'admin');
+        if (projectIndex > 0) {
+            const basePath = pathParts.slice(0, projectIndex).join('/');
+            caminhoAPIAlunosCache = baseUrl + basePath + '/admin/api/alunos.php';
+        } else {
+            caminhoAPIAlunosCache = baseUrl + '/admin/api/alunos.php';
+        }
     } else {
         caminhoAPIAlunosCache = baseUrl + '/admin/api/alunos.php';
     }
     
     console.log('🌐 Caminho da API Alunos detectado:', caminhoAPIAlunosCache);
+    console.log('🌐 Base URL:', baseUrl);
+    console.log('🌐 Pathname:', pathname);
     return caminhoAPIAlunosCache;
 }
 
@@ -57,6 +66,7 @@ async function fetchAPIAlunos(endpoint = '', options = {}) {
     const url = baseApiUrl + endpoint;
     
     console.log('📡 Fazendo requisição para:', url);
+    console.log('📡 URL completa:', url);
     console.log('📡 Método:', options.method || 'GET');
     console.log('📡 Opções:', options);
     
@@ -369,6 +379,43 @@ window.editarAluno = async function(id) {
                 if (cidadeField) cidadeField.value = aluno.cidade || '';
                 if (obsField) obsField.value = aluno.observacoes || '';
                 
+                // Carregar operações existentes
+                console.log('🔄 Carregando operações do aluno:', aluno.operacoes);
+                console.log('🔄 Tipo de operacoes:', typeof aluno.operacoes);
+                
+                let operacoesArray = null;
+                
+                // Verificar se operacoes é string JSON e converter para array
+                if (typeof aluno.operacoes === 'string' && aluno.operacoes !== 'null') {
+                    try {
+                        operacoesArray = JSON.parse(aluno.operacoes);
+                        console.log('🔄 Operacoes convertidas de string para array:', operacoesArray);
+                    } catch (e) {
+                        console.error('❌ Erro ao fazer parse das operações:', e);
+                        operacoesArray = null;
+                    }
+                } else if (Array.isArray(aluno.operacoes)) {
+                    operacoesArray = aluno.operacoes;
+                    console.log('🔄 Operacoes já é array:', operacoesArray);
+                }
+                
+                console.log('🔄 Operacoes finais:', operacoesArray);
+                console.log('🔄 Operacoes é array?', Array.isArray(operacoesArray));
+                console.log('🔄 Quantidade de operações:', operacoesArray ? operacoesArray.length : 'undefined');
+                
+                if (operacoesArray && Array.isArray(operacoesArray) && operacoesArray.length > 0) {
+                    console.log('✅ Operações válidas encontradas, chamando carregarOperacoesExistentes');
+                    carregarOperacoesExistentes(operacoesArray);
+                } else {
+                    console.log('⚠️ Nenhuma operação encontrada ou formato inválido');
+                    // Limpar operações existentes
+                    const container = document.getElementById('operacoes-container');
+                    if (container) {
+                        container.innerHTML = '';
+                        console.log('🧹 Container de operações limpo');
+                    }
+                }
+                
                 // Preencher tipo de serviço e categoria CNH
                 if (aluno.categoria_cnh) {
                     // Usar o tipo de serviço salvo no banco, ou determinar baseado na categoria
@@ -525,5 +572,160 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('✅ Sistema de alunos inicializado!');
 });
+
+// Função para carregar operações existentes (copiada do alunos.php)
+function carregarOperacoesExistentes(operacoes) {
+    console.log('🔄 Carregando operações existentes:', operacoes);
+    console.log('🔄 Tipo de operacoes:', typeof operacoes);
+    console.log('🔄 Array?', Array.isArray(operacoes));
+    console.log('🔄 Quantidade:', operacoes ? operacoes.length : 'undefined');
+    
+    // Limpar operações atuais
+    const container = document.getElementById('operacoes-container');
+    if (!container) {
+        console.log('❌ Container operacoes-container não encontrado');
+        return;
+    }
+    
+    container.innerHTML = '';
+    let contadorOperacoes = 0;
+    
+    // Verificar se operacoes é um array válido
+    if (!Array.isArray(operacoes) || operacoes.length === 0) {
+        console.log('⚠️ Nenhuma operação para carregar ou operacoes não é array');
+        return;
+    }
+    
+    // Definir categorias por tipo de serviço (GLOBAL)
+    const categoriasPorTipo = {
+        'primeira_habilitacao': [
+            { value: 'A', text: 'A - Motocicletas', desc: 'Primeira habilitação para motocicletas, ciclomotores e triciclos' },
+            { value: 'B', text: 'B - Automóveis', desc: 'Primeira habilitação para automóveis, caminhonetes e utilitários' },
+            { value: 'AB', text: 'AB - A + B', desc: 'Primeira habilitação completa (motocicletas + automóveis)' }
+        ],
+        'adicao': [
+            { value: 'A', text: 'A - Motocicletas', desc: 'Adicionar categoria A (motocicletas) à habilitação existente' },
+            { value: 'B', text: 'B - Automóveis', desc: 'Adicionar categoria B (automóveis) à habilitação existente' }
+        ],
+        'mudanca': [
+            { value: 'C', text: 'C - Veículos de Carga', desc: 'Mudança de B para C (veículos de carga acima de 3.500kg)' },
+            { value: 'D', text: 'D - Veículos de Passageiros', desc: 'Mudança de B para D (veículos de transporte de passageiros)' },
+            { value: 'E', text: 'E - Combinação de Veículos', desc: 'Mudança de B para E (combinação de veículos - carreta, bitrem)' }
+        ]
+    };
+    
+    // Adicionar cada operação existente
+    operacoes.forEach((operacao, index) => {
+        console.log(`🔄 Processando operação ${index}:`, operacao);
+        console.log(`🔄 Operação ${index} - tipo:`, operacao.tipo);
+        console.log(`🔄 Operação ${index} - categoria:`, operacao.categoria);
+        contadorOperacoes++;
+        console.log(`🔄 Contador de operações agora é: ${contadorOperacoes}`);
+        
+        const operacaoHtml = `
+            <div class="operacao-item border rounded p-2 mb-2" data-operacao-id="${contadorOperacoes}">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <select class="form-select form-select-sm" name="operacao_tipo_${contadorOperacoes}" onchange="carregarCategoriasOperacao(${contadorOperacoes})">
+                            <option value="">Tipo de Operação</option>
+                            <option value="primeira_habilitacao" ${operacao.tipo === 'primeira_habilitacao' ? 'selected' : ''}>🏍️ Primeira Habilitação</option>
+                            <option value="adicao" ${operacao.tipo === 'adicao' ? 'selected' : ''}>➕ Adição de Categoria</option>
+                            <option value="mudanca" ${operacao.tipo === 'mudanca' ? 'selected' : ''}>🔄 Mudança de Categoria</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <select class="form-select form-select-sm" name="operacao_categoria_${contadorOperacoes}" disabled>
+                            <option value="">Selecione o tipo primeiro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerOperacao(${contadorOperacoes})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', operacaoHtml);
+        console.log(`✅ HTML inserido para operação ${contadorOperacoes}`);
+        
+        // Carregar categorias para esta operação
+        setTimeout(() => {
+            console.log(`⚙️ Carregando categorias para operação ${contadorOperacoes} com categoria: ${operacao.categoria}`);
+            carregarCategoriasOperacao(contadorOperacoes, operacao.categoria);
+        }, 50);
+    });
+}
+
+// Função para carregar categorias CNH dinamicamente para uma operação específica
+function carregarCategoriasOperacao(operacaoId, categoriaSelecionada = '') {
+    console.log(`⚙️ Carregando categorias para operação ${operacaoId}. Categoria Selecionada: ${categoriaSelecionada}`);
+    const tipoSelect = document.querySelector(`select[name="operacao_tipo_${operacaoId}"]`);
+    const categoriaSelect = document.querySelector(`select[name="operacao_categoria_${operacaoId}"]`);
+    
+    if (!tipoSelect || !categoriaSelect) {
+        console.log('❌ Selects não encontrados para operação', operacaoId);
+        return;
+    }
+    
+    const tipoServico = tipoSelect.value;
+    
+    // Limpar opções anteriores
+    categoriaSelect.innerHTML = '<option value="">Selecione a categoria...</option>';
+    
+    if (!tipoServico) {
+        categoriaSelect.disabled = true;
+        return;
+    }
+    
+    // Definir categorias por tipo de serviço (mesma lógica da função principal)
+    const categoriasPorTipo = {
+        'primeira_habilitacao': [
+            { value: 'A', text: 'A - Motocicletas', desc: 'Primeira habilitação para motocicletas, ciclomotores e triciclos' },
+            { value: 'B', text: 'B - Automóveis', desc: 'Primeira habilitação para automóveis, caminhonetes e utilitários' },
+            { value: 'AB', text: 'AB - A + B', desc: 'Primeira habilitação completa (motocicletas + automóveis)' }
+        ],
+        'adicao': [
+            { value: 'A', text: 'A - Motocicletas', desc: 'Adicionar categoria A (motocicletas) à habilitação existente' },
+            { value: 'B', text: 'B - Automóveis', desc: 'Adicionar categoria B (automóveis) à habilitação existente' }
+        ],
+        'mudanca': [
+            { value: 'C', text: 'C - Veículos de Carga', desc: 'Mudança de B para C (veículos de carga acima de 3.500kg)' },
+            { value: 'D', text: 'D - Veículos de Passageiros', desc: 'Mudança de B para D (veículos de transporte de passageiros)' },
+            { value: 'E', text: 'E - Combinação de Veículos', desc: 'Mudança de B para E (combinação de veículos - carreta, bitrem)' }
+        ]
+    };
+    
+    // Usar a definição global de categoriasPorTipo
+    console.log(`⚙️ Tipo de serviço: ${tipoServico}`);
+    console.log(`⚙️ Categorias disponíveis:`, categoriasPorTipo[tipoServico]);
+    
+    const categorias = categoriasPorTipo[tipoServico] || [];
+    
+    // Adicionar opções ao select
+    categorias.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.value;
+        option.textContent = cat.text;
+        if (cat.value === categoriaSelecionada) {
+            option.selected = true;
+            console.log(`✅ Categoria selecionada: ${cat.value} - ${cat.text}`);
+        }
+        categoriaSelect.appendChild(option);
+    });
+    
+    // Habilitar select
+    categoriaSelect.disabled = false;
+    console.log(`⚙️ Select habilitado para operação ${operacaoId}`);
+}
+
+// Função para remover operação
+function removerOperacao(operacaoId) {
+    const operacaoItem = document.querySelector(`[data-operacao-id="${operacaoId}"]`);
+    if (operacaoItem) {
+        operacaoItem.remove();
+    }
+}
 
 console.log('📋 Arquivo alunos.js carregado!');

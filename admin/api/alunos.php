@@ -222,6 +222,13 @@ try {
                 }
                 $aluno['cfc_nome'] = $cfc ? $cfc['nome'] : 'N/A';
                 
+                // Decodificar operações se existirem
+                if (!empty($aluno['operacoes'])) {
+                    $aluno['operacoes'] = json_decode($aluno['operacoes'], true);
+                } else {
+                    $aluno['operacoes'] = [];
+                }
+                
                 $response = ['success' => true, 'aluno' => $aluno];
                 
                 if (LOG_ENABLED) {
@@ -237,6 +244,15 @@ try {
                     LEFT JOIN cfcs c ON a.cfc_id = c.id 
                     ORDER BY a.nome ASC
                 ");
+                
+                // Decodificar operações para cada aluno
+                foreach ($alunos as &$aluno) {
+                    if (!empty($aluno['operacoes'])) {
+                        $aluno['operacoes'] = json_decode($aluno['operacoes'], true);
+                    } else {
+                        $aluno['operacoes'] = [];
+                    }
+                }
                 
                 sendJsonResponse(['success' => true, 'alunos' => $alunos]);
             }
@@ -281,34 +297,28 @@ try {
             }
             
             // Validações básicas
-            if (empty($data['nome']) || empty($data['cpf']) || empty($data['cfc_id']) || empty($data['categoria_cnh'])) {
+            if (empty($data['nome']) || empty($data['cpf']) || empty($data['cfc_id'])) {
                 if (LOG_ENABLED) {
                     error_log('[API Alunos] Validação falhou - campos obrigatórios: ' . print_r([
                         'nome' => !empty($data['nome']),
                         'cpf' => !empty($data['cpf']),
                         'cfc_id' => !empty($data['cfc_id']),
-                        'categoria_cnh' => !empty($data['categoria_cnh']),
-                        'tipo_servico' => !empty($data['tipo_servico'])
+                        'operacoes' => !empty($data['operacoes'])
                     ], true));
                 }
-                sendJsonResponse(['success' => false, 'error' => 'Nome, CPF, CFC e Categoria CNH são obrigatórios'], 400);
+                sendJsonResponse(['success' => false, 'error' => 'Nome, CPF e CFC são obrigatórios'], 400);
             }
             
-            // Se tipo_servico não foi enviado, determinar baseado na categoria
-            if (empty($data['tipo_servico']) && !empty($data['categoria_cnh'])) {
-                $categoria = $data['categoria_cnh'];
-                if (in_array($categoria, ['A', 'B', 'AB', 'ACC'])) {
-                    $data['tipo_servico'] = 'primeira_habilitacao';
-                } elseif (in_array($categoria, ['C', 'D', 'E'])) {
-                    $data['tipo_servico'] = 'adicao';
-                } else {
-                    $data['tipo_servico'] = 'mudanca';
-                }
-                
-                if (LOG_ENABLED) {
-                    error_log('[API Alunos] Tipo de serviço determinado automaticamente: ' . $data['tipo_servico'] . ' para categoria: ' . $categoria);
-                }
+        // Verificar se tem operações
+        if (empty($data['operacoes'])) {
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] Validação falhou - operacoes não fornecidas');
             }
+            sendJsonResponse(['success' => false, 'error' => 'Operações são obrigatórias'], 400);
+        }
+            
+            // Não precisamos mais determinar tipo_servico baseado em categoria_cnh
+            // Agora usamos apenas operacoes
             
             // Verificar se CPF já existe
             $cpfExistente = $db->findWhere('alunos', 'cpf = ? AND id != ?', [$data['cpf'], $data['id'] ?? 0], '*', null, 1);
@@ -351,19 +361,48 @@ try {
                 'cidade' => $data['cidade'] ?? '',
                 'estado' => $data['estado'] ?? '',
                 'cep' => $data['cep'] ?? '',
-                'tipo_servico' => $data['tipo_servico'] ?? '',
-                'categoria_cnh' => $data['categoria_cnh'] ?? 'B',
+                // Removido: tipo_servico e categoria_cnh - agora usamos apenas operacoes
                 'status' => $data['status'] ?? 'ativo',
                 'observacoes' => $data['observacoes'] ?? '',
+                'operacoes' => isset($data['operacoes']) ? json_encode($data['operacoes']) : null,
                 'criado_em' => date('Y-m-d H:i:s')
             ];
             
             try {
-                if (LOG_ENABLED) {
-                    error_log('[API Alunos] Dados para inserção: ' . print_r($alunoData, true));
-                }
-                
-                $alunoId = $db->insert('alunos', $alunoData);
+                // Verificar se é edição (tem ID) ou criação
+                if (!empty($data['id'])) {
+                    // É edição - fazer UPDATE
+                    if (LOG_ENABLED) {
+                        error_log('[API Alunos] Dados para atualização: ' . print_r($alunoData, true));
+                    }
+                    
+                    $resultado = $db->update('alunos', $alunoData, 'id = ?', [$data['id']]);
+                    
+                    if (!$resultado) {
+                        if (LOG_ENABLED) {
+                            error_log('[API Alunos] Erro ao atualizar aluno - update retornou false');
+                        }
+                        http_response_code(500);
+                        echo json_encode(['success' => false, 'error' => 'Erro ao atualizar aluno']);
+                        exit;
+                    }
+                    
+                    if (LOG_ENABLED) {
+                        error_log('[API Alunos] Aluno atualizado com sucesso, ID: ' . $data['id']);
+                    }
+                    
+                    sendJsonResponse([
+                        'success' => true, 
+                        'message' => 'Aluno atualizado com sucesso!',
+                        'aluno_id' => $data['id']
+                    ]);
+                } else {
+                    // É criação - fazer INSERT
+                    if (LOG_ENABLED) {
+                        error_log('[API Alunos] Dados para inserção: ' . print_r($alunoData, true));
+                    }
+                    
+                    $alunoId = $db->insert('alunos', $alunoData);
                 if (!$alunoId) {
                     if (LOG_ENABLED) {
                         error_log('[API Alunos] Erro ao inserir aluno - insert retornou false');
@@ -422,6 +461,7 @@ try {
                 }
                 
                 sendJsonResponse($response);
+                } // Fim do bloco else para criação
                 
             } catch (Exception $e) {
                 if (LOG_ENABLED) {
@@ -500,7 +540,7 @@ try {
             // Preparar dados para atualização
             $alunoData = array_filter($input, function($value, $key) {
                 // Manter campos obrigatórios mesmo se vazios
-                if (in_array($key, ['tipo_servico', 'categoria_cnh', 'status'])) {
+                if (in_array($key, ['status'])) {
                     return true;
                 }
                 return $value !== null && $value !== '';
@@ -511,6 +551,11 @@ try {
             unset($alunoData['criado_em']); // Não atualizar data de criação
             unset($alunoData['cfc_nome']); // Campo calculado, não existe na tabela
             unset($alunoData['atualizado_em']); // Campo não existe na tabela
+            
+            // Processar operações se existirem
+            if (isset($alunoData['operacoes'])) {
+                $alunoData['operacoes'] = json_encode($alunoData['operacoes']);
+            }
             
             if (LOG_ENABLED) {
                 error_log('[API Alunos] PUT - Dados para atualização: ' . json_encode($alunoData));

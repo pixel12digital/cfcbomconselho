@@ -570,17 +570,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 case 'alunos':
                     try {
                         $alunos = $db->fetchAll("
-                            SELECT a.id, a.nome, a.cpf, a.rg, a.data_nascimento, a.endereco, a.telefone, a.email, a.cfc_id, a.categoria_cnh, a.status, a.criado_em,
+                            SELECT a.id, a.nome, a.cpf, a.rg, a.data_nascimento, a.endereco, a.telefone, a.email, a.cfc_id, a.categoria_cnh, a.status, a.criado_em, a.operacoes,
                                    c.nome as cfc_nome,
                                    NULL as ultima_aula
                             FROM alunos a 
                             LEFT JOIN cfcs c ON a.cfc_id = c.id 
                             ORDER BY a.nome ASC
                         ");
+                        
+                        // Decodificar operações para cada aluno
+                        foreach ($alunos as &$aluno) {
+                            if (!empty($aluno['operacoes'])) {
+                                $aluno['operacoes'] = json_decode($aluno['operacoes'], true);
+                            } else {
+                                $aluno['operacoes'] = [];
+                            }
+                        }
                     } catch (Exception $e) {
                         // Query mais simples como fallback
                         try {
                             $alunos = $db->fetchAll("SELECT * FROM alunos ORDER BY nome ASC");
+                            // Decodificar operações para cada aluno no fallback também
+                            foreach ($alunos as &$aluno) {
+                                if (!empty($aluno['operacoes'])) {
+                                    $aluno['operacoes'] = json_decode($aluno['operacoes'], true);
+                                } else {
+                                    $aluno['operacoes'] = [];
+                                }
+                            }
                         } catch (Exception $e2) {
                             $alunos = [];
                         }
@@ -1184,7 +1201,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <?php endif; ?>
     
     <?php if ($page === 'alunos'): ?>
-        <script src="assets/js/alunos.js"></script>
+        <!-- <script src="assets/js/alunos.js"></script> -->
+        <!-- alunos.js removido para evitar conflito com código inline -->
     <?php endif; ?>
 </body>
 </html>

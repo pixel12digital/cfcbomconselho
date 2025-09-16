@@ -986,7 +986,40 @@ body.modal-open #modalAluno .modal-dialog {
                                 </div>
                             </td>
                             <td>
-                                <span class="badge bg-secondary"><?php echo htmlspecialchars($aluno['categoria_cnh']); ?></span>
+                                <?php 
+                                // Mostrar operações dinâmicas em vez de categoria única
+                                if (!empty($aluno['operacoes']) && is_array($aluno['operacoes'])) {
+                                    foreach ($aluno['operacoes'] as $index => $operacao) {
+                                        $badgeClass = '';
+                                        $tipoText = '';
+                                        
+                                        switch ($operacao['tipo']) {
+                                            case 'primeira_habilitacao':
+                                                $badgeClass = 'bg-primary';
+                                                $tipoText = '🏍️';
+                                                break;
+                                            case 'adicao':
+                                                $badgeClass = 'bg-success';
+                                                $tipoText = '➕';
+                                                break;
+                                            case 'mudanca':
+                                                $badgeClass = 'bg-warning';
+                                                $tipoText = '🔄';
+                                                break;
+                                            default:
+                                                $badgeClass = 'bg-secondary';
+                                                $tipoText = '📋';
+                                        }
+                                        
+                                        if ($index > 0) echo '<br>';
+                                        echo '<span class="badge ' . $badgeClass . ' me-1" title="' . ucfirst(str_replace('_', ' ', $operacao['tipo'])) . '">' . 
+                                             $tipoText . ' ' . htmlspecialchars($operacao['categoria']) . '</span>';
+                                    }
+                                } else {
+                                    // Fallback para categoria antiga se não houver operações
+                                    echo '<span class="badge bg-secondary">' . htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A') . '</span>';
+                                }
+                                ?>
                             </td>
                             <td>
                                 <?php
@@ -1064,6 +1097,7 @@ body.modal-open #modalAluno .modal-dialog {
                 </div>
                 <div class="modal-body" style="overflow-y: auto; padding: 1rem; flex: 1; min-height: 0; max-height: calc(90vh - 140px);">
                     <input type="hidden" name="acao" id="acaoAluno" value="criar">
+                    <input type="hidden" name="aluno_id" id="aluno_id" value="">
                     
                     <div class="container-fluid" style="padding: 0;">
                         <!-- Seção 1: Informações Pessoais -->
@@ -1146,11 +1180,11 @@ body.modal-open #modalAluno .modal-dialog {
                             </div>
                         </div>
                         
-                        <!-- Seção 2: Informações Acadêmicas -->
+                        <!-- Seção 2: CFC -->
                         <div class="row mb-2">
                             <div class="col-12">
                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                                    <i class="fas fa-graduation-cap me-1"></i>Informações Acadêmicas
+                                    <i class="fas fa-graduation-cap me-1"></i>CFC
                                 </h6>
                             </div>
                             <div class="col-md-6">
@@ -1168,32 +1202,28 @@ body.modal-open #modalAluno .modal-dialog {
                                     </select>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-1">
-                                    <label for="tipo_servico" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Tipo de Serviço *</label>
-                                    <select class="form-select" id="tipo_servico" name="tipo_servico" required style="padding: 0.4rem; font-size: 0.85rem;" onchange="carregarCategoriasCNH()">
-                                        <option value="">Selecione o tipo de serviço...</option>
-                                        <option value="primeira_habilitacao">🏍️ Primeira Habilitação</option>
-                                        <option value="adicao">➕ Adição de Categoria</option>
-                                        <option value="mudanca">🔄 Mudança de Categoria</option>
-                                    </select>
-                                </div>
-                            </div>
                         </div>
                         
+                        <!-- Seção 3: Tipo de Serviço -->
                         <div class="row mb-2">
-                            <div class="col-md-6">
-                                <div class="mb-1">
-                                    <label for="categoria_cnh" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Categoria CNH *</label>
-                                    <select class="form-select" id="categoria_cnh" name="categoria_cnh" required style="padding: 0.4rem; font-size: 0.85rem;" disabled>
-                                        <option value="">Primeiro selecione o tipo de serviço</option>
-                                    </select>
-                                    <small class="form-text text-muted" id="categoria_info" style="font-size: 0.75rem; margin-top: 0.25rem;"></small>
+                            <div class="col-12">
+                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                                    <i class="fas fa-tasks me-1"></i>Tipo de Serviço
+                                </h6>
+                            </div>
+                            <div class="col-12">
+                                <div class="mb-2">
+                                    <div id="operacoes-container">
+                                        <!-- Operações existentes serão carregadas aqui -->
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="adicionarOperacao()" style="font-size: 0.8rem;">
+                                        <i class="fas fa-plus me-1"></i>Adicionar Tipo de Serviço
+                                    </button>
                                 </div>
                             </div>
                         </div>
                         
-                        <!-- Seção 3: Endereço -->
+                        <!-- Seção 4: Endereço -->
                         <div class="row mb-2">
                             <div class="col-12">
                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
@@ -1404,7 +1434,14 @@ body.modal-open #modalAluno .modal-dialog {
                         <?php if (isset($alunos) && is_array($alunos)): ?>
                             <?php foreach ($alunos as $aluno): ?>
                                 <option value="<?php echo intval($aluno['id']); ?>" data-nome="<?php echo htmlspecialchars($aluno['nome']); ?>">
-                                    <?php echo htmlspecialchars($aluno['nome']); ?> - <?php echo htmlspecialchars($aluno['categoria_cnh']); ?>
+                                    <?php echo htmlspecialchars($aluno['nome']); ?> - <?php 
+                                    if (!empty($aluno['operacoes']) && is_array($aluno['operacoes'])) {
+                                        $categorias = array_map(function($op) { return $op['categoria']; }, $aluno['operacoes']);
+                                        echo implode(', ', $categorias);
+                                    } else {
+                                        echo htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A');
+                                    }
+                                    ?>
                                 </option>
                             <?php endforeach; ?>
                         <?php endif; ?>
@@ -1481,6 +1518,24 @@ body.modal-open #modalAluno .modal-dialog {
 
 <!-- Scripts específicos para Alunos -->
 <script>
+// Definir categorias por tipo de serviço (GLOBAL)
+const categoriasPorTipo = {
+    'primeira_habilitacao': [
+        { value: 'A', text: 'A - Motocicletas', desc: 'Primeira habilitação para motocicletas, ciclomotores e triciclos' },
+        { value: 'B', text: 'B - Automóveis', desc: 'Primeira habilitação para automóveis, caminhonetes e utilitários' },
+        { value: 'AB', text: 'AB - A + B', desc: 'Primeira habilitação completa (motocicletas + automóveis)' }
+    ],
+    'adicao': [
+        { value: 'A', text: 'A - Motocicletas', desc: 'Adicionar categoria A (motocicletas) à habilitação existente' },
+        { value: 'B', text: 'B - Automóveis', desc: 'Adicionar categoria B (automóveis) à habilitação existente' }
+    ],
+    'mudanca': [
+        { value: 'C', text: 'C - Veículos de Carga', desc: 'Mudança de B para C (veículos de carga acima de 3.500kg)' },
+        { value: 'D', text: 'D - Veículos de Passageiros', desc: 'Mudança de B para D (veículos de transporte de passageiros)' },
+        { value: 'E', text: 'E - Combinação de Veículos', desc: 'Mudança de B para E (combinação de veículos - carreta, bitrem)' }
+    ]
+};
+
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar máscaras
     inicializarMascarasAluno();
@@ -1613,11 +1668,17 @@ function editarAluno(id) {
     }
     
     console.log(`📡 Fazendo requisição para api/alunos.php?id=${id}`);
+    console.log(`📡 URL completa: ${window.location.origin}/cfc-bom-conselho/admin/api/alunos.php?id=${id}`);
     
     // Buscar dados do aluno (usando nova API funcional)
     fetch(`api/alunos.php?id=${id}`)
         .then(response => {
             console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
+            console.log(`📨 URL da resposta: ${response.url}`);
+            console.log(`📨 Headers da resposta:`, response.headers);
+            return response;
+        })
+        .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -1638,20 +1699,29 @@ function editarAluno(id) {
             console.log('📄 Dados recebidos:', data);
             
             if (data.success) {
-                console.log('✅ Success = true, abrindo modal...');
+                console.log('✅ Success = true, configurando modal...');
                 
-                // Preencher formulário
-                preencherFormularioAluno(data.aluno);
-                console.log('✅ Formulário preenchido');
-                
-                // Configurar modal
+                // Configurar modal PRIMEIRO
                 if (modalTitle) modalTitle.textContent = 'Editar Aluno';
-                if (acaoAluno) acaoAluno.value = 'editar';
-                if (alunoId) alunoId.value = id;
+                if (acaoAluno) {
+                    acaoAluno.value = 'editar';
+                    console.log('✅ Campo acaoAluno definido como: editar');
+                }
+                if (alunoId) {
+                    alunoId.value = id;
+                    console.log('✅ Campo aluno_id definido como:', id);
+                }
                 
-                // Abrir modal customizado
+                // Abrir modal customizado PRIMEIRO
                 abrirModalAluno();
                 console.log('🪟 Modal customizado aberto!');
+                
+                // Preencher formulário DEPOIS com delay para garantir que o modal esteja renderizado
+                setTimeout(() => {
+                    console.log('🔄 Chamando preencherFormularioAluno com dados:', data.aluno);
+                    preencherFormularioAluno(data.aluno);
+                    console.log('✅ Formulário preenchido - função executada');
+                }, 100);
                 
             } else {
                 console.error('❌ Success = false, erro:', data.error);
@@ -1665,16 +1735,52 @@ function editarAluno(id) {
 }
 
 function preencherFormularioAluno(aluno) {
-    document.getElementById('nome').value = aluno.nome || '';
-    document.getElementById('cpf').value = aluno.cpf || '';
-    document.getElementById('rg').value = aluno.rg || '';
-    document.getElementById('data_nascimento').value = aluno.data_nascimento || '';
-    document.getElementById('naturalidade').value = aluno.naturalidade || '';
-    document.getElementById('nacionalidade').value = aluno.nacionalidade || '';
-    document.getElementById('email').value = aluno.email || '';
-    document.getElementById('telefone').value = aluno.telefone || '';
-    document.getElementById('cfc_id').value = aluno.cfc_id || '';
-    document.getElementById('status').value = aluno.status || 'ativo';
+    console.log('📝 Preenchendo formulário para aluno:', aluno);
+    console.log('📝 Dados específicos do aluno:');
+    console.log('  - ID:', aluno.id);
+    console.log('  - Nome:', aluno.nome);
+    console.log('  - CPF:', aluno.cpf);
+    console.log('  - Email:', aluno.email);
+    console.log('  - Telefone:', aluno.telefone);
+    console.log('  - CFC ID:', aluno.cfc_id);
+    
+    // Verificar se o modal está aberto
+    const modal = document.getElementById('modalAluno');
+    console.log('🔍 Modal status:', modal ? (modal.style.display === 'block' ? '✅ Aberto' : '❌ Fechado') : '❌ Não encontrado');
+    
+    // Definir ID do aluno para edição
+    const alunoIdField = document.getElementById('aluno_id');
+    if (alunoIdField) alunoIdField.value = aluno.id || '';
+    
+    // Preencher campos básicos com verificações de segurança
+    const campos = {
+        'nome': aluno.nome || '',
+        'cpf': aluno.cpf || '',
+        'rg': aluno.rg || '',
+        'data_nascimento': aluno.data_nascimento || '',
+        'naturalidade': aluno.naturalidade || '',
+        'nacionalidade': aluno.nacionalidade || '',
+        'email': aluno.email || '',
+        'telefone': aluno.telefone || '',
+        'cfc_id': aluno.cfc_id || '',
+        'status': aluno.status || 'ativo'
+    };
+    
+    console.log('📝 Campos a serem preenchidos:', campos);
+    
+    // Preencher cada campo se ele existir
+    console.log('🔍 Verificando elementos do formulário...');
+    Object.keys(campos).forEach(campoId => {
+        const elemento = document.getElementById(campoId);
+        console.log(`🔍 Campo ${campoId}:`, elemento ? '✅ Existe' : '❌ Não existe');
+        if (elemento) {
+            elemento.value = campos[campoId];
+            console.log(`✅ Campo ${campoId} preenchido com valor:`, campos[campoId]);
+            console.log(`✅ Valor atual do campo ${campoId}:`, elemento.value);
+        } else {
+            console.warn(`⚠️ Campo ${campoId} não encontrado no DOM`);
+        }
+    });
     
     // Preencher tipo de serviço e categoria CNH
     if (aluno.categoria_cnh) {
@@ -1688,16 +1794,7 @@ function preencherFormularioAluno(aluno) {
             tipoServico = 'mudanca';
         }
         
-        // Definir tipo de serviço primeiro
-        document.getElementById('tipo_servico').value = tipoServico;
-        
-        // Carregar categorias para o tipo selecionado
-        carregarCategoriasCNH();
-        
-        // Definir categoria CNH após carregar as opções
-        setTimeout(() => {
-            document.getElementById('categoria_cnh').value = aluno.categoria_cnh || '';
-        }, 100);
+        // Removido: tipo_servico e categoria_cnh - agora usamos apenas operacoes
     }
     
     // Endereço
@@ -1722,15 +1819,43 @@ function preencherFormularioAluno(aluno) {
             endereco = aluno.endereco;
         }
         
-        document.getElementById('cep').value = endereco.cep || '';
-        document.getElementById('logradouro').value = endereco.logradouro || '';
-        document.getElementById('numero').value = endereco.numero || '';
-        document.getElementById('bairro').value = endereco.bairro || '';
-        document.getElementById('cidade').value = endereco.cidade || '';
-        document.getElementById('uf').value = endereco.uf || '';
+        // Preencher campos de endereço com verificações de segurança
+        const camposEndereco = {
+            'cep': endereco.cep || '',
+            'logradouro': endereco.logradouro || '',
+            'numero': endereco.numero || '',
+            'bairro': endereco.bairro || '',
+            'cidade': endereco.cidade || '',
+            'uf': endereco.uf || ''
+        };
+        
+        Object.keys(camposEndereco).forEach(campoId => {
+            const elemento = document.getElementById(campoId);
+            if (elemento) {
+                elemento.value = camposEndereco[campoId];
+                console.log(`✅ Campo endereço ${campoId} preenchido:`, camposEndereco[campoId]);
+            } else {
+                console.warn(`⚠️ Campo endereço ${campoId} não encontrado no DOM`);
+            }
+        });
     }
     
-    document.getElementById('observacoes').value = aluno.observacoes || '';
+    // Carregar operações existentes
+    console.log('🔍 Dados do aluno recebidos:', aluno);
+    console.log('🔍 Operações do aluno:', aluno.operacoes);
+    console.log('🔍 Tipo de operacoes:', typeof aluno.operacoes);
+    console.log('🔍 Operacoes é array?', Array.isArray(aluno.operacoes));
+    console.log('🔍 Quantidade de operações:', aluno.operacoes ? aluno.operacoes.length : 'undefined');
+    carregarOperacoesExistentes(aluno.operacoes || []);
+    
+    // Preencher campo de observações
+    const observacoesField = document.getElementById('observacoes');
+    if (observacoesField) {
+        observacoesField.value = aluno.observacoes || '';
+        console.log('✅ Campo observacoes preenchido:', aluno.observacoes);
+    } else {
+        console.warn('⚠️ Campo observacoes não encontrado no DOM');
+    }
 }
 
 function visualizarAluno(id) {
@@ -1756,6 +1881,11 @@ function visualizarAluno(id) {
     fetch(`api/alunos.php?id=${id}`)
         .then(response => {
             console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
+            console.log(`📨 URL da resposta: ${response.url}`);
+            console.log(`📨 Headers da resposta:`, response.headers);
+            return response;
+        })
+        .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
@@ -1843,9 +1973,8 @@ function preencherModalVisualizacao(aluno) {
                 <p><strong>Telefone:</strong> ${aluno.telefone || 'Não informado'}</p>
             </div>
             <div class="col-md-6">
-                <h6><i class="fas fa-graduation-cap me-2"></i>Informações Acadêmicas</h6>
+                <h6><i class="fas fa-graduation-cap me-2"></i>CFC</h6>
                 <p><strong>CFC:</strong> ${aluno.cfc_nome || 'Não informado'}</p>
-                <p><strong>Categoria:</strong> <span class="badge bg-secondary">${aluno.categoria_cnh}</span></p>
             </div>
         </div>
         
@@ -2871,6 +3000,44 @@ function abrirModalAluno() {
         modal.style.display = 'block';
         document.body.style.overflow = 'hidden'; // Prevenir scroll do body
         
+        // Verificar se é para criar novo aluno ou editar
+        const acaoAluno = document.getElementById('acaoAluno');
+        const isEditando = acaoAluno && acaoAluno.value === 'editar';
+        
+        console.log('🔍 Modal aberto - Editando?', isEditando);
+        
+        // Limpar formulário APENAS se for novo aluno
+        if (!isEditando) {
+            const formAluno = document.getElementById('formAluno');
+            if (formAluno) {
+                formAluno.reset();
+                console.log('🧹 Formulário limpo para novo aluno');
+            }
+        } else {
+            console.log('📝 Formulário mantido para edição');
+        }
+        
+        const modalTitle = document.getElementById('modalTitle');
+        if (modalTitle) {
+            modalTitle.textContent = isEditando ? 'Editar Aluno' : 'Novo Aluno';
+        }
+        
+        if (acaoAluno && !isEditando) {
+            acaoAluno.value = 'criar';
+            
+            // Limpar seção de operações apenas para novo aluno
+            if (acaoAluno.value === 'criar') {
+                const operacoesContainer = document.getElementById('operacoes-container');
+                if (operacoesContainer) {
+                    operacoesContainer.innerHTML = '';
+                    contadorOperacoes = 0;
+                }
+            }
+        }
+        
+        const alunoIdField = document.getElementById('aluno_id');
+        if (alunoIdField) alunoIdField.value = ''; // Limpar ID
+        
         // Aplicar responsividade
         setTimeout(() => {
             ajustarModalResponsivo();
@@ -2945,89 +3112,7 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Função para carregar categorias CNH dinamicamente
-function carregarCategoriasCNH() {
-    console.log('🔧 carregarCategoriasCNH() chamada');
-    
-    const tipoServico = document.getElementById('tipo_servico').value;
-    const selectCategoria = document.getElementById('categoria_cnh');
-    const infoCategoria = document.getElementById('categoria_info');
-    
-    console.log('🔧 Tipo de serviço selecionado:', tipoServico);
-    console.log('🔧 Select categoria encontrado:', !!selectCategoria);
-    console.log('🔧 Info categoria encontrado:', !!infoCategoria);
-    
-    // Limpar opções anteriores
-    selectCategoria.innerHTML = '<option value="">Selecione a categoria...</option>';
-    
-    if (!tipoServico) {
-        console.log('⚠️ Tipo de serviço vazio, desabilitando categoria');
-        selectCategoria.disabled = true;
-        infoCategoria.textContent = '';
-        return;
-    }
-    
-    // Definir categorias por tipo de serviço
-    const categoriasPorTipo = {
-        'primeira_habilitacao': [
-            { value: 'A', text: 'A - Motocicletas', desc: 'Motocicletas, ciclomotores e triciclos' },
-            { value: 'B', text: 'B - Automóveis', desc: 'Automóveis, caminhonetes e utilitários' },
-            { value: 'AB', text: 'AB - A + B', desc: 'Motocicletas e automóveis' },
-            { value: 'ACC', text: 'ACC - Ciclomotores', desc: 'Ciclomotores até 50cc (menores de 18 anos)' }
-        ],
-        'adicao': [
-            { value: 'C', text: 'C - Veículos de Carga', desc: 'Veículos de carga acima de 3.500kg' },
-            { value: 'D', text: 'D - Veículos de Passageiros', desc: 'Veículos de transporte de passageiros' },
-            { value: 'E', text: 'E - Combinação de Veículos', desc: 'Combinação de veículos (carreta, bitrem)' }
-        ],
-        'mudanca': [
-            { value: 'AC', text: 'AC - A + C', desc: 'Motocicletas + Veículos de Carga' },
-            { value: 'AD', text: 'AD - A + D', desc: 'Motocicletas + Veículos de Passageiros' },
-            { value: 'AE', text: 'AE - A + E', desc: 'Motocicletas + Combinação de Veículos' },
-            { value: 'BC', text: 'BC - B + C', desc: 'Automóveis + Veículos de Carga' },
-            { value: 'BD', text: 'BD - B + D', desc: 'Automóveis + Veículos de Passageiros' },
-            { value: 'BE', text: 'BE - B + E', desc: 'Automóveis + Combinação de Veículos' },
-            { value: 'CD', text: 'CD - C + D', desc: 'Veículos de Carga + Passageiros' },
-            { value: 'CE', text: 'CE - C + E', desc: 'Veículos de Carga + Combinação' },
-            { value: 'DE', text: 'DE - D + E', desc: 'Veículos de Passageiros + Combinação' }
-        ]
-    };
-    
-    const categorias = categoriasPorTipo[tipoServico] || [];
-    
-    // Adicionar opções ao select
-    console.log('🔧 Adicionando', categorias.length, 'categorias ao select');
-    categorias.forEach(cat => {
-        const option = document.createElement('option');
-        option.value = cat.value;
-        option.textContent = cat.text;
-        option.setAttribute('data-desc', cat.desc);
-        selectCategoria.appendChild(option);
-        console.log('✅ Adicionada opção:', cat.value, '-', cat.text);
-    });
-    
-    // Habilitar select e mostrar informações
-    selectCategoria.disabled = false;
-    console.log('✅ Select categoria habilitado com', selectCategoria.options.length, 'opções');
-    
-    // Mostrar informações sobre o tipo selecionado
-    const tiposInfo = {
-        'primeira_habilitacao': 'Para quem nunca teve habilitação. Inclui curso teórico obrigatório.',
-        'adicao': 'Para quem já possui categoria B. Não requer curso teórico.',
-        'mudanca': 'Para quem já possui outras categorias. Não requer curso teórico.'
-    };
-    
-    infoCategoria.textContent = tiposInfo[tipoServico] || '';
-    
-    // Adicionar evento para mostrar descrição da categoria selecionada
-    selectCategoria.addEventListener('change', function() {
-        const selectedOption = this.options[this.selectedIndex];
-        if (selectedOption.value) {
-            infoCategoria.textContent = selectedOption.getAttribute('data-desc');
-        } else {
-            infoCategoria.textContent = tiposInfo[tipoServico] || '';
-        }
-    });
-}
+// Removido: função carregarCategoriasCNH() - não é mais necessária
 
 // Função para salvar aluno via AJAX
 function salvarAluno() {
@@ -3039,6 +3124,9 @@ function salvarAluno() {
     const textoOriginal = btnSalvar.innerHTML;
     btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando...';
     btnSalvar.disabled = true;
+    
+    // Coletar operações de habilitação
+    const operacoes = coletarDadosOperacoes();
     
     // Preparar dados para envio
     const dados = {
@@ -3052,8 +3140,8 @@ function salvarAluno() {
         telefone: formData.get('telefone'),
         status: formData.get('status'),
         cfc_id: formData.get('cfc_id'),
-        tipo_servico: formData.get('tipo_servico'),
-        categoria_cnh: formData.get('categoria_cnh'),
+        // Removido: tipo_servico e categoria_cnh - agora usamos apenas operacoes
+        operacoes: operacoes, // Adicionar operações
         cep: formData.get('cep'),
         endereco: formData.get('logradouro'), // Mapear logradouro para endereco
         numero: formData.get('numero'),
@@ -3072,7 +3160,10 @@ function salvarAluno() {
     }
     
     // Fazer requisição para a API
-    console.log('Enviando dados para API:', dados);
+    console.log('📤 Enviando dados para API:', dados);
+    console.log('📤 Operações coletadas:', operacoes);
+    console.log('📤 Ação:', acao);
+    console.log('📤 Aluno ID:', alunoId);
     
     fetch('api/alunos.php', {
         method: 'POST',
@@ -3123,6 +3214,224 @@ function salvarAluno() {
         // Restaurar botão
         btnSalvar.innerHTML = textoOriginal;
         btnSalvar.disabled = false;
+    });
+}
+
+// Sistema de Operações de Habilitação
+let contadorOperacoes = 0;
+
+function adicionarOperacao() {
+    contadorOperacoes++;
+    const container = document.getElementById('operacoes-container');
+    
+    if (!container) {
+        console.error('❌ Container de operações não encontrado!');
+        alert('ERRO: Container de operações não encontrado!');
+        return;
+    }
+    
+    const operacaoHtml = `
+        <div class="operacao-item border rounded p-2 mb-2" data-operacao-id="${contadorOperacoes}">
+            <div class="row align-items-center">
+                <div class="col-md-3">
+                    <select class="form-select form-select-sm" name="operacao_tipo_${contadorOperacoes}" onchange="carregarCategoriasOperacao(${contadorOperacoes})">
+                        <option value="">Tipo de Operação</option>
+                        <option value="primeira_habilitacao">🏍️ Primeira Habilitação</option>
+                        <option value="adicao">➕ Adição de Categoria</option>
+                        <option value="mudanca">🔄 Mudança de Categoria</option>
+                    </select>
+                </div>
+                <div class="col-md-6">
+                    <select class="form-select form-select-sm" name="operacao_categoria_${contadorOperacoes}" disabled>
+                        <option value="">Selecione o tipo primeiro</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerOperacao(${contadorOperacoes})">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', operacaoHtml);
+}
+
+function carregarCategoriasOperacao(operacaoId, categoriaSelecionada = '', tipoServicoParam = '') {
+    console.log('🔄 Carregando categorias para operação:', operacaoId);
+    
+    const tipoSelect = document.querySelector(`select[name="operacao_tipo_${operacaoId}"]`);
+    const categoriaSelect = document.querySelector(`select[name="operacao_categoria_${operacaoId}"]`);
+    
+    if (!tipoSelect) {
+        console.warn(`⚠️ Select de tipo não encontrado para operação ${operacaoId}`);
+        return;
+    }
+    
+    if (!categoriaSelect) {
+        console.warn(`⚠️ Select de categoria não encontrado para operação ${operacaoId}`);
+        return;
+    }
+    
+    // Usar o tipo passado como parâmetro ou o valor do select
+    console.log(`🔍 tipoServicoParam recebido:`, tipoServicoParam);
+    console.log(`🔍 tipoSelect.value:`, tipoSelect ? tipoSelect.value : 'não existe');
+    const tipoServico = tipoServicoParam || (tipoSelect ? tipoSelect.value : '');
+    console.log(`🔍 tipoServico final:`, tipoServico);
+    
+    // Limpar opções anteriores
+    categoriaSelect.innerHTML = '<option value="">Selecione a categoria...</option>';
+    
+    if (!tipoServico) {
+        categoriaSelect.disabled = true;
+        return;
+    }
+    
+    // Usar a definição global de categoriasPorTipo
+    console.log(`⚙️ Tipo de serviço: ${tipoServico}`);
+    console.log(`⚙️ Categorias disponíveis:`, categoriasPorTipo[tipoServico]);
+    
+    const categorias = categoriasPorTipo[tipoServico] || [];
+    
+    // Adicionar opções ao select
+    categorias.forEach(cat => {
+        const option = document.createElement('option');
+        option.value = cat.value;
+        option.textContent = cat.text;
+        if (cat.value === categoriaSelecionada) {
+            option.selected = true;
+            console.log(`✅ Categoria selecionada: ${cat.value} - ${cat.text}`);
+        }
+        categoriaSelect.appendChild(option);
+    });
+    
+    // Habilitar select
+    categoriaSelect.disabled = false;
+    console.log(`⚙️ Select habilitado para operação ${operacaoId}`);
+}
+
+function removerOperacao(operacaoId) {
+    const operacaoItem = document.querySelector(`[data-operacao-id="${operacaoId}"]`);
+    if (operacaoItem) {
+        operacaoItem.remove();
+    }
+}
+
+// Função para coletar dados das operações ao salvar
+function coletarDadosOperacoes() {
+    const operacoes = [];
+    const operacaoItems = document.querySelectorAll('.operacao-item');
+    
+    console.log('📋 Coletando operações - Total de itens encontrados:', operacaoItems.length);
+    
+    operacaoItems.forEach((item, index) => {
+        const operacaoId = item.getAttribute('data-operacao-id');
+        const tipo = document.querySelector(`select[name="operacao_tipo_${operacaoId}"]`)?.value;
+        const categoria = document.querySelector(`select[name="operacao_categoria_${operacaoId}"]`)?.value;
+        
+        console.log(`📋 Operação ${index + 1} (ID: ${operacaoId}):`, { tipo, categoria });
+        
+        if (tipo && categoria) {
+            operacoes.push({
+                tipo: tipo,
+                categoria: categoria
+            });
+            console.log('✅ Operação adicionada:', { tipo, categoria });
+        } else {
+            console.log('⚠️ Operação ignorada - campos vazios:', { tipo, categoria });
+        }
+    });
+    
+    console.log('📋 Total de operações coletadas:', operacoes.length);
+    console.log('📋 Operações finais:', operacoes);
+    
+    return operacoes;
+}
+
+// Função para carregar operações existentes ao editar aluno
+function carregarOperacoesExistentes(operacoes) {
+    console.log('🔄 Carregando operações existentes:', operacoes);
+    console.log('🔄 Tipo de operacoes:', typeof operacoes);
+    console.log('🔄 Array?', Array.isArray(operacoes));
+    console.log('🔄 Quantidade:', operacoes ? operacoes.length : 'undefined');
+    
+    // Limpar operações atuais com verificação de segurança
+    const operacoesContainer = document.getElementById('operacoes-container');
+    if (operacoesContainer) {
+        operacoesContainer.innerHTML = '';
+        contadorOperacoes = 0;
+        console.log('✅ Container de operações limpo');
+    } else {
+        console.warn('⚠️ Container de operações não encontrado');
+        return;
+    }
+    
+    // Verificar se operacoes é um array válido
+    if (!Array.isArray(operacoes) || operacoes.length === 0) {
+        console.log('⚠️ Nenhuma operação para carregar ou operacoes não é array');
+        return;
+    }
+    
+    // Adicionar cada operação existente
+    console.log(`🔄 Iniciando processamento de ${operacoes.length} operações`);
+    console.log(`🔄 Contador inicial: ${contadorOperacoes}`);
+    
+    operacoes.forEach((operacao, index) => {
+        console.log(`🔄 Processando operação ${index}:`, operacao);
+        console.log(`🔄 Operação ${index} - tipo:`, operacao.tipo);
+        console.log(`🔄 Operação ${index} - categoria:`, operacao.categoria);
+        contadorOperacoes++;
+        console.log(`🔄 Contador de operações agora é: ${contadorOperacoes}`);
+        const container = document.getElementById('operacoes-container');
+        console.log(`🔄 Container encontrado:`, container ? '✅' : '❌');
+        
+        const operacaoHtml = `
+            <div class="operacao-item border rounded p-2 mb-2" data-operacao-id="${contadorOperacoes}">
+                <div class="row align-items-center">
+                    <div class="col-md-3">
+                        <select class="form-select form-select-sm" name="operacao_tipo_${contadorOperacoes}" onchange="carregarCategoriasOperacao(${contadorOperacoes})">
+                            <option value="">Tipo de Operação</option>
+                            <option value="primeira_habilitacao" ${operacao.tipo === 'primeira_habilitacao' ? 'selected' : ''}>🏍️ Primeira Habilitação</option>
+                            <option value="adicao" ${operacao.tipo === 'adicao' ? 'selected' : ''}>➕ Adição de Categoria</option>
+                            <option value="mudanca" ${operacao.tipo === 'mudanca' ? 'selected' : ''}>🔄 Mudança de Categoria</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6">
+                        <select class="form-select form-select-sm" name="operacao_categoria_${contadorOperacoes}" disabled>
+                            <option value="">Selecione o tipo primeiro</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerOperacao(${contadorOperacoes})">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', operacaoHtml);
+        console.log(`✅ HTML inserido para operação ${contadorOperacoes}`);
+        
+        // Elemento inserido com sucesso
+        
+        // Carregar categorias para esta operação
+        // Capturar o valor atual do contador para evitar closure
+        const operacaoIdAtual = contadorOperacoes;
+        setTimeout(() => {
+            console.log(`⚙️ Carregando categorias para operação ${operacaoIdAtual} com categoria: ${operacao.categoria}`);
+            
+            // Verificar se o select existe antes de acessar .value
+            const tipoSelect = document.querySelector(`select[name="operacao_tipo_${operacaoIdAtual}"]`);
+            if (tipoSelect) {
+                console.log(`⚙️ Valor do select tipo:`, tipoSelect.value);
+            } else {
+                console.warn(`⚠️ Select de tipo não encontrado para operação ${operacaoIdAtual}`);
+            }
+            
+            carregarCategoriasOperacao(operacaoIdAtual, operacao.categoria, operacao.tipo);
+        }, 100);
     });
 }
 </script>
