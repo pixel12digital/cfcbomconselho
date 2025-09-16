@@ -49,14 +49,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } else {
                 // Para funcionários, usar sistema normal
-            $result = $auth->login($email, $senha, $remember);
-            
-            if ($result['success']) {
-                $success = $result['message'];
-                header('Refresh: 1; URL=admin/');
-                exit;
-            } else {
-                $error = $result['message'];
+                $result = $auth->login($email, $senha, $remember);
+                
+                if ($result['success']) {
+                    $success = $result['message'];
+                    header('Refresh: 1; URL=admin/');
+                    exit;
+                } else {
+                    $error = $result['message'];
                 }
             }
         } catch (Exception $e) {
@@ -72,24 +72,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $userTypes = [
     'admin' => [
         'title' => 'Administrador',
+        'icon' => '👑',
+        'description' => 'Acesso total ao sistema incluindo configurações',
         'placeholder' => 'admin@cfc.com',
         'field_label' => 'E-mail',
         'field_type' => 'email'
     ],
     'secretaria' => [
         'title' => 'Atendente CFC',
+        'icon' => '👩‍💼',
+        'description' => 'Pode fazer tudo menos mexer nas configurações',
         'placeholder' => 'atendente@cfc.com',
         'field_label' => 'E-mail',
         'field_type' => 'email'
     ],
     'instrutor' => [
         'title' => 'Instrutor',
+        'icon' => '👨‍🏫',
+        'description' => 'Pode alterar e cancelar aulas mas não adicionar',
         'placeholder' => 'instrutor@cfc.com',
         'field_label' => 'E-mail',
         'field_type' => 'email'
     ],
     'aluno' => [
         'title' => 'Aluno',
+        'icon' => '🎓',
+        'description' => 'Pode visualizar apenas suas aulas e progresso',
         'placeholder' => '000.000.000-00',
         'field_label' => 'CPF',
         'field_type' => 'text'
@@ -161,30 +169,27 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             z-index: 1;
         }
         
-        .logo-image {
-            width: 180px;
-            height: 180px;
-            margin-bottom: 30px;
-            border-radius: 50%;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            padding: 8px;
-            object-fit: contain;
-            transition: all 0.3s ease;
-            border: 4px solid rgba(255,255,255,0.3);
+        .logo {
+            font-size: 48px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
         }
         
-        .logo-image:hover {
-            transform: scale(1.08);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+        .logo .bom { color: #f39c12; }
+        .logo .conselho { color: #e74c3c; }
+        
+        .system-title {
+            font-size: 32px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.3);
         }
         
         .system-subtitle {
-            font-size: 18px;
+            font-size: 16px;
             opacity: 0.9;
-            line-height: 1.6;
-            text-align: center;
-            margin-top: 10px;
+            line-height: 1.5;
         }
         
         .user-types {
@@ -196,7 +201,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             background: rgba(255,255,255,0.1);
             border: 2px solid rgba(255,255,255,0.2);
             border-radius: 15px;
-            padding: 15px;
+            padding: 20px;
             margin-bottom: 15px;
             cursor: pointer;
             transition: all 0.3s ease;
@@ -220,10 +225,28 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             box-shadow: 0 5px 15px rgba(243, 156, 18, 0.3);
         }
         
+        .user-type-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .user-type-icon {
+            font-size: 24px;
+            margin-right: 15px;
+            width: 40px;
+            text-align: center;
+        }
+        
         .user-type-title {
             font-size: 18px;
             font-weight: 600;
-            text-align: center;
+        }
+        
+        .user-type-desc {
+            font-size: 14px;
+            opacity: 0.8;
+            line-height: 1.4;
         }
         
         .right-panel {
@@ -423,15 +446,8 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                 padding: 30px 20px;
             }
             
-            .logo-image {
-                width: 140px;
-                height: 140px;
-                margin-bottom: 20px;
-                padding: 6px;
-            }
-            
-            .system-subtitle {
-                font-size: 16px;
+            .system-title {
+                font-size: 24px;
             }
             
             .user-type-card {
@@ -449,46 +465,53 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         <!-- Painel Esquerdo - Seleção de Tipo de Usuário -->
         <div class="left-panel">
             <div class="logo-section">
-                <img src="assets/logo.png" alt="Logo CFC" class="logo-image">
+                <div class="logo">
+                    <span class="bom">BOM</span> <span class="conselho">CONSELHO</span>
+                </div>
+                <h1 class="system-title">Sistema CFC</h1>
                 <p class="system-subtitle">Sistema completo para gestão de Centros de Formação de Condutores</p>
             </div>
             
             <div class="user-types">
                 <?php foreach ($userTypes as $type => $config): ?>
                     <a href="?type=<?php echo $type; ?>" class="user-type-card <?php echo $userType === $type ? 'active' : ''; ?>">
-                        <div class="user-type-title"><?php echo $config['title']; ?></div>
+                        <div class="user-type-header">
+                            <div class="user-type-icon"><?php echo $config['icon']; ?></div>
+                            <div class="user-type-title"><?php echo $config['title']; ?></div>
+                        </div>
+                        <div class="user-type-desc"><?php echo $config['description']; ?></div>
                     </a>
                 <?php endforeach; ?>
             </div>
-                </div>
+        </div>
         
         <!-- Painel Direito - Formulário de Login -->
         <div class="right-panel">
             <div class="login-header">
                 <h2 class="login-title"><?php echo $currentConfig['title']; ?></h2>
                 <p class="login-subtitle">Entre com suas credenciais para acessar o sistema</p>
-        </div>
+            </div>
             
-                            <?php if ($error): ?>
+            <?php if ($error): ?>
                 <div class="alert alert-error">
                     <?php echo htmlspecialchars($error); ?>
-                            </div>
-                            <?php endif; ?>
-                            
-                            <?php if ($success): ?>
+                </div>
+            <?php endif; ?>
+            
+            <?php if ($success): ?>
                 <div class="alert alert-success">
                     <?php echo htmlspecialchars($success); ?>
-                            </div>
-                            <?php endif; ?>
-                            
+                </div>
+            <?php endif; ?>
+            
             <form method="POST">
                 <input type="hidden" name="user_type" value="<?php echo $userType; ?>">
                 
                 <div class="form-group">
                     <label for="email" class="form-label"><?php echo $currentConfig['field_label']; ?></label>
                     <input type="<?php echo $currentConfig['field_type']; ?>" 
-                                       id="email" 
-                                       name="email" 
+                           id="email" 
+                           name="email" 
                            class="form-control" 
                            placeholder="<?php echo $currentConfig['placeholder']; ?>" 
                            required>
@@ -498,32 +521,32 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                         <?php else: ?>
                             Digite seu endereço de e-mail cadastrado no sistema
                         <?php endif; ?>
-                            </div>
-                        </div>
-                                
+                    </div>
+                </div>
+                
                 <div class="form-group">
                     <label for="senha" class="form-label">Senha</label>
-                                <input type="password" 
-                                       id="senha" 
-                                       name="senha" 
+                    <input type="password" 
+                           id="senha" 
+                           name="senha" 
                            class="form-control" 
-                                       placeholder="Sua senha"
+                           placeholder="Sua senha" 
                            required>
                     <div class="form-help">Digite sua senha de acesso ao sistema</div>
-                        </div>
-                                
+                </div>
+                
                 <?php if ($userType !== 'aluno'): ?>
                 <div class="form-options">
                     <div class="checkbox-group">
                         <input type="checkbox" id="remember" name="remember">
                         <label for="remember">Lembrar de mim</label>
-                            </div>
+                    </div>
                     <a href="#" class="forgot-password">Esqueci minha senha</a>
-                            </div>
+                </div>
                 <?php endif; ?>
                 
                 <button type="submit" class="btn-login">
-                    Entrar no Sistema
+                    🚀 Entrar no Sistema
                 </button>
             </form>
             

@@ -1,0 +1,140 @@
+/* =====================================================
+   CORREÇÃO DE SOBREPOSIÇÃO - PÁGINA DE USUÁRIOS
+   ===================================================== */
+
+/* Corrigir sobreposição no page-header */
+.admin-main .page-header {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+    min-height: auto;
+    padding-bottom: var(--spacing-2xl);
+}
+
+/* Container para título e subtítulo */
+.admin-main .page-header > div:first-child {
+    flex: 1;
+    z-index: 2;
+    position: relative;
+}
+
+/* Container para ações */
+.admin-main .page-actions {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    margin-top: var(--spacing-lg);
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+}
+
+/* Ajustar título para não sobrepor */
+.admin-main .page-title {
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.2;
+}
+
+/* Ajustar subtítulo */
+.admin-main .page-subtitle {
+    margin-bottom: 0;
+    line-height: 1.4;
+}
+
+/* Responsividade melhorada */
+@media (max-width: 1200px) {
+    .admin-main .page-actions {
+        justify-content: center;
+        margin-top: var(--spacing-md);
+    }
+    
+    .admin-main .page-actions .btn {
+        margin: var(--spacing-xs);
+        font-size: var(--font-size-sm);
+        padding: var(--spacing-sm) var(--spacing-md);
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-main .page-header {
+        padding: var(--spacing-lg) var(--spacing-md);
+        text-align: center;
+    }
+    
+    .admin-main .page-title {
+        font-size: var(--font-size-2xl);
+        margin-bottom: var(--spacing-sm);
+    }
+    
+    .admin-main .page-subtitle {
+        font-size: var(--font-size-base);
+        margin-bottom: var(--spacing-md);
+    }
+    
+    .admin-main .page-actions {
+        flex-direction: column;
+        align-items: center;
+        gap: var(--spacing-sm);
+        margin-top: var(--spacing-md);
+    }
+    
+    .admin-main .page-actions .btn {
+        width: 100%;
+        max-width: 200px;
+        margin: 0;
+    }
+}
+
+/* Garantir que os botões não sobreponham o texto */
+.admin-main .page-header .page-actions {
+    z-index: 3;
+}
+
+.admin-main .page-header .page-title,
+.admin-main .page-header .page-subtitle {
+    z-index: 2;
+    position: relative;
+}
+
+/* Ajustar espaçamento dos botões de teste */
+.admin-main .page-actions .btn-outline-secondary,
+.admin-main .page-actions .btn-outline-warning,
+.admin-main .page-actions .btn-outline-danger {
+    margin-left: 0 !important;
+    margin-top: var(--spacing-xs);
+}
+
+/* Layout flexível para o header */
+.admin-main .page-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.admin-main .page-header > div:first-child {
+    width: 100%;
+}
+
+.admin-main .page-header .page-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: var(--spacing-lg);
+}
+
+/* Garantir que não há sobreposição */
+.admin-main .page-header * {
+    box-sizing: border-box;
+}
+
+/* Ajustar altura mínima do header */
+.admin-main .page-header {
+    min-height: 120px;
+}
+
+@media (min-width: 769px) {
+    .admin-main .page-header {
+        min-height: 140px;
+    }
+}

@@ -8,6 +8,7 @@
 
 // Incluir classe de configurações
 require_once 'configuracoes_categorias.php';
+require_once '../includes/CredentialManager.php';
 
 class SistemaMatricula {
     
@@ -54,6 +55,35 @@ class SistemaMatricula {
                 
                 // Criar slots de aulas baseados na configuração
                 self::criarSlotsAulas($alunoId, $configuracao);
+                
+                // Criar credenciais automáticas para o aluno
+                if (LOG_ENABLED) {
+                    error_log('[Sistema Matrícula] Criando credenciais automáticas para aluno ID: ' . $alunoId);
+                }
+                
+                $credentials = CredentialManager::createStudentCredentials([
+                    'aluno_id' => $alunoId,
+                    'nome' => $dadosAluno['nome'],
+                    'cpf' => $dadosAluno['cpf'],
+                    'email' => $dadosAluno['email'] ?? null
+                ]);
+                
+                if ($credentials['success']) {
+                    if (LOG_ENABLED) {
+                        error_log('[Sistema Matrícula] Credenciais criadas com sucesso para aluno ID: ' . $alunoId);
+                    }
+                    
+                    // Enviar credenciais por email (simulado)
+                    CredentialManager::sendCredentials(
+                        $credentials['cpf'], 
+                        $credentials['senha_temporaria'], 
+                        'aluno'
+                    );
+                } else {
+                    if (LOG_ENABLED) {
+                        error_log('[Sistema Matrícula] Erro ao criar credenciais: ' . $credentials['message']);
+                    }
+                }
                 
                 // Confirmar transação
                 db()->commit();

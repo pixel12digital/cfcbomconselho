@@ -17,6 +17,15 @@ if (!isLoggedIn()) {
     exit;
 }
 
+// Verificar se pode acessar configurações (apenas admin)
+if (!canAccessConfigurations()) {
+    $currentUser = getCurrentUser();
+    error_log('[CONFIGURACOES API] Usuário não tem permissão para acessar configurações: ' . ($currentUser['tipo'] ?? 'desconhecido'));
+    http_response_code(403);
+    echo json_encode(['error' => 'Acesso negado - Apenas administradores podem acessar configurações']);
+    exit;
+}
+
 // Verificar método da requisição
 $method = $_SERVER['REQUEST_METHOD'];
 $action = $_GET['action'] ?? '';

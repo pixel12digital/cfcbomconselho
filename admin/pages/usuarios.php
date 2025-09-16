@@ -17,6 +17,303 @@ if ($action === 'list') {
 }
 ?>
 
+<!-- CSS específico para corrigir sobreposição -->
+<style>
+/* Correção de sobreposição no page-header */
+.admin-main .page-header {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: auto;
+    padding-bottom: 40px;
+}
+
+/* Container para título e subtítulo */
+.admin-main .page-header > div:first-child {
+    flex: 1;
+    z-index: 2;
+    position: relative;
+}
+
+/* Container para ações */
+.admin-main .page-actions {
+    position: static !important;
+    top: auto !important;
+    right: auto !important;
+    margin-top: 20px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+/* Ajustar título para não sobrepor */
+.admin-main .page-title {
+    margin-bottom: 10px;
+    line-height: 1.2;
+}
+
+/* Ajustar subtítulo */
+.admin-main .page-subtitle {
+    margin-bottom: 0;
+    line-height: 1.4;
+}
+
+/* Responsividade melhorada */
+@media (max-width: 1200px) {
+    .admin-main .page-actions {
+        justify-content: center;
+        margin-top: 15px;
+    }
+    
+    .admin-main .page-actions .btn {
+        margin: 5px;
+        font-size: 14px;
+        padding: 8px 16px;
+    }
+}
+
+@media (max-width: 768px) {
+    .admin-main .page-header {
+        padding: 20px 15px;
+        text-align: center;
+    }
+    
+    .admin-main .page-title {
+        font-size: 24px;
+        margin-bottom: 10px;
+    }
+    
+    .admin-main .page-subtitle {
+        font-size: 16px;
+        margin-bottom: 15px;
+    }
+    
+    .admin-main .page-actions {
+        flex-direction: column;
+        align-items: center;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .admin-main .page-actions .btn {
+        width: 100%;
+        max-width: 200px;
+        margin: 0;
+    }
+}
+
+/* Garantir que os botões não sobreponham o texto */
+.admin-main .page-header .page-actions {
+    z-index: 3;
+}
+
+.admin-main .page-header .page-title,
+.admin-main .page-header .page-subtitle {
+    z-index: 2;
+    position: relative;
+}
+
+/* Ajustar espaçamento dos botões de teste */
+.admin-main .page-actions .btn-outline-secondary,
+.admin-main .page-actions .btn-outline-warning,
+.admin-main .page-actions .btn-outline-danger {
+    margin-left: 0 !important;
+    margin-top: 5px;
+}
+
+/* Layout flexível para o header */
+.admin-main .page-header {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+.admin-main .page-header > div:first-child {
+    width: 100%;
+}
+
+.admin-main .page-header .page-actions {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 20px;
+}
+
+/* Garantir que não há sobreposição */
+.admin-main .page-header * {
+    box-sizing: border-box;
+}
+
+/* Ajustar altura mínima do header */
+.admin-main .page-header {
+    min-height: 120px;
+}
+
+@media (min-width: 769px) {
+    .admin-main .page-header {
+        min-height: 140px;
+    }
+}
+
+/* Otimização dos botões de ação rápida */
+.page-actions .btn {
+    width: 40px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 4px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+}
+
+.page-actions .btn i {
+    font-size: 12px;
+    margin: 0;
+}
+
+/* Botões de ação na tabela */
+.action-buttons-container {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.action-btn {
+    width: 40px !important;
+    height: 24px !important;
+    padding: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    min-width: 40px !important;
+    max-width: 40px !important;
+}
+
+.action-btn i {
+    margin: 0;
+    font-size: 12px;
+}
+
+/* Hover effects para botões de ícone */
+.page-actions .btn:hover,
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+/* Responsividade para botões de ação */
+@media (max-width: 768px) {
+    .page-actions .btn {
+        width: 40px !important;
+        height: 24px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+    }
+    
+    .page-actions .btn i {
+        font-size: 12px;
+    }
+    
+    .action-btn {
+        width: 40px !important;
+        height: 24px !important;
+        min-width: 40px !important;
+        max-width: 40px !important;
+    }
+    
+    .action-btn i {
+        font-size: 12px;
+    }
+}
+
+/* Otimização da tabela de usuários */
+.table-container {
+    overflow-x: auto;
+    max-width: 100%;
+}
+
+.table {
+    width: 100%;
+    min-width: 600px;
+    table-layout: fixed;
+}
+
+.table th,
+.table td {
+    padding: 12px 8px;
+    vertical-align: middle;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Larguras específicas das colunas */
+.table th:nth-child(1),
+.table td:nth-child(1) {
+    width: 35%;
+    min-width: 150px;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+    width: 20%;
+    min-width: 100px;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+    width: 15%;
+    min-width: 80px;
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+    width: 15%;
+    min-width: 80px;
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+    width: 15%;
+    min-width: 100px;
+}
+
+/* Responsividade da tabela */
+@media (max-width: 1200px) {
+    .table {
+        min-width: 500px;
+    }
+    
+    .table th,
+    .table td {
+        padding: 8px 6px;
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 768px) {
+    .table {
+        min-width: 400px;
+    }
+    
+    .table th,
+    .table td {
+        padding: 6px 4px;
+        font-size: 12px;
+    }
+    
+    .badge {
+        font-size: 10px;
+        padding: 4px 6px;
+    }
+}
+</style>
+
 <!-- Header da Página -->
 <div class="page-header">
     <div>
@@ -24,25 +321,11 @@ if ($action === 'list') {
         <p class="page-subtitle">Cadastro e gerenciamento de usuários do sistema</p>
     </div>
     <div class="page-actions">
-        <button class="btn btn-primary" id="btnNovoUsuario">
+        <button class="btn btn-primary" id="btnNovoUsuario" title="Novo Usuário">
             <i class="fas fa-plus"></i>
-            Novo Usuário
         </button>
-        <button class="btn btn-outline-primary" id="btnExportar">
+        <button class="btn btn-outline-primary" id="btnExportar" title="Exportar Dados">
             <i class="fas fa-download"></i>
-            Exportar
-        </button>
-        <button class="btn btn-outline-secondary" id="btnTeste" style="margin-left: 10px;">
-            <i class="fas fa-bug"></i>
-            Teste Modal
-        </button>
-        <button class="btn btn-outline-warning" id="btnTesteEventos" style="margin-left: 10px;">
-            <i class="fas fa-mouse-pointer"></i>
-            Teste Eventos
-        </button>
-        <button class="btn btn-outline-danger" id="btnDebugModal" style="margin-left: 10px;">
-            <i class="fas fa-bug"></i>
-            Debug Modal
         </button>
     </div>
 </div>
@@ -60,7 +343,6 @@ if ($action === 'list') {
                         <thead>
                             <tr>
                                 <th>Nome</th>
-                                <th>E-mail</th>
                                 <th>Tipo</th>
                                 <th>Status</th>
                                 <th>Criado em</th>
@@ -71,19 +353,20 @@ if ($action === 'list') {
                             <?php foreach ($usuarios as $usuario): ?>
                                 <tr>
                                     <td>
-                                        <div class="d-flex items-center gap-3">
-                                            <div class="user-avatar">
-                                                <?php echo strtoupper(substr($usuario['nome'], 0, 1)); ?>
-                                            </div>
-                                            <div>
-                                                <div class="font-weight-semibold"><?php echo htmlspecialchars($usuario['nome']); ?></div>
-                                            </div>
-                                        </div>
+                                        <div class="font-weight-semibold"><?php echo htmlspecialchars($usuario['nome']); ?></div>
                                     </td>
-                                    <td><?php echo htmlspecialchars($usuario['email']); ?></td>
                                     <td>
-                                        <span class="badge badge-<?php echo $usuario['tipo'] === 'admin' ? 'danger' : 'primary'; ?>">
-                                            <?php echo ucfirst($usuario['tipo']); ?>
+                                        <?php 
+                                        $tipoDisplay = [
+                                            'admin' => ['text' => 'Administrador', 'class' => 'danger'],
+                                            'secretaria' => ['text' => 'Atendente CFC', 'class' => 'primary'],
+                                            'instrutor' => ['text' => 'Instrutor', 'class' => 'warning'],
+                                            'aluno' => ['text' => 'Aluno', 'class' => 'info']
+                                        ];
+                                        $tipoInfo = $tipoDisplay[$usuario['tipo']] ?? ['text' => ucfirst($usuario['tipo']), 'class' => 'secondary'];
+                                        ?>
+                                        <span class="badge badge-<?php echo $tipoInfo['class']; ?>">
+                                            <?php echo $tipoInfo['text']; ?>
                                         </span>
                                     </td>
                                     <td>
@@ -91,21 +374,21 @@ if ($action === 'list') {
                                             <?php echo $usuario['ativo'] ? 'Ativo' : 'Inativo'; ?>
                                         </span>
                                     </td>
-                                    <td><?php echo date('d/m/Y H:i', strtotime($usuario['criado_em'])); ?></td>
+                                    <td><?php echo date('d/m/Y', strtotime($usuario['criado_em'])); ?></td>
                                     <td>
                                         <div class="action-buttons-container">
                                             <!-- Botão de edição -->
                                             <button class="btn btn-edit action-btn btn-editar-usuario" 
                                                     data-user-id="<?php echo $usuario['id']; ?>"
                                                     title="Editar dados do usuário">
-                                                <i class="fas fa-edit me-1"></i>Editar
+                                                <i class="fas fa-edit"></i>
                                             </button>
                                             
                                             <!-- Botão de exclusão destacado -->
                                             <button class="btn btn-delete action-btn btn-excluir-usuario" 
                                                     data-user-id="<?php echo $usuario['id']; ?>"
                                                     title="ATENCAO: EXCLUIR USUARIO - Esta acao nao pode ser desfeita!">
-                                                <i class="fas fa-trash me-1"></i>Excluir
+                                                <i class="fas fa-trash"></i>
                                             </button>
                                         </div>
                                     </td>
@@ -154,24 +437,31 @@ if ($action === 'list') {
                 </div>
                 
                 <div class="form-group">
-                    <label for="userType" class="form-label">Usuário</label>
+                    <label for="userType" class="form-label">Tipo de Usuário</label>
                     <select id="userType" name="tipo" class="form-control" required>
                         <option value="">Selecione...</option>
                         <option value="admin">Administrador</option>
-                        <option value="recepcao">Recepcionista</option>
-                        <option value="instrutor_pratico">Instrutor</option>
+                        <option value="secretaria">Atendente CFC</option>
+                        <option value="instrutor">Instrutor</option>
+                        <option value="aluno">Aluno</option>
                     </select>
+                    <div class="form-text">
+                        <strong>Administrador:</strong> Acesso total incluindo configurações<br>
+                        <strong>Atendente CFC:</strong> Pode fazer tudo menos configurações<br>
+                        <strong>Instrutor:</strong> Pode alterar/cancelar aulas mas não adicionar<br>
+                        <strong>Aluno:</strong> Pode visualizar apenas suas informações
+                    </div>
                 </div>
                 
                 <div class="form-group">
-                    <label for="userPassword" class="form-label">Senha</label>
-                    <input type="password" id="userPassword" name="senha" class="form-control" required>
-                    <div class="form-text">Mínimo 6 caracteres</div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="userConfirmPassword" class="form-label">Confirmar Senha</label>
-                    <input type="password" id="userConfirmPassword" name="confirmar_senha" class="form-control" required>
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <strong>Sistema de Credenciais Automáticas</strong><br>
+                        • Senha temporária será gerada automaticamente<br>
+                        • Credenciais serão exibidas na tela após criação<br>
+                        • Usuário receberá credenciais por email<br>
+                        • Senha deve ser alterada no primeiro acesso
+                    </div>
                 </div>
                 
                 <div class="form-group">
@@ -218,9 +508,9 @@ function showCreateUserModal() {
     document.getElementById('userForm').reset();
     document.getElementById('userId').value = '';
     
-    // Mostrar campo de senha
-    document.getElementById('userPassword').required = true;
-    document.getElementById('userConfirmPassword').required = true;
+    // Senha não é mais necessária - sistema gera automaticamente
+    // document.getElementById('userPassword').required = true;
+    // document.getElementById('userConfirmPassword').required = true;
     
     // Mostrar modal
     const modal = document.getElementById('userModal');
@@ -260,9 +550,9 @@ function editUser(userId) {
                 document.getElementById('userType').value = currentUser.tipo;
                 document.getElementById('userActive').checked = currentUser.ativo;
                 
-                // Senha não obrigatória na edição
-                document.getElementById('userPassword').required = false;
-                document.getElementById('userConfirmPassword').required = false;
+                // Senha não é mais necessária - sistema gera automaticamente
+                // document.getElementById('userPassword').required = false;
+                // document.getElementById('userConfirmPassword').required = false;
                 
                 // Mostrar modal
                 const modal = document.getElementById('userModal');
@@ -328,26 +618,27 @@ function saveUser() {
         return;
     }
     
-    if (!isEditMode) {
-        if (!formData.get('senha')) {
-            showNotification('Senha e obrigatoria', 'error');
-            return;
-        }
-        
-        if (formData.get('senha').length < 6) {
-            showNotification('Senha deve ter pelo menos 6 caracteres', 'error');
-            return;
-        }
-        
-        if (formData.get('senha') !== formData.get('confirmar_senha')) {
-            showNotification('Senhas nao conferem', 'error');
-            return;
-        }
-    }
+    // Validação de senha removida - sistema gera automaticamente
+    // if (!isEditMode) {
+    //     if (!formData.get('senha')) {
+    //         showNotification('Senha e obrigatoria', 'error');
+    //         return;
+    //     }
+    //     
+    //     if (formData.get('senha').length < 6) {
+    //         showNotification('Senha deve ter pelo menos 6 caracteres', 'error');
+    //         return;
+    //     }
+    //     
+    //     if (formData.get('senha') !== formData.get('confirmar_senha')) {
+    //         showNotification('Senhas nao conferem', 'error');
+    //         return;
+    //     }
+    // }
     
     console.log('Validacoes passaram, preparando dados...');
     
-    // Preparar dados para envio
+    // Preparar dados para envio (senha removida - sistema gera automaticamente)
     const userData = {
         nome: formData.get('nome').trim(),
         email: formData.get('email').trim(),
@@ -355,9 +646,10 @@ function saveUser() {
         ativo: formData.get('ativo') ? true : false
     };
     
-    if (!isEditMode || formData.get('senha')) {
-        userData.senha = formData.get('senha');
-    }
+    // Senha não é mais necessária - sistema gera automaticamente
+    // if (!isEditMode || formData.get('senha')) {
+    //     userData.senha = formData.get('senha');
+    // }
     
     if (isEditMode) {
         userData.id = formData.get('id');
@@ -385,6 +677,15 @@ function saveUser() {
         if (data.success) {
             showNotification(data.message || 'Usuário salvo com sucesso!', 'success');
             closeUserModal();
+            
+            // Se foram criadas credenciais, exibir na tela
+            if (data.credentials) {
+                const credentials = data.credentials;
+                const credentialsUrl = `credenciais_criadas.php?credentials=${btoa(JSON.stringify(credentials))}`;
+                setTimeout(function() {
+                    window.open(credentialsUrl, '_blank');
+                }, 1000);
+            }
             
             // Recarregar página para mostrar dados atualizados
             setTimeout(function() {

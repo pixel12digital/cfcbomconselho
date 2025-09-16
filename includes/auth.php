@@ -20,11 +20,11 @@ class Auth {
     }
     
     // Método de login principal
-    public function login($email, $senha, $remember = false) {
+    public function login($login, $senha, $remember = false) {
         try {
             // Validar entrada
-            if (empty($email) || empty($senha)) {
-                return ['success' => false, 'message' => 'Email e senha são obrigatórios'];
+            if (empty($login) || empty($senha)) {
+                return ['success' => false, 'message' => 'Login e senha são obrigatórios'];
             }
             
             // Verificar se está bloqueado
@@ -32,17 +32,17 @@ class Auth {
                 return ['success' => false, 'message' => 'Muitas tentativas de login. Tente novamente em ' . $this->getLockoutTimeRemaining() . ' minutos'];
             }
             
-            // Buscar usuário
-            $usuario = $this->getUserByEmail($email);
+            // Buscar usuário (por email ou CPF)
+            $usuario = $this->getUserByLogin($login);
             if (!$usuario) {
                 $this->incrementAttempts($this->getClientIP());
-                return ['success' => false, 'message' => 'Email ou senha inválidos'];
+                return ['success' => false, 'message' => 'Login ou senha inválidos'];
             }
             
             // Verificar senha
             if (!password_verify($senha, $usuario['senha'])) {
                 $this->incrementAttempts($this->getClientIP());
-                return ['success' => false, 'message' => 'Email ou senha inválidos'];
+                return ['success' => false, 'message' => 'Login ou senha inválidos'];
             }
             
             // Verificar se usuário está ativo
@@ -215,6 +215,52 @@ class Auth {
         return $user && $user['tipo'] === 'secretaria';
     }
     
+    // Verificar se é aluno
+    public function isStudent() {
+        $user = $this->getCurrentUser();
+        return $user && $user['tipo'] === 'aluno';
+    }
+    
+    // Verificar se pode adicionar aulas (apenas admin e secretaria)
+    public function canAddLessons() {
+        $user = $this->getCurrentUser();
+        if (!$user) return false;
+        
+        return in_array($user['tipo'], ['admin', 'secretaria']);
+    }
+    
+    // Verificar se pode editar aulas (admin, secretaria e instrutor)
+    public function canEditLessons() {
+        $user = $this->getCurrentUser();
+        if (!$user) return false;
+        
+        return in_array($user['tipo'], ['admin', 'secretaria', 'instrutor']);
+    }
+    
+    // Verificar se pode cancelar aulas (admin, secretaria e instrutor)
+    public function canCancelLessons() {
+        $user = $this->getCurrentUser();
+        if (!$user) return false;
+        
+        return in_array($user['tipo'], ['admin', 'secretaria', 'instrutor']);
+    }
+    
+    // Verificar se pode acessar configurações (apenas admin)
+    public function canAccessConfigurations() {
+        $user = $this->getCurrentUser();
+        if (!$user) return false;
+        
+        return $user['tipo'] === 'admin';
+    }
+    
+    // Verificar se pode gerenciar usuários (admin e secretaria)
+    public function canManageUsers() {
+        $user = $this->getCurrentUser();
+        if (!$user) return false;
+        
+        return in_array($user['tipo'], ['admin', 'secretaria']);
+    }
+    
     // Criar nova sessão
     private function createSession($usuario, $remember = false) {
         $_SESSION['user_id'] = $usuario['id'];
@@ -253,7 +299,28 @@ class Auth {
         ]);
     }
     
-    // Buscar usuário por email
+    // Buscar usuário por email ou CPF
+    private function getUserByLogin($login) {
+        $login = trim($login);
+        
+        // Se contém apenas números, tratar como CPF
+        if (preg_match('/^[0-9]+$/', $login)) {
+            $sql = "SELECT u.*, c.id as cfc_id FROM usuarios u 
+                    LEFT JOIN cfcs c ON u.id = c.responsavel_id 
+                    WHERE u.cpf = :cpf LIMIT 1";
+            
+            return $this->db->fetch($sql, ['cpf' => $login]);
+        }
+        
+        // Caso contrário, tratar como email
+        $sql = "SELECT u.*, c.id as cfc_id FROM usuarios u 
+                LEFT JOIN cfcs c ON u.id = c.responsavel_id 
+                WHERE u.email = :email LIMIT 1";
+        
+        return $this->db->fetch($sql, ['email' => strtolower($login)]);
+    }
+    
+    // Buscar usuário por email (método mantido para compatibilidade)
     private function getUserByEmail($email) {
         $sql = "SELECT u.*, c.id as cfc_id FROM usuarios u 
                 LEFT JOIN cfcs c ON u.id = c.responsavel_id 
@@ -355,10 +422,18 @@ class Auth {
                 'veiculos', 'relatorios', 'configuracoes', 'backup', 'logs'
             ],
             'instrutor' => [
-                'dashboard', 'alunos', 'aulas', 'veiculos', 'relatorios'
+                'dashboard', 'alunos', 'aulas_visualizar', 'aulas_editar', 'aulas_cancelar',
+                'veiculos', 'relatorios'
+                // Removido: 'aulas_adicionar', 'usuarios', 'cfcs', 'instrutores', 'configuracoes'
             ],
             'secretaria' => [
-                'dashboard', 'alunos', 'aulas', 'relatorios'
+                'dashboard', 'usuarios', 'cfcs', 'alunos', 'instrutores', 'aulas', 
+                'veiculos', 'relatorios'
+                // Removido: 'configuracoes', 'backup', 'logs'
+            ],
+            'aluno' => [
+                'dashboard', 'aulas_visualizar', 'relatorios_visualizar'
+                // Apenas visualização
             ]
         ];
         
@@ -508,6 +583,54 @@ function isSecretary() {
         $auth = new Auth();
     }
     return $auth->isSecretary();
+}
+
+function isStudent() {
+    global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
+    return $auth->isStudent();
+}
+
+function canAddLessons() {
+    global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
+    return $auth->canAddLessons();
+}
+
+function canEditLessons() {
+    global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
+    return $auth->canEditLessons();
+}
+
+function canCancelLessons() {
+    global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
+    return $auth->canCancelLessons();
+}
+
+function canAccessConfigurations() {
+    global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
+    return $auth->canAccessConfigurations();
+}
+
+function canManageUsers() {
+    global $auth;
+    if (!isset($auth)) {
+        $auth = new Auth();
+    }
+    return $auth->canManageUsers();
 }
 
 function requireLogin() {

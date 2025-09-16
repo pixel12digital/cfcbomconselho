@@ -42,62 +42,65 @@ if (!isset($_SESSION['user_id'])) {
     session_start();
 }
 
-// Para requisições JSON (editar/cancelar), verificar se há dados válidos
-$input = file_get_contents('php://input');
-$data = json_decode($input, true);
+// Verificar se usuário está logado
+if (!isLoggedIn()) {
+    http_response_code(401);
+    echo json_encode(['sucesso' => false, 'mensagem' => 'Usuário não autenticado']);
+    exit();
+}
 
-// Debug: log da requisição
-error_log("Requisição recebida: " . json_encode($data));
-error_log("Método: " . $_SERVER['REQUEST_METHOD']);
-error_log("Content-Type: " . ($_SERVER['CONTENT_TYPE'] ?? 'não definido'));
-
-// Debug adicional em arquivo personalizado
-file_put_contents(__DIR__ . '/../../debug_api.log', date('Y-m-d H:i:s') . " - Input raw: " . $input . "\n", FILE_APPEND);
-file_put_contents(__DIR__ . '/../../debug_api.log', date('Y-m-d H:i:s') . " - Data decoded: " . json_encode($data) . "\n", FILE_APPEND);
-
-if ($data && isset($data['acao'])) {
-    // Para ações específicas, permitir sem sessão ativa por enquanto
-    // TODO: Implementar autenticação adequada para APIs
-    error_log("Ação detectada: " . $data['acao']);
-} else {
-    // Para requisições normais, verificar autenticação
-    // Temporariamente desabilitado para testes
-    // if (!isset($_SESSION['user_id'])) {
-    //     http_response_code(401);
-    //     echo json_encode(['sucesso' => false, 'mensagem' => 'Usuário não autenticado']);
-    //     exit();
-    // }
+$currentUser = getCurrentUser();
+if (!$currentUser) {
+    http_response_code(401);
+    echo json_encode(['sucesso' => false, 'mensagem' => 'Sessão inválida']);
+    exit();
 }
 
 try {
     $db = db();
     
     // Se for JSON, usar os dados do JSON, senão usar $_POST
-    if ($data) {
-        $acao = $data['acao'] ?? 'criar';
-        $aula_id = $data['aula_id'] ?? null;
+    $input = file_get_contents('php://input');
+    $data = json_decode($input, true);
+    
+    // Debug: log da requisição
+    error_log("Requisição recebida: " . json_encode($data));
+    error_log("Usuário atual: " . $currentUser['email'] . " (Tipo: " . $currentUser['tipo'] . ")");
+    
+    if ($data && isset($data['acao'])) {
+        $acao = $data['acao'];
+        
+        // Verificar permissões específicas por ação
+        if ($acao === 'criar' && !canAddLessons()) {
+            http_response_code(403);
+            echo json_encode(['sucesso' => false, 'mensagem' => 'Apenas administradores e atendentes podem adicionar aulas']);
+            exit();
+        }
+        
+        if (($acao === 'editar' || $acao === 'cancelar') && !canEditLessons()) {
+            http_response_code(403);
+            echo json_encode(['sucesso' => false, 'mensagem' => 'Você não tem permissão para editar aulas']);
+            exit();
+        }
         
         // Para ações específicas como cancelar
-        if ($acao === 'cancelar' && $aula_id) {
-            cancelarAula($aula_id);
+        if ($acao === 'cancelar' && isset($data['aula_id'])) {
+            cancelarAula($data['aula_id']);
             exit();
         }
         
         // Para ação de editar
-        if ($acao === 'editar' && $aula_id) {
-            editarAula($aula_id, $data);
+        if ($acao === 'editar' && isset($data['aula_id'])) {
+            editarAula($data['aula_id'], $data);
             exit();
         }
         
-        // Para outras ações JSON, usar os dados do JSON
-        $aluno_id = $data['aluno_id'] ?? null;
-        $data_aula = $data['data_aula'] ?? null;
-        $hora_inicio = $data['hora_inicio'] ?? null;
-        $duracao = $data['duracao'] ?? null;
-        $tipo_aula = $data['tipo_aula'] ?? null;
-        $instrutor_id = $data['instrutor_id'] ?? null;
-        $veiculo_id = $data['veiculo_id'] ?? null;
-        $disciplina = $data['disciplina'] ?? null;
+        // Para criação de nova aula
+        if ($acao === 'criar') {
+            criarAula($data);
+            exit();
+        }
+    }
         $observacoes = $data['observacoes'] ?? '';
         $tipo_agendamento = $data['tipo_agendamento'] ?? 'unica';
         $posicao_intervalo = $data['posicao_intervalo'] ?? 'depois';

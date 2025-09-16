@@ -12,6 +12,7 @@ error_log('[USUARIOS API] Iniciando - Método: ' . $_SERVER['REQUEST_METHOD'] . 
 require_once '../../includes/config.php';
 require_once '../../includes/database.php';
 require_once '../../includes/auth.php';
+require_once '../../includes/CredentialManager.php';
 
 // Log das configurações
 error_log('[USUARIOS API] Ambiente: ' . (defined('ENVIRONMENT') ? ENVIRONMENT : 'indefinido'));
@@ -37,11 +38,11 @@ if (!$currentUser) {
 // Log do usuário atual
 error_log('[USUARIOS API] Usuário logado: ' . $currentUser['email'] . ' (Tipo: ' . $currentUser['tipo'] . ')');
 
-// Verificar se é admin
-if ($currentUser['tipo'] !== 'admin') {
-    error_log('[USUARIOS API] Usuário não é admin: ' . $currentUser['tipo']);
+// Verificar se é admin ou secretaria
+if (!canManageUsers()) {
+    error_log('[USUARIOS API] Usuário não tem permissão para gerenciar usuários: ' . $currentUser['tipo']);
     http_response_code(403);
-    echo json_encode(['error' => 'Acesso negado - Apenas administradores podem gerenciar usuários', 'code' => 'NOT_ADMIN']);
+    echo json_encode(['error' => 'Acesso negado - Apenas administradores e atendentes podem gerenciar usuários', 'code' => 'NOT_AUTHORIZED']);
     exit;
 }
 
@@ -91,11 +92,11 @@ try {
             
             error_log('[USUARIOS API] Dados recebidos para criação: ' . json_encode(array_keys($data)));
             
-            // Validações
-            if (empty($data['nome']) || empty($data['email']) || empty($data['senha']) || empty($data['tipo'])) {
+            // Validações básicas
+            if (empty($data['nome']) || empty($data['email']) || empty($data['tipo'])) {
                 error_log('[USUARIOS API] Dados obrigatórios ausentes');
                 http_response_code(400);
-                echo json_encode(['error' => 'Todos os campos são obrigatórios', 'code' => 'MISSING_FIELDS']);
+                echo json_encode(['error' => 'Nome, email e tipo são obrigatórios', 'code' => 'MISSING_FIELDS']);
                 exit;
             }
             
@@ -108,24 +109,48 @@ try {
                 exit;
             }
             
-            // Hash da senha
-            $senha_hash = password_hash($data['senha'], PASSWORD_DEFAULT);
-            
-            // Inserir usuário
-            error_log('[USUARIOS API] Inserindo novo usuário: ' . $data['email']);
-            $result = $db->insert('usuarios', [
+            // Criar credenciais automáticas
+            error_log('[USUARIOS API] Criando credenciais automáticas para: ' . $data['email']);
+            $credentials = CredentialManager::createEmployeeCredentials([
                 'nome' => $data['nome'],
                 'email' => $data['email'],
-                'senha' => $senha_hash,
-                'tipo' => $data['tipo'],
-                'ativo' => isset($data['ativo']) ? (bool)$data['ativo'] : true,
-                'criado_em' => date('Y-m-d H:i:s')
+                'tipo' => $data['tipo']
             ]);
+            
+            if (!$credentials['success']) {
+                error_log('[USUARIOS API] Erro ao criar credenciais: ' . $credentials['message']);
+                http_response_code(500);
+                echo json_encode(['error' => 'Erro ao criar credenciais do usuário', 'code' => 'CREDENTIAL_ERROR']);
+                exit;
+            }
+            
+            // Enviar credenciais por email (simulado)
+            CredentialManager::sendCredentials(
+                $credentials['email'], 
+                $credentials['senha_temporaria'], 
+                $data['tipo']
+            );
+            
+            $result = $credentials['usuario_id'];
             
             if ($result) {
                 error_log('[USUARIOS API] Usuário criado com sucesso - ID: ' . $result);
                 $usuario = $db->fetch("SELECT id, nome, email, tipo, ativo, criado_em FROM usuarios WHERE id = ?", [$result]);
-                echo json_encode(['success' => true, 'message' => 'Usuário criado com sucesso', 'data' => $usuario]);
+                
+                $response = [
+                    'success' => true, 
+                    'message' => 'Usuário criado com sucesso', 
+                    'data' => $usuario
+                ];
+                
+                // Adicionar credenciais à resposta
+                $response['credentials'] = [
+                    'email' => $credentials['email'],
+                    'senha_temporaria' => $credentials['senha_temporaria'],
+                    'message' => 'Credenciais criadas automaticamente'
+                ];
+                
+                echo json_encode($response);
             } else {
                 error_log('[USUARIOS API] Erro ao criar usuário');
                 http_response_code(500);

@@ -31,6 +31,11 @@ try {
         error_log('[API Alunos] auth.php carregado');
     }
     
+    require_once $basePath . '/includes/CredentialManager.php';
+    if (function_exists('error_log')) {
+        error_log('[API Alunos] CredentialManager.php carregado');
+    }
+    
 } catch (Exception $e) {
     if (function_exists('error_log')) {
         error_log('[API Alunos] Erro ao carregar includes: ' . $e->getMessage());
@@ -80,54 +85,22 @@ try {
     // Verificar autenticação
     if (!$isLoggedIn || !$hasPermission) {
         if (function_exists('error_log')) {
-            error_log('[API Alunos] Usuário não autorizado, tentando login automático...');
+            error_log('[API Alunos] Usuário não autorizado, verificando permissões específicas...');
         }
         
-        // Para desenvolvimento local, permitir acesso sem autenticação
-        if (ENVIRONMENT === 'local') {
+        // Verificar se tem permissão para gerenciar alunos (admin, secretaria)
+        if (!canManageUsers()) {
             if (function_exists('error_log')) {
-                error_log('[API Alunos] Ambiente local - permitindo acesso sem autenticação');
+                error_log('[API Alunos] Usuário não tem permissão para gerenciar alunos');
             }
-            $isLoggedIn = true;
-            $hasPermission = true;
-        } else {
-            // Tentar login automático como fallback (apenas para desenvolvimento)
-            try {
-                $auth = new Auth();
-                $loginResult = $auth->login('admin@cfc.com', 'admin123');
-                
-                if ($loginResult['success']) {
-                    if (function_exists('error_log')) {
-                        error_log('[API Alunos] Login automático realizado com sucesso');
-                    }
-                    // Verificar novamente após login
-                    $isLoggedIn = isLoggedIn();
-                    $hasPermission = hasPermission('admin');
-                }
-            } catch (Exception $e) {
-                if (function_exists('error_log')) {
-                    error_log('[API Alunos] Erro no login automático: ' . $e->getMessage());
-                }
-            }
-            
-            // Se ainda não estiver autorizado, retornar erro
-            if (!$isLoggedIn || !$hasPermission) {
-                if (function_exists('error_log')) {
-                    error_log('[API Alunos] Usuário não autorizado após tentativa de login automático');
-                }
-                http_response_code(401);
-                echo json_encode([
-                    'success' => false, 
-                    'error' => 'Não autorizado. Faça login novamente.', 
-                    'debug' => [
-                        'logged_in' => $isLoggedIn, 
-                        'has_permission' => $hasPermission,
-                        'session_debug' => $sessionDebug
-                    ]
-                ]);
-                exit;
-            }
+            http_response_code(403);
+            echo json_encode(['error' => 'Acesso negado - Apenas administradores e atendentes podem gerenciar alunos']);
+            exit;
         }
+        
+        // Se chegou até aqui, tem permissão
+        $isLoggedIn = true;
+        $hasPermission = true;
     }
     
     if (function_exists('error_log')) {
@@ -390,8 +363,51 @@ try {
                     error_log('[API Alunos] Aluno inserido com sucesso, ID: ' . $alunoId);
                 }
                 
+                // Criar credenciais automáticas para o aluno
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] Criando credenciais automáticas para aluno ID: ' . $alunoId);
+                }
+                
+                $credentials = CredentialManager::createStudentCredentials([
+                    'aluno_id' => $alunoId,
+                    'nome' => $alunoData['nome'],
+                    'cpf' => $alunoData['cpf'],
+                    'email' => $alunoData['email']
+                ]);
+                
+                if ($credentials['success']) {
+                    if (LOG_ENABLED) {
+                        error_log('[API Alunos] Credenciais criadas com sucesso para aluno ID: ' . $alunoId);
+                    }
+                    
+                    // Enviar credenciais por email (simulado)
+                    CredentialManager::sendCredentials(
+                        $credentials['cpf'], 
+                        $credentials['senha_temporaria'], 
+                        'aluno'
+                    );
+                } else {
+                    if (LOG_ENABLED) {
+                        error_log('[API Alunos] Erro ao criar credenciais: ' . $credentials['message']);
+                    }
+                }
+                
                 $alunoData['id'] = $alunoId;
-                echo json_encode(['success' => true, 'message' => 'Aluno criado com sucesso', 'data' => $alunoData]);
+                $response = [
+                    'success' => true, 
+                    'message' => 'Aluno criado com sucesso', 
+                    'data' => $alunoData
+                ];
+                
+                if ($credentials['success']) {
+                    $response['credentials'] = [
+                        'cpf' => $credentials['cpf'],
+                        'senha_temporaria' => $credentials['senha_temporaria'],
+                        'message' => 'Credenciais criadas automaticamente'
+                    ];
+                }
+                
+                echo json_encode($response);
                 
             } catch (Exception $e) {
                 if (LOG_ENABLED) {

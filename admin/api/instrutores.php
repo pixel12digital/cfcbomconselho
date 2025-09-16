@@ -15,6 +15,7 @@ header('Access-Control-Allow-Headers: Content-Type, Authorization, X-Requested-W
 require_once '../../includes/config.php';
 require_once '../../includes/database.php';
 require_once '../../includes/auth.php';
+require_once '../../includes/CredentialManager.php';
 
 // Debug da sessão
 error_log('Session ID: ' . (session_id() ?: 'Nenhuma'));
@@ -39,7 +40,7 @@ if (!function_exists('hasPermission')) {
     exit;
 }
 
-// Verificar se o usuário está logado e tem permissão de admin
+// Verificar se o usuário está logado e tem permissão de admin ou secretaria
 if (!isLoggedIn()) {
     error_log('Usuário não está logado');
     http_response_code(401);
@@ -47,10 +48,11 @@ if (!isLoggedIn()) {
     exit;
 }
 
-if (!hasPermission('admin')) {
-    error_log('Usuário não tem permissão de admin. User ID: ' . ($_SESSION['user_id'] ?? 'Nenhum'));
+if (!canManageUsers()) {
+    $currentUser = getCurrentUser();
+    error_log('Usuário não tem permissão para gerenciar instrutores: ' . ($currentUser['tipo'] ?? 'desconhecido'));
     http_response_code(403);
-    echo json_encode(['error' => 'Permissão negada - Apenas administradores']);
+    echo json_encode(['error' => 'Permissão negada - Apenas administradores e atendentes']);
     exit;
 }
 
@@ -218,6 +220,40 @@ try {
                 if (!$instrutor_id) {
                     error_log('Erro na inserção do instrutor. Último erro SQL: ' . $db->getLastError());
                     throw new Exception('Erro na execução da query: ' . $db->getLastError());
+                }
+                
+                // Criar credenciais automáticas para o instrutor se não foi fornecido usuário_id
+                if (!$usuario_id) {
+                    if (LOG_ENABLED) {
+                        error_log('[API Instrutores] Criando credenciais automáticas para instrutor ID: ' . $instrutor_id);
+                    }
+                    
+                    $credentials = CredentialManager::createEmployeeCredentials([
+                        'instrutor_id' => $instrutor_id,
+                        'nome' => $instrutorData['nome'],
+                        'email' => $instrutorData['email'],
+                        'tipo' => 'instrutor'
+                    ]);
+                    
+                    if ($credentials['success']) {
+                        if (LOG_ENABLED) {
+                            error_log('[API Instrutores] Credenciais criadas com sucesso para instrutor ID: ' . $instrutor_id);
+                        }
+                        
+                        // Atualizar o instrutor com o usuario_id criado
+                        $db->update('instrutores', ['usuario_id' => $credentials['usuario_id']], ['id' => $instrutor_id]);
+                        
+                        // Enviar credenciais por email (simulado)
+                        CredentialManager::sendCredentials(
+                            $credentials['email'], 
+                            $credentials['senha_temporaria'], 
+                            'instrutor'
+                        );
+                    } else {
+                        if (LOG_ENABLED) {
+                            error_log('[API Instrutores] Erro ao criar credenciais: ' . $credentials['message']);
+                        }
+                    }
                 }
                 
                 $db->commit();
