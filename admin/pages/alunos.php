@@ -727,6 +727,54 @@ body.modal-open #modalAluno .modal-dialog {
     margin: 0 !important;
     padding: 0 !important;
 }
+
+/* =====================================================
+   ESTILOS PARA TOASTS MELHORADOS
+   ===================================================== */
+
+.toast-container {
+    z-index: 9999 !important;
+}
+
+.toast {
+    min-width: 350px;
+    max-width: 450px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    border: none;
+}
+
+.toast-body {
+    padding: 1rem;
+}
+
+.toast .btn-close {
+    filter: invert(1);
+}
+
+.toast.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333) !important;
+}
+
+.toast.bg-success {
+    background: linear-gradient(135deg, #198754, #157347) !important;
+}
+
+.toast.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+}
+
+.toast.bg-info {
+    background: linear-gradient(135deg, #0dcaf0, #0aa2c0) !important;
+}
+
+/* Responsividade para toasts */
+@media (max-width: 768px) {
+    .toast {
+        min-width: 300px;
+        max-width: 350px;
+    }
+}
 </style>
 
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
@@ -1016,7 +1064,6 @@ body.modal-open #modalAluno .modal-dialog {
                 </div>
                 <div class="modal-body" style="overflow-y: auto; padding: 1rem; flex: 1; min-height: 0; max-height: calc(90vh - 140px);">
                     <input type="hidden" name="acao" id="acaoAluno" value="criar">
-                    <input type="hidden" name="aluno_id" id="aluno_id" value="">
                     
                     <div class="container-fluid" style="padding: 0;">
                         <!-- Seção 1: Informações Pessoais -->
@@ -1315,6 +1362,31 @@ body.modal-open #modalAluno .modal-dialog {
                                 <small>2h 30min</small>
                             </div>
                         </label>
+                    </div>
+                </div>
+                
+                <!-- Opções para 3 aulas -->
+                <div id="modal_opcoesTresAulas" class="mb-3" style="display: none;">
+                    <label class="form-label fw-bold">Posição do Intervalo:</label>
+                    <div class="d-flex gap-3">
+                        <div class="form-check custom-radio">
+                            <input class="form-check-input" type="radio" name="posicao_intervalo" id="modal_intervalo_depois" value="depois" checked>
+                            <label class="form-check-label" for="modal_intervalo_depois">
+                                <div class="radio-text">
+                                    <strong>2 consecutivas + intervalo + 1 aula</strong>
+                                    <small>Primeiro bloco, depois intervalo</small>
+                                </div>
+                            </label>
+                        </div>
+                        <div class="form-check custom-radio">
+                            <input class="form-check-input" type="radio" name="posicao_intervalo" id="modal_intervalo_antes" value="antes">
+                            <label class="form-check-label" for="modal_intervalo_antes">
+                                <div class="radio-text">
+                                    <strong>1 aula + intervalo + 2 consecutivas</strong>
+                                    <small>Primeira aula, depois intervalo</small>
+                                </div>
+                            </label>
+                        </div>
                     </div>
                 </div>
                 
@@ -1813,27 +1885,66 @@ function agendarAula(id) {
     // Abrir modal primeiro
     abrirModalNovaAula();
     
-    // Aguardar um pouco para o modal estar totalmente carregado
+    // Aguardar mais tempo para garantir que o modal esteja totalmente carregado
     setTimeout(() => {
         preencherAlunoSelecionado(id);
-    }, 200); // Aumentei o tempo para 200ms
+    }, 500); // Aumentei para 500ms para dar mais tempo
 }
 
 function preencherAlunoSelecionado(id) {
     console.log('🔧 Preenchendo aluno selecionado:', id);
     
-    const selectAluno = document.getElementById('aluno_id');
+    // Tentar encontrar o elemento com retry
+    let selectAluno = document.getElementById('aluno_id');
+    
     if (!selectAluno) {
-        console.error('❌ Select de aluno não encontrado!');
+        console.warn('⚠️ Select de aluno não encontrado, tentando novamente...');
+        // Aguardar um pouco e tentar novamente
+        setTimeout(() => {
+            selectAluno = document.getElementById('aluno_id');
+            if (selectAluno) {
+                console.log('✅ Select de aluno encontrado na segunda tentativa');
+                preencherAlunoSelecionado(id);
+            } else {
+                console.error('❌ Select de aluno não encontrado após retry');
+            }
+        }, 100);
+        return;
+    }
+    
+    // Verificar se é um elemento select válido
+    if (selectAluno.tagName !== 'SELECT') {
+        console.error('❌ Elemento encontrado não é um SELECT:', selectAluno.tagName);
+        return;
+    }
+    
+    // Verificar se options existe e é válido
+    if (!selectAluno.options) {
+        console.error('❌ Select de aluno não tem propriedade options!');
+        console.log('🔍 Elemento encontrado:', selectAluno);
+        console.log('🔍 Tipo do elemento:', typeof selectAluno);
+        console.log('🔍 Propriedades disponíveis:', Object.keys(selectAluno));
         return;
     }
     
     console.log('📋 Select encontrado, verificando opções...');
+    console.log('📋 Total de opções:', selectAluno.options ? selectAluno.options.length : 'undefined');
+    
+    // Listar todas as opções para debug (com verificação de segurança)
+    if (selectAluno.options && selectAluno.options.length > 0) {
+        for (let i = 0; i < selectAluno.options.length; i++) {
+            const option = selectAluno.options[i];
+            console.log(`📋 Opção ${i}: value="${option.value}", text="${option.textContent}"`);
+        }
+    } else {
+        console.warn('⚠️ Nenhuma opção encontrada no select de aluno');
+    }
     
     // Método mais simples e seguro
     try {
         // Tentar definir o valor diretamente
         selectAluno.value = id;
+        console.log('🔧 Valor definido:', selectAluno.value);
         
         // Verificar se foi definido corretamente
         if (selectAluno.value == id) {
@@ -1849,20 +1960,42 @@ function preencherAlunoSelecionado(id) {
             console.log('⚠️ Valor não foi definido, tentando método alternativo...');
             
             // Método alternativo: percorrer as opções
-            for (let i = 0; i < selectAluno.options.length; i++) {
-                const option = selectAluno.options[i];
-                if (option.value == id) {
-                    selectAluno.selectedIndex = i;
-                    console.log('✅ Aluno pré-selecionado (método alternativo):', option.textContent);
-                    
-                    selectAluno.dispatchEvent(new Event('change', { bubbles: true }));
-                    carregarInstrutoresDisponiveis();
-                    carregarVeiculosDisponiveis();
-                    return;
+            if (selectAluno.options && selectAluno.options.length > 0) {
+                for (let i = 0; i < selectAluno.options.length; i++) {
+                    const option = selectAluno.options[i];
+                    if (option.value == id) {
+                        selectAluno.selectedIndex = i;
+                        console.log('✅ Aluno pré-selecionado (método alternativo):', option.textContent);
+                        
+                        selectAluno.dispatchEvent(new Event('change', { bubbles: true }));
+                        carregarInstrutoresDisponiveis();
+                        carregarVeiculosDisponiveis();
+                        return;
+                    }
                 }
             }
             
             console.error('❌ Nenhuma opção encontrada para ID:', id);
+            console.log('🔍 Tentando com string...');
+            
+            // Última tentativa: converter para string
+            const idString = String(id);
+            if (selectAluno.options && selectAluno.options.length > 0) {
+                for (let i = 0; i < selectAluno.options.length; i++) {
+                    const option = selectAluno.options[i];
+                    if (option.value === idString) {
+                        selectAluno.selectedIndex = i;
+                        console.log('✅ Aluno pré-selecionado (string):', option.textContent);
+                        
+                        selectAluno.dispatchEvent(new Event('change', { bubbles: true }));
+                        carregarInstrutoresDisponiveis();
+                        carregarVeiculosDisponiveis();
+                        return;
+                    }
+                }
+            }
+            
+            console.error('❌ Nenhuma opção encontrada mesmo com string!');
         }
     } catch (error) {
         console.error('❌ Erro ao pré-selecionar aluno:', error);
@@ -2078,39 +2211,109 @@ function exportarFiltros() {
 
 // Função para mostrar alertas usando o sistema de notificações
 function mostrarAlerta(mensagem, tipo) {
-    if (typeof notifications !== 'undefined') {
-        notifications.show(mensagem, tipo);
-    } else {
-        // Fallback para alertas tradicionais
-        const alertDiv = document.createElement('div');
-        alertDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
-        alertDiv.innerHTML = `
-            ${mensagem}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        `;
-        
-        // Tentar encontrar um container válido para inserir o alerta
-        const container = document.querySelector('.container-fluid') || 
-                         document.querySelector('.container') || 
-                         document.querySelector('main') || 
-                         document.body;
-        
-        if (container && container !== document.body) {
-            const targetElement = container.querySelector('.d-flex') || container.firstChild;
-            if (targetElement) {
-                container.insertBefore(alertDiv, targetElement);
-            } else {
-                container.appendChild(alertDiv);
-            }
-        } else {
-            // Fallback para o body se não encontrar container
-            document.body.insertBefore(alertDiv, document.body.firstChild);
-        }
-        
-        setTimeout(() => {
-            alertDiv.remove();
-        }, 5000);
+    // Criar um toast moderno e elegante
+    const toastContainer = document.getElementById('toast-container') || criarToastContainer();
+    
+    const toastId = 'toast-' + Date.now();
+    const toastDiv = document.createElement('div');
+    
+    // Configurar classes e ícones baseados no tipo
+    let iconClass, bgClass, textClass;
+    switch(tipo) {
+        case 'success':
+            iconClass = 'fas fa-check-circle';
+            bgClass = 'bg-success';
+            textClass = 'text-white';
+            break;
+        case 'danger':
+        case 'error':
+            iconClass = 'fas fa-exclamation-triangle';
+            bgClass = 'bg-danger';
+            textClass = 'text-white';
+            break;
+        case 'warning':
+            iconClass = 'fas fa-exclamation-circle';
+            bgClass = 'bg-warning';
+            textClass = 'text-dark';
+            break;
+        case 'info':
+            iconClass = 'fas fa-info-circle';
+            bgClass = 'bg-info';
+            textClass = 'text-white';
+            break;
+        default:
+            iconClass = 'fas fa-bell';
+            bgClass = 'bg-primary';
+            textClass = 'text-white';
     }
+    
+    toastDiv.id = toastId;
+    toastDiv.className = `toast align-items-center ${bgClass} ${textClass} border-0`;
+    toastDiv.setAttribute('role', 'alert');
+    toastDiv.setAttribute('aria-live', 'assertive');
+    toastDiv.setAttribute('aria-atomic', 'true');
+    
+    toastDiv.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body d-flex align-items-center">
+                <i class="${iconClass} me-3 fs-5"></i>
+                <div>
+                    <strong>${tipo === 'success' ? 'Sucesso!' : tipo === 'danger' || tipo === 'error' ? 'Erro!' : tipo === 'warning' ? 'Atenção!' : 'Informação!'}</strong>
+                    <div class="small mt-1">${tipo === 'danger' || tipo === 'error' ? formatarMensagemErro(mensagem) : mensagem}</div>
+                </div>
+            </div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+    `;
+    
+    toastContainer.appendChild(toastDiv);
+    
+    // Inicializar o toast
+    const toast = new bootstrap.Toast(toastDiv, {
+        autohide: true,
+        delay: tipo === 'danger' || tipo === 'error' ? 8000 : 5000
+    });
+    
+    toast.show();
+    
+    // Remover o elemento após ser escondido
+    toastDiv.addEventListener('hidden.bs.toast', () => {
+        toastDiv.remove();
+    });
+}
+
+function criarToastContainer() {
+    const container = document.createElement('div');
+    container.id = 'toast-container';
+    container.className = 'toast-container position-fixed top-0 end-0 p-3';
+    container.style.zIndex = '9999';
+    document.body.appendChild(container);
+    return container;
+}
+
+// Função para formatar mensagens de erro específicas
+function formatarMensagemErro(mensagem) {
+    // Mapear mensagens de erro para versões mais amigáveis
+    const mapeamentoErros = {
+        'ALUNO JÁ AGENDADO': '⚠️ Conflito de Horário',
+        'INSTRUTOR JÁ AGENDADO': '⚠️ Instrutor Indisponível',
+        'VEÍCULO JÁ AGENDADO': '⚠️ Veículo Indisponível',
+        'excederia o limite': '⚠️ Limite de Aulas Excedido',
+        'não encontrado': '❌ Registro Não Encontrado',
+        'não está logado': '🔐 Sessão Expirada',
+        'Permissão negada': '🚫 Acesso Negado'
+    };
+    
+    // Procurar por padrões conhecidos e substituir
+    let mensagemFormatada = mensagem;
+    for (const [padrao, substituto] of Object.entries(mapeamentoErros)) {
+        if (mensagem.includes(padrao)) {
+            mensagemFormatada = mensagem.replace(padrao, substituto);
+            break;
+        }
+    }
+    
+    return mensagemFormatada;
 }
 
 // Função para confirmar ações importantes
@@ -2136,10 +2339,209 @@ function abrirModalNovaAula() {
         // Garantir que o modal esteja totalmente renderizado
         modal.offsetHeight; // Force reflow
         
+        // Aguardar um pouco mais para garantir que todos os elementos estejam prontos
+        setTimeout(() => {
+            // Inicializar eventos dos radio buttons
+            inicializarEventosAgendamento();
+            
+            // Verificar se os selects existem
+            const selectAluno = document.getElementById('aluno_id');
+            const selectInstrutor = document.getElementById('instrutor_id');
+            const selectVeiculo = document.getElementById('veiculo_id');
+            
+            console.log('🔍 Verificando elementos do modal:');
+            console.log('📋 Select aluno:', selectAluno ? 'encontrado' : 'não encontrado');
+            console.log('📋 Select instrutor:', selectInstrutor ? 'encontrado' : 'não encontrado');
+            console.log('📋 Select veículo:', selectVeiculo ? 'encontrado' : 'não encontrado');
+            
+            if (selectAluno && selectAluno.options) {
+                console.log('📋 Opções do aluno:', selectAluno.options.length);
+            }
+        }, 100);
+        
         console.log('✅ Modal de nova aula aberto!');
     } else {
         console.error('❌ Modal não encontrado!');
     }
+}
+
+function inicializarEventosAgendamento() {
+    console.log('🔧 Inicializando eventos de agendamento...');
+    
+    // Event listeners para os radio buttons de tipo de agendamento
+    const radioButtons = document.querySelectorAll('input[name="tipo_agendamento"]');
+    radioButtons.forEach(radio => {
+        radio.addEventListener('change', function() {
+            console.log('📻 Tipo de agendamento alterado:', this.value);
+            atualizarOpcoesAgendamento(this.value);
+        });
+    });
+    
+    // Event listeners para os radio buttons de posição do intervalo
+    const intervalos = document.querySelectorAll('input[name="posicao_intervalo"]');
+    intervalos.forEach(radio => {
+        radio.addEventListener('change', function() {
+            console.log('📻 Posição do intervalo alterada:', this.value);
+            atualizarHorariosCalculados();
+        });
+    });
+    
+    // Event listener para hora de início
+    const horaInicio = document.getElementById('hora_inicio');
+    if (horaInicio) {
+        horaInicio.addEventListener('input', function() {
+            console.log('🕐 Hora de início alterada:', this.value);
+            atualizarHorariosCalculados();
+        });
+    }
+}
+
+function atualizarOpcoesAgendamento(tipo) {
+    console.log('🔧 Atualizando opções para tipo:', tipo);
+    
+    const opcoesTresAulas = document.getElementById('modal_opcoesTresAulas');
+    
+    if (tipo === 'tres') {
+        // Mostrar opções de intervalo para 3 aulas
+        if (opcoesTresAulas) {
+            opcoesTresAulas.style.display = 'block';
+            console.log('✅ Opções de intervalo exibidas');
+        }
+    } else {
+        // Ocultar opções de intervalo para 1 ou 2 aulas
+        if (opcoesTresAulas) {
+            opcoesTresAulas.style.display = 'none';
+            console.log('✅ Opções de intervalo ocultadas');
+        }
+    }
+    
+    // Atualizar horários calculados se existir o elemento
+    atualizarHorariosCalculados();
+}
+
+function atualizarHorariosCalculados() {
+    const tipoAgendamento = document.querySelector('input[name="tipo_agendamento"]:checked');
+    const posicaoIntervalo = document.querySelector('input[name="posicao_intervalo"]:checked');
+    const horaInicio = document.getElementById('hora_inicio');
+    
+    if (!tipoAgendamento || !horaInicio || !horaInicio.value) {
+        return;
+    }
+    
+    const horaInicioValue = horaInicio.value;
+    const tipo = tipoAgendamento.value;
+    const posicao = posicaoIntervalo ? posicaoIntervalo.value : 'depois';
+    
+    console.log('🕐 Calculando horários:', { tipo, posicao, horaInicio: horaInicioValue });
+    
+    // Calcular horários baseado no tipo
+    let horarios = [];
+    
+    switch (tipo) {
+        case 'unica':
+            horarios = [{
+                inicio: horaInicioValue,
+                fim: adicionarMinutos(horaInicioValue, 50),
+                duracao: '50 min'
+            }];
+            break;
+            
+        case 'duas':
+            horarios = [
+                {
+                    inicio: horaInicioValue,
+                    fim: adicionarMinutos(horaInicioValue, 50),
+                    duracao: '50 min'
+                },
+                {
+                    inicio: adicionarMinutos(horaInicioValue, 50),
+                    fim: adicionarMinutos(horaInicioValue, 100),
+                    duracao: '50 min'
+                }
+            ];
+            break;
+            
+        case 'tres':
+            if (posicao === 'depois') {
+                // 2 consecutivas + 30min intervalo + 1 aula
+                horarios = [
+                    {
+                        inicio: horaInicioValue,
+                        fim: adicionarMinutos(horaInicioValue, 50),
+                        duracao: '50 min'
+                    },
+                    {
+                        inicio: adicionarMinutos(horaInicioValue, 50),
+                        fim: adicionarMinutos(horaInicioValue, 100),
+                        duracao: '50 min'
+                    },
+                    {
+                        inicio: adicionarMinutos(horaInicioValue, 130),
+                        fim: adicionarMinutos(horaInicioValue, 180),
+                        duracao: '50 min'
+                    }
+                ];
+            } else {
+                // 1 aula + 30min intervalo + 2 consecutivas
+                horarios = [
+                    {
+                        inicio: horaInicioValue,
+                        fim: adicionarMinutos(horaInicioValue, 50),
+                        duracao: '50 min'
+                    },
+                    {
+                        inicio: adicionarMinutos(horaInicioValue, 80),
+                        fim: adicionarMinutos(horaInicioValue, 130),
+                        duracao: '50 min'
+                    },
+                    {
+                        inicio: adicionarMinutos(horaInicioValue, 160),
+                        fim: adicionarMinutos(horaInicioValue, 210),
+                        duracao: '50 min'
+                    }
+                ];
+            }
+            break;
+    }
+    
+    console.log('🕐 Horários calculados:', horarios);
+    
+    // Atualizar elementos HTML se existirem
+    const containerHorarios = document.getElementById('horarios-calculados');
+    if (containerHorarios) {
+        containerHorarios.innerHTML = '';
+        
+        horarios.forEach((horario, index) => {
+            const card = document.createElement('div');
+            card.className = 'card mb-2';
+            card.innerHTML = `
+                <div class="card-body p-2">
+                    <h6 class="card-title mb-1">${index + 1}ª Aula</h6>
+                    <p class="card-text mb-0">
+                        <strong>${horario.inicio}</strong> - <strong>${horario.fim}</strong>
+                        <small class="text-muted">(${horario.duracao})</small>
+                    </p>
+                </div>
+            `;
+            containerHorarios.appendChild(card);
+        });
+        
+        // Adicionar banner de intervalo se for 3 aulas
+        if (tipo === 'tres' && horarios.length === 3) {
+            const bannerIntervalo = document.createElement('div');
+            bannerIntervalo.className = 'alert alert-info text-center py-2 mb-2';
+            bannerIntervalo.innerHTML = '<strong>INTERVALO DE 30 MINUTOS ENTRE BLOCOS DE AULAS</strong>';
+            containerHorarios.insertBefore(bannerIntervalo, containerHorarios.children[1]);
+        }
+    }
+}
+
+function adicionarMinutos(hora, minutos) {
+    const [h, m] = hora.split(':').map(Number);
+    const totalMinutos = h * 60 + m + minutos;
+    const novaHora = Math.floor(totalMinutos / 60);
+    const novoMinuto = totalMinutos % 60;
+    return `${novaHora.toString().padStart(2, '0')}:${novoMinuto.toString().padStart(2, '0')}`;
 }
 
 function fecharModalNovaAula() {
@@ -2158,35 +2560,98 @@ function fecharModalNovaAula() {
 function carregarInstrutoresDisponiveis() {
     console.log('🔧 Carregando instrutores disponíveis...');
     
-    // Por enquanto, vamos usar dados mockados para evitar problemas de autenticação
     const selectInstrutor = document.getElementById('instrutor_id');
-    if (selectInstrutor) {
-        selectInstrutor.innerHTML = '<option value="">Selecione o instrutor</option>';
-        
-        // Dados mockados temporários
-        const instrutoresMock = [
-            { id: 1, nome: 'João Silva', categoria_habilitacao: 'A, B, C' },
-            { id: 2, nome: 'Maria Santos', categoria_habilitacao: 'A, B' },
-            { id: 3, nome: 'Pedro Oliveira', categoria_habilitacao: 'B, C, D' }
-        ];
-        
-        instrutoresMock.forEach(instrutor => {
+    if (!selectInstrutor) {
+        console.error('❌ Select de instrutor não encontrado!');
+        return;
+    }
+    
+    // Limpar opções existentes
+    selectInstrutor.innerHTML = '<option value="">Selecione o instrutor</option>';
+    
+    // Fazer chamada real para a API
+    fetch('api/instrutores.php', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        credentials: 'include' // Incluir cookies de sessão
+    })
+        .then(response => {
+            console.log('📡 Resposta da API instrutores:', response.status);
+            console.log('📡 Headers da resposta:', response.headers);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('📄 Dados recebidos da API instrutores:', data);
+            
+            // Verificar se os dados são válidos
+            if (data && data.success && Array.isArray(data.data)) {
+                data.data.forEach(instrutor => {
+                    const option = document.createElement('option');
+                    option.value = instrutor.id;
+                    
+                    // Construir texto com nome e categorias
+                    let texto = instrutor.nome || 'Nome não informado';
+                    if (instrutor.categorias_json) {
+                        try {
+                            const categorias = JSON.parse(instrutor.categorias_json);
+                            if (Array.isArray(categorias) && categorias.length > 0) {
+                                texto += ` - ${categorias.join(', ')}`;
+                            }
+                        } catch (e) {
+                            console.warn('⚠️ Erro ao parsear categorias:', e);
+                        }
+                    }
+                    
+                    option.textContent = texto;
+                    selectInstrutor.appendChild(option);
+                });
+                console.log('✅ Instrutores carregados:', data.data.length);
+            } else {
+                console.warn('⚠️ Dados de instrutores inválidos ou vazios');
+                
+                // Fallback: adicionar opção de erro
+                const option = document.createElement('option');
+                option.value = '';
+                option.textContent = 'Nenhum instrutor disponível';
+                option.disabled = true;
+                selectInstrutor.appendChild(option);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar instrutores:', error);
+            
+            // Fallback: adicionar opção de erro
             const option = document.createElement('option');
-            option.value = instrutor.id;
-            option.textContent = `${instrutor.nome} - ${instrutor.categoria_habilitacao}`;
+            option.value = '';
+            option.textContent = 'Erro ao carregar instrutores';
+            option.disabled = true;
             selectInstrutor.appendChild(option);
         });
-        
-        console.log('✅ Instrutores carregados (mock):', instrutoresMock.length);
-    }
 }
 
 function carregarVeiculosDisponiveis() {
     console.log('🔧 Carregando veículos disponíveis...');
     
-    fetch('api/veiculos.php')
+    fetch('api/veiculos.php', {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        credentials: 'include' // Incluir cookies de sessão
+    })
         .then(response => {
             console.log('📡 Resposta da API veículos:', response.status);
+            console.log('📡 Headers da resposta:', response.headers);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
             return response.json();
         })
         .then(data => {
@@ -2234,6 +2699,27 @@ function salvarNovaAula(event) {
     const formData = new FormData(event.target);
     const dados = Object.fromEntries(formData.entries());
     
+    // Debug: mostrar dados que serão enviados
+    console.log('📋 Dados do formulário:', dados);
+    
+    // Verificar se tipo_agendamento está sendo enviado
+    const tipoAgendamento = document.querySelector('input[name="tipo_agendamento"]:checked');
+    if (tipoAgendamento) {
+        dados.tipo_agendamento = tipoAgendamento.value;
+        console.log('📋 Tipo de agendamento:', tipoAgendamento.value);
+    } else {
+        console.warn('⚠️ Nenhum tipo de agendamento selecionado!');
+    }
+    
+    // Verificar posição do intervalo para 3 aulas
+    const posicaoIntervalo = document.querySelector('input[name="posicao_intervalo"]:checked');
+    if (posicaoIntervalo) {
+        dados.posicao_intervalo = posicaoIntervalo.value;
+        console.log('📋 Posição do intervalo:', posicaoIntervalo.value);
+    }
+    
+    console.log('📋 Dados finais para envio:', dados);
+    
     // Mostrar loading no botão
     const btnSalvar = event.target.querySelector('button[type="submit"]');
     const textoOriginal = btnSalvar.innerHTML;
@@ -2259,12 +2745,13 @@ function salvarNovaAula(event) {
                 window.location.reload();
             }, 1500);
         } else {
-            mostrarAlerta('Erro ao agendar aula: ' + (data.mensagem || 'Erro desconhecido'), 'danger');
+            const mensagemErro = data.mensagem || 'Erro desconhecido';
+            mostrarAlerta(mensagemErro, 'danger');
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        mostrarAlerta('Erro ao agendar aula. Verifique o console para mais detalhes.', 'danger');
+        mostrarAlerta('Erro de conexão. Verifique sua internet e tente novamente.', 'danger');
     })
     .finally(() => {
         // Restaurar botão
@@ -2596,4 +3083,5 @@ function salvarAluno() {
         btnSalvar.disabled = false;
     });
 }
+</script>
 </script>

@@ -169,8 +169,14 @@ try {
     
     // 1. Verificar limite diário do instrutor (máximo 3 aulas)
     $aulas_hoje = $db->fetchAll("SELECT COUNT(*) as total FROM aulas WHERE instrutor_id = ? AND data_aula = ? AND status != 'cancelada'", [$instrutor_id, $data_aula]);
-    $total_aulas_existentes = $aulas_hoje[0]['total'];
+    $total_aulas_existentes = $aulas_hoje[0]['total'] ?? 0;
     $total_aulas_novas = count($horarios_aulas);
+    
+    // Debug: log dos valores
+    error_log("Debug agendamento - Instrutor ID: $instrutor_id, Data: $data_aula");
+    error_log("Debug agendamento - Total aulas existentes: $total_aulas_existentes");
+    error_log("Debug agendamento - Total aulas novas: $total_aulas_novas");
+    error_log("Debug agendamento - Horários calculados: " . json_encode($horarios_aulas));
     
     if (($total_aulas_existentes + $total_aulas_novas) > 3) {
         throw new Exception("Instrutor já possui {$total_aulas_existentes} aulas agendadas. Com {$total_aulas_novas} novas aulas, excederia o limite de 3 aulas por dia.");
@@ -374,8 +380,8 @@ try {
                      'hora_fim' => date('H:i:s', strtotime($hora_inicio) + (130 * 60))
                  ];
                  $horarios[] = [
-                     'hora_inicio' => date('H:i:s', strtotime($hora_inicio) + (130 * 60)),
-                     'hora_fim' => date('H:i:s', strtotime($hora_inicio) + (180 * 60))
+                     'hora_inicio' => date('H:i:s', strtotime($hora_inicio) + (160 * 60)),
+                     'hora_fim' => date('H:i:s', strtotime($hora_inicio) + (210 * 60))
                  ];
              }
              break;
