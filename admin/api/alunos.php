@@ -320,14 +320,15 @@ try {
             // Não precisamos mais determinar tipo_servico baseado em categoria_cnh
             // Agora usamos apenas operacoes
             
-            // Verificar se CPF já existe
-            $cpfExistente = $db->findWhere('alunos', 'cpf = ? AND id != ?', [$data['cpf'], $data['id'] ?? 0], '*', null, 1);
+            // Verificar se CPF já existe (exceto para o próprio aluno se for edição)
+            $idExcluir = isset($data['id']) && !empty($data['id']) ? $data['id'] : 0;
+            $cpfExistente = $db->findWhere('alunos', 'cpf = ? AND id != ?', [$data['cpf'], $idExcluir], '*', null, 1);
             if ($cpfExistente && is_array($cpfExistente)) {
                 $cpfExistente = $cpfExistente[0]; // Pegar o primeiro resultado
             }
             if ($cpfExistente) {
                 if (LOG_ENABLED) {
-                    error_log('[API Alunos] CPF já existe: ' . $data['cpf']);
+                    error_log('[API Alunos] CPF já existe: ' . $data['cpf'] . ' - ID encontrado: ' . $cpfExistente['id'] . ' - ID excluído: ' . $idExcluir);
                 }
                 http_response_code(400);
                 echo json_encode(['success' => false, 'error' => 'CPF já cadastrado']);
@@ -365,6 +366,7 @@ try {
                 'status' => $data['status'] ?? 'ativo',
                 'observacoes' => $data['observacoes'] ?? '',
                 'operacoes' => isset($data['operacoes']) ? json_encode($data['operacoes']) : null,
+                'atividade_remunerada' => isset($data['atividade_remunerada']) ? (int)$data['atividade_remunerada'] : 0,
                 'criado_em' => date('Y-m-d H:i:s')
             ];
             
@@ -555,6 +557,11 @@ try {
             // Processar operações se existirem
             if (isset($alunoData['operacoes'])) {
                 $alunoData['operacoes'] = json_encode($alunoData['operacoes']);
+            }
+            
+            // Processar atividade remunerada
+            if (isset($alunoData['atividade_remunerada'])) {
+                $alunoData['atividade_remunerada'] = (int)$alunoData['atividade_remunerada'];
             }
             
             if (LOG_ENABLED) {

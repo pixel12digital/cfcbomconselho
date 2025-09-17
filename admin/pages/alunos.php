@@ -941,7 +941,7 @@ body.modal-open #modalAluno .modal-dialog {
 <!-- Tabela de Alunos -->
 <div class="card shadow">
     <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Alunos</h5>
+        <h5 class="mb-0 text-secondary"><i class="fas fa-list me-2"></i>Lista de Alunos</h5>
     </div>
     <div class="card-body">
         <div class="table-responsive">
@@ -1005,6 +1005,10 @@ body.modal-open #modalAluno .modal-dialog {
                                             case 'mudanca':
                                                 $badgeClass = 'bg-warning';
                                                 $tipoText = '🔄';
+                                                break;
+                                            case 'aula_avulsa':
+                                                $badgeClass = 'bg-info';
+                                                $tipoText = '📚';
                                                 break;
                                             default:
                                                 $badgeClass = 'bg-secondary';
@@ -1142,6 +1146,17 @@ body.modal-open #modalAluno .modal-dialog {
                                         <option value="inativo">Inativo</option>
                                         <option value="concluido">Concluído</option>
                                     </select>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="mb-1">
+                                    <label for="atividade_remunerada" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Atividade Remunerada</label>
+                                    <div class="form-check mt-2">
+                                        <input class="form-check-input" type="checkbox" id="atividade_remunerada" name="atividade_remunerada" value="1" style="font-size: 0.9rem;">
+                                        <label class="form-check-label" for="atividade_remunerada" style="font-size: 0.85rem;">
+                                            <i class="fas fa-briefcase me-1"></i>CNH com atividade remunerada
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1533,10 +1548,50 @@ const categoriasPorTipo = {
         { value: 'C', text: 'C - Veículos de Carga', desc: 'Mudança de B para C (veículos de carga acima de 3.500kg)' },
         { value: 'D', text: 'D - Veículos de Passageiros', desc: 'Mudança de B para D (veículos de transporte de passageiros)' },
         { value: 'E', text: 'E - Combinação de Veículos', desc: 'Mudança de B para E (combinação de veículos - carreta, bitrem)' }
+    ],
+    'aula_avulsa': [
+        { value: 'A', text: 'A - Motocicletas', desc: 'Aula avulsa para categoria A (motocicletas, ciclomotores e triciclos)' },
+        { value: 'B', text: 'B - Automóveis', desc: 'Aula avulsa para categoria B (automóveis, caminhonetes e utilitários)' },
+        { value: 'C', text: 'C - Veículos de Carga', desc: 'Aula avulsa para categoria C (veículos de carga acima de 3.500kg)' },
+        { value: 'D', text: 'D - Veículos de Passageiros', desc: 'Aula avulsa para categoria D (veículos de transporte de passageiros)' },
+        { value: 'E', text: 'E - Combinação de Veículos', desc: 'Aula avulsa para categoria E (combinação de veículos - carreta, bitrem)' }
     ]
 };
 
 document.addEventListener('DOMContentLoaded', function() {
+        // CORREÇÃO DE DUPLICAÇÃO - Temporariamente desabilitada para teste
+        /*
+        setTimeout(function() {
+            const tabela = document.getElementById('tabelaAlunos');
+            if (tabela) {
+                const linhas = tabela.querySelectorAll('tbody tr');
+                const idsEncontrados = [];
+                const linhasParaRemover = [];
+                
+                linhas.forEach((linha, index) => {
+                    const id = linha.querySelector('td:first-child')?.textContent?.trim();
+                    if (id) {
+                        if (idsEncontrados.includes(id)) {
+                            console.log('🔧 Removendo linha duplicada para ID:', id);
+                            linhasParaRemover.push(linha);
+                        } else {
+                            idsEncontrados.push(id);
+                        }
+                    }
+                });
+                
+                // Remover linhas duplicadas
+                linhasParaRemover.forEach(linha => {
+                    linha.remove();
+                });
+                
+                if (linhasParaRemover.length > 0) {
+                    console.log('✅ Duplicatas removidas:', linhasParaRemover.length);
+                }
+            }
+        }, 100);
+        */
+    
     // Inicializar máscaras
     inicializarMascarasAluno();
     
@@ -1671,7 +1726,8 @@ function editarAluno(id) {
     console.log(`📡 URL completa: ${window.location.origin}/cfc-bom-conselho/admin/api/alunos.php?id=${id}`);
     
     // Buscar dados do aluno (usando nova API funcional)
-    fetch(`api/alunos.php?id=${id}`)
+    const timestamp = new Date().getTime();
+    fetch(`api/alunos.php?id=${id}&t=${timestamp}`)
         .then(response => {
             console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
             console.log(`📨 URL da resposta: ${response.url}`);
@@ -1719,9 +1775,10 @@ function editarAluno(id) {
                 // Preencher formulário DEPOIS com delay para garantir que o modal esteja renderizado
                 setTimeout(() => {
                     console.log('🔄 Chamando preencherFormularioAluno com dados:', data.aluno);
+                    console.log('🔄 Timestamp:', new Date().toISOString());
                     preencherFormularioAluno(data.aluno);
                     console.log('✅ Formulário preenchido - função executada');
-                }, 100);
+                }, 200); // Aumentar delay para 200ms
                 
             } else {
                 console.error('❌ Success = false, erro:', data.error);
@@ -1763,24 +1820,50 @@ function preencherFormularioAluno(aluno) {
         'email': aluno.email || '',
         'telefone': aluno.telefone || '',
         'cfc_id': aluno.cfc_id || '',
-        'status': aluno.status || 'ativo'
+        'status': aluno.status || 'ativo',
+        'atividade_remunerada': aluno.atividade_remunerada || 0
     };
     
     console.log('📝 Campos a serem preenchidos:', campos);
     
     // Preencher cada campo se ele existir
     console.log('🔍 Verificando elementos do formulário...');
+    console.log('🔍 Modal visível?', document.getElementById('modalAluno')?.style.display);
+    console.log('🔍 Formulário existe?', document.getElementById('formAluno') ? 'Sim' : 'Não');
+    
     Object.keys(campos).forEach(campoId => {
         const elemento = document.getElementById(campoId);
         console.log(`🔍 Campo ${campoId}:`, elemento ? '✅ Existe' : '❌ Não existe');
         if (elemento) {
+            const valorAnterior = elemento.value;
             elemento.value = campos[campoId];
-            console.log(`✅ Campo ${campoId} preenchido com valor:`, campos[campoId]);
-            console.log(`✅ Valor atual do campo ${campoId}:`, elemento.value);
+            console.log(`✅ Campo ${campoId}:`);
+            console.log(`  - Valor anterior: "${valorAnterior}"`);
+            console.log(`  - Valor novo: "${campos[campoId]}"`);
+            console.log(`  - Valor atual: "${elemento.value}"`);
+            
+            // Verificar se o valor foi realmente definido (comparação mais robusta)
+            if (String(elemento.value).trim() !== String(campos[campoId]).trim()) {
+                console.error(`❌ ERRO: Campo ${campoId} não foi preenchido corretamente!`);
+                console.error(`  - Esperado: "${campos[campoId]}"`);
+                console.error(`  - Atual: "${elemento.value}"`);
+            } else {
+                console.log(`✅ Campo ${campoId} preenchido corretamente`);
+            }
         } else {
             console.warn(`⚠️ Campo ${campoId} não encontrado no DOM`);
         }
     });
+    
+    // Tratamento especial para checkbox de atividade remunerada
+    const checkboxAtividade = document.getElementById('atividade_remunerada');
+    if (checkboxAtividade) {
+        const valorAtividade = campos['atividade_remunerada'] == 1 || campos['atividade_remunerada'] === '1' || campos['atividade_remunerada'] === true;
+        checkboxAtividade.checked = valorAtividade;
+        console.log(`✅ Checkbox atividade_remunerada:`, valorAtividade ? 'Marcado' : 'Desmarcado');
+    } else {
+        console.warn(`⚠️ Checkbox atividade_remunerada não encontrado no DOM`);
+    }
     
     // Preencher tipo de serviço e categoria CNH
     if (aluno.categoria_cnh) {
@@ -1878,7 +1961,8 @@ function visualizarAluno(id) {
     console.log(`📡 Fazendo requisição para api/alunos.php?id=${id}`);
 
     // Buscar dados do aluno (usando nova API funcional)
-    fetch(`api/alunos.php?id=${id}`)
+    const timestamp = new Date().getTime();
+    fetch(`api/alunos.php?id=${id}&t=${timestamp}`)
         .then(response => {
             console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
             console.log(`📨 URL da resposta: ${response.url}`);
@@ -1971,6 +2055,7 @@ function preencherModalVisualizacao(aluno) {
                 <p><strong>Nacionalidade:</strong> ${aluno.nacionalidade || 'Não informado'}</p>
                 <p><strong>E-mail:</strong> ${aluno.email || 'Não informado'}</p>
                 <p><strong>Telefone:</strong> ${aluno.telefone || 'Não informado'}</p>
+                <p><strong>Atividade Remunerada:</strong> ${aluno.atividade_remunerada == 1 ? '<span class="badge bg-success"><i class="fas fa-briefcase me-1"></i>Sim</span>' : '<span class="badge bg-secondary"><i class="fas fa-user me-1"></i>Não</span>'}</p>
             </div>
             <div class="col-md-6">
                 <h6><i class="fas fa-graduation-cap me-2"></i>CFC</h6>
@@ -2159,7 +2244,8 @@ function excluirAluno(id) {
             loading.showGlobal('Excluindo aluno...');
         }
         
-        fetch(`api/alunos.php`, {
+        const timestamp = new Date().getTime();
+        fetch(`api/alunos.php?t=${timestamp}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -3142,6 +3228,7 @@ function salvarAluno() {
         cfc_id: formData.get('cfc_id'),
         // Removido: tipo_servico e categoria_cnh - agora usamos apenas operacoes
         operacoes: operacoes, // Adicionar operações
+        atividade_remunerada: formData.get('atividade_remunerada') ? 1 : 0,
         cep: formData.get('cep'),
         endereco: formData.get('logradouro'), // Mapear logradouro para endereco
         numero: formData.get('numero'),
@@ -3165,7 +3252,8 @@ function salvarAluno() {
     console.log('📤 Ação:', acao);
     console.log('📤 Aluno ID:', alunoId);
     
-    fetch('api/alunos.php', {
+    const timestamp = new Date().getTime();
+    fetch(`api/alunos.php?t=${timestamp}`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -3239,6 +3327,7 @@ function adicionarOperacao() {
                         <option value="primeira_habilitacao">🏍️ Primeira Habilitação</option>
                         <option value="adicao">➕ Adição de Categoria</option>
                         <option value="mudanca">🔄 Mudança de Categoria</option>
+                        <option value="aula_avulsa">📚 Aula Avulsa</option>
                     </select>
                 </div>
                 <div class="col-md-6">
@@ -3395,6 +3484,7 @@ function carregarOperacoesExistentes(operacoes) {
                             <option value="primeira_habilitacao" ${operacao.tipo === 'primeira_habilitacao' ? 'selected' : ''}>🏍️ Primeira Habilitação</option>
                             <option value="adicao" ${operacao.tipo === 'adicao' ? 'selected' : ''}>➕ Adição de Categoria</option>
                             <option value="mudanca" ${operacao.tipo === 'mudanca' ? 'selected' : ''}>🔄 Mudança de Categoria</option>
+                            <option value="aula_avulsa" ${operacao.tipo === 'aula_avulsa' ? 'selected' : ''}>📚 Aula Avulsa</option>
                         </select>
                     </div>
                     <div class="col-md-6">
@@ -3434,5 +3524,4 @@ function carregarOperacoesExistentes(operacoes) {
         }, 100);
     });
 }
-</script>
 </script>

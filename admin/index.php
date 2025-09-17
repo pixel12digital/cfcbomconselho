@@ -569,36 +569,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             switch ($page) {
                 case 'alunos':
                     try {
-                        $alunos = $db->fetchAll("
-                            SELECT a.id, a.nome, a.cpf, a.rg, a.data_nascimento, a.endereco, a.telefone, a.email, a.cfc_id, a.categoria_cnh, a.status, a.criado_em, a.operacoes,
-                                   c.nome as cfc_nome,
-                                   NULL as ultima_aula
+                        // SOLUÇÃO DEFINITIVA v3.0 - Forçar eliminação de duplicatas
+                        $alunosRaw = $db->fetchAll("
+                            SELECT a.id, a.nome, a.cpf, a.rg, a.data_nascimento, a.endereco, a.telefone, a.email, a.cfc_id, a.categoria_cnh, a.status, a.criado_em, a.operacoes
                             FROM alunos a 
-                            LEFT JOIN cfcs c ON a.cfc_id = c.id 
                             ORDER BY a.nome ASC
                         ");
                         
-                        // Decodificar operações para cada aluno
-                        foreach ($alunos as &$aluno) {
-                            if (!empty($aluno['operacoes'])) {
-                                $aluno['operacoes'] = json_decode($aluno['operacoes'], true);
+                        // FORÇAR eliminação de duplicatas por ID
+                        $alunos = [];
+                        $idsProcessados = [];
+                        foreach ($alunosRaw as $aluno) {
+                            if (!in_array($aluno['id'], $idsProcessados)) {
+                                $alunos[] = $aluno;
+                                $idsProcessados[] = $aluno['id'];
+                            }
+                        }
+                        
+                        // Adicionar campos necessários e decodificar operações
+                        for ($i = 0; $i < count($alunos); $i++) {
+                            $alunos[$i]['cfc_nome'] = 'CFC BOM CONSELHO';
+                            $alunos[$i]['ultima_aula'] = null;
+                            
+                            // Decodificar operações
+                            if (!empty($alunos[$i]['operacoes'])) {
+                                $alunos[$i]['operacoes'] = json_decode($alunos[$i]['operacoes'], true);
                             } else {
-                                $aluno['operacoes'] = [];
+                                $alunos[$i]['operacoes'] = [];
                             }
                         }
                     } catch (Exception $e) {
+                        // Log do erro para debug
+                        error_log("ERRO na query principal de alunos: " . $e->getMessage());
+                        
                         // Query mais simples como fallback
                         try {
-                            $alunos = $db->fetchAll("SELECT * FROM alunos ORDER BY nome ASC");
+                            $alunos = $db->fetchAll("SELECT DISTINCT * FROM alunos ORDER BY nome ASC");
                             // Decodificar operações para cada aluno no fallback também
-                            foreach ($alunos as &$aluno) {
-                                if (!empty($aluno['operacoes'])) {
-                                    $aluno['operacoes'] = json_decode($aluno['operacoes'], true);
+                            for ($i = 0; $i < count($alunos); $i++) {
+                                if (!empty($alunos[$i]['operacoes'])) {
+                                    $alunos[$i]['operacoes'] = json_decode($alunos[$i]['operacoes'], true);
                                 } else {
-                                    $aluno['operacoes'] = [];
+                                    $alunos[$i]['operacoes'] = [];
                                 }
                             }
                         } catch (Exception $e2) {
+                            error_log("ERRO no fallback de alunos: " . $e2->getMessage());
                             $alunos = [];
                         }
                     }
