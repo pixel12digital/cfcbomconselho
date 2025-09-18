@@ -993,7 +993,10 @@ body.modal-open #modalAluno .modal-dialog {
                                         $badgeClass = '';
                                         $tipoText = '';
                                         
-                                        switch ($operacao['tipo']) {
+                                        $tipo = $operacao['tipo'] ?? 'desconhecido';
+                                        $categoria = $operacao['categoria'] ?? $operacao['categoria_cnh'] ?? 'N/A';
+                                        
+                                        switch ($tipo) {
                                             case 'primeira_habilitacao':
                                                 $badgeClass = 'bg-primary';
                                                 $tipoText = '🏍️';
@@ -1016,8 +1019,8 @@ body.modal-open #modalAluno .modal-dialog {
                                         }
                                         
                                         if ($index > 0) echo '<br>';
-                                        echo '<span class="badge ' . $badgeClass . ' me-1" title="' . ucfirst(str_replace('_', ' ', $operacao['tipo'])) . '">' . 
-                                             $tipoText . ' ' . htmlspecialchars($operacao['categoria']) . '</span>';
+                                        echo '<span class="badge ' . $badgeClass . ' me-1" title="' . ucfirst(str_replace('_', ' ', $tipo)) . '">' . 
+                                             $tipoText . ' ' . htmlspecialchars($categoria) . '</span>';
                                     }
                                 } else {
                                     // Fallback para categoria antiga se não houver operações
@@ -1101,7 +1104,7 @@ body.modal-open #modalAluno .modal-dialog {
                 </div>
                 <div class="modal-body" style="overflow-y: auto; padding: 1rem; flex: 1; min-height: 0; max-height: calc(90vh - 140px);">
                     <input type="hidden" name="acao" id="acaoAluno" value="criar">
-                    <input type="hidden" name="aluno_id" id="aluno_id" value="">
+                    <input type="hidden" name="aluno_id" id="aluno_id_hidden" value="">
                     
                     <div class="container-fluid" style="padding: 0;">
                         <!-- Seção 1: Informações Pessoais -->
@@ -1451,7 +1454,9 @@ body.modal-open #modalAluno .modal-dialog {
                                 <option value="<?php echo intval($aluno['id']); ?>" data-nome="<?php echo htmlspecialchars($aluno['nome']); ?>">
                                     <?php echo htmlspecialchars($aluno['nome']); ?> - <?php 
                                     if (!empty($aluno['operacoes']) && is_array($aluno['operacoes'])) {
-                                        $categorias = array_map(function($op) { return $op['categoria']; }, $aluno['operacoes']);
+                                        $categorias = array_map(function($op) { 
+                                            return $op['categoria'] ?? $op['categoria_cnh'] ?? 'N/A'; 
+                                        }, $aluno['operacoes']);
                                         echo implode(', ', $categorias);
                                     } else {
                                         echo htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A');
@@ -1701,6 +1706,30 @@ function inicializarModalAluno() {
     });
 }
 
+function abrirModalEdicao() {
+    console.log('🚀 Abrindo modal para edição...');
+    const modal = document.getElementById('modalAluno');
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden'; // Prevenir scroll do body
+        
+        // Configurar para edição
+        const acaoAluno = document.getElementById('acaoAluno');
+        if (acaoAluno) {
+            acaoAluno.value = 'editar';
+            console.log('✅ Campo acaoAluno definido como: editar');
+        }
+        
+        const modalTitle = document.getElementById('modalTitle');
+        if (modalTitle) {
+            modalTitle.innerHTML = '<i class="fas fa-user-edit me-2"></i>Editar Aluno';
+        }
+        
+        console.log('🔍 Modal aberto - Editando? true');
+        console.log('📝 Formulário mantido para edição');
+    }
+}
+
 function editarAluno(id) {
     console.log('🚀 editarAluno chamada com ID:', id);
     
@@ -1708,7 +1737,7 @@ function editarAluno(id) {
     const modalElement = document.getElementById('modalAluno');
     const modalTitle = document.getElementById('modalTitle');
     const acaoAluno = document.getElementById('acaoAluno');
-    const alunoId = document.getElementById('aluno_id');
+    const alunoId = document.getElementById('aluno_id_hidden');
     
     console.log('🔍 Verificando elementos do DOM:');
     console.log('  modalAluno:', modalElement ? '✅ Existe' : '❌ Não existe');
@@ -1768,9 +1797,9 @@ function editarAluno(id) {
                     console.log('✅ Campo aluno_id definido como:', id);
                 }
                 
-                // Abrir modal customizado PRIMEIRO
-                abrirModalAluno();
-                console.log('🪟 Modal customizado aberto!');
+                // Abrir modal customizado para edição
+                abrirModalEdicao();
+                console.log('🪟 Modal de edição aberto!');
                 
                 // Preencher formulário DEPOIS com delay para garantir que o modal esteja renderizado
                 setTimeout(() => {
@@ -1806,7 +1835,7 @@ function preencherFormularioAluno(aluno) {
     console.log('🔍 Modal status:', modal ? (modal.style.display === 'block' ? '✅ Aberto' : '❌ Fechado') : '❌ Não encontrado');
     
     // Definir ID do aluno para edição
-    const alunoIdField = document.getElementById('aluno_id');
+    const alunoIdField = document.getElementById('aluno_id_hidden');
     if (alunoIdField) alunoIdField.value = aluno.id || '';
     
     // Preencher campos básicos com verificações de segurança
@@ -2558,6 +2587,48 @@ function confirmarAcao(mensagem, acao) {
 
 // FUNÇÕES PARA MODAL DE AGENDAMENTO
 
+function resetarFormularioAgendamento() {
+    console.log('🔄 Resetando formulário de agendamento...');
+    
+    // Resetar todos os selects para o primeiro item (placeholder)
+    const selectInstrutor = document.getElementById('instrutor_id');
+    if (selectInstrutor) {
+        selectInstrutor.selectedIndex = 0;
+        console.log('✅ Select instrutor resetado para:', selectInstrutor.value);
+    }
+    
+    const selectVeiculo = document.getElementById('veiculo_id');
+    if (selectVeiculo) {
+        selectVeiculo.selectedIndex = 0;
+        console.log('✅ Select veículo resetado para:', selectVeiculo.value);
+    }
+    
+    // Resetar outros campos
+    const tipoAulaSelect = document.getElementById('tipo_aula');
+    if (tipoAulaSelect) {
+        tipoAulaSelect.selectedIndex = 0;
+    }
+    
+    // Resetar campos de data e hora
+    const dataAula = document.getElementById('data_aula');
+    if (dataAula) {
+        dataAula.value = '';
+    }
+    
+    const horaInicio = document.getElementById('hora_inicio');
+    if (horaInicio) {
+        horaInicio.value = '';
+    }
+    
+    // Resetar observações
+    const observacoes = document.getElementById('observacoes');
+    if (observacoes) {
+        observacoes.value = '';
+    }
+    
+    console.log('✅ Formulário de agendamento resetado');
+}
+
 function abrirModalNovaAula() {
     console.log('🚀 Abrindo modal de nova aula...');
     const modal = document.getElementById('modal-nova-aula');
@@ -2570,6 +2641,9 @@ function abrirModalNovaAula() {
         
         // Aguardar um pouco mais para garantir que todos os elementos estejam prontos
         setTimeout(() => {
+            // Resetar formulário primeiro
+            resetarFormularioAgendamento();
+            
             // Inicializar eventos dos radio buttons
             inicializarEventosAgendamento();
             
@@ -2841,6 +2915,9 @@ function carregarInstrutoresDisponiveis() {
                     selectInstrutor.appendChild(option);
                 });
                 console.log('✅ Instrutores carregados:', data.data.length);
+                
+                // Garantir que nenhum item seja selecionado automaticamente
+                selectInstrutor.selectedIndex = 0; // Sempre selecionar o primeiro item (placeholder)
             } else {
                 console.warn('⚠️ Dados de instrutores inválidos ou vazios');
                 
@@ -2900,6 +2977,9 @@ function carregarVeiculosDisponiveis() {
                         selectVeiculo.appendChild(option);
                     });
                     console.log('✅ Veículos carregados:', data.data.length);
+                    
+                    // Garantir que nenhum item seja selecionado automaticamente
+                    selectVeiculo.selectedIndex = 0; // Sempre selecionar o primeiro item (placeholder)
                 } else {
                     console.warn('⚠️ Dados de veículos inválidos ou vazios');
                     const option = document.createElement('option');
@@ -2948,6 +3028,39 @@ function salvarNovaAula(event) {
     }
     
     console.log('📋 Dados finais para envio:', dados);
+    
+    // Validar se IDs são válidos antes de enviar
+    const instrutorId = dados.instrutor_id;
+    const veiculoId = dados.veiculo_id;
+    
+    if (!instrutorId || instrutorId === '' || instrutorId === '0') {
+        alert('Por favor, selecione um instrutor válido.');
+        return;
+    }
+    
+    if (dados.tipo_aula !== 'teorica' && (!veiculoId || veiculoId === '' || veiculoId === '0')) {
+        alert('Por favor, selecione um veículo válido para aulas práticas.');
+        return;
+    }
+    
+    // Verificar se não está enviando IDs inexistentes (como 1)
+    const selectInstrutor = document.getElementById('instrutor_id');
+    const instrutorOption = selectInstrutor.querySelector(`option[value="${instrutorId}"]`);
+    if (!instrutorOption || instrutorOption.disabled) {
+        alert('O instrutor selecionado não é válido. Por favor, selecione outro instrutor.');
+        return;
+    }
+    
+    if (dados.tipo_aula !== 'teorica') {
+        const selectVeiculo = document.getElementById('veiculo_id');
+        const veiculoOption = selectVeiculo.querySelector(`option[value="${veiculoId}"]`);
+        if (!veiculoOption || veiculoOption.disabled) {
+            alert('O veículo selecionado não é válido. Por favor, selecione outro veículo.');
+            return;
+        }
+    }
+    
+    console.log('✅ Validação de IDs passou - instrutor:', instrutorId, 'veículo:', veiculoId);
     
     // Mostrar loading no botão
     const btnSalvar = event.target.querySelector('button[type="submit"]');
@@ -3086,42 +3199,36 @@ function abrirModalAluno() {
         modal.style.display = 'block';
         document.body.style.overflow = 'hidden'; // Prevenir scroll do body
         
-        // Verificar se é para criar novo aluno ou editar
+        // SEMPRE definir como criar novo aluno quando esta função é chamada
         const acaoAluno = document.getElementById('acaoAluno');
-        const isEditando = acaoAluno && acaoAluno.value === 'editar';
+        if (acaoAluno) {
+            acaoAluno.value = 'criar';
+            console.log('✅ Campo acaoAluno definido como: criar');
+        }
         
-        console.log('🔍 Modal aberto - Editando?', isEditando);
+        console.log('🔍 Modal aberto - Editando? false (sempre criar novo)');
         
-        // Limpar formulário APENAS se for novo aluno
-        if (!isEditando) {
-            const formAluno = document.getElementById('formAluno');
-            if (formAluno) {
-                formAluno.reset();
-                console.log('🧹 Formulário limpo para novo aluno');
-            }
-        } else {
-            console.log('📝 Formulário mantido para edição');
+        // SEMPRE limpar formulário para novo aluno
+        const formAluno = document.getElementById('formAluno');
+        if (formAluno) {
+            formAluno.reset();
+            console.log('🧹 Formulário limpo para novo aluno');
         }
         
         const modalTitle = document.getElementById('modalTitle');
         if (modalTitle) {
-            modalTitle.textContent = isEditando ? 'Editar Aluno' : 'Novo Aluno';
+            modalTitle.innerHTML = '<i class="fas fa-user-graduate me-2"></i>Novo Aluno';
         }
         
-        if (acaoAluno && !isEditando) {
-            acaoAluno.value = 'criar';
-            
-            // Limpar seção de operações apenas para novo aluno
-            if (acaoAluno.value === 'criar') {
-                const operacoesContainer = document.getElementById('operacoes-container');
-                if (operacoesContainer) {
-                    operacoesContainer.innerHTML = '';
-                    contadorOperacoes = 0;
-                }
-            }
+        // Limpar seção de operações para novo aluno
+        const operacoesContainer = document.getElementById('operacoes-container');
+        if (operacoesContainer) {
+            operacoesContainer.innerHTML = '';
+            contadorOperacoes = 0;
+            console.log('🧹 Seção de operações limpa');
         }
         
-        const alunoIdField = document.getElementById('aluno_id');
+        const alunoIdField = document.getElementById('aluno_id_hidden');
         if (alunoIdField) alunoIdField.value = ''; // Limpar ID
         
         // Aplicar responsividade

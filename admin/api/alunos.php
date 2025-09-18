@@ -346,6 +346,21 @@ try {
                 exit;
             }
             
+            // Determinar categoria_cnh e tipo_servico baseado nas operações
+            $categoria_cnh = 'B'; // Padrão
+            $tipo_servico = 'primeira_habilitacao'; // Padrão
+            
+            if (!empty($data['operacoes']) && is_array($data['operacoes'])) {
+                // Extrair categoria da primeira operação
+                $primeiraOperacao = $data['operacoes'][0] ?? [];
+                if (isset($primeiraOperacao['categoria_cnh'])) {
+                    $categoria_cnh = $primeiraOperacao['categoria_cnh'];
+                }
+                if (isset($primeiraOperacao['tipo_servico'])) {
+                    $tipo_servico = $primeiraOperacao['tipo_servico'];
+                }
+            }
+
             $alunoData = [
                 'cfc_id' => $data['cfc_id'],
                 'nome' => $data['nome'],
@@ -362,7 +377,8 @@ try {
                 'cidade' => $data['cidade'] ?? '',
                 'estado' => $data['estado'] ?? '',
                 'cep' => $data['cep'] ?? '',
-                // Removido: tipo_servico e categoria_cnh - agora usamos apenas operacoes
+                'categoria_cnh' => $categoria_cnh, // Campo obrigatório
+                'tipo_servico' => $tipo_servico, // Campo obrigatório
                 'status' => $data['status'] ?? 'ativo',
                 'observacoes' => $data['observacoes'] ?? '',
                 'operacoes' => isset($data['operacoes']) ? json_encode($data['operacoes']) : null,

@@ -1415,6 +1415,7 @@ function formatarEvento(aula) {
 
     // Formatar horário para exibição resumida
     const horaInicio = aula.hora_inicio.substring(0, 5); // HH:MM
+    const horaFim = aula.hora_fim.substring(0, 5); // HH:MM
     const tipoAulaTexto = aula.tipo_aula === 'teorica' ? '📚' : '🚗';
     const statusIcon = aula.status === 'agendada' ? '⏰' : 
                       aula.status === 'concluida' ? '✅' : 
@@ -1422,7 +1423,7 @@ function formatarEvento(aula) {
     
     // Título resumido para melhor visualização
     const nomeResumido = aula.aluno_nome.split(' ').slice(0, 2).join(' ');
-    const tituloResumido = `${horaInicio} ${tipoAulaTexto} ${nomeResumido}`;
+    const tituloResumido = `${horaInicio}-${horaFim} ${tipoAulaTexto} ${nomeResumido}`;
     
     return {
         id: aula.id,
@@ -1535,9 +1536,11 @@ function salvarNovaAula(event) {
         });
     })
     .then(data => {
-        if (data.sucesso) {
+        console.log('Resposta da API:', data);
+        
+        if (data.success) {
             // Sucesso
-            alert('Aula agendada com sucesso!');
+            alert(data.mensagem || 'Aula agendada com sucesso!');
             fecharModalNovaAula();
             
             // Recarregar calendário para mostrar dados atualizados
@@ -1551,7 +1554,7 @@ function salvarNovaAula(event) {
             }, 1000);
         } else {
             // Erro
-            alert('Erro ao agendar aula: ' + data.mensagem);
+            alert('Erro ao agendar aula: ' + (data.mensagem || 'Erro desconhecido'));
             
             // Reativar botão
             btnSubmit.innerHTML = textoOriginal;
@@ -2518,7 +2521,7 @@ function cancelarAula(aulaId) {
             });
         })
         .then(data => {
-            if (data.sucesso) {
+            if (data.success) {
                 alert('Aula cancelada com sucesso!');
                 fecharModalDetalhes();
                 

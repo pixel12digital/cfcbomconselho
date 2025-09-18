@@ -26,11 +26,11 @@ function returnJsonError($message, $code = 500) {
     
     http_response_code($code);
     
-    $output = json_encode(['sucesso' => false, 'mensagem' => $message], JSON_UNESCAPED_UNICODE);
+    $output = json_encode(['success' => false, 'mensagem' => $message], JSON_UNESCAPED_UNICODE);
     
     if (json_last_error() !== JSON_ERROR_NONE) {
         $output = json_encode([
-            'sucesso' => false, 
+            'success' => false, 
             'mensagem' => 'Erro ao codificar JSON: ' . json_last_error_msg()
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -45,7 +45,7 @@ function returnJsonSuccess($message, $data = null) {
         ob_clean();
     }
     
-    $response = ['sucesso' => true, 'mensagem' => $message];
+    $response = ['success' => true, 'mensagem' => $message];
     if ($data !== null) {
         $response['dados'] = $data;
     }
@@ -54,7 +54,7 @@ function returnJsonSuccess($message, $data = null) {
     
     if (json_last_error() !== JSON_ERROR_NONE) {
         $output = json_encode([
-            'sucesso' => false, 
+            'success' => false, 
             'mensagem' => 'Erro ao codificar JSON: ' . json_last_error_msg()
         ], JSON_UNESCAPED_UNICODE);
     }
@@ -72,7 +72,7 @@ function buscarAulas() {
     }
     if (!isset($_SESSION['user_id'])) {
     http_response_code(401);
-        echo json_encode(['sucesso' => false, 'mensagem' => 'Usuário não autenticado']);
+        echo json_encode(['success' => false, 'mensagem' => 'Usuário não autenticado']);
     exit();
 }
 
@@ -95,7 +95,7 @@ try {
         ");
     
     echo json_encode([
-        'sucesso' => true,
+        'success' => true,
             'dados' => $aulas,
             'total' => count($aulas)
     ]);
@@ -103,7 +103,7 @@ try {
 } catch (Exception $e) {
         http_response_code(500);
     echo json_encode([
-        'sucesso' => false,
+        'success' => false,
             'mensagem' => 'Erro ao buscar aulas: ' . $e->getMessage(),
         'erro' => DEBUG_MODE ? $e->getTraceAsString() : null
     ]);
@@ -115,6 +115,13 @@ try {
  */
  function calcularHorariosAulas($hora_inicio, $tipo_agendamento, $posicao_intervalo = 'depois') {
     $horarios = [];
+    
+    // Garantir que a hora tenha formato HH:MM:SS
+    if (strlen($hora_inicio) === 5) {
+        $hora_inicio .= ':00';
+    }
+    
+    error_log("Hora de início formatada: $hora_inicio");
     
     // Converter hora de início para minutos
     $inicio_minutos = horaParaMinutos($hora_inicio);
@@ -169,7 +176,7 @@ try {
                  $horarios[] = [
                     'hora_inicio' => date('H:i:s', strtotime($hora_inicio) + (130 * 60)),
                     'hora_fim' => date('H:i:s', strtotime($hora_inicio) + (180 * 60))
-                 ];
+                ];
              }
              break;
             
@@ -192,6 +199,8 @@ function horaParaMinutos($hora) {
  * Criar uma nova aula
  */
 function criarAula($data) {
+    error_log("=== INÍCIO DA FUNÇÃO CRIAR AULA ===");
+    error_log("Dados recebidos na função: " . json_encode($data));
     try {
         $db = db();
         
@@ -223,13 +232,20 @@ function criarAula($data) {
             returnJsonError('Veículo é obrigatório para aulas práticas', 400);
         }
         
-        // Validar duração fixa de 50 minutos
-        if ($duracao != 50) {
+        // Validar duração fixa de 50 minutos (se fornecida)
+        if ($duracao && $duracao != 50) {
             returnJsonError('A aula deve ter exatamente 50 minutos de duração', 400);
         }
         
+        // Se duração não foi fornecida, usar 50 minutos como padrão
+        if (!$duracao) {
+            $duracao = 50;
+        }
+        
         // Calcular horários baseados no tipo de agendamento
+        error_log("Calculando horários para: $hora_inicio, $tipo_agendamento, $posicao_intervalo");
         $horarios_aulas = calcularHorariosAulas($hora_inicio, $tipo_agendamento, $posicao_intervalo);
+        error_log("Horários calculados: " . json_encode($horarios_aulas));
         
         // Buscar informações do aluno e CFC
         $aluno = $db->fetch("SELECT a.*, c.id as cfc_id FROM alunos a JOIN cfcs c ON a.cfc_id = c.id WHERE a.id = ?", [$aluno_id]);
@@ -252,7 +268,9 @@ function criarAula($data) {
         }
         
         // Verificar conflitos de horário para todas as aulas do bloco
-        foreach ($horarios_aulas as $aula) {
+        error_log("Verificando conflitos para " . count($horarios_aulas) . " aulas");
+        foreach ($horarios_aulas as $index => $aula) {
+            error_log("Verificando conflito para aula $index: " . json_encode($aula));
             $conflito_instrutor = $db->fetch("SELECT * FROM aulas WHERE instrutor_id = ? AND data_aula = ? AND status != 'cancelada' AND (
                 (hora_inicio <= ? AND hora_fim > ?) OR
                 (hora_inicio < ? AND hora_fim >= ?) OR
@@ -368,7 +386,7 @@ try {
     }
 
     if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        buscarAula();
+        buscarAulas();
         exit();
     }
 
@@ -387,35 +405,51 @@ try {
     $currentUser = getCurrentUser();
     if (!$currentUser) {
         http_response_code(401);
-        echo json_encode(['sucesso' => false, 'mensagem' => 'Sessão inválida']);
+        echo json_encode(['success' => false, 'mensagem' => 'Sessão inválida']);
         exit();
     }
 
     try {
         $db = db();
         
-        // MODIFICAÇÃO: Usar php://input normalmente
-        $input = file_get_contents('php://input');
-        error_log("Input bruto: " . $input);
-        $data = json_decode($input, true);
-        error_log("Data decodificada: " . json_encode($data));
+        // Limpar buffer antes de ler input
+        if (ob_get_level()) {
+            ob_clean();
+        }
+        
+        // Verificar se é FormData ou JSON
+        $data = null;
+        $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+        
+        if (strpos($contentType, 'multipart/form-data') !== false) {
+            // É FormData - usar $_POST
+            error_log("Recebido FormData: " . json_encode($_POST));
+            $data = $_POST;
+        } else {
+            // É JSON - usar php://input
+            $input = file_get_contents('php://input');
+            error_log("Input bruto: " . $input);
+            $data = json_decode($input, true);
+            error_log("Data decodificada: " . json_encode($data));
+        }
         
         error_log("Requisição recebida: " . json_encode($data));
         error_log("Usuário atual: " . $currentUser['email'] . " (Tipo: " . $currentUser['tipo'] . ")");
         
         if ($data && isset($data['acao'])) {
+            error_log("Ação detectada: " . $data['acao']);
             $acao = $data['acao'];
             error_log("Ação detectada: " . $acao);
             
             if ($acao === 'criar' && !canAddLessons()) {
                 http_response_code(403);
-                echo json_encode(['sucesso' => false, 'mensagem' => 'Apenas administradores e atendentes podem adicionar aulas']);
+                echo json_encode(['success' => false, 'mensagem' => 'Apenas administradores e atendentes podem adicionar aulas']);
                 exit();
             }
             
             if (($acao === 'editar' || $acao === 'cancelar') && !canEditLessons()) {
                 http_response_code(403);
-                echo json_encode(['sucesso' => false, 'mensagem' => 'Você não tem permissão para editar aulas']);
+                echo json_encode(['success' => false, 'mensagem' => 'Você não tem permissão para editar aulas']);
                 exit();
             }
             
@@ -448,42 +482,16 @@ try {
             $tipo_agendamento = $data['tipo_agendamento'] ?? 'unica';
             $posicao_intervalo = $data['posicao_intervalo'] ?? 'depois';
         } else {
-            // Receber dados do formulário (comportamento original)
+            error_log("Nenhuma ação detectada, assumindo criação de aula");
+            // Assumir que é uma criação de aula
             $acao = 'criar';
-            $aluno_id = $_POST['aluno_id'] ?? null;
-            $data_aula = $_POST['data_aula'] ?? null;
-            $hora_inicio = $_POST['hora_inicio'] ?? null;
-            $duracao = $_POST['duracao'] ?? null;
-            $tipo_aula = $_POST['tipo_aula'] ?? null;
-            $instrutor_id = $_POST['instrutor_id'] ?? null;
-            $veiculo_id = $_POST['veiculo_id'] ?? null;
-            $disciplina = $_POST['disciplina'] ?? null;
-            $observacoes = $_POST['observacoes'] ?? '';
-            $tipo_agendamento = $_POST['tipo_agendamento'] ?? 'unica';
-            $posicao_intervalo = $_POST['posicao_intervalo'] ?? 'depois';
             
-            criarAula([
-                'aluno_id' => $aluno_id,
-                'data_aula' => $data_aula,
-                'hora_inicio' => $hora_inicio,
-                'duracao' => $duracao,
-                'tipo_aula' => $tipo_aula,
-                'instrutor_id' => $instrutor_id,
-                'veiculo_id' => $veiculo_id,
-                'disciplina' => $disciplina,
-                'observacoes' => $observacoes,
-                'tipo_agendamento' => $tipo_agendamento,
-                'posicao_intervalo' => $posicao_intervalo
-            ]);
+            error_log("Chamando criarAula com dados recebidos");
+            criarAula($data);
         }
         
     } catch (Exception $e) {
-        http_response_code(400);
-        echo json_encode([
-            'sucesso' => false,
-            'mensagem' => $e->getMessage(),
-            'erro' => DEBUG_MODE ? $e->getTraceAsString() : null
-        ]);
+        returnJsonError($e->getMessage(), 400);
     }
 
 } catch (Exception $e) {

@@ -87,11 +87,8 @@ class CredentialManager {
         $usuarioId = $db->insert('usuarios', $usuarioData);
         
         if ($usuarioId) {
-            // Atualizar aluno com usuario_id e senha
-            $db->update('alunos', [
-                'usuario_id' => $usuarioId,
-                'senha' => $hashedPassword
-            ], ['id' => $dados['aluno_id']]);
+            // Não precisamos atualizar a tabela alunos pois ela não tem campos de usuário
+            // O relacionamento é feito apenas através do CPF/email
             
             return [
                 'success' => true,

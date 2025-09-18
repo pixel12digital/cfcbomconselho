@@ -29,28 +29,19 @@ class SistemaAgendamento {
         try {
             this.loadingSystem.show('Carregando dados do sistema...');
             
-            // Carregar dados das APIs
-            const [instrutoresRes, veiculosRes, alunosRes, cfcsRes, aulasRes] = await Promise.all([
-                fetch('api/instrutores.php'),
-                fetch('api/veiculos.php'),
-                fetch('api/alunos.php'),
-                fetch('api/cfcs.php'),
-                fetch('api/agendamento.php')
-            ]);
+            // Os dados já estão disponíveis no PHP, vamos usá-los diretamente
+            this.carregarDadosDoPHP();
             
-            // Processar respostas
-            this.instrutoresData = await instrutoresRes.json();
-            this.veiculosData = await veiculosRes.json();
-            this.alunosData = await alunosRes.json();
-            this.cfcsData = await cfcsRes.json();
-            
-            // Processar aulas
-            const aulasResponse = await aulasRes.json();
-            if (aulasResponse.sucesso) {
-                this.aulasData = aulasResponse.dados;
-            } else {
+            // Tentar carregar aulas via API se disponível
+            try {
+                const aulasRes = await fetch('api/agendamento.php');
+                const aulasResponse = await aulasRes.json();
+                if (aulasResponse.sucesso) {
+                    this.aulasData = aulasResponse.dados;
+                }
+            } catch (error) {
+                console.warn('Não foi possível carregar aulas via API, usando dados do PHP');
                 this.aulasData = [];
-                console.warn('Erro ao carregar aulas:', aulasResponse.mensagem);
             }
             
             this.preencherFiltros();
@@ -65,6 +56,83 @@ class SistemaAgendamento {
         } finally {
             this.loadingSystem.hide();
         }
+    }
+
+    carregarDadosDoPHP() {
+        // Os dados já estão disponíveis nas variáveis PHP
+        // Vamos extraí-los dos elementos HTML já populados
+        
+        // Extrair instrutores do dropdown de filtro
+        const selectInstrutores = document.getElementById('filter-instrutor');
+        if (selectInstrutores) {
+            this.instrutoresData = [];
+            for (let i = 1; i < selectInstrutores.options.length; i++) {
+                const option = selectInstrutores.options[i];
+                this.instrutoresData.push({
+                    id: option.value,
+                    nome: option.textContent
+                });
+            }
+        }
+        
+        // Extrair veículos do dropdown do modal
+        const selectVeiculos = document.getElementById('veiculo_id');
+        if (selectVeiculos) {
+            this.veiculosData = [];
+            for (let i = 1; i < selectVeiculos.options.length; i++) {
+                const option = selectVeiculos.options[i];
+                // Parsear texto do veículo: "MARCA MODELO - PLACA"
+                const texto = option.textContent;
+                const match = texto.match(/^(.+) - (.+)$/);
+                if (match) {
+                    const marcaModelo = match[1].trim();
+                    const placa = match[2].trim();
+                    const partes = marcaModelo.split(' ');
+                    const marca = partes[0] || '';
+                    const modelo = partes.slice(1).join(' ') || '';
+                    
+                    this.veiculosData.push({
+                        id: option.value,
+                        marca: marca,
+                        modelo: modelo,
+                        placa: placa
+                    });
+                }
+            }
+        }
+        
+        // Extrair alunos do dropdown do modal
+        const selectAlunos = document.getElementById('aluno_id');
+        if (selectAlunos) {
+            this.alunosData = [];
+            for (let i = 1; i < selectAlunos.options.length; i++) {
+                const option = selectAlunos.options[i];
+                this.alunosData.push({
+                    id: option.value,
+                    nome: option.textContent.split(' - ')[0] // Remove categoria
+                });
+            }
+        }
+        
+        // Extrair CFCs do dropdown de filtro
+        const selectCFCs = document.getElementById('filter-cfc');
+        if (selectCFCs) {
+            this.cfcsData = [];
+            for (let i = 1; i < selectCFCs.options.length; i++) {
+                const option = selectCFCs.options[i];
+                this.cfcsData.push({
+                    id: option.value,
+                    nome: option.textContent
+                });
+            }
+        }
+        
+        console.log('Dados carregados do PHP:', {
+            instrutores: this.instrutoresData.length,
+            veiculos: this.veiculosData.length,
+            alunos: this.alunosData.length,
+            cfcs: this.cfcsData.length
+        });
     }
     
     carregarDadosSimulados() {
@@ -93,6 +161,81 @@ class SistemaAgendamento {
         ];
         
         this.aulasData = [];
+        
+        // Preencher filtros com dados simulados
+        this.preencherFiltros();
+    }
+
+    preencherFiltros() {
+        console.log('Preenchendo filtros...');
+        
+        // Os dropdowns já estão populados pelo PHP, não precisamos preenchê-los novamente
+        // Apenas verificar se os dados foram carregados corretamente
+        console.log('Verificando dados carregados:');
+        console.log('- Instrutores:', this.instrutoresData?.length || 0);
+        console.log('- Veículos:', this.veiculosData?.length || 0);
+        console.log('- Alunos:', this.alunosData?.length || 0);
+        console.log('- CFCs:', this.cfcsData?.length || 0);
+        
+        // Verificar se os dropdowns estão populados
+        this.verificarDropdowns();
+        
+        console.log('Filtros verificados com sucesso');
+    }
+
+    verificarDropdowns() {
+        const dropdowns = [
+            { id: 'filter-instrutor', nome: 'Filtro Instrutores' },
+            { id: 'veiculo_id', nome: 'Veículos' },
+            { id: 'instrutor_id', nome: 'Instrutores' },
+            { id: 'aluno_id', nome: 'Alunos' }
+        ];
+        
+        dropdowns.forEach(dropdown => {
+            const element = document.getElementById(dropdown.id);
+            if (element) {
+                const optionsCount = element.options.length;
+                console.log(`${dropdown.nome}: ${optionsCount} opções`);
+                
+                if (optionsCount <= 1) {
+                    console.warn(`⚠️ ${dropdown.nome} tem apenas ${optionsCount} opção(ões)`);
+                } else {
+                    console.log(`✅ ${dropdown.nome} carregado corretamente`);
+                }
+            } else {
+                console.error(`❌ ${dropdown.nome} não encontrado`);
+            }
+        });
+    }
+
+    preencherDropdown(elementId, dados, campoTexto, campoValor) {
+        const select = document.getElementById(elementId);
+        if (!select) {
+            console.warn(`Elemento ${elementId} não encontrado`);
+            return;
+        }
+
+        // Limpar opções existentes (exceto a primeira que é o placeholder)
+        while (select.children.length > 1) {
+            select.removeChild(select.lastChild);
+        }
+
+        // Adicionar opções
+        dados.forEach(item => {
+            const option = document.createElement('option');
+            option.value = item[campoValor];
+            
+            if (elementId === 'veiculo_id') {
+                // Para veículos, criar texto personalizado
+                option.textContent = `${item.marca} ${item.modelo} - ${item.placa}`;
+            } else {
+                option.textContent = item[campoTexto];
+            }
+            
+            select.appendChild(option);
+        });
+
+        console.log(`Dropdown ${elementId} preenchido com ${dados.length} itens`);
     }
 
     inicializarCalendario() {
