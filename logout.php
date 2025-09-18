@@ -40,6 +40,6 @@ if (ob_get_level()) {
 }
 
 // Redirecionar para a página de login com mensagem de sucesso
-header('Location: index.php?message=logout_success');
+header('Location: login.php?message=logout_success');
 exit;
 ?>
