@@ -1516,7 +1516,7 @@ function salvarNovaAula(event) {
     btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Agendando...';
     btnSubmit.disabled = true;
     
-    fetch('API_CONFIG.getRelativeApiUrl('AGENDAMENTO')', {
+    fetch(API_CONFIG.getRelativeApiUrl('AGENDAMENTO'), {
         method: 'POST',
         body: formData
     })
@@ -1628,7 +1628,7 @@ function atualizarAula(event) {
     
     console.log('Dados mapeados para API:', mappedData);
     
-    fetch('API_CONFIG.getRelativeApiUrl('AGENDAMENTO')', {
+    fetch(API_CONFIG.getRelativeApiUrl('AGENDAMENTO'), {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -2513,7 +2513,7 @@ function cancelarAula(aulaId) {
     const confirmacao = confirm('Tem certeza que deseja cancelar esta aula?');
     if (confirmacao) {
         // Chamar API para cancelar aula
-        fetch('API_CONFIG.getRelativeApiUrl('AGENDAMENTO')', {
+        fetch(API_CONFIG.getRelativeApiUrl('AGENDAMENTO'), {
             method: 'POST',
             credentials: 'include',
             headers: {
