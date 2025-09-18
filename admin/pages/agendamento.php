@@ -1516,7 +1516,7 @@ function salvarNovaAula(event) {
     btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Agendando...';
     btnSubmit.disabled = true;
     
-    fetch('/cfc-bom-conselho/admin/api/agendamento.php', {
+    fetch('API_CONFIG.getRelativeApiUrl('AGENDAMENTO')', {
         method: 'POST',
         body: formData
     })
@@ -1628,7 +1628,7 @@ function atualizarAula(event) {
     
     console.log('Dados mapeados para API:', mappedData);
     
-    fetch('/cfc-bom-conselho/admin/api/agendamento.php', {
+    fetch('API_CONFIG.getRelativeApiUrl('AGENDAMENTO')', {
         method: 'POST',
         credentials: 'include',
         headers: {
@@ -1836,7 +1836,7 @@ async function consultarDisponibilidadeInstrutor(data, instrutorId, tipo, duraca
                 tipo_aula: tipo || 'pratica'
             });
             
-            const response = await fetch(`/cfc-bom-conselho/admin/api/verificar-disponibilidade.php?${params}`);
+            const response = await fetch(API_CONFIG.getRelativeApiUrl('VERIFICAR_DISPONIBILIDADE') + '?' + params);
             
             if (!response.ok) {
                 console.warn(`API não disponível para ${horario}, usando verificação manual`);
@@ -2513,7 +2513,7 @@ function cancelarAula(aulaId) {
     const confirmacao = confirm('Tem certeza que deseja cancelar esta aula?');
     if (confirmacao) {
         // Chamar API para cancelar aula
-        fetch('/cfc-bom-conselho/admin/api/agendamento.php', {
+        fetch('API_CONFIG.getRelativeApiUrl('AGENDAMENTO')', {
             method: 'POST',
             credentials: 'include',
             headers: {

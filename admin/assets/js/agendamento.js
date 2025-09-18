@@ -34,7 +34,7 @@ class SistemaAgendamento {
             
             // Tentar carregar aulas via API se disponível
             try {
-                const aulasRes = await fetch('api/agendamento.php');
+                const aulasRes = await fetch(API_CONFIG.getRelativeApiUrl('AGENDAMENTO'));
                 const aulasResponse = await aulasRes.json();
                 if (aulasResponse.sucesso) {
                     this.aulasData = aulasResponse.dados;
@@ -636,7 +636,7 @@ class SistemaAgendamento {
                 aula_id_excluir: aulaIdExcluir || ''
             });
 
-            const response = await fetch(`admin/api/verificar-disponibilidade.php?${params}`);
+            const response = await fetch(API_CONFIG.getRelativeApiUrl('VERIFICAR_DISPONIBILIDADE') + `?${params}`);
             const result = await response.json();
 
             if (!result.disponivel) {
@@ -658,7 +658,7 @@ class SistemaAgendamento {
 
     async enviarAula(dados) {
         try {
-            const response = await fetch('api/agendamento.php/aula', {
+            const response = await fetch(API_CONFIG.getRelativeApiUrl('AGENDAMENTO') + '/aula', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -708,7 +708,7 @@ class SistemaAgendamento {
 
     async atualizarAulaAPI(dados) {
         try {
-            const response = await fetch('api/agendamento.php/aula', {
+            const response = await fetch(API_CONFIG.getRelativeApiUrl('AGENDAMENTO') + '/aula', {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -736,7 +736,7 @@ class SistemaAgendamento {
 
     async excluirAulaAPI(aulaId) {
         try {
-            const response = await fetch(`api/agendamento.php/aula?id=${aulaId}`, {
+            const response = await fetch(API_CONFIG.getRelativeApiUrl('AGENDAMENTO') + `/aula?id=${aulaId}`, {
                 method: 'DELETE'
             });
             

@@ -1752,11 +1752,11 @@ function editarAluno(id) {
     }
     
     console.log(`📡 Fazendo requisição para api/alunos.php?id=${id}`);
-    console.log(`📡 URL completa: ${window.location.origin}/cfc-bom-conselho/admin/api/alunos.php?id=${id}`);
+    console.log(`📡 URL completa: ${API_CONFIG.getRelativeApiUrl('ALUNOS')}?id=${id}`);
     
     // Buscar dados do aluno (usando nova API funcional)
     const timestamp = new Date().getTime();
-    fetch(`api/alunos.php?id=${id}&t=${timestamp}`)
+    fetch(API_CONFIG.getRelativeApiUrl('ALUNOS') + `?id=${id}&t=${timestamp}`)
         .then(response => {
             console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
             console.log(`📨 URL da resposta: ${response.url}`);
@@ -1991,7 +1991,7 @@ function visualizarAluno(id) {
 
     // Buscar dados do aluno (usando nova API funcional)
     const timestamp = new Date().getTime();
-    fetch(`api/alunos.php?id=${id}&t=${timestamp}`)
+    fetch(API_CONFIG.getRelativeApiUrl('ALUNOS') + `?id=${id}&t=${timestamp}`)
         .then(response => {
             console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
             console.log(`📨 URL da resposta: ${response.url}`);
@@ -2274,7 +2274,7 @@ function excluirAluno(id) {
         }
         
         const timestamp = new Date().getTime();
-        fetch(`api/alunos.php?t=${timestamp}`, {
+        fetch(API_CONFIG.getRelativeApiUrl('ALUNOS') + `?t=${timestamp}`, {
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
@@ -2873,7 +2873,7 @@ function carregarInstrutoresDisponiveis() {
     selectInstrutor.innerHTML = '<option value="">Selecione o instrutor</option>';
     
     // Fazer chamada real para a API
-    fetch('api/instrutores.php', {
+    fetch(API_CONFIG.getRelativeApiUrl('INSTRUTORES'), {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -2944,7 +2944,7 @@ function carregarInstrutoresDisponiveis() {
 function carregarVeiculosDisponiveis() {
     console.log('🔧 Carregando veículos disponíveis...');
     
-    fetch('api/veiculos.php', {
+    fetch(API_CONFIG.getRelativeApiUrl('VEICULOS'), {
         method: 'GET',
         headers: {
             'Content-Type': 'application/json',
@@ -3069,7 +3069,7 @@ function salvarNovaAula(event) {
     btnSalvar.disabled = true;
     
     // Enviar para API
-    fetch('api/agendamento.php', {
+    fetch(API_CONFIG.getRelativeApiUrl('AGENDAMENTO'), {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',

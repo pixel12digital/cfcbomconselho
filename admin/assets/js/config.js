@@ -11,7 +11,8 @@ const API_CONFIG = {
         ALUNOS: 'admin/api/alunos.php',
         VEICULOS: 'admin/api/veiculos.php',
         AGENDAMENTO: 'admin/api/agendamento.php',
-        HISTORICO: 'admin/api/historico.php'
+        HISTORICO: 'admin/api/historico.php',
+        VERIFICAR_DISPONIBILIDADE: 'admin/api/verificar-disponibilidade.php'
     },
 
     // Função para obter URL da API (CORRIGIDA para ambos os ambientes)
