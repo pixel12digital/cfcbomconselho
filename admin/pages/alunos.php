@@ -3077,6 +3077,18 @@ function salvarNovaAula(event) {
         body: JSON.stringify(dados)
     })
     .then(response => {
+        // Tratar resposta HTTP 409 (Conflict) especificamente
+        if (response.status === 409) {
+            return response.text().then(text => {
+                try {
+                    const errorData = JSON.parse(text);
+                    throw new Error(`CONFLITO: ${errorData.mensagem || 'Conflito de agendamento detectado'}`);
+                } catch (e) {
+                    throw new Error('CONFLITO: Veículo ou instrutor já possui aula agendada neste horário');
+                }
+            });
+        }
+        
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
@@ -3107,7 +3119,14 @@ function salvarNovaAula(event) {
     })
     .catch(error => {
         console.error('Erro:', error);
-        mostrarAlerta('Erro de conexão. Verifique sua internet e tente novamente.', 'danger');
+        
+        // Verificar se é erro de conflito específico
+        if (error.message.startsWith('CONFLITO:')) {
+            const mensagemConflito = error.message.replace('CONFLITO: ', '');
+            mostrarAlerta(`⚠️ ${mensagemConflito}`, 'warning');
+        } else {
+            mostrarAlerta('Erro de conexão. Verifique sua internet e tente novamente.', 'danger');
+        }
     })
     .finally(() => {
         // Restaurar botão

@@ -666,6 +666,17 @@ class SistemaAgendamento {
                 body: JSON.stringify(dados)
             });
             
+            // Tratar resposta HTTP 409 (Conflict) especificamente
+            if (response.status === 409) {
+                const errorData = await response.text();
+                try {
+                    const parsedError = JSON.parse(errorData);
+                    throw new Error(`CONFLITO: ${parsedError.mensagem || 'Conflito de agendamento detectado'}`);
+                } catch (e) {
+                    throw new Error('CONFLITO: Veículo ou instrutor já possui aula agendada neste horário');
+                }
+            }
+            
             const resultado = await response.json();
             
             if (!response.ok) {
@@ -676,6 +687,17 @@ class SistemaAgendamento {
             
         } catch (error) {
             console.error('Erro ao enviar aula:', error);
+            
+            // Verificar se é erro de conflito específico
+            if (error.message.startsWith('CONFLITO:')) {
+                const mensagemConflito = error.message.replace('CONFLITO: ', '');
+                return {
+                    sucesso: false,
+                    mensagem: `⚠️ ${mensagemConflito}`,
+                    tipo: 'warning'
+                };
+            }
+            
             return {
                 sucesso: false,
                 mensagem: error.message || 'Erro ao conectar com o servidor',
