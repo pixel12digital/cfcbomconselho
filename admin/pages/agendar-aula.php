@@ -780,9 +780,56 @@ if (!isset($aluno) || !isset($instrutores) || !isset($veiculos)) {
                 method: 'POST',
                 body: formData
             })
-            .then(response => response.json())
+            .then(response => {
+                // Tratar resposta HTTP 409 (Conflict) especificamente
+                if (response.status === 409) {
+                    return response.text().then(text => {
+                        console.log('Resposta de erro 409:', text);
+                        try {
+                            const errorData = JSON.parse(text);
+                            console.log('Dados de erro parseados:', errorData);
+                            throw new Error(`CONFLITO: ${errorData.mensagem || 'Conflito de agendamento detectado'}`);
+                        } catch (e) {
+                            console.error('Erro ao fazer parse do JSON de erro:', e);
+                            console.error('Texto da resposta:', text);
+                            // Se não conseguir fazer parse, extrair a mensagem do JSON manualmente
+                            let mensagemErro = 'Veículo ou instrutor já possui aula agendada neste horário';
+                            
+                            // Tentar extrair a mensagem do JSON manualmente
+                            const match = text.match(/"mensagem":"([^"]+)"/);
+                            if (match && match[1]) {
+                                mensagemErro = match[1];
+                            } else if (text.includes('INSTRUTOR INDISPONÍVEL')) {
+                                mensagemErro = text.replace(/.*INSTRUTOR INDISPONÍVEL: /, '👨‍🏫 INSTRUTOR INDISPONÍVEL: ').replace(/".*/, '');
+                            } else if (text.includes('VEÍCULO INDISPONÍVEL')) {
+                                mensagemErro = text.replace(/.*VEÍCULO INDISPONÍVEL: /, '🚗 VEÍCULO INDISPONÍVEL: ').replace(/".*/, '');
+                            } else if (text.includes('LIMITE DE AULAS EXCEDIDO')) {
+                                mensagemErro = text.replace(/.*LIMITE DE AULAS EXCEDIDO: /, '🚫 LIMITE DE AULAS EXCEDIDO: ').replace(/".*/, '');
+                            }
+                            
+                            throw new Error(`CONFLITO: ${mensagemErro}`);
+                        }
+                    });
+                }
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return response.text().then(text => {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error('❌ Erro ao fazer parse do JSON:', e);
+                        console.error('📄 Texto que causou erro:', text);
+                        throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+                    }
+                });
+            })
             .then(data => {
-                if (data.sucesso) {
+                console.log('Resposta da API:', data);
+                
+                if (data.success) {
                     // Sucesso
                     mostrarMensagemSucesso('Aula agendada com sucesso!', data.dados);
                     
@@ -792,7 +839,7 @@ if (!isset($aluno) || !isset($instrutores) || !isset($veiculos)) {
                     }, 3000);
                 } else {
                     // Erro
-                    mostrarMensagemErro('Erro ao agendar aula: ' + data.mensagem);
+                    mostrarMensagemErro('Erro ao agendar aula: ' + (data.mensagem || 'Erro desconhecido'));
                     
                     // Reativar botão
                     btnSubmit.innerHTML = textoOriginal;
@@ -801,7 +848,14 @@ if (!isset($aluno) || !isset($instrutores) || !isset($veiculos)) {
             })
             .catch(error => {
                 console.error('Erro:', error);
-                mostrarMensagemErro('Erro ao agendar aula. Tente novamente.');
+                
+                // Verificar se é erro de conflito específico
+                if (error.message.startsWith('CONFLITO:')) {
+                    const mensagemConflito = error.message.replace('CONFLITO: ', '');
+                    mostrarMensagemErro(`⚠️ ATENÇÃO: ${mensagemConflito}`);
+                } else {
+                    mostrarMensagemErro('Erro ao agendar aula. Tente novamente.');
+                }
                 
                 // Reativar botão
                 btnSubmit.innerHTML = textoOriginal;

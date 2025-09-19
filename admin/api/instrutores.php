@@ -17,6 +17,129 @@ require_once '../../includes/database.php';
 require_once '../../includes/auth.php';
 require_once '../../includes/CredentialManager.php';
 
+// =====================================================
+// FUNÇÕES DE UPLOAD DE FOTO
+// =====================================================
+
+/**
+ * Processa upload de foto do instrutor
+ */
+function processarUploadFoto($arquivo, $instrutorId = null) {
+    if (!isset($arquivo) || $arquivo['error'] !== UPLOAD_ERR_OK) {
+        return null; // Nenhum arquivo enviado ou erro no upload
+    }
+    
+    // Validar tipo de arquivo - detectar automaticamente se necessário
+    $tiposPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
+    $tipoDetectado = $arquivo['type'];
+    
+    // Se o tipo não foi detectado corretamente (processamento manual), detectar pela extensão
+    if (empty($tipoDetectado) || $tipoDetectado === 'application/octet-stream') {
+        $extensao = strtolower(pathinfo($arquivo['name'], PATHINFO_EXTENSION));
+        $mapeamentoTipos = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'png' => 'image/png',
+            'gif' => 'image/gif',
+            'webp' => 'image/webp'
+        ];
+        
+        if (isset($mapeamentoTipos[$extensao])) {
+            $tipoDetectado = $mapeamentoTipos[$extensao];
+            error_log('Tipo detectado pela extensão: ' . $extensao . ' -> ' . $tipoDetectado);
+        }
+    }
+    
+    if (!in_array($tipoDetectado, $tiposPermitidos)) {
+        error_log('Tipo de arquivo rejeitado: ' . $tipoDetectado . ' (original: ' . $arquivo['type'] . ')');
+        throw new Exception('Tipo de arquivo não permitido. Use JPG, PNG, GIF ou WebP.');
+    }
+    
+    // Validar tamanho (2MB máximo)
+    $tamanhoMaximo = 2 * 1024 * 1024; // 2MB
+    if ($arquivo['size'] > $tamanhoMaximo) {
+        throw new Exception('Arquivo muito grande. Tamanho máximo: 2MB.');
+    }
+    
+    // Gerar nome único para o arquivo
+    $extensao = pathinfo($arquivo['name'], PATHINFO_EXTENSION);
+    $nomeArquivo = 'instrutor_' . ($instrutorId ?: uniqid()) . '_' . time() . '.' . $extensao;
+    
+    // Diretório de destino
+    $diretorioDestino = '../../assets/uploads/instrutores/';
+    
+    error_log('Processando upload - Nome original: ' . $arquivo['name']);
+    error_log('Processando upload - Tamanho: ' . $arquivo['size']);
+    error_log('Processando upload - Tipo: ' . $arquivo['type']);
+    error_log('Processando upload - Tmp_name: ' . $arquivo['tmp_name']);
+    error_log('Processando upload - Erro: ' . $arquivo['error']);
+    error_log('Processando upload - Nome arquivo: ' . $nomeArquivo);
+    error_log('Processando upload - Diretório destino: ' . $diretorioDestino);
+    
+    // Garantir que o diretório existe
+    if (!is_dir($diretorioDestino)) {
+        error_log('Diretório não existe, criando...');
+        if (!mkdir($diretorioDestino, 0755, true)) {
+            error_log('Erro ao criar diretório: ' . $diretorioDestino);
+            throw new Exception('Erro ao criar diretório de upload.');
+        }
+        error_log('Diretório criado com sucesso');
+    } else {
+        error_log('Diretório existe: ' . $diretorioDestino);
+    }
+    
+    $caminhoCompleto = $diretorioDestino . $nomeArquivo;
+    error_log('Caminho completo: ' . $caminhoCompleto);
+    
+    // Verificar se o arquivo temporário existe
+    if (!file_exists($arquivo['tmp_name'])) {
+        error_log('Arquivo temporário não existe: ' . $arquivo['tmp_name']);
+        throw new Exception('Arquivo temporário não encontrado.');
+    }
+    
+    // Verificar permissões do diretório
+    if (!is_writable($diretorioDestino)) {
+        error_log('Diretório não é gravável: ' . $diretorioDestino);
+        throw new Exception('Diretório de destino não tem permissão de escrita.');
+    }
+    
+    // Mover arquivo (usar copy() para arquivos processados manualmente)
+    error_log('Tentando mover arquivo...');
+    
+    // Para arquivos processados manualmente, usar copy() em vez de move_uploaded_file()
+    if (!copy($arquivo['tmp_name'], $caminhoCompleto)) {
+        error_log('Erro no copy - tmp_name: ' . $arquivo['tmp_name']);
+        error_log('Erro no copy - destino: ' . $caminhoCompleto);
+        
+        $ultimoErro = error_get_last();
+        if ($ultimoErro) {
+            error_log('Erro no copy - último erro PHP: ' . $ultimoErro['message']);
+        } else {
+            error_log('Erro no copy - nenhum erro PHP disponível');
+        }
+        
+        throw new Exception('Erro ao salvar arquivo.');
+    }
+    
+    // Remover arquivo temporário após copiar
+    unlink($arquivo['tmp_name']);
+    error_log('Arquivo temporário removido: ' . $arquivo['tmp_name']);
+    
+    error_log('Arquivo movido com sucesso para: ' . $caminhoCompleto);
+    
+    // Retornar caminho relativo para o banco de dados
+    return 'assets/uploads/instrutores/' . $nomeArquivo;
+}
+
+/**
+ * Remove foto antiga se existir
+ */
+function removerFotoAntiga($caminhoFoto) {
+    if ($caminhoFoto && file_exists('../../' . $caminhoFoto)) {
+        unlink('../../' . $caminhoFoto);
+    }
+}
+
 // Debug da sessão
 error_log('Session ID: ' . (session_id() ?: 'Nenhuma'));
 error_log('User ID: ' . ($_SESSION['user_id'] ?? 'Nenhum'));
@@ -114,10 +237,108 @@ try {
             
         case 'POST':
             // Criar novo instrutor
-            $data = json_decode(file_get_contents('php://input'), true);
+            // Debug completo dos headers
+            error_log('POST - Headers recebidos: ' . json_encode(getallheaders()));
+            error_log('POST - CONTENT_TYPE: ' . ($_SERVER['CONTENT_TYPE'] ?? 'NÃO DEFINIDO'));
+            error_log('POST - REQUEST_METHOD: ' . ($_SERVER['REQUEST_METHOD'] ?? 'NÃO DEFINIDO'));
+            error_log('POST - $_POST vazio? ' . (empty($_POST) ? 'SIM' : 'NÃO'));
+            error_log('POST - $_FILES vazio? ' . (empty($_FILES) ? 'SIM' : 'NÃO'));
+            error_log('POST - $_POST: ' . json_encode($_POST));
+            error_log('POST - $_FILES: ' . json_encode(array_keys($_FILES)));
             
-            if (!$data) {
+            // Verificar se é FormData (multipart/form-data) ou JSON
+            $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+            
+            // Se é multipart/form-data mas $_POST está vazio, forçar processamento
+            if (strpos($contentType, 'multipart/form-data') !== false && empty($_POST)) {
+                error_log('POST - FormData detectado mas $_POST vazio, forçando processamento...');
+                
+                // Tentar processar manualmente o FormData
+                $input = file_get_contents('php://input');
+                error_log('POST - Input raw length: ' . strlen($input));
+                
+                // Parse manual do FormData (método simples)
+                $boundary = null;
+                if (preg_match('/boundary=(.+)$/', $contentType, $matches)) {
+                    $boundary = $matches[1];
+                    error_log('POST - Boundary encontrado: ' . $boundary);
+                }
+                
+                if ($boundary) {
+                    $parts = explode('--' . $boundary, $input);
+                    $data = [];
+                    
+                    foreach ($parts as $part) {
+                        if (empty(trim($part))) continue;
+                        
+                        if (preg_match('/name="([^"]+)"/', $part, $nameMatches)) {
+                            $fieldName = $nameMatches[1];
+                            
+                            // Verificar se é um arquivo
+                            if (preg_match('/filename="([^"]+)"/', $part, $fileMatches)) {
+                                $filename = $fileMatches[1];
+                                error_log('POST - Arquivo encontrado: ' . $fieldName . ' = ' . $filename);
+                                
+                                // Extrair dados do arquivo
+                                $fileData = substr($part, strpos($part, "\r\n\r\n") + 4);
+                                $fileData = rtrim($fileData, "\r\n");
+                                
+                                // Detectar tipo MIME pela extensão
+                                $extensao = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                                $mapeamentoTipos = [
+                                    'jpg' => 'image/jpeg',
+                                    'jpeg' => 'image/jpeg',
+                                    'png' => 'image/png',
+                                    'gif' => 'image/gif',
+                                    'webp' => 'image/webp'
+                                ];
+                                $tipoMime = $mapeamentoTipos[$extensao] ?? 'application/octet-stream';
+                                
+                                // Simular $_FILES
+                                $_FILES[$fieldName] = [
+                                    'name' => $filename,
+                                    'type' => $tipoMime,
+                                    'tmp_name' => sys_get_temp_dir() . '/php_' . uniqid(),
+                                    'error' => UPLOAD_ERR_OK,
+                                    'size' => strlen($fileData)
+                                ];
+                                
+                                // Salvar arquivo temporário
+                                file_put_contents($_FILES[$fieldName]['tmp_name'], $fileData);
+                                
+                            } else {
+                                // Campo normal
+                                $fieldValue = substr($part, strpos($part, "\r\n\r\n") + 4);
+                                $fieldValue = rtrim($fieldValue, "\r\n");
+                                $data[$fieldName] = $fieldValue;
+                                error_log('POST - Campo encontrado: ' . $fieldName . ' = ' . $fieldValue);
+                            }
+                        }
+                    }
+                    
+                    error_log('POST - Dados processados manualmente: ' . json_encode($data));
+                    error_log('POST - Arquivos processados: ' . json_encode(array_keys($_FILES)));
+                }
+            }
+            
+            // Se $_POST não está vazio, provavelmente é FormData
+            if (!empty($_POST)) {
+                // Dados vêm via FormData (POST + FILES)
                 $data = $_POST;
+                error_log('POST - Processando como FormData');
+                error_log('POST - Dados recebidos via FormData: ' . json_encode($data));
+                error_log('POST - Arquivos recebidos: ' . json_encode(array_keys($_FILES)));
+            } else if (isset($data) && !empty($data)) {
+                // Dados processados manualmente
+                error_log('POST - Usando dados processados manualmente');
+            } else {
+                // Dados vêm via JSON
+                error_log('POST - Processando como JSON');
+                $data = json_decode(file_get_contents('php://input'), true);
+                if (!$data) {
+                    $data = $_POST;
+                }
+                error_log('POST - Dados recebidos via JSON: ' . json_encode($data));
             }
             
             // Debug: Log dos dados recebidos
@@ -185,6 +406,23 @@ try {
                     error_log('POST - Usuário encontrado: ' . $usuario_id);
                 }
                 
+                // Processar categorias e dias da semana para FormData
+                $categorias = $data['categoria_habilitacao'] ?? [];
+                $diasSemana = $data['dias_semana'] ?? [];
+                
+                // Se vier como array (FormData), usar diretamente
+                if (is_array($categorias)) {
+                    error_log('POST - Categorias como array: ' . json_encode($categorias));
+                } else {
+                    error_log('POST - Categorias como string: ' . $categorias);
+                }
+                
+                if (is_array($diasSemana)) {
+                    error_log('POST - Dias da semana como array: ' . json_encode($diasSemana));
+                } else {
+                    error_log('POST - Dias da semana como string: ' . $diasSemana);
+                }
+                
                 // Criar instrutor com TODOS os campos
                 $instrutorData = [
                     'nome' => $data['nome'] ?? '',
@@ -199,16 +437,29 @@ try {
                     'usuario_id' => $usuario_id,
                     'cfc_id' => $data['cfc_id'],
                     'credencial' => $data['credencial'] ?? '',
-                    'categorias_json' => json_encode($data['categoria_habilitacao'] ?? []),
+                    'categorias_json' => json_encode($categorias),
                     'tipo_carga' => $data['tipo_carga'] ?? '',
                     'validade_credencial' => !empty($data['validade_credencial']) ? $data['validade_credencial'] : null,
                     'observacoes' => $data['observacoes'] ?? '',
-                    'dias_semana' => json_encode($data['dias_semana'] ?? []),
+                    'dias_semana' => json_encode($diasSemana),
                     'horario_inicio' => $data['horario_inicio'] ?? '',
                     'horario_fim' => $data['horario_fim'] ?? '',
                     'ativo' => isset($data['ativo']) ? (bool)$data['ativo'] : true,
                     'criado_em' => date('Y-m-d H:i:s')
                 ];
+                
+                // Processar upload de foto se houver
+                $caminhoFoto = null;
+                if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+                    try {
+                        $caminhoFoto = processarUploadFoto($_FILES['foto']);
+                        $instrutorData['foto'] = $caminhoFoto;
+                        error_log('Foto processada com sucesso: ' . $caminhoFoto);
+                    } catch (Exception $e) {
+                        error_log('Erro no upload da foto: ' . $e->getMessage());
+                        throw new Exception('Erro no upload da foto: ' . $e->getMessage());
+                    }
+                }
                 
                 // Debug: Log dos dados que serão inseridos
                 error_log('Dados do instrutor para inserção: ' . json_encode($instrutorData));
@@ -285,14 +536,112 @@ try {
             
         case 'PUT':
             // Atualizar instrutor
-            $data = json_decode(file_get_contents('php://input'), true);
+            // Debug completo dos headers
+            error_log('PUT - Headers recebidos: ' . json_encode(getallheaders()));
+            error_log('PUT - CONTENT_TYPE: ' . ($_SERVER['CONTENT_TYPE'] ?? 'NÃO DEFINIDO'));
+            error_log('PUT - REQUEST_METHOD: ' . ($_SERVER['REQUEST_METHOD'] ?? 'NÃO DEFINIDO'));
+            error_log('PUT - $_POST vazio? ' . (empty($_POST) ? 'SIM' : 'NÃO'));
+            error_log('PUT - $_FILES vazio? ' . (empty($_FILES) ? 'SIM' : 'NÃO'));
+            error_log('PUT - $_POST: ' . json_encode($_POST));
+            error_log('PUT - $_FILES: ' . json_encode(array_keys($_FILES)));
             
-            if (!$data) {
-                parse_str(file_get_contents('php://input'), $data);
+            // Verificar se é FormData (multipart/form-data) ou JSON
+            $contentType = $_SERVER['CONTENT_TYPE'] ?? '';
+            
+            // Se é multipart/form-data mas $_POST está vazio, forçar processamento
+            if (strpos($contentType, 'multipart/form-data') !== false && empty($_POST)) {
+                error_log('PUT - FormData detectado mas $_POST vazio, forçando processamento...');
+                
+                // Tentar processar manualmente o FormData
+                $input = file_get_contents('php://input');
+                error_log('PUT - Input raw length: ' . strlen($input));
+                
+                // Parse manual do FormData (método simples)
+                $boundary = null;
+                if (preg_match('/boundary=(.+)$/', $contentType, $matches)) {
+                    $boundary = $matches[1];
+                    error_log('PUT - Boundary encontrado: ' . $boundary);
+                }
+                
+                if ($boundary) {
+                    $parts = explode('--' . $boundary, $input);
+                    $data = [];
+                    
+                    foreach ($parts as $part) {
+                        if (empty(trim($part))) continue;
+                        
+                        if (preg_match('/name="([^"]+)"/', $part, $nameMatches)) {
+                            $fieldName = $nameMatches[1];
+                            
+                            // Verificar se é um arquivo
+                            if (preg_match('/filename="([^"]+)"/', $part, $fileMatches)) {
+                                $filename = $fileMatches[1];
+                                error_log('PUT - Arquivo encontrado: ' . $fieldName . ' = ' . $filename);
+                                
+                                // Extrair dados do arquivo
+                                $fileData = substr($part, strpos($part, "\r\n\r\n") + 4);
+                                $fileData = rtrim($fileData, "\r\n");
+                                
+                                // Detectar tipo MIME pela extensão
+                                $extensao = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+                                $mapeamentoTipos = [
+                                    'jpg' => 'image/jpeg',
+                                    'jpeg' => 'image/jpeg',
+                                    'png' => 'image/png',
+                                    'gif' => 'image/gif',
+                                    'webp' => 'image/webp'
+                                ];
+                                $tipoMime = $mapeamentoTipos[$extensao] ?? 'application/octet-stream';
+                                
+                                // Simular $_FILES
+                                $_FILES[$fieldName] = [
+                                    'name' => $filename,
+                                    'type' => $tipoMime,
+                                    'tmp_name' => sys_get_temp_dir() . '/php_' . uniqid(),
+                                    'error' => UPLOAD_ERR_OK,
+                                    'size' => strlen($fileData)
+                                ];
+                                
+                                // Salvar arquivo temporário
+                                file_put_contents($_FILES[$fieldName]['tmp_name'], $fileData);
+                                
+                            } else {
+                                // Campo normal
+                                $fieldValue = substr($part, strpos($part, "\r\n\r\n") + 4);
+                                $fieldValue = rtrim($fieldValue, "\r\n");
+                                $data[$fieldName] = $fieldValue;
+                                error_log('PUT - Campo encontrado: ' . $fieldName . ' = ' . $fieldValue);
+                            }
+                        }
+                    }
+                    
+                    error_log('PUT - Dados processados manualmente: ' . json_encode($data));
+                    error_log('PUT - Arquivos processados: ' . json_encode(array_keys($_FILES)));
+                }
+            }
+            
+            // Se $_POST não está vazio, provavelmente é FormData
+            if (!empty($_POST)) {
+                // Dados vêm via FormData (POST + FILES)
+                $data = $_POST;
+                error_log('PUT - Processando como FormData');
+                error_log('PUT - Dados recebidos via FormData: ' . json_encode($data));
+                error_log('PUT - Arquivos recebidos: ' . json_encode(array_keys($_FILES)));
+            } else if (isset($data) && !empty($data)) {
+                // Dados processados manualmente
+                error_log('PUT - Usando dados processados manualmente');
+            } else {
+                // Dados vêm via JSON
+                error_log('PUT - Processando como JSON');
+                $data = json_decode(file_get_contents('php://input'), true);
+                if (!$data) {
+                    parse_str(file_get_contents('php://input'), $data);
+                }
+                error_log('PUT - Dados recebidos via JSON: ' . json_encode($data));
             }
             
             // Debug: Log dos dados recebidos
-            error_log('PUT - Dados recebidos na API: ' . json_encode($data));
+            error_log('PUT - Dados processados: ' . json_encode($data));
             
             if (empty($data['id'])) {
                 http_response_code(400);
@@ -333,6 +682,22 @@ try {
                     }
                 }
                 
+                // Processar categorias e dias da semana para FormData (PUT)
+                $categorias = $data['categoria_habilitacao'] ?? null;
+                $diasSemana = $data['dias_semana'] ?? null;
+                
+                if (is_array($categorias)) {
+                    error_log('PUT - Categorias como array: ' . json_encode($categorias));
+                } else if ($categorias !== null) {
+                    error_log('PUT - Categorias como string: ' . $categorias);
+                }
+                
+                if (is_array($diasSemana)) {
+                    error_log('PUT - Dias da semana como array: ' . json_encode($diasSemana));
+                } else if ($diasSemana !== null) {
+                    error_log('PUT - Dias da semana como string: ' . $diasSemana);
+                }
+                
                 // Atualizar dados do instrutor com TODOS os campos
                 $updateInstrutorData = [];
                 if (isset($data['nome'])) $updateInstrutorData['nome'] = $data['nome'];
@@ -346,14 +711,31 @@ try {
                 if (isset($data['uf'])) $updateInstrutorData['uf'] = $data['uf'];
                 if (isset($data['cfc_id'])) $updateInstrutorData['cfc_id'] = $data['cfc_id'];
                 if (isset($data['credencial'])) $updateInstrutorData['credencial'] = $data['credencial'];
-                if (isset($data['categoria_habilitacao'])) $updateInstrutorData['categorias_json'] = json_encode($data['categoria_habilitacao']);
+                if ($categorias !== null) $updateInstrutorData['categorias_json'] = json_encode($categorias);
                 if (isset($data['tipo_carga'])) $updateInstrutorData['tipo_carga'] = $data['tipo_carga'];
                 if (isset($data['validade_credencial'])) $updateInstrutorData['validade_credencial'] = !empty($data['validade_credencial']) ? $data['validade_credencial'] : null;
                 if (isset($data['observacoes'])) $updateInstrutorData['observacoes'] = $data['observacoes'];
-                if (isset($data['dias_semana'])) $updateInstrutorData['dias_semana'] = json_encode($data['dias_semana']);
+                if ($diasSemana !== null) $updateInstrutorData['dias_semana'] = json_encode($diasSemana);
                 if (isset($data['horario_inicio'])) $updateInstrutorData['horario_inicio'] = $data['horario_inicio'];
                 if (isset($data['horario_fim'])) $updateInstrutorData['horario_fim'] = $data['horario_fim'];
                 if (isset($data['ativo'])) $updateInstrutorData['ativo'] = (bool)$data['ativo'];
+                
+                // Processar upload de foto se houver
+                if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+                    try {
+                        // Remover foto antiga se existir
+                        if (isset($existingInstrutor['foto']) && !empty($existingInstrutor['foto'])) {
+                            removerFotoAntiga($existingInstrutor['foto']);
+                        }
+                        
+                        $caminhoFoto = processarUploadFoto($_FILES['foto'], $id);
+                        $updateInstrutorData['foto'] = $caminhoFoto;
+                        error_log('Foto atualizada com sucesso: ' . $caminhoFoto);
+                    } catch (Exception $e) {
+                        error_log('Erro no upload da foto: ' . $e->getMessage());
+                        throw new Exception('Erro no upload da foto: ' . $e->getMessage());
+                    }
+                }
                 
                 // Debug: Log dos dados que serão atualizados
                 error_log('PUT - Dados do instrutor para atualização: ' . json_encode($updateInstrutorData));

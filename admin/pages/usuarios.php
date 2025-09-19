@@ -19,170 +19,174 @@ if ($action === 'list') {
 
 <!-- CSS específico para corrigir sobreposição -->
 <style>
-/* Correção de sobreposição no page-header */
-.admin-main .page-header {
+/* Estilos específicos para a página de usuários */
+.user-table {
+    margin-top: var(--spacing-lg);
+}
+
+.user-actions {
     display: flex;
-    flex-direction: column;
-    gap: 20px;
-    min-height: auto;
-    padding-bottom: 40px;
+    gap: var(--spacing-xs);
 }
 
-/* Container para título e subtítulo */
-.admin-main .page-header > div:first-child {
-    flex: 1;
-    z-index: 2;
-    position: relative;
-}
-
-/* Container para ações */
-.admin-main .page-actions {
-    position: static !important;
-    top: auto !important;
-    right: auto !important;
-    margin-top: 20px;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-/* Ajustar título para não sobrepor */
-.admin-main .page-title {
-    margin-bottom: 10px;
-    line-height: 1.2;
-}
-
-/* Ajustar subtítulo */
-.admin-main .page-subtitle {
-    margin-bottom: 0;
-    line-height: 1.4;
-}
-
-/* Responsividade melhorada */
-@media (max-width: 1200px) {
-    .admin-main .page-actions {
-        justify-content: center;
-        margin-top: 15px;
-    }
-    
-    .admin-main .page-actions .btn {
-        margin: 5px;
-        font-size: 14px;
-        padding: 8px 16px;
-    }
-}
-
-@media (max-width: 768px) {
-    .admin-main .page-header {
-        padding: 20px 15px;
-        text-align: center;
-    }
-    
-    .admin-main .page-title {
-        font-size: 24px;
-        margin-bottom: 10px;
-    }
-    
-    .admin-main .page-subtitle {
-        font-size: 16px;
-        margin-bottom: 15px;
-    }
-    
-    .admin-main .page-actions {
-        flex-direction: column;
-        align-items: center;
-        gap: 10px;
-        margin-top: 15px;
-    }
-    
-    .admin-main .page-actions .btn {
-        width: 100%;
-        max-width: 200px;
-        margin: 0;
-    }
-}
-
-/* Garantir que os botões não sobreponham o texto */
-.admin-main .page-header .page-actions {
-    z-index: 3;
-}
-
-.admin-main .page-header .page-title,
-.admin-main .page-header .page-subtitle {
-    z-index: 2;
-    position: relative;
-}
-
-/* Ajustar espaçamento dos botões de teste */
-.admin-main .page-actions .btn-outline-secondary,
-.admin-main .page-actions .btn-outline-warning,
-.admin-main .page-actions .btn-outline-danger {
-    margin-left: 0 !important;
-    margin-top: 5px;
-}
-
-/* Layout flexível para o header */
-.admin-main .page-header {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-}
-
-.admin-main .page-header > div:first-child {
-    width: 100%;
-}
-
-.admin-main .page-header .page-actions {
-    width: 100%;
-    display: flex;
-    justify-content: flex-end;
-    flex-wrap: wrap;
-    margin-top: 20px;
-}
-
-/* Garantir que não há sobreposição */
-.admin-main .page-header * {
-    box-sizing: border-box;
-}
-
-/* Ajustar altura mínima do header */
-.admin-main .page-header {
-    min-height: 120px;
-}
-
-@media (min-width: 769px) {
-    .admin-main .page-header {
-        min-height: 140px;
-    }
-}
-
-/* Otimização dos botões de ação rápida */
-.page-actions .btn {
-    width: 40px !important;
-    height: 24px !important;
-    padding: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border-radius: 4px !important;
-    min-width: 40px !important;
-    max-width: 40px !important;
-}
-
-.page-actions .btn i {
+.user-actions .btn {
+    padding: 4px 8px;
     font-size: 12px;
-    margin: 0;
+}
+
+.user-badge {
+    font-size: 11px;
+    padding: 4px 6px;
+}
+
+/* CORREÇÃO CRÍTICA: Eliminar "tabela dentro de tabela" */
+.card-header {
+    display: block !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    padding: var(--spacing-lg) var(--spacing-xl) !important;
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%) !important;
+    border-bottom: 1px solid var(--gray-200) !important;
+    font-weight: var(--font-weight-semibold) !important;
+    color: var(--gray-700) !important;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+.card-header h3 {
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: var(--font-size-xl) !important;
+    font-weight: var(--font-weight-bold) !important;
+    color: var(--gray-800) !important;
+    line-height: 1.2 !important;
+}
+
+/* Garantir que card-header não herde estilos de tabela */
+.card-header,
+.card-header * {
+    display: block !important;
+    display: flex !important;
+    box-sizing: border-box !important;
+}
+
+.card-header h3 {
+    display: block !important;
+}
+
+/* Garantir que a tabela real tenha estilos corretos */
+.table-container {
+    overflow-x: auto;
+    max-width: 100%;
+    background: var(--white);
+    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
+    box-shadow: none;
+}
+
+.table {
+    width: 100%;
+    min-width: 600px;
+    table-layout: fixed;
+    border-collapse: separate !important;
+    border-spacing: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+}
+
+.table th {
+    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%) !important;
+    padding: 12px 8px !important;
+    text-align: left !important;
+    font-weight: var(--font-weight-semibold) !important;
+    color: var(--gray-700) !important;
+    border-bottom: 2px solid var(--gray-200) !important;
+    border-top: none !important;
+    border-left: none !important;
+    border-right: none !important;
+}
+
+.table th:first-child {
+    border-top-left-radius: 0 !important;
+}
+
+.table th:last-child {
+    border-top-right-radius: 0 !important;
+}
+
+.table td {
+    padding: 12px 8px !important;
+    border-bottom: 1px solid var(--gray-200) !important;
+    border-left: none !important;
+    border-right: none !important;
+    border-top: none !important;
+    color: var(--gray-800) !important;
+    vertical-align: middle !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+}
+
+.table tbody tr:hover {
+    background-color: var(--gray-50) !important;
+}
+
+.table tbody tr:last-child td {
+    border-bottom: none !important;
+}
+
+.table tbody tr:last-child td:first-child {
+    border-bottom-left-radius: var(--border-radius-lg) !important;
+}
+
+.table tbody tr:last-child td:last-child {
+    border-bottom-right-radius: var(--border-radius-lg) !important;
+}
+
+/* Larguras específicas das colunas */
+.table th:nth-child(1),
+.table td:nth-child(1) {
+    width: 35% !important;
+    min-width: 150px !important;
+}
+
+.table th:nth-child(2),
+.table td:nth-child(2) {
+    width: 20% !important;
+    min-width: 100px !important;
+}
+
+.table th:nth-child(3),
+.table td:nth-child(3) {
+    width: 15% !important;
+    min-width: 80px !important;
+}
+
+.table th:nth-child(4),
+.table td:nth-child(4) {
+    width: 15% !important;
+    min-width: 80px !important;
+}
+
+.table th:nth-child(5),
+.table td:nth-child(5) {
+    width: 15% !important;
+    min-width: 100px !important;
 }
 
 /* Botões de ação na tabela */
 .action-buttons-container {
-    display: flex;
-    gap: 8px;
-    align-items: center;
+    display: flex !important;
+    gap: 8px !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 .action-btn {
-    width: 40px !important;
+    width: 32px !important;
     height: 24px !important;
     padding: 0 !important;
     display: flex !important;
@@ -190,133 +194,60 @@ if ($action === 'list') {
     justify-content: center !important;
     border-radius: 4px !important;
     font-size: 12px !important;
-    min-width: 40px !important;
-    max-width: 40px !important;
+    min-width: 32px !important;
+    max-width: 32px !important;
 }
 
 .action-btn i {
-    margin: 0;
-    font-size: 12px;
-}
-
-/* Hover effects para botões de ícone */
-.page-actions .btn:hover,
-.action-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-}
-
-/* Responsividade para botões de ação */
-@media (max-width: 768px) {
-    .page-actions .btn {
-        width: 40px !important;
-        height: 24px !important;
-        min-width: 40px !important;
-        max-width: 40px !important;
-    }
-    
-    .page-actions .btn i {
-        font-size: 12px;
-    }
-    
-    .action-btn {
-        width: 40px !important;
-        height: 24px !important;
-        min-width: 40px !important;
-        max-width: 40px !important;
-    }
-    
-    .action-btn i {
-        font-size: 12px;
-    }
-}
-
-/* Otimização da tabela de usuários */
-.table-container {
-    overflow-x: auto;
-    max-width: 100%;
-}
-
-.table {
-    width: 100%;
-    min-width: 600px;
-    table-layout: fixed;
-}
-
-.table th,
-.table td {
-    padding: 12px 8px;
-    vertical-align: middle;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Larguras específicas das colunas */
-.table th:nth-child(1),
-.table td:nth-child(1) {
-    width: 35%;
-    min-width: 150px;
-}
-
-.table th:nth-child(2),
-.table td:nth-child(2) {
-    width: 20%;
-    min-width: 100px;
-}
-
-.table th:nth-child(3),
-.table td:nth-child(3) {
-    width: 15%;
-    min-width: 80px;
-}
-
-.table th:nth-child(4),
-.table td:nth-child(4) {
-    width: 15%;
-    min-width: 80px;
-}
-
-.table th:nth-child(5),
-.table td:nth-child(5) {
-    width: 15%;
-    min-width: 100px;
+    margin: 0 !important;
+    font-size: 12px !important;
 }
 
 /* Responsividade da tabela */
 @media (max-width: 1200px) {
     .table {
-        min-width: 500px;
+        min-width: 500px !important;
     }
     
     .table th,
     .table td {
-        padding: 8px 6px;
-        font-size: 14px;
+        padding: 8px 6px !important;
+        font-size: 14px !important;
     }
 }
 
 @media (max-width: 768px) {
     .table {
-        min-width: 400px;
+        min-width: 400px !important;
     }
     
     .table th,
     .table td {
-        padding: 6px 4px;
-        font-size: 12px;
+        padding: 6px 4px !important;
+        font-size: 12px !important;
     }
     
     .badge {
-        font-size: 10px;
-        padding: 4px 6px;
+        font-size: 10px !important;
+        padding: 4px 6px !important;
+    }
+    
+    .action-btn {
+        width: 28px !important;
+        height: 20px !important;
+        min-width: 28px !important;
+        max-width: 28px !important;
+    }
+    
+    .action-btn i {
+        font-size: 10px !important;
     }
 }
 </style>
 
 <!-- Header da Página -->
-<div class="page-header">
-    <div>
+<div class="page-header-management">
+    <div class="header-content">
         <h1 class="page-title">Gerenciar Usuários</h1>
         <p class="page-subtitle">Cadastro e gerenciamento de usuários do sistema</p>
     </div>

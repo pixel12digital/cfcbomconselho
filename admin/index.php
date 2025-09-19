@@ -203,136 +203,123 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <!-- CSS dos Botões de Ação -->
     <link href="assets/css/action-buttons.css" rel="stylesheet">
     
+    <!-- CSS do Menu com Ícones -->
+    <link href="assets/css/sidebar-icons.css" rel="stylesheet">
+    
+    <!-- CSS Final do Menu -->
+    <link href="assets/css/menu-flyout.css" rel="stylesheet">
+    
+    <!-- CSS de Correções para Sidebar -->
+    <link href="assets/css/sidebar-fixes.css" rel="stylesheet">
+    
+    <!-- CSS da Topbar Unificada -->
+    <link href="assets/css/topbar-unified.css" rel="stylesheet">
+    
+    <!-- CSS de Correções Críticas de Layout -->
+    <link href="assets/css/layout-fixes.css" rel="stylesheet">
+    
+    <!-- CSS Adicional para Garantir Apenas Ícones -->
+    <style>
+        /* Garantir que ícones sejam visíveis */
+        .admin-sidebar .nav-icon {
+            display: flex !important;
+            opacity: 1 !important;
+            visibility: visible !important;
+            color: #ecf0f1 !important;
+            font-size: 18px !important;
+            width: 24px !important;
+            height: 24px !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        
+        /* Ocultar textos mas manter ícones */
+        .admin-sidebar .nav-text,
+        .admin-sidebar .nav-badge,
+        .admin-sidebar .nav-arrow {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+        }
+        
+        /* Garantir que apenas ícones sejam visíveis */
+        .admin-sidebar .nav-link,
+        .admin-sidebar .nav-toggle {
+            justify-content: center !important;
+            align-items: center !important;
+            padding: 12px !important;
+        }
+        
+        /* Garantir que elementos de texto não apareçam */
+        .admin-sidebar .nav-link > span:not(.nav-icon),
+        .admin-sidebar .nav-toggle > span:not(.nav-icon) {
+            display: none !important;
+        }
+        
+        /* Garantir que flyouts apareçam ao lado */
+        .admin-sidebar .nav-flyout {
+            position: fixed !important;
+            z-index: 1000 !important;
+            background-color: #2c3e50 !important;
+            border-radius: 8px !important;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+            min-width: 200px !important;
+            max-width: 250px !important;
+            padding: 0 !important;
+        }
+        
+        /* CORREÇÕES ESPECÍFICAS PARA TOPBAR - REMOVIDAS - AGORA NO CSS UNIFICADO */
+        
+        /* Garantir que flyouts mostrem apenas texto */
+        .admin-sidebar .nav-flyout .flyout-title {
+            color: #ecf0f1 !important;
+            font-size: 16px !important;
+            font-weight: 700 !important;
+            padding: 12px 16px !important;
+            background-color: rgba(255, 255, 255, 0.05) !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+            border-radius: 8px 8px 0 0 !important;
+        }
+        
+        .admin-sidebar .nav-flyout .flyout-item {
+            display: block !important;
+            padding: 12px 16px !important;
+            color: #ecf0f1 !important;
+            text-decoration: none !important;
+            font-size: 14px !important;
+            font-weight: 500 !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+        }
+        
+        .admin-sidebar .nav-flyout .flyout-item:hover {
+            background-color: rgba(255, 255, 255, 0.1) !important;
+            color: #ffffff !important;
+        }
+        
+        .admin-sidebar .nav-flyout .flyout-item:last-child {
+            border-bottom: none !important;
+            border-radius: 0 0 8px 8px !important;
+        }
+        
+        /* Ocultar ícones dos flyouts */
+        .admin-sidebar .nav-flyout .flyout-icon {
+            display: none !important;
+        }
+        
+        /* Garantir que sidebar nunca expanda */
+        .admin-sidebar {
+            width: 70px !important;
+            transition: none !important;
+        }
+        
+        .admin-sidebar:hover {
+            width: 70px !important;
+        }
+    </style>
+    
     <!-- CSS Inline para Garantir Funcionamento em Produção -->
     <style>
-        /* Estilos críticos para o menu dropdown */
-        .nav-group { position: relative; }
-        .nav-toggle { cursor: pointer; user-select: none; position: relative; }
-        .nav-toggle:hover { background-color: rgba(255, 255, 255, 0.15) !important; }
-        
-        .nav-arrow { margin-left: auto; transition: transform 0.3s ease; }
-        .nav-arrow i { font-size: 12px; opacity: 0.8; }
-        
-        .nav-submenu {
-            max-height: 0;
-            overflow: hidden;
-            transition: all 0.3s ease;
-            opacity: 0;
-            background-color: rgba(0, 0, 0, 0.1);
-            margin: 0 1rem;
-            border-radius: 8px;
-            display: none;
-            transform: translateY(-10px);
-        }
-        
-        .nav-submenu.open {
-            max-height: 500px;
-            opacity: 1;
-            display: block !important;
-            transform: translateY(0);
-        }
-        
-        .nav-sublink {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.5rem 1.5rem;
-            color: rgba(255, 255, 255, 0.8);
-            text-decoration: none;
-            border-radius: 8px;
-            transition: all 0.3s ease;
-            font-size: 0.875rem;
-            margin: 2px 0.5rem;
-            position: relative;
-        }
-        
-        .nav-sublink:hover {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: #ffffff;
-            transform: translateX(5px);
-        }
-        
-        .nav-sublink.active {
-            background-color: #0ea5e9;
-            color: #ffffff;
-            font-weight: 600;
-        }
-        
-        .nav-sublink i {
-            width: 16px;
-            height: 16px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.875rem;
-            opacity: 0.9;
-        }
-        
-        .nav-sublink span {
-            flex: 1;
-            font-weight: 500;
-        }
-        
-        .nav-sublink .nav-badge {
-            background-color: #0ea5e9;
-            color: #ffffff;
-            padding: 2px 6px;
-            border-radius: 10px;
-            font-size: 10px;
-            font-weight: 600;
-            min-width: 20px;
-            text-align: center;
-        }
-        
-        /* Animações */
-        @keyframes slideDown {
-            from { transform: scaleY(0); opacity: 0; }
-            to { transform: scaleY(1); opacity: 1; }
-        }
-        
-        .nav-submenu { animation: slideDown 0.3s ease-out; }
-        
-        /* Responsividade */
-        @media (max-width: 1024px) {
-            .nav-submenu { margin: 0 0.5rem; }
-            .nav-sublink { padding: 0.5rem 1rem; font-size: 0.75rem; }
-            .nav-sublink i { width: 14px; height: 14px; font-size: 0.75rem; }
-        }
-        
-        /* Estados especiais */
-        .nav-group:hover .nav-toggle { background-color: rgba(255, 255, 255, 0.1); }
-        .nav-submenu .nav-sublink:first-child { margin-top: 0.5rem; }
-        .nav-submenu .nav-sublink:last-child { margin-bottom: 0.5rem; }
-        
-        /* Indicadores visuais */
-        .nav-group.has-active .nav-toggle { background-color: rgba(255, 255, 255, 0.15); color: #ffffff; }
-        .nav-group.has-active .nav-toggle .nav-icon { color: #0ea5e9; }
-        
-        /* Acessibilidade */
-        .nav-toggle:focus { outline: 2px solid #0ea5e9; outline-offset: 2px; }
-        .nav-sublink:focus { outline: 2px solid #0ea5e9; outline-offset: 2px; }
-        
-        /* Páginas ativas */
-        .nav-sublink.active::before {
-            content: '';
-            position: absolute;
-            left: 0;
-            top: 50%;
-            transform: translateY(-50%);
-            width: 3px;
-            height: 60%;
-            background-color: #ffffff;
-            border-radius: 0 2px 2px 0;
-        }
-        
-        /* Hover effects */
-        .nav-sublink:hover i { transform: scale(1.1); transition: transform 0.2s ease; }
-        .nav-toggle:hover .nav-arrow i { transform: scale(1.1); transition: transform 0.2s ease; }
-        
-        /* Correções para produção */
-        .nav-submenu.open { display: block !important; visibility: visible !important; opacity: 1 !important; }
-        .nav-arrow i.fa-chevron-up { transform: rotate(180deg); }
-        .nav-arrow i.fa-chevron-down { transform: rotate(0deg); }
+        /* Estilos de expansão interna removidos - usando menu-flyout.css */
     </style>
     
     <!-- Font Awesome para ícones -->
@@ -345,27 +332,82 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <!-- Container Principal -->
     <div class="admin-container">
         
-        <!-- Header Superior -->
-        <header class="admin-header">
-            <div class="header-content">
-                <div class="logo">
-                    <img src="../assets/logo.png" alt="<?php echo APP_NAME; ?>">
-                    <span>Sistema CFC - Admin</span>
+        <!-- Topbar Completa - STICKY/FIXED -->
+        <div class="topbar" id="main-topbar">
+            <!-- Logo -->
+            <a href="?page=dashboard" class="topbar-logo">
+                <div class="topbar-logo-icon">
+                    <i class="fas fa-car"></i>
                 </div>
-                
-                <div class="header-actions">
-                    <div class="user-menu">
-                        <div class="user-avatar">
-                            <?php echo strtoupper(substr($user['nome'], 0, 1)); ?>
+                <div class="topbar-logo-text">CFC Bom Conselho</div>
+            </a>
+            
+            <!-- Busca Global -->
+            <div class="topbar-search">
+                <div class="search-input-wrapper">
+                    <input 
+                        type="text" 
+                        class="search-input" 
+                        placeholder="Pesquisar por nome, CPF, matrícula, telefone..."
+                        autocomplete="off"
+                        aria-label="Busca global"
+                    >
+                    <i class="fas fa-search search-icon"></i>
+                    <div class="search-results" id="search-results" role="listbox" aria-label="Resultados da pesquisa"></div>
+                </div>
+            </div>
+            
+            <!-- Notificações e Perfil (Direita) -->
+            <div class="topbar-right">
+                <!-- Notificações -->
+                <div class="topbar-notifications">
+                    <button class="notification-icon" aria-label="Notificações">
+                        <i class="fas fa-bell"></i>
+                        <span class="notification-badge hidden" id="notification-badge">0</span>
+                    </button>
+                    <div class="notification-dropdown" id="notification-dropdown">
+                        <div class="notification-header">
+                            <h3 class="notification-title">Notificações</h3>
                         </div>
-                        <div class="user-info">
-                            <div class="user-name"><?php echo htmlspecialchars($user['nome']); ?></div>
-                            <div class="user-role">Administrador</div>
+                        <div class="notification-list" id="notification-list">
+                            <div class="search-loading">Carregando notificações...</div>
+                        </div>
+                        <div class="notification-footer">
+                            <div class="notification-actions">
+                                <button class="notification-btn" id="mark-all-read">Marcar todas como lidas</button>
+                                <a href="?page=notifications" class="notification-btn">Ver todas</a>
+                            </div>
                         </div>
                     </div>
                 </div>
+                
+                <!-- Perfil do Usuário -->
+                <div class="topbar-profile">
+                    <button class="profile-button" id="profile-button" aria-label="Perfil do usuário">
+                        <div class="profile-avatar" id="profile-avatar"><?php echo strtoupper(substr($user['nome'], 0, 1)); ?></div>
+                        <div class="profile-info">
+                            <div class="profile-name" id="profile-name"><?php echo htmlspecialchars($user['nome']); ?></div>
+                            <div class="profile-role" id="profile-role">Administrador</div>
+                        </div>
+                        <i class="fas fa-chevron-down profile-dropdown-icon"></i>
+                    </button>
+                    <div class="profile-dropdown" id="profile-dropdown">
+                        <a href="?page=profile" class="profile-dropdown-item">
+                            <i class="fas fa-user profile-dropdown-icon-item"></i>
+                            Meu Perfil
+                        </a>
+                        <a href="?page=change-password" class="profile-dropdown-item">
+                            <i class="fas fa-key profile-dropdown-icon-item"></i>
+                            Trocar senha
+                        </a>
+                        <a href="logout.php" class="profile-dropdown-item logout">
+                            <i class="fas fa-sign-out-alt profile-dropdown-icon-item"></i>
+                            Sair
+                        </a>
+                    </div>
+                </div>
             </div>
-        </header>
+        </div>
         
         <!-- Sidebar de Navegação -->
         <nav class="admin-sidebar">
@@ -377,7 +419,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             <div class="nav-menu">
                 <!-- Dashboard -->
                 <div class="nav-item">
-                    <a href="index.php" class="nav-link <?php echo $page === 'dashboard' ? 'active' : ''; ?>">
+                    <a href="index.php" class="nav-link <?php echo $page === 'dashboard' ? 'active' : ''; ?>" title="Dashboard">
                         <div class="nav-icon">
                             <i class="fas fa-chart-line"></i>
                         </div>
@@ -387,7 +429,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 
                 <!-- Cadastros -->
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="cadastros">
+                    <div class="nav-link nav-toggle" data-group="cadastros" title="Cadastros">
                         <div class="nav-icon">
                             <i class="fas fa-database"></i>
                         </div>
@@ -425,7 +467,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 
                 <!-- Operacional -->
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="operacional">
+                    <div class="nav-link nav-toggle" data-group="operacional" title="Operacional">
                         <div class="nav-icon">
                             <i class="fas fa-calendar-alt"></i>
                         </div>
@@ -436,24 +478,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     </div>
                     <div class="nav-submenu" id="operacional">
                         <a href="index.php?page=agendamento" class="nav-sublink <?php echo $page === 'agendamento' ? 'active' : ''; ?>">
-                            <i class="fas fa-calendar-plus"></i>
+                            <i class="fas fa-calendar-alt"></i>
                             <span>Agendamento</span>
                             <div class="nav-badge"><?php echo $stats['total_aulas']; ?></div>
-                        </a>
-                        <a href="index.php?page=agendar-aula&action=list" class="nav-sublink <?php echo $page === 'agendar-aula' ? 'active' : ''; ?>">
-                            <i class="fas fa-clock"></i>
-                            <span>Aulas</span>
-                        </a>
-                        <a href="index.php?page=sessoes&action=list" class="nav-sublink <?php echo $page === 'sessoes' ? 'active' : ''; ?>">
-                            <i class="fas fa-list-check"></i>
-                            <span>Sessões</span>
                         </a>
                     </div>
                 </div>
                 
                 <!-- Relatórios -->
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="relatorios">
+                    <div class="nav-link nav-toggle" data-group="relatorios" title="Relatórios">
                         <div class="nav-icon">
                             <i class="fas fa-chart-bar"></i>
                         </div>
@@ -484,7 +518,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 
                 <!-- Configurações -->
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="configuracoes">
+                    <div class="nav-link nav-toggle" data-group="configuracoes" title="Configurações">
                         <div class="nav-icon">
                             <i class="fas fa-cogs"></i>
                         </div>
@@ -515,7 +549,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 
                 <!-- Ferramentas de Desenvolvimento -->
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="ferramentas">
+                    <div class="nav-link nav-toggle" data-group="ferramentas" title="Ferramentas">
                         <div class="nav-icon">
                             <i class="fas fa-tools"></i>
                         </div>
@@ -545,7 +579,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 
                 <!-- Sair -->
                 <div class="nav-item">
-                    <a href="../logout.php" class="nav-link">
+                    <a href="../logout.php" class="nav-link" title="Sair">
                         <div class="nav-icon">
                             <i class="fas fa-sign-out-alt"></i>
                         </div>
@@ -1027,170 +1061,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             }).format(amount);
         }
         
-        // Sistema de menus dropdown otimizado para produção
-        document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 Iniciando sistema de menus dropdown...');
-            
-            // Controle dos menus dropdown
-            const navToggles = document.querySelectorAll('.nav-toggle');
-            console.log(`📋 Encontrados ${navToggles.length} toggles de menu`);
-            
-            if (navToggles.length === 0) {
-                console.warn('⚠️ Nenhum toggle de menu encontrado. Verificando estrutura...');
-                // Fallback: tentar encontrar elementos por classe
-                const fallbackToggles = document.querySelectorAll('[data-group]');
-                if (fallbackToggles.length > 0) {
-                    console.log(`🔄 Usando fallback: ${fallbackToggles.length} elementos encontrados`);
-                    fallbackToggles.forEach(toggle => {
-                        toggle.classList.add('nav-toggle');
-                        toggle.style.cursor = 'pointer';
-                    });
-                }
-            }
-            
-            // Função para alternar submenu
-            function toggleSubmenu(toggleElement) {
-                const group = toggleElement.getAttribute('data-group');
-                const submenu = document.getElementById(group);
-                const arrow = toggleElement.querySelector('.nav-arrow i, .fa-chevron-down, .fa-chevron-up');
-                
-                if (!submenu) {
-                    console.error(`❌ Submenu não encontrado para o grupo: ${group}`);
-                    return;
-                }
-                
-                console.log(`🔄 Alternando submenu: ${group}`);
-                
-                // Fechar outros submenus (comportamento accordion)
-                document.querySelectorAll('.nav-submenu').forEach(menu => {
-                    if (menu.id !== group) {
-                        menu.classList.remove('open');
-                        const otherToggle = menu.previousElementSibling;
-                        if (otherToggle) {
-                            const otherArrow = otherToggle.querySelector('.nav-arrow i, .fa-chevron-down, .fa-chevron-up');
-                            if (otherArrow) {
-                                otherArrow.classList.remove('fa-chevron-up');
-                                otherArrow.classList.add('fa-chevron-down');
-                                otherArrow.style.transform = 'rotate(0deg)';
-                            }
-                        }
-                    }
-                });
-                
-                // Toggle do submenu atual
-                const isOpen = submenu.classList.contains('open');
-                submenu.classList.toggle('open');
-                
-                // Aplicar estilos baseado no estado
-                if (submenu.classList.contains('open')) {
-                    submenu.style.display = 'block';
-                    submenu.style.visibility = 'visible';
-                    submenu.style.opacity = '1';
-                    submenu.style.maxHeight = '500px';
-                    submenu.style.overflow = 'visible';
-                } else {
-                    submenu.style.display = 'none';
-                    submenu.style.visibility = 'hidden';
-                    submenu.style.opacity = '0';
-                    submenu.style.maxHeight = '0';
-                    submenu.style.overflow = 'hidden';
-                }
-                
-                // Rotacionar seta com animação suave
-                if (arrow) {
-                    if (submenu.classList.contains('open')) {
-                        arrow.classList.remove('fa-chevron-down');
-                        arrow.classList.add('fa-chevron-up');
-                        arrow.style.transform = 'rotate(180deg)';
-                        arrow.style.transition = 'transform 0.3s ease';
-                    } else {
-                        arrow.classList.remove('fa-chevron-up');
-                        arrow.classList.add('fa-chevron-down');
-                        arrow.style.transform = 'rotate(0deg)';
-                        arrow.style.transition = 'transform 0.3s ease';
-                    }
-                }
-                
-                console.log(`✅ Submenu ${group} ${isOpen ? 'fechado' : 'aberto'}`);
-            }
-            
-            // Adicionar event listeners
-            navToggles.forEach((toggle, index) => {
-                console.log(`🔗 Adicionando listener para toggle ${index + 1}: ${toggle.getAttribute('data-group')}`);
-                
-                toggle.addEventListener('click', function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.log(`🖱️ Clique no toggle: ${this.getAttribute('data-group')}`);
-                    toggleSubmenu(this);
-                });
-                
-                // Adicionar listener de teclado para acessibilidade
-                toggle.addEventListener('keydown', function(e) {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        console.log(`⌨️ Tecla pressionada no toggle: ${this.getAttribute('data-group')}`);
-                        toggleSubmenu(this);
-                    }
-                });
-                
-                // Adicionar hover effect para melhor UX
-                toggle.addEventListener('mouseenter', function() {
-                    this.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
-                });
-                
-                toggle.addEventListener('mouseleave', function() {
-                    this.style.backgroundColor = '';
-                });
-            });
-            
-            // Abrir submenu da página ativa automaticamente (se houver)
-            setTimeout(() => {
-                const activeSubmenu = document.querySelector('.nav-sublink.active');
-                if (activeSubmenu) {
-                    const submenu = activeSubmenu.closest('.nav-submenu');
-                    if (submenu) {
-                        console.log(`🎯 Abrindo submenu da página ativa: ${submenu.id}`);
-                        submenu.classList.add('open');
-                        submenu.style.display = 'block';
-                        submenu.style.visibility = 'visible';
-                        submenu.style.opacity = '1';
-                        submenu.style.maxHeight = '500px';
-                        submenu.style.overflow = 'visible';
-                        
-                        const toggle = submenu.previousElementSibling;
-                        if (toggle) {
-                            const arrow = toggle.querySelector('.nav-arrow i, .fa-chevron-down, .fa-chevron-up');
-                            if (arrow) {
-                                arrow.classList.remove('fa-chevron-down');
-                                arrow.classList.add('fa-chevron-up');
-                                arrow.style.transform = 'rotate(180deg)';
-                            }
-                        }
-                    }
-                }
-            }, 100);
-            
-            // Garantir que todos os submenus comecem fechados por padrão
-            document.querySelectorAll('.nav-submenu').forEach(submenu => {
-                submenu.classList.remove('open');
-                submenu.style.display = 'none';
-                submenu.style.visibility = 'hidden';
-                submenu.style.opacity = '0';
-                submenu.style.maxHeight = '0';
-                submenu.style.overflow = 'hidden';
-            });
-            
-            // Garantir que todas as setas comecem apontando para baixo
-            document.querySelectorAll('.nav-arrow i').forEach(arrow => {
-                arrow.classList.remove('fa-chevron-up');
-                arrow.classList.add('fa-chevron-down');
-                arrow.style.transform = 'rotate(0deg)';
-            });
-            
-            console.log('✅ Sistema de menus dropdown inicializado com sucesso!');
-            console.log('📋 Menu configurado para funcionar como accordion - apenas um grupo aberto por vez');
-        });
+        // Scripts de expansão interna removidos - usando menu-flyout.js
     </script>
     
     <!-- Bootstrap JavaScript -->
@@ -1204,6 +1075,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <!-- JavaScript Principal do Admin -->
     <script src="assets/js/config.js"></script>
     <script src="assets/js/admin.js"></script>
+    <script src="assets/js/menu-flyout.js"></script>
+    <script src="assets/js/topbar-unified.js"></script>
     <script src="assets/js/components.js"></script>
     
     <!-- JavaScript das Funcionalidades Específicas -->

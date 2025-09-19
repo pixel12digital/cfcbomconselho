@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Notificações - CFC Bom Conselho</title>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- CSS da Topbar -->
+    <link href="assets/css/topbar-simple.css" rel="stylesheet">
+    
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+        }
+        
+        .test-content {
+            padding: 20px;
+            margin-top: 64px;
+        }
+        
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .test-section h2 {
+            color: #2c3e50;
+            margin-top: 0;
+        }
+        
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        
+        .test-button:hover {
+            background: #2980b9;
+        }
+        
+        .test-button.success {
+            background: #2ecc71;
+        }
+        
+        .test-button.warning {
+            background: #f39c12;
+        }
+        
+        .test-button.danger {
+            background: #e74c3c;
+        }
+        
+        .notification-demo {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+            border-left: 4px solid #3498db;
+        }
+        
+        .notification-demo h4 {
+            margin: 0 0 10px 0;
+            color: #2c3e50;
+        }
+        
+        .notification-demo p {
+            margin: 5px 0;
+            color: #666;
+        }
+        
+        .status {
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <!-- Topbar será criada pelo JavaScript -->
+    
+    <div class="test-content">
+        <div class="test-section">
+            <h2>🔔 Teste Completo das Notificações</h2>
+            <p>Esta página testa especificamente o sistema de notificações da topbar.</p>
+            
+            <div class="notification-demo">
+                <h4>📋 Funcionalidades Testadas:</h4>
+                <p>✅ Badge de contagem de notificações não lidas</p>
+                <p>✅ Dropdown com lista de notificações</p>
+                <p>✅ Indicadores visuais para notificações não lidas</p>
+                <p>✅ Botão "Marcar todas como lidas"</p>
+                <p>✅ Botão "Ver todas"</p>
+                <p>✅ Clique em notificação individual</p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🧪 Testes Automáticos</h2>
+            <p>Execute os testes para verificar se as notificações estão funcionando:</p>
+            
+            <button class="test-button" onclick="testBadgeVisibility()">
+                <i class="fas fa-eye"></i> Verificar Badge
+            </button>
+            
+            <button class="test-button" onclick="testDropdownOpen()">
+                <i class="fas fa-chevron-down"></i> Abrir Dropdown
+            </button>
+            
+            <button class="test-button" onclick="testNotificationCount()">
+                <i class="fas fa-list"></i> Contar Notificações
+            </button>
+            
+            <button class="test-button success" onclick="testMarkAllRead()">
+                <i class="fas fa-check-double"></i> Marcar Todas como Lidas
+            </button>
+            
+            <button class="test-button warning" onclick="testAddNotification()">
+                <i class="fas fa-plus"></i> Adicionar Notificação
+            </button>
+            
+            <button class="test-button danger" onclick="testClearAll()">
+                <i class="fas fa-trash"></i> Limpar Todas
+            </button>
+        </div>
+        
+        <div class="test-section">
+            <h2>📊 Status das Notificações</h2>
+            <div id="notification-status">
+                <p>Carregando status...</p>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2>🔍 Log de Testes</h2>
+            <div id="test-log" style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-family: monospace; font-size: 12px; max-height: 300px; overflow-y: auto;">
+                <p>Log de testes será exibido aqui...</p>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript da Topbar -->
+    <script src="assets/js/topbar-simple.js"></script>
+    
+    <script>
+        let testLog = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${message}`;
+            testLog.push(logEntry);
+            
+            const logDiv = document.getElementById('test-log');
+            logDiv.innerHTML = testLog.map(entry => `<p>${entry}</p>`).join('');
+            logDiv.scrollTop = logDiv.scrollHeight;
+            
+            console.log(logEntry);
+        }
+        
+        function updateStatus() {
+            const statusDiv = document.getElementById('notification-status');
+            const badge = document.getElementById('notification-badge');
+            const dropdown = document.querySelector('.notification-dropdown');
+            const items = document.querySelectorAll('.notification-item');
+            const unreadItems = document.querySelectorAll('.notification-item.unread');
+            
+            let statusHtml = `
+                <p><strong>Badge:</strong> 
+                    ${badge && !badge.classList.contains('hidden') ? 
+                        `<span class="status success">Visível (${badge.textContent})</span>` : 
+                        '<span class="status error">Oculto</span>'}
+                </p>
+                <p><strong>Dropdown:</strong> 
+                    ${dropdown && dropdown.classList.contains('show') ? 
+                        '<span class="status success">Aberto</span>' : 
+                        '<span class="status warning">Fechado</span>'}
+                </p>
+                <p><strong>Total de Notificações:</strong> 
+                    <span class="status ${items.length > 0 ? 'success' : 'error'}">${items.length}</span>
+                </p>
+                <p><strong>Não Lidas:</strong> 
+                    <span class="status ${unreadItems.length > 0 ? 'warning' : 'success'}">${unreadItems.length}</span>
+                </p>
+            `;
+            
+            statusDiv.innerHTML = statusHtml;
+        }
+        
+        function testBadgeVisibility() {
+            log('🔍 Testando visibilidade do badge...');
+            const badge = document.getElementById('notification-badge');
+            
+            if (badge) {
+                if (!badge.classList.contains('hidden')) {
+                    log(`✅ Badge visível: ${badge.textContent}`, 'success');
+                } else {
+                    log('⚠️ Badge oculto', 'warning');
+                }
+            } else {
+                log('❌ Badge não encontrado', 'error');
+            }
+            
+            updateStatus();
+        }
+        
+        function testDropdownOpen() {
+            log('🔍 Testando abertura do dropdown...');
+            const notificationIcon = document.querySelector('.notification-icon');
+            
+            if (notificationIcon) {
+                notificationIcon.click();
+                log('✅ Clique no ícone de notificações executado', 'success');
+                
+                setTimeout(() => {
+                    const dropdown = document.querySelector('.notification-dropdown');
+                    if (dropdown && dropdown.classList.contains('show')) {
+                        log('✅ Dropdown aberto com sucesso', 'success');
+                        
+                        const items = dropdown.querySelectorAll('.notification-item');
+                        log(`📨 ${items.length} notificações encontradas no dropdown`, 'info');
+                    } else {
+                        log('❌ Dropdown não abriu', 'error');
+                    }
+                    
+                    updateStatus();
+                }, 100);
+            } else {
+                log('❌ Ícone de notificações não encontrado', 'error');
+            }
+        }
+        
+        function testNotificationCount() {
+            log('🔍 Contando notificações...');
+            const items = document.querySelectorAll('.notification-item');
+            const unreadItems = document.querySelectorAll('.notification-item.unread');
+            
+            log(`📊 Total: ${items.length} | Não lidas: ${unreadItems.length}`, 'info');
+            
+            if (items.length > 0) {
+                log('✅ Notificações encontradas', 'success');
+            } else {
+                log('⚠️ Nenhuma notificação encontrada', 'warning');
+            }
+            
+            updateStatus();
+        }
+        
+        function testMarkAllRead() {
+            log('🔍 Testando marcar todas como lidas...');
+            const button = document.getElementById('mark-all-read');
+            
+            if (button) {
+                button.click();
+                log('✅ Botão "Marcar todas como lidas" clicado', 'success');
+                
+                setTimeout(() => {
+                    const badge = document.getElementById('notification-badge');
+                    if (badge && badge.classList.contains('hidden')) {
+                        log('✅ Badge ocultado após marcar todas como lidas', 'success');
+                    } else {
+                        log('⚠️ Badge ainda visível', 'warning');
+                    }
+                    
+                    updateStatus();
+                }, 100);
+            } else {
+                log('❌ Botão "Marcar todas como lidas" não encontrado', 'error');
+            }
+        }
+        
+        function testAddNotification() {
+            log('🔍 Adicionando notificação de teste...');
+            
+            // Simular adição de notificação
+            const mockNotification = {
+                id: Date.now(),
+                title: 'Notificação de Teste',
+                message: 'Esta é uma notificação adicionada via teste',
+                type: 'info',
+                url: '#',
+                unread: true,
+                created_at: new Date().toISOString(),
+                icon: 'fas fa-info-circle',
+                color: '#3498db'
+            };
+            
+            // Recarregar notificações
+            if (window.topbarInstance) {
+                window.topbarInstance.loadMockNotifications();
+                log('✅ Notificação de teste adicionada', 'success');
+            } else {
+                log('❌ Instância da topbar não encontrada', 'error');
+            }
+            
+            updateStatus();
+        }
+        
+        function testClearAll() {
+            log('🔍 Limpando todas as notificações...');
+            
+            const list = document.querySelector('.notification-list');
+            if (list) {
+                list.innerHTML = `
+                    <div class="search-empty">
+                        <i class="fas fa-bell-slash" style="font-size: 24px; margin-bottom: 8px; display: block;"></i>
+                        Nenhuma notificação
+                    </div>
+                `;
+                
+                const badge = document.getElementById('notification-badge');
+                if (badge) {
+                    badge.classList.add('hidden');
+                }
+                
+                log('✅ Todas as notificações foram limpas', 'success');
+            } else {
+                log('❌ Lista de notificações não encontrada', 'error');
+            }
+            
+            updateStatus();
+        }
+        
+        // Atualizar status a cada segundo
+        setInterval(updateStatus, 1000);
+        
+        // Verificar se a topbar foi criada
+        setTimeout(() => {
+            const topbar = document.querySelector('.topbar');
+            if (topbar) {
+                log('✅ Topbar criada com sucesso!', 'success');
+                
+                // Verificar elementos das notificações
+                const notificationIcon = document.querySelector('.notification-icon');
+                const notificationDropdown = document.querySelector('.notification-dropdown');
+                const notificationBadge = document.getElementById('notification-badge');
+                
+                if (notificationIcon) {
+                    log('✅ Ícone de notificações encontrado', 'success');
+                } else {
+                    log('❌ Ícone de notificações não encontrado', 'error');
+                }
+                
+                if (notificationDropdown) {
+                    log('✅ Dropdown de notificações encontrado', 'success');
+                } else {
+                    log('❌ Dropdown de notificações não encontrado', 'error');
+                }
+                
+                if (notificationBadge) {
+                    log('✅ Badge de notificações encontrado', 'success');
+                } else {
+                    log('❌ Badge de notificações não encontrado', 'error');
+                }
+                
+                updateStatus();
+            } else {
+                log('❌ Topbar não foi criada', 'error');
+            }
+        }, 500);
+        
+        // Expor instância da topbar para testes
+        setTimeout(() => {
+            if (window.SimpleTopbar) {
+                window.topbarInstance = new SimpleTopbar();
+                log('✅ Instância da topbar criada para testes', 'success');
+            }
+        }, 1000);
+    </script>
+</body>
+</html>

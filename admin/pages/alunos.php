@@ -3080,11 +3080,30 @@ function salvarNovaAula(event) {
         // Tratar resposta HTTP 409 (Conflict) especificamente
         if (response.status === 409) {
             return response.text().then(text => {
+                console.log('Resposta de erro 409:', text);
                 try {
                     const errorData = JSON.parse(text);
+                    console.log('Dados de erro parseados:', errorData);
                     throw new Error(`CONFLITO: ${errorData.mensagem || 'Conflito de agendamento detectado'}`);
                 } catch (e) {
-                    throw new Error('CONFLITO: Veículo ou instrutor já possui aula agendada neste horário');
+                    console.error('Erro ao fazer parse do JSON de erro:', e);
+                    console.error('Texto da resposta:', text);
+                    // Se não conseguir fazer parse, extrair a mensagem do JSON manualmente
+                    let mensagemErro = 'Veículo ou instrutor já possui aula agendada neste horário';
+                    
+                    // Tentar extrair a mensagem do JSON manualmente
+                    const match = text.match(/"mensagem":"([^"]+)"/);
+                    if (match && match[1]) {
+                        mensagemErro = match[1];
+                    } else if (text.includes('INSTRUTOR INDISPONÍVEL')) {
+                        mensagemErro = text.replace(/.*INSTRUTOR INDISPONÍVEL: /, '👨‍🏫 INSTRUTOR INDISPONÍVEL: ').replace(/".*/, '');
+                    } else if (text.includes('VEÍCULO INDISPONÍVEL')) {
+                        mensagemErro = text.replace(/.*VEÍCULO INDISPONÍVEL: /, '🚗 VEÍCULO INDISPONÍVEL: ').replace(/".*/, '');
+                    } else if (text.includes('LIMITE DE AULAS EXCEDIDO')) {
+                        mensagemErro = text.replace(/.*LIMITE DE AULAS EXCEDIDO: /, '🚫 LIMITE DE AULAS EXCEDIDO: ').replace(/".*/, '');
+                    }
+                    
+                    throw new Error(`CONFLITO: ${mensagemErro}`);
                 }
             });
         }

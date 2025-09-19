@@ -1,0 +1,773 @@
+/* =====================================================
+   TOPBAR COMPLETA - PAINEL ADMINISTRATIVO
+   Logo | Busca Global | Notificações | Perfil
+   ===================================================== */
+
+/* =====================================================
+   CONTAINER PRINCIPAL DA TOPBAR
+   ===================================================== */
+
+.topbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 64px !important;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 20px !important;
+    transition: all 0.3s ease !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Ajustar margem do conteúdo principal */
+.admin-main {
+    margin-top: 64px !important;
+}
+
+/* Garantir que a topbar seja sempre visível */
+body {
+    padding-top: 64px !important;
+}
+
+/* Forçar visibilidade de todos os elementos da topbar */
+.topbar * {
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.topbar .topbar-logo,
+.topbar .topbar-search,
+.topbar .topbar-notifications,
+.topbar .topbar-profile {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Garantir que elementos específicos sejam visíveis */
+.topbar .search-input {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.topbar .notification-icon {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.topbar .profile-button {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Garantir que a topbar seja sempre visível */
+.topbar {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 64px !important;
+    z-index: 1000 !important;
+}
+
+/* Garantir que a topbar seja sempre visível */
+.topbar {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 64px !important;
+    z-index: 1000 !important;
+}
+
+/* =====================================================
+   LOGO (ESQUERDA)
+   ===================================================== */
+
+.topbar-logo {
+    display: flex !important;
+    align-items: center !important;
+    text-decoration: none !important;
+    color: #ffffff !important;
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    margin-right: 30px !important;
+    transition: opacity 0.3s ease !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex-shrink: 0 !important;
+}
+
+.topbar-logo:hover {
+    opacity: 0.8 !important;
+}
+
+.topbar-logo-icon {
+    width: 40px !important;
+    height: 40px !important;
+    background: linear-gradient(45deg, #3498db, #2ecc71) !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-right: 12px !important;
+    color: #ffffff !important;
+    font-size: 18px !important;
+}
+
+.topbar-logo-text {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+}
+
+/* =====================================================
+   BARRA DE PESQUISA (CENTRO)
+   ===================================================== */
+
+.topbar-search {
+    flex: 1 !important;
+    max-width: 600px !important;
+    position: relative !important;
+    margin: 0 30px !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.search-input-wrapper {
+    position: relative !important;
+    width: 100% !important;
+}
+
+.search-input {
+    width: 100% !important;
+    height: 40px !important;
+    padding: 0 50px 0 16px !important;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 20px !important;
+    font-size: 14px !important;
+    color: #333333 !important;
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    transition: all 0.3s ease !important;
+    outline: none !important;
+}
+
+.search-input:focus {
+    border-color: #3498db !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2) !important;
+}
+
+.search-input::placeholder {
+    color: #999999 !important;
+    font-style: italic !important;
+}
+
+.search-icon {
+    position: absolute !important;
+    right: 16px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #999999 !important;
+    font-size: 16px !important;
+    pointer-events: none !important;
+    transition: color 0.3s ease !important;
+}
+
+.search-input:focus + .search-icon {
+    color: #3498db !important;
+}
+
+/* =====================================================
+   DROPDOWN DE RESULTADOS DA PESQUISA
+   ===================================================== */
+
+.search-results {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1001 !important;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    display: none !important;
+    margin-top: 4px !important;
+}
+
+.search-results.show {
+    display: block !important;
+}
+
+.search-result-item {
+    display: flex !important;
+    align-items: center !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+    text-decoration: none !important;
+    color: #333333 !important;
+}
+
+.search-result-item:hover,
+.search-result-item.active {
+    background-color: #f8f9fa !important;
+}
+
+.search-result-item:last-child {
+    border-bottom: none !important;
+}
+
+.search-result-icon {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    margin-right: 12px !important;
+    flex-shrink: 0 !important;
+}
+
+.search-result-content {
+    flex: 1 !important;
+}
+
+.search-result-title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #333333 !important;
+    margin-bottom: 2px !important;
+}
+
+.search-result-subtitle {
+    font-size: 12px !important;
+    color: #666666 !important;
+}
+
+.search-result-type {
+    font-size: 11px !important;
+    color: #999999 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.search-footer {
+    padding: 12px 16px !important;
+    border-top: 1px solid #f0f0f0 !important;
+    background-color: #f8f9fa !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+.search-footer-link {
+    display: block !important;
+    text-align: center !important;
+    color: #3498db !important;
+    text-decoration: none !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+}
+
+.search-footer-link:hover {
+    color: #2980b9 !important;
+}
+
+/* =====================================================
+   NOTIFICAÇÕES (DIREITA)
+   ===================================================== */
+
+.topbar-notifications {
+    position: relative !important;
+    margin-right: 20px !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex-shrink: 0 !important;
+}
+
+.notification-icon {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 18px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+}
+
+.notification-icon:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.notification-badge {
+    position: absolute !important;
+    top: -2px !important;
+    right: -2px !important;
+    background-color: #e74c3c !important;
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 2px 6px !important;
+    border-radius: 10px !important;
+    min-width: 18px !important;
+    text-align: center !important;
+    line-height: 1.2 !important;
+}
+
+.notification-badge.hidden {
+    display: none !important;
+}
+
+/* =====================================================
+   DROPDOWN DE NOTIFICAÇÕES
+   ===================================================== */
+
+.notification-dropdown {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    width: 320px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1001 !important;
+    display: none !important;
+    margin-top: 8px !important;
+}
+
+.notification-dropdown.show {
+    display: block !important;
+}
+
+.notification-header {
+    padding: 16px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    background-color: #f8f9fa !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.notification-title {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: #333333 !important;
+    margin: 0 !important;
+}
+
+.notification-list {
+    max-height: 300px !important;
+    overflow-y: auto !important;
+}
+
+.notification-item {
+    display: flex !important;
+    align-items: flex-start !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+    text-decoration: none !important;
+    color: #333333 !important;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+.notification-item.unread {
+    background-color: #e3f2fd !important;
+}
+
+.notification-item:last-child {
+    border-bottom: none !important;
+}
+
+.notification-icon-item {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    margin-right: 12px !important;
+    flex-shrink: 0 !important;
+}
+
+.notification-content {
+    flex: 1 !important;
+}
+
+.notification-message {
+    font-size: 14px !important;
+    color: #333333 !important;
+    margin-bottom: 4px !important;
+    line-height: 1.4 !important;
+}
+
+.notification-time {
+    font-size: 12px !important;
+    color: #999999 !important;
+}
+
+.notification-footer {
+    padding: 12px 16px !important;
+    border-top: 1px solid #f0f0f0 !important;
+    background-color: #f8f9fa !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+.notification-actions {
+    display: flex !important;
+    gap: 8px !important;
+}
+
+.notification-btn {
+    flex: 1 !important;
+    padding: 8px 12px !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 4px !important;
+    background-color: #ffffff !important;
+    color: #666666 !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    text-decoration: none !important;
+    text-align: center !important;
+}
+
+.notification-btn:hover {
+    background-color: #f8f9fa !important;
+    border-color: #3498db !important;
+    color: #3498db !important;
+}
+
+/* =====================================================
+   PERFIL DO USUÁRIO (DIREITA)
+   ===================================================== */
+
+.topbar-profile {
+    position: relative !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex-shrink: 0 !important;
+}
+
+.profile-button {
+    display: flex !important;
+    align-items: center !important;
+    padding: 8px 12px !important;
+    border-radius: 20px !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+}
+
+.profile-button:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.profile-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(45deg, #3498db, #2ecc71) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    margin-right: 8px !important;
+}
+
+.profile-info {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+
+.profile-name {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+}
+
+.profile-role {
+    font-size: 12px !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+}
+
+.profile-dropdown-icon {
+    margin-left: 8px !important;
+    font-size: 12px !important;
+    transition: transform 0.3s ease !important;
+}
+
+.profile-button.active .profile-dropdown-icon {
+    transform: rotate(180deg) !important;
+}
+
+/* =====================================================
+   DROPDOWN DO PERFIL
+   ===================================================== */
+
+.profile-dropdown {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    width: 200px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1001 !important;
+    display: none !important;
+    margin-top: 8px !important;
+}
+
+.profile-dropdown.show {
+    display: block !important;
+}
+
+.profile-dropdown-item {
+    display: flex !important;
+    align-items: center !important;
+    padding: 12px 16px !important;
+    color: #333333 !important;
+    text-decoration: none !important;
+    transition: background-color 0.2s ease !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.profile-dropdown-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+.profile-dropdown-item:last-child {
+    border-bottom: none !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+.profile-dropdown-item.logout {
+    color: #e74c3c !important;
+}
+
+.profile-dropdown-item.logout:hover {
+    background-color: #fdf2f2 !important;
+}
+
+.profile-dropdown-icon-item {
+    width: 20px !important;
+    margin-right: 12px !important;
+    color: #666666 !important;
+    font-size: 14px !important;
+}
+
+.profile-dropdown-item.logout .profile-dropdown-icon-item {
+    color: #e74c3c !important;
+}
+
+/* =====================================================
+   ESTADOS DE CARREGAMENTO E VAZIO
+   ===================================================== */
+
+.search-loading,
+.search-empty,
+.search-error {
+    padding: 20px !important;
+    text-align: center !important;
+    color: #666666 !important;
+    font-size: 14px !important;
+}
+
+.search-loading::after {
+    content: '' !important;
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    border: 2px solid #e0e0e0 !important;
+    border-top: 2px solid #3498db !important;
+    border-radius: 50% !important;
+    animation: spin 1s linear infinite !important;
+    margin-left: 8px !important;
+}
+
+.search-error {
+    color: #e74c3c !important;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* =====================================================
+   RESPONSIVIDADE
+   ===================================================== */
+
+@media (max-width: 1024px) {
+    .topbar {
+        padding: 0 16px !important;
+    }
+    
+    .topbar-search {
+        margin: 0 20px !important;
+    }
+    
+    .profile-info {
+        display: none !important;
+    }
+    
+    .profile-button {
+        padding: 8px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .topbar-logo-text {
+        display: none !important;
+    }
+    
+    .topbar-search {
+        margin: 0 16px !important;
+    }
+    
+    .search-input {
+        font-size: 16px !important; /* Evitar zoom no iOS */
+    }
+    
+    .notification-dropdown {
+        width: 280px !important;
+    }
+    
+    .profile-dropdown {
+        width: 180px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .topbar {
+        padding: 0 12px !important;
+    }
+    
+    .topbar-search {
+        margin: 0 12px !important;
+    }
+    
+    .notification-dropdown {
+        width: 260px !important;
+    }
+}
+
+/* =====================================================
+   ACESSIBILIDADE
+   ===================================================== */
+
+.search-input:focus,
+.notification-icon:focus,
+.profile-button:focus {
+    outline: 2px solid #3498db !important;
+    outline-offset: 2px !important;
+}
+
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+/* =====================================================
+   SOBRESCREVER CONFLITOS DE CSS
+   ===================================================== */
+
+/* Garantir que a topbar seja sempre visível */
+.topbar {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 64px !important;
+    z-index: 1000 !important;
+}
+
+/* Forçar visibilidade de todos os elementos */
+.topbar .topbar-logo,
+.topbar .topbar-search,
+.topbar .topbar-notifications,
+.topbar .topbar-profile {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Garantir que o input de busca seja visível */
+.topbar .search-input {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    width: 100% !important;
+}
+
+/* Garantir que o ícone de notificações seja visível */
+.topbar .notification-icon {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Garantir que o perfil seja visível */
+.topbar .profile-button {
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}

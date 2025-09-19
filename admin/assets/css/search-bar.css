@@ -1,0 +1,236 @@
+/* =====================================================
+   BARRA DE PESQUISA - PAINEL ADMINISTRATIVO
+   Barra de pesquisa funcional no topo do sistema
+   ===================================================== */
+
+/* =====================================================
+   CONTAINER DA BARRA DE PESQUISA
+   ===================================================== */
+
+.search-container {
+    position: fixed !important;
+    top: 0 !important;
+    left: 70px !important; /* Ao lado da sidebar */
+    right: 0 !important;
+    height: 60px !important;
+    background-color: #ffffff !important;
+    border-bottom: 1px solid #e0e0e0 !important;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1) !important;
+    z-index: 999 !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 20px !important;
+    transition: left 0.3s ease !important;
+}
+
+/* Ajustar quando sidebar expandir em mobile */
+@media (max-width: 1024px) {
+    .search-container {
+        left: 280px !important;
+    }
+}
+
+/* =====================================================
+   BARRA DE PESQUISA PRINCIPAL
+   ===================================================== */
+
+.search-bar {
+    position: relative !important;
+    flex: 1 !important;
+    max-width: 600px !important;
+    margin: 0 auto !important;
+}
+
+.search-input {
+    width: 100% !important;
+    height: 40px !important;
+    padding: 0 50px 0 16px !important;
+    border: 2px solid #e0e0e0 !important;
+    border-radius: 20px !important;
+    font-size: 14px !important;
+    color: #333333 !important;
+    background-color: #f8f9fa !important;
+    transition: all 0.3s ease !important;
+    outline: none !important;
+}
+
+.search-input:focus {
+    border-color: #3498db !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1) !important;
+}
+
+.search-input::placeholder {
+    color: #999999 !important;
+    font-style: italic !important;
+}
+
+/* =====================================================
+   ÍCONE DE PESQUISA
+   ===================================================== */
+
+.search-icon {
+    position: absolute !important;
+    right: 16px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #999999 !important;
+    font-size: 16px !important;
+    pointer-events: none !important;
+    transition: color 0.3s ease !important;
+}
+
+.search-input:focus + .search-icon {
+    color: #3498db !important;
+}
+
+/* =====================================================
+   DROPDOWN DE RESULTADOS
+   ===================================================== */
+
+.search-results {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1000 !important;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    display: none !important;
+}
+
+.search-results.show {
+    display: block !important;
+}
+
+/* =====================================================
+   ITENS DE RESULTADO
+   ===================================================== */
+
+.search-result-item {
+    display: flex !important;
+    align-items: center !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+    text-decoration: none !important;
+    color: #333333 !important;
+}
+
+.search-result-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+.search-result-item:last-child {
+    border-bottom: none !important;
+}
+
+.search-result-icon {
+    width: 32px !important;
+    height: 32px !important;
+    background-color: #3498db !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    margin-right: 12px !important;
+    flex-shrink: 0 !important;
+}
+
+.search-result-content {
+    flex: 1 !important;
+}
+
+.search-result-title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #333333 !important;
+    margin-bottom: 2px !important;
+}
+
+.search-result-subtitle {
+    font-size: 12px !important;
+    color: #666666 !important;
+}
+
+.search-result-type {
+    font-size: 11px !important;
+    color: #999999 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+/* =====================================================
+   ESTADO VAZIO
+   ===================================================== */
+
+.search-empty {
+    padding: 20px !important;
+    text-align: center !important;
+    color: #999999 !important;
+    font-size: 14px !important;
+}
+
+.search-loading {
+    padding: 20px !important;
+    text-align: center !important;
+    color: #666666 !important;
+    font-size: 14px !important;
+}
+
+.search-loading::after {
+    content: '' !important;
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    border: 2px solid #e0e0e0 !important;
+    border-top: 2px solid #3498db !important;
+    border-radius: 50% !important;
+    animation: spin 1s linear infinite !important;
+    margin-left: 8px !important;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* =====================================================
+   AJUSTES PARA MOBILE
+   ===================================================== */
+
+@media (max-width: 768px) {
+    .search-container {
+        left: 0 !important;
+        padding: 0 16px !important;
+    }
+    
+    .search-bar {
+        max-width: none !important;
+    }
+    
+    .search-input {
+        font-size: 16px !important; /* Evitar zoom no iOS */
+    }
+}
+
+/* =====================================================
+   INTEGRAÇÃO COM HEADER EXISTENTE
+   ===================================================== */
+
+/* Ajustar margem do conteúdo principal */
+.admin-main {
+    margin-top: 60px !important; /* Espaço para a barra de pesquisa */
+}
+
+/* Ocultar header original se existir */
+.admin-header {
+    display: none !important;
+}

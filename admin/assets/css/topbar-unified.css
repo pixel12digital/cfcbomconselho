@@ -1,0 +1,865 @@
+/* =====================================================
+   TOPBAR UNIFICADA - SISTEMA CFC BOM CONSELHO
+   Layout: Logo | Busca Global | Notificações | Perfil
+   Altura: 64px fixa, sem gaps
+   ===================================================== */
+
+/* =====================================================
+   SOBRESCREVER TODOS OS CONFLITOS
+   ===================================================== */
+
+/* Remover header antigo completamente */
+.admin-header,
+.main-header,
+header[class*="header"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* =====================================================
+   TOPBAR PRINCIPAL - STICKY/FIXED COM LAYOUT PERFEITO
+   ===================================================== */
+
+.topbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 64px !important;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 0 24px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    margin: 0 !important;
+    /* Garantir que seja sempre sticky */
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    position: fixed !important;
+}
+
+/* =====================================================
+   AJUSTES DE LAYOUT PARA ELIMINAR GAP COMPLETAMENTE
+   ===================================================== */
+
+body {
+    padding-top: 64px !important;
+    margin: 0 !important;
+    /* Garantir que não haja espaçamento extra */
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+.admin-container {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    /* Garantir que o container não tenha espaçamento */
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.admin-main {
+    margin-top: 64px !important;
+    margin-left: 70px !important;
+    padding: 24px !important;
+    min-height: calc(100vh - 64px) !important;
+    /* Garantir que não haja espaçamento extra */
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.admin-sidebar {
+    top: 64px !important;
+    height: calc(100vh - 64px) !important;
+    /* Garantir que a sidebar seja sticky também */
+    position: fixed !important;
+    z-index: 999 !important;
+}
+
+/* =====================================================
+   CORREÇÕES ESPECÍFICAS PARA ELIMINAR GAPS
+   ===================================================== */
+
+/* Remover qualquer margin/padding que possa causar gap */
+.admin-main .page-header,
+.admin-main .content,
+.admin-main .container,
+.admin-main .row,
+.admin-main .col {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Garantir que elementos dentro do main não tenham espaçamento superior */
+.admin-main > *:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Corrigir qualquer elemento que possa estar causando gap */
+.main-content,
+.content-wrapper,
+.page-wrapper {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* =====================================================
+   CORREÇÕES ADICIONAIS PARA GARANTIR ZERO GAP
+   ===================================================== */
+
+/* Garantir que elementos específicos do Bootstrap não causem gap */
+.container,
+.container-fluid,
+.row,
+.col,
+.col-* {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Corrigir elementos que podem ter margin/padding padrão */
+.card,
+.card-body,
+.card-header,
+.alert,
+.badge,
+.btn {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Garantir que a primeira linha de conteúdo não tenha espaçamento */
+.admin-main .row:first-child,
+.admin-main .container:first-child,
+.admin-main .card:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Corrigir elementos específicos do dashboard */
+.stat-card,
+.chart-section,
+.page-header {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Garantir que não haja espaçamento em elementos absolutos */
+.position-absolute,
+.position-fixed,
+.position-relative {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* =====================================================
+   LOGO (ESQUERDA) - FLEX-SHRINK: 0
+   ===================================================== */
+
+.topbar-logo {
+    display: flex !important;
+    align-items: center !important;
+    text-decoration: none !important;
+    color: #ffffff !important;
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    flex-shrink: 0 !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    transition: opacity 0.3s ease !important;
+    /* Garantir que não encolha */
+    min-width: fit-content !important;
+}
+
+.topbar-logo:hover {
+    opacity: 0.8 !important;
+    text-decoration: none !important;
+    color: #ffffff !important;
+}
+
+.topbar-logo-icon {
+    width: 40px !important;
+    height: 40px !important;
+    background: linear-gradient(45deg, #3498db, #2ecc71) !important;
+    border-radius: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    margin-right: 12px !important;
+    color: #ffffff !important;
+    font-size: 18px !important;
+    flex-shrink: 0 !important;
+}
+
+.topbar-logo-text {
+    font-size: 18px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    white-space: nowrap !important;
+}
+
+/* =====================================================
+   BARRA DE PESQUISA (CENTRO - LARGURA FLUIDA)
+   ===================================================== */
+
+.topbar-search {
+    flex: 1 !important;
+    max-width: 600px !important;
+    min-width: 200px !important;
+    position: relative !important;
+    margin: 0 20px !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    /* Largura fluida com clamp para responsividade */
+    width: clamp(200px, 100%, 600px) !important;
+}
+
+.search-input-wrapper {
+    position: relative !important;
+    width: 100% !important;
+}
+
+.search-input {
+    width: 100% !important;
+    height: 40px !important;
+    padding: 0 50px 0 16px !important;
+    border: 2px solid rgba(255, 255, 255, 0.2) !important;
+    border-radius: 20px !important;
+    font-size: 14px !important;
+    color: #333333 !important;
+    background-color: rgba(255, 255, 255, 0.95) !important;
+    transition: all 0.3s ease !important;
+    outline: none !important;
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-family: inherit !important;
+}
+
+.search-input:focus {
+    border-color: #3498db !important;
+    background-color: #ffffff !important;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2) !important;
+}
+
+.search-input::placeholder {
+    color: #999999 !important;
+    font-style: italic !important;
+}
+
+.search-icon {
+    position: absolute !important;
+    right: 16px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    color: #999999 !important;
+    font-size: 16px !important;
+    pointer-events: none !important;
+    transition: color 0.3s ease !important;
+}
+
+.search-input:focus + .search-icon {
+    color: #3498db !important;
+}
+
+/* =====================================================
+   DROPDOWN DE RESULTADOS DA PESQUISA
+   ===================================================== */
+
+.search-results {
+    position: absolute !important;
+    top: 100% !important;
+    left: 0 !important;
+    right: 0 !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1001 !important;
+    max-height: 400px !important;
+    overflow-y: auto !important;
+    display: none !important;
+    margin-top: 4px !important;
+}
+
+.search-results.show {
+    display: block !important;
+}
+
+.search-result-item {
+    display: flex !important;
+    align-items: center !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+    text-decoration: none !important;
+    color: #333333 !important;
+}
+
+.search-result-item:hover,
+.search-result-item.active {
+    background-color: #f8f9fa !important;
+}
+
+.search-result-item:last-child {
+    border-bottom: none !important;
+}
+
+.search-result-icon {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    margin-right: 12px !important;
+    flex-shrink: 0 !important;
+}
+
+.search-result-content {
+    flex: 1 !important;
+}
+
+.search-result-title {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #333333 !important;
+    margin-bottom: 2px !important;
+}
+
+.search-result-subtitle {
+    font-size: 12px !important;
+    color: #666666 !important;
+}
+
+.search-result-type {
+    font-size: 11px !important;
+    color: #999999 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.5px !important;
+}
+
+.search-footer {
+    padding: 12px 16px !important;
+    border-top: 1px solid #f0f0f0 !important;
+    background-color: #f8f9fa !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+.search-footer-link {
+    display: block !important;
+    text-align: center !important;
+    color: #3498db !important;
+    text-decoration: none !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+}
+
+.search-footer-link:hover {
+    color: #2980b9 !important;
+}
+
+/* =====================================================
+   ELEMENTOS DA DIREITA - ALINHADOS À BORDA
+   ===================================================== */
+
+.topbar-right {
+    display: flex !important;
+    align-items: center !important;
+    gap: 16px !important;
+    flex-shrink: 0 !important;
+    /* Garantir que fiquem alinhados à direita */
+    margin-left: auto !important;
+}
+
+/* =====================================================
+   NOTIFICAÇÕES (DIREITA)
+   ===================================================== */
+
+.topbar-notifications {
+    position: relative !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex-shrink: 0 !important;
+}
+
+.notification-icon {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 18px !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    position: relative !important;
+    border: none !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.notification-icon:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.notification-icon:focus {
+    outline: 2px solid #3498db !important;
+    outline-offset: 2px !important;
+}
+
+.notification-badge {
+    position: absolute !important;
+    top: -2px !important;
+    right: -2px !important;
+    background-color: #e74c3c !important;
+    color: #ffffff !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    padding: 2px 6px !important;
+    border-radius: 10px !important;
+    min-width: 18px !important;
+    text-align: center !important;
+    line-height: 1.2 !important;
+}
+
+.notification-badge.hidden {
+    display: none !important;
+}
+
+/* =====================================================
+   DROPDOWN DE NOTIFICAÇÕES
+   ===================================================== */
+
+.notification-dropdown {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    width: 320px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1001 !important;
+    display: none !important;
+    margin-top: 8px !important;
+}
+
+.notification-dropdown.show {
+    display: block !important;
+}
+
+.notification-header {
+    padding: 16px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    background-color: #f8f9fa !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.notification-title {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: #333333 !important;
+    margin: 0 !important;
+}
+
+.notification-list {
+    max-height: 300px !important;
+    overflow-y: auto !important;
+}
+
+.notification-item {
+    display: flex !important;
+    align-items: flex-start !important;
+    padding: 12px 16px !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+    cursor: pointer !important;
+    transition: background-color 0.2s ease !important;
+    text-decoration: none !important;
+    color: #333333 !important;
+}
+
+.notification-item:hover {
+    background-color: #f8f9fa !important;
+}
+
+.notification-item.unread {
+    background-color: #e3f2fd !important;
+    position: relative !important;
+}
+
+.notification-unread-indicator {
+    position: absolute !important;
+    top: 8px !important;
+    right: 8px !important;
+    width: 8px !important;
+    height: 8px !important;
+    background-color: #e74c3c !important;
+    border-radius: 50% !important;
+}
+
+.notification-item:last-child {
+    border-bottom: none !important;
+}
+
+.notification-icon-item {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    margin-right: 12px !important;
+    flex-shrink: 0 !important;
+}
+
+.notification-content {
+    flex: 1 !important;
+}
+
+.notification-message {
+    font-size: 14px !important;
+    color: #333333 !important;
+    margin-bottom: 4px !important;
+    line-height: 1.4 !important;
+}
+
+.notification-time {
+    font-size: 12px !important;
+    color: #999999 !important;
+}
+
+.notification-footer {
+    padding: 12px 16px !important;
+    border-top: 1px solid #f0f0f0 !important;
+    background-color: #f8f9fa !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+.notification-actions {
+    display: flex !important;
+    gap: 8px !important;
+}
+
+.notification-btn {
+    flex: 1 !important;
+    padding: 8px 12px !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 4px !important;
+    background-color: #ffffff !important;
+    color: #666666 !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    text-decoration: none !important;
+    text-align: center !important;
+}
+
+.notification-btn:hover {
+    background-color: #f8f9fa !important;
+    border-color: #3498db !important;
+    color: #3498db !important;
+}
+
+/* =====================================================
+   PERFIL DO USUÁRIO (DIREITA)
+   ===================================================== */
+
+.topbar-profile {
+    position: relative !important;
+    display: flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    flex-shrink: 0 !important;
+}
+
+.profile-button {
+    display: flex !important;
+    align-items: center !important;
+    padding: 8px 12px !important;
+    border-radius: 20px !important;
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    cursor: pointer !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.profile-button:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    text-decoration: none !important;
+    color: #ffffff !important;
+}
+
+.profile-button:focus {
+    outline: 2px solid #3498db !important;
+    outline-offset: 2px !important;
+}
+
+.profile-avatar {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(45deg, #3498db, #2ecc71) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    margin-right: 8px !important;
+}
+
+.profile-info {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+}
+
+.profile-name {
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    color: #ffffff !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+}
+
+.profile-role {
+    font-size: 12px !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+}
+
+.profile-dropdown-icon {
+    margin-left: 8px !important;
+    font-size: 12px !important;
+    transition: transform 0.3s ease !important;
+}
+
+.profile-button.active .profile-dropdown-icon {
+    transform: rotate(180deg) !important;
+}
+
+/* =====================================================
+   DROPDOWN DO PERFIL
+   ===================================================== */
+
+.profile-dropdown {
+    position: absolute !important;
+    top: 100% !important;
+    right: 0 !important;
+    width: 200px !important;
+    background-color: #ffffff !important;
+    border: 1px solid #e0e0e0 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1001 !important;
+    display: none !important;
+    margin-top: 8px !important;
+}
+
+.profile-dropdown.show {
+    display: block !important;
+}
+
+.profile-dropdown-item {
+    display: flex !important;
+    align-items: center !important;
+    padding: 12px 16px !important;
+    color: #333333 !important;
+    text-decoration: none !important;
+    transition: background-color 0.2s ease !important;
+    border-bottom: 1px solid #f0f0f0 !important;
+}
+
+.profile-dropdown-item:hover {
+    background-color: #f8f9fa !important;
+    text-decoration: none !important;
+    color: #333333 !important;
+}
+
+.profile-dropdown-item:last-child {
+    border-bottom: none !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+.profile-dropdown-item.logout {
+    color: #e74c3c !important;
+}
+
+.profile-dropdown-item.logout:hover {
+    background-color: #fdf2f2 !important;
+    color: #e74c3c !important;
+}
+
+.profile-dropdown-icon-item {
+    width: 20px !important;
+    margin-right: 12px !important;
+    color: #666666 !important;
+    font-size: 14px !important;
+}
+
+.profile-dropdown-item.logout .profile-dropdown-icon-item {
+    color: #e74c3c !important;
+}
+
+/* =====================================================
+   ESTADOS DE CARREGAMENTO E VAZIO
+   ===================================================== */
+
+.search-loading,
+.search-empty,
+.search-error {
+    padding: 20px !important;
+    text-align: center !important;
+    color: #666666 !important;
+    font-size: 14px !important;
+}
+
+.search-loading::after {
+    content: '' !important;
+    display: inline-block !important;
+    width: 16px !important;
+    height: 16px !important;
+    border: 2px solid #e0e0e0 !important;
+    border-top: 2px solid #3498db !important;
+    border-radius: 50% !important;
+    animation: spin 1s linear infinite !important;
+    margin-left: 8px !important;
+}
+
+.search-error {
+    color: #e74c3c !important;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* =====================================================
+   RESPONSIVIDADE
+   ===================================================== */
+
+@media (max-width: 1024px) {
+    .topbar {
+        padding: 0 20px !important;
+    }
+    
+    .topbar-search {
+        margin: 0 16px !important;
+        min-width: 150px !important;
+    }
+    
+    .profile-info {
+        display: none !important;
+    }
+    
+    .profile-button {
+        padding: 8px !important;
+    }
+    
+    .topbar-right {
+        gap: 12px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .topbar {
+        padding: 0 16px !important;
+    }
+    
+    .topbar-logo-text {
+        display: none !important;
+    }
+    
+    .topbar-search {
+        margin: 0 12px !important;
+        min-width: 120px !important;
+    }
+    
+    .search-input {
+        font-size: 16px !important; /* Evitar zoom no iOS */
+    }
+    
+    .notification-dropdown {
+        width: 280px !important;
+    }
+    
+    .profile-dropdown {
+        width: 180px !important;
+    }
+    
+    .topbar-right {
+        gap: 8px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .topbar {
+        padding: 0 12px !important;
+    }
+    
+    .topbar-search {
+        margin: 0 8px !important;
+        min-width: 100px !important;
+    }
+    
+    .notification-dropdown {
+        width: 260px !important;
+    }
+    
+    .topbar-right {
+        gap: 6px !important;
+    }
+}
+
+/* =====================================================
+   ACESSIBILIDADE
+   ===================================================== */
+
+.search-input:focus,
+.notification-icon:focus,
+.profile-button:focus {
+    outline: 2px solid #3498db !important;
+    outline-offset: 2px !important;
+}
+
+.sr-only {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}

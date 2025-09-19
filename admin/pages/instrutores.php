@@ -144,7 +144,7 @@ $pageTitle = 'Gestão de Instrutores';
 <!-- Modal Customizado para Cadastro/Edição de Instrutor -->
 <div id="modalInstrutor" class="custom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; overflow: auto;">
     <div class="custom-modal-dialog" style="position: relative; width: 95%; max-width: 1200px; margin: 20px auto; background: white; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: block;">
-        <form id="formInstrutor" onsubmit="return false;">
+        <form id="formInstrutor" enctype="multipart/form-data" onsubmit="return false;">
             <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
                 <h5 class="modal-title" id="modalTitle" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
                     <i class="fas fa-user-tie me-2"></i>Novo Instrutor
@@ -156,7 +156,42 @@ $pageTitle = 'Gestão de Instrutores';
                 <input type="hidden" name="instrutor_id" id="instrutor_id" value="">
                 
                 <div class="container-fluid" style="padding: 0;">
-                                                 <!-- Seção 1: Informações Básicas -->
+                    
+                    <!-- Seção 0: Foto do Instrutor -->
+                    <div class="row mb-3">
+                        <div class="col-12">
+                            <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                                <i class="fas fa-camera me-1"></i>Foto do Instrutor
+                            </h6>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-2">
+                                <label for="foto" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Foto (Opcional)</label>
+                                <input type="file" class="form-control" id="foto" name="foto" accept="image/*" 
+                                       style="padding: 0.4rem; font-size: 0.85rem;" onchange="previewFoto(this)">
+                                <small class="text-muted" style="font-size: 0.75rem;">📷 JPG, PNG, GIF até 2MB</small>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="text-center">
+                                <div id="preview-container" style="display: none;">
+                                    <img id="foto-preview" src="" alt="Preview da foto" 
+                                         style="max-width: 150px; max-height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dee2e6;">
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerFoto()">
+                                            <i class="fas fa-trash"></i> Remover
+                                        </button>
+                                    </div>
+                                </div>
+                                <div id="placeholder-foto" class="text-muted" style="font-size: 0.8rem;">
+                                    <i class="fas fa-user-circle fa-3x"></i><br>
+                                    Nenhuma foto selecionada
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Seção 1: Informações Básicas -->
                          <div class="row mb-2">
                              <div class="col-12">
                                  <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">

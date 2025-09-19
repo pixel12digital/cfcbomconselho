@@ -1,6 +1,118 @@
 // Funções JavaScript da página de instrutores - VERSÃO CORRIGIDA
 // Este arquivo é carregado APÓS o config.js, garantindo que API_CONFIG esteja disponível
 
+// =====================================================
+// FUNÇÕES DE GERENCIAMENTO DE FOTO
+// =====================================================
+
+/**
+ * Preview da foto selecionada
+ */
+function previewFoto(input) {
+    console.log('📷 Preview da foto iniciado...');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        // Validar tipo de arquivo
+        if (!file.type.startsWith('image/')) {
+            alert('⚠️ Por favor, selecione apenas arquivos de imagem (JPG, PNG, GIF)');
+            input.value = '';
+            return;
+        }
+        
+        // Validar tamanho (2MB máximo)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('⚠️ O arquivo deve ter no máximo 2MB');
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('foto-preview');
+            const container = document.getElementById('preview-container');
+            const placeholder = document.getElementById('placeholder-foto');
+            
+            preview.src = e.target.result;
+            container.style.display = 'block';
+            placeholder.style.display = 'none';
+            
+            console.log('✅ Preview da foto carregado com sucesso');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+/**
+ * Remover foto selecionada
+ */
+function removerFoto() {
+    console.log('🗑️ Removendo foto...');
+    
+    const input = document.getElementById('foto');
+    const preview = document.getElementById('foto-preview');
+    const container = document.getElementById('preview-container');
+    const placeholder = document.getElementById('placeholder-foto');
+    
+    input.value = '';
+    preview.src = '';
+    container.style.display = 'none';
+    placeholder.style.display = 'block';
+    
+    console.log('✅ Foto removida com sucesso');
+}
+
+/**
+ * Carregar foto existente do instrutor
+ */
+function carregarFotoExistente(caminhoFoto) {
+    console.log('📷 Carregando foto existente:', caminhoFoto);
+    
+    if (caminhoFoto && caminhoFoto.trim() !== '') {
+        const preview = document.getElementById('foto-preview');
+        const container = document.getElementById('preview-container');
+        const placeholder = document.getElementById('placeholder-foto');
+        
+        // Construir URL completa da foto
+        let urlFoto;
+        if (caminhoFoto.startsWith('http')) {
+            urlFoto = caminhoFoto;
+        } else {
+            // Construir URL baseada no contexto atual
+            const baseUrl = window.location.origin + window.location.pathname.split('/').slice(0, -2).join('/');
+            urlFoto = `${baseUrl}/${caminhoFoto}`;
+        }
+        
+        console.log('📷 URL da foto construída:', urlFoto);
+        
+        preview.src = urlFoto;
+        container.style.display = 'block';
+        placeholder.style.display = 'none';
+        
+        // Verificar se a imagem carregou
+        preview.onload = function() {
+            console.log('✅ Foto existente carregada com sucesso');
+        };
+        
+        preview.onerror = function() {
+            console.error('❌ Erro ao carregar foto:', urlFoto);
+            // Se der erro, mostrar placeholder
+            container.style.display = 'none';
+            placeholder.style.display = 'block';
+        };
+    } else {
+        // Se não há foto, mostrar placeholder
+        const container = document.getElementById('preview-container');
+        const placeholder = document.getElementById('placeholder-foto');
+        
+        container.style.display = 'none';
+        placeholder.style.display = 'block';
+        
+        console.log('ℹ️ Nenhuma foto existente encontrada');
+    }
+}
+
 // Funções JavaScript com URLs CORRIGIDAS
 async function abrirModalInstrutor() {
     console.log('🚀 Abrindo modal de instrutor...');
@@ -134,6 +246,21 @@ function limparCamposFormulario() {
         const elemento = document.getElementById(campo);
         if (elemento) elemento.value = '';
     });
+    
+    // Limpar campo de foto
+    const fotoInput = document.getElementById('foto');
+    if (fotoInput) {
+        fotoInput.value = '';
+    }
+    
+    // Resetar preview da foto
+    const preview = document.getElementById('foto-preview');
+    const container = document.getElementById('preview-container');
+    const placeholder = document.getElementById('placeholder-foto');
+    
+    if (preview) preview.src = '';
+    if (container) container.style.display = 'none';
+    if (placeholder) placeholder.style.display = 'block';
     
     // Garantir que os campos de data estejam funcionando corretamente
     setTimeout(() => {
@@ -515,6 +642,20 @@ function preencherFormularioInstrutor(instrutor) {
         }
         horarioFimField.value = horarioFim;
         console.log('✅ Campo horario_fim preenchido:', horarioFimField.value);
+    }
+    
+    // Carregar foto existente se houver
+    if (instrutor.foto && instrutor.foto.trim() !== '') {
+        carregarFotoExistente(instrutor.foto);
+    } else {
+        // Resetar preview da foto
+        const preview = document.getElementById('foto-preview');
+        const container = document.getElementById('preview-container');
+        const placeholder = document.getElementById('placeholder-foto');
+        
+        if (preview) preview.src = '';
+        if (container) container.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
     }
     
     console.log('✅ Formulário preenchido com sucesso!');
@@ -1694,8 +1835,41 @@ function preencherModalVisualizacao(instrutor) {
     const horarioInicioFormatado = instrutor.horario_inicio ? instrutor.horario_inicio.substring(0, 5) : 'N/A';
     const horarioFimFormatado = instrutor.horario_fim ? instrutor.horario_fim.substring(0, 5) : 'N/A';
     
+    // Preparar HTML da foto
+    let fotoHTML = '';
+    if (instrutor.foto && instrutor.foto.trim() !== '') {
+        let urlFoto;
+        if (instrutor.foto.startsWith('http')) {
+            urlFoto = instrutor.foto;
+        } else {
+            // Construir URL baseada no contexto atual
+            const baseUrl = window.location.origin + window.location.pathname.split('/').slice(0, -2).join('/');
+            urlFoto = `${baseUrl}/${instrutor.foto}`;
+        }
+        fotoHTML = `
+            <div class="row mb-4">
+                <div class="col-12">
+                    <h6 class="text-primary border-bottom pb-2 mb-3">
+                        <i class="fas fa-camera me-2"></i>Foto do Instrutor
+                    </h6>
+                </div>
+                <div class="col-12 text-center">
+                    <img src="${urlFoto}" alt="Foto do instrutor" 
+                         style="max-width: 200px; max-height: 200px; border-radius: 50%; object-fit: cover; border: 3px solid #dee2e6; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <div style="display: none; color: #6c757d; font-size: 0.9rem;">
+                        <i class="fas fa-user-circle fa-3x"></i><br>
+                        Foto não disponível
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
     conteudo.innerHTML = `
         <div class="container-fluid" style="padding: 0;">
+            ${fotoHTML}
+            
             <!-- Informações Básicas -->
             <div class="row mb-3">
                 <div class="col-12">

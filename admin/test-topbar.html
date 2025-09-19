@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Topbar Unificada - Sistema CFC</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- CSS Unificado da Topbar -->
+    <link href="assets/css/topbar-unified.css" rel="stylesheet">
+    
+    <style>
+        /* Estilos de teste */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .test-content {
+            margin-top: 64px;
+            padding: 40px 20px;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 8px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+        
+        .test-title {
+            color: #2c3e50;
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+        }
+        
+        .test-description {
+            color: #666;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .test-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .test-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            border-left: 4px solid #3498db;
+        }
+        
+        .test-card h4 {
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        
+        .test-card p {
+            color: #666;
+            margin-bottom: 15px;
+        }
+        
+        .test-button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+        }
+        
+        .test-button:hover {
+            background: #2980b9;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-success { background-color: #27ae60; }
+        .status-warning { background-color: #f39c12; }
+        .status-error { background-color: #e74c3c; }
+        
+        .test-sidebar {
+            position: fixed;
+            left: 0;
+            top: 64px;
+            width: 70px;
+            height: calc(100vh - 64px);
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            z-index: 999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding-top: 20px;
+        }
+        
+        .test-sidebar-item {
+            width: 50px;
+            height: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            margin-bottom: 10px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        
+        .test-sidebar-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <!-- Topbar (será criada pelo JavaScript) -->
+    
+    <!-- Sidebar de teste -->
+    <div class="test-sidebar">
+        <div class="test-sidebar-item" title="Dashboard">
+            <i class="fas fa-chart-line"></i>
+        </div>
+        <div class="test-sidebar-item" title="Alunos">
+            <i class="fas fa-graduation-cap"></i>
+        </div>
+        <div class="test-sidebar-item" title="Instrutores">
+            <i class="fas fa-chalkboard-teacher"></i>
+        </div>
+        <div class="test-sidebar-item" title="Veículos">
+            <i class="fas fa-car"></i>
+        </div>
+    </div>
+    
+    <!-- Conteúdo de teste -->
+    <div class="test-content">
+        <div class="test-section">
+            <h1 class="test-title">Teste da Topbar Unificada</h1>
+            <p class="test-description">
+                Esta página testa a implementação da topbar unificada do Sistema CFC.
+                Verifique se todos os elementos estão funcionando corretamente.
+            </p>
+            
+            <div class="test-grid">
+                <div class="test-card">
+                    <h4><span class="status-indicator status-success"></span>Layout</h4>
+                    <p>Topbar fixa no topo com altura de 64px, sem gaps ou espaços em branco.</p>
+                    <button class="test-button" onclick="testLayout()">Testar Layout</button>
+                </div>
+                
+                <div class="test-card">
+                    <h4><span class="status-indicator status-success"></span>Distribuição</h4>
+                    <p>Logo à esquerda, busca central fluida, notificações e perfil à direita.</p>
+                    <button class="test-button" onclick="testElementDistribution()">Testar Distribuição</button>
+                </div>
+                
+                <div class="test-card">
+                    <h4><span class="status-indicator status-success"></span>Comportamento Sticky</h4>
+                    <p>Topbar permanece fixa no topo durante a rolagem da página.</p>
+                    <button class="test-button" onclick="testStickyBehavior()">Testar Sticky</button>
+                </div>
+                
+                <div class="test-card">
+                    <h4><span class="status-indicator status-success"></span>Busca Global</h4>
+                    <p>Campo de busca centralizado com debounce de 300ms e sugestões em dropdown.</p>
+                    <button class="test-button" onclick="testSearch()">Testar Busca</button>
+                </div>
+                
+                <div class="test-card">
+                    <h4><span class="status-indicator status-success"></span>Notificações</h4>
+                    <p>Sino com badge de contagem e dropdown com últimas notificações.</p>
+                    <button class="test-button" onclick="testNotifications()">Testar Notificações</button>
+                </div>
+                
+                <div class="test-card">
+                    <h4><span class="status-indicator status-success"></span>Perfil</h4>
+                    <p>Menu do usuário com dropdown contendo opções de perfil e logout.</p>
+                    <button class="test-button" onclick="testProfile()">Testar Perfil</button>
+                </div>
+                
+                <div class="test-card">
+                    <h4><span class="status-indicator status-success"></span>Responsividade</h4>
+                    <p>Layout adaptável para diferentes tamanhos de tela (desktop, tablet, mobile).</p>
+                    <button class="test-button" onclick="testResponsive()">Testar Responsivo</button>
+                </div>
+                
+                <div class="test-card">
+                    <h4><span class="status-indicator status-success"></span>Acessibilidade</h4>
+                    <p>Navegação por teclado, labels ARIA e foco visível em todos os elementos.</p>
+                    <button class="test-button" onclick="testAccessibility()">Testar Acessibilidade</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="test-title">Instruções de Teste</h2>
+            <div class="test-description">
+                <h4>1. Layout e Espaçamento</h4>
+                <ul>
+                    <li>Verifique se não há espaço em branco entre a topbar e o conteúdo</li>
+                    <li>Confirme que a topbar tem altura fixa de 64px</li>
+                    <li>Teste se a sidebar está posicionada corretamente (70px de largura)</li>
+                </ul>
+                
+                <h4>2. Funcionalidades</h4>
+                <ul>
+                    <li><strong>Busca:</strong> Digite pelo menos 3 caracteres e aguarde 300ms</li>
+                    <li><strong>Notificações:</strong> Clique no sino para ver o dropdown</li>
+                    <li><strong>Perfil:</strong> Clique no avatar para ver o menu</li>
+                    <li><strong>Atalhos:</strong> Pressione "/" para focar na busca</li>
+                </ul>
+                
+                <h4>3. Responsividade</h4>
+                <ul>
+                    <li>Redimensione a janela para testar breakpoints</li>
+                    <li>Verifique se os elementos se adaptam corretamente</li>
+                    <li>Teste em dispositivos móveis (largura ≤ 768px)</li>
+                </ul>
+                
+                <h4>4. Acessibilidade</h4>
+                <ul>
+                    <li>Navegue usando apenas o teclado (Tab, Enter, Escape)</li>
+                    <li>Verifique se há indicadores de foco visíveis</li>
+                    <li>Teste leitores de tela se disponível</li>
+                </ul>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h2 class="test-title">Log de Testes</h2>
+            <div id="test-log" style="background: #f8f9fa; padding: 20px; border-radius: 8px; font-family: monospace; font-size: 14px; max-height: 300px; overflow-y: auto;">
+                <div>🚀 Iniciando testes da topbar unificada...</div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- JavaScript -->
+    <script src="assets/js/topbar-unified.js"></script>
+    
+    <script>
+        // Funções de teste
+        function log(message) {
+            const logElement = document.getElementById('test-log');
+            const timestamp = new Date().toLocaleTimeString();
+            logElement.innerHTML += `<div>[${timestamp}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+        
+        function testLayout() {
+            log('🔍 Testando layout da topbar...');
+            
+            const topbar = document.querySelector('.topbar');
+            const body = document.body;
+            const adminMain = document.querySelector('.admin-main');
+            const adminSidebar = document.querySelector('.admin-sidebar');
+            
+            if (!topbar) {
+                log('❌ Topbar não encontrada!');
+                return;
+            }
+            
+            const topbarHeight = topbar.offsetHeight;
+            const topbarTop = topbar.offsetTop;
+            const bodyPaddingTop = parseInt(getComputedStyle(body).paddingTop);
+            const mainMarginTop = adminMain ? parseInt(getComputedStyle(adminMain).marginTop) : 0;
+            const sidebarTop = adminSidebar ? parseInt(getComputedStyle(adminSidebar).top) : 0;
+            
+            log(`📏 Altura da topbar: ${topbarHeight}px`);
+            log(`📏 Posição top da topbar: ${topbarTop}px`);
+            log(`📏 Padding-top do body: ${bodyPaddingTop}px`);
+            log(`📏 Margin-top do main: ${mainMarginTop}px`);
+            log(`📏 Top da sidebar: ${sidebarTop}px`);
+            
+            // Verificar se não há gap
+            const hasGap = topbarTop > 0 || bodyPaddingTop !== 64 || mainMarginTop !== 64;
+            
+            if (topbarHeight === 64 && !hasGap && sidebarTop === 64) {
+                log('✅ Layout correto: topbar 64px, sem gaps, sidebar alinhada');
+            } else {
+                log('❌ Layout incorreto: verifique altura, espaçamento e alinhamento');
+                if (hasGap) log('⚠️ Gap detectado entre topbar e conteúdo');
+                if (sidebarTop !== 64) log('⚠️ Sidebar não alinhada com topbar');
+            }
+            
+            // Testar distribuição dos elementos
+            testElementDistribution();
+        }
+        
+        function testElementDistribution() {
+            log('📐 Testando distribuição dos elementos...');
+            
+            const topbar = document.querySelector('.topbar');
+            const logo = document.querySelector('.topbar-logo');
+            const search = document.querySelector('.topbar-search');
+            const rightContainer = document.querySelector('.topbar-right');
+            
+            if (!topbar || !logo || !search || !rightContainer) {
+                log('❌ Elementos da topbar não encontrados!');
+                return;
+            }
+            
+            const topbarRect = topbar.getBoundingClientRect();
+            const logoRect = logo.getBoundingClientRect();
+            const searchRect = search.getBoundingClientRect();
+            const rightRect = rightContainer.getBoundingClientRect();
+            
+            log(`📐 Logo: left=${logoRect.left.toFixed(1)}px, width=${logoRect.width.toFixed(1)}px`);
+            log(`📐 Busca: left=${searchRect.left.toFixed(1)}px, width=${searchRect.width.toFixed(1)}px`);
+            log(`📐 Direita: left=${rightRect.left.toFixed(1)}px, width=${rightRect.width.toFixed(1)}px`);
+            
+            // Verificar alinhamento
+            const logoAligned = Math.abs(logoRect.left - topbarRect.left) < 5;
+            const rightAligned = Math.abs(rightRect.right - topbarRect.right) < 5;
+            const searchCentered = searchRect.left > logoRect.right && searchRect.right < rightRect.left;
+            
+            if (logoAligned && rightAligned && searchCentered) {
+                log('✅ Distribuição perfeita: logo à esquerda, busca central, elementos à direita');
+            } else {
+                log('❌ Distribuição incorreta');
+                if (!logoAligned) log('⚠️ Logo não alinhado à esquerda');
+                if (!rightAligned) log('⚠️ Elementos não alinhados à direita');
+                if (!searchCentered) log('⚠️ Busca não centralizada');
+            }
+        }
+        
+        function testStickyBehavior() {
+            log('📌 Testando comportamento sticky da topbar...');
+            
+            const topbar = document.querySelector('.topbar');
+            if (!topbar) {
+                log('❌ Topbar não encontrada!');
+                return;
+            }
+            
+            const computedStyle = getComputedStyle(topbar);
+            const position = computedStyle.position;
+            const top = computedStyle.top;
+            const zIndex = computedStyle.zIndex;
+            
+            log(`📌 Position: ${position}`);
+            log(`📌 Top: ${top}`);
+            log(`📌 Z-index: ${zIndex}`);
+            
+            if (position === 'fixed' && top === '0px' && zIndex === '1000') {
+                log('✅ Topbar configurada corretamente como sticky');
+            } else {
+                log('❌ Topbar não está configurada como sticky');
+            }
+            
+            // Testar scroll
+            log('🔄 Testando scroll...');
+            const initialScrollY = window.scrollY;
+            window.scrollTo(0, 100);
+            
+            setTimeout(() => {
+                const topbarAfterScroll = document.querySelector('.topbar');
+                const topbarRect = topbarAfterScroll.getBoundingClientRect();
+                
+                if (topbarRect.top === 0) {
+                    log('✅ Topbar permanece no topo durante scroll');
+                } else {
+                    log('❌ Topbar não permanece no topo durante scroll');
+                }
+                
+                // Restaurar posição
+                window.scrollTo(0, initialScrollY);
+            }, 100);
+        }
+        
+        function testSearch() {
+            log('🔍 Testando busca global...');
+            
+            const searchInput = document.querySelector('.search-input');
+            if (!searchInput) {
+                log('❌ Campo de busca não encontrado!');
+                return;
+            }
+            
+            log('✅ Campo de busca encontrado');
+            searchInput.focus();
+            searchInput.value = 'teste';
+            
+            // Simular evento de input
+            const event = new Event('input', { bubbles: true });
+            searchInput.dispatchEvent(event);
+            
+            log('🔍 Busca iniciada com termo "teste"');
+            
+            setTimeout(() => {
+                const results = document.querySelector('.search-results');
+                if (results && results.classList.contains('show')) {
+                    log('✅ Dropdown de resultados apareceu');
+                } else {
+                    log('⚠️ Dropdown de resultados não apareceu (normal se API não estiver disponível)');
+                }
+            }, 500);
+        }
+        
+        function testNotifications() {
+            log('🔔 Testando notificações...');
+            
+            const notificationIcon = document.querySelector('.notification-icon');
+            if (!notificationIcon) {
+                log('❌ Ícone de notificações não encontrado!');
+                return;
+            }
+            
+            log('✅ Ícone de notificações encontrado');
+            notificationIcon.click();
+            
+            setTimeout(() => {
+                const dropdown = document.querySelector('.notification-dropdown');
+                if (dropdown && dropdown.classList.contains('show')) {
+                    log('✅ Dropdown de notificações aberto');
+                    
+                    const badge = document.querySelector('.notification-badge');
+                    if (badge) {
+                        const count = badge.textContent;
+                        log(`🔔 Badge de notificações: ${count}`);
+                    }
+                } else {
+                    log('❌ Dropdown de notificações não abriu');
+                }
+            }, 100);
+        }
+        
+        function testProfile() {
+            log('👤 Testando perfil do usuário...');
+            
+            const profileButton = document.querySelector('.profile-button');
+            if (!profileButton) {
+                log('❌ Botão de perfil não encontrado!');
+                return;
+            }
+            
+            log('✅ Botão de perfil encontrado');
+            profileButton.click();
+            
+            setTimeout(() => {
+                const dropdown = document.querySelector('.profile-dropdown');
+                if (dropdown && dropdown.classList.contains('show')) {
+                    log('✅ Dropdown de perfil aberto');
+                } else {
+                    log('❌ Dropdown de perfil não abriu');
+                }
+            }, 100);
+        }
+        
+        function testResponsive() {
+            log('📱 Testando responsividade...');
+            
+            const currentWidth = window.innerWidth;
+            log(`📏 Largura atual: ${currentWidth}px`);
+            
+            if (currentWidth <= 480) {
+                log('📱 Breakpoint: Mobile (≤480px)');
+            } else if (currentWidth <= 768) {
+                log('📱 Breakpoint: Tablet (≤768px)');
+            } else if (currentWidth <= 1024) {
+                log('📱 Breakpoint: Desktop pequeno (≤1024px)');
+            } else {
+                log('📱 Breakpoint: Desktop grande (>1024px)');
+            }
+            
+            // Verificar elementos responsivos
+            const logoText = document.querySelector('.topbar-logo-text');
+            const profileInfo = document.querySelector('.profile-info');
+            
+            if (window.innerWidth <= 768 && logoText) {
+                const isHidden = getComputedStyle(logoText).display === 'none';
+                log(isHidden ? '✅ Logo text oculto em mobile' : '⚠️ Logo text deveria estar oculto em mobile');
+            }
+            
+            if (window.innerWidth <= 1024 && profileInfo) {
+                const isHidden = getComputedStyle(profileInfo).display === 'none';
+                log(isHidden ? '✅ Profile info oculto em tablet' : '⚠️ Profile info deveria estar oculto em tablet');
+            }
+        }
+        
+        function testAccessibility() {
+            log('♿ Testando acessibilidade...');
+            
+            // Verificar elementos focáveis
+            const focusableElements = document.querySelectorAll('input, button, a, [tabindex]');
+            log(`🎯 Elementos focáveis encontrados: ${focusableElements.length}`);
+            
+            // Verificar labels ARIA
+            const ariaLabels = document.querySelectorAll('[aria-label]');
+            log(`🏷️ Elementos com aria-label: ${ariaLabels.length}`);
+            
+            // Verificar roles
+            const roles = document.querySelectorAll('[role]');
+            log(`🎭 Elementos com role: ${roles.length}`);
+            
+            log('✅ Testes de acessibilidade básicos concluídos');
+            log('💡 Dica: Use Tab para navegar, Enter para ativar, Escape para fechar');
+        }
+        
+        // Log inicial
+        document.addEventListener('DOMContentLoaded', function() {
+            log('✅ DOM carregado');
+            log('🚀 Topbar unificada inicializando...');
+            
+            // Aguardar inicialização da topbar
+            setTimeout(() => {
+                const topbar = document.querySelector('.topbar');
+                if (topbar) {
+                    log('✅ Topbar carregada com sucesso');
+                } else {
+                    log('❌ Falha ao carregar topbar');
+                }
+            }, 1000);
+        });
+        
+        // Log de redimensionamento
+        window.addEventListener('resize', function() {
+            log(`📏 Janela redimensionada: ${window.innerWidth}x${window.innerHeight}`);
+        });
+    </script>
+</body>
+</html>

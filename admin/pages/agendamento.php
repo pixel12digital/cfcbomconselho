@@ -151,6 +151,26 @@ try {
                 <option value="cancelada">Cancelada</option>
             </select>
         </div>
+        
+        <div class="filter-group">
+            <label for="filter-veiculo">Veículo:</label>
+            <select id="filter-veiculo" onchange="filtrarAgenda()">
+                <option value="">Todos os Veículos</option>
+                <?php foreach ($veiculos as $veiculo): ?>
+                    <option value="<?php echo $veiculo['id']; ?>"><?php echo htmlspecialchars($veiculo['placa'] . ' - ' . $veiculo['modelo']); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="filter-aluno">Aluno:</label>
+            <select id="filter-aluno" onchange="filtrarAgenda()">
+                <option value="">Todos os Alunos</option>
+                <?php foreach ($alunos as $aluno): ?>
+                    <option value="<?php echo $aluno['id']; ?>"><?php echo htmlspecialchars($aluno['nome']); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
     </div>
 </div>
 
@@ -163,23 +183,27 @@ try {
     <div class="legend-items">
         <div class="legend-item">
             <div class="legend-color teorica"></div>
-            <span>📚 Aula Teórica</span>
+            <span>Aula Teórica</span>
         </div>
         <div class="legend-item">
             <div class="legend-color pratica"></div>
-            <span>🚗 Aula Prática</span>
+            <span>Aula Prática</span>
         </div>
         <div class="legend-item">
             <div class="legend-color agendada"></div>
-            <span>⏰ Agendada</span>
+            <span>Agendada</span>
         </div>
         <div class="legend-item">
             <div class="legend-color concluida"></div>
-            <span>✅ Concluída</span>
+            <span>Concluída</span>
         </div>
         <div class="legend-item">
             <div class="legend-color em_andamento"></div>
-            <span>🔄 Em Andamento</span>
+            <span>Em Andamento</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color cancelada"></div>
+            <span>Cancelada</span>
         </div>
 </div>
 
@@ -543,8 +567,13 @@ try {
                 </div>
                 
                 <div class="form-group">
-                    <label for="edit_hora_fim">Hora de Fim *</label>
-                    <input type="time" id="edit_hora_fim" name="hora_fim" required>
+                    <label for="edit_hora_fim">Hora de Fim</label>
+                    <div class="form-control-plaintext bg-light border rounded p-2">
+                        <i class="fas fa-clock me-2 text-primary"></i>
+                        <strong id="edit_hora_fim_display">--:--</strong>
+                        <small class="text-muted ms-2">(calculada automaticamente - 50 minutos)</small>
+                    </div>
+                    <input type="hidden" id="edit_hora_fim" name="hora_fim">
                 </div>
             </div>
             
@@ -677,7 +706,7 @@ try {
         background: white;
         border-radius: 10px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        overflow: hidden;
+        overflow: visible; /* Permitir que popovers sejam exibidas corretamente */
     }
     
     .calendar-title {
@@ -712,29 +741,33 @@ try {
     
     /* Estilos específicos por tipo de aula */
     .event-teorica {
-        background: linear-gradient(135deg, #3498db, #2980b9) !important;
-        border-left: 4px solid #2980b9 !important;
+        background: linear-gradient(135deg, #6c7ce7, #5a6fd8) !important;
+        border-left: 3px solid #5a6fd8 !important;
+        box-shadow: 0 2px 4px rgba(108, 124, 231, 0.2) !important;
     }
     
     .event-pratica {
-        background: linear-gradient(135deg, #e74c3c, #c0392b) !important;
-        border-left: 4px solid #c0392b !important;
+        background: linear-gradient(135deg, #4a90e2, #3a7bd5) !important;
+        border-left: 3px solid #3a7bd5 !important;
+        box-shadow: 0 2px 4px rgba(74, 144, 226, 0.2) !important;
     }
     
     /* Estilos específicos por status */
     .event-agendada {
-        opacity: 1 !important;
-        animation: pulse 2s infinite !important;
+        opacity: 0.9 !important;
+        animation: none !important;
     }
     
     .event-concluida {
         opacity: 0.8 !important;
         background: linear-gradient(135deg, #27ae60, #229954) !important;
+        box-shadow: 0 2px 4px rgba(39, 174, 96, 0.2) !important;
     }
     
     .event-em_andamento {
         background: linear-gradient(135deg, #f39c12, #e67e22) !important;
-        animation: pulse 1.5s infinite !important;
+        animation: none !important;
+        box-shadow: 0 2px 4px rgba(243, 156, 18, 0.2) !important;
     }
     
     @keyframes pulse {
@@ -804,18 +837,110 @@ try {
         background-color: #5a6268 !important;
     }
     
-    /* Popover para eventos extras */
-    .fc-popover {
-        border-radius: 8px !important;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
-        border: none !important;
+    /* Garantir que o container do calendário tenha posicionamento correto */
+    .fc-daygrid-day-events {
+        position: relative !important;
+        overflow: visible !important;
     }
     
-    .fc-popover-header {
-        background-color: #f8f9fa !important;
-        border-radius: 8px 8px 0 0 !important;
-        font-weight: 600 !important;
-        color: #495057 !important;
+    .fc-daygrid-day {
+        overflow: visible !important;
+    }
+    
+    /* Estilos específicos para o more link */
+    .fc-daygrid-more-link {
+        cursor: pointer !important;
+        pointer-events: auto !important;
+    }
+    
+    .fc-daygrid-more-link:hover {
+        background-color: #5a6268 !important;
+        transform: scale(1.05) !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    /* Corrigir posicionamento da popover do FullCalendar */
+    .fc-popover {
+        z-index: 9999 !important;
+        position: absolute !important;
+    }
+    
+    .fc-popover-caret {
+        z-index: 10000 !important;
+        position: absolute !important;
+    }
+    
+    /* Garantir que o container do FullCalendar permita overflow */
+    .fc {
+        overflow: visible !important;
+    }
+    
+    .fc-view-harness {
+        overflow: visible !important;
+    }
+    
+    /* Estilos para expansão de célula do dia */
+    .fc-daygrid-day.expandido {
+        position: relative !important;
+        z-index: 10 !important;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+        background-color: #fff !important;
+        border: 2px solid #007bff !important;
+        border-radius: 8px !important;
+    }
+    
+    .fc-daygrid-day.expandido .fc-daygrid-day-events {
+        max-height: none !important;
+        overflow: visible !important;
+    }
+    
+    .fc-daygrid-day.expandido .fc-daygrid-event {
+        display: block !important;
+        opacity: 1 !important;
+        transform: none !important;
+        margin: 2px 0 !important;
+    }
+    
+    .fc-daygrid-day.expandido .fc-daygrid-more-link {
+        display: none !important;
+    }
+    
+    .evento-oculto {
+        display: none !important;
+    }
+    
+    .evento-oculto.visivel {
+        display: block !important;
+        animation: fadeInExpand 0.3s ease-out !important;
+    }
+    
+    @keyframes fadeInExpand {
+        from {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Botão para recolher eventos expandidos */
+    .btn-recolher-eventos {
+        background: #6c757d !important;
+        color: white !important;
+        border: none !important;
+        border-radius: 4px !important;
+        padding: 4px 8px !important;
+        font-size: 0.75rem !important;
+        cursor: pointer !important;
+        margin-top: 4px !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .btn-recolher-eventos:hover {
+        background: #5a6268 !important;
+        transform: scale(1.05) !important;
     }
     
     /* Melhorar responsividade */
@@ -1179,15 +1304,15 @@ try {
     }
     
     .legend-color.teorica {
-        background: linear-gradient(135deg, #3498db, #2980b9);
+        background: linear-gradient(135deg, #6c7ce7, #5a6fd8);
     }
     
     .legend-color.pratica {
-        background: linear-gradient(135deg, #e74c3c, #c0392b);
+        background: linear-gradient(135deg, #4a90e2, #3a7bd5);
     }
     
     .legend-color.agendada {
-        background: linear-gradient(135deg, #f39c12, #e67e22);
+        background: linear-gradient(135deg, #7b8a8b, #6c7d7d);
     }
     
     .legend-color.concluida {
@@ -1196,6 +1321,10 @@ try {
     
     .legend-color.em_andamento {
         background: linear-gradient(135deg, #f39c12, #e67e22);
+    }
+    
+    .legend-color.cancelada {
+        background: linear-gradient(135deg, #bdc3c7, #95a5a6);
     }
     
     /* Melhorar aparência dos filtros */
@@ -1235,9 +1364,9 @@ try {
 </style>
 
 <!-- Incluir FullCalendar -->
-<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/locales/pt-br.global.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.5/index.global.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.5/index.global.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.5/locales/pt-br.global.min.js"></script>
 
 <!-- JavaScript do agendamento integrado na página -->
 
@@ -1304,6 +1433,172 @@ function inicializarCalendario() {
 
     console.log('Inicializando calendário com', aulasData.length, 'aulas');
 
+    // Função para expandir célula do dia
+    function expandirCelulaDia(dayEl, allSegs) {
+        // Verificar se dayEl existe
+        if (!dayEl) {
+            console.error('dayEl não está definido');
+            return;
+        }
+        
+        console.log('Expandindo célula do dia:', dayEl);
+        
+        // Remover expansão anterior se existir
+        const diasExpandidos = document.querySelectorAll('.fc-daygrid-day.expandido');
+        diasExpandidos.forEach(dia => {
+            dia.classList.remove('expandido');
+            const btnRecolher = dia.querySelector('.btn-recolher-eventos');
+            if (btnRecolher) {
+                btnRecolher.remove();
+            }
+            // Recolher eventos ocultos
+            const eventosOcultos = dia.querySelectorAll('.evento-oculto');
+            eventosOcultos.forEach(evento => {
+                evento.classList.remove('visivel');
+            });
+        });
+        
+        // Adicionar classe de expansão
+        dayEl.classList.add('expandido');
+        
+        // Encontrar o link "mais" para obter os eventos ocultos
+        const moreLink = dayEl.querySelector('.fc-daygrid-more-link');
+        if (moreLink) {
+            const numEventosOcultos = parseInt(moreLink.textContent.match(/\d+/)[0]);
+            const containerEventos = dayEl.querySelector('.fc-daygrid-day-events');
+            
+            if (!containerEventos) {
+                console.error('Container de eventos não encontrado');
+                return;
+            }
+            
+            // Obter data do dia para buscar eventos reais
+            const dataStr = dayEl.getAttribute('data-date');
+            console.log('Data do dia clicado:', dataStr);
+            
+            if (dataStr && aulasData) {
+                // Filtrar eventos do dia específico
+                const eventosDoDia = aulasData.filter(aula => {
+                    console.log('Comparando:', aula.data_aula, 'com', dataStr);
+                    
+                    // Tentar diferentes formatos de data
+                    const aulaDate = new Date(aula.data_aula);
+                    const dayDate = new Date(dataStr);
+                    
+                    // Comparar apenas ano, mês e dia
+                    const aulaDateOnly = aulaDate.toDateString();
+                    const dayDateOnly = dayDate.toDateString();
+                    
+                    console.log('Datas normalizadas - Aula:', aulaDateOnly, 'Dia:', dayDateOnly);
+                    
+                    return aula.data_aula === dataStr || aulaDateOnly === dayDateOnly;
+                });
+                
+                console.log('Eventos encontrados para o dia:', eventosDoDia);
+                
+                // Mostrar todos os eventos (incluindo os ocultos)
+                eventosDoDia.forEach((aula, index) => {
+                    if (index >= 3) { // Eventos além dos 3 primeiros (que já estão visíveis)
+                        const eventoOculto = document.createElement('div');
+                        eventoOculto.className = 'fc-daygrid-event fc-event evento-oculto';
+                        
+                        // Aplicar estilo baseado no tipo de aula
+                        if (aula.tipo_aula === 'teorica') {
+                            eventoOculto.style.background = 'linear-gradient(135deg, #6c7ce7, #5a6fd8)';
+                        } else if (aula.tipo_aula === 'pratica') {
+                            eventoOculto.style.background = 'linear-gradient(135deg, #4a90e2, #3a7bd5)';
+                        }
+                        
+                        eventoOculto.style.color = 'white';
+                        eventoOculto.style.padding = '3px 6px';
+                        eventoOculto.style.margin = '1px 0';
+                        eventoOculto.style.borderRadius = '4px';
+                        eventoOculto.style.fontSize = '0.8rem';
+                        eventoOculto.style.fontWeight = '500';
+                        eventoOculto.style.boxShadow = '0 1px 3px rgba(0,0,0,0.2)';
+                        eventoOculto.style.cursor = 'pointer';
+                        
+                        // Formatar texto do evento
+                        const horaInicio = aula.hora_inicio.substring(0, 5);
+                        const tipo = aula.tipo_aula === 'teorica' ? 'T' : 'P';
+                        eventoOculto.textContent = `${horaInicio} ${tipo} ${aula.nome_aluno || 'Aluno'}`;
+                        
+                        // Adicionar com delay para animação
+                        setTimeout(() => {
+                            containerEventos.appendChild(eventoOculto);
+                            setTimeout(() => {
+                                eventoOculto.classList.add('visivel');
+                            }, 50);
+                        }, (index - 3) * 100);
+                    }
+                });
+            } else {
+                console.log('Nenhum evento real encontrado para a data:', dataStr);
+                console.log('Dados disponíveis:', aulasData);
+                
+                // Se não há eventos reais, não criar eventos simulados
+                // Apenas mostrar mensagem de que não há mais eventos
+                const mensagem = document.createElement('div');
+                mensagem.className = 'evento-oculto';
+                mensagem.style.color = '#6c757d';
+                mensagem.style.fontSize = '0.75rem';
+                mensagem.style.fontStyle = 'italic';
+                mensagem.style.padding = '4px 6px';
+                mensagem.textContent = 'Nenhum evento adicional encontrado';
+                
+                containerEventos.appendChild(mensagem);
+            }
+            
+            // Criar botão para recolher
+            setTimeout(() => {
+                const btnRecolher = document.createElement('button');
+                btnRecolher.className = 'btn-recolher-eventos';
+                btnRecolher.textContent = 'Recolher';
+                btnRecolher.onclick = () => recolherCelulaDia(dayEl);
+                containerEventos.appendChild(btnRecolher);
+            }, numEventosOcultos * 100 + 200);
+        }
+        
+        // Scroll suave para o dia expandido se necessário
+        dayEl.scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'nearest',
+            inline: 'nearest'
+        });
+    }
+    
+    // Função para recolher célula do dia
+    function recolherCelulaDia(dayEl) {
+        dayEl.classList.remove('expandido');
+        
+        // Remover eventos ocultos
+        const eventosOcultos = dayEl.querySelectorAll('.evento-oculto');
+        eventosOcultos.forEach(evento => {
+            evento.remove();
+        });
+        
+        // Remover botão recolher
+        const btnRecolher = dayEl.querySelector('.btn-recolher-eventos');
+        if (btnRecolher) {
+            btnRecolher.remove();
+        }
+    }
+
+    // Event delegation para capturar cliques no link "mais"
+    document.addEventListener('click', function(event) {
+        if (event.target.classList.contains('fc-daygrid-more-link')) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            // Encontrar o elemento pai do dia
+            const dayEl = event.target.closest('.fc-daygrid-day');
+            if (dayEl) {
+                console.log('Link mais clicado, expandindo dia:', dayEl);
+                expandirCelulaDia(dayEl, []);
+            }
+        }
+    });
+
     // Configuração do FullCalendar
     const calendar = new FullCalendar.Calendar(calendarEl, {
         initialView: 'dayGridMonth',
@@ -1324,8 +1619,25 @@ function inicializarCalendario() {
         eventTextColor: '#ffffff',
         eventBorderColor: 'transparent',
         dayMaxEventRows: 4, // Máximo de 4 linhas de eventos por dia
-        moreLinkClick: 'popover', // Mostrar popover para eventos extras
-        dayMaxEvents: 4, // Limitar eventos visíveis por dia
+        moreLinkClick: 'popover', // Usar popover padrão, mas interceptaremos com event delegation
+        dayMaxEvents: 3, // Reduzir para 3 eventos por dia para testar
+        dayMaxEventRows: 3, // Reduzir para 3 linhas por dia
+        // Configurações de localização específicas
+        buttonText: {
+            today: 'Hoje',
+            month: 'Mês',
+            week: 'Semana',
+            day: 'Dia',
+            list: 'Lista'
+        },
+        // Traduzir texto "more" para português
+        moreLinkText: function(num) {
+            return '+ ' + num + ' mais';
+        },
+        
+        // Ocultar texto "Dia inteiro"
+        allDayText: '',
+        
         // Configurações de localização específicas
         buttonText: {
             today: 'Hoje',
@@ -1353,6 +1665,10 @@ function inicializarCalendario() {
             if (window.filtrosAtivos) {
                 const filtros = window.filtrosAtivos;
                 
+                if (filtros.cfc) {
+                    eventosFiltrados = eventosFiltrados.filter(aula => aula.cfc_id == filtros.cfc);
+                }
+                
                 if (filtros.instrutor) {
                     eventosFiltrados = eventosFiltrados.filter(aula => aula.instrutor_id == filtros.instrutor);
                 }
@@ -1363,6 +1679,14 @@ function inicializarCalendario() {
                 
                 if (filtros.status) {
                     eventosFiltrados = eventosFiltrados.filter(aula => aula.status === filtros.status);
+                }
+                
+                if (filtros.veiculo) {
+                    eventosFiltrados = eventosFiltrados.filter(aula => aula.veiculo_id == filtros.veiculo);
+                }
+                
+                if (filtros.aluno) {
+                    eventosFiltrados = eventosFiltrados.filter(aula => aula.aluno_id == filtros.aluno);
                 }
                 
                 console.log('Eventos após aplicar filtros:', eventosFiltrados.length);
@@ -1405,21 +1729,19 @@ function inicializarCalendario() {
 
 function formatarEvento(aula) {
     const cores = {
-        teorica: '#3498db',
-        pratica: '#e74c3c',
-        agendada: '#f39c12',
-        'em_andamento': '#3498db',
+        teorica: '#6c7ce7',
+        pratica: '#4a90e2',
+        agendada: '#7b8a8b',
+        'em_andamento': '#f39c12',
         concluida: '#27ae60',
-        cancelada: '#95a5a6'
+        cancelada: '#bdc3c7'
     };
 
     // Formatar horário para exibição resumida
     const horaInicio = aula.hora_inicio.substring(0, 5); // HH:MM
     const horaFim = aula.hora_fim.substring(0, 5); // HH:MM
-    const tipoAulaTexto = aula.tipo_aula === 'teorica' ? '📚' : '🚗';
-    const statusIcon = aula.status === 'agendada' ? '⏰' : 
-                      aula.status === 'concluida' ? '✅' : 
-                      aula.status === 'em_andamento' ? '🔄' : '❌';
+    const tipoAulaTexto = aula.tipo_aula === 'teorica' ? 'T' : 'P';
+    const statusIcon = '';
     
     // Título resumido para melhor visualização
     const nomeResumido = aula.aluno_nome.split(' ').slice(0, 2).join(' ');
@@ -1524,11 +1846,30 @@ function salvarNovaAula(event) {
         // Tratar resposta HTTP 409 (Conflict) especificamente
         if (response.status === 409) {
             return response.text().then(text => {
+                console.log('Resposta de erro 409:', text);
                 try {
                     const errorData = JSON.parse(text);
+                    console.log('Dados de erro parseados:', errorData);
                     throw new Error(`CONFLITO: ${errorData.mensagem || 'Conflito de agendamento detectado'}`);
                 } catch (e) {
-                    throw new Error('CONFLITO: Veículo ou instrutor já possui aula agendada neste horário');
+                    console.error('Erro ao fazer parse do JSON de erro:', e);
+                    console.error('Texto da resposta:', text);
+                    // Se não conseguir fazer parse, extrair a mensagem do JSON manualmente
+                    let mensagemErro = 'Veículo ou instrutor já possui aula agendada neste horário';
+                    
+                    // Tentar extrair a mensagem do JSON manualmente
+                    const match = text.match(/"mensagem":"([^"]+)"/);
+                    if (match && match[1]) {
+                        mensagemErro = match[1];
+                    } else if (text.includes('INSTRUTOR INDISPONÍVEL')) {
+                        mensagemErro = text.replace(/.*INSTRUTOR INDISPONÍVEL: /, '👨‍🏫 INSTRUTOR INDISPONÍVEL: ').replace(/".*/, '');
+                    } else if (text.includes('VEÍCULO INDISPONÍVEL')) {
+                        mensagemErro = text.replace(/.*VEÍCULO INDISPONÍVEL: /, '🚗 VEÍCULO INDISPONÍVEL: ').replace(/".*/, '');
+                    } else if (text.includes('LIMITE DE AULAS EXCEDIDO')) {
+                        mensagemErro = text.replace(/.*LIMITE DE AULAS EXCEDIDO: /, '🚫 LIMITE DE AULAS EXCEDIDO: ').replace(/".*/, '');
+                    }
+                    
+                    throw new Error(`CONFLITO: ${mensagemErro}`);
                 }
             });
         }
@@ -1616,14 +1957,14 @@ function atualizarAula(event) {
     const mappedData = {
         acao: 'editar',
         aula_id: data.aula_id,
-        edit_aluno_id: data.aluno_id,
-        edit_instrutor_id: data.instrutor_id,
-        edit_veiculo_id: data.veiculo_id,
-        edit_data_aula: data.data_aula,
-        edit_hora_inicio: data.hora_inicio,
-        edit_hora_fim: data.hora_fim,
-        edit_tipo_aula: data.tipo_aula,
-        edit_observacoes: data.observacoes || ''
+        aluno_id: data.aluno_id,
+        instrutor_id: data.instrutor_id,
+        veiculo_id: data.veiculo_id,
+        data_aula: data.data_aula,
+        hora_inicio: data.hora_inicio,
+        hora_fim: data.hora_fim,
+        tipo_aula: data.tipo_aula,
+        observacoes: data.observacoes || ''
     };
     
     console.log('Dados mapeados para API:', mappedData);
@@ -1637,6 +1978,37 @@ function atualizarAula(event) {
         body: JSON.stringify(mappedData)
     })
     .then(response => {
+        // Tratar resposta HTTP 409 (Conflict) especificamente
+        if (response.status === 409) {
+            return response.text().then(text => {
+                console.log('Resposta de erro 409:', text);
+                try {
+                    const errorData = JSON.parse(text);
+                    console.log('Dados de erro parseados:', errorData);
+                    throw new Error(`CONFLITO: ${errorData.mensagem || 'Conflito de agendamento detectado'}`);
+                } catch (e) {
+                    console.error('Erro ao fazer parse do JSON de erro:', e);
+                    console.error('Texto da resposta:', text);
+                    // Se não conseguir fazer parse, extrair a mensagem do JSON manualmente
+                    let mensagemErro = 'Veículo ou instrutor já possui aula agendada neste horário';
+                    
+                    // Tentar extrair a mensagem do JSON manualmente
+                    const match = text.match(/"mensagem":"([^"]+)"/);
+                    if (match && match[1]) {
+                        mensagemErro = match[1];
+                    } else if (text.includes('INSTRUTOR INDISPONÍVEL')) {
+                        mensagemErro = text.replace(/.*INSTRUTOR INDISPONÍVEL: /, '👨‍🏫 INSTRUTOR INDISPONÍVEL: ').replace(/".*/, '');
+                    } else if (text.includes('VEÍCULO INDISPONÍVEL')) {
+                        mensagemErro = text.replace(/.*VEÍCULO INDISPONÍVEL: /, '🚗 VEÍCULO INDISPONÍVEL: ').replace(/".*/, '');
+                    } else if (text.includes('LIMITE DE AULAS EXCEDIDO')) {
+                        mensagemErro = text.replace(/.*LIMITE DE AULAS EXCEDIDO: /, '🚫 LIMITE DE AULAS EXCEDIDO: ').replace(/".*/, '');
+                    }
+                    
+                    throw new Error(`CONFLITO: ${mensagemErro}`);
+                }
+            });
+        }
+        
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
@@ -1652,7 +2024,9 @@ function atualizarAula(event) {
         });
     })
     .then(result => {
-        if (result.sucesso) {
+        console.log('Resposta da API de edição:', result);
+        
+        if (result.success) {
             alert('Aula atualizada com sucesso!');
             fecharModalEditarAula();
             
@@ -1671,7 +2045,14 @@ function atualizarAula(event) {
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Erro ao atualizar aula. Tente novamente.');
+        
+        // Verificar se é erro de conflito específico
+        if (error.message.startsWith('CONFLITO:')) {
+            const mensagemConflito = error.message.replace('CONFLITO: ', '');
+            alert(`⚠️ ATENÇÃO: ${mensagemConflito}`);
+        } else {
+            alert('Erro ao atualizar aula. Tente novamente.');
+        }
     })
     .finally(() => {
         // Reativar botão
@@ -2217,12 +2598,16 @@ function filtrarAgenda() {
     const instrutorId = document.getElementById('filter-instrutor').value;
     const tipoAula = document.getElementById('filter-tipo').value;
     const status = document.getElementById('filter-status').value;
+    const veiculoId = document.getElementById('filter-veiculo').value;
+    const alunoId = document.getElementById('filter-aluno').value;
     
     console.log('Aplicando filtros:', {
         cfc: cfcId,
         instrutor: instrutorId,
         tipo: tipoAula,
-        status: status
+        status: status,
+        veiculo: veiculoId,
+        aluno: alunoId
     });
     
     // Armazenar filtros globalmente para uso na função de eventos
@@ -2230,7 +2615,9 @@ function filtrarAgenda() {
         cfc: cfcId,
         instrutor: instrutorId,
         tipo: tipoAula,
-        status: status
+        status: status,
+        veiculo: veiculoId,
+        aluno: alunoId
     };
     
     // Recarregar calendário para aplicar filtros
@@ -2435,7 +2822,7 @@ function adicionarTooltipEvento(evento, elemento) {
         <div class="event-tooltip">
             <div class="tooltip-header">
                 <strong>${props.hora_inicio} ${props.status_icon}</strong>
-                <span class="tooltip-type">${props.tipo_aula === 'teorica' ? '📚 Teórica' : '🚗 Prática'}</span>
+                <span class="tooltip-type">${props.tipo_aula === 'teorica' ? 'Teórica' : 'Prática'}</span>
             </div>
             <div class="tooltip-content">
                 <div class="tooltip-row">
@@ -2715,9 +3102,34 @@ function preencherFormularioEdicao(aula) {
     document.getElementById('edit_veiculo_id').value = aula.veiculo_id || '';
     document.getElementById('edit_data_aula').value = aula.data_aula;
     document.getElementById('edit_hora_inicio').value = aula.hora_inicio;
-    document.getElementById('edit_hora_fim').value = aula.hora_fim;
+    
+    // Calcular hora de fim automaticamente (hora início + 50 minutos)
+    calcularHoraFimEdicao();
+    
     document.getElementById('edit_status').value = aula.status;
     document.getElementById('edit_observacoes').value = aula.observacoes || '';
+}
+
+function calcularHoraFimEdicao() {
+    const horaInicio = document.getElementById('edit_hora_inicio').value;
+    if (horaInicio) {
+        // Converter hora de início para minutos
+        const [horas, minutos] = horaInicio.split(':').map(Number);
+        const totalMinutos = horas * 60 + minutos;
+        
+        // Adicionar 50 minutos
+        const totalMinutosFim = totalMinutos + 50;
+        
+        // Converter de volta para HH:MM
+        const horasFim = Math.floor(totalMinutosFim / 60);
+        const minutosFim = totalMinutosFim % 60;
+        
+        const horaFim = `${horasFim.toString().padStart(2, '0')}:${minutosFim.toString().padStart(2, '0')}`;
+        
+        // Atualizar display e campo hidden
+        document.getElementById('edit_hora_fim_display').textContent = horaFim;
+        document.getElementById('edit_hora_fim').value = horaFim;
+    }
 }
 
 // Habilitar/desabilitar campo veículo baseado no tipo de aula
@@ -2730,6 +3142,14 @@ document.getElementById('tipo_aula').addEventListener('change', function() {
         veiculoField.disabled = true;
         veiculoField.required = false;
         veiculoField.value = '';
+    }
+});
+
+// Event listener para recalcular hora de fim quando hora de início mudar (modal de edição)
+document.addEventListener('DOMContentLoaded', function() {
+    const editHoraInicio = document.getElementById('edit_hora_inicio');
+    if (editHoraInicio) {
+        editHoraInicio.addEventListener('change', calcularHoraFimEdicao);
     }
 });
 </script>

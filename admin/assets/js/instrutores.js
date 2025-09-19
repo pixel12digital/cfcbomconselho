@@ -92,6 +92,81 @@ function converterDataParaExibicao(dataString) {
     }
 }
 
+/**
+ * Carregar foto existente no preview
+ */
+function carregarFotoExistente(caminhoFoto) {
+    console.log('📷 Função carregarFotoExistente chamada com:', caminhoFoto);
+    console.log('📷 Tipo do parâmetro:', typeof caminhoFoto);
+    
+    if (caminhoFoto && caminhoFoto.trim() !== '') {
+        console.log('📷 Buscando elementos do DOM...');
+        const preview = document.getElementById('foto-preview');
+        const container = document.getElementById('preview-container');
+        const placeholder = document.getElementById('placeholder-foto');
+        
+        console.log('📷 Elementos encontrados:');
+        console.log('📷 - preview:', preview);
+        console.log('📷 - container:', container);
+        console.log('📷 - placeholder:', placeholder);
+        
+        // Construir URL completa da foto
+        let urlFoto;
+        if (caminhoFoto.startsWith('http')) {
+            urlFoto = caminhoFoto;
+        } else {
+            // Construir URL baseada no contexto atual
+            const baseUrl = window.location.origin + window.location.pathname.split('/').slice(0, -2).join('/');
+            urlFoto = `${baseUrl}/${caminhoFoto}`;
+        }
+        
+        // Debug: Testar URL antes de usar
+        console.log('🔍 Testando URL da foto:', urlFoto);
+        console.log('🔍 Base URL:', window.location.origin);
+        console.log('🔍 Pathname:', window.location.pathname);
+        console.log('🔍 Pathname split:', window.location.pathname.split('/'));
+        console.log('🔍 Pathname slice:', window.location.pathname.split('/').slice(0, -2));
+        console.log('🔍 Pathname join:', window.location.pathname.split('/').slice(0, -2).join('/'));
+        
+        console.log('📷 URL da foto construída:', urlFoto);
+        
+        if (preview && container && placeholder) {
+            preview.src = urlFoto;
+            container.style.display = 'block';
+            placeholder.style.display = 'none';
+            
+            console.log('📷 Elementos configurados - aguardando carregamento...');
+            
+            // Verificar se a imagem carregou
+            preview.onload = function() {
+                console.log('✅ Foto existente carregada com sucesso');
+            };
+            
+            preview.onerror = function() {
+                console.error('❌ Erro ao carregar foto:', urlFoto);
+                // Se der erro, mostrar placeholder
+                container.style.display = 'none';
+                placeholder.style.display = 'block';
+            };
+        } else {
+            console.error('❌ Elementos do DOM não encontrados!');
+        }
+        
+    } else {
+        console.log('📷 Caminho da foto vazio ou inválido');
+        // Se não há foto, mostrar placeholder
+        const container = document.getElementById('preview-container');
+        const placeholder = document.getElementById('placeholder-foto');
+        
+        if (container && placeholder) {
+            container.style.display = 'none';
+            placeholder.style.display = 'block';
+        }
+        
+        console.log('📷 Placeholder configurado');
+    }
+}
+
 // Função para detectar o caminho correto da API
 async function detectarCaminhoAPIInstrutores() {
     if (caminhoAPIInstrutoresCache) {
@@ -134,8 +209,13 @@ async function fetchAPIInstrutores(endpoint = '', options = {}) {
     console.log('📡 Método:', options.method || 'GET');
     console.log('📡 Opções:', options);
     
+    // Não definir Content-Type se for FormData (deixar o browser definir automaticamente)
+    const isFormData = options.body instanceof FormData;
+    
     const defaultOptions = {
-        headers: {
+        headers: isFormData ? {
+            'X-Requested-With': 'XMLHttpRequest'
+        } : {
             'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
         },
@@ -304,30 +384,45 @@ window.salvarInstrutor = async function() {
             return;
         }
         
-        // Preparar dados
-        const instrutorData = {
-            nome: formData.get('nome').trim(),
-            email: formData.get('email').trim(),
-            telefone: formData.get('telefone').trim(),
-            credencial: formData.get('credencial').trim(),
-            categoria_habilitacao: categoriasSelecionadas,
-            dias_semana: diasSelecionados,
-            cfc_id: formData.get('cfc_id') || null,
-            usuario_id: formData.get('usuario_id') || null,
-            ativo: formData.get('ativo') === '1',
-            // Campos adicionais
-            cpf: formData.get('cpf') || '',
-            cnh: formData.get('cnh') || '',
-            data_nascimento: converterDataParaMySQL(formData.get('data_nascimento') || ''),
-            horario_inicio: formData.get('horario_inicio') || '',
-            horario_fim: formData.get('horario_fim') || '',
-            endereco: formData.get('endereco') || '',
-            cidade: formData.get('cidade') || '',
-            uf: formData.get('uf') || '',
-            tipo_carga: formData.get('tipo_carga') || '',
-            validade_credencial: converterDataParaMySQL(formData.get('validade_credencial') || ''),
-            observacoes: formData.get('observacoes') || ''
-        };
+        // Preparar dados usando FormData para suportar upload de arquivos
+        const dadosEnvio = new FormData();
+        
+        // Adicionar campos básicos
+        dadosEnvio.append('nome', formData.get('nome').trim());
+        dadosEnvio.append('email', formData.get('email').trim());
+        dadosEnvio.append('telefone', formData.get('telefone').trim());
+        dadosEnvio.append('credencial', formData.get('credencial').trim());
+        dadosEnvio.append('cfc_id', formData.get('cfc_id') || '');
+        dadosEnvio.append('usuario_id', formData.get('usuario_id') || '');
+        dadosEnvio.append('ativo', formData.get('ativo') === '1' ? '1' : '0');
+        
+        // Adicionar campos adicionais
+        dadosEnvio.append('cpf', formData.get('cpf') || '');
+        dadosEnvio.append('cnh', formData.get('cnh') || '');
+        dadosEnvio.append('data_nascimento', converterDataParaMySQL(formData.get('data_nascimento') || ''));
+        dadosEnvio.append('horario_inicio', formData.get('horario_inicio') || '');
+        dadosEnvio.append('horario_fim', formData.get('horario_fim') || '');
+        dadosEnvio.append('endereco', formData.get('endereco') || '');
+        dadosEnvio.append('cidade', formData.get('cidade') || '');
+        dadosEnvio.append('uf', formData.get('uf') || '');
+        dadosEnvio.append('tipo_carga', formData.get('tipo_carga') || '');
+        dadosEnvio.append('validade_credencial', converterDataParaMySQL(formData.get('validade_credencial') || ''));
+        dadosEnvio.append('observacoes', formData.get('observacoes') || '');
+        
+        // Adicionar categorias e dias da semana
+        categoriasSelecionadas.forEach(categoria => {
+            dadosEnvio.append('categoria_habilitacao[]', categoria);
+        });
+        diasSelecionados.forEach(dia => {
+            dadosEnvio.append('dias_semana[]', dia);
+        });
+        
+        // Adicionar foto se houver
+        const fotoInput = document.getElementById('foto');
+        if (fotoInput && fotoInput.files && fotoInput.files[0]) {
+            dadosEnvio.append('foto', fotoInput.files[0]);
+            console.log('📷 Foto adicionada ao FormData:', fotoInput.files[0].name);
+        }
         
         const acao = formData.get('acao');
         const instrutor_id = formData.get('instrutor_id');
@@ -338,13 +433,13 @@ window.salvarInstrutor = async function() {
         console.log('🔍 Debug - Tipo de instrutor_id:', typeof instrutor_id);
         
         if (acao === 'editar' && instrutor_id) {
-            instrutorData.id = instrutor_id;
+            dadosEnvio.append('id', instrutor_id);
             console.log('✅ Modo edição detectado - ID:', instrutor_id);
         } else {
             console.log('⚠️ Modo criação detectado ou ID não encontrado');
         }
         
-        console.log('📋 Dados do instrutor para salvar:', instrutorData);
+        console.log('📋 FormData preparado para envio');
         
         // Debug adicional para verificar campos específicos
         console.log('🔍 Debug - usuario_id:', formData.get('usuario_id'));
@@ -367,7 +462,7 @@ window.salvarInstrutor = async function() {
                 
                 const response = await fetchAPIInstrutores(endpoint, {
                     method: method,
-                    body: JSON.stringify(instrutorData)
+                    body: dadosEnvio
                 });
                 
                 // Verificar se a resposta é válida antes de tentar fazer parse
@@ -664,6 +759,32 @@ window.editarInstrutor = async function(id) {
                          console.log('🔍 usuarioField:', usuarioField);
                          console.log('🔍 instrutor.usuario_id:', instrutor.usuario_id);
                      }
+                    
+                    // Carregar foto existente se houver
+                    console.log('🔍 Debug - instrutor.foto:', instrutor.foto);
+                    console.log('🔍 Debug - typeof instrutor.foto:', typeof instrutor.foto);
+                    console.log('🔍 Debug - instrutor.foto trim:', instrutor.foto ? instrutor.foto.trim() : 'undefined');
+                    
+                    if (instrutor.foto && instrutor.foto.trim() !== '') {
+                        console.log('📷 Carregando foto existente:', instrutor.foto);
+                        console.log('🔍 Debug - Chamando carregarFotoExistente...');
+                        carregarFotoExistente(instrutor.foto);
+                    } else {
+                        console.log('📷 Nenhuma foto existente encontrada');
+                        console.log('🔍 Debug - Resetando preview da foto...');
+                        // Resetar preview da foto
+                        const preview = document.getElementById('foto-preview');
+                        const container = document.getElementById('preview-container');
+                        const placeholder = document.getElementById('placeholder-foto');
+                        
+                        console.log('🔍 Debug - preview element:', preview);
+                        console.log('🔍 Debug - container element:', container);
+                        console.log('🔍 Debug - placeholder element:', placeholder);
+                        
+                        if (preview) preview.src = '';
+                        if (container) container.style.display = 'none';
+                        if (placeholder) placeholder.style.display = 'block';
+                    }
                     
                     console.log('✅ Formulário preenchido com sucesso!');
                 } catch (error) {

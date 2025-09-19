@@ -669,11 +669,30 @@ class SistemaAgendamento {
             // Tratar resposta HTTP 409 (Conflict) especificamente
             if (response.status === 409) {
                 const errorData = await response.text();
+                console.log('Resposta de erro 409:', errorData);
                 try {
                     const parsedError = JSON.parse(errorData);
+                    console.log('Dados de erro parseados:', parsedError);
                     throw new Error(`CONFLITO: ${parsedError.mensagem || 'Conflito de agendamento detectado'}`);
                 } catch (e) {
-                    throw new Error('CONFLITO: Veículo ou instrutor já possui aula agendada neste horário');
+                    console.error('Erro ao fazer parse do JSON de erro:', e);
+                    console.error('Texto da resposta:', errorData);
+                    // Se não conseguir fazer parse, extrair a mensagem do JSON manualmente
+                    let mensagemErro = 'Veículo ou instrutor já possui aula agendada neste horário';
+                    
+                    // Tentar extrair a mensagem do JSON manualmente
+                    const match = errorData.match(/"mensagem":"([^"]+)"/);
+                    if (match && match[1]) {
+                        mensagemErro = match[1];
+                    } else if (errorData.includes('INSTRUTOR INDISPONÍVEL')) {
+                        mensagemErro = errorData.replace(/.*INSTRUTOR INDISPONÍVEL: /, '👨‍🏫 INSTRUTOR INDISPONÍVEL: ').replace(/".*/, '');
+                    } else if (errorData.includes('VEÍCULO INDISPONÍVEL')) {
+                        mensagemErro = errorData.replace(/.*VEÍCULO INDISPONÍVEL: /, '🚗 VEÍCULO INDISPONÍVEL: ').replace(/".*/, '');
+                    } else if (errorData.includes('LIMITE DE AULAS EXCEDIDO')) {
+                        mensagemErro = errorData.replace(/.*LIMITE DE AULAS EXCEDIDO: /, '🚫 LIMITE DE AULAS EXCEDIDO: ').replace(/".*/, '');
+                    }
+                    
+                    throw new Error(`CONFLITO: ${mensagemErro}`);
                 }
             }
             

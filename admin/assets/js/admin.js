@@ -53,50 +53,21 @@ class AdminPanel {
             document.body.classList.add('mobile-view');
         }
         this.setupSubmenuToggle();
+        this.setupSidebarHover();
+    }
+    
+    // Configurar hover da sidebar - DESABILITADO para evitar conflito
+    setupSidebarHover() {
+        // Sistema de hover desabilitado - usando menu-efficient.js
+        console.log('Sistema de hover do admin.js desabilitado - usando menu-efficient.js');
+        return;
     }
 
-    // Configurar toggle dos submenus
+    // Configurar toggle dos submenus - DESABILITADO para evitar conflito
     setupSubmenuToggle() {
-        const navToggles = document.querySelectorAll('.nav-toggle');
-        
-        navToggles.forEach(toggle => {
-            toggle.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                
-                const group = toggle.getAttribute('data-group');
-                const submenu = document.getElementById(group);
-                const arrow = toggle.querySelector('.nav-arrow i');
-                
-                if (submenu) {
-                    // Fechar outros submenus abertos
-                    const allSubmenus = document.querySelectorAll('.nav-submenu');
-                    const allArrows = document.querySelectorAll('.nav-arrow i');
-                    
-                    allSubmenus.forEach(menu => {
-                        if (menu !== submenu) {
-                            menu.classList.remove('open');
-                        }
-                    });
-                    
-                    allArrows.forEach(arr => {
-                        if (arr !== arrow) {
-                            arr.style.transform = 'rotate(0deg)';
-                        }
-                    });
-                    
-                    // Toggle do submenu atual
-                    submenu.classList.toggle('open');
-                    
-                    // Rotacionar seta
-                    if (submenu.classList.contains('open')) {
-                        arrow.style.transform = 'rotate(180deg)';
-                    } else {
-                        arrow.style.transform = 'rotate(0deg)';
-                    }
-                }
-            });
-        });
+        // Sistema de menu desabilitado - usando menu-efficient.js
+        console.log('Sistema de menu do admin.js desabilitado - usando menu-efficient.js');
+        return;
     }
 
     // Toggle sidebar

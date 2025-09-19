@@ -50,8 +50,9 @@ try {
     $instrutor_id = $_REQUEST['instrutor_id'] ?? null;
     $veiculo_id = $_REQUEST['veiculo_id'] ?? null;
     $tipo_aula = $_REQUEST['tipo_aula'] ?? null;
-         $tipo_agendamento = $_REQUEST['tipo_agendamento'] ?? 'unica';
-     $posicao_intervalo = $_REQUEST['posicao_intervalo'] ?? 'depois';
+    $aluno_id = $_REQUEST['aluno_id'] ?? null; // Adicionado parâmetro aluno_id
+    $tipo_agendamento = $_REQUEST['tipo_agendamento'] ?? 'unica';
+    $posicao_intervalo = $_REQUEST['posicao_intervalo'] ?? 'depois';
     
     if (!$data_aula || !$hora_inicio) {
         throw new Exception('Data e hora de início são obrigatórios');
@@ -127,8 +128,8 @@ try {
         }
     }
     
-    // 3. Verificar limite diário do ALUNO (máximo 3 aulas por dia)
-    if ($aluno_id) {
+    // 3. Verificar limite diário do ALUNO (máximo 3 aulas práticas por dia)
+    if ($aluno_id && $tipo_aula === 'pratica') {
         $limite_aluno = verificarLimiteDiarioAluno($db, $aluno_id, $data_aula, count($horarios_aulas));
         $resultado['detalhes']['limite_aluno'] = $limite_aluno;
         
@@ -275,12 +276,12 @@ function verificarLimiteDiarioAluno($db, $aluno_id, $data_aula, $aulas_novas = 1
         ];
     }
     
-    // Buscar aulas já agendadas para o dia
-    $aulas_hoje = $db->fetchAll("SELECT COUNT(*) as total FROM aulas WHERE aluno_id = ? AND data_aula = ? AND status != 'cancelada'", [$aluno_id, $data_aula]);
+    // Buscar aulas práticas já agendadas para o dia
+    $aulas_hoje = $db->fetchAll("SELECT COUNT(*) as total FROM aulas WHERE aluno_id = ? AND data_aula = ? AND status != 'cancelada' AND tipo_aula = 'pratica'", [$aluno_id, $data_aula]);
     $total_aulas = $aulas_hoje[0]['total'];
     $total_com_novas = $total_aulas + $aulas_novas;
     
-    // Limite fixo de 3 aulas por dia para alunos
+    // Limite fixo de 3 aulas práticas por dia para alunos
     $limite_aluno = 3;
     
     if ($total_com_novas > $limite_aluno) {
@@ -289,7 +290,7 @@ function verificarLimiteDiarioAluno($db, $aluno_id, $data_aula, $aulas_novas = 1
             'total_aulas' => $total_aulas,
             'aulas_novas' => $aulas_novas,
             'limite' => $limite_aluno,
-            'mensagem' => "Aluno já possui {$total_aulas} aulas agendadas. Com {$aulas_novas} novas aulas, excederia o limite de {$limite_aluno} aulas por dia."
+            'mensagem' => "🚫 LIMITE DE AULAS EXCEDIDO: O aluno já possui {$total_aulas} aulas práticas agendadas para este dia. Com {$aulas_novas} nova(s) aula(s) prática(s), excederia o limite máximo de {$limite_aluno} aulas práticas por dia."
         ];
     }
     
@@ -299,7 +300,7 @@ function verificarLimiteDiarioAluno($db, $aluno_id, $data_aula, $aulas_novas = 1
         'aulas_novas' => $aulas_novas,
         'limite' => $limite_aluno,
         'aulas_restantes' => $limite_aluno - $total_com_novas,
-        'mensagem' => "Aluno pode agendar mais " . ($limite_aluno - $total_com_novas) . " aula(s) (limite: {$limite_aluno} aulas por dia)"
+        'mensagem' => "Aluno pode agendar mais " . ($limite_aluno - $total_com_novas) . " aula(s) prática(s) (limite: {$limite_aluno} aulas práticas por dia)"
     ];
 }
 
