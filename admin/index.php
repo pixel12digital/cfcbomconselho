@@ -485,6 +485,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     </div>
                 </div>
                 
+                <!-- Turmas -->
+                <div class="nav-item nav-group">
+                    <div class="nav-link nav-toggle" data-group="turmas" title="Turmas">
+                        <div class="nav-icon">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                        <div class="nav-text">Turmas</div>
+                        <div class="nav-arrow">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="nav-submenu" id="turmas">
+                        <a href="?page=turmas" class="nav-sublink <?php echo $page === 'turmas' ? 'active' : ''; ?>">
+                            <i class="fas fa-plus"></i>
+                            <span>Nova Turma</span>
+                        </a>
+                        <a href="?page=turmas" class="nav-sublink <?php echo $page === 'turmas' ? 'active' : ''; ?>">
+                            <i class="fas fa-list"></i>
+                            <span>Gestão de Turmas</span>
+                        </a>
+                    </div>
+                </div>
+                
                 <!-- Relatórios -->
                 <div class="nav-item nav-group">
                     <div class="nav-link nav-toggle" data-group="relatorios" title="Relatórios">

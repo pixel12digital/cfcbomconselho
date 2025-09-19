@@ -27,6 +27,13 @@ document.addEventListener('DOMContentLoaded', function() {
                 { icon: 'fas fa-calendar-alt', text: 'Agendamento', href: '?page=agendamento' }
             ]
         },
+        'turmas': {
+            title: 'Turmas',
+            items: [
+                { icon: 'fas fa-plus', text: 'Nova Turma', href: '?page=turmas' },
+                { icon: 'fas fa-list', text: 'Gestão de Turmas', href: '?page=turmas' }
+            ]
+        },
         'relatorios': {
             title: 'Relatórios',
             items: [
