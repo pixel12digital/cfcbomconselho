@@ -1102,9 +1102,53 @@ body.modal-open #modalAluno .modal-dialog {
                     </h5>
                     <button type="button" class="btn-close" onclick="fecharModalAluno()" style="filter: invert(1); background: none; border: none; font-size: 1.25rem; color: white; opacity: 0.8; cursor: pointer;">&times;</button>
                 </div>
-                <div class="modal-body" style="overflow-y: auto; padding: 1rem; flex: 1; min-height: 0; max-height: calc(90vh - 140px);">
+                <div class="modal-body" style="overflow-y: auto; padding: 0; flex: 1; min-height: 0; max-height: calc(90vh - 140px);">
                     <input type="hidden" name="acao" id="acaoAluno" value="criar">
                     <input type="hidden" name="aluno_id" id="aluno_id_hidden" value="">
+                    
+                    <!-- Navegação por Abas -->
+                    <ul class="nav nav-tabs" id="alunoTabs" role="tablist" style="margin: 0; border-bottom: 1px solid #dee2e6;">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="dados-tab" data-bs-toggle="tab" data-bs-target="#dados" type="button" role="tab">
+                                <i class="fas fa-user me-1"></i>Dados
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="matricula-tab" data-bs-toggle="tab" data-bs-target="#matricula" type="button" role="tab">
+                                <i class="fas fa-graduation-cap me-1"></i>Matrícula/Serviço
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation" id="financeiro-tab-container" style="display: none;">
+                            <button class="nav-link" id="financeiro-tab" data-bs-toggle="tab" data-bs-target="#financeiro" type="button" role="tab">
+                                <i class="fas fa-dollar-sign me-1"></i>Financeiro
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation" id="documentos-tab-container" style="display: none;">
+                            <button class="nav-link" id="documentos-tab" data-bs-toggle="tab" data-bs-target="#documentos" type="button" role="tab">
+                                <i class="fas fa-file-alt me-1"></i>Documentos
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="agenda-tab" data-bs-toggle="tab" data-bs-target="#agenda" type="button" role="tab">
+                                <i class="fas fa-calendar-alt me-1"></i>Agenda/Aulas
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="teorico-tab" data-bs-toggle="tab" data-bs-target="#teorico" type="button" role="tab">
+                                <i class="fas fa-chalkboard-teacher me-1"></i>Teórico
+                            </button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="historico-tab" data-bs-toggle="tab" data-bs-target="#historico" type="button" role="tab">
+                                <i class="fas fa-history me-1"></i>Histórico & Auditoria
+                            </button>
+                        </li>
+                    </ul>
+                    
+                    <!-- Conteúdo das Abas -->
+                    <div class="tab-content" id="alunoTabsContent" style="padding: 1rem;">
+                        <!-- Aba Dados -->
+                        <div class="tab-pane fade show active" id="dados" role="tabpanel">
                     
                     <div class="container-fluid" style="padding: 0;">
                         <!-- Seção 1: Informações Pessoais -->
@@ -1330,6 +1374,118 @@ body.modal-open #modalAluno .modal-dialog {
                                     <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Observações</label>
                                     <textarea class="form-control" id="observacoes" name="observacoes" rows="1" 
                                               placeholder="Informações adicionais sobre o aluno..." style="padding: 0.4rem; font-size: 0.85rem; resize: vertical;"></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                        </div>
+                        
+                        <!-- Aba Matrícula/Serviço -->
+                        <div class="tab-pane fade" id="matricula" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-3">
+                                        <i class="fas fa-graduation-cap me-1"></i>Matrículas do Aluno
+                                    </h6>
+                                    <div id="matriculas-container">
+                                        <div class="text-center text-muted py-4">
+                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                                            <p>Carregando matrículas...</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="adicionarMatricula()">
+                                            <i class="fas fa-plus me-1"></i>Nova Matrícula
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Aba Financeiro -->
+                        <div class="tab-pane fade" id="financeiro" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-3">
+                                        <i class="fas fa-dollar-sign me-1"></i>Informações Financeiras
+                                    </h6>
+                                    <div class="alert alert-info">
+                                        <i class="fas fa-info-circle me-2"></i>
+                                        Sistema financeiro em desenvolvimento. Esta funcionalidade será implementada em breve.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Aba Documentos -->
+                        <div class="tab-pane fade" id="documentos" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-3">
+                                        <i class="fas fa-file-alt me-1"></i>Documentos do Aluno
+                                    </h6>
+                                    <div id="documentos-container">
+                                        <div class="text-center text-muted py-4">
+                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                                            <p>Carregando documentos...</p>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <button type="button" class="btn btn-sm btn-primary" onclick="adicionarDocumento()">
+                                            <i class="fas fa-plus me-1"></i>Adicionar Documento
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Aba Agenda/Aulas -->
+                        <div class="tab-pane fade" id="agenda" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-3">
+                                        <i class="fas fa-calendar-alt me-1"></i>Aulas Agendadas
+                                    </h6>
+                                    <div id="aulas-container">
+                                        <div class="text-center text-muted py-4">
+                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                                            <p>Carregando aulas...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Aba Teórico -->
+                        <div class="tab-pane fade" id="teorico" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-3">
+                                        <i class="fas fa-chalkboard-teacher me-1"></i>Turma Teórica
+                                    </h6>
+                                    <div id="turma-container">
+                                        <div class="text-center text-muted py-4">
+                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                                            <p>Carregando informações da turma...</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Aba Histórico & Auditoria -->
+                        <div class="tab-pane fade" id="historico" role="tabpanel">
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6 class="text-primary border-bottom pb-1 mb-3">
+                                        <i class="fas fa-history me-1"></i>Histórico Completo
+                                    </h6>
+                                    <div id="historico-container">
+                                        <div class="text-center text-muted py-4">
+                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
+                                            <p>Carregando histórico...</p>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -3669,4 +3825,258 @@ function carregarOperacoesExistentes(operacoes) {
         }, 100);
     });
 }
+
+// =====================================================
+// FUNÇÕES PARA CONTROLE DAS ABAS DO MODAL DE ALUNO
+// =====================================================
+
+// Função para ajustar visibilidade das abas conforme perfil do usuário
+function ajustarAbasPorPerfil() {
+    const currentUser = <?php echo json_encode($user ?? []); ?>;
+    const userType = currentUser.tipo || 'instrutor';
+    
+    console.log('👤 Ajustando abas para perfil:', userType);
+    
+    // Mostrar/ocultar abas conforme perfil
+    if (userType === 'instrutor') {
+        // Instrutor: apenas Teórico, Agenda/Aulas, Histórico
+        document.getElementById('financeiro-tab-container').style.display = 'none';
+        document.getElementById('documentos-tab-container').style.display = 'none';
+    } else if (userType === 'secretaria') {
+        // Secretaria: todas exceto gestão de Usuários (já controlado no menu)
+        document.getElementById('financeiro-tab-container').style.display = 'block';
+        document.getElementById('documentos-tab-container').style.display = 'block';
+    } else if (userType === 'admin') {
+        // Admin: todas as abas
+        document.getElementById('financeiro-tab-container').style.display = 'block';
+        document.getElementById('documentos-tab-container').style.display = 'block';
+    }
+}
+
+// Função para carregar dados da aba Matrícula
+function carregarMatriculas(alunoId) {
+    if (!alunoId) return;
+    
+    fetch(`api/matriculas.php?aluno_id=${alunoId}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('matriculas-container');
+            if (data.success && data.matriculas.length > 0) {
+                container.innerHTML = `
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Categoria</th>
+                                    <th>Tipo Serviço</th>
+                                    <th>Status</th>
+                                    <th>Data Início</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${data.matriculas.map(matricula => `
+                                    <tr>
+                                        <td>${matricula.categoria_cnh}</td>
+                                        <td>${matricula.tipo_servico}</td>
+                                        <td><span class="badge bg-${matricula.status === 'ativa' ? 'success' : 'secondary'}">${matricula.status}</span></td>
+                                        <td>${new Date(matricula.data_inicio).toLocaleDateString('pt-BR')}</td>
+                                        <td>
+                                            <button class="btn btn-sm btn-outline-primary" onclick="editarMatricula(${matricula.id})">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-graduation-cap fa-2x mb-2"></i>
+                        <p>Nenhuma matrícula encontrada</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar matrículas:', error);
+            document.getElementById('matriculas-container').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Erro ao carregar matrículas
+                </div>
+            `;
+        });
+}
+
+// Função para carregar documentos da aba Documentos
+function carregarDocumentos(alunoId) {
+    if (!alunoId) return;
+    
+    fetch(`api/aluno-documentos.php?aluno_id=${alunoId}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('documentos-container');
+            if (data.success && data.documentos.length > 0) {
+                container.innerHTML = `
+                    <div class="row">
+                        ${data.documentos.map(doc => `
+                            <div class="col-md-6 mb-3">
+                                <div class="card">
+                                    <div class="card-body">
+                                        <h6 class="card-title">${doc.tipo_documento}</h6>
+                                        <p class="card-text small">${doc.nome_arquivo}</p>
+                                        <div class="d-flex justify-content-between">
+                                            <span class="badge bg-${doc.status === 'aprovado' ? 'success' : doc.status === 'rejeitado' ? 'danger' : 'warning'}">${doc.status}</span>
+                                            <div>
+                                                <button class="btn btn-sm btn-outline-primary" onclick="visualizarDocumento(${doc.id})">
+                                                    <i class="fas fa-eye"></i>
+                                                </button>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="excluirDocumento(${doc.id})">
+                                                    <i class="fas fa-trash"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-file-alt fa-2x mb-2"></i>
+                        <p>Nenhum documento encontrado</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar documentos:', error);
+            document.getElementById('documentos-container').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Erro ao carregar documentos
+                </div>
+            `;
+        });
+}
+
+// Função para carregar dados de uma aba específica
+function carregarDadosAba(abaId, alunoId) {
+    console.log(`📊 Carregando dados da aba: ${abaId} para aluno: ${alunoId}`);
+    
+    switch(abaId) {
+        case 'matricula':
+            carregarMatriculas(alunoId);
+            break;
+        case 'documentos':
+            carregarDocumentos(alunoId);
+            break;
+        case 'agenda':
+            document.getElementById('aulas-container').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-calendar-alt fa-2x mb-2"></i>
+                    <p>Carregando aulas agendadas...</p>
+                </div>
+            `;
+            break;
+        case 'teorico':
+            document.getElementById('turma-container').innerHTML = `
+                <div class="text-center text-muted py-4">
+                    <i class="fas fa-chalkboard-teacher fa-2x mb-2"></i>
+                    <p>Carregando informações da turma...</p>
+                </div>
+            `;
+            break;
+        case 'historico':
+            carregarHistorico(alunoId);
+            break;
+    }
+}
+
+// Função para carregar histórico
+function carregarHistorico(alunoId) {
+    if (!alunoId) return;
+    
+    fetch(`api/historico.php?tipo=aluno&id=${alunoId}`)
+        .then(response => response.json())
+        .then(data => {
+            const container = document.getElementById('historico-container');
+            if (data.success) {
+                container.innerHTML = `
+                    <div class="timeline">
+                        <div class="timeline-item">
+                            <div class="timeline-marker"></div>
+                            <div class="timeline-content">
+                                <h6>Cadastro do Aluno</h6>
+                                <p class="text-muted small">Aluno cadastrado no sistema</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.innerHTML = `
+                    <div class="text-center text-muted py-4">
+                        <i class="fas fa-history fa-2x mb-2"></i>
+                        <p>Nenhum histórico encontrado</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao carregar histórico:', error);
+            document.getElementById('historico-container').innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Erro ao carregar histórico
+                </div>
+            `;
+        });
+}
+
+// Função para adicionar nova matrícula
+function adicionarMatricula() {
+    const alunoId = document.getElementById('aluno_id_hidden').value;
+    if (!alunoId) {
+        mostrarAlerta('ID do aluno não encontrado', 'danger');
+        return;
+    }
+    
+    mostrarAlerta('Funcionalidade de nova matrícula em desenvolvimento', 'info');
+}
+
+// Função para adicionar novo documento
+function adicionarDocumento() {
+    const alunoId = document.getElementById('aluno_id_hidden').value;
+    if (!alunoId) {
+        mostrarAlerta('ID do aluno não encontrado', 'danger');
+        return;
+    }
+    
+    mostrarAlerta('Funcionalidade de upload de documentos em desenvolvimento', 'info');
+}
+
+// Event listener para mudança de abas
+document.addEventListener('DOMContentLoaded', function() {
+    // Ajustar abas por perfil
+    ajustarAbasPorPerfil();
+    
+    // Event listener para mudança de abas
+    const tabButtons = document.querySelectorAll('#alunoTabs button[data-bs-toggle="tab"]');
+    tabButtons.forEach(button => {
+        button.addEventListener('shown.bs.tab', function(event) {
+            const targetTab = event.target.getAttribute('data-bs-target').replace('#', '');
+            const alunoId = document.getElementById('aluno_id_hidden').value;
+            
+            if (alunoId) {
+                carregarDadosAba(targetTab, alunoId);
+            }
+        });
+    });
+});
 </script>

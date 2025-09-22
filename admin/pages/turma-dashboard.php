@@ -1,5 +1,15 @@
 <?php
 /**
+ * DEPRECATED - Este arquivo foi substituído pela funcionalidade integrada em turmas.php
+ * 
+ * Funcionalidade equivalente disponível em:
+ * - Gestão de Turmas: /admin/pages/turmas.php
+ * 
+ * Este arquivo será removido em versão futura.
+ * Por favor, use a nova interface unificada de turmas.
+ */
+
+/**
  * Dashboard de Turmas Teóricas
  * Sistema de Turmas Teóricas - CFC Bom Conselho
  * 

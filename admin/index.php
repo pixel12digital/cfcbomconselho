@@ -433,7 +433,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 </div>
                 
                 <!-- Cadastros -->
-                <?php if ($isAdmin): ?>
+                <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
                 <div class="nav-item nav-group">
                     <div class="nav-link nav-toggle" data-group="cadastros" title="Cadastros">
                         <div class="nav-icon">
@@ -445,6 +445,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         </div>
                     </div>
                     <div class="nav-submenu" id="cadastros">
+                        <?php if ($isAdmin): ?>
                         <a href="index.php?page=usuarios&action=list" class="nav-sublink <?php echo $page === 'usuarios' ? 'active' : ''; ?>">
                             <i class="fas fa-users"></i>
                             <span>Usuários</span>
@@ -453,17 +454,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <i class="fas fa-building"></i>
                             <span>CFCs</span>
                         </a>
-                        <a href="index.php?page=alunos&action=list" class="nav-sublink <?php echo $page === 'alunos' ? 'active' : ''; ?>">
+                        <?php endif; ?>
+                        <a href="pages/alunos.php" class="nav-sublink <?php echo $page === 'alunos' ? 'active' : ''; ?>">
                             <i class="fas fa-graduation-cap"></i>
                             <span>Alunos</span>
                             <div class="nav-badge"><?php echo $stats['total_alunos']; ?></div>
                         </a>
-                        <a href="index.php?page=instrutores&action=list" class="nav-sublink <?php echo $page === 'instrutores' ? 'active' : ''; ?>">
+                        <a href="pages/instrutores.php" class="nav-sublink <?php echo $page === 'instrutores' ? 'active' : ''; ?>">
                             <i class="fas fa-chalkboard-teacher"></i>
                             <span>Instrutores</span>
                             <div class="nav-badge"><?php echo $stats['total_instrutores']; ?></div>
                         </a>
-                        <a href="index.php?page=veiculos&action=list" class="nav-sublink <?php echo $page === 'veiculos' ? 'active' : ''; ?>">
+                        <a href="pages/veiculos.php" class="nav-sublink <?php echo $page === 'veiculos' ? 'active' : ''; ?>">
                             <i class="fas fa-car"></i>
                             <span>Veículos</span>
                             <div class="nav-badge"><?php echo $stats['total_veiculos']; ?></div>
@@ -492,85 +494,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     </div>
                 </div>
                 
-                <!-- Turmas Teóricas -->
-                <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="turmas" title="Turmas Teóricas">
+                <!-- Gestão de Turmas -->
+                <div class="nav-item">
+                    <a href="pages/turmas.php" class="nav-link <?php echo $page === 'turmas' ? 'active' : ''; ?>" title="Gestão de Turmas">
                         <div class="nav-icon">
                             <i class="fas fa-graduation-cap"></i>
                         </div>
-                        <div class="nav-text">Turmas Teóricas</div>
-                        <div class="nav-arrow">
-                            <i class="fas fa-chevron-down"></i>
-                        </div>
-                    </div>
-                    <div class="nav-submenu" id="turmas">
-                        <a href="pages/turmas.php?action=create" class="nav-sublink <?php echo $page === 'turmas' && $action === 'create' ? 'active' : ''; ?>">
-                            <i class="fas fa-plus"></i>
-                            <span>Nova Turma</span>
-                        </a>
-                        <a href="pages/turmas.php" class="nav-sublink <?php echo $page === 'turmas' && $action !== 'create' ? 'active' : ''; ?>">
-                            <i class="fas fa-list"></i>
-                            <span>Lista de Turmas</span>
-                        </a>
-                        <a href="pages/turma-dashboard.php" class="nav-sublink <?php echo $page === 'turma-dashboard' ? 'active' : ''; ?>">
-                            <i class="fas fa-tachometer-alt"></i>
-                            <span>Dashboard</span>
-                        </a>
-                        <a href="pages/turma-calendario.php" class="nav-sublink <?php echo $page === 'turma-calendario' ? 'active' : ''; ?>">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>Calendário de Aulas</span>
-                        </a>
-                        <a href="pages/turma-matriculas.php" class="nav-sublink <?php echo $page === 'turma-matriculas' ? 'active' : ''; ?>">
-                            <i class="fas fa-user-plus"></i>
-                            <span>Matrículas</span>
-                        </a>
-                        <a href="pages/turma-relatorios.php" class="nav-sublink <?php echo $page === 'turma-relatorios' ? 'active' : ''; ?>">
-                            <i class="fas fa-chart-bar"></i>
-                            <span>Relatórios</span>
-                        </a>
-                        <a href="pages/turma-configuracoes.php" class="nav-sublink <?php echo $page === 'turma-configuracoes' ? 'active' : ''; ?>">
-                            <i class="fas fa-cogs"></i>
-                            <span>Configurações</span>
-                        </a>
-                        <a href="pages/turma-templates.php" class="nav-sublink <?php echo $page === 'turma-templates' ? 'active' : ''; ?>">
-                            <i class="fas fa-copy"></i>
-                            <span>Templates</span>
-                        </a>
-                        <a href="pages/turma-grade-generator.php" class="nav-sublink <?php echo $page === 'turma-grade-generator' ? 'active' : ''; ?>">
-                            <i class="fas fa-calendar-plus"></i>
-                            <span>Gerador de Grade</span>
-                        </a>
-                    </div>
+                        <div class="nav-text">Gestão de Turmas</div>
+                    </a>
                 </div>
                 
-                <!-- Relatórios -->
-                <?php if ($isAdmin): ?>
+                <!-- Relatórios Gerais -->
+                <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="relatorios" title="Relatórios">
+                    <div class="nav-link nav-toggle" data-group="relatorios" title="Relatórios Gerais">
                         <div class="nav-icon">
                             <i class="fas fa-chart-bar"></i>
                         </div>
-                        <div class="nav-text">Relatórios</div>
+                        <div class="nav-text">Relatórios Gerais</div>
                         <div class="nav-arrow">
                             <i class="fas fa-chevron-down"></i>
                         </div>
                     </div>
                     <div class="nav-submenu" id="relatorios">
-                        <a href="index.php?page=relatorios&action=alunos" class="nav-sublink <?php echo $page === 'relatorios' && $action === 'alunos' ? 'active' : ''; ?>">
+                        <a href="pages/relatorio-matriculas.php" class="nav-sublink">
                             <i class="fas fa-graduation-cap"></i>
-                            <span>Relatório de Alunos</span>
+                            <span>Relatório de Matrículas</span>
                         </a>
-                        <a href="index.php?page=relatorios&action=instrutores" class="nav-sublink <?php echo $page === 'relatorios' && $action === 'instrutores' ? 'active' : ''; ?>">
-                            <i class="fas fa-chalkboard-teacher"></i>
-                            <span>Relatório de Instrutores</span>
-                        </a>
-                        <a href="index.php?page=relatorios&action=aulas" class="nav-sublink <?php echo $page === 'relatorios' && $action === 'aulas' ? 'active' : ''; ?>">
+                        <a href="pages/relatorio-frequencia.php" class="nav-sublink">
                             <i class="fas fa-calendar-check"></i>
-                            <span>Relatório de Aulas</span>
+                            <span>Relatório de Frequência</span>
                         </a>
-                        <a href="index.php?page=relatorios&action=financeiro" class="nav-sublink <?php echo $page === 'relatorios' && $action === 'financeiro' ? 'active' : ''; ?>">
-                            <i class="fas fa-dollar-sign"></i>
-                            <span>Relatório Financeiro</span>
+                        <a href="pages/relatorio-presencas.php" class="nav-sublink">
+                            <i class="fas fa-user-check"></i>
+                            <span>Relatório de Presenças</span>
+                        </a>
+                        <a href="pages/relatorio-ata.php" class="nav-sublink">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Relatório de ATA</span>
                         </a>
                     </div>
                 </div>
