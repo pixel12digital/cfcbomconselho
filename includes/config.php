@@ -137,6 +137,9 @@ define('INTEGRATION_GOOGLE_ANALYTICS', false);
 define('INTEGRATION_FACEBOOK_PIXEL', false);
 define('INTEGRATION_WHATSAPP', false);
 
+// Configurações do Sistema Financeiro
+define('FINANCEIRO_ENABLED', true);
+
 // Configurações de Suporte
 define('SUPPORT_EMAIL', 'suporte@seudominio.com');
 define('SUPPORT_PHONE', '(11) 99999-9999');

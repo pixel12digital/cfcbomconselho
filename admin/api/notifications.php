@@ -38,85 +38,102 @@ try {
     $notifications = [];
     
     // Notificações de alunos novos (últimos 7 dias)
-    $novosAlunos = $db->fetchAll("
-        SELECT 
-            CONCAT('Novo aluno cadastrado: ', nome) as title,
-            CONCAT('O aluno ', nome, ' foi cadastrado no sistema') as message,
-            'user' as type,
-            '#9b59b6' as color,
-            'fas fa-user' as icon,
-            CONCAT('?page=alunos&action=view&id=', id) as url,
-            criado_em as created_at,
-            1 as unread
-        FROM alunos 
-        WHERE criado_em >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-        ORDER BY criado_em DESC
-        LIMIT 3
-    ");
-    
-    $notifications = array_merge($notifications, $novosAlunos);
+    try {
+        $novosAlunos = $db->fetchAll("
+            SELECT 
+                CONCAT('Novo aluno cadastrado: ', nome) as title,
+                CONCAT('O aluno ', nome, ' foi cadastrado no sistema') as message,
+                'user' as type,
+                '#9b59b6' as color,
+                'fas fa-user' as icon,
+                CONCAT('?page=alunos&action=view&id=', id) as url,
+                criado_em as created_at,
+                1 as unread
+            FROM alunos 
+            WHERE criado_em >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+            ORDER BY criado_em DESC
+            LIMIT 3
+        ");
+        
+        $notifications = array_merge($notifications, $novosAlunos);
+    } catch (Exception $e) {
+        error_log('Erro ao buscar notificações de alunos: ' . $e->getMessage());
+    }
     
     // Notificações de aulas próximas (próximas 24 horas)
-    $aulasProximas = $db->fetchAll("
-        SELECT 
-            CONCAT('Aula agendada para ', DATE_FORMAT(data_aula, '%d/%m/%Y'), ' às ', TIME_FORMAT(hora_inicio, '%H:%i')) as title,
-            CONCAT('Aula com ', COALESCE(al.nome, 'aluno'), ' e instrutor ', COALESCE(u.nome, 'não definido')) as message,
-            'schedule' as type,
-            '#e67e22' as color,
-            'fas fa-calendar' as icon,
-            CONCAT('?page=agendar-aula&action=view&id=', a.id) as url,
-            NOW() as created_at,
-            1 as unread
-        FROM aulas a
-        LEFT JOIN alunos al ON a.aluno_id = al.id
-        LEFT JOIN instrutores i ON a.instrutor_id = i.id
-        LEFT JOIN usuarios u ON i.usuario_id = u.id
-        WHERE a.data_aula BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 1 DAY)
-        AND a.status = 'agendada'
-        ORDER BY a.data_aula ASC, a.hora_inicio ASC
-        LIMIT 5
-    ");
+    try {
+        $aulasProximas = $db->fetchAll("
+            SELECT 
+                CONCAT('Aula agendada para ', DATE_FORMAT(data_aula, '%d/%m/%Y'), ' às ', TIME_FORMAT(hora_inicio, '%H:%i')) as title,
+                CONCAT('Aula com ', COALESCE(al.nome, 'aluno'), ' e instrutor ', COALESCE(u.nome, 'não definido')) as message,
+                'schedule' as type,
+                '#e67e22' as color,
+                'fas fa-calendar' as icon,
+                CONCAT('?page=agendar-aula&action=view&id=', a.id) as url,
+                NOW() as created_at,
+                1 as unread
+            FROM aulas a
+            LEFT JOIN alunos al ON a.aluno_id = al.id
+            LEFT JOIN instrutores i ON a.instrutor_id = i.id
+            LEFT JOIN usuarios u ON i.usuario_id = u.id
+            WHERE a.data_aula BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 1 DAY)
+            AND a.status = 'agendada'
+            ORDER BY a.data_aula ASC, a.hora_inicio ASC
+            LIMIT 5
+        ");
+        
+        $notifications = array_merge($notifications, $aulasProximas);
+    } catch (Exception $e) {
+        error_log('Erro ao buscar notificações de aulas: ' . $e->getMessage());
+    }
     
-    $notifications = array_merge($notifications, $aulasProximas);
-    
-    // Notificações de documentos próximos ao vencimento
-    $documentosVencendo = $db->fetchAll("
-        SELECT 
-            CONCAT('Documento próximo ao vencimento: CNH do instrutor ', u.nome) as title,
-            CONCAT('A CNH do instrutor ', u.nome, ' vence em breve') as message,
-            'warning' as type,
-            '#f39c12' as color,
-            'fas fa-exclamation-triangle' as icon,
-            CONCAT('?page=instrutores&action=view&id=', i.id) as url,
-            NOW() as created_at,
-            1 as unread
-        FROM instrutores i
-        JOIN usuarios u ON i.usuario_id = u.id
-        WHERE i.data_vencimento_cnh BETWEEN CURDATE() AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
-        ORDER BY i.data_vencimento_cnh ASC
-        LIMIT 3
-    ");
-    
-    $notifications = array_merge($notifications, $documentosVencendo);
+    // Notificações de instrutores inativos (simplificado para evitar erros de coluna)
+    try {
+        $documentosVencendo = $db->fetchAll("
+            SELECT 
+                CONCAT('Instrutor inativo: ', u.nome) as title,
+                CONCAT('O instrutor ', u.nome, ' está inativo no sistema') as message,
+                'warning' as type,
+                '#f39c12' as color,
+                'fas fa-exclamation-triangle' as icon,
+                CONCAT('?page=instrutores&action=view&id=', i.id) as url,
+                NOW() as created_at,
+                1 as unread
+            FROM instrutores i
+            JOIN usuarios u ON i.usuario_id = u.id
+            WHERE i.ativo = 0
+            ORDER BY i.id ASC
+            LIMIT 3
+        ");
+        
+        $notifications = array_merge($notifications, $documentosVencendo);
+    } catch (Exception $e) {
+        // Se houver erro, continuar sem essas notificações
+        error_log('Erro ao buscar notificações de instrutores: ' . $e->getMessage());
+    }
     
     // Notificações de veículos em manutenção
-    $veiculosManutencao = $db->fetchAll("
-        SELECT 
-            CONCAT('Veículo em manutenção: ', placa) as title,
-            CONCAT('O veículo ', placa, ' (', marca, ' ', modelo, ') está em manutenção') as message,
-            'maintenance' as type,
-            '#e74c3c' as color,
-            'fas fa-wrench' as icon,
-            CONCAT('?page=veiculos&action=view&id=', id) as url,
-            NOW() as created_at,
-            1 as unread
-        FROM veiculos 
-        WHERE status = 'manutencao' OR proxima_manutencao <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
-        ORDER BY proxima_manutencao ASC
-        LIMIT 3
-    ");
-    
-    $notifications = array_merge($notifications, $veiculosManutencao);
+    try {
+        $veiculosManutencao = $db->fetchAll("
+            SELECT 
+                CONCAT('Veículo em manutenção: ', placa) as title,
+                CONCAT('O veículo ', placa, ' (', marca, ' ', modelo, ') está em manutenção') as message,
+                'maintenance' as type,
+                '#e74c3c' as color,
+                'fas fa-wrench' as icon,
+                CONCAT('?page=veiculos&action=view&id=', id) as url,
+                NOW() as created_at,
+                1 as unread
+            FROM veiculos 
+            WHERE status = 'manutencao' OR proxima_manutencao <= DATE_ADD(CURDATE(), INTERVAL 7 DAY)
+            ORDER BY proxima_manutencao ASC
+            LIMIT 3
+        ");
+        
+        $notifications = array_merge($notifications, $veiculosManutencao);
+    } catch (Exception $e) {
+        error_log('Erro ao buscar notificações de veículos: ' . $e->getMessage());
+    }
     
     // Notificações do sistema
     $notificacoesSistema = [

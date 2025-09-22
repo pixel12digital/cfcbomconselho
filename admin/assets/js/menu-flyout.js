@@ -41,6 +41,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 { icon: 'fas fa-calendar-plus', text: 'Gerador de Grade', href: '?page=turma-grade-generator' }
             ]
         },
+        'financeiro': {
+            title: 'Financeiro',
+            items: [
+                { icon: 'fas fa-file-invoice', text: 'Faturas (Receitas)', href: '?page=financeiro-faturas' },
+                { icon: 'fas fa-receipt', text: 'Despesas (Pagamentos)', href: '?page=financeiro-despesas' },
+                { icon: 'fas fa-chart-line', text: 'Relatórios', href: '?page=financeiro-relatorios' }
+            ]
+        },
         'relatorios': {
             title: 'Relatórios',
             items: [

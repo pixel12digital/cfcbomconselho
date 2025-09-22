@@ -1002,11 +1002,11 @@ body.modal-open #modalAluno .modal-dialog {
                                                 $tipoText = '🏍️';
                                                 break;
                                             case 'adicao':
-                                                $badgeClass = 'bg-success';
+                                                $badgeClass = 'badge-status-ativo';
                                                 $tipoText = '➕';
                                                 break;
                                             case 'mudanca':
-                                                $badgeClass = 'bg-warning';
+                                                $badgeClass = 'badge-status-pendente';
                                                 $tipoText = '🔄';
                                                 break;
                                             case 'aula_avulsa':
@@ -1014,7 +1014,7 @@ body.modal-open #modalAluno .modal-dialog {
                                                 $tipoText = '📚';
                                                 break;
                                             default:
-                                                $badgeClass = 'bg-secondary';
+                                                $badgeClass = 'badge-status-inativo';
                                                 $tipoText = '📋';
                                         }
                                         
@@ -1047,26 +1047,46 @@ body.modal-open #modalAluno .modal-dialog {
                             </td>
                             <td>
                                 <div class="action-buttons-compact">
-                                    <button type="button" class="btn btn-sm btn-outline-primary action-icon-btn" 
+                                    <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
+                                    <button type="button" class="btn btn-sm btn-secondary-action btn-edit action-icon-btn" 
                                             onclick="editarAluno(<?php echo $aluno['id']; ?>)" 
-                                            title="Editar dados do aluno" data-bs-toggle="tooltip">
-                                        <i class="fas fa-edit"></i>
+                                            title="Editar dados do aluno" data-tooltip="Editar dados do aluno"
+                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
+                                        <i class="fas fa-edit" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-info action-icon-btn" 
+                                    <?php endif; ?>
+                                    
+                                    <button type="button" class="btn btn-sm btn-secondary-action btn-view action-icon-btn" 
                                             onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" 
-                                            title="Ver detalhes completos do aluno" data-bs-toggle="tooltip">
-                                        <i class="fas fa-eye"></i>
+                                            title="Ver detalhes completos do aluno" data-tooltip="Ver detalhes completos do aluno"
+                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
+                                        <i class="fas fa-eye" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-success action-icon-btn" 
+                                    
+                                    <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
+                                    <button type="button" class="btn btn-sm btn-primary-action btn-add action-icon-btn" 
                                             onclick="agendarAula(<?php echo $aluno['id']; ?>)" 
-                                            title="Agendar nova aula para este aluno" data-bs-toggle="tooltip">
-                                        <i class="fas fa-calendar-plus"></i>
+                                            title="Agendar nova aula para este aluno" data-tooltip="Agendar nova aula para este aluno"
+                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
+                                        <i class="fas fa-calendar-plus" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
                                     </button>
-                                    <button type="button" class="btn btn-sm btn-outline-warning action-icon-btn" 
+                                    <?php endif; ?>
+                                    
+                                    <button type="button" class="btn btn-sm btn-secondary-action btn-history action-icon-btn" 
                                             onclick="historicoAluno(<?php echo $aluno['id']; ?>)" 
-                                            title="Visualizar histórico de aulas e progresso" data-bs-toggle="tooltip">
-                                        <i class="fas fa-history"></i>
+                                            title="Visualizar histórico de aulas e progresso" data-tooltip="Visualizar histórico de aulas e progresso"
+                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
+                                        <i class="fas fa-history" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
                                     </button>
+                                    
+                                    <?php if (defined('FINANCEIRO_ENABLED') && FINANCEIRO_ENABLED && ($isAdmin || $user['tipo'] === 'secretaria')): ?>
+                                    <button type="button" class="btn btn-sm btn-secondary-action btn-financial action-icon-btn" 
+                                            onclick="abrirFinanceiroAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Ver faturas e pagamentos do aluno" data-tooltip="Ver faturas e pagamentos do aluno"
+                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
+                                        <i class="fas fa-dollar-sign" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
+                                    </button>
+                                    <?php endif; ?>
                                     <?php if ($aluno['status'] === 'ativo'): ?>
                                     <button type="button" class="btn btn-sm btn-outline-secondary action-icon-btn" 
                                             onclick="desativarAluno(<?php echo $aluno['id']; ?>)" 
@@ -2407,6 +2427,14 @@ function historicoAluno(id) {
     
     // Redirecionar para página de histórico usando o sistema de roteamento do admin
     window.location.href = `?page=historico-aluno&id=${id}`;
+}
+
+function abrirFinanceiroAluno(id) {
+    // Debug: verificar se a função está sendo chamada
+    console.log('Função abrirFinanceiroAluno chamada com ID:', id);
+    
+    // Redirecionar para página de faturas com filtro por aluno usando roteamento
+    window.location.href = `?page=financeiro-faturas&aluno_id=${id}`;
 }
 
 function ativarAluno(id) {

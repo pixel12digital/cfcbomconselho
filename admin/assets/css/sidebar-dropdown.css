@@ -44,6 +44,14 @@
     background-color: rgba(0, 0, 0, 0.1);
     margin: 0 1rem;
     border-radius: 8px;
+    display: none; /* Inicialmente oculto */
+}
+
+/* Quando o submenu está visível */
+.nav-submenu[style*="display: block"] {
+    max-height: 500px;
+    opacity: 1;
+    display: block !important;
 }
 
 .nav-submenu.open {

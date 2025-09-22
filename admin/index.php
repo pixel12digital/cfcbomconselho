@@ -504,6 +504,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     </a>
                 </div>
                 
+                <!-- Financeiro -->
+                <?php if (defined('FINANCEIRO_ENABLED') && FINANCEIRO_ENABLED && ($isAdmin || $user['tipo'] === 'secretaria')): ?>
+                <div class="nav-item nav-group">
+                    <div class="nav-link nav-toggle" data-group="financeiro" title="Financeiro">
+                        <div class="nav-icon">
+                            <i class="fas fa-dollar-sign"></i>
+                        </div>
+                        <div class="nav-text">Financeiro</div>
+                        <div class="nav-arrow">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </div>
+                    <div class="nav-submenu" id="financeiro">
+                        <a href="?page=financeiro-faturas" class="nav-sublink <?php echo $page === 'financeiro-faturas' ? 'active' : ''; ?>">
+                            <i class="fas fa-file-invoice"></i>
+                            <span>Faturas (Receitas)</span>
+                        </a>
+                        <a href="?page=financeiro-despesas" class="nav-sublink <?php echo $page === 'financeiro-despesas' ? 'active' : ''; ?>">
+                            <i class="fas fa-receipt"></i>
+                            <span>Despesas (Pagamentos)</span>
+                        </a>
+                        <a href="?page=financeiro-relatorios" class="nav-sublink <?php echo $page === 'financeiro-relatorios' ? 'active' : ''; ?>">
+                            <i class="fas fa-chart-line"></i>
+                            <span>Relatórios</span>
+                        </a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
                 <!-- Relatórios Gerais -->
                 <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
                 <div class="nav-item nav-group">
@@ -945,13 +974,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     }
                     break;
                     
+                // === CASES PARA MÓDULO FINANCEIRO ===
+                case 'financeiro-faturas':
+                    // Carregar dados para página de faturas
+                    try {
+                        // Buscar alunos para filtros
+                        $alunos = $db->fetchAll("SELECT id, nome, cpf FROM alunos ORDER BY nome");
+                    } catch (Exception $e) {
+                        $alunos = [];
+                    }
+                    break;
+                    
+                case 'financeiro-despesas':
+                    // Carregar dados para página de despesas
+                    try {
+                        // Dados específicos de despesas podem ser carregados aqui
+                    } catch (Exception $e) {
+                        // Tratar erro se necessário
+                    }
+                    break;
+                    
+                case 'financeiro-relatorios':
+                    // Carregar dados para página de relatórios
+                    try {
+                        // Dados específicos de relatórios podem ser carregados aqui
+                    } catch (Exception $e) {
+                        // Tratar erro se necessário
+                    }
+                    break;
+
                 // === CASES PARA TURMAS TEÓRICAS ===
                 case 'turmas':
-                case 'turma-calendario':
-                case 'turma-matriculas':
-                case 'turma-dashboard':
-                case 'turma-configuracoes':
-                case 'turma-templates':
+                // Casos legados removidos - funcionalidade migrada para turmas.php
                     // Carregar dados básicos para todas as páginas de turmas
                     try {
                         $turmas = $db->fetchAll("
@@ -994,61 +1048,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     
                     // Dados específicos por página
                     switch ($page) {
-                        case 'turma-calendario':
-                            // Carregar aulas para o calendário
-                            try {
-                                $aulas_calendario = $db->fetchAll("
-                                    SELECT ta.*, t.nome as turma_nome, i.nome as instrutor_nome
-                                    FROM turma_aulas ta
-                                    JOIN turmas t ON ta.turma_id = t.id
-                                    LEFT JOIN instrutores i ON t.instrutor_id = i.id
-                                    WHERE t.tipo_aula = 'teorica'
-                                    ORDER BY ta.data_aula, ta.hora_inicio
-                                ");
-                            } catch (Exception $e) {
-                                $aulas_calendario = [];
-                            }
-                            break;
-                            
-                        case 'turma-matriculas':
-                            // Carregar matrículas pendentes
-                            try {
-                                $matriculas_pendentes = $db->fetchAll("
-                                    SELECT ta.*, a.nome as aluno_nome, a.cpf, t.nome as turma_nome
-                                    FROM turma_alunos ta
-                                    JOIN alunos a ON ta.aluno_id = a.id
-                                    JOIN turmas t ON ta.turma_id = t.id
-                                    WHERE ta.status = 'matriculado'
-                                    ORDER BY ta.data_matricula DESC
-                                ");
-                            } catch (Exception $e) {
-                                $matriculas_pendentes = [];
-                            }
-                            break;
-                            
-                        case 'turma-dashboard':
-                            // Carregar estatísticas para dashboard
-                            try {
-                                $stats_turmas = $db->fetch("
-                                    SELECT 
-                                        COUNT(*) as total_turmas,
-                                        COUNT(CASE WHEN status = 'ativa' THEN 1 END) as turmas_ativas,
-                                        COUNT(CASE WHEN status = 'agendada' THEN 1 END) as turmas_agendadas,
-                                        COUNT(CASE WHEN status = 'concluida' THEN 1 END) as turmas_concluidas,
-                                        SUM(total_alunos) as total_alunos_matriculados
-                                    FROM turmas 
-                                    WHERE tipo_aula = 'teorica'
-                                ");
-                            } catch (Exception $e) {
-                                $stats_turmas = [
-                                    'total_turmas' => 0,
-                                    'turmas_ativas' => 0,
-                                    'turmas_agendadas' => 0,
-                                    'turmas_concluidas' => 0,
-                                    'total_alunos_matriculados' => 0
-                                ];
-                            }
-                            break;
+                        // Casos legados removidos - funcionalidade migrada para turmas.php
                     }
                     break;
                     
@@ -1087,7 +1087,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 error_log("DEBUG: Session ID depois de definir arquivo: " . session_id());
                 error_log("DEBUG: User ID depois de definir arquivo: " . ($_SESSION['user_id'] ?? 'não definido'));
                 error_log("DEBUG: User Type depois de definir arquivo: " . ($_SESSION['user_type'] ?? 'não definido'));
-            } elseif (in_array($page, ['turmas', 'turma-calendario', 'turma-matriculas', 'turma-dashboard', 'turma-configuracoes', 'turma-templates'])) {
+            } elseif ($page === 'turmas') {
                 // Páginas de turmas teóricas
                 $content_file = "pages/{$page}.php";
             } else {

@@ -14,10 +14,19 @@ require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../includes/turma_manager.php';
 
-// Obter dados do usuário logado e suas permissões
+// Verificar se o usuário está logado e tem permissão
+if (!isLoggedIn() || (!hasPermission('admin') && !hasPermission('instrutor'))) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Obter dados do usuário logado
 $user = getCurrentUser();
 $userType = $user['tipo'] ?? 'admin';
 $userId = $user['id'] ?? null;
+$isAdmin = hasPermission('admin');
+$isInstrutor = hasPermission('instrutor');
+$db = Database::getInstance();
 
 // Instanciar o gerenciador de turmas
 $turmaManager = new TurmaManager();
@@ -56,8 +65,21 @@ $totalPaginas = ceil($totalTurmas / $filtros['limite']);
 $paginaAtual = $filtros['pagina'] + 1;
 ?>
 
-<!-- CSS específico para a página de turmas -->
-<style>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestão de Turmas - Sistema CFC</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <!-- CSS específico para a página de turmas -->
+    <style>
     .page-header {
         background: linear-gradient(135deg, #00A651 0%, #007A3D 100%);
         color: white;
@@ -659,3 +681,8 @@ function showNotification(message, type = 'info') {
     }
 }
 </script>
+
+<!-- Bootstrap JavaScript -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

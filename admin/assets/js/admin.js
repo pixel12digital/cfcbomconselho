@@ -63,11 +63,38 @@ class AdminPanel {
         return;
     }
 
-    // Configurar toggle dos submenus - DESABILITADO para evitar conflito
+    // Configurar toggle dos submenus
     setupSubmenuToggle() {
-        // Sistema de menu desabilitado - usando menu-efficient.js
-        console.log('Sistema de menu do admin.js desabilitado - usando menu-efficient.js');
-        return;
+        const navToggles = document.querySelectorAll('.nav-toggle');
+        
+        navToggles.forEach(toggle => {
+            toggle.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                
+                const group = this.getAttribute('data-group');
+                const submenu = document.getElementById(group);
+                
+                if (submenu) {
+                    // Toggle do submenu
+                    const isVisible = submenu.style.display === 'block';
+                    
+                    // Fechar todos os outros submenus
+                    document.querySelectorAll('.nav-submenu').forEach(menu => {
+                        if (menu.id !== group) {
+                            menu.style.display = 'none';
+                        }
+                    });
+                    
+                    // Toggle do submenu atual
+                    submenu.style.display = isVisible ? 'none' : 'block';
+                    
+                    console.log('Submenu toggled:', group, 'Visible:', !isVisible);
+                }
+            });
+        });
+        
+        console.log('Sistema de toggle de submenus configurado');
     }
 
     // Toggle sidebar
