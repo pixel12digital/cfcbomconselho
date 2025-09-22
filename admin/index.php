@@ -14,14 +14,18 @@ require_once '../includes/config.php';
 require_once '../includes/database.php';
 require_once '../includes/auth.php';
 
-// Verificar se o usuário está logado e tem permissão de admin
-if (!isLoggedIn() || !hasPermission('admin')) {
+// Verificar se o usuário está logado e tem permissão de admin ou instrutor
+if (!isLoggedIn() || (!hasPermission('admin') && !hasPermission('instrutor'))) {
     header('Location: ../index.php');
     exit;
 }
 
 // Obter dados do usuário logado
 $user = getCurrentUser();
+$userType = $user['tipo'] ?? 'admin';
+$userId = $user['id'] ?? null;
+$isAdmin = hasPermission('admin');
+$isInstrutor = hasPermission('instrutor');
 $db = Database::getInstance();
 
 // Obter estatísticas para o dashboard
@@ -281,6 +285,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             border-radius: 8px 8px 0 0 !important;
         }
         
+        
         .admin-sidebar .nav-flyout .flyout-item {
             display: block !important;
             padding: 12px 16px !important;
@@ -428,6 +433,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 </div>
                 
                 <!-- Cadastros -->
+                <?php if ($isAdmin): ?>
                 <div class="nav-item nav-group">
                     <div class="nav-link nav-toggle" data-group="cadastros" title="Cadastros">
                         <div class="nav-icon">
@@ -464,6 +470,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         </a>
                     </div>
                 </div>
+                <?php endif; ?>
                 
                 <!-- Operacional -->
                 <div class="nav-item nav-group">
@@ -485,30 +492,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     </div>
                 </div>
                 
-                <!-- Turmas -->
+                <!-- Turmas Teóricas -->
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="turmas" title="Turmas">
+                    <div class="nav-link nav-toggle" data-group="turmas" title="Turmas Teóricas">
                         <div class="nav-icon">
                             <i class="fas fa-graduation-cap"></i>
                         </div>
-                        <div class="nav-text">Turmas</div>
+                        <div class="nav-text">Turmas Teóricas</div>
                         <div class="nav-arrow">
                             <i class="fas fa-chevron-down"></i>
                         </div>
                     </div>
                     <div class="nav-submenu" id="turmas">
-                        <a href="?page=turmas" class="nav-sublink <?php echo $page === 'turmas' ? 'active' : ''; ?>">
+                        <a href="pages/turmas.php?action=create" class="nav-sublink <?php echo $page === 'turmas' && $action === 'create' ? 'active' : ''; ?>">
                             <i class="fas fa-plus"></i>
                             <span>Nova Turma</span>
                         </a>
-                        <a href="?page=turmas" class="nav-sublink <?php echo $page === 'turmas' ? 'active' : ''; ?>">
+                        <a href="pages/turmas.php" class="nav-sublink <?php echo $page === 'turmas' && $action !== 'create' ? 'active' : ''; ?>">
                             <i class="fas fa-list"></i>
-                            <span>Gestão de Turmas</span>
+                            <span>Lista de Turmas</span>
+                        </a>
+                        <a href="pages/turma-dashboard.php" class="nav-sublink <?php echo $page === 'turma-dashboard' ? 'active' : ''; ?>">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <span>Dashboard</span>
+                        </a>
+                        <a href="pages/turma-calendario.php" class="nav-sublink <?php echo $page === 'turma-calendario' ? 'active' : ''; ?>">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Calendário de Aulas</span>
+                        </a>
+                        <a href="pages/turma-matriculas.php" class="nav-sublink <?php echo $page === 'turma-matriculas' ? 'active' : ''; ?>">
+                            <i class="fas fa-user-plus"></i>
+                            <span>Matrículas</span>
+                        </a>
+                        <a href="pages/turma-relatorios.php" class="nav-sublink <?php echo $page === 'turma-relatorios' ? 'active' : ''; ?>">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Relatórios</span>
+                        </a>
+                        <a href="pages/turma-configuracoes.php" class="nav-sublink <?php echo $page === 'turma-configuracoes' ? 'active' : ''; ?>">
+                            <i class="fas fa-cogs"></i>
+                            <span>Configurações</span>
+                        </a>
+                        <a href="pages/turma-templates.php" class="nav-sublink <?php echo $page === 'turma-templates' ? 'active' : ''; ?>">
+                            <i class="fas fa-copy"></i>
+                            <span>Templates</span>
+                        </a>
+                        <a href="pages/turma-grade-generator.php" class="nav-sublink <?php echo $page === 'turma-grade-generator' ? 'active' : ''; ?>">
+                            <i class="fas fa-calendar-plus"></i>
+                            <span>Gerador de Grade</span>
                         </a>
                     </div>
                 </div>
                 
                 <!-- Relatórios -->
+                <?php if ($isAdmin): ?>
                 <div class="nav-item nav-group">
                     <div class="nav-link nav-toggle" data-group="relatorios" title="Relatórios">
                         <div class="nav-icon">
@@ -538,8 +574,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         </a>
                     </div>
                 </div>
+                <?php endif; ?>
                 
                 <!-- Configurações -->
+                <?php if ($isAdmin): ?>
                 <div class="nav-item nav-group">
                     <div class="nav-link nav-toggle" data-group="configuracoes" title="Configurações">
                         <div class="nav-icon">
@@ -569,8 +607,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         </a>
                     </div>
                 </div>
+                <?php endif; ?>
                 
                 <!-- Ferramentas de Desenvolvimento -->
+                <?php if ($isAdmin): ?>
                 <div class="nav-item nav-group">
                     <div class="nav-link nav-toggle" data-group="ferramentas" title="Ferramentas">
                         <div class="nav-icon">
@@ -599,6 +639,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         </a>
                     </div>
                 </div>
+                <?php endif; ?>
                 
                 <!-- Sair -->
                 <div class="nav-item">
@@ -943,6 +984,113 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     }
                     break;
                     
+                // === CASES PARA TURMAS TEÓRICAS ===
+                case 'turmas':
+                case 'turma-calendario':
+                case 'turma-matriculas':
+                case 'turma-dashboard':
+                case 'turma-configuracoes':
+                case 'turma-templates':
+                    // Carregar dados básicos para todas as páginas de turmas
+                    try {
+                        $turmas = $db->fetchAll("
+                            SELECT t.*, i.nome as instrutor_nome, c.nome as cfc_nome,
+                                   COUNT(ta.id) as total_alunos_matriculados
+                            FROM turmas t
+                            LEFT JOIN instrutores i ON t.instrutor_id = i.id
+                            LEFT JOIN cfcs c ON t.cfc_id = c.id
+                            LEFT JOIN turma_alunos ta ON t.id = ta.turma_id
+                            WHERE t.tipo_aula = 'teorica'
+                            GROUP BY t.id
+                            ORDER BY t.data_inicio DESC
+                        ");
+                    } catch (Exception $e) {
+                        $turmas = [];
+                    }
+                    
+                    try {
+                        $instrutores = $db->fetchAll("
+                            SELECT i.id, i.usuario_id, u.nome, u.email, i.categoria_habilitacao
+                            FROM instrutores i
+                            JOIN usuarios u ON i.usuario_id = u.id
+                            WHERE i.ativo = 1
+                            ORDER BY u.nome ASC
+                        ");
+                    } catch (Exception $e) {
+                        $instrutores = [];
+                    }
+                    
+                    try {
+                        $alunos = $db->fetchAll("
+                            SELECT a.id, a.nome, a.cpf, a.email, a.telefone, a.categoria_cnh
+                            FROM alunos a
+                            WHERE a.status = 'ativo'
+                            ORDER BY a.nome ASC
+                        ");
+                    } catch (Exception $e) {
+                        $alunos = [];
+                    }
+                    
+                    // Dados específicos por página
+                    switch ($page) {
+                        case 'turma-calendario':
+                            // Carregar aulas para o calendário
+                            try {
+                                $aulas_calendario = $db->fetchAll("
+                                    SELECT ta.*, t.nome as turma_nome, i.nome as instrutor_nome
+                                    FROM turma_aulas ta
+                                    JOIN turmas t ON ta.turma_id = t.id
+                                    LEFT JOIN instrutores i ON t.instrutor_id = i.id
+                                    WHERE t.tipo_aula = 'teorica'
+                                    ORDER BY ta.data_aula, ta.hora_inicio
+                                ");
+                            } catch (Exception $e) {
+                                $aulas_calendario = [];
+                            }
+                            break;
+                            
+                        case 'turma-matriculas':
+                            // Carregar matrículas pendentes
+                            try {
+                                $matriculas_pendentes = $db->fetchAll("
+                                    SELECT ta.*, a.nome as aluno_nome, a.cpf, t.nome as turma_nome
+                                    FROM turma_alunos ta
+                                    JOIN alunos a ON ta.aluno_id = a.id
+                                    JOIN turmas t ON ta.turma_id = t.id
+                                    WHERE ta.status = 'matriculado'
+                                    ORDER BY ta.data_matricula DESC
+                                ");
+                            } catch (Exception $e) {
+                                $matriculas_pendentes = [];
+                            }
+                            break;
+                            
+                        case 'turma-dashboard':
+                            // Carregar estatísticas para dashboard
+                            try {
+                                $stats_turmas = $db->fetch("
+                                    SELECT 
+                                        COUNT(*) as total_turmas,
+                                        COUNT(CASE WHEN status = 'ativa' THEN 1 END) as turmas_ativas,
+                                        COUNT(CASE WHEN status = 'agendada' THEN 1 END) as turmas_agendadas,
+                                        COUNT(CASE WHEN status = 'concluida' THEN 1 END) as turmas_concluidas,
+                                        SUM(total_alunos) as total_alunos_matriculados
+                                    FROM turmas 
+                                    WHERE tipo_aula = 'teorica'
+                                ");
+                            } catch (Exception $e) {
+                                $stats_turmas = [
+                                    'total_turmas' => 0,
+                                    'turmas_ativas' => 0,
+                                    'turmas_agendadas' => 0,
+                                    'turmas_concluidas' => 0,
+                                    'total_alunos_matriculados' => 0
+                                ];
+                            }
+                            break;
+                    }
+                    break;
+                    
                 default:
                     // Para o dashboard, não precisamos carregar dados específicos
                     break;
@@ -978,6 +1126,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 error_log("DEBUG: Session ID depois de definir arquivo: " . session_id());
                 error_log("DEBUG: User ID depois de definir arquivo: " . ($_SESSION['user_id'] ?? 'não definido'));
                 error_log("DEBUG: User Type depois de definir arquivo: " . ($_SESSION['user_type'] ?? 'não definido'));
+            } elseif (in_array($page, ['turmas', 'turma-calendario', 'turma-matriculas', 'turma-dashboard', 'turma-configuracoes', 'turma-templates'])) {
+                // Páginas de turmas teóricas
+                $content_file = "pages/{$page}.php";
             } else {
                 $content_file = "pages/{$page}.php";
             }

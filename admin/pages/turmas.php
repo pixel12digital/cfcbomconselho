@@ -9,8 +9,17 @@
  */
 
 // Incluir dependências
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
 require_once __DIR__ . '/../includes/turma_manager.php';
 
+// Obter dados do usuário logado e suas permissões
+$user = getCurrentUser();
+$userType = $user['tipo'] ?? 'admin';
+$userId = $user['id'] ?? null;
+
+// Instanciar o gerenciador de turmas
 $turmaManager = new TurmaManager();
 
 // Buscar instrutores para o dropdown
@@ -372,12 +381,45 @@ $paginaAtual = $filtros['pagina'] + 1;
                                 </td>
                                 <td>
                                     <div class="btn-group" role="group">
-                                        <button class="btn btn-sm btn-outline-primary" 
+                                        <?php
+                                        // Buscar primeira aula da turma para deep links
+                                        $firstAula = $db->fetch("
+                                            SELECT id FROM turma_aulas 
+                                            WHERE turma_id = ? 
+                                            ORDER BY data_aula ASC, hora_inicio ASC 
+                                            LIMIT 1
+                                        ", [$turma['id']]);
+                                        $firstAulaId = $firstAula['id'] ?? null;
+                                        ?>
+                                        
+                                        <!-- Botões de Ação Rápida -->
+                                        <?php if ($userType === 'admin' || ($userType === 'instrutor' && $turma['instrutor_id'] == $userId)): ?>
+                                            <?php if ($firstAulaId): ?>
+                                                <a href="turma-chamada.php?turma_id=<?= $turma['id'] ?>&aula_id=<?= $firstAulaId ?>"
+                                                   class="btn btn-sm btn-outline-primary" title="Chamada">
+                                                    <i class="fas fa-clipboard-check"></i>
+                                                </a>
+                                                <a href="turma-diario.php?turma_id=<?= $turma['id'] ?>&aula_id=<?= $firstAulaId ?>"
+                                                   class="btn btn-sm btn-outline-info" title="Diário">
+                                                    <i class="fas fa-book-open"></i>
+                                                </a>
+                                            <?php endif; ?>
+                                        <?php endif; ?>
+
+                                        <?php if ($userType === 'admin'): ?>
+                                            <a href="turma-relatorios.php?turma_id=<?= $turma['id'] ?>"
+                                               class="btn btn-sm btn-outline-success" title="Relatórios">
+                                                <i class="fas fa-chart-bar"></i>
+                                            </a>
+                                        <?php endif; ?>
+
+                                        <!-- Botões de Gestão -->
+                                        <button class="btn btn-sm btn-outline-secondary" 
                                                 onclick="visualizarTurma(<?php echo $turma['id']; ?>)"
                                                 title="Visualizar">
                                             <i class="fas fa-eye"></i>
                                         </button>
-                                        <button class="btn btn-sm btn-outline-success" 
+                                        <button class="btn btn-sm btn-outline-warning" 
                                                 onclick="editarTurma(<?php echo $turma['id']; ?>)"
                                                 title="Editar">
                                             <i class="fas fa-edit"></i>

@@ -28,10 +28,17 @@ document.addEventListener('DOMContentLoaded', function() {
             ]
         },
         'turmas': {
-            title: 'Turmas',
+            title: 'Turmas Teóricas',
             items: [
-                { icon: 'fas fa-plus', text: 'Nova Turma', href: '?page=turmas' },
-                { icon: 'fas fa-list', text: 'Gestão de Turmas', href: '?page=turmas' }
+                { icon: 'fas fa-plus', text: 'Nova Turma', href: '?page=turmas&action=create' },
+                { icon: 'fas fa-list', text: 'Lista de Turmas', href: '?page=turmas' },
+                { icon: 'fas fa-tachometer-alt', text: 'Dashboard', href: '?page=turma-dashboard' },
+                { icon: 'fas fa-calendar-alt', text: 'Calendário de Aulas', href: '?page=turma-calendario' },
+                { icon: 'fas fa-user-plus', text: 'Matrículas', href: '?page=turma-matriculas' },
+                { icon: 'fas fa-chart-bar', text: 'Relatórios', href: '?page=turma-relatorios' },
+                { icon: 'fas fa-cogs', text: 'Configurações', href: '?page=turma-configuracoes' },
+                { icon: 'fas fa-copy', text: 'Templates', href: '?page=turma-templates' },
+                { icon: 'fas fa-calendar-plus', text: 'Gerador de Grade', href: '?page=turma-grade-generator' }
             ]
         },
         'relatorios': {
