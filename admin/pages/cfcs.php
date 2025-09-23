@@ -1017,14 +1017,21 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
     }
     
     .action-buttons .btn {
-        font-size: 12px !important;
+        font-size: 10px !important;
         padding: 0 !important;
+        margin: 0 !important;
         white-space: nowrap !important;
         width: 18px !important;
         height: 18px !important;
+        min-width: 18px !important;
+        min-height: 18px !important;
+        max-width: 18px !important;
+        max-height: 18px !important;
         display: flex !important;
         align-items: center !important;
         justify-content: center !important;
+        border-radius: 3px !important;
+        line-height: 1 !important;
     }
     
     .action-buttons .btn .me-1 {
@@ -1032,7 +1039,9 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
     }
     
     .action-buttons .btn i {
-        font-size: 10px !important;
+        font-size: 8px !important;
+        line-height: 1 !important;
+        margin: 0 !important;
     }
     
     .action-buttons .btn:not(:hover) {
