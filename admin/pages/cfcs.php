@@ -22,15 +22,6 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
         <button type="button" class="btn btn-primary" onclick="abrirModalCFC('criar')">
             <i class="fas fa-plus me-1"></i>Novo CFC
         </button>
-        <button type="button" class="btn btn-info ms-2" onclick="testarCaminhosManual()" title="Testar caminhos da API">
-            <i class="fas fa-cog me-1"></i>Testar API
-        </button>
-        <button type="button" class="btn btn-warning ms-2" onclick="limparCacheAPI()" title="Limpar cache da API">
-            <i class="fas fa-broom me-1"></i>Limpar Cache
-        </button>
-        <button type="button" class="btn btn-success ms-2" onclick="testarAPICFC()" title="Testar API de CFCs">
-            <i class="fas fa-vial me-1"></i>Testar API CFC
-        </button>
     </div>
 </div>
 
@@ -67,7 +58,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 
 <!-- Tabela de CFCs -->
 <div class="card shadow">
-    <div class="card-header bg-primary text-white">
+    <div class="card-header bg-secondary text-white">
         <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de CFCs</h5>
     </div>
     <div class="card-body">
