@@ -4388,3 +4388,4 @@ window.addEventListener('resize', toggleMobileLayoutAlunos);
 // Chamada inicial para definir o layout correto
 console.log('🔧 Inicializando layout responsivo para alunos');
 toggleMobileLayoutAlunos();
+</script>
