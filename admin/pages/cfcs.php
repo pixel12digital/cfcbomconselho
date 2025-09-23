@@ -127,19 +127,19 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                         <button type="button" class="btn btn-edit action-btn" 
                                                 onclick="editarCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="Editar dados do CFC"
-                                                style="width: 25px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
+                                                style="width: 24px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
                                             <i class="fas fa-edit" style="font-size: 8px !important;"></i>
                                         </button>
                                         <button type="button" class="btn btn-view action-btn" 
                                                 onclick="visualizarCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="Ver detalhes completos do CFC"
-                                                style="width: 25px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
+                                                style="width: 24px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
                                             <i class="fas fa-eye" style="font-size: 8px !important;"></i>
                                         </button>
                                         <button type="button" class="btn btn-manage action-btn" 
                                                 onclick="gerenciarCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="Gerenciar instrutores, alunos e veículos"
-                                                style="width: 25px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
+                                                style="width: 24px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
                                             <i class="fas fa-cogs" style="font-size: 8px !important;"></i>
                                         </button>
                                     </div>
@@ -150,14 +150,14 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                         <button type="button" class="btn btn-toggle action-btn" 
                                                 onclick="desativarCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="Desativar CFC (não poderá operar)"
-                                                style="width: 25px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
+                                                style="width: 24px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
                                             <i class="fas fa-ban" style="font-size: 8px !important;"></i>
                                         </button>
                                         <?php else: ?>
                                         <button type="button" class="btn btn-schedule action-btn" 
                                                 onclick="ativarCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="Reativar CFC para operação"
-                                                style="width: 25px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
+                                                style="width: 24px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
                                             <i class="fas fa-check" style="font-size: 8px !important;"></i>
                                         </button>
                                         <?php endif; ?>
@@ -168,7 +168,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                         <button type="button" class="btn btn-delete action-btn" 
                                                 onclick="excluirCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="⚠️ EXCLUIR CFC - Esta ação não pode ser desfeita!"
-                                                style="width: 25px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
+                                                style="width: 24px !important; height: 18px !important; padding: 0 !important; margin: 0 !important; font-size: 8px !important;">
                                             <i class="fas fa-trash" style="font-size: 8px !important;"></i>
                                         </button>
                                     </div>
@@ -1070,11 +1070,11 @@ table .action-buttons .btn-delete {
     padding: 0 !important;
     margin: 0 !important;
     white-space: nowrap !important;
-    width: 25px !important;
+    width: 24px !important;
     height: 18px !important;
-    min-width: 25px !important;
+    min-width: 24px !important;
     min-height: 18px !important;
-    max-width: 25px !important;
+    max-width: 24px !important;
     max-height: 18px !important;
     display: flex !important;
     align-items: center !important;
