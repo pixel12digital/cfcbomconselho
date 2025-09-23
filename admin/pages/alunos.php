@@ -9,6 +9,10 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 header("Cache-Control: no-cache, no-store, must-revalidate");
 header("Pragma: no-cache");
 header("Expires: 0");
+
+// Debug: Verificar se os dados estão sendo carregados
+error_log("DEBUG ALUNOS: Total de alunos carregados: " . count($alunos));
+error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum'));
 ?>
 
 <style>
@@ -4355,6 +4359,10 @@ document.addEventListener('DOMContentLoaded', function() {
 // =====================================================
 // CONTROLE DE LAYOUT RESPONSIVO PARA ALUNOS
 // =====================================================
+
+console.log('🔧 SCRIPT ALUNOS CARREGADO - Verificando dados PHP');
+console.log('🔧 Total de alunos:', <?php echo count($alunos ?? []); ?>);
+console.log('🔧 Alunos data:', <?php echo json_encode($alunos ?? []); ?>);
 
 function toggleMobileLayoutAlunos() {
     console.log('🔧 toggleMobileLayoutAlunos executado - viewport:', window.innerWidth);
