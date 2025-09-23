@@ -232,6 +232,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <link href="assets/css/admin.css" rel="stylesheet">
     <link href="assets/css/modal-veiculos.css" rel="stylesheet">
     
+    <!-- Mobile Fallback CSS -->
+    <link href="assets/css/mobile-fallback.css" rel="stylesheet">
+    
     <!-- CSS dos Botões de Ação -->
     <link href="assets/css/action-buttons.css" rel="stylesheet">
     
@@ -1488,5 +1491,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
         <!-- <script src="assets/js/alunos.js"></script> -->
         <!-- alunos.js removido para evitar conflito com código inline -->
     <?php endif; ?>
+    
+    <!-- Mobile Debug Script -->
+    <script src="assets/js/mobile-debug.js"></script>
 </body>
 </html>

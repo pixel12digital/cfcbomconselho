@@ -3,10 +3,11 @@
     AddType text/css .css
 </IfModule>
 
-# Headers específicos para CSS
+# Headers específicos para CSS - Mobile Fix
 <IfModule mod_headers.c>
     Header set Content-Type "text/css"
-    Header set Cache-Control "public, max-age=2592000"
+    Header set Cache-Control "public, max-age=3600"
+    Header set X-Mobile-CSS-Fix "enabled"
 </IfModule>
 
 # Permitir acesso aos arquivos CSS
