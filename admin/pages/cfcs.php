@@ -1017,7 +1017,7 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
     }
 }
 
-/* CSS AGRESSIVO PARA BOTÕES 18x18px - APLICAR EM TODOS OS DISPOSITIVOS */
+/* CSS ULTRA AGRESSIVO PARA BOTÕES 18x18px - APLICAR EM TODOS OS DISPOSITIVOS */
 .action-buttons .btn,
 .action-buttons .btn-sm,
 .action-buttons .btn-primary,
@@ -1031,7 +1031,35 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
 .action-buttons .btn-manage,
 .action-buttons .btn-toggle,
 .action-buttons .btn-schedule,
-.action-buttons .btn-delete {
+.action-buttons .btn-delete,
+td .action-buttons .btn,
+td .action-buttons .btn-sm,
+td .action-buttons .btn-primary,
+td .action-buttons .btn-info,
+td .action-buttons .btn-warning,
+td .action-buttons .btn-secondary,
+td .action-buttons .btn-success,
+td .action-buttons .btn-danger,
+td .action-buttons .btn-edit,
+td .action-buttons .btn-view,
+td .action-buttons .btn-manage,
+td .action-buttons .btn-toggle,
+td .action-buttons .btn-schedule,
+td .action-buttons .btn-delete,
+table .action-buttons .btn,
+table .action-buttons .btn-sm,
+table .action-buttons .btn-primary,
+table .action-buttons .btn-info,
+table .action-buttons .btn-warning,
+table .action-buttons .btn-secondary,
+table .action-buttons .btn-success,
+table .action-buttons .btn-danger,
+table .action-buttons .btn-edit,
+table .action-buttons .btn-view,
+table .action-buttons .btn-manage,
+table .action-buttons .btn-toggle,
+table .action-buttons .btn-schedule,
+table .action-buttons .btn-delete {
     font-size: 8px !important;
     padding: 0 !important;
     margin: 0 !important;
@@ -1048,6 +1076,8 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
     border-radius: 3px !important;
     line-height: 1 !important;
     box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
 }
 
 .action-buttons .btn .me-1,
@@ -1063,7 +1093,35 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
 .action-buttons .btn-manage .me-1,
 .action-buttons .btn-toggle .me-1,
 .action-buttons .btn-schedule .me-1,
-.action-buttons .btn-delete .me-1 {
+.action-buttons .btn-delete .me-1,
+td .action-buttons .btn .me-1,
+td .action-buttons .btn-sm .me-1,
+td .action-buttons .btn-primary .me-1,
+td .action-buttons .btn-info .me-1,
+td .action-buttons .btn-warning .me-1,
+td .action-buttons .btn-secondary .me-1,
+td .action-buttons .btn-success .me-1,
+td .action-buttons .btn-danger .me-1,
+td .action-buttons .btn-edit .me-1,
+td .action-buttons .btn-view .me-1,
+td .action-buttons .btn-manage .me-1,
+td .action-buttons .btn-toggle .me-1,
+td .action-buttons .btn-schedule .me-1,
+td .action-buttons .btn-delete .me-1,
+table .action-buttons .btn .me-1,
+table .action-buttons .btn-sm .me-1,
+table .action-buttons .btn-primary .me-1,
+table .action-buttons .btn-info .me-1,
+table .action-buttons .btn-warning .me-1,
+table .action-buttons .btn-secondary .me-1,
+table .action-buttons .btn-success .me-1,
+table .action-buttons .btn-danger .me-1,
+table .action-buttons .btn-edit .me-1,
+table .action-buttons .btn-view .me-1,
+table .action-buttons .btn-manage .me-1,
+table .action-buttons .btn-toggle .me-1,
+table .action-buttons .btn-schedule .me-1,
+table .action-buttons .btn-delete .me-1 {
     margin-right: 0 !important;
     margin-left: 0 !important;
     margin-top: 0 !important;
