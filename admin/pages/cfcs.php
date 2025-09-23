@@ -1019,7 +1019,23 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
         display: flex !important;
         flex-direction: row !important;
         gap: 5px !important;
-        flex-wrap: wrap !important;
+        flex-wrap: nowrap !important;
+    }
+    
+    .action-buttons-container {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px !important;
+        flex-wrap: nowrap !important;
+    }
+    
+    .action-buttons-primary,
+    .action-buttons-secondary,
+    .action-buttons-danger {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px !important;
+        flex-wrap: nowrap !important;
     }
 }
 
