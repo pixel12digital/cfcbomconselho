@@ -58,7 +58,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 
 <!-- Tabela de CFCs -->
 <div class="card shadow">
-    <div class="card-header bg-dark text-white">
+    <div class="card-header bg-dark text-light">
         <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de CFCs</h5>
     </div>
     <div class="card-body">
