@@ -4,6 +4,11 @@ if (!isset($alunos)) $alunos = [];
 if (!isset($cfcs)) $cfcs = [];
 if (!isset($mensagem)) $mensagem = '';
 if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
+
+// Headers para evitar cache em produção
+header("Cache-Control: no-cache, no-store, must-revalidate");
+header("Pragma: no-cache");
+header("Expires: 0");
 ?>
 
 <style>
@@ -4352,16 +4357,20 @@ document.addEventListener('DOMContentLoaded', function() {
 // =====================================================
 
 function toggleMobileLayoutAlunos() {
+    console.log('🔧 toggleMobileLayoutAlunos executado - viewport:', window.innerWidth);
     const viewportWidth = window.innerWidth;
     const isMobile = viewportWidth <= 600;
     const tableContainer = document.querySelector('.table-container');
     const mobileCards = document.querySelector('.mobile-aluno-cards');
+
+    console.log('🔧 isMobile:', isMobile, 'tableContainer:', !!tableContainer, 'mobileCards:', !!mobileCards);
 
     if (isMobile && mobileCards) {
         if (tableContainer) {
             tableContainer.style.display = 'none';
         }
         mobileCards.style.display = 'block';
+        console.log('🔧 Layout mobile ativado');
     } else {
         if (tableContainer) {
             tableContainer.style.display = 'block';
@@ -4369,6 +4378,7 @@ function toggleMobileLayoutAlunos() {
         if (mobileCards) {
             mobileCards.style.display = 'none';
         }
+        console.log('🔧 Layout desktop ativado');
     }
 }
 
@@ -4376,4 +4386,5 @@ function toggleMobileLayoutAlunos() {
 window.addEventListener('resize', toggleMobileLayoutAlunos);
 
 // Chamada inicial para definir o layout correto
+console.log('🔧 Inicializando layout responsivo para alunos');
 toggleMobileLayoutAlunos();

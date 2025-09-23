@@ -229,11 +229,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     
     <!-- CSS Principal -->
-    <link href="assets/css/admin.css" rel="stylesheet">
-    <link href="assets/css/modal-veiculos.css" rel="stylesheet">
+    <link href="assets/css/admin.css?v=<?php echo time(); ?>" rel="stylesheet">
+    <link href="assets/css/modal-veiculos.css?v=<?php echo time(); ?>" rel="stylesheet">
     
     <!-- Mobile Fallback CSS -->
-    <link href="assets/css/mobile-fallback.css" rel="stylesheet">
+    <link href="assets/css/mobile-fallback.css?v=<?php echo time(); ?>" rel="stylesheet">
     
     <!-- CSS dos Botões de Ação -->
     <link href="assets/css/action-buttons.css" rel="stylesheet">
