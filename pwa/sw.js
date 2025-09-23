@@ -4,15 +4,15 @@
  * Estratégias de cache otimizadas para PWA
  */
 
-const CACHE_VERSION = 'cfc-v1.0.0';
+const CACHE_VERSION = 'cfc-v1.0.1';
 const CACHE_NAME = `cfc-cache-${CACHE_VERSION}`;
 const OFFLINE_CACHE = 'cfc-offline-v1';
 
 // App Shell - recursos críticos que devem estar sempre disponíveis
 const APP_SHELL = [
-  '/cfc-bom-conselho/admin/',
-  '/cfc-bom-conselho/admin/assets/css/admin.css',
-  '/cfc-bom-conselho/admin/assets/js/admin.js',
+  '../admin/',
+  '../admin/assets/css/admin.css',
+  '../admin/assets/js/admin.js',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css',
   'https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css'
@@ -20,24 +20,24 @@ const APP_SHELL = [
 
 // Recursos estáticos que podem ser cacheados
 const STATIC_RESOURCES = [
-  '/cfc-bom-conselho/admin/assets/css/',
-  '/cfc-bom-conselho/admin/assets/js/',
-  '/cfc-bom-conselho/admin/assets/images/',
-  '/cfc-bom-conselho/pwa/icons/'
+  '../admin/assets/css/',
+  '../admin/assets/js/',
+  '../admin/assets/images/',
+  '../pwa/icons/'
 ];
 
 // Rotas que NÃO devem ser cacheadas (conteúdo sensível)
 const EXCLUDED_ROUTES = [
-  '/cfc-bom-conselho/admin/logout.php',
-  '/cfc-bom-conselho/admin/login.php',
-  '/cfc-bom-conselho/admin/api/auth/',
-  '/cfc-bom-conselho/admin/api/sensitive/',
-  '/cfc-bom-conselho/admin/pages/usuarios.php',
-  '/cfc-bom-conselho/admin/pages/configuracoes.php'
+  '../admin/logout.php',
+  '../admin/login.php',
+  '../admin/api/auth/',
+  '../admin/api/sensitive/',
+  '../admin/pages/usuarios.php',
+  '../admin/pages/configuracoes.php'
 ];
 
 // Página offline
-const OFFLINE_PAGE = '/cfc-bom-conselho/pwa/offline.html';
+const OFFLINE_PAGE = '../pwa/offline.html';
 
 /**
  * Evento de instalação - cache do App Shell
@@ -309,8 +309,8 @@ self.addEventListener('push', (event) => {
     const data = event.data.json();
     const options = {
       body: data.body,
-      icon: '/cfc-bom-conselho/pwa/icons/icon-192.png',
-      badge: '/cfc-bom-conselho/pwa/icons/icon-72.png',
+      icon: '../pwa/icons/icon-192.png',
+      badge: '../pwa/icons/icon-72.png',
       tag: data.tag || 'cfc-notification',
       data: data.data || {}
     };
