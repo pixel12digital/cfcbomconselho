@@ -22,10 +22,22 @@
         console.log('📄 CSS encontrados:', stylesheets.length);
         
         stylesheets.forEach((link, index) => {
+            let rulesCount = 0;
+            let rulesStatus = 'N/A';
+            
+            if (link.sheet) {
+                try {
+                    rulesCount = link.sheet.cssRules ? link.sheet.cssRules.length : 0;
+                    rulesStatus = 'OK';
+                } catch (e) {
+                    rulesStatus = 'CORS Blocked';
+                }
+            }
+            
             console.log(`CSS ${index + 1}:`, {
                 href: link.href,
                 loaded: link.sheet ? '✅ Carregado' : '❌ Não carregado',
-                rules: link.sheet ? (link.sheet.cssRules ? link.sheet.cssRules.length : 'N/A (CORS)') : 0
+                rules: `${rulesCount} (${rulesStatus})`
             });
         });
         

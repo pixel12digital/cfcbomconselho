@@ -202,33 +202,40 @@ if ($action === 'list') {
    RESPONSIVIDADE MOBILE - TABELA DE USUÁRIOS
    ===================================================== */
 
-@media (max-width: 768px) {
+/* FORÇAR RESPONSIVIDADE - CSS MAIS ESPECÍFICO */
+@media screen and (max-width: 768px), screen and (max-width: 900px) {
     /* Container da tabela responsivo */
-    .table-container {
+    .card .card-body .table-container {
         overflow-x: auto !important;
         -webkit-overflow-scrolling: touch !important;
-        border-radius: var(--border-radius-lg) !important;
-        box-shadow: var(--shadow-sm) !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        max-width: 100% !important;
+        width: 100% !important;
     }
     
-    /* Tabela mobile */
-    .table {
-        min-width: 100% !important;
+    /* Tabela mobile - FORÇAR LARGURA */
+    .card .card-body .table-container .table {
+        min-width: 600px !important;
+        width: 600px !important;
         font-size: 14px !important;
+        table-layout: fixed !important;
     }
     
     /* Cabeçalho da tabela mobile */
-    .table th {
+    .card .card-body .table-container .table th {
         padding: 8px 6px !important;
         font-size: 12px !important;
         white-space: nowrap !important;
+        width: auto !important;
     }
     
     /* Células da tabela mobile */
-    .table td {
+    .card .card-body .table-container .table td {
         padding: 8px 6px !important;
         font-size: 13px !important;
         white-space: nowrap !important;
+        width: auto !important;
     }
     
     /* Ajustar larguras das colunas para mobile */
@@ -296,19 +303,21 @@ if ($action === 'list') {
     }
 }
 
-@media (max-width: 480px) {
-    /* Mobile pequeno - layout em cards */
-    .table-container {
+@media screen and (max-width: 480px), screen and (max-width: 600px) {
+    /* Mobile pequeno - FORÇAR layout em cards */
+    .card .card-body .table-container {
+        display: none !important;
         overflow: visible !important;
     }
     
-    .table {
+    .card .card-body .table-container .table {
         display: none !important;
     }
     
-    /* Cards para mobile pequeno */
-    .mobile-user-cards {
+    /* Cards para mobile pequeno - FORÇAR VISIBILIDADE */
+    .card .card-body .mobile-user-cards {
         display: block !important;
+        width: 100% !important;
     }
     
     .mobile-user-card {
@@ -554,7 +563,7 @@ if ($action === 'list') {
                                 <div class="mobile-user-field">
                                     <span class="mobile-user-label">Último acesso</span>
                                     <span class="mobile-user-value">
-                                        <?php echo $usuario['ultimo_acesso'] ? date('d/m/Y H:i', strtotime($usuario['ultimo_acesso'])) : 'Nunca'; ?>
+                                        <?php echo isset($usuario['ultimo_acesso']) && $usuario['ultimo_acesso'] ? date('d/m/Y H:i', strtotime($usuario['ultimo_acesso'])) : 'Nunca'; ?>
                                     </span>
                                 </div>
                             </div>
@@ -1516,18 +1525,26 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Função para alternar entre tabela e cards mobile
     function toggleMobileLayout() {
-        const isMobile = window.innerWidth <= 480;
+        const viewportWidth = window.innerWidth;
+        const isMobile = viewportWidth <= 600; // Aumentar threshold
         const tableContainer = document.querySelector('.table-container');
         const mobileCards = document.querySelector('.mobile-user-cards');
         
+        
         if (isMobile && mobileCards) {
             // Mobile pequeno - mostrar cards
-            if (tableContainer) tableContainer.style.display = 'none';
+            if (tableContainer) {
+                tableContainer.style.display = 'none';
+            }
             mobileCards.style.display = 'block';
         } else {
             // Desktop/tablet - mostrar tabela
-            if (tableContainer) tableContainer.style.display = 'block';
-            if (mobileCards) mobileCards.style.display = 'none';
+            if (tableContainer) {
+                tableContainer.style.display = 'block';
+            }
+            if (mobileCards) {
+                mobileCards.style.display = 'none';
+            }
         }
     }
     
