@@ -58,7 +58,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 
 <!-- Tabela de CFCs -->
 <div class="card shadow">
-    <div class="card-header bg-secondary text-white">
+    <div class="card-header bg-dark text-white">
         <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de CFCs</h5>
     </div>
     <div class="card-body">
@@ -995,6 +995,45 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
         width: 1200px !important;
         max-width: 1200px !important;
         min-width: 1200px !important;
+    }
+}
+
+/* =====================================================
+   AJUSTES PARA DESKTOP - CFCs
+   ===================================================== */
+
+/* Otimizações para desktop */
+@media screen and (min-width: 769px) {
+    .card .card-body .table-container {
+        overflow-x: visible !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    
+    .card .card-body .table-container .table {
+        width: 100% !important;
+        font-size: 14px !important;
+        table-layout: auto !important;
+    }
+    
+    .card .card-body .table-container .table th,
+    .card .card-body .table-container .table td {
+        padding: 12px 8px !important;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+    }
+    
+    .action-buttons {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .action-buttons .btn {
+        font-size: 12px !important;
+        padding: 6px 10px !important;
+        white-space: nowrap !important;
     }
 }
 
