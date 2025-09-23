@@ -1023,7 +1023,7 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
     }
 }
 
-/* CSS ULTRA AGRESSIVO PARA BOTÕES 18x18px - APLICAR EM TODOS OS DISPOSITIVOS */
+/* CSS ULTRA AGRESSIVO PARA BOTÕES 24x18px - APLICAR EM TODOS OS DISPOSITIVOS */
 .action-buttons .btn,
 .action-buttons .btn-sm,
 .action-buttons .btn-primary,
@@ -1214,6 +1214,40 @@ table .action-buttons .btn-delete .me-1 {
     top: -30px;
     left: 50%;
     transform: translateX(-50%);
+}
+
+/* CSS EXTREMAMENTE AGRESSIVO - FORÇAR 24x18px */
+button.btn.action-btn,
+button.btn.btn-sm.action-btn,
+button.btn.btn-primary.action-btn,
+button.btn.btn-info.action-btn,
+button.btn.btn-warning.action-btn,
+button.btn.btn-secondary.action-btn,
+button.btn.btn-success.action-btn,
+button.btn.btn-danger.action-btn,
+button.btn.btn-edit.action-btn,
+button.btn.btn-view.action-btn,
+button.btn.btn-manage.action-btn,
+button.btn.btn-toggle.action-btn,
+button.btn.btn-schedule.action-btn,
+button.btn.btn-delete.action-btn {
+    width: 24px !important;
+    height: 18px !important;
+    min-width: 24px !important;
+    min-height: 18px !important;
+    max-width: 24px !important;
+    max-height: 18px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 8px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 3px !important;
+    line-height: 1 !important;
+    box-sizing: border-box !important;
+    flex-shrink: 0 !important;
+    flex-grow: 0 !important;
 }
 
 /* =====================================================
