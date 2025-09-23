@@ -27,10 +27,16 @@
             
             if (link.sheet) {
                 try {
-                    rulesCount = link.sheet.cssRules ? link.sheet.cssRules.length : 0;
-                    rulesStatus = 'OK';
+                    // Tentar acessar cssRules com tratamento robusto
+                    if (link.sheet.cssRules) {
+                        rulesCount = link.sheet.cssRules.length;
+                        rulesStatus = 'OK';
+                    } else {
+                        rulesStatus = 'No Rules';
+                    }
                 } catch (e) {
                     rulesStatus = 'CORS Blocked';
+                    rulesCount = 'N/A';
                 }
             }
             
@@ -119,7 +125,23 @@
         
         stylesheets.forEach(link => {
             try {
-                if (!link.sheet || (link.sheet.cssRules && link.sheet.cssRules.length === 0)) {
+                let needsReload = false;
+                
+                if (!link.sheet) {
+                    needsReload = true;
+                } else {
+                    try {
+                        // Verificar se tem regras CSS
+                        if (link.sheet.cssRules && link.sheet.cssRules.length === 0) {
+                            needsReload = true;
+                        }
+                    } catch (e) {
+                        // Ignorar erros de CORS - CSS pode estar funcionando mesmo sem acesso às regras
+                        console.log('⚠️ CSS com restrição CORS (ignorando):', link.href);
+                    }
+                }
+                
+                if (needsReload) {
                     console.log('🔄 Recarregando CSS:', link.href);
                     const newLink = link.cloneNode(true);
                     newLink.href = link.href + '?v=' + Date.now();
@@ -127,8 +149,8 @@
                     reloadCount++;
                 }
             } catch (e) {
-                // Ignorar erros de CORS
-                console.log('⚠️ CSS com restrição CORS:', link.href);
+                // Ignorar erros gerais
+                console.log('⚠️ Erro ao verificar CSS:', link.href);
             }
         });
         
