@@ -22,28 +22,10 @@
         console.log('📄 CSS encontrados:', stylesheets.length);
         
         stylesheets.forEach((link, index) => {
-            let rulesCount = 0;
-            let rulesStatus = 'N/A';
-            
-            if (link.sheet) {
-                try {
-                    // Tentar acessar cssRules com tratamento robusto
-                    if (link.sheet.cssRules) {
-                        rulesCount = link.sheet.cssRules.length;
-                        rulesStatus = 'OK';
-                    } else {
-                        rulesStatus = 'No Rules';
-                    }
-                } catch (e) {
-                    rulesStatus = 'CORS Blocked';
-                    rulesCount = 'N/A';
-                }
-            }
-            
             console.log(`CSS ${index + 1}:`, {
                 href: link.href,
                 loaded: link.sheet ? '✅ Carregado' : '❌ Não carregado',
-                rules: `${rulesCount} (${rulesStatus})`
+                status: link.sheet ? 'OK' : 'Não carregado'
             });
         });
         
@@ -125,24 +107,9 @@
         
         stylesheets.forEach(link => {
             try {
-                let needsReload = false;
-                
+                // Apenas verificar se o CSS foi carregado, sem acessar cssRules
                 if (!link.sheet) {
-                    needsReload = true;
-                } else {
-                    try {
-                        // Verificar se tem regras CSS
-                        if (link.sheet.cssRules && link.sheet.cssRules.length === 0) {
-                            needsReload = true;
-                        }
-                    } catch (e) {
-                        // Ignorar erros de CORS - CSS pode estar funcionando mesmo sem acesso às regras
-                        console.log('⚠️ CSS com restrição CORS (ignorando):', link.href);
-                    }
-                }
-                
-                if (needsReload) {
-                    console.log('🔄 Recarregando CSS:', link.href);
+                    console.log('🔄 Recarregando CSS não carregado:', link.href);
                     const newLink = link.cloneNode(true);
                     newLink.href = link.href + '?v=' + Date.now();
                     link.parentNode.replaceChild(newLink, link);
