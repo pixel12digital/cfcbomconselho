@@ -12,6 +12,7 @@ require_once 'includes/config.php';
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>CFC Bom Conselho - Centro de Formação de Condutores</title>
+    <link rel="icon" type="image/x-icon" href="favicon.ico">
     <link rel="stylesheet" href="assets/css/mobile-first.css">
     <link rel="stylesheet" href="assets/css/responsive-utilities.css">
     <link rel="stylesheet" href="assets/css/cfc-responsive.css?v=<?php echo time(); ?>">
