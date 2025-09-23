@@ -204,24 +204,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <meta name="description" content="Sistema administrativo para gerenciamento de CFC">
     <meta name="format-detection" content="telephone=no">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="msapplication-config" content="/cfc-bom-conselho/pwa/browserconfig.xml">
+    <meta name="msapplication-config" content="../pwa/browserconfig.xml">
     <meta name="msapplication-TileColor" content="#2c3e50">
     <meta name="msapplication-tap-highlight" content="no">
     <meta name="theme-color" content="#2c3e50">
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/cfc-bom-conselho/pwa/manifest.json">
+    <link rel="manifest" href="../pwa/manifest.json">
     
     <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="/cfc-bom-conselho/pwa/icons/icon-192.png">
-    <link rel="apple-touch-icon" sizes="152x152" href="/cfc-bom-conselho/pwa/icons/icon-152.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/cfc-bom-conselho/pwa/icons/icon-192.png">
-    <link rel="apple-touch-icon" sizes="167x167" href="/cfc-bom-conselho/pwa/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="../pwa/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="../pwa/icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="../pwa/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="../pwa/icons/icon-192.png">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/cfc-bom-conselho/pwa/icons/icon-32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/cfc-bom-conselho/pwa/icons/icon-16.png">
-    <link rel="shortcut icon" href="/cfc-bom-conselho/pwa/icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="../pwa/icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="../pwa/icons/icon-16.png">
+    <link rel="shortcut icon" href="../pwa/icons/icon-32.png">
     
     <title>Dashboard Administrativo - <?php echo APP_NAME; ?></title>
     
@@ -1466,13 +1466,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <script src="assets/js/components.js"></script>
     
     <!-- PWA Registration -->
-    <script src="/cfc-bom-conselho/pwa/pwa-register.js"></script>
+    <script src="../pwa/pwa-register.js"></script>
     
     <!-- Performance Metrics -->
-    <script src="/cfc-bom-conselho/pwa/performance-metrics.js"></script>
+    <script src="../pwa/performance-metrics.js"></script>
     
     <!-- Automated PWA Tests -->
-    <script src="/cfc-bom-conselho/pwa/automated-test.js"></script>
+    <script src="../pwa/automated-test.js"></script>
     
     <!-- JavaScript das Funcionalidades Específicas -->
     <?php if ($page === 'cfcs'): ?>

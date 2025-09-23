@@ -42,8 +42,8 @@ class PWAManager {
         try {
             console.log('[PWA] Registrando Service Worker...');
             
-            this.registration = await navigator.serviceWorker.register('/cfc-bom-conselho/pwa/sw.js', {
-                scope: '/cfc-bom-conselho/pwa/'
+            this.registration = await navigator.serviceWorker.register('../pwa/sw.js', {
+                scope: '../pwa/'
             });
             
             console.log('[PWA] Service Worker registrado:', this.registration);
@@ -488,8 +488,8 @@ class PWAManager {
         if (Notification.permission === 'granted') {
             const notification = new Notification('CFC Bom Conselho', {
                 body: 'Bem-vindo ao sistema administrativo! Você pode instalar este app para acesso rápido.',
-                icon: '/cfc-bom-conselho/pwa/icons/icon-192.png',
-                badge: '/cfc-bom-conselho/pwa/icons/icon-72.png',
+                icon: '../pwa/icons/icon-192.png',
+                badge: '../pwa/icons/icon-72.png',
                 tag: 'cfc-welcome',
                 requireInteraction: false,
                 silent: false

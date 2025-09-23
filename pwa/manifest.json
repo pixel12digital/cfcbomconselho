@@ -2,8 +2,8 @@
   "name": "CFC Bom Conselho - Sistema Administrativo",
   "short_name": "CFC Admin",
   "description": "Sistema administrativo para gerenciamento de CFC",
-  "start_url": "/cfc-bom-conselho/admin/?source=pwa",
-  "scope": "/cfc-bom-conselho/pwa/",
+  "start_url": "../admin/?source=pwa",
+  "scope": "../pwa/",
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#2c3e50",
@@ -13,61 +13,61 @@
   "categories": ["business", "productivity", "education"],
   "icons": [
     {
-      "src": "/cfc-bom-conselho/pwa/icons/icon-72.png",
+      "src": "../pwa/icons/icon-72.png",
       "sizes": "72x72",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/cfc-bom-conselho/pwa/icons/icon-96.png",
+      "src": "../pwa/icons/icon-96.png",
       "sizes": "96x96",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/cfc-bom-conselho/pwa/icons/icon-128.png",
+      "src": "../pwa/icons/icon-128.png",
       "sizes": "128x128",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/cfc-bom-conselho/pwa/icons/icon-144.png",
+      "src": "../pwa/icons/icon-144.png",
       "sizes": "144x144",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/cfc-bom-conselho/pwa/icons/icon-152.png",
+      "src": "../pwa/icons/icon-152.png",
       "sizes": "152x152",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/cfc-bom-conselho/pwa/icons/icon-192.png",
+      "src": "../pwa/icons/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/cfc-bom-conselho/pwa/icons/icon-384.png",
+      "src": "../pwa/icons/icon-384.png",
       "sizes": "384x384",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/cfc-bom-conselho/pwa/icons/icon-512.png",
+      "src": "../pwa/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/cfc-bom-conselho/pwa/icons/icon-192-maskable.png",
+      "src": "../pwa/icons/icon-192-maskable.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/cfc-bom-conselho/pwa/icons/icon-512-maskable.png",
+      "src": "../pwa/icons/icon-512-maskable.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
@@ -75,14 +75,14 @@
   ],
   "screenshots": [
     {
-      "src": "/cfc-bom-conselho/pwa/screenshots/desktop-1.png",
+      "src": "../pwa/screenshots/desktop-1.png",
       "sizes": "1280x720",
       "type": "image/png",
       "form_factor": "wide",
       "label": "Dashboard principal"
     },
     {
-      "src": "/cfc-bom-conselho/pwa/screenshots/mobile-1.png",
+      "src": "../pwa/screenshots/mobile-1.png",
       "sizes": "390x844",
       "type": "image/png",
       "form_factor": "narrow",
@@ -94,10 +94,10 @@
       "name": "Dashboard",
       "short_name": "Dashboard",
       "description": "Acessar dashboard principal",
-      "url": "/cfc-bom-conselho/admin/?page=dashboard",
+      "url": "../admin/?page=dashboard",
       "icons": [
         {
-          "src": "/cfc-bom-conselho/pwa/icons/icon-96.png",
+          "src": "../pwa/icons/icon-96.png",
           "sizes": "96x96"
         }
       ]
@@ -106,10 +106,10 @@
       "name": "Alunos",
       "short_name": "Alunos",
       "description": "Gerenciar alunos",
-      "url": "/cfc-bom-conselho/admin/pages/alunos.php",
+      "url": "../admin/pages/alunos.php",
       "icons": [
         {
-          "src": "/cfc-bom-conselho/pwa/icons/icon-96.png",
+          "src": "../pwa/icons/icon-96.png",
           "sizes": "96x96"
         }
       ]
@@ -118,10 +118,10 @@
       "name": "Agendamento",
       "short_name": "Agenda",
       "description": "Agendar aulas",
-      "url": "/cfc-bom-conselho/admin/?page=agendamento",
+      "url": "../admin/?page=agendamento",
       "icons": [
         {
-          "src": "/cfc-bom-conselho/pwa/icons/icon-96.png",
+          "src": "../pwa/icons/icon-96.png",
           "sizes": "96x96"
         }
       ]
