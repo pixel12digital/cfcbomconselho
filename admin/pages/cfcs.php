@@ -71,7 +71,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
         <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de CFCs</h5>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
+        <div class="table-responsive table-container">
             <table class="table table-striped table-hover" id="tabelaCFCs">
                 <thead class="table-dark">
                     <tr>
@@ -196,6 +196,93 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+        
+        <!-- Layout em cards para mobile -->
+        <div class="mobile-cfc-cards" style="display: none;">
+            <?php if (!empty($cfcs)): ?>
+                <?php foreach ($cfcs as $cfc): ?>
+                <div class="mobile-cfc-card" data-cfc-id="<?php echo $cfc['id']; ?>">
+                    <div class="mobile-cfc-header">
+                        <div class="mobile-cfc-title">
+                            <strong><?php echo htmlspecialchars($cfc['nome']); ?></strong>
+                            <span class="mobile-cfc-id">#<?php echo $cfc['id']; ?></span>
+                        </div>
+                        <div class="mobile-cfc-status">
+                            <?php if ($cfc['ativo']): ?>
+                                <span class="badge bg-success">ATIVO</span>
+                            <?php else: ?>
+                                <span class="badge bg-secondary">INATIVO</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    
+                    <div class="mobile-cfc-body">
+                        <div class="mobile-cfc-field">
+                            <span class="mobile-cfc-label">CNPJ</span>
+                            <span class="mobile-cfc-value"><?php echo htmlspecialchars($cfc['cnpj']); ?></span>
+                        </div>
+                        
+                        <?php if ($cfc['email']): ?>
+                        <div class="mobile-cfc-field">
+                            <span class="mobile-cfc-label">Email</span>
+                            <span class="mobile-cfc-value"><?php echo htmlspecialchars($cfc['email']); ?></span>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($cfc['cidade'] && $cfc['uf']): ?>
+                        <div class="mobile-cfc-field">
+                            <span class="mobile-cfc-label">Cidade/UF</span>
+                            <span class="mobile-cfc-value"><?php echo htmlspecialchars($cfc['cidade']) . '/' . htmlspecialchars($cfc['uf']); ?></span>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($cfc['telefone']): ?>
+                        <div class="mobile-cfc-field">
+                            <span class="mobile-cfc-label">Telefone</span>
+                            <span class="mobile-cfc-value"><?php echo htmlspecialchars($cfc['telefone']); ?></span>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <?php if ($cfc['responsavel']): ?>
+                        <div class="mobile-cfc-field">
+                            <span class="mobile-cfc-label">Responsável</span>
+                            <span class="mobile-cfc-value"><?php echo htmlspecialchars($cfc['responsavel']); ?></span>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <div class="mobile-cfc-field">
+                            <span class="mobile-cfc-label">Alunos</span>
+                            <span class="mobile-cfc-value"><?php echo isset($cfc['total_alunos']) ? $cfc['total_alunos'] : '0'; ?></span>
+                        </div>
+                    </div>
+                    
+                    <div class="mobile-cfc-actions">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="editarCFC(<?php echo $cfc['id']; ?>)">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-info" onclick="visualizarCFC(<?php echo $cfc['id']; ?>)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-warning" onclick="gerenciarCFC(<?php echo $cfc['id']; ?>)">
+                            <i class="fas fa-cogs"></i>
+                        </button>
+                        <?php if ($cfc['ativo']): ?>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="desativarCFC(<?php echo $cfc['id']; ?>)">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                        <?php else: ?>
+                        <button type="button" class="btn btn-sm btn-success" onclick="ativarCFC(<?php echo $cfc['id']; ?>)">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <?php endif; ?>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="excluirCFC(<?php echo $cfc['id']; ?>)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -919,5 +1006,177 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
         min-width: 1200px !important;
     }
 }
+
+/* =====================================================
+   RESPONSIVIDADE PARA MOBILE - CFCs
+   ===================================================== */
+
+/* Media queries para responsividade */
+@media screen and (max-width: 768px), screen and (max-width: 900px) {
+    .card .card-body .table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    .card .card-body .table-container .table {
+        min-width: 800px !important;
+        width: 800px !important;
+        font-size: 14px !important;
+        table-layout: fixed !important;
+    }
+    
+    .card .card-body .table-container .table th,
+    .card .card-body .table-container .table td {
+        padding: 8px 6px !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+    }
+    
+    .action-buttons {
+        flex-direction: column !important;
+        gap: 5px !important;
+    }
+    
+    .action-buttons .btn {
+        font-size: 12px !important;
+        padding: 4px 8px !important;
+    }
+}
+
+@media screen and (max-width: 480px), screen and (max-width: 600px) {
+    .card .card-body .table-container {
+        display: none !important;
+        overflow: visible !important;
+    }
+    
+    .card .card-body .table-container .table {
+        display: none !important;
+    }
+    
+    .card .card-body .mobile-cfc-cards {
+        display: block !important;
+        width: 100% !important;
+    }
+    
+    .mobile-cfc-card {
+        background: #fff !important;
+        border: 1px solid #dee2e6 !important;
+        border-radius: 8px !important;
+        margin-bottom: 15px !important;
+        padding: 15px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    
+    .mobile-cfc-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        margin-bottom: 12px !important;
+        padding-bottom: 10px !important;
+        border-bottom: 1px solid #e9ecef !important;
+    }
+    
+    .mobile-cfc-title {
+        flex: 1 !important;
+    }
+    
+    .mobile-cfc-title strong {
+        font-size: 16px !important;
+        color: #333 !important;
+        display: block !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .mobile-cfc-id {
+        font-size: 12px !important;
+        color: #6c757d !important;
+        font-weight: normal !important;
+    }
+    
+    .mobile-cfc-status {
+        margin-left: 10px !important;
+    }
+    
+    .mobile-cfc-body {
+        margin-bottom: 15px !important;
+    }
+    
+    .mobile-cfc-field {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        margin-bottom: 8px !important;
+        padding: 4px 0 !important;
+    }
+    
+    .mobile-cfc-label {
+        font-weight: 600 !important;
+        color: #495057 !important;
+        font-size: 13px !important;
+        min-width: 80px !important;
+    }
+    
+    .mobile-cfc-value {
+        color: #6c757d !important;
+        font-size: 13px !important;
+        text-align: right !important;
+        flex: 1 !important;
+        word-break: break-word !important;
+    }
+    
+    .mobile-cfc-actions {
+        display: flex !important;
+        gap: 8px !important;
+        justify-content: center !important;
+        padding-top: 10px !important;
+        border-top: 1px solid #e9ecef !important;
+    }
+    
+    .mobile-cfc-actions .btn {
+        flex: 1 !important;
+        max-width: 50px !important;
+        padding: 8px !important;
+        font-size: 12px !important;
+    }
+}
 </style>
+
+<script>
+// =====================================================
+// RESPONSIVIDADE PARA MOBILE - CFCs
+// =====================================================
+
+function toggleMobileLayoutCFCs() {
+    const viewportWidth = window.innerWidth;
+    const isMobile = viewportWidth <= 600;
+    const tableContainer = document.querySelector('.table-container');
+    const mobileCards = document.querySelector('.mobile-cfc-cards');
+    
+    if (isMobile && mobileCards) {
+        // Mobile pequeno - mostrar cards
+        if (tableContainer) {
+            tableContainer.style.display = 'none';
+        }
+        mobileCards.style.display = 'block';
+    } else {
+        // Desktop/tablet - mostrar tabela
+        if (tableContainer) {
+            tableContainer.style.display = 'block';
+        }
+        if (mobileCards) {
+            mobileCards.style.display = 'none';
+        }
+    }
+}
+
+// Executar na inicialização e no resize
+window.addEventListener('resize', toggleMobileLayoutCFCs);
+toggleMobileLayoutCFCs(); // Chamada inicial
+
+</script>
 

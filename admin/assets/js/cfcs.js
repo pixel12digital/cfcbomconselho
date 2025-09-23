@@ -3,14 +3,14 @@
  * Sistema CFC - Bom Conselho
  */
 
+// Verificar se já foi carregado para evitar duplicação
+if (window.cfcsSystemLoaded) {
+    console.warn('⚠️ Sistema CFC já foi carregado anteriormente. Ignorando carregamento duplicado.');
+} else {
+    window.cfcsSystemLoaded = true;
+
 // Cache para o caminho da API
 let caminhoAPICache = null;
-
-    // Verificar se já foi carregado para evitar duplicação
-    if (window.cfcsSystemLoaded) {
-        console.warn('⚠️ Sistema CFC já foi carregado anteriormente. Ignorando carregamento duplicado.');
-    } else {
-        window.cfcsSystemLoaded = true;
         
         // CRÍTICO: Listener global para remover backdrop
         document.addEventListener('DOMContentLoaded', function() {
@@ -903,3 +903,5 @@ if (document.readyState === 'loading') {
 } else {
     verificarScriptsDuplicados();
 }
+
+} // Fechamento do bloco else para evitar carregamento duplicado
