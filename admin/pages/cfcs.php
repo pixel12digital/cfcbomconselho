@@ -70,17 +70,15 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                         <th>Nome</th>
                         <th>CNPJ</th>
                         <th>Cidade/UF</th>
-                        <th>Telefone</th>
                         <th>Responsável</th>
                         <th>Status</th>
-                        <th>Alunos</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($cfcs)): ?>
                     <tr>
-                        <td colspan="9" class="text-center text-muted py-4">
+                        <td colspan="7" class="text-center text-muted py-4">
                             <i class="fas fa-inbox fa-3x mb-3"></i>
                             <p>Nenhum CFC cadastrado ainda.</p>
                             <button class="btn btn-primary" onclick="abrirModalCFC('criar')">
@@ -109,15 +107,6 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php if ($cfc['telefone']): ?>
-                                    <a href="tel:<?php echo htmlspecialchars($cfc['telefone']); ?>" class="text-decoration-none">
-                                        <i class="fas fa-phone me-1"></i><?php echo htmlspecialchars($cfc['telefone']); ?>
-                                    </a>
-                                <?php else: ?>
-                                    <span class="text-muted">Não informado</span>
-                                <?php endif; ?>
-                            </td>
-                            <td>
                                 <?php if ($cfc['responsavel_nome']): ?>
                                     <span class="badge bg-info"><?php echo htmlspecialchars($cfc['responsavel_nome']); ?></span>
                                 <?php else: ?>
@@ -132,26 +121,23 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <span class="badge bg-primary"><?php echo $cfc['total_alunos'] ?? 0; ?></span>
-                            </td>
-                            <td>
                                 <div class="action-buttons-container">
                                     <!-- Botões principais em linha -->
                                     <div class="action-buttons-primary">
                                         <button type="button" class="btn btn-edit action-btn" 
                                                 onclick="editarCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="Editar dados do CFC">
-                                            <i class="fas fa-edit me-1"></i>Editar
+                                            <i class="fas fa-edit"></i>
                                         </button>
                                         <button type="button" class="btn btn-view action-btn" 
                                                 onclick="visualizarCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="Ver detalhes completos do CFC">
-                                            <i class="fas fa-eye me-1"></i>Ver
+                                            <i class="fas fa-eye"></i>
                                         </button>
                                         <button type="button" class="btn btn-manage action-btn" 
                                                 onclick="gerenciarCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="Gerenciar instrutores, alunos e veículos">
-                                            <i class="fas fa-cogs me-1"></i>Gerenciar
+                                            <i class="fas fa-cogs"></i>
                                         </button>
                                     </div>
                                     
@@ -161,13 +147,13 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                         <button type="button" class="btn btn-toggle action-btn" 
                                                 onclick="desativarCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="Desativar CFC (não poderá operar)">
-                                            <i class="fas fa-ban me-1"></i>Desativar
+                                            <i class="fas fa-ban"></i>
                                         </button>
                                         <?php else: ?>
                                         <button type="button" class="btn btn-schedule action-btn" 
                                                 onclick="ativarCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="Reativar CFC para operação">
-                                            <i class="fas fa-check me-1"></i>Ativar
+                                            <i class="fas fa-check"></i>
                                         </button>
                                         <?php endif; ?>
                                     </div>
@@ -177,7 +163,7 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
                                         <button type="button" class="btn btn-delete action-btn" 
                                                 onclick="excluirCFC(<?php echo $cfc['id']; ?>)" 
                                                 title="⚠️ EXCLUIR CFC - Esta ação não pode ser desfeita!">
-                                            <i class="fas fa-trash me-1"></i>Excluir
+                                            <i class="fas fa-trash"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -1032,8 +1018,36 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
     
     .action-buttons .btn {
         font-size: 12px !important;
-        padding: 6px 10px !important;
+        padding: 6px 8px !important;
         white-space: nowrap !important;
+        min-width: 35px !important;
+    }
+    
+    .action-buttons .btn .me-1 {
+        margin-right: 0 !important;
+    }
+    
+    .action-buttons .btn:not(:hover) {
+        color: transparent !important;
+    }
+    
+    .action-buttons .btn:hover {
+        color: white !important;
+    }
+    
+    .action-buttons .btn:hover::after {
+        content: attr(title);
+        position: absolute;
+        background: rgba(0,0,0,0.8);
+        color: white;
+        padding: 4px 8px;
+        border-radius: 4px;
+        font-size: 11px;
+        white-space: nowrap;
+        z-index: 1000;
+        top: -30px;
+        left: 50%;
+        transform: translateX(-50%);
     }
 }
 
