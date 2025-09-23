@@ -1018,13 +1018,21 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
     
     .action-buttons .btn {
         font-size: 12px !important;
-        padding: 6px 8px !important;
+        padding: 0 !important;
         white-space: nowrap !important;
-        min-width: 35px !important;
+        width: 18px !important;
+        height: 18px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
     }
     
     .action-buttons .btn .me-1 {
         margin-right: 0 !important;
+    }
+    
+    .action-buttons .btn i {
+        font-size: 10px !important;
     }
     
     .action-buttons .btn:not(:hover) {
