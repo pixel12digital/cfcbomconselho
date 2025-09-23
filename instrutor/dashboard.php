@@ -1,7 +1,8 @@
 <?php
 /**
- * Dashboard do Aluno - Mobile First + PWA
+ * Dashboard do Instrutor - Mobile First
  * Interface focada em usabilidade móvel
+ * IMPORTANTE: Instrutor NÃO pode criar agendamentos, apenas cancelar/transferir
  */
 
 require_once __DIR__ . '/../includes/config.php';
@@ -11,7 +12,7 @@ require_once __DIR__ . '/../includes/services/SistemaNotificacoes.php';
 
 // Verificar autenticação
 $user = getCurrentUser();
-if (!$user || $user['tipo'] !== 'aluno') {
+if (!$user || $user['tipo'] !== 'instrutor') {
     header('Location: /login.php');
     exit();
 }
@@ -19,140 +20,239 @@ if (!$user || $user['tipo'] !== 'aluno') {
 $db = db();
 $notificacoes = new SistemaNotificacoes();
 
-// Buscar dados do aluno
-$aluno = $db->fetch("SELECT * FROM alunos WHERE id = ?", [$user['id']]);
+// Buscar dados do instrutor
+$instrutor = $db->fetch("SELECT * FROM instrutores WHERE id = ?", [$user['id']]);
 
-// Buscar próximas aulas (próximos 14 dias)
-$proximasAulas = $db->fetchAll("
+// Buscar aulas do dia
+$hoje = date('Y-m-d');
+$aulasHoje = $db->fetchAll("
     SELECT a.*, 
-           i.nome as instrutor_nome,
+           al.nome as aluno_nome, al.telefone as aluno_telefone,
            v.modelo as veiculo_modelo, v.placa as veiculo_placa
     FROM aulas a
-    JOIN instrutores i ON a.instrutor_id = i.id
+    JOIN alunos al ON a.aluno_id = al.id
     LEFT JOIN veiculos v ON a.veiculo_id = v.id
-    WHERE a.aluno_id = ?
-      AND a.data_aula >= CURDATE() 
-      AND a.data_aula <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
+    WHERE a.instrutor_id = ? 
+      AND a.data_aula = ?
+      AND a.status != 'cancelada'
+    ORDER BY a.hora_inicio ASC
+", [$user['id'], $hoje]);
+
+// Buscar próximas aulas (próximos 7 dias)
+$proximasAulas = $db->fetchAll("
+    SELECT a.*, 
+           al.nome as aluno_nome, al.telefone as aluno_telefone,
+           v.modelo as veiculo_modelo, v.placa as veiculo_placa
+    FROM aulas a
+    JOIN alunos al ON a.aluno_id = al.id
+    LEFT JOIN veiculos v ON a.veiculo_id = v.id
+    WHERE a.instrutor_id = ? 
+      AND a.data_aula > ?
+      AND a.data_aula <= DATE_ADD(?, INTERVAL 7 DAY)
       AND a.status != 'cancelada'
     ORDER BY a.data_aula ASC, a.hora_inicio ASC
     LIMIT 10
-", [$user['id']]);
+", [$user['id'], $hoje, $hoje]);
 
 // Buscar notificações não lidas
-$notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($user['id'], 'aluno');
+$notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($user['id'], 'instrutor');
 
-// Buscar status dos exames
-$exames = $db->fetchAll("
-    SELECT tipo, status, data_exame
-    FROM exames 
-    WHERE aluno_id = ? 
-    ORDER BY data_exame DESC
-", [$user['id']]);
+// Buscar turmas teóricas do dia
+$turmasTeoricas = $db->fetchAll("
+    SELECT a.*, 
+           al.nome as aluno_nome,
+           COUNT(*) as total_alunos
+    FROM aulas a
+    JOIN alunos al ON a.aluno_id = al.id
+    WHERE a.instrutor_id = ? 
+      AND a.data_aula = ?
+      AND a.tipo_aula = 'teorica'
+      AND a.status != 'cancelada'
+    GROUP BY a.id
+    ORDER BY a.hora_inicio ASC
+", [$user['id'], $hoje]);
 
-// Verificar guardas de negócio
-$guardaExames = true;
-$guardaFinanceiro = true;
+// Estatísticas do dia
+$statsHoje = $db->fetch("
+    SELECT 
+        COUNT(*) as total_aulas,
+        SUM(CASE WHEN status = 'agendada' THEN 1 ELSE 0 END) as agendadas,
+        SUM(CASE WHEN status = 'confirmada' THEN 1 ELSE 0 END) as confirmadas,
+        SUM(CASE WHEN status = 'concluida' THEN 1 ELSE 0 END) as concluidas
+    FROM aulas 
+    WHERE instrutor_id = ? AND data_aula = ?
+", [$user['id'], $hoje]);
 
-foreach ($exames as $exame) {
-    if (in_array($exame['tipo'], ['medico', 'psicologico']) && $exame['status'] !== 'aprovado') {
-        $guardaExames = false;
-        break;
-    }
-}
-
-// Configurar variáveis para o layout
-$pageTitle = 'Dashboard - ' . htmlspecialchars($aluno['nome']);
-$homeUrl = '/aluno/dashboard.php';
-
-// Incluir layout mobile-first
-ob_start();
 ?>
-<!-- Conteúdo do Dashboard -->
-<div class="row">
-    <div class="col-12">
-        <div class="card card-mobile mb-mobile">
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - <?php echo htmlspecialchars($instrutor['nome']); ?></title>
+    <link rel="stylesheet" href="../assets/css/mobile-first.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1>Olá, <?php echo htmlspecialchars($instrutor['nome']); ?>!</h1>
+        <div class="subtitle">Gerencie suas aulas e turmas</div>
+    </div>
+
+    <div class="container">
+        <!-- Notificações -->
+        <?php if (!empty($notificacoesNaoLidas)): ?>
+        <div class="card">
             <div class="card-header">
-                <h2 class="card-title fs-mobile-2">
-                    <i class="fas fa-user-graduate me-2"></i>
-                    Olá, <?php echo htmlspecialchars($aluno['nome']); ?>!
+                <h2 class="card-title">
+                    <i class="fas fa-bell"></i>
+                    Notificações
                 </h2>
-                <p class="card-subtitle text-muted mb-0">Acompanhe suas aulas e progresso</p>
+                <span class="badge badge-info"><?php echo count($notificacoesNaoLidas); ?></span>
+            </div>
+            <div class="notificacoes-list">
+                <?php foreach ($notificacoesNaoLidas as $notificacao): ?>
+                <div class="notificacao-item" data-id="<?php echo $notificacao['id']; ?>">
+                    <div class="notificacao-content">
+                        <h4><?php echo htmlspecialchars($notificacao['titulo']); ?></h4>
+                        <p><?php echo htmlspecialchars($notificacao['mensagem']); ?></p>
+                        <small><?php echo date('d/m/Y H:i', strtotime($notificacao['criado_em'])); ?></small>
+                    </div>
+                    <button class="btn btn-sm btn-outline marcar-lida" data-id="<?php echo $notificacao['id']; ?>">
+                        <i class="fas fa-check"></i>
+                    </button>
+                </div>
+                <?php endforeach; ?>
             </div>
         </div>
-    </div>
-</div>
-<!-- Notificações -->
-<?php if (!empty($notificacoesNaoLidas)): ?>
-<div class="row">
-    <div class="col-12">
-        <div class="card card-mobile mb-mobile">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title fs-mobile-3 mb-0">
-                    <i class="fas fa-bell me-2"></i>
-                    Notificações
-                </h3>
-                <span class="badge bg-primary"><?php echo count($notificacoesNaoLidas); ?></span>
+        <?php endif; ?>
+
+        <!-- Estatísticas do Dia -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-chart-bar"></i>
+                    Hoje - <?php echo date('d/m/Y'); ?>
+                </h2>
             </div>
-            <div class="card-body p-0">
-                <?php foreach ($notificacoesNaoLidas as $notificacao): ?>
-                <div class="border-bottom p-3" data-id="<?php echo $notificacao['id']; ?>">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-1"><?php echo htmlspecialchars($notificacao['titulo']); ?></h6>
-                            <p class="text-muted mb-1 fs-mobile-6"><?php echo htmlspecialchars($notificacao['mensagem']); ?></p>
-                            <small class="text-muted"><?php echo date('d/m/Y H:i', strtotime($notificacao['criado_em'])); ?></small>
+            <div class="grid grid-2">
+                <div class="stat-item">
+                    <div class="stat-number"><?php echo $statsHoje['total_aulas']; ?></div>
+                    <div class="stat-label">Total de Aulas</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number"><?php echo $statsHoje['confirmadas']; ?></div>
+                    <div class="stat-label">Confirmadas</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number"><?php echo $statsHoje['concluidas']; ?></div>
+                    <div class="stat-label">Concluídas</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number"><?php echo $statsHoje['agendadas']; ?></div>
+                    <div class="stat-label">Pendentes</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Aulas de Hoje -->
+        <div class="card">
+            <div class="card-header">
+                <h2 class="card-title">
+                    <i class="fas fa-calendar-day"></i>
+                    Aulas de Hoje
+                </h2>
+            </div>
+            
+            <?php if (empty($aulasHoje)): ?>
+            <div class="empty-state">
+                <div class="empty-state-icon">
+                    <i class="fas fa-calendar-times"></i>
+                </div>
+                <h3 class="empty-state-title">Nenhuma aula hoje</h3>
+                <p class="empty-state-text">Você não possui aulas agendadas para hoje.</p>
+            </div>
+            <?php else: ?>
+            <div class="aula-list">
+                <?php foreach ($aulasHoje as $aula): ?>
+                <div class="aula-item" data-aula-id="<?php echo $aula['id']; ?>">
+                    <div class="aula-item-header">
+                        <div>
+                            <div class="aula-tipo <?php echo $aula['tipo_aula']; ?>">
+                                <?php echo ucfirst($aula['tipo_aula']); ?>
+                            </div>
+                            <div class="aula-data">
+                                <?php echo date('H:i', strtotime($aula['hora_inicio'])); ?> - 
+                                <?php echo date('H:i', strtotime($aula['hora_fim'])); ?>
+                            </div>
                         </div>
-                        <button class="btn btn-sm btn-outline-primary marcar-lida" data-id="<?php echo $notificacao['id']; ?>">
-                            <i class="fas fa-check"></i>
+                        <div class="aula-status <?php echo $aula['status']; ?>">
+                            <?php echo ucfirst($aula['status']); ?>
+                        </div>
+                    </div>
+                    
+                    <div class="aula-detalhes">
+                        <div class="aula-detalhe">
+                            <i class="fas fa-user aula-detalhe-icon"></i>
+                            <?php echo htmlspecialchars($aula['aluno_nome']); ?>
+                        </div>
+                        <?php if ($aula['aluno_telefone']): ?>
+                        <div class="aula-detalhe">
+                            <i class="fas fa-phone aula-detalhe-icon"></i>
+                            <a href="tel:<?php echo htmlspecialchars($aula['aluno_telefone']); ?>">
+                                <?php echo htmlspecialchars($aula['aluno_telefone']); ?>
+                            </a>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($aula['veiculo_modelo']): ?>
+                        <div class="aula-detalhe">
+                            <i class="fas fa-car aula-detalhe-icon"></i>
+                            <?php echo htmlspecialchars($aula['veiculo_modelo']); ?> - <?php echo htmlspecialchars($aula['veiculo_placa']); ?>
+                        </div>
+                        <?php endif; ?>
+                        <?php if ($aula['observacoes']): ?>
+                        <div class="aula-detalhe">
+                            <i class="fas fa-sticky-note aula-detalhe-icon"></i>
+                            <?php echo htmlspecialchars($aula['observacoes']); ?>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                    
+                    <div class="aula-actions">
+                        <?php if ($aula['tipo_aula'] === 'teorica'): ?>
+                        <button class="btn btn-sm btn-primary fazer-chamada" 
+                                data-aula-id="<?php echo $aula['id']; ?>">
+                            <i class="fas fa-clipboard-list"></i>
+                            Chamada
+                        </button>
+                        <button class="btn btn-sm btn-secondary fazer-diario" 
+                                data-aula-id="<?php echo $aula['id']; ?>">
+                            <i class="fas fa-book"></i>
+                            Diário
+                        </button>
+                        <?php endif; ?>
+                        
+                        <button class="btn btn-sm btn-warning solicitar-transferencia" 
+                                data-aula-id="<?php echo $aula['id']; ?>"
+                                data-data="<?php echo $aula['data_aula']; ?>"
+                                data-hora="<?php echo $aula['hora_inicio']; ?>">
+                            <i class="fas fa-exchange-alt"></i>
+                            Transferir
+                        </button>
+                        
+                        <button class="btn btn-sm btn-danger cancelar-aula" 
+                                data-aula-id="<?php echo $aula['id']; ?>"
+                                data-data="<?php echo $aula['data_aula']; ?>"
+                                data-hora="<?php echo $aula['hora_inicio']; ?>">
+                            <i class="fas fa-times"></i>
+                            Cancelar
                         </button>
                     </div>
                 </div>
                 <?php endforeach; ?>
             </div>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
-        <!-- Status do Processo -->
-        <div class="card">
-            <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-route"></i>
-                    Seu Progresso
-                </h2>
-            </div>
-            <div class="progresso-timeline">
-                <div class="timeline-item <?php echo $guardaExames ? 'completed' : 'pending'; ?>">
-                    <div class="timeline-icon">
-                        <i class="fas fa-stethoscope"></i>
-                    </div>
-                    <div class="timeline-content">
-                        <h4>Exames Médico e Psicológico</h4>
-                        <p><?php echo $guardaExames ? 'Aprovados' : 'Pendentes'; ?></p>
-                    </div>
-                </div>
-                
-                <div class="timeline-item <?php echo $guardaExames ? 'completed' : 'disabled'; ?>">
-                    <div class="timeline-icon">
-                        <i class="fas fa-book"></i>
-                    </div>
-                    <div class="timeline-content">
-                        <h4>Aulas Teóricas</h4>
-                        <p><?php echo $guardaExames ? 'Liberadas' : 'Bloqueadas'; ?></p>
-                    </div>
-                </div>
-                
-                <div class="timeline-item disabled">
-                    <div class="timeline-icon">
-                        <i class="fas fa-car"></i>
-                    </div>
-                    <div class="timeline-content">
-                        <h4>Aulas Práticas</h4>
-                        <p>Após prova teórica</p>
-                    </div>
-                </div>
-            </div>
+            <?php endif; ?>
         </div>
 
         <!-- Próximas Aulas -->
@@ -160,7 +260,7 @@ ob_start();
             <div class="card-header">
                 <h2 class="card-title">
                     <i class="fas fa-calendar-alt"></i>
-                    Próximas Aulas
+                    Próximas Aulas (7 dias)
                 </h2>
             </div>
             
@@ -170,7 +270,7 @@ ob_start();
                     <i class="fas fa-calendar-times"></i>
                 </div>
                 <h3 class="empty-state-title">Nenhuma aula agendada</h3>
-                <p class="empty-state-text">Você não possui aulas agendadas para os próximos 14 dias.</p>
+                <p class="empty-state-text">Você não possui aulas agendadas para os próximos 7 dias.</p>
             </div>
             <?php else: ?>
             <div class="aula-list">
@@ -197,7 +297,7 @@ ob_start();
                     <div class="aula-detalhes">
                         <div class="aula-detalhe">
                             <i class="fas fa-user aula-detalhe-icon"></i>
-                            <?php echo htmlspecialchars($aula['instrutor_nome']); ?>
+                            <?php echo htmlspecialchars($aula['aluno_nome']); ?>
                         </div>
                         <?php if ($aula['veiculo_modelo']): ?>
                         <div class="aula-detalhe">
@@ -205,23 +305,18 @@ ob_start();
                             <?php echo htmlspecialchars($aula['veiculo_modelo']); ?> - <?php echo htmlspecialchars($aula['veiculo_placa']); ?>
                         </div>
                         <?php endif; ?>
-                        <?php if ($aula['observacoes']): ?>
-                        <div class="aula-detalhe">
-                            <i class="fas fa-sticky-note aula-detalhe-icon"></i>
-                            <?php echo htmlspecialchars($aula['observacoes']); ?>
-                        </div>
-                        <?php endif; ?>
                     </div>
                     
                     <div class="aula-actions">
-                        <button class="btn btn-sm btn-outline solicitar-reagendamento" 
+                        <button class="btn btn-sm btn-warning solicitar-transferencia" 
                                 data-aula-id="<?php echo $aula['id']; ?>"
                                 data-data="<?php echo $aula['data_aula']; ?>"
                                 data-hora="<?php echo $aula['hora_inicio']; ?>">
-                            <i class="fas fa-calendar-alt"></i>
-                            Reagendar
+                            <i class="fas fa-exchange-alt"></i>
+                            Transferir
                         </button>
-                        <button class="btn btn-sm btn-danger solicitar-cancelamento" 
+                        
+                        <button class="btn btn-sm btn-danger cancelar-aula" 
                                 data-aula-id="<?php echo $aula['id']; ?>"
                                 data-data="<?php echo $aula['data_aula']; ?>"
                                 data-hora="<?php echo $aula['hora_inicio']; ?>">
@@ -252,37 +347,37 @@ ob_start();
                     <i class="fas fa-bell"></i>
                     Central de Avisos
                 </button>
-                <button class="btn btn-outline btn-full" onclick="verFinanceiro()">
-                    <i class="fas fa-credit-card"></i>
-                    Financeiro
+                <button class="btn btn-outline btn-full" onclick="registrarOcorrencia()">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    Registrar Ocorrência
                 </button>
-                <button class="btn btn-outline btn-full" onclick="contatarCFC()">
+                <button class="btn btn-outline btn-full" onclick="contatarSecretaria()">
                     <i class="fas fa-phone"></i>
-                    Contatar CFC
+                    Contatar Secretária
                 </button>
             </div>
         </div>
     </div>
 
-    <!-- Modal de Solicitação -->
-    <div id="modalSolicitacao" class="modal-overlay hidden">
+    <!-- Modal de Cancelamento/Transferência -->
+    <div id="modalAcao" class="modal-overlay hidden">
         <div class="modal">
             <div class="modal-header">
-                <h3 class="modal-title" id="modalTitulo">Solicitar Reagendamento</h3>
+                <h3 class="modal-title" id="modalTitulo">Cancelar Aula</h3>
             </div>
             <div class="modal-body">
-                <form id="formSolicitacao">
+                <form id="formAcao">
                     <input type="hidden" id="aulaId" name="aula_id">
-                    <input type="hidden" id="tipoSolicitacao" name="tipo_solicitacao">
+                    <input type="hidden" id="tipoAcao" name="tipo_acao">
                     
                     <div class="form-group">
-                        <label class="form-label">Data Atual</label>
-                        <input type="text" id="dataAtual" class="form-input" readonly>
+                        <label class="form-label">Data da Aula</label>
+                        <input type="text" id="dataAula" class="form-input" readonly>
                     </div>
                     
                     <div class="form-group">
-                        <label class="form-label">Horário Atual</label>
-                        <input type="text" id="horaAtual" class="form-input" readonly>
+                        <label class="form-label">Horário</label>
+                        <input type="text" id="horaAula" class="form-input" readonly>
                     </div>
                     
                     <div class="form-group" id="novaDataGroup" style="display: none;">
@@ -299,9 +394,11 @@ ob_start();
                         <label class="form-label">Motivo</label>
                         <select id="motivo" name="motivo" class="form-select">
                             <option value="">Selecione um motivo</option>
-                            <option value="imprevisto_pessoal">Imprevisto pessoal</option>
                             <option value="problema_saude">Problema de saúde</option>
-                            <option value="compromisso_trabalho">Compromisso de trabalho</option>
+                            <option value="imprevisto_pessoal">Imprevisto pessoal</option>
+                            <option value="problema_veiculo">Problema com veículo</option>
+                            <option value="ausencia_aluno">Ausência do aluno</option>
+                            <option value="condicoes_climaticas">Condições climáticas</option>
                             <option value="outro">Outro</option>
                         </select>
                     </div>
@@ -309,20 +406,20 @@ ob_start();
                     <div class="form-group">
                         <label class="form-label">Justificativa *</label>
                         <textarea id="justificativa" name="justificativa" class="form-textarea" 
-                                  placeholder="Descreva o motivo da solicitação..." required></textarea>
+                                  placeholder="Descreva o motivo da ação..." required></textarea>
                     </div>
                     
                     <div class="form-group">
                         <div class="alert alert-info">
                             <i class="fas fa-info-circle"></i>
-                            <strong>Política:</strong> Solicitações devem ser feitas com no mínimo 24 horas de antecedência.
+                            <strong>Política:</strong> Ações devem ser feitas com no mínimo 24 horas de antecedência.
                         </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
-                <button type="button" class="btn btn-primary" onclick="enviarSolicitacao()">Enviar Solicitação</button>
+                <button type="button" class="btn btn-primary" onclick="enviarAcao()">Confirmar</button>
             </div>
         </div>
     </div>
@@ -343,32 +440,32 @@ ob_start();
             window.location.href = 'notificacoes.php';
         }
 
-        function verFinanceiro() {
-            window.location.href = 'financeiro.php';
+        function registrarOcorrencia() {
+            window.location.href = 'ocorrencias.php';
         }
 
-        function contatarCFC() {
+        function contatarSecretaria() {
             window.location.href = 'contato.php';
         }
 
         // Funções do modal
         function abrirModal(tipo, aulaId, data, hora) {
-            document.getElementById('tipoSolicitacao').value = tipo;
+            document.getElementById('tipoAcao').value = tipo;
             document.getElementById('aulaId').value = aulaId;
-            document.getElementById('dataAtual').value = data;
-            document.getElementById('horaAtual').value = hora;
+            document.getElementById('dataAula').value = data;
+            document.getElementById('horaAula').value = hora;
             
-            const modal = document.getElementById('modalSolicitacao');
+            const modal = document.getElementById('modalAcao');
             const titulo = document.getElementById('modalTitulo');
             const novaDataGroup = document.getElementById('novaDataGroup');
             const novaHoraGroup = document.getElementById('novaHoraGroup');
             
-            if (tipo === 'reagendamento') {
-                titulo.textContent = 'Solicitar Reagendamento';
+            if (tipo === 'transferencia') {
+                titulo.textContent = 'Solicitar Transferência';
                 novaDataGroup.style.display = 'block';
                 novaHoraGroup.style.display = 'block';
             } else {
-                titulo.textContent = 'Solicitar Cancelamento';
+                titulo.textContent = 'Cancelar Aula';
                 novaDataGroup.style.display = 'none';
                 novaHoraGroup.style.display = 'none';
             }
@@ -378,30 +475,45 @@ ob_start();
         }
 
         function fecharModal() {
-            document.getElementById('modalSolicitacao').classList.add('hidden');
-            document.getElementById('formSolicitacao').reset();
+            document.getElementById('modalAcao').classList.add('hidden');
+            document.getElementById('formAcao').reset();
             modalAberto = false;
         }
 
-        // Event listeners para botões de ação
+        // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
-            // Botões de reagendamento
-            document.querySelectorAll('.solicitar-reagendamento').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    const aulaId = this.dataset.aulaId;
-                    const data = this.dataset.data;
-                    const hora = this.dataset.hora;
-                    abrirModal('reagendamento', aulaId, data, hora);
-                });
-            });
-
             // Botões de cancelamento
-            document.querySelectorAll('.solicitar-cancelamento').forEach(btn => {
+            document.querySelectorAll('.cancelar-aula').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const aulaId = this.dataset.aulaId;
                     const data = this.dataset.data;
                     const hora = this.dataset.hora;
                     abrirModal('cancelamento', aulaId, data, hora);
+                });
+            });
+
+            // Botões de transferência
+            document.querySelectorAll('.solicitar-transferencia').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const aulaId = this.dataset.aulaId;
+                    const data = this.dataset.data;
+                    const hora = this.dataset.hora;
+                    abrirModal('transferencia', aulaId, data, hora);
+                });
+            });
+
+            // Botões de chamada e diário
+            document.querySelectorAll('.fazer-chamada').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const aulaId = this.dataset.aulaId;
+                    window.location.href = `chamada.php?aula_id=${aulaId}`;
+                });
+            });
+
+            document.querySelectorAll('.fazer-diario').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const aulaId = this.dataset.aulaId;
+                    window.location.href = `diario.php?aula_id=${aulaId}`;
                 });
             });
 
@@ -414,16 +526,16 @@ ob_start();
             });
 
             // Fechar modal ao clicar fora
-            document.getElementById('modalSolicitacao').addEventListener('click', function(e) {
+            document.getElementById('modalAcao').addEventListener('click', function(e) {
                 if (e.target === this) {
                     fecharModal();
                 }
             });
         });
 
-        // Função para enviar solicitação
-        async function enviarSolicitacao() {
-            const form = document.getElementById('formSolicitacao');
+        // Função para enviar ação
+        async function enviarAcao() {
+            const form = document.getElementById('formAcao');
             const formData = new FormData(form);
             
             // Validação básica
@@ -440,7 +552,7 @@ ob_start();
                     },
                     body: JSON.stringify({
                         aula_id: formData.get('aula_id'),
-                        tipo_solicitacao: formData.get('tipo_solicitacao'),
+                        tipo_solicitacao: formData.get('tipo_acao'),
                         nova_data: formData.get('nova_data'),
                         nova_hora: formData.get('nova_hora'),
                         motivo: formData.get('motivo'),
@@ -527,13 +639,13 @@ ob_start();
         }
 
         // Prevenir envio do formulário com Enter
-        document.getElementById('formSolicitacao').addEventListener('submit', function(e) {
+        document.getElementById('formAcao').addEventListener('submit', function(e) {
             e.preventDefault();
         });
     </script>
 
     <style>
-        /* Estilos específicos para o dashboard do aluno */
+        /* Estilos específicos para o dashboard do instrutor */
         .notificacao-item {
             display: flex;
             align-items: center;
@@ -566,81 +678,37 @@ ob_start();
             color: #94a3b8;
         }
 
-        .progresso-timeline {
-            position: relative;
+        .stat-item {
+            text-align: center;
+            padding: 16px;
+            background: #f8fafc;
+            border-radius: 8px;
         }
 
-        .timeline-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            position: relative;
-        }
-
-        .timeline-item:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            left: 20px;
-            top: 40px;
-            width: 2px;
-            height: 20px;
-            background: #e2e8f0;
-        }
-
-        .timeline-item.completed::after {
-            background: #059669;
-        }
-
-        .timeline-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 16px;
-            font-size: 16px;
-            color: white;
-            background: #e2e8f0;
-        }
-
-        .timeline-item.completed .timeline-icon {
-            background: #059669;
-        }
-
-        .timeline-item.disabled .timeline-icon {
-            background: #f1f5f9;
-            color: #94a3b8;
-        }
-
-        .timeline-content h4 {
-            font-size: 14px;
-            font-weight: 600;
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #2563eb;
             margin-bottom: 4px;
-            color: #1e293b;
         }
 
-        .timeline-item.disabled .timeline-content h4 {
-            color: #94a3b8;
-        }
-
-        .timeline-content p {
+        .stat-label {
             font-size: 12px;
             color: #64748b;
-        }
-
-        .timeline-item.disabled .timeline-content p {
-            color: #94a3b8;
+            text-transform: uppercase;
+            font-weight: 500;
         }
 
         .aula-actions {
             display: flex;
             gap: 8px;
             margin-top: 12px;
+            flex-wrap: wrap;
         }
 
         .aula-actions .btn {
             flex: 1;
+            min-width: 120px;
         }
 
         .alert {
@@ -669,6 +737,7 @@ ob_start();
             
             .aula-actions .btn {
                 width: 100%;
+                min-width: auto;
             }
         }
     </style>

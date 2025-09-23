@@ -204,6 +204,13 @@ function criarAula($data) {
     try {
         $db = db();
         
+        // Verificar permissões
+        $permissions = new AgendamentoPermissions();
+        $permCriar = $permissions->podeCriarAgendamento();
+        if (!$permCriar['permitido']) {
+            returnJsonError($permCriar['motivo'], 403);
+        }
+        
         // Validar dados obrigatórios
         $aluno_id = $data['aluno_id'] ?? null;
         $data_aula = $data['data_aula'] ?? null;
@@ -247,14 +254,6 @@ function criarAula($data) {
         $horarios_aulas = calcularHorariosAulas($hora_inicio, $tipo_agendamento, $posicao_intervalo);
         error_log("Horários calculados: " . json_encode($horarios_aulas));
         
-        // Verificar limite de aulas práticas por dia para alunos
-        if ($tipo_aula === 'pratica') {
-            $limite_aluno = verificarLimiteDiarioAluno($db, $aluno_id, $data_aula, count($horarios_aulas));
-            if (!$limite_aluno['disponivel']) {
-                returnJsonError($limite_aluno['mensagem'], 409);
-            }
-        }
-        
         // Buscar informações do aluno e CFC
         $aluno = $db->fetch("SELECT a.*, c.id as cfc_id FROM alunos a JOIN cfcs c ON a.cfc_id = c.id WHERE a.id = ?", [$aluno_id]);
         if (!$aluno) {
@@ -275,36 +274,26 @@ function criarAula($data) {
             }
         }
         
-        // Verificar conflitos de horário para todas as aulas do bloco
-        error_log("Verificando conflitos para " . count($horarios_aulas) . " aulas");
+        // Usar sistema de guardas para validação completa
+        $guards = new AgendamentoGuards();
+        
+        // Verificar cada aula do bloco
         foreach ($horarios_aulas as $index => $aula) {
-            error_log("Verificando conflito para aula $index: " . json_encode($aula));
-            $conflito_instrutor = $db->fetch("SELECT * FROM aulas WHERE instrutor_id = ? AND data_aula = ? AND status != 'cancelada' AND (
-                (hora_inicio <= ? AND hora_fim > ?) OR
-                (hora_inicio < ? AND hora_fim >= ?) OR
-                (hora_inicio >= ? AND hora_fim <= ?)
-            )", [$instrutor_id, $data_aula, $aula['hora_inicio'], $aula['hora_inicio'], $aula['hora_fim'], $aula['hora_fim'], $aula['hora_inicio'], $aula['hora_fim']]);
+            $dadosAula = [
+                'aluno_id' => $aluno_id,
+                'instrutor_id' => $instrutor_id,
+                'veiculo_id' => $veiculo_id,
+                'tipo_aula' => $tipo_aula,
+                'data_aula' => $data_aula,
+                'hora_inicio' => $aula['hora_inicio'],
+                'hora_fim' => $aula['hora_fim'],
+                'disciplina' => $disciplina,
+                'observacoes' => $observacoes
+            ];
             
-            if ($conflito_instrutor) {
-                // Buscar nome do instrutor para mensagem mais específica
-                $nome_instrutor = $db->fetchColumn("SELECT COALESCE(u.nome, i.nome) FROM instrutores i LEFT JOIN usuarios u ON i.usuario_id = u.id WHERE i.id = ?", [$instrutor_id]);
-                returnJsonError("👨‍🏫 INSTRUTOR INDISPONÍVEL: O instrutor {$nome_instrutor} já possui aula agendada no horário {$aula['hora_inicio']} às {$aula['hora_fim']}. Escolha outro horário ou instrutor.", 409);
-            }
-            
-            // Verificar conflitos de veículo (se aplicável)
-            if ($veiculo_id) {
-                $conflito_veiculo = $db->fetch("SELECT * FROM aulas WHERE veiculo_id = ? AND data_aula = ? AND status != 'cancelada' AND (
-                    (hora_inicio <= ? AND hora_fim > ?) OR
-                    (hora_inicio < ? AND hora_fim >= ?) OR
-                    (hora_inicio >= ? AND hora_fim <= ?)
-                )", [$veiculo_id, $data_aula, $aula['hora_inicio'], $aula['hora_inicio'], $aula['hora_fim'], $aula['hora_fim'], $aula['hora_inicio'], $aula['hora_fim']]);
-                
-                if ($conflito_veiculo) {
-                    // Buscar informações do veículo para mensagem mais específica
-                    $info_veiculo = $db->fetch("SELECT placa, modelo, marca FROM veiculos WHERE id = ?", [$veiculo_id]);
-                    $veiculo_info = "{$info_veiculo['marca']} {$info_veiculo['modelo']} - {$info_veiculo['placa']}";
-                    returnJsonError("🚗 VEÍCULO INDISPONÍVEL: O veículo {$veiculo_info} já está em uso no horário {$aula['hora_inicio']} às {$aula['hora_fim']}. Escolha outro horário ou veículo.", 409);
-                }
+            $validacao = $guards->validarAgendamentoCompleto($dadosAula);
+            if (!$validacao['valido']) {
+                returnJsonError($validacao['motivo'], 409);
             }
         }
         
@@ -337,22 +326,24 @@ function criarAula($data) {
                     'hora_fim' => $aula['hora_fim']
                 ];
                 
-                // Log de auditoria para cada aula
-                $log_sql = "INSERT INTO logs (usuario_id, acao, tabela, registro_id, dados_anteriores, dados_novos, ip_address, criado_em) 
-                            VALUES (?, 'INSERT', 'aulas', ?, NULL, ?, ?, NOW())";
-                
-                $dados_json = json_encode([
-                    'aluno_id' => $aluno_id,
-                    'instrutor_id' => $instrutor_id,
-                    'tipo_aula' => $tipo_aula,
-                    'data_aula' => $data_aula,
-                    'hora_inicio' => $aula['hora_inicio'],
-                    'hora_fim' => $aula['hora_fim'],
-                    'veiculo_id' => $veiculo_id,
-                    'aula_bloco' => $index + 1
-                ]);
-                
-                $db->query($log_sql, [$_SESSION['user_id'], $aula_id, $dados_json, $_SERVER['REMOTE_ADDR'] ?? 'unknown']);
+            // Registrar auditoria usando o sistema de auditoria
+            $auditoria = new AgendamentoAuditoria();
+            $dadosAulaAuditoria = [
+                'aluno_id' => $aluno_id,
+                'instrutor_id' => $instrutor_id,
+                'tipo_aula' => $tipo_aula,
+                'data_aula' => $data_aula,
+                'hora_inicio' => $aula['hora_inicio'],
+                'hora_fim' => $aula['hora_fim'],
+                'veiculo_id' => $veiculo_id,
+                'disciplina' => $disciplina,
+                'observacoes' => $observacoes . ($index > 0 ? " (Aula " . ($index + 1) . " do bloco)" : "")
+            ];
+            $auditoria->registrarCriacao($aula_id, $dadosAulaAuditoria);
+            
+            // Enviar notificações
+            $notificacoes = new SistemaNotificacoes();
+            $notificacoes->notificarAgendamentoCriado($aula_id, $dadosAulaAuditoria);
             } else {
                 returnJsonError('Erro ao salvar aula ' . ($index + 1) . ' no banco de dados', 500);
             }
@@ -389,9 +380,13 @@ function criarAula($data) {
 }
 
 try {
-    require_once __DIR__ . '/../../includes/config.php';
-    require_once __DIR__ . '/../../includes/database.php';
-    require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/guards/AgendamentoGuards.php';
+require_once __DIR__ . '/../../includes/guards/AgendamentoPermissions.php';
+require_once __DIR__ . '/../../includes/guards/AgendamentoAuditoria.php';
+require_once __DIR__ . '/../../includes/services/SistemaNotificacoes.php';
 
     if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
         http_response_code(200);
@@ -516,7 +511,7 @@ try {
 /**
  * Cancelar uma aula
  */
-function cancelarAula($aula_id) {
+function cancelarAula($aula_id, $motivo = '') {
     if (!isset($_SESSION['user_id'])) {
         returnJsonError('Sessão não encontrada. Faça login novamente.', 401);
     }
@@ -525,8 +520,11 @@ function cancelarAula($aula_id) {
         returnJsonError('Usuário não autenticado. Faça login novamente.', 401);
     }
     
-    if (!canCancelLessons()) {
-        returnJsonError('Você não tem permissão para cancelar aulas', 403);
+    // Verificar permissões usando o sistema de permissões
+    $permissions = new AgendamentoPermissions();
+    $permCancelar = $permissions->podeCancelarAgendamento($aula_id);
+    if (!$permCancelar['permitido']) {
+        returnJsonError($permCancelar['motivo'], 403);
     }
     
     $db = db();
@@ -540,6 +538,14 @@ function cancelarAula($aula_id) {
     if (!$result) {
         returnJsonError('Erro ao cancelar aula no banco de dados', 500);
     }
+    
+        // Registrar auditoria do cancelamento
+        $auditoria = new AgendamentoAuditoria();
+        $auditoria->registrarCancelamento($aula_id, $aula, $motivo);
+        
+        // Enviar notificações
+        $notificacoes = new SistemaNotificacoes();
+        $notificacoes->notificarAgendamentoCancelado($aula_id, $aula, $motivo);
     
     returnJsonSuccess('Aula cancelada com sucesso');
 }
