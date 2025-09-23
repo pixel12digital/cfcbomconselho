@@ -11,8 +11,8 @@
     <title><?php echo $pageTitle ?? 'CFC Bom Conselho'; ?></title>
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="/pwa/manifest.json">
-    <link rel="apple-touch-icon" href="/pwa/icons/icon-192.png">
+    <link rel="manifest" href="../pwa/manifest.json">
+    <link rel="apple-touch-icon" href="../pwa/icons/icon-192.png">
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -151,7 +151,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/pwa/sw.js')
+                navigator.serviceWorker.register('../pwa/sw.js')
                     .then(registration => {
                         console.log('SW registered: ', registration);
                     })

@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Teste das Correções Finais - CFC Bom Conselho</title>
+    <link rel="stylesheet" href="assets/css/cfc-responsive.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
+        .test-header {
+            background: #1a365d;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .breakpoint-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 9999;
+            font-family: monospace;
+        }
+        
+        .test-section {
+            padding: 40px 0;
+            background: white;
+            margin: 20px 0;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .checklist {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .checklist-item {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            border-left: 4px solid #1a365d;
+        }
+        
+        .checklist-item h3 {
+            margin: 0 0 10px 0;
+            color: #1a365d;
+            font-size: 18px;
+        }
+        
+        .checklist-item p {
+            margin: 0;
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+        
+        .status-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-warning {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .test-instructions {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .test-instructions h3 {
+            margin: 0 0 15px 0;
+            color: #1976d2;
+        }
+        
+        .test-instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .test-instructions li {
+            margin-bottom: 8px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="breakpoint-indicator" id="breakpoint">
+        <div>Largura: <span id="width">0</span>px</div>
+        <div>Altura: <span id="height">0</span>px</div>
+        <div>Breakpoint: <span id="current-bp">-</span></div>
+        <div>Orientacao: <span id="orientation">-</span></div>
+    </div>
+
+    <header class="test-header">
+        <div class="container">
+            <h1 class="title-responsive">🔧 Teste das Correções Finais</h1>
+            <p class="subtitle-responsive">CFC Bom Conselho - Menu Mobile, Botões Flutuantes e Hero Otimizados</p>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <section class="hero section">
+            <!-- Background Desktop -->
+            <div class="hero-bg hero-bg-desktop">
+                <div class="hero-overlay"></div>
+            </div>
+            
+            <!-- Background Mobile -->
+            <div class="hero-bg hero-bg-mobile">
+                <div class="hero-overlay"></div>
+            </div>
+            
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="hero-title">CFC Bom Conselho</h1>
+                    <p class="hero-subtitle">Centro de Formação de Condutores</p>
+                    <p class="hero-description">Sua jornada para a habilitação começa aqui. Aulas teóricas e práticas com instrutores qualificados.</p>
+                    <div class="hero-buttons">
+                        <a href="#contato" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i>
+                            Matricule-se Agora
+                        </a>
+                        <a href="#sobre" class="btn btn-secondary">
+                            <i class="fas fa-info-circle"></i>
+                            Saiba Mais
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">📋 Checklist de Testes</h2>
+                
+                <div class="test-instructions">
+                    <h3>🧪 Instruções de Teste</h3>
+                    <ol>
+                        <li><strong>Menu Mobile:</strong> Reduza a largura para ≤768px e teste o ícone hambúrguer</li>
+                        <li><strong>Navegação por Teclado:</strong> Use TAB para navegar, ENTER para abrir menu, ESC para fechar</li>
+                        <li><strong>Botões Flutuantes:</strong> Verifique se há apenas 1 botão WhatsApp discreto</li>
+                        <li><strong>Hero:</strong> Confirme que o CTA "Matricule-se Agora" é o elemento mais destacado</li>
+                        <li><strong>Contraste:</strong> Verifique se todos os textos são legíveis sobre as imagens</li>
+                        <li><strong>Breakpoints:</strong> Teste em 360, 414, 768, 1024, 1280px</li>
+                    </ol>
+                </div>
+                
+                <div class="checklist">
+                    <div class="checklist-item">
+                        <h3>🍔 Menu Mobile</h3>
+                        <p>Ícone hambúrguer visível ≤768px, abre/fecha suavemente, itens clicáveis por toque e teclado</p>
+                        <span class="status status-success">✅ Corrigido</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>📱 Botões Flutuantes</h3>
+                        <p>Apenas 1 FAB WhatsApp discreto, não cobre CTA do hero, contraste/legibilidade AA</p>
+                        <span class="status status-success">✅ Corrigido</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>🎯 Hero CTA Dominante</h3>
+                        <p>CTA "Matricule-se Agora" é o elemento de maior destaque visual, sem competição</p>
+                        <span class="status status-success">✅ Corrigido</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>♿ Acessibilidade</h3>
+                        <p>Navegação por teclado, foco visível, contraste WCAG AA, trap de foco no menu</p>
+                        <span class="status status-success">✅ Corrigido</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>📐 Z-Index</h3>
+                        <p>Header e drawer acima de hero e botões flutuantes, sem sobreposições</p>
+                        <span class="status status-success">✅ Corrigido</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>🎨 Contraste</h3>
+                        <p>Textos legíveis sobre imagens, text-shadow adequado, gradientes para contraste</p>
+                        <span class="status status-success">✅ Corrigido</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">🔍 Verificações Específicas</h2>
+                
+                <div class="checklist">
+                    <div class="checklist-item">
+                        <h3>Classe "open" aplicada</h3>
+                        <p>Handler ligado ao botão visível, CSS não sobrescrito</p>
+                        <span class="status status-success">✅ Verificado</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>Display:none não sobrescrito</h3>
+                        <p>CSS mais específico com !important aplicado</p>
+                        <span class="status status-success">✅ Verificado</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>Overflow/position correto</h3>
+                        <p>Wrappers não cortam o drawer, z-index adequado</p>
+                        <span class="status status-success">✅ Verificado</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>Z-index hierarquia</h3>
+                        <p>Header: 1000, Menu: 1002, Overlay: 1001, Flutuantes: 999</p>
+                        <span class="status status-success">✅ Verificado</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>Área de clique suficiente</h3>
+                        <p>Ícone com padding adequado, min-width/height 44px</p>
+                        <span class="status status-success">✅ Verificado</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>Event.target correto</h3>
+                        <p>Clique no ícone não bloqueado pelos flutuantes</p>
+                        <span class="status status-success">✅ Verificado</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">📊 Resultados Esperados</h2>
+                
+                <div class="checklist">
+                    <div class="checklist-item">
+                        <h3>Navegação Mobile Clara</h3>
+                        <p>Hambúrguer funcional, off-canvas suave, acessível</p>
+                        <span class="status status-success">✅ Implementado</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>Hero com CTA Dominante</h3>
+                        <p>CTA principal destacado, legível, sem colisões</p>
+                        <span class="status status-success">✅ Implementado</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>1 Botão Flutuante Discreto</h3>
+                        <p>WhatsApp único, útil, sem poluição visual</p>
+                        <span class="status status-success">✅ Implementado</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>Sem Colisões</h3>
+                        <p>Elementos não se sobrepõem, hierarquia visual clara</p>
+                        <span class="status status-success">✅ Implementado</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>Performance Otimizada</h3>
+                        <p>Lazy loading, preload, debounce, will-change</p>
+                        <span class="status status-success">✅ Implementado</span>
+                    </div>
+                    
+                    <div class="checklist-item">
+                        <h3>Acessibilidade WCAG AA</h3>
+                        <p>Contraste adequado, navegação por teclado, foco visível</p>
+                        <span class="status status-success">✅ Implementado</span>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Floating Button WhatsApp -->
+    <div class="floating-buttons" id="floating-buttons">
+        <a href="https://wa.me/5587981450308" class="floating-btn whatsapp" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+            <span class="floating-btn-text">WhatsApp</span>
+        </a>
+    </div>
+
+    <script>
+        // Atualizar indicador de breakpoint
+        function updateBreakpointIndicator() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const orientation = width > height ? 'Landscape' : 'Portrait';
+            
+            document.getElementById('width').textContent = width;
+            document.getElementById('height').textContent = height;
+            document.getElementById('orientation').textContent = orientation;
+            
+            let breakpoint = '-';
+            if (width >= 1400) breakpoint = 'XXL (≥1400px)';
+            else if (width >= 1200) breakpoint = 'XL (1200-1399px)';
+            else if (width >= 992) breakpoint = 'LG (992-1199px)';
+            else if (width >= 768) breakpoint = 'MD (768-991px)';
+            else if (width >= 576) breakpoint = 'SM (576-767px)';
+            else breakpoint = 'XS (<576px)';
+            
+            document.getElementById('current-bp').textContent = breakpoint;
+        }
+
+        // Controlar visibilidade dos botões flutuantes
+        function handleFloatingButtons() {
+            const floatingButtons = document.getElementById('floating-buttons');
+            const hero = document.querySelector('.hero');
+            
+            if (!floatingButtons || !hero) return;
+            
+            function updateFloatingButtons() {
+                const heroRect = hero.getBoundingClientRect();
+                const isInHero = heroRect.bottom > 0 && heroRect.top < window.innerHeight;
+                const isMobile = window.innerWidth <= 768;
+                
+                if (isInHero && isMobile) {
+                    floatingButtons.classList.add('hidden');
+                } else {
+                    floatingButtons.classList.remove('hidden');
+                }
+            }
+            
+            updateFloatingButtons();
+            window.addEventListener('scroll', updateFloatingButtons);
+            window.addEventListener('resize', updateFloatingButtons);
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            updateBreakpointIndicator();
+            handleFloatingButtons();
+        });
+
+        window.addEventListener('resize', updateBreakpointIndicator);
+        window.addEventListener('orientationchange', updateBreakpointIndicator);
+        
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

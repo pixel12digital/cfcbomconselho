@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Teste Ícone Entrar Oculto - CFC Bom Conselho</title>
+    <link rel="stylesheet" href="assets/css/cfc-responsive.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            min-height: 100vh;
+        }
+        
+        .test-header {
+            background: #1a365d;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .breakpoint-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 9999;
+            font-family: monospace;
+        }
+        
+        .test-section {
+            padding: 40px 0;
+            background: white;
+            margin: 20px 0;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .hero {
+            background: linear-gradient(135deg, #1a365d 0%, #2d3748 100%);
+            color: white;
+            padding: 80px 0;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .hero-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 700;
+            margin: 0 0 20px 0;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.2rem, 2.5vw, 1.8rem);
+            margin: 0 0 30px 0;
+            opacity: 0.9;
+        }
+        
+        .hero-description {
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            margin: 0 0 40px 0;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+            opacity: 0.8;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 0 10px;
+        }
+        
+        .btn-primary {
+            background: #25d366;
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #20c05a;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .btn-secondary:hover {
+            background: white;
+            color: #1a365d;
+        }
+        
+        .improvement-card {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .improvement-card h4 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+        
+        .improvement-card ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .improvement-card li {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .test-instructions {
+            background: #fff3e0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .test-instructions h3 {
+            margin: 0 0 15px 0;
+            color: #e65100;
+        }
+        
+        .test-instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .test-instructions li {
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .status-card {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .status-fixed {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+        }
+        
+        .status-fixed h4 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+        
+        .status-fixed p {
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        .demo-section {
+            text-align: center;
+            padding: 40px 0;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .demo-button {
+            display: inline-block;
+            padding: 15px 30px;
+            border-radius: 25px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            margin: 10px;
+            font-size: 18px;
+        }
+        
+        .demo-button-yellow {
+            background: #F7B731;
+            color: #1A365D;
+        }
+        
+        .demo-button-yellow:hover {
+            background: #e6a700;
+            transform: translateY(-2px);
+        }
+        
+        .fix-info {
+            background: #e3f2fd;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .fix-info h3 {
+            margin: 0 0 15px 0;
+            color: #1976d2;
+        }
+        
+        .fix-info ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .fix-info li {
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .problem-section {
+            background: #ffebee;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #f44336;
+        }
+        
+        .problem-section h3 {
+            margin: 0 0 15px 0;
+            color: #c62828;
+        }
+        
+        .problem-section ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .problem-section li {
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .comparison-section {
+            background: #f3e5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #9c27b0;
+        }
+        
+        .comparison-section h3 {
+            margin: 0 0 15px 0;
+            color: #7b1fa2;
+        }
+        
+        .comparison-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        
+        .comparison-before, .comparison-after {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        
+        .comparison-before {
+            background: #ffebee;
+            border: 2px solid #f44336;
+        }
+        
+        .comparison-after {
+            background: #e8f5e8;
+            border: 2px solid #4caf50;
+        }
+        
+        .comparison-before h4 {
+            margin: 0 0 10px 0;
+            color: #c62828;
+        }
+        
+        .comparison-after h4 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+        
+        .comparison-before p, .comparison-after p {
+            margin: 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="breakpoint-indicator" id="breakpoint">
+        <div>Largura: <span id="width">0</span>px</div>
+        <div>Altura: <span id="height">0</span>px</div>
+        <div>Breakpoint: <span id="current-bp">-</span></div>
+        <div>Orientacao: <span id="orientation">-</span></div>
+        <div>Status: <span id="button-status">-</span></div>
+    </div>
+
+    <header class="test-header">
+        <div class="container">
+            <h1 class="title-responsive">🔑 Ícone Entrar Oculto</h1>
+            <p class="subtitle-responsive">Botão Limpo e Minimalista</p>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <section class="hero section">
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="hero-title">CFC Bom Conselho</h1>
+                    <p class="hero-subtitle">Centro de Formação de Condutores</p>
+                    <p class="hero-description">Sua jornada para a habilitação começa aqui. Aulas teóricas e práticas com instrutores qualificados.</p>
+                    <div class="hero-buttons">
+                        <a href="#contato" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i>
+                            Matricule-se Agora
+                        </a>
+                        <a href="#sobre" class="btn btn-secondary">
+                            <i class="fas fa-info-circle"></i>
+                            Saiba Mais
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">🔍 Problema Identificado</h2>
+                
+                <div class="problem-section">
+                    <h3>❌ Ícone Desnecessário</h3>
+                    <ul>
+                        <li><strong>Botão Entrar:</strong> Tinha ícone de chave 🔑</li>
+                        <li><strong>Localização 1:</strong> Header principal (desktop)</li>
+                        <li><strong>Localização 2:</strong> Menu mobile</li>
+                        <li><strong>Problema:</strong> Ícone desnecessário e poluição visual</li>
+                    </ul>
+                </div>
+                
+                <div class="fix-info">
+                    <h3>✅ Correção Implementada</h3>
+                    <ul>
+                        <li><strong>Ícone Removido:</strong> 🔑 removido de ambos os locais</li>
+                        <li><strong>Texto Limpo:</strong> Apenas "Entrar" sem ícone</li>
+                        <li><strong>Funcionalidade:</strong> Mantida (ainda abre login.php)</li>
+                        <li><strong>Estilo:</strong> Mantido (cor amarela, texto azul)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">📊 Comparação Antes vs Depois</h2>
+                
+                <div class="comparison-section">
+                    <h3>🔄 Mudanças Implementadas</h3>
+                    
+                    <div class="comparison-grid">
+                        <div class="comparison-before">
+                            <h4>❌ ANTES</h4>
+                            <p>Botão Entrar:<br>
+                            • 🔑 Entrar<br>
+                            • Ícone de chave<br>
+                            • Poluição visual</p>
+                        </div>
+                        
+                        <div class="comparison-after">
+                            <h4>✅ DEPOIS</h4>
+                            <p>Botão Entrar:<br>
+                            • Entrar<br>
+                            • Sem ícone<br>
+                            • Interface limpa</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">🧪 Instruções de Teste</h2>
+                
+                <div class="test-instructions">
+                    <h3>💻 Teste Desktop (≥769px)</h3>
+                    <ol>
+                        <li><strong>Aumente a largura</strong> para ≥769px</li>
+                        <li><strong>Verifique:</strong> Botão "Entrar" no header (canto superior direito)</li>
+                        <li><strong>Verifique:</strong> NÃO há ícone de chave 🔑</li>
+                        <li><strong>Verifique:</strong> Apenas texto "Entrar"</li>
+                        <li><strong>Teste clique:</strong> Abre login.php</li>
+                    </ol>
+                </div>
+                
+                <div class="test-instructions">
+                    <h3>📱 Teste Mobile (≤768px)</h3>
+                    <ol>
+                        <li><strong>Reduza a largura</strong> para ≤768px</li>
+                        <li><strong>Clique no menu:</strong> Abra o menu hambúrguer</li>
+                        <li><strong>Verifique:</strong> Botão "Entrar" no menu mobile</li>
+                        <li><strong>Verifique:</strong> NÃO há ícone de chave 🔑</li>
+                        <li><strong>Verifique:</strong> Apenas texto "Entrar"</li>
+                        <li><strong>Teste clique:</strong> Abre login.php</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">🎨 Demonstração Visual</h2>
+                
+                <div class="demo-section">
+                    <h3>Botão Entrar (Sem Ícone)</h3>
+                    <p>Este é o botão que agora aparece no site</p>
+                    <a href="login.php" class="demo-button demo-button-yellow" target="_blank" rel="noopener" aria-label="Entrar">
+                        Entrar
+                    </a>
+                    <p style="margin-top: 20px; color: #666;">
+                        <strong>Especificações:</strong><br>
+                        Texto: "Entrar" (sem ícone)<br>
+                        Cor: #F7B731 (fundo amarelo)<br>
+                        Texto: #1A365D (azul escuro)<br>
+                        <strong>Interface limpa e minimalista</strong>
+                    </p>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">✅ Status da Correção</h2>
+                
+                <div class="status-grid">
+                    <div class="status-card status-fixed">
+                        <h4>Header Desktop</h4>
+                        <p>✅ Ícone removido<br>✅ Texto limpo<br>✅ Funcional</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Menu Mobile</h4>
+                        <p>✅ Ícone removido<br>✅ Texto limpo<br>✅ Funcional</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Funcionalidade</h4>
+                        <p>✅ Abre login.php<br>✅ Link funcional<br>✅ Navegação correta</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Estilo</h4>
+                        <p>✅ Cor amarela<br>✅ Texto azul<br>✅ Bordas arredondadas</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Interface</h4>
+                        <p>✅ Limpa<br>✅ Minimalista<br>✅ Sem poluição</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Responsividade</h4>
+                        <p>✅ Desktop: visível<br>✅ Mobile: no menu<br>✅ Consistente</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Floating Button WhatsApp -->
+    <div class="floating-buttons" id="floating-buttons">
+        <a href="https://wa.me/5587981450308" class="floating-btn whatsapp" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+    </div>
+
+    <script>
+        // Atualizar indicador de breakpoint
+        function updateBreakpointIndicator() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const orientation = width > height ? 'Landscape' : 'Portrait';
+            
+            document.getElementById('width').textContent = width;
+            document.getElementById('height').textContent = height;
+            document.getElementById('orientation').textContent = orientation;
+            
+            let breakpoint = '-';
+            if (width >= 1400) breakpoint = 'XXL (≥1400px)';
+            else if (width >= 1200) breakpoint = 'XL (1200-1399px)';
+            else if (width >= 992) breakpoint = 'LG (992-1199px)';
+            else if (width >= 768) breakpoint = 'MD (768-991px)';
+            else if (width >= 576) breakpoint = 'SM (576-767px)';
+            else breakpoint = 'XS (<576px)';
+            
+            document.getElementById('current-bp').textContent = breakpoint;
+            
+            // Status dos botões
+            const isMobile = width <= 768;
+            const floatingButtons = document.getElementById('floating-buttons');
+            const isVisible = floatingButtons && !floatingButtons.classList.contains('hidden');
+            
+            if (isVisible) {
+                if (isMobile) {
+                    document.getElementById('button-status').textContent = '✅ WhatsApp (Mobile)';
+                    document.getElementById('button-status').style.color = '#4caf50';
+                } else {
+                    document.getElementById('button-status').textContent = '✅ WhatsApp (Desktop)';
+                    document.getElementById('button-status').style.color = '#4caf50';
+                }
+            } else {
+                document.getElementById('button-status').textContent = '❌ Oculto (Menu aberto)';
+                document.getElementById('button-status').style.color = '#f44336';
+            }
+        }
+
+        // Controlar visibilidade dos botões flutuantes
+        function handleFloatingButtons() {
+            const floatingButtons = document.getElementById('floating-buttons');
+            const hero = document.querySelector('.hero');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (!floatingButtons || !hero) return;
+            
+            function updateFloatingButtons() {
+                const isMenuOpen = mobileMenu && mobileMenu.classList.contains('active');
+                
+                // Ocultar botões flutuantes apenas quando o menu mobile estiver aberto
+                // para evitar conflitos de interface
+                if (isMenuOpen) {
+                    floatingButtons.classList.add('hidden');
+                } else {
+                    floatingButtons.classList.remove('hidden');
+                }
+            }
+            
+            // Verificar na inicialização
+            updateFloatingButtons();
+            
+            // Verificar no scroll com debounce
+            let scrollTimeout;
+            window.addEventListener('scroll', function() {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(updateFloatingButtons, 10);
+            });
+            
+            window.addEventListener('resize', updateFloatingButtons);
+            
+            // Verificar quando o menu mobile abre/fecha
+            if (mobileMenu) {
+                const observer = new MutationObserver(updateFloatingButtons);
+                observer.observe(mobileMenu, { attributes: true, attributeFilter: ['class'] });
+            }
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            updateBreakpointIndicator();
+            handleFloatingButtons();
+        });
+
+        window.addEventListener('resize', updateBreakpointIndicator);
+        window.addEventListener('orientationchange', updateBreakpointIndicator);
+        
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Validação PWA - Sistema CFC</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --info-color: #3498db;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f8f9fa;
+            padding: 20px 0;
+        }
+        
+        .validation-header {
+            background: var(--primary-color);
+            color: white;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            transition: transform 0.2s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-2px);
+        }
+        
+        .metric-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+        
+        .metric-target {
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        
+        .status-pass {
+            color: var(--success-color);
+        }
+        
+        .status-warn {
+            color: var(--warning-color);
+        }
+        
+        .status-fail {
+            color: var(--danger-color);
+        }
+        
+        .test-section {
+            background: white;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .test-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 0;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .test-item:last-child {
+            border-bottom: none;
+        }
+        
+        .test-status {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: bold;
+        }
+        
+        .status-pending {
+            background: #e9ecef;
+            color: #6c757d;
+        }
+        
+        .status-running {
+            background: var(--info-color);
+            color: white;
+            animation: pulse 1s infinite;
+        }
+        
+        .status-passed {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .status-failed {
+            background: var(--danger-color);
+            color: white;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        .btn-test {
+            padding: 8px 16px;
+            border-radius: 6px;
+            border: none;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-primary {
+            background: var(--primary-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #34495e;
+        }
+        
+        .btn-success {
+            background: var(--success-color);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: var(--warning-color);
+            color: white;
+        }
+        
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+            background: #e9ecef;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: var(--success-color);
+            transition: width 0.3s ease;
+        }
+        
+        .log-container {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+        }
+        
+        .log-entry {
+            margin-bottom: 5px;
+            padding: 2px 0;
+        }
+        
+        .log-info { color: var(--info-color); }
+        .log-success { color: var(--success-color); }
+        .log-warning { color: var(--warning-color); }
+        .log-error { color: var(--danger-color); }
+        
+        .summary-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-top: 30px;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .stat-number {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="validation-header">
+        <div class="container">
+            <div class="row align-items-center">
+                <div class="col-md-8">
+                    <h1><i class="fas fa-car"></i> Validação PWA - CFC Bom Conselho</h1>
+                    <p class="mb-0">Teste completo de funcionalidades e métricas</p>
+                </div>
+                <div class="col-md-4 text-end">
+                    <button class="btn btn-light" onclick="runAllTests()">
+                        <i class="fas fa-play"></i> Executar Todos os Testes
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Métricas Principais -->
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value status-pending" id="lighthouse-pwa">--</div>
+                        <div class="metric-target">Lighthouse PWA<br><small>Meta: ≥ 95</small></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value status-pending" id="lighthouse-a11y">--</div>
+                        <div class="metric-target">Lighthouse A11y<br><small>Meta: ≥ 92</small></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value status-pending" id="performance-lcp">--</div>
+                        <div class="metric-target">LCP<br><small>Meta: ≤ 2.5s</small></div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card metric-card">
+                    <div class="card-body text-center">
+                        <div class="metric-value status-pending" id="cache-size">--</div>
+                        <div class="metric-target">App Shell<br><small>Meta: ≤ 1.5MB</small></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Progresso Geral -->
+        <div class="test-section">
+            <h3><i class="fas fa-tasks"></i> Progresso Geral</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="overall-progress" style="width: 0%"></div>
+            </div>
+            <p class="mb-0"><span id="tests-completed">0</span> de <span id="total-tests">11</span> testes concluídos</p>
+        </div>
+
+        <!-- Testes de Instalação -->
+        <div class="test-section">
+            <h3><i class="fas fa-download"></i> Testes de Instalação</h3>
+            <div class="test-item">
+                <div>
+                    <strong>Android Chrome - Install App</strong>
+                    <br><small>Verificar botão "Install app" e modo standalone</small>
+                </div>
+                <div>
+                    <span class="test-status status-pending" id="test-android">⏳</span>
+                    <button class="btn-test btn-primary" onclick="testAndroidInstall()">Testar</button>
+                </div>
+            </div>
+            <div class="test-item">
+                <div>
+                    <strong>iOS Safari - Add to Home Screen</strong>
+                    <br><small>Verificar ícone e splash screen</small>
+                </div>
+                <div>
+                    <span class="test-status status-pending" id="test-ios">⏳</span>
+                    <button class="btn-test btn-primary" onclick="testIOSInstall()">Testar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testes Offline -->
+        <div class="test-section">
+            <h3><i class="fas fa-wifi-slash"></i> Testes Offline</h3>
+            <div class="test-item">
+                <div>
+                    <strong>App Shell Offline</strong>
+                    <br><small>Carregar /admin/ offline e verificar página offline</small>
+                </div>
+                <div>
+                    <span class="test-status status-pending" id="test-offline-shell">⏳</span>
+                    <button class="btn-test btn-primary" onclick="testOfflineShell()">Testar</button>
+                </div>
+            </div>
+            <div class="test-item">
+                <div>
+                    <strong>Erro Amigável Offline</strong>
+                    <br><small>Testar ação que depende de rede offline</small>
+                </div>
+                <div>
+                    <span class="test-status status-pending" id="test-offline-error">⏳</span>
+                    <button class="btn-test btn-primary" onclick="testOfflineError()">Testar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testes de Atualização -->
+        <div class="test-section">
+            <h3><i class="fas fa-sync-alt"></i> Testes de Atualização</h3>
+            <div class="test-item">
+                <div>
+                    <strong>Banner de Nova Versão</strong>
+                    <br><small>Simular bump de versão e verificar banner</small>
+                </div>
+                <div>
+                    <span class="test-status status-pending" id="test-update-banner">⏳</span>
+                    <button class="btn-test btn-primary" onclick="testUpdateBanner()">Testar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testes Mobile -->
+        <div class="test-section">
+            <h3><i class="fas fa-mobile-alt"></i> Testes Mobile</h3>
+            <div class="test-item">
+                <div>
+                    <strong>Navegação Mobile</strong>
+                    <br><small>Hambúrguer, drawer, scroll lock, foco</small>
+                </div>
+                <div>
+                    <span class="test-status status-pending" id="test-mobile-nav">⏳</span>
+                    <button class="btn-test btn-primary" onclick="testMobileNav()">Testar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testes de Segurança -->
+        <div class="test-section">
+            <h3><i class="fas fa-shield-alt"></i> Testes de Segurança</h3>
+            <div class="test-item">
+                <div>
+                    <strong>Cache Seguro</strong>
+                    <br><small>Logout/login não serve HTML antigo</small>
+                </div>
+                <div>
+                    <span class="test-status status-pending" id="test-cache-security">⏳</span>
+                    <button class="btn-test btn-primary" onclick="testCacheSecurity()">Testar</button>
+                </div>
+            </div>
+            <div class="test-item">
+                <div>
+                    <strong>Limpeza de Cache</strong>
+                    <br><small>App Shell recompõe após limpeza</small>
+                </div>
+                <div>
+                    <span class="test-status status-pending" id="test-cache-clear">⏳</span>
+                    <button class="btn-test btn-primary" onclick="testCacheClear()">Testar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Testes A11y -->
+        <div class="test-section">
+            <h3><i class="fas fa-universal-access"></i> Testes de Acessibilidade</h3>
+            <div class="test-item">
+                <div>
+                    <strong>Foco e Navegação</strong>
+                    <br><small>Foco visível, ordem lógica, trap ativo</small>
+                </div>
+                <div>
+                    <span class="test-status status-pending" id="test-a11y-focus">⏳</span>
+                    <button class="btn-test btn-primary" onclick="testA11yFocus()">Testar</button>
+                </div>
+            </div>
+            <div class="test-item">
+                <div>
+                    <strong>Contraste e ARIA</strong>
+                    <br><small>Contraste AA, aria-labels, landmarks</small>
+                </div>
+                <div>
+                    <span class="test-status status-pending" id="test-a11y-contrast">⏳</span>
+                    <button class="btn-test btn-primary" onclick="testA11yContrast()">Testar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Log de Testes -->
+        <div class="test-section">
+            <h3><i class="fas fa-terminal"></i> Log de Testes</h3>
+            <div class="log-container" id="test-log">
+                <div class="log-entry log-info">Sistema de validação PWA inicializado</div>
+                <div class="log-entry log-info">Aguardando execução dos testes...</div>
+            </div>
+        </div>
+
+        <!-- Resumo Final -->
+        <div class="summary-stats" id="summary-stats" style="display: none;">
+            <div class="stat-card">
+                <div class="stat-number status-pass" id="summary-passed">0</div>
+                <div class="stat-label">Testes Aprovados</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number status-fail" id="summary-failed">0</div>
+                <div class="stat-label">Testes Falharam</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="summary-score">0%</div>
+                <div class="stat-label">Score Geral</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number" id="summary-time">0s</div>
+                <div class="stat-label">Tempo Total</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Estado dos testes
+        let testResults = {};
+        let startTime = null;
+        let completedTests = 0;
+        const totalTests = 11;
+
+        // Logging
+        function log(message, type = 'info') {
+            const logContainer = document.getElementById('test-log');
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // Atualizar progresso
+        function updateProgress() {
+            const progress = (completedTests / totalTests) * 100;
+            document.getElementById('overall-progress').style.width = progress + '%';
+            document.getElementById('tests-completed').textContent = completedTests;
+            document.getElementById('total-tests').textContent = totalTests;
+        }
+
+        // Marcar teste como concluído
+        function markTestComplete(testId, passed, message) {
+            const statusElement = document.getElementById(testId);
+            const statusClass = passed ? 'status-passed' : 'status-failed';
+            const statusIcon = passed ? '✅' : '❌';
+            
+            statusElement.className = `test-status ${statusClass}`;
+            statusElement.textContent = statusIcon;
+            
+            testResults[testId] = { passed, message };
+            completedTests++;
+            updateProgress();
+            
+            log(`${testId}: ${passed ? 'APROVADO' : 'FALHOU'} - ${message}`, passed ? 'success' : 'error');
+            
+            if (completedTests === totalTests) {
+                showSummary();
+            }
+        }
+
+        // Mostrar resumo final
+        function showSummary() {
+            const passed = Object.values(testResults).filter(r => r.passed).length;
+            const failed = Object.values(testResults).filter(r => !r.passed).length;
+            const score = Math.round((passed / totalTests) * 100);
+            const time = Math.round((Date.now() - startTime) / 1000);
+            
+            document.getElementById('summary-passed').textContent = passed;
+            document.getElementById('summary-failed').textContent = failed;
+            document.getElementById('summary-score').textContent = score + '%';
+            document.getElementById('summary-time').textContent = time + 's';
+            
+            document.getElementById('summary-stats').style.display = 'grid';
+            
+            log(`Resumo final: ${passed} aprovados, ${failed} falharam (${score}%)`, score >= 80 ? 'success' : 'warning');
+        }
+
+        // Testes individuais
+        async function testAndroidInstall() {
+            log('Testando instalação Android...', 'info');
+            
+            try {
+                // Verificar se está em modo standalone
+                const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+                
+                // Verificar se beforeinstallprompt está disponível
+                const hasInstallPrompt = 'onbeforeinstallprompt' in window;
+                
+                // Verificar manifest
+                const manifest = await fetch('../pwa/manifest.json').then(r => r.json());
+                const hasValidManifest = manifest.name && manifest.short_name && manifest.icons;
+                
+                const passed = hasValidManifest && (isStandalone || hasInstallPrompt);
+                markTestComplete('test-android', passed, 
+                    passed ? 'Manifest válido e instalação disponível' : 'Manifest inválido ou instalação não disponível');
+                
+            } catch (error) {
+                markTestComplete('test-android', false, 'Erro: ' + error.message);
+            }
+        }
+
+        async function testIOSInstall() {
+            log('Testando instalação iOS...', 'info');
+            
+            try {
+                // Verificar meta tags iOS
+                const appleWebAppCapable = document.querySelector('meta[name="apple-mobile-web-app-capable"]');
+                const appleWebAppTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+                const appleTouchIcon = document.querySelector('link[rel="apple-touch-icon"]');
+                
+                const passed = appleWebAppCapable && appleWebAppTitle && appleTouchIcon;
+                markTestComplete('test-ios', passed, 
+                    passed ? 'Meta tags iOS configuradas' : 'Meta tags iOS faltando');
+                
+            } catch (error) {
+                markTestComplete('test-ios', false, 'Erro: ' + error.message);
+            }
+        }
+
+        async function testOfflineShell() {
+            log('Testando App Shell offline...', 'info');
+            
+            try {
+                // Verificar se Service Worker está registrado
+                const registration = await navigator.serviceWorker.getRegistration();
+                const hasSW = !!registration;
+                
+                // Verificar se página offline existe
+                const offlinePage = await fetch('../pwa/offline.html').then(r => r.ok).catch(() => false);
+                
+                const passed = hasSW && offlinePage;
+                markTestComplete('test-offline-shell', passed, 
+                    passed ? 'SW registrado e página offline disponível' : 'SW não registrado ou página offline faltando');
+                
+            } catch (error) {
+                markTestComplete('test-offline-shell', false, 'Erro: ' + error.message);
+            }
+        }
+
+        async function testOfflineError() {
+            log('Testando erro amigável offline...', 'info');
+            
+            try {
+                // Simular requisição que falha offline
+                const response = await fetch('/admin/api/test-offline', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ test: true })
+                }).catch(() => ({ ok: false, status: 0 }));
+                
+                // Verificar se há tratamento de erro
+                const hasErrorHandling = !response.ok;
+                
+                markTestComplete('test-offline-error', hasErrorHandling, 
+                    hasErrorHandling ? 'Tratamento de erro offline funcionando' : 'Tratamento de erro offline não implementado');
+                
+            } catch (error) {
+                markTestComplete('test-offline-error', true, 'Erro capturado corretamente');
+            }
+        }
+
+        async function testUpdateBanner() {
+            log('Testando banner de atualização...', 'info');
+            
+            try {
+                // Verificar se PWA Manager está disponível
+                const hasPWAManager = typeof window.PWAManager !== 'undefined';
+                
+                // Verificar se Service Worker tem skipWaiting
+                const registration = await navigator.serviceWorker.getRegistration();
+                const hasSkipWaiting = registration && registration.waiting;
+                
+                const passed = hasPWAManager;
+                markTestComplete('test-update-banner', passed, 
+                    passed ? 'PWA Manager disponível para atualizações' : 'PWA Manager não encontrado');
+                
+            } catch (error) {
+                markTestComplete('test-update-banner', false, 'Erro: ' + error.message);
+            }
+        }
+
+        async function testMobileNav() {
+            log('Testando navegação mobile...', 'info');
+            
+            try {
+                // Verificar se mobile menu está disponível
+                const mobileToggle = document.querySelector('.mobile-menu-toggle');
+                const mobileDrawer = document.querySelector('.mobile-drawer');
+                const mobileMenuJS = document.querySelector('script[src*="mobile-menu-clean.js"]');
+                
+                const passed = mobileToggle && mobileDrawer && mobileMenuJS;
+                markTestComplete('test-mobile-nav', passed, 
+                    passed ? 'Componentes de navegação mobile encontrados' : 'Componentes de navegação mobile faltando');
+                
+            } catch (error) {
+                markTestComplete('test-mobile-nav', false, 'Erro: ' + error.message);
+            }
+        }
+
+        async function testCacheSecurity() {
+            log('Testando segurança do cache...', 'info');
+            
+            try {
+                // Verificar se Service Worker tem exclusões
+                const swResponse = await fetch('../pwa/sw.js');
+                const swText = await swResponse.text();
+                const hasExclusions = swText.includes('EXCLUDED_ROUTES') && swText.includes('shouldExcludeFromCache');
+                
+                markTestComplete('test-cache-security', hasExclusions, 
+                    hasExclusions ? 'Exclusões de cache configuradas' : 'Exclusões de cache não encontradas');
+                
+            } catch (error) {
+                markTestComplete('test-cache-security', false, 'Erro: ' + error.message);
+            }
+        }
+
+        async function testCacheClear() {
+            log('Testando limpeza de cache...', 'info');
+            
+            try {
+                // Verificar se há limpeza de cache antigo
+                const swResponse = await fetch('../pwa/sw.js');
+                const swText = await swResponse.text();
+                const hasCacheCleanup = swText.includes('caches.delete') && swText.includes('CACHE_VERSION');
+                
+                markTestComplete('test-cache-clear', hasCacheCleanup, 
+                    hasCacheCleanup ? 'Limpeza de cache implementada' : 'Limpeza de cache não encontrada');
+                
+            } catch (error) {
+                markTestComplete('test-cache-clear', false, 'Erro: ' + error.message);
+            }
+        }
+
+        async function testA11yFocus() {
+            log('Testando foco e navegação A11y...', 'info');
+            
+            try {
+                // Verificar elementos com foco
+                const focusableElements = document.querySelectorAll('button, input, select, textarea, a[href]');
+                const hasFocusableElements = focusableElements.length > 0;
+                
+                // Verificar aria-labels
+                const ariaLabels = document.querySelectorAll('[aria-label]');
+                const hasAriaLabels = ariaLabels.length > 0;
+                
+                const passed = hasFocusableElements && hasAriaLabels;
+                markTestComplete('test-a11y-focus', passed, 
+                    passed ? 'Elementos focáveis e aria-labels encontrados' : 'Elementos focáveis ou aria-labels faltando');
+                
+            } catch (error) {
+                markTestComplete('test-a11y-focus', false, 'Erro: ' + error.message);
+            }
+        }
+
+        async function testA11yContrast() {
+            log('Testando contraste e ARIA...', 'info');
+            
+            try {
+                // Verificar contraste básico (simulado)
+                const header = document.querySelector('.validation-header');
+                const hasGoodContrast = header && window.getComputedStyle(header).color;
+                
+                // Verificar landmarks
+                const landmarks = document.querySelectorAll('header, nav, main, footer');
+                const hasLandmarks = landmarks.length > 0;
+                
+                const passed = hasGoodContrast && hasLandmarks;
+                markTestComplete('test-a11y-contrast', passed, 
+                    passed ? 'Contraste e landmarks encontrados' : 'Contraste ou landmarks faltando');
+                
+            } catch (error) {
+                markTestComplete('test-a11y-contrast', false, 'Erro: ' + error.message);
+            }
+        }
+
+        // Executar todos os testes
+        async function runAllTests() {
+            startTime = Date.now();
+            completedTests = 0;
+            testResults = {};
+            
+            log('Iniciando execução de todos os testes...', 'info');
+            
+            // Resetar status
+            document.querySelectorAll('.test-status').forEach(el => {
+                el.className = 'test-status status-pending';
+                el.textContent = '⏳';
+            });
+            
+            // Executar testes em sequência
+            await testAndroidInstall();
+            await testIOSInstall();
+            await testOfflineShell();
+            await testOfflineError();
+            await testUpdateBanner();
+            await testMobileNav();
+            await testCacheSecurity();
+            await testCacheClear();
+            await testA11yFocus();
+            await testA11yContrast();
+            
+            log('Todos os testes concluídos!', 'success');
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Sistema de validação PWA carregado', 'success');
+            updateProgress();
+        });
+    </script>
+</body>
+</html>

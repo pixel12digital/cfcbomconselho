@@ -100,9 +100,9 @@
 
 .admin-sidebar .nav-icon {
     /* Tamanho fixo */
-    width: 24px !important;
-    height: 24px !important;
-    font-size: 18px !important;
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 16px !important;
     /* Posição fixa */
     margin: 0 !important;
     padding: 0 !important;

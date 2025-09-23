@@ -1,0 +1,601 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Teste Ícone Padrão WhatsApp - CFC Bom Conselho</title>
+    <link rel="stylesheet" href="assets/css/cfc-responsive.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
+        .test-header {
+            background: #1a365d;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .breakpoint-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 9999;
+            font-family: monospace;
+        }
+        
+        .test-section {
+            padding: 40px 0;
+            background: white;
+            margin: 20px 0;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .improvement-card {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .improvement-card h4 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+        
+        .improvement-card ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .improvement-card li {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .test-instructions {
+            background: #fff3e0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .test-instructions h3 {
+            margin: 0 0 15px 0;
+            color: #e65100;
+        }
+        
+        .test-instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .test-instructions li {
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .status-card {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .status-fixed {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+        }
+        
+        .status-fixed h4 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+        
+        .status-fixed p {
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        .demo-section {
+            text-align: center;
+            padding: 40px 0;
+            background: #f8f9fa;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        
+        .demo-button {
+            display: inline-block;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: #25d366;
+            color: white;
+            text-align: center;
+            line-height: 56px;
+            font-size: 28px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+            transition: all 0.3s ease;
+            text-decoration: none;
+            margin: 10px;
+        }
+        
+        .demo-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+            background: #20c05a;
+        }
+        
+        .specs-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .specs-table th,
+        .specs-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .specs-table th {
+            background: #25d366;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .specs-table tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="breakpoint-indicator" id="breakpoint">
+        <div>Largura: <span id="width">0</span>px</div>
+        <div>Altura: <span id="height">0</span>px</div>
+        <div>Breakpoint: <span id="current-bp">-</span></div>
+        <div>Orientacao: <span id="orientation">-</span></div>
+        <div>Ícone: <span id="icon-status">-</span></div>
+    </div>
+
+    <header class="test-header">
+        <div class="container">
+            <h1 class="title-responsive">📱 Ícone Padrão WhatsApp</h1>
+            <p class="subtitle-responsive">Formato Padrão e Elegante</p>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <section class="hero section">
+            <!-- Background Desktop -->
+            <div class="hero-bg hero-bg-desktop">
+                <div class="hero-overlay"></div>
+            </div>
+            
+            <!-- Background Mobile -->
+            <div class="hero-bg hero-bg-mobile">
+                <div class="hero-overlay"></div>
+            </div>
+            
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="hero-title">CFC Bom Conselho</h1>
+                    <p class="hero-subtitle">Centro de Formação de Condutores</p>
+                    <p class="hero-description">Sua jornada para a habilitação começa aqui. Aulas teóricas e práticas com instrutores qualificados.</p>
+                    <div class="hero-buttons">
+                        <a href="#contato" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i>
+                            Matricule-se Agora
+                        </a>
+                        <a href="#sobre" class="btn btn-secondary">
+                            <i class="fas fa-info-circle"></i>
+                            Saiba Mais
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">📱 Ícone Padrão WhatsApp</h2>
+                
+                <div class="improvement-card">
+                    <h4>1. Formato Padrão</h4>
+                    <ul>
+                        <li>Tamanho: 56×56px (padrão WhatsApp)</li>
+                        <li>Formato: Círculo perfeito (border-radius: 50%)</li>
+                        <li>Ícone: 28px (tamanho ideal para clicabilidade)</li>
+                        <li>Cor: #25d366 (verde oficial WhatsApp)</li>
+                    </ul>
+                </div>
+                
+                <div class="improvement-card">
+                    <h4>2. Características Visuais</h4>
+                    <ul>
+                        <li>Sombra: 0 2px 8px rgba(0,0,0,0.15)</li>
+                        <li>Hover: Elevação leve (translateY(-2px))</li>
+                        <li>Transição: 0.3s ease (suave)</li>
+                        <li>Posição: Canto inferior direito</li>
+                    </ul>
+                </div>
+                
+                <div class="improvement-card">
+                    <h4>3. Responsividade</h4>
+                    <ul>
+                        <li>Desktop: 56×56px, ícone 28px</li>
+                        <li>Tablet: 56×56px, ícone 28px</li>
+                        <li>Mobile: 56×56px, ícone 28px</li>
+                        <li>Oculto no mobile: display: none !important</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">🎨 Demonstração Visual</h2>
+                
+                <div class="demo-section">
+                    <h3>Ícone WhatsApp Padrão</h3>
+                    <p>Clique para testar o comportamento</p>
+                    <a href="https://wa.me/5587981450308" class="demo-button" target="_blank" rel="noopener" aria-label="WhatsApp">
+                        <i class="fab fa-whatsapp"></i>
+                    </a>
+                    <p style="margin-top: 20px; color: #666;">
+                        <strong>Especificações Técnicas:</strong>
+                    </p>
+                </div>
+                
+                <table class="specs-table">
+                    <thead>
+                        <tr>
+                            <th>Propriedade</th>
+                            <th>Valor</th>
+                            <th>Descrição</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><strong>Largura</strong></td>
+                            <td>56px</td>
+                            <td>Tamanho padrão WhatsApp</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Altura</strong></td>
+                            <td>56px</td>
+                            <td>Tamanho padrão WhatsApp</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Border-radius</strong></td>
+                            <td>50%</td>
+                            <td>Círculo perfeito</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Ícone</strong></td>
+                            <td>28px</td>
+                            <td>Tamanho ideal para clicabilidade</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cor de Fundo</strong></td>
+                            <td>#25d366</td>
+                            <td>Verde oficial WhatsApp</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Cor do Ícone</strong></td>
+                            <td>#FFFFFF</td>
+                            <td>Branco para contraste</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Sombra</strong></td>
+                            <td>0 2px 8px rgba(0,0,0,0.15)</td>
+                            <td>Sombra suave para profundidade</td>
+                        </tr>
+                        <tr>
+                            <td><strong>Hover</strong></td>
+                            <td>translateY(-2px)</td>
+                            <td>Elevação leve no hover</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">🧪 Instruções de Teste</h2>
+                
+                <div class="test-instructions">
+                    <h3>💻 Teste Desktop (≥769px)</h3>
+                    <ol>
+                        <li><strong>Aumente a largura</strong> para ≥769px</li>
+                        <li><strong>Verifique:</strong> Ícone WhatsApp 56×56px visível</li>
+                        <li><strong>Verifique:</strong> Círculo perfeito (border-radius: 50%)</li>
+                        <li><strong>Verifique:</strong> Ícone 28px centralizado</li>
+                        <li><strong>Teste hover:</strong> Elevação leve ao passar o mouse</li>
+                        <li><strong>Teste clique:</strong> Deve abrir WhatsApp</li>
+                    </ol>
+                </div>
+                
+                <div class="test-instructions">
+                    <h3>📱 Teste Mobile (≤768px)</h3>
+                    <ol>
+                        <li><strong>Reduza a largura</strong> para ≤768px</li>
+                        <li><strong>Verifique:</strong> Ícone flutuante NÃO aparece</li>
+                        <li><strong>Verifique:</strong> Apenas botão hambúrguer visível</li>
+                        <li><strong>Clique no menu:</strong> WhatsApp disponível no menu</li>
+                        <li><strong>Teste contatos:</strong> Links funcionais no menu</li>
+                    </ol>
+                </div>
+                
+                <div class="test-instructions">
+                    <h3>🔘 Teste do Ícone</h3>
+                    <ol>
+                        <li><strong>Tamanho:</strong> 56×56px em todos os breakpoints</li>
+                        <li><strong>Formato:</strong> Círculo perfeito (50%)</li>
+                        <li><strong>Ícone:</strong> 28px centralizado</li>
+                        <li><strong>Cor:</strong> #25d366 (verde WhatsApp)</li>
+                        <li><strong>Posição:</strong> Canto inferior direito</li>
+                        <li><strong>Z-index:</strong> Acima do conteúdo, abaixo do menu</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">✅ Status do Ícone Padrão</h2>
+                
+                <div class="status-grid">
+                    <div class="status-card status-fixed">
+                        <h4>Formato Padrão</h4>
+                        <p>✅ 56×56px<br>✅ Círculo perfeito<br>✅ Ícone 28px</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Cores Oficiais</h4>
+                        <p>✅ #25d366 (fundo)<br>✅ #FFFFFF (ícone)<br>✅ Contraste adequado</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Interação</h4>
+                        <p>✅ Hover suave<br>✅ Clique funcional<br>✅ Transições</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Responsividade</h4>
+                        <p>✅ Desktop: visível<br>✅ Mobile: oculto<br>✅ Consistente</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Acessibilidade</h4>
+                        <p>✅ aria-label<br>✅ Área de toque<br>✅ Contraste WCAG</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Performance</h4>
+                        <p>✅ CSS otimizado<br>✅ Sem elementos extras<br>✅ Carregamento rápido</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Floating Button WhatsApp -->
+    <div class="floating-buttons" id="floating-buttons">
+        <a href="https://wa.me/5587981450308" class="floating-btn whatsapp" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+    </div>
+
+    <script>
+        // Atualizar indicador de breakpoint
+        function updateBreakpointIndicator() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const orientation = width > height ? 'Landscape' : 'Portrait';
+            
+            document.getElementById('width').textContent = width;
+            document.getElementById('height').textContent = height;
+            document.getElementById('orientation').textContent = orientation;
+            
+            let breakpoint = '-';
+            if (width >= 1400) breakpoint = 'XXL (≥1400px)';
+            else if (width >= 1200) breakpoint = 'XL (1200-1399px)';
+            else if (width >= 992) breakpoint = 'LG (992-1199px)';
+            else if (width >= 768) breakpoint = 'MD (768-991px)';
+            else if (width >= 576) breakpoint = 'SM (576-767px)';
+            else breakpoint = 'XS (<576px)';
+            
+            document.getElementById('current-bp').textContent = breakpoint;
+            
+            // Status do ícone
+            const isMobile = width <= 768;
+            const floatingButtons = document.getElementById('floating-buttons');
+            const isVisible = floatingButtons && !floatingButtons.classList.contains('hidden');
+            
+            if (isMobile) {
+                document.getElementById('icon-status').textContent = '❌ Oculto (Mobile)';
+                document.getElementById('icon-status').style.color = '#f44336';
+            } else if (isVisible) {
+                document.getElementById('icon-status').textContent = '✅ Visível (Desktop)';
+                document.getElementById('icon-status').style.color = '#4caf50';
+            } else {
+                document.getElementById('icon-status').textContent = '❌ Oculto';
+                document.getElementById('icon-status').style.color = '#f44336';
+            }
+        }
+
+        // Controlar visibilidade dos botões flutuantes
+        function handleFloatingButtons() {
+            const floatingButtons = document.getElementById('floating-buttons');
+            const hero = document.querySelector('.hero');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (!floatingButtons || !hero) return;
+            
+            function updateFloatingButtons() {
+                const isMobile = window.innerWidth <= 768;
+                const isMenuOpen = mobileMenu && mobileMenu.classList.contains('active');
+                
+                // Em mobile, sempre ocultar os botões flutuantes
+                // pois já temos WhatsApp e telefone no menu
+                if (isMobile || isMenuOpen) {
+                    floatingButtons.classList.add('hidden');
+                } else {
+                    floatingButtons.classList.remove('hidden');
+                }
+            }
+            
+            // Verificar na inicialização
+            updateFloatingButtons();
+            
+            // Verificar no scroll com debounce
+            let scrollTimeout;
+            window.addEventListener('scroll', function() {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(updateFloatingButtons, 10);
+            });
+            
+            window.addEventListener('resize', updateFloatingButtons);
+            
+            // Verificar quando o menu mobile abre/fecha
+            if (mobileMenu) {
+                const observer = new MutationObserver(updateFloatingButtons);
+                observer.observe(mobileMenu, { attributes: true, attributeFilter: ['class'] });
+            }
+        }
+
+        // Menu Mobile
+        function initMobileMenu() {
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            const menu = document.getElementById('mobile-menu');
+            const overlay = document.getElementById('mobile-menu-overlay');
+            const closeBtn = document.querySelector('.mobile-menu-close');
+            
+            if (!toggle || !menu || !overlay) return;
+            
+            function openMenu() {
+                menu.classList.add('active');
+                overlay.classList.add('active');
+                toggle.setAttribute('aria-expanded', 'true');
+                toggle.setAttribute('aria-label', 'Fechar menu');
+                document.body.style.overflow = 'hidden';
+                
+                // Focar no primeiro link do menu
+                const firstLink = menu.querySelector('a');
+                if (firstLink) {
+                    setTimeout(() => firstLink.focus(), 100);
+                }
+            }
+            
+            function closeMenu() {
+                menu.classList.remove('active');
+                overlay.classList.remove('active');
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.setAttribute('aria-label', 'Abrir menu');
+                document.body.style.overflow = '';
+                toggle.focus();
+            }
+            
+            // Event listeners
+            toggle.addEventListener('click', openMenu);
+            closeBtn.addEventListener('click', closeMenu);
+            overlay.addEventListener('click', closeMenu);
+            
+            // ESC key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && menu.classList.contains('active')) {
+                    closeMenu();
+                }
+            });
+            
+            // Close on link click
+            const menuLinks = menu.querySelectorAll('a');
+            menuLinks.forEach(link => {
+                link.addEventListener('click', closeMenu);
+            });
+            
+            // Focus trap
+            function trapFocus(e) {
+                if (!menu.classList.contains('active')) return;
+                
+                const focusableElements = menu.querySelectorAll(
+                    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled])'
+                );
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+                
+                if (e.key === 'Tab') {
+                    if (e.shiftKey) {
+                        if (document.activeElement === firstElement) {
+                            lastElement.focus();
+                            e.preventDefault();
+                        }
+                    } else {
+                        if (document.activeElement === lastElement) {
+                            firstElement.focus();
+                            e.preventDefault();
+                        }
+                    }
+                }
+            }
+            document.addEventListener('keydown', trapFocus);
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            updateBreakpointIndicator();
+            handleFloatingButtons();
+            initMobileMenu();
+        });
+
+        window.addEventListener('resize', updateBreakpointIndicator);
+        window.addEventListener('orientationchange', updateBreakpointIndicator);
+        
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+    <title>Teste Correção Final - CFC Bom Conselho</title>
+    <link rel="stylesheet" href="assets/css/cfc-responsive.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+        }
+        
+        .test-header {
+            background: #1a365d;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        
+        .breakpoint-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            z-index: 9999;
+            font-family: monospace;
+        }
+        
+        .test-section {
+            padding: 40px 0;
+            background: white;
+            margin: 20px 0;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.1);
+        }
+        
+        .fix-card {
+            background: #e8f5e8;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 15px 0;
+            border-left: 4px solid #4caf50;
+        }
+        
+        .fix-card h4 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+        
+        .fix-card ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .fix-card li {
+            margin-bottom: 5px;
+            color: #333;
+        }
+        
+        .test-instructions {
+            background: #fff3e0;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #ff9800;
+        }
+        
+        .test-instructions h3 {
+            margin: 0 0 15px 0;
+            color: #e65100;
+        }
+        
+        .test-instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .test-instructions li {
+            margin-bottom: 8px;
+            color: #333;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        .status-card {
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .status-fixed {
+            background: #e8f5e8;
+            color: #2e7d32;
+            border: 2px solid #4caf50;
+        }
+        
+        .status-fixed h4 {
+            margin: 0 0 10px 0;
+            color: #2e7d32;
+        }
+        
+        .status-fixed p {
+            margin: 0;
+            font-size: 14px;
+        }
+        
+        .debug-info {
+            background: #f3e5f5;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            border-left: 4px solid #9c27b0;
+        }
+        
+        .debug-info h3 {
+            margin: 0 0 15px 0;
+            color: #7b1fa2;
+        }
+        
+        .debug-info ul {
+            margin: 0;
+            padding-left: 20px;
+        }
+        
+        .debug-info li {
+            margin-bottom: 8px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div class="breakpoint-indicator" id="breakpoint">
+        <div>Largura: <span id="width">0</span>px</div>
+        <div>Altura: <span id="height">0</span>px</div>
+        <div>Breakpoint: <span id="current-bp">-</span></div>
+        <div>Orientacao: <span id="orientation">-</span></div>
+        <div>Font Awesome: <span id="fa-status">Verificando...</span></div>
+    </div>
+
+    <header class="test-header">
+        <div class="container">
+            <h1 class="title-responsive">🔧 Teste Correção Final</h1>
+            <p class="subtitle-responsive">Font Awesome + Fallbacks + Visibilidade</p>
+        </div>
+    </header>
+
+    <main id="main-content">
+        <section class="hero section">
+            <!-- Background Desktop -->
+            <div class="hero-bg hero-bg-desktop">
+                <div class="hero-overlay"></div>
+            </div>
+            
+            <!-- Background Mobile -->
+            <div class="hero-bg hero-bg-mobile">
+                <div class="hero-overlay"></div>
+            </div>
+            
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="hero-title">CFC Bom Conselho</h1>
+                    <p class="hero-subtitle">Centro de Formação de Condutores</p>
+                    <p class="hero-description">Sua jornada para a habilitação começa aqui. Aulas teóricas e práticas com instrutores qualificados.</p>
+                    <div class="hero-buttons">
+                        <a href="#contato" class="btn btn-primary">
+                            <i class="fas fa-user-plus"></i>
+                            Matricule-se Agora
+                        </a>
+                        <a href="#sobre" class="btn btn-secondary">
+                            <i class="fas fa-info-circle"></i>
+                            Saiba Mais
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">🔧 Correções Aplicadas</h2>
+                
+                <div class="fix-card">
+                    <h4>1. Font Awesome Adicionado</h4>
+                    <ul>
+                        <li>CDN Font Awesome 6.0.0 incluído no head</li>
+                        <li>Ícones fas fa-bars e fas fa-times disponíveis</li>
+                        <li>Fallbacks Unicode (☰ e ✕) para caso de falha</li>
+                        <li>JavaScript para detectar carregamento do Font Awesome</li>
+                    </ul>
+                </div>
+                
+                <div class="fix-card">
+                    <h4>2. Fallbacks de Ícones</h4>
+                    <ul>
+                        <li>☰ (Unicode U+2630) para menu hambúrguer</li>
+                        <li>✕ (Unicode U+2715) para botão fechar</li>
+                        <li>CSS condicional para mostrar fallback se Font Awesome falhar</li>
+                        <li>Classe .fa-loaded aplicada quando Font Awesome carrega</li>
+                    </ul>
+                </div>
+                
+                <div class="fix-card">
+                    <h4>3. CSS de Visibilidade</h4>
+                    <ul>
+                        <li>display: flex !important no mobile (≤768px)</li>
+                        <li>visibility: visible !important</li>
+                        <li>opacity: 1 !important</li>
+                        <li>Z-index 1001 (acima de elementos flutuantes)</li>
+                        <li>Área de toque 44×44px</li>
+                    </ul>
+                </div>
+                
+                <div class="fix-card">
+                    <h4>4. JavaScript de Detecção</h4>
+                    <ul>
+                        <li>Função checkFontAwesome() para verificar carregamento</li>
+                        <li>Teste de font-family para detectar Font Awesome</li>
+                        <li>Aplicação da classe .fa-loaded quando disponível</li>
+                        <li>Verificação dupla (imediata + 1 segundo de delay)</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">🧪 Instruções de Teste</h2>
+                
+                <div class="test-instructions">
+                    <h3>📱 Teste de Visibilidade (≤768px)</h3>
+                    <ol>
+                        <li><strong>Reduza a largura</strong> para ≤768px</li>
+                        <li><strong>Verifique:</strong> Botão hambúrguer visível no canto direito</li>
+                        <li><strong>Verifique:</strong> Ícone ☰ ou ícone Font Awesome visível</li>
+                        <li><strong>Verifique:</strong> Botão branco com contraste adequado</li>
+                        <li><strong>Verifique:</strong> Tamanho 44×44px</li>
+                    </ol>
+                </div>
+                
+                <div class="test-instructions">
+                    <h3>🍔 Teste de Funcionalidade</h3>
+                    <ol>
+                        <li><strong>Clique no botão hambúrguer</strong></li>
+                        <li><strong>Verifique:</strong> Menu abre da direita</li>
+                        <li><strong>Verifique:</strong> Botão "X" visível no topo direito do menu</li>
+                        <li><strong>Verifique:</strong> Ícone ✕ ou ícone Font Awesome visível</li>
+                        <li><strong>Teste fechamento:</strong> Clique no "X", fora do menu, ou ESC</li>
+                    </ol>
+                </div>
+                
+                <div class="test-instructions">
+                    <h3>🔍 Teste de Fallbacks</h3>
+                    <ol>
+                        <li><strong>Desconecte a internet</strong> (para simular falha do CDN)</li>
+                        <li><strong>Recarregue a página</strong></li>
+                        <li><strong>Verifique:</strong> Ícones Unicode (☰ e ✕) aparecem</li>
+                        <li><strong>Teste funcionalidade:</strong> Menu ainda funciona</li>
+                        <li><strong>Reconecte e recarregue:</strong> Font Awesome deve carregar</li>
+                    </ol>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">✅ Status das Correções</h2>
+                
+                <div class="status-grid">
+                    <div class="status-card status-fixed">
+                        <h4>Font Awesome</h4>
+                        <p>✅ CDN incluído<br>✅ Ícones disponíveis<br>✅ Detecção automática</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Fallbacks Unicode</h4>
+                        <p>✅ ☰ para hambúrguer<br>✅ ✕ para fechar<br>✅ CSS condicional</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Visibilidade CSS</h4>
+                        <p>✅ display: flex !important<br>✅ visibility: visible<br>✅ opacity: 1</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>JavaScript</h4>
+                        <p>✅ Detecção Font Awesome<br>✅ Classe .fa-loaded<br>✅ Verificação dupla</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Área de Toque</h4>
+                        <p>✅ 44×44px mínimo<br>✅ Contraste adequado<br>✅ Z-index correto</p>
+                    </div>
+                    
+                    <div class="status-card status-fixed">
+                        <h4>Funcionalidade</h4>
+                        <p>✅ Menu abre/fecha<br>✅ Navegação por teclado<br>✅ Acessibilidade</p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="test-section">
+            <div class="container">
+                <h2 class="section-title">🔍 Debugging</h2>
+                
+                <div class="debug-info">
+                    <h3>Se os botões ainda não aparecerem:</h3>
+                    <ul>
+                        <li><strong>Verifique o console</strong> do navegador para erros</li>
+                        <li><strong>Inspecione o elemento</strong> no DevTools</li>
+                        <li><strong>Verifique se o CSS</strong> está sendo carregado</li>
+                        <li><strong>Teste em modo incógnito</strong> para evitar cache</li>
+                        <li><strong>Verifique se o viewport</strong> está ≤768px</li>
+                        <li><strong>Verifique se Font Awesome</strong> está carregando</li>
+                    </ul>
+                </div>
+                
+                <div class="debug-info">
+                    <h3>Elementos a verificar no DevTools:</h3>
+                    <ul>
+                        <li><strong>.mobile-menu-toggle</strong> - deve ter display: flex em ≤768px</li>
+                        <li><strong>.mobile-menu-close</strong> - deve ter display: flex sempre</li>
+                        <li><strong>Font Awesome</strong> - verificar se font-family contém "Font Awesome"</li>
+                        <li><strong>Fallbacks</strong> - verificar se ícones Unicode aparecem</li>
+                        <li><strong>Z-index</strong> - menu: 1002, toggle: 1001</li>
+                    </ul>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Floating Button WhatsApp -->
+    <div class="floating-buttons" id="floating-buttons">
+        <a href="https://wa.me/5587981450308" class="floating-btn whatsapp" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+            <span class="floating-btn-text">WhatsApp</span>
+        </a>
+    </div>
+
+    <script>
+        // Atualizar indicador de breakpoint
+        function updateBreakpointIndicator() {
+            const width = window.innerWidth;
+            const height = window.innerHeight;
+            const orientation = width > height ? 'Landscape' : 'Portrait';
+            
+            document.getElementById('width').textContent = width;
+            document.getElementById('height').textContent = height;
+            document.getElementById('orientation').textContent = orientation;
+            
+            let breakpoint = '-';
+            if (width >= 1400) breakpoint = 'XXL (≥1400px)';
+            else if (width >= 1200) breakpoint = 'XL (1200-1399px)';
+            else if (width >= 992) breakpoint = 'LG (992-1199px)';
+            else if (width >= 768) breakpoint = 'MD (768-991px)';
+            else if (width >= 576) breakpoint = 'SM (576-767px)';
+            else breakpoint = 'XS (<576px)';
+            
+            document.getElementById('current-bp').textContent = breakpoint;
+        }
+
+        // Verificar se Font Awesome carregou
+        function checkFontAwesome() {
+            const testIcon = document.createElement('i');
+            testIcon.className = 'fas fa-bars';
+            testIcon.style.position = 'absolute';
+            testIcon.style.left = '-9999px';
+            document.body.appendChild(testIcon);
+            
+            const computedStyle = window.getComputedStyle(testIcon);
+            const fontFamily = computedStyle.getPropertyValue('font-family');
+            
+            document.body.removeChild(testIcon);
+            
+            // Se Font Awesome carregou, a font-family deve conter "Font Awesome"
+            if (fontFamily.includes('Font Awesome') || fontFamily.includes('FontAwesome')) {
+                document.querySelectorAll('.mobile-menu-toggle, .mobile-menu-close').forEach(btn => {
+                    btn.classList.add('fa-loaded');
+                });
+                document.getElementById('fa-status').textContent = '✅ Carregado';
+                document.getElementById('fa-status').style.color = '#4caf50';
+            } else {
+                document.getElementById('fa-status').textContent = '❌ Não carregado';
+                document.getElementById('fa-status').style.color = '#f44336';
+            }
+        }
+
+        // Controlar visibilidade dos botões flutuantes
+        function handleFloatingButtons() {
+            const floatingButtons = document.getElementById('floating-buttons');
+            const hero = document.querySelector('.hero');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (!floatingButtons || !hero) return;
+            
+            function updateFloatingButtons() {
+                const heroRect = hero.getBoundingClientRect();
+                const isInHero = heroRect.bottom > 0 && heroRect.top < window.innerHeight;
+                const isMobile = window.innerWidth <= 768;
+                const isMenuOpen = mobileMenu && mobileMenu.classList.contains('active');
+                const scrollY = window.scrollY;
+                const heroHeight = hero.offsetHeight;
+                
+                // Scroll gate: só mostrar após passar 75% do hero
+                const hasPassedHero = scrollY > (heroHeight * 0.75);
+                
+                // Esconder se: estiver no hero em mobile OU menu aberto OU não passou do hero
+                if ((isInHero && isMobile) || isMenuOpen || !hasPassedHero) {
+                    floatingButtons.classList.add('hidden');
+                } else {
+                    floatingButtons.classList.remove('hidden');
+                }
+            }
+            
+            // Verificar na inicialização
+            updateFloatingButtons();
+            
+            // Verificar no scroll com debounce
+            let scrollTimeout;
+            window.addEventListener('scroll', function() {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(updateFloatingButtons, 10);
+            });
+            
+            window.addEventListener('resize', updateFloatingButtons);
+            
+            // Verificar quando o menu mobile abre/fecha
+            if (mobileMenu) {
+                const observer = new MutationObserver(updateFloatingButtons);
+                observer.observe(mobileMenu, { attributes: true, attributeFilter: ['class'] });
+            }
+        }
+
+        // Menu Mobile
+        function initMobileMenu() {
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            const menu = document.getElementById('mobile-menu');
+            const overlay = document.getElementById('mobile-menu-overlay');
+            const closeBtn = document.querySelector('.mobile-menu-close');
+            
+            if (!toggle || !menu || !overlay) return;
+            
+            function openMenu() {
+                menu.classList.add('active');
+                overlay.classList.add('active');
+                toggle.setAttribute('aria-expanded', 'true');
+                toggle.setAttribute('aria-label', 'Fechar menu');
+                document.body.style.overflow = 'hidden';
+                
+                // Focar no primeiro link do menu
+                const firstLink = menu.querySelector('a');
+                if (firstLink) {
+                    setTimeout(() => firstLink.focus(), 100);
+                }
+            }
+            
+            function closeMenu() {
+                menu.classList.remove('active');
+                overlay.classList.remove('active');
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.setAttribute('aria-label', 'Abrir menu');
+                document.body.style.overflow = '';
+                toggle.focus();
+            }
+            
+            // Event listeners
+            toggle.addEventListener('click', openMenu);
+            closeBtn.addEventListener('click', closeMenu);
+            overlay.addEventListener('click', closeMenu);
+            
+            // ESC key
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && menu.classList.contains('active')) {
+                    closeMenu();
+                }
+            });
+            
+            // Close on link click
+            const menuLinks = menu.querySelectorAll('a');
+            menuLinks.forEach(link => {
+                link.addEventListener('click', closeMenu);
+            });
+            
+            // Focus trap
+            function trapFocus(e) {
+                if (!menu.classList.contains('active')) return;
+                
+                const focusableElements = menu.querySelectorAll(
+                    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled])'
+                );
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+                
+                if (e.key === 'Tab') {
+                    if (e.shiftKey) {
+                        if (document.activeElement === firstElement) {
+                            lastElement.focus();
+                            e.preventDefault();
+                        }
+                    } else {
+                        if (document.activeElement === lastElement) {
+                            firstElement.focus();
+                            e.preventDefault();
+                        }
+                    }
+                }
+            }
+            document.addEventListener('keydown', trapFocus);
+        }
+
+        // Inicializar
+        document.addEventListener('DOMContentLoaded', function() {
+            updateBreakpointIndicator();
+            handleFloatingButtons();
+            initMobileMenu();
+            checkFontAwesome();
+            
+            // Verificar novamente após um delay para garantir que Font Awesome carregou
+            setTimeout(checkFontAwesome, 1000);
+        });
+
+        window.addEventListener('resize', updateBreakpointIndicator);
+        window.addEventListener('orientationchange', updateBreakpointIndicator);
+        
+        // Smooth scroll
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    target.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'start'
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

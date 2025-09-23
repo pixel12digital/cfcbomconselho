@@ -10,8 +10,12 @@ require_once 'includes/config.php';
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
     <title>CFC Bom Conselho - Centro de Formação de Condutores</title>
+    <link rel="stylesheet" href="assets/css/mobile-first.css">
+    <link rel="stylesheet" href="assets/css/responsive-utilities.css">
+    <link rel="stylesheet" href="assets/css/cfc-responsive.css?v=<?php echo time(); ?>">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         /* Cores Principais - Alinhadas ao Logo */
         :root {
@@ -76,7 +80,7 @@ require_once 'includes/config.php';
             padding: 20px 0;
             position: sticky;
             top: 0;
-            z-index: 100;
+            z-index: 1000;
             box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
         
@@ -87,6 +91,7 @@ require_once 'includes/config.php';
             justify-content: space-between;
             align-items: center;
             padding: 0 20px;
+            position: relative;
         }
         
         .logo {
@@ -120,7 +125,7 @@ require_once 'includes/config.php';
             margin-top: 2px;
         }
         
-        /* Navegação */
+        /* Navegação Desktop */
         .nav-menu {
             display: flex;
             list-style: none;
@@ -140,6 +145,225 @@ require_once 'includes/config.php';
         .nav-menu a.active {
             border-bottom-color: #f39c12;
             color: #f39c12;
+        }
+        
+        /* Menu Mobile - Hambúrguer */
+        .mobile-menu-toggle {
+            display: none;
+            background: rgba(255, 255, 255, 0.95);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: #1a365d;
+            font-size: 26px;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            width: 44px;
+            height: 44px;
+            z-index: 1001;
+            position: relative;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .mobile-menu-toggle:hover {
+            background: white;
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+        }
+        
+        .mobile-menu-toggle:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+        }
+        
+        .mobile-menu-toggle:focus {
+            outline: 3px solid rgba(255, 255, 255, 0.8);
+            outline-offset: 2px;
+            background: white;
+            border-color: rgba(255, 255, 255, 0.6);
+        }
+        
+        .mobile-menu-toggle:focus-visible {
+            outline: 3px solid #1a365d;
+            outline-offset: 2px;
+        }
+        
+        .menu-icon-fallback {
+            display: none;
+            font-size: 24px;
+            color: #1a365d;
+            font-weight: bold;
+        }
+        
+        .close-icon-fallback {
+            display: none;
+            font-size: 20px;
+            color: white;
+            font-weight: bold;
+        }
+        
+        /* Fallback se Font Awesome não carregar */
+        .mobile-menu-toggle .fas {
+            display: block;
+        }
+        
+        .mobile-menu-close .fas {
+            display: block;
+        }
+        
+        /* Se Font Awesome não estiver disponível, mostrar fallback */
+        .mobile-menu-toggle:not(.fa-loaded) .fas,
+        .mobile-menu-close:not(.fa-loaded) .fas {
+            display: none;
+        }
+        
+        .mobile-menu-toggle:not(.fa-loaded) .menu-icon-fallback,
+        .mobile-menu-close:not(.fa-loaded) .close-icon-fallback {
+            display: block;
+        }
+        
+        
+        /* Menu Mobile - Off Canvas */
+        .mobile-menu {
+            position: fixed;
+            top: 0;
+            right: -100%;
+            width: 100%;
+            max-width: 320px;
+            height: 100vh;
+            background: linear-gradient(135deg, #1a365d, #2d3748);
+            z-index: 1002;
+            transition: right 0.3s ease;
+            overflow-y: auto;
+            box-shadow: -5px 0 15px rgba(0,0,0,0.3);
+        }
+        
+        .mobile-menu.active {
+            right: 0;
+        }
+        
+        .mobile-menu-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .mobile-menu-close {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 10px;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            width: 44px;
+            height: 44px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .mobile-menu-close:hover {
+            background: rgba(255,255,255,0.2);
+            border-color: rgba(255,255,255,0.5);
+            transform: translateY(-1px);
+        }
+        
+        .mobile-menu-close:focus {
+            outline: 2px solid white;
+            outline-offset: 2px;
+        }
+        
+        .mobile-menu-nav {
+            padding: 20px 0;
+        }
+        
+        .mobile-menu-nav a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 15px 20px;
+            font-size: 18px;
+            font-weight: 500;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            transition: background 0.3s ease;
+        }
+        
+        .mobile-menu-nav a:hover,
+        .mobile-menu-nav a:focus {
+            background: rgba(255,255,255,0.1);
+            outline: none;
+        }
+        
+        .mobile-menu-nav a:last-child {
+            border-bottom: none;
+        }
+        
+        .mobile-menu-contact {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            margin: 10px 0;
+        }
+        
+        .contact-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+            color: white;
+        }
+        
+        .contact-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .contact-item i {
+            width: 20px;
+            margin-right: 12px;
+            color: var(--logo-yellow);
+            font-size: 16px;
+        }
+        
+        .contact-item a {
+            color: white;
+            text-decoration: none;
+            padding: 0;
+            border: none;
+            transition: color 0.3s ease;
+        }
+        
+        .contact-item a:hover {
+            color: var(--logo-yellow);
+            background: none;
+        }
+        
+        .contact-item span {
+            line-height: 1.4;
+        }
+        
+        /* Overlay para fechar menu */
+        .mobile-menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1001;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .mobile-menu-overlay.active {
+            opacity: 1;
+            visibility: visible;
         }
         
         /* Botão de Login */
@@ -168,14 +392,279 @@ require_once 'includes/config.php';
             background: #f6ad55;
         }
         
-        /* Hero Section */
+        /* Hero Section Redesenhado */
         .hero {
-            background-image: url('assets/img/banner-home.png');
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            overflow: hidden;
+        }
+        
+        .hero-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
-            min-height: 500px;
+            z-index: 1;
+        }
+        
+        .hero-bg-desktop {
+            background-image: linear-gradient(135deg, rgba(26, 54, 93, 0.85), rgba(45, 55, 72, 0.75)), url('assets/img/banner-home.png');
+            display: block;
+        }
+        
+        .hero-bg-mobile {
+            background-image: linear-gradient(135deg, rgba(26, 54, 93, 0.9), rgba(45, 55, 72, 0.85)), url('assets/img/frota01.jpg');
+            display: none;
+        }
+        
+        .hero-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
             width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, rgba(26, 54, 93, 0.4), rgba(45, 55, 72, 0.3));
+            z-index: 2;
+        }
+        
+        .hero-content {
+            position: relative;
+            z-index: 3;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+        
+        .hero-title {
+            font-size: clamp(2.5rem, 5vw, 4rem);
+            font-weight: 800;
+            margin-bottom: 20px;
+            line-height: 1.2;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.8);
+            color: white;
+        }
+        
+        .hero-subtitle {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            font-weight: 600;
+            margin-bottom: 15px;
+            color: var(--logo-yellow);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+        }
+        
+        .hero-description {
+            font-size: clamp(1rem, 2.5vw, 1.3rem);
+            margin-bottom: 40px;
+            line-height: 1.6;
+            opacity: 0.95;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
+            color: white;
+        }
+        
+        .hero-buttons {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .hero-buttons .btn {
+            min-width: 200px;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 50px;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            font-weight: 600;
+            text-shadow: none;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 4;
+        }
+        
+        .hero-buttons .btn-primary {
+            background: linear-gradient(135deg, #1a365d, #2d3748);
+            color: white;
+            border: 2px solid rgba(255,255,255,0.2);
+        }
+        
+        .hero-buttons .btn-primary:hover {
+            background: linear-gradient(135deg, #2d3748, #1a365d);
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.3);
+        }
+        
+        .hero-buttons .btn-secondary {
+            background: rgba(255,255,255,0.9);
+            color: #1a365d;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        .hero-buttons .btn-secondary:hover {
+            background: white;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.4);
+            border-color: rgba(255,255,255,0.5);
+        }
+        
+        .hero-buttons .btn:focus {
+            outline: 3px solid rgba(255,255,255,0.7);
+            outline-offset: 2px;
+        }
+        
+        /* Acessibilidade - Foco Visível */
+        *:focus-visible {
+            outline: 3px solid #1a365d;
+            outline-offset: 2px;
+            border-radius: 4px;
+        }
+        
+        .btn:focus-visible,
+        .nav-menu a:focus-visible,
+        .mobile-menu-nav a:focus-visible {
+            outline: 3px solid #f7b731;
+            outline-offset: 2px;
+        }
+        
+        /* Contraste melhorado */
+        .hero-title,
+        .hero-subtitle,
+        .hero-description {
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+        
+        /* Skip to content link */
+        .skip-link {
+            position: absolute;
+            top: -40px;
+            left: 6px;
+            background: #1a365d;
+            color: white;
+            padding: 8px;
+            text-decoration: none;
+            border-radius: 4px;
+            z-index: 10000;
+            transition: top 0.3s;
+        }
+        
+        .skip-link:focus {
+            top: 6px;
+        }
+        
+        /* Screen reader only */
+        .sr-only {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            padding: 0;
+            margin: -1px;
+            overflow: hidden;
+            clip: rect(0, 0, 0, 0);
+            white-space: nowrap;
+            border: 0;
+        }
+        
+        /* Otimizações de Performance */
+        .lazy {
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .lazy.loaded {
+            opacity: 1;
+        }
+        
+        /* Will-change para animações */
+        .hero-bg,
+        .floating-btn,
+        .btn {
+            will-change: transform;
+        }
+        
+        /* Botões Flutuantes */
+        .floating-buttons {
+            position: fixed !important;
+            bottom: 20px !important;
+            right: 20px !important;
+            z-index: 1000 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            gap: 15px !important;
+        }
+        
+        /* Botão WhatsApp Padrão - Forçar estilos */
+        .floating-btn {
+            width: 56px !important;
+            height: 56px !important;
+            border-radius: 50% !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            text-decoration: none !important;
+            color: white !important;
+            font-size: 28px !important;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.15) !important;
+            transition: all 0.3s ease !important;
+            background: #25d366 !important;
+            border: none !important;
+            position: relative !important;
+            overflow: hidden !important;
+        }
+        
+        .floating-btn:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2) !important;
+            background: #20c05a !important;
+        }
+        
+        .floating-btn:active {
+            transform: translateY(0) !important;
+        }
+        
+        .floating-btn.whatsapp {
+            background: #25d366 !important;
+        }
+        
+        .floating-btn.whatsapp:hover {
+            background: #20c05a !important;
+        }
+        
+        /* Contain para melhor performance de layout */
+        .hero,
+        .section {
+            contain: layout style;
+        }
+        
+        /* Otimização de fontes */
+        @font-face {
+            font-family: 'Segoe UI';
+            font-display: swap;
+        }
+        
+        /* Preload de recursos críticos */
+        .preload {
+            position: absolute;
+            left: -9999px;
+            top: -9999px;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
         }
         
         /* Seção de Navegação */
@@ -2262,10 +2751,80 @@ require_once 'includes/config.php';
             background: #f8f9fa;
         }
         
-        .content-section .container {
+        .content-section         .container {
             max-width: 1200px;
             margin: 0 auto;
             padding: 0 20px;
+            width: 100%;
+        }
+        
+        /* Containers responsivos */
+        .container-fluid {
+            width: 100%;
+            padding: 0 15px;
+        }
+        
+        .container-sm {
+            max-width: 540px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        .container-md {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        .container-lg {
+            max-width: 960px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        .container-xl {
+            max-width: 1140px;
+            margin: 0 auto;
+            padding: 0 15px;
+        }
+        
+        /* Espaçamentos responsivos */
+        .section {
+            padding: clamp(40px, 8vw, 80px) 0;
+        }
+        
+        .section-sm {
+            padding: clamp(30px, 6vw, 60px) 0;
+        }
+        
+        .section-lg {
+            padding: clamp(60px, 10vw, 100px) 0;
+        }
+        
+        /* Margens responsivas */
+        .mb-responsive {
+            margin-bottom: clamp(20px, 4vw, 40px);
+        }
+        
+        .mt-responsive {
+            margin-top: clamp(20px, 4vw, 40px);
+        }
+        
+        .my-responsive {
+            margin: clamp(20px, 4vw, 40px) 0;
+        }
+        
+        /* Padding responsivo */
+        .p-responsive {
+            padding: clamp(15px, 3vw, 30px);
+        }
+        
+        .px-responsive {
+            padding: 0 clamp(15px, 3vw, 30px);
+        }
+        
+        .py-responsive {
+            padding: clamp(15px, 3vw, 30px) 0;
         }
         
         .section-title {
@@ -2333,45 +2892,124 @@ require_once 'includes/config.php';
         }
         
         
-        /* Responsivo */
-        @media (max-width: 768px) {
+        /* Responsivo - Mobile First */
+        @media (max-width: 1200px) {
+            .header-info .container,
+            .main-header .container {
+                padding: 0 15px;
+            }
+        }
+        
+        @media (max-width: 992px) {
             .header-info .container {
                 flex-direction: column;
-                gap: 10px;
+                gap: 8px;
                 text-align: center;
+                padding: 8px 15px;
             }
             
             .main-header .container {
                 flex-direction: column;
-                gap: 20px;
+                gap: 15px;
+                text-align: center;
+                padding: 15px;
             }
             
             .nav-menu {
-                flex-direction: column;
-                gap: 15px;
-                text-align: center;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 10px;
             }
             
+            .nav-menu a {
+                padding: 8px 16px;
+                font-size: 14px;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header-info {
+                display: none;
+            }
+            
+            .main-header {
+                padding: 12px 0;
+                min-height: 60px;
+            }
+            
+            /* Ajustar posição dos botões flutuantes no mobile */
+            .floating-buttons {
+                bottom: 15px !important;
+                right: 15px !important;
+            }
+            
+            .main-header .container {
+                flex-direction: row;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            /* Esconder menu desktop e mostrar hambúrguer */
+            .nav-menu {
+                display: none !important;
+            }
+            
+            .mobile-menu-toggle {
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+            
+            
             .login-btn {
-                padding: 10px 16px;
-                font-size: 13px;
+                display: none;
+            }
+            
+            /* Hero Mobile */
+            .hero {
+                min-height: 80vh;
+            }
+            
+            .hero-bg-desktop {
+                display: none;
+            }
+            
+            .hero-bg-mobile {
+                display: block;
+            }
+            
+            .hero-buttons {
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+            }
+            
+            .hero-buttons .btn {
+                width: 100%;
+                max-width: 280px;
+                min-width: auto;
+            }
+            
+            /* Esconder botão secundário em mobile */
+            .hero-buttons .btn-secondary {
+                display: none;
             }
             
             .logo-image {
-                width: 70px !important;
-                height: 70px !important;
+                width: 50px !important;
+                height: 50px !important;
             }
             
             .logo-text {
-                font-size: 16px;
+                font-size: 14px;
             }
             
             .logo-subtitle {
-                font-size: 10px;
+                font-size: 9px;
             }
             
             .hero h1 {
-                font-size: 32px;
+                font-size: 28px;
             }
             
             .hero p {
@@ -2385,6 +3023,118 @@ require_once 'includes/config.php';
             
             .section-title {
                 font-size: 28px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .header-info {
+                padding: 4px 0;
+                font-size: 11px;
+            }
+            
+            .header-info .container {
+                padding: 0 10px;
+            }
+            
+            .main-header {
+                padding: 10px 0;
+            }
+            
+            .main-header .container {
+                padding: 0 10px;
+            }
+            
+            .logo-image {
+                width: 50px !important;
+                height: 50px !important;
+            }
+            
+            .logo-text {
+                font-size: 12px;
+            }
+            
+            .logo-subtitle {
+                font-size: 8px;
+            }
+            
+            .nav-menu a {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+            
+            .login-btn {
+                padding: 10px 15px;
+                font-size: 14px;
+            }
+            
+            .hero h1 {
+                font-size: 24px;
+            }
+            
+            .hero p {
+                font-size: 16px;
+            }
+            
+            .section-title {
+                font-size: 24px;
+            }
+        }
+        
+        
+        @media (max-width: 480px) {
+            .header-info .container,
+            .main-header .container {
+                padding: 0 8px;
+            }
+            
+            .logo-text {
+                font-size: 11px;
+            }
+            
+            .nav-menu a {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            
+            .login-btn {
+                padding: 8px 12px;
+                font-size: 13px;
+            }
+            
+            .hero h1 {
+                font-size: 22px;
+            }
+            
+            .hero p {
+                font-size: 15px;
+            }
+        }
+        
+        @media (max-width: 360px) {
+            .header-info {
+                font-size: 10px;
+            }
+            
+            .logo-text {
+                font-size: 10px;
+            }
+            
+            .nav-menu a {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            
+            .login-btn {
+                padding: 6px 10px;
+                font-size: 12px;
+            }
+            
+            .hero h1 {
+                font-size: 20px;
+            }
+            
+            .hero p {
+                font-size: 14px;
             }
         }
         
@@ -2645,142 +3395,28 @@ require_once 'includes/config.php';
             z-index: 1;
         }
         
-        /* Botões Flutuantes */
-        .floating-buttons {
-            position: fixed !important;
-            bottom: 20px !important;
-            right: 20px !important;
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 15px !important;
-            z-index: 2147483647 !important;
-            pointer-events: auto !important;
-            isolation: isolate !important;
-        }
         
-        .call-button {
-            background: var(--logo-yellow) !important;
-            color: var(--logo-blue) !important;
-            padding: 15px 25px !important;
-            border-radius: 25px !important;
-            text-decoration: none !important;
-            font-weight: 700 !important;
-            font-size: 0.9rem !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 10px !important;
-            box-shadow: 0 6px 20px rgba(247, 183, 49, 0.4) !important;
-            transition: all 0.3s ease !important;
-            white-space: nowrap !important;
-            z-index: 2147483645 !important;
-            position: relative !important;
-            pointer-events: auto !important;
-            isolation: isolate !important;
-        }
         
-        .call-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(247, 183, 49, 0.5);
-            text-decoration: none;
-            color: var(--logo-blue);
-        }
         
-        .whatsapp-button {
-            background: #25D366 !important;
-            color: white !important;
-            padding: 15px 25px !important;
-            border-radius: 25px !important;
-            text-decoration: none !important;
-            font-weight: 700 !important;
-            font-size: 0.9rem !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 10px !important;
-            box-shadow: 0 6px 20px rgba(37, 211, 102, 0.4) !important;
-            transition: all 0.3s ease !important;
-            white-space: nowrap !important;
-            z-index: 2147483646 !important;
-            position: relative !important;
-            pointer-events: auto !important;
-            isolation: isolate !important;
-        }
-        
-        .whatsapp-button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(37, 211, 102, 0.5);
-            text-decoration: none;
-            color: white;
-        }
-        
-        .call-icon {
-            width: 16px;
-            height: 16px;
-            position: relative;
-        }
-        
-        .call-icon.phone::before {
-            content: '';
-            position: absolute;
-            width: 10px;
-            height: 6px;
-            border: 2px solid var(--logo-blue);
-            border-radius: 2px;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-        }
-        
-        .call-icon.phone::after {
-            content: '';
-            position: absolute;
-            width: 3px;
-            height: 3px;
-            background: var(--logo-blue);
-            border-radius: 50%;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            margin-top: -1px;
-            margin-left: 4px;
-        }
-        
-        .scroll-top {
-            width: 50px !important;
-            height: 50px !important;
-            background: white !important;
-            border: none !important;
-            border-radius: 50% !important;
-            display: flex !important;
-            align-items: center !important;
-            justify-content: center !important;
-            cursor: pointer !important;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2) !important;
-            transition: all 0.3s ease !important;
-            z-index: 2147483644 !important;
-            position: relative !important;
-            pointer-events: auto !important;
-            isolation: isolate !important;
-        }
-        
-        .scroll-top:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
-        }
-        
-        .scroll-icon {
-            width: 0;
-            height: 0;
-            border-left: 8px solid transparent;
-            border-right: 8px solid transparent;
-            border-bottom: 12px solid var(--logo-yellow);
-        }
         
         /* Responsividade Footer */
+        @media (max-width: 992px) {
+            .footer-content {
+                grid-template-columns: 1fr 1fr;
+                gap: 30px;
+            }
+        }
+        
         @media (max-width: 768px) {
+            .footer {
+                padding: 40px 0 15px;
+            }
+            
             .footer-content {
                 grid-template-columns: 1fr;
-                gap: 30px;
+                gap: 25px;
                 text-align: center;
+                padding: 0 15px;
             }
             
             .footer-logo {
@@ -2796,90 +3432,81 @@ require_once 'includes/config.php';
                 justify-content: center;
             }
             
+            .footer-column h4 {
+                font-size: 1.1rem;
+                margin-bottom: 15px;
+            }
+            
+            .footer-column p,
+            .footer-column li {
+                font-size: 14px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .footer {
+                padding: 30px 0 15px;
+            }
+            
+            .footer-content {
+                padding: 0 10px;
+                gap: 20px;
+            }
+            
+            .footer-logo {
+                max-width: 120px;
+            }
+            
+            .footer-logo-image {
+                max-width: 110px;
+            }
+            
+            .footer-column h4 {
+                font-size: 1rem;
+                margin-bottom: 12px;
+            }
+            
+            .footer-column p,
+            .footer-column li {
+                font-size: 13px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .footer {
+                padding: 25px 0 15px;
+            }
+            
+            .footer-content {
+                padding: 0 8px;
+                gap: 15px;
+            }
+            
+            .footer-logo {
+                max-width: 100px;
+            }
+            
+            .footer-logo-image {
+                max-width: 90px;
+            }
+            
+            .footer-column h4 {
+                font-size: 0.9rem;
+            }
+            
+            .footer-column p,
+            .footer-column li {
+                font-size: 12px;
+            }
+        }
+            
             .floating-buttons {
                 bottom: 15px;
                 right: 15px;
             }
             
-            .call-button {
-                padding: 12px 20px;
-                font-size: 0.85rem;
-            }
-            
-            .whatsapp-button {
-                padding: 12px 20px;
-                font-size: 0.85rem;
-            }
-            
-            .scroll-top {
-                width: 45px;
-                height: 45px;
-            }
-        }
-        /* Regra de Prioridade Absoluta para Botões Flutuantes */
-        .floating-buttons,
-        .floating-buttons *,
-        .whatsapp-button,
-        .call-button,
-        .scroll-top {
-            z-index: 2147483647 !important;
-            position: relative !important;
-            pointer-events: auto !important;
         }
         
-        .whatsapp-button {
-            z-index: 2147483646 !important;
-        }
-        
-        .call-button {
-            z-index: 2147483645 !important;
-        }
-        
-        .scroll-top {
-            z-index: 2147483644 !important;
-        }
-        
-        /* CSS Adicional para Garantir Comportamento Flutuante */
-        .floating-buttons {
-            position: fixed !important;
-            bottom: 20px !important;
-            right: 20px !important;
-            width: auto !important;
-            height: auto !important;
-            max-width: none !important;
-            max-height: none !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            display: flex !important;
-            flex-direction: column !important;
-            gap: 15px !important;
-            z-index: 2147483647 !important;
-            pointer-events: auto !important;
-            isolation: isolate !important;
-        }
-        
-        .whatsapp-button,
-        .call-button {
-            width: auto !important;
-            height: auto !important;
-            max-width: none !important;
-            max-height: none !important;
-            margin: 0 !important;
-            padding: 15px 25px !important;
-            border: none !important;
-            display: flex !important;
-            align-items: center !important;
-            gap: 10px !important;
-            white-space: nowrap !important;
-        }
-        
-        .scroll-top {
-            width: 50px !important;
-            height: 50px !important;
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-        }
         
         /* Seção Formação Completa */
         .formacao-completa-section {
@@ -2984,6 +3611,9 @@ require_once 'includes/config.php';
     </style>
 </head>
 <body>
+    <!-- Skip to Content Link -->
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+    
     <!-- Header Superior - Informações de Contato -->
     <div class="header-info">
         <div class="container">
@@ -3020,14 +3650,88 @@ require_once 'includes/config.php';
             </nav>
             
             <a href="login.php" class="login-btn" title="Acessar Sistema">
-                🔑 Entrar
+                Entrar
             </a>
+            
+            <!-- Botão Hambúrguer Mobile -->
+            <button class="mobile-menu-toggle" aria-label="Abrir menu" aria-expanded="false">
+                <i class="fas fa-bars"></i>
+                <span class="menu-icon-fallback">☰</span>
+            </button>
         </div>
     </header>
 
+    <!-- Menu Mobile Off-Canvas -->
+    <div class="mobile-menu-overlay" id="mobile-menu-overlay"></div>
+    <div class="mobile-menu" id="mobile-menu">
+        <div class="mobile-menu-header">
+            <div class="logo-text" style="color: white; font-size: 18px;">CFC Bom Conselho</div>
+            <button class="mobile-menu-close" aria-label="Fechar menu">
+                <i class="fas fa-times"></i>
+                <span class="close-icon-fallback">✕</span>
+            </button>
+        </div>
+        <nav class="mobile-menu-nav">
+            <a href="#home" class="active">HOME</a>
+            <a href="#formacao-completa">SOBRE</a>
+            <a href="#servicos">SERVIÇOS</a>
+            <a href="#trabalhe">TRABALHE CONOSCO</a>
+            <a href="#contato">CONTATO</a>
+            
+            <!-- Informações de Contato -->
+            <div class="mobile-menu-contact">
+                <div class="contact-item">
+                    <i class="fas fa-phone"></i>
+                    <a href="tel:+5587981450308">(87) 98145-0308</a>
+                </div>
+                <div class="contact-item">
+                    <i class="fab fa-whatsapp"></i>
+                    <a href="https://wa.me/5587981450308" target="_blank">WhatsApp</a>
+                </div>
+                <div class="contact-item">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>R. Ângela Pessoa Lucena, 248<br>Bom Conselho, PE</span>
+                </div>
+            </div>
+            
+            <a href="login.php" style="background: var(--logo-yellow); color: var(--logo-blue); margin: 20px; border-radius: 25px; text-align: center;">
+                Entrar
+            </a>
+        </nav>
+    </div>
+
+    <!-- Main Content -->
+    <main id="main-content">
+    
     <!-- Hero Section -->
-    <section class="hero" id="home">
-        <!-- Apenas a imagem do banner, sem texto adicional -->
+    <section class="hero section" id="home">
+        <!-- Background Desktop -->
+        <div class="hero-bg hero-bg-desktop">
+            <div class="hero-overlay"></div>
+        </div>
+        
+        <!-- Background Mobile -->
+        <div class="hero-bg hero-bg-mobile">
+            <div class="hero-overlay"></div>
+        </div>
+        
+        <div class="container">
+            <div class="hero-content">
+                <h1 class="hero-title">CFC Bom Conselho</h1>
+                <p class="hero-subtitle">Centro de Formação de Condutores</p>
+                <p class="hero-description">Sua jornada para a habilitação começa aqui. Aulas teóricas e práticas com instrutores qualificados.</p>
+                <div class="hero-buttons">
+                    <a href="#contato" class="btn btn-primary">
+                        <i class="fas fa-user-plus"></i>
+                        Matricule-se Agora
+                    </a>
+                    <a href="#formacao-completa" class="btn btn-secondary">
+                        <i class="fas fa-info-circle"></i>
+                        Saiba Mais
+                    </a>
+                </div>
+            </div>
+        </div>
     </section>
 
     <!-- Seção de Navegação -->
@@ -3609,6 +4313,8 @@ require_once 'includes/config.php';
             </div>
         </div>
     </section>
+    
+    </main>
 
     <!-- Footer -->
     <footer class="footer">
@@ -3682,20 +4388,6 @@ require_once 'includes/config.php';
         </div>
     </footer>
 
-    <!-- Botões Flutuantes - Fora do Footer -->
-    <div class="floating-buttons">
-        <a href="https://wa.me/5587981450308?text=Olá! Gostaria de saber mais sobre os serviços do CFC Bom Conselho." target="_blank" class="whatsapp-button">
-            <span class="whatsapp-icon">📱</span>
-            <span class="whatsapp-text">WhatsApp</span>
-        </a>
-        <a href="tel:+5587981450308" class="call-button">
-            <span class="call-icon phone"></span>
-            <span class="call-text">Ligar Agora</span>
-        </a>
-        <button class="scroll-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})">
-            <span class="scroll-icon"></span>
-        </button>
-    </div>
 
     <script>
         // Função para enviar formulário para WhatsApp
@@ -3783,6 +4475,272 @@ require_once 'includes/config.php';
                 }
             });
         });
+    </script>
+
+    <!-- Floating Button WhatsApp -->
+    <div class="floating-buttons" id="floating-buttons">
+        <a href="https://wa.me/5587981450308" class="floating-btn whatsapp" target="_blank" rel="noopener" aria-label="WhatsApp">
+            <i class="fab fa-whatsapp"></i>
+        </a>
+    </div>
+
+    <!-- JavaScript para Responsividade -->
+    <script>
+        // Detectar orientação e ajustar layout
+        function handleOrientationChange() {
+            const isLandscape = window.innerWidth > window.innerHeight;
+            document.body.classList.toggle('landscape', isLandscape);
+        }
+
+        // Detectar dispositivo touch
+        function detectTouchDevice() {
+            if ('ontouchstart' in window || navigator.maxTouchPoints > 0) {
+                document.body.classList.add('touch-device');
+            }
+        }
+
+        // Ajustar altura do viewport em mobile
+        function setViewportHeight() {
+            const vh = window.innerHeight * 0.01;
+            document.documentElement.style.setProperty('--vh', `${vh}px`);
+        }
+
+        // Smooth scroll para links internos
+        function initSmoothScroll() {
+            document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+                anchor.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
+                });
+            });
+        }
+
+        // Lazy loading para imagens
+        function initLazyLoading() {
+            if ('IntersectionObserver' in window) {
+                const imageObserver = new IntersectionObserver((entries, observer) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            const img = entry.target;
+                            if (img.dataset.src) {
+                                img.src = img.dataset.src;
+                                img.classList.remove('lazy');
+                                img.classList.add('loaded');
+                            }
+                            imageObserver.unobserve(img);
+                        }
+                    });
+                }, {
+                    rootMargin: '50px 0px',
+                    threshold: 0.01
+                });
+
+                document.querySelectorAll('img[data-src]').forEach(img => {
+                    imageObserver.observe(img);
+                });
+            }
+        }
+        
+        // Preload de imagens críticas
+        function preloadCriticalImages() {
+            const criticalImages = [
+                'assets/img/banner-home.png',
+                'assets/img/frota01.jpg'
+            ];
+            
+            criticalImages.forEach(src => {
+                const link = document.createElement('link');
+                link.rel = 'preload';
+                link.as = 'image';
+                link.href = src;
+                document.head.appendChild(link);
+            });
+        }
+        
+        // Otimização de performance
+        function optimizePerformance() {
+            // Debounce para eventos de scroll
+            let scrollTimeout;
+            const originalScrollHandler = window.onscroll;
+            
+            window.onscroll = function() {
+                if (scrollTimeout) {
+                    clearTimeout(scrollTimeout);
+                }
+                scrollTimeout = setTimeout(() => {
+                    if (originalScrollHandler) {
+                        originalScrollHandler();
+                    }
+                }, 16); // ~60fps
+            };
+            
+            // Preload de recursos críticos
+            preloadCriticalImages();
+        }
+
+        // Controlar visibilidade dos botões flutuantes
+        function handleFloatingButtons() {
+            const floatingButtons = document.getElementById('floating-buttons');
+            const hero = document.querySelector('.hero');
+            const mobileMenu = document.getElementById('mobile-menu');
+            
+            if (!floatingButtons || !hero) return;
+            
+            function updateFloatingButtons() {
+                const isMenuOpen = mobileMenu && mobileMenu.classList.contains('active');
+                
+                // Ocultar botões flutuantes apenas quando o menu mobile estiver aberto
+                // para evitar conflitos de interface
+                if (isMenuOpen) {
+                    floatingButtons.classList.add('hidden');
+                } else {
+                    floatingButtons.classList.remove('hidden');
+                }
+            }
+            
+            // Verificar na inicialização
+            updateFloatingButtons();
+            
+            // Verificar no scroll com debounce
+            let scrollTimeout;
+            window.addEventListener('scroll', function() {
+                clearTimeout(scrollTimeout);
+                scrollTimeout = setTimeout(updateFloatingButtons, 10);
+            });
+            
+            window.addEventListener('resize', updateFloatingButtons);
+            
+            // Verificar quando o menu mobile abre/fecha
+            if (mobileMenu) {
+                const observer = new MutationObserver(updateFloatingButtons);
+                observer.observe(mobileMenu, { attributes: true, attributeFilter: ['class'] });
+            }
+        }
+
+        // Menu Mobile
+        function initMobileMenu() {
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            const menu = document.getElementById('mobile-menu');
+            const overlay = document.getElementById('mobile-menu-overlay');
+            const closeBtn = document.querySelector('.mobile-menu-close');
+            
+            if (!toggle || !menu || !overlay) return;
+            
+            function openMenu() {
+                menu.classList.add('active');
+                overlay.classList.add('active');
+                toggle.setAttribute('aria-expanded', 'true');
+                toggle.setAttribute('aria-label', 'Fechar menu');
+                document.body.style.overflow = 'hidden';
+                
+                // Focar no primeiro link do menu
+                const firstLink = menu.querySelector('a');
+                if (firstLink) {
+                    setTimeout(() => firstLink.focus(), 100);
+                }
+            }
+            
+            function closeMenu() {
+                menu.classList.remove('active');
+                overlay.classList.remove('active');
+                toggle.setAttribute('aria-expanded', 'false');
+                toggle.setAttribute('aria-label', 'Abrir menu');
+                document.body.style.overflow = '';
+                toggle.focus();
+            }
+            
+            // Event listeners
+            toggle.addEventListener('click', openMenu);
+            closeBtn.addEventListener('click', closeMenu);
+            overlay.addEventListener('click', closeMenu);
+            
+            // Fechar com ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && menu.classList.contains('active')) {
+                    closeMenu();
+                }
+            });
+            
+            // Fechar ao clicar em um link
+            const menuLinks = menu.querySelectorAll('a');
+            menuLinks.forEach(link => {
+                link.addEventListener('click', closeMenu);
+            });
+            
+            // Trap de foco no menu
+            function trapFocus(e) {
+                if (!menu.classList.contains('active')) return;
+                
+                const focusableElements = menu.querySelectorAll(
+                    'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled])'
+                );
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+                
+                if (e.key === 'Tab') {
+                    if (e.shiftKey) {
+                        if (document.activeElement === firstElement) {
+                            lastElement.focus();
+                            e.preventDefault();
+                        }
+                    } else {
+                        if (document.activeElement === lastElement) {
+                            firstElement.focus();
+                            e.preventDefault();
+                        }
+                    }
+                }
+            }
+            
+            document.addEventListener('keydown', trapFocus);
+        }
+
+        // Verificar se Font Awesome carregou
+        function checkFontAwesome() {
+            const testIcon = document.createElement('i');
+            testIcon.className = 'fas fa-bars';
+            testIcon.style.position = 'absolute';
+            testIcon.style.left = '-9999px';
+            document.body.appendChild(testIcon);
+            
+            const computedStyle = window.getComputedStyle(testIcon);
+            const fontFamily = computedStyle.getPropertyValue('font-family');
+            
+            document.body.removeChild(testIcon);
+            
+            // Se Font Awesome carregou, a font-family deve conter "Font Awesome"
+            if (fontFamily.includes('Font Awesome') || fontFamily.includes('FontAwesome')) {
+                document.querySelectorAll('.mobile-menu-toggle, .mobile-menu-close').forEach(btn => {
+                    btn.classList.add('fa-loaded');
+                });
+            }
+        }
+
+        // Inicializar funcionalidades
+        document.addEventListener('DOMContentLoaded', function() {
+            handleOrientationChange();
+            detectTouchDevice();
+            setViewportHeight();
+            initSmoothScroll();
+            initLazyLoading();
+            handleFloatingButtons();
+            initMobileMenu();
+            optimizePerformance();
+            checkFontAwesome();
+            
+            // Verificar novamente após um delay para garantir que Font Awesome carregou
+            setTimeout(checkFontAwesome, 1000);
+        });
+
+        // Event listeners
+        window.addEventListener('orientationchange', handleOrientationChange);
+        window.addEventListener('resize', setViewportHeight);
     </script>
 </body>
 </html>

@@ -1126,8 +1126,8 @@
 }
 
 .notification-icon {
-    width: 40px;
-    height: 40px;
+    width: 20px;
+    height: 20px;
     border-radius: 50%;
     display: flex;
     align-items: center;
@@ -1451,9 +1451,9 @@
     }
     
     .stat-icon {
-        width: 35px;
-        height: 35px;
-        font-size: var(--font-size-md);
+        width: 20px;
+        height: 20px;
+        font-size: var(--font-size-sm);
     }
     
     .stat-header {

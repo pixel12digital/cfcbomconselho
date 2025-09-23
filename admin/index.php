@@ -195,6 +195,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- CSP configurado para permitir fontes base64 e Font Awesome -->
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://kit.fontawesome.com https://unpkg.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://kit.fontawesome.com; font-src 'self' data: blob: https://fonts.gstatic.com https://cdnjs.cloudflare.com https://kit.fontawesome.com https://cdn.jsdelivr.net; img-src 'self' data: https:; connect-src 'self' https://viacep.com.br https://cdn.jsdelivr.net https://unpkg.com; object-src 'none'; base-uri 'self';">
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="CFC Bom Conselho">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="CFC Admin">
+    <meta name="description" content="Sistema administrativo para gerenciamento de CFC">
+    <meta name="format-detection" content="telephone=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-config" content="/cfc-bom-conselho/pwa/browserconfig.xml">
+    <meta name="msapplication-TileColor" content="#2c3e50">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="theme-color" content="#2c3e50">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/cfc-bom-conselho/pwa/manifest.json">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/cfc-bom-conselho/pwa/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/cfc-bom-conselho/pwa/icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/cfc-bom-conselho/pwa/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="167x167" href="/cfc-bom-conselho/pwa/icons/icon-192.png">
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/cfc-bom-conselho/pwa/icons/icon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/cfc-bom-conselho/pwa/icons/icon-16.png">
+    <link rel="shortcut icon" href="/cfc-bom-conselho/pwa/icons/icon-32.png">
+    
     <title>Dashboard Administrativo - <?php echo APP_NAME; ?></title>
     
     <!-- Bootstrap CSS -->
@@ -221,6 +249,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     
     <!-- CSS de Correções Críticas de Layout -->
     <link href="assets/css/layout-fixes.css" rel="stylesheet">
+    
+    <!-- CSS do Menu Mobile Clean -->
+    <link href="assets/css/mobile-menu-clean.css" rel="stylesheet">
     
     <!-- CSS Adicional para Garantir Apenas Ícones -->
     <style>
@@ -364,6 +395,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             
             <!-- Notificações e Perfil (Direita) -->
             <div class="topbar-right">
+                <!-- Botão Hambúrguer Mobile -->
+                <button 
+                    class="mobile-menu-toggle" 
+                    id="mobile-menu-toggle"
+                    aria-label="Abrir menu de navegação"
+                    aria-expanded="false"
+                    aria-controls="mobile-drawer"
+                >
+                    <span class="hamburger-icon">
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                        <span class="hamburger-line"></span>
+                    </span>
+                </button>
+                
                 <!-- Notificações -->
                 <div class="topbar-notifications">
                     <button class="notification-icon" aria-label="Notificações">
@@ -642,6 +688,210 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 </div>
             </div>
         </nav>
+        
+        <!-- Mobile Drawer Navigation -->
+        <div class="mobile-drawer" id="mobile-drawer" role="navigation" aria-label="Menu de navegação principal">
+            <div class="mobile-drawer-overlay" id="mobile-drawer-overlay"></div>
+            <div class="mobile-drawer-content">
+                <div class="mobile-drawer-header">
+                    <div class="mobile-drawer-logo">
+                        <i class="fas fa-car"></i>
+                        <span>CFC Bom Conselho</span>
+                    </div>
+                    <button 
+                        class="mobile-drawer-close" 
+                        id="mobile-drawer-close"
+                        aria-label="Fechar menu de navegação"
+                    >
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                
+                <div class="mobile-drawer-body">
+                    <nav class="mobile-nav">
+                        <!-- Dashboard -->
+                        <div class="mobile-nav-item">
+                            <a href="index.php" class="mobile-nav-link <?php echo $page === 'dashboard' ? 'active' : ''; ?>">
+                                <i class="fas fa-chart-line"></i>
+                                <span>Dashboard</span>
+                            </a>
+                        </div>
+                        
+                        <!-- Cadastros -->
+                        <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
+                        <div class="mobile-nav-group">
+                            <div class="mobile-nav-group-header">
+                                <i class="fas fa-database"></i>
+                                <span>Cadastros</span>
+                                <i class="fas fa-chevron-down mobile-nav-arrow"></i>
+                            </div>
+                            <div class="mobile-nav-submenu">
+                                <?php if ($isAdmin): ?>
+                                <a href="index.php?page=usuarios&action=list" class="mobile-nav-sublink <?php echo $page === 'usuarios' ? 'active' : ''; ?>">
+                                    <i class="fas fa-users"></i>
+                                    <span>Usuários</span>
+                                </a>
+                                <a href="index.php?page=cfcs&action=list" class="mobile-nav-sublink <?php echo $page === 'cfcs' ? 'active' : ''; ?>">
+                                    <i class="fas fa-building"></i>
+                                    <span>CFCs</span>
+                                </a>
+                                <?php endif; ?>
+                                <a href="pages/alunos.php" class="mobile-nav-sublink <?php echo $page === 'alunos' ? 'active' : ''; ?>">
+                                    <i class="fas fa-graduation-cap"></i>
+                                    <span>Alunos</span>
+                                    <span class="mobile-nav-badge"><?php echo $stats['total_alunos']; ?></span>
+                                </a>
+                                <a href="pages/instrutores.php" class="mobile-nav-sublink <?php echo $page === 'instrutores' ? 'active' : ''; ?>">
+                                    <i class="fas fa-chalkboard-teacher"></i>
+                                    <span>Instrutores</span>
+                                    <span class="mobile-nav-badge"><?php echo $stats['total_instrutores']; ?></span>
+                                </a>
+                                <a href="pages/veiculos.php" class="mobile-nav-sublink <?php echo $page === 'veiculos' ? 'active' : ''; ?>">
+                                    <i class="fas fa-car"></i>
+                                    <span>Veículos</span>
+                                    <span class="mobile-nav-badge"><?php echo $stats['total_veiculos']; ?></span>
+                                </a>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Operacional -->
+                        <div class="mobile-nav-group">
+                            <div class="mobile-nav-group-header">
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Operacional</span>
+                                <i class="fas fa-chevron-down mobile-nav-arrow"></i>
+                            </div>
+                            <div class="mobile-nav-submenu">
+                                <a href="index.php?page=agendamento" class="mobile-nav-sublink <?php echo $page === 'agendamento' ? 'active' : ''; ?>">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span>Agendamento</span>
+                                    <span class="mobile-nav-badge"><?php echo $stats['total_aulas']; ?></span>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Gestão de Turmas -->
+                        <div class="mobile-nav-item">
+                            <a href="?page=turmas" class="mobile-nav-link <?php echo $page === 'turmas' ? 'active' : ''; ?>">
+                                <i class="fas fa-graduation-cap"></i>
+                                <span>Gestão de Turmas</span>
+                            </a>
+                        </div>
+                        
+                        <!-- Financeiro -->
+                        <?php if (defined('FINANCEIRO_ENABLED') && FINANCEIRO_ENABLED && ($isAdmin || $user['tipo'] === 'secretaria')): ?>
+                        <div class="mobile-nav-group">
+                            <div class="mobile-nav-group-header">
+                                <i class="fas fa-dollar-sign"></i>
+                                <span>Financeiro</span>
+                                <i class="fas fa-chevron-down mobile-nav-arrow"></i>
+                            </div>
+                            <div class="mobile-nav-submenu">
+                                <a href="index.php?page=financeiro-faturas" class="mobile-nav-sublink <?php echo $page === 'financeiro-faturas' ? 'active' : ''; ?>">
+                                    <i class="fas fa-file-invoice"></i>
+                                    <span>Faturas (Receitas)</span>
+                                </a>
+                                <a href="index.php?page=financeiro-despesas" class="mobile-nav-sublink <?php echo $page === 'financeiro-despesas' ? 'active' : ''; ?>">
+                                    <i class="fas fa-receipt"></i>
+                                    <span>Despesas (Pagamentos)</span>
+                                </a>
+                                <a href="index.php?page=financeiro-relatorios" class="mobile-nav-sublink <?php echo $page === 'financeiro-relatorios' ? 'active' : ''; ?>">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span>Relatórios</span>
+                                </a>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Relatórios -->
+                        <div class="mobile-nav-group">
+                            <div class="mobile-nav-group-header">
+                                <i class="fas fa-chart-bar"></i>
+                                <span>Relatórios</span>
+                                <i class="fas fa-chevron-down mobile-nav-arrow"></i>
+                            </div>
+                            <div class="mobile-nav-submenu">
+                                <a href="index.php?page=relatorios" class="mobile-nav-sublink <?php echo $page === 'relatorios' ? 'active' : ''; ?>">
+                                    <i class="fas fa-chart-bar"></i>
+                                    <span>Relatórios Gerais</span>
+                                </a>
+                                <a href="index.php?page=relatorios-aulas" class="mobile-nav-sublink <?php echo $page === 'relatorios-aulas' ? 'active' : ''; ?>">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>Relatórios de Aulas</span>
+                                </a>
+                                <a href="index.php?page=estatisticas" class="mobile-nav-sublink <?php echo $page === 'estatisticas' ? 'active' : ''; ?>">
+                                    <i class="fas fa-chart-line"></i>
+                                    <span>Estatísticas</span>
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Configurações -->
+                        <?php if ($isAdmin): ?>
+                        <div class="mobile-nav-group">
+                            <div class="mobile-nav-group-header">
+                                <i class="fas fa-cogs"></i>
+                                <span>Configurações</span>
+                                <i class="fas fa-chevron-down mobile-nav-arrow"></i>
+                            </div>
+                            <div class="mobile-nav-submenu">
+                                <a href="index.php?page=configuracoes-categorias" class="mobile-nav-sublink <?php echo $page === 'configuracoes-categorias' ? 'active' : ''; ?>">
+                                    <i class="fas fa-layer-group"></i>
+                                    <span>Categorias de Habilitação</span>
+                                </a>
+                                <a href="index.php?page=configuracoes&action=geral" class="mobile-nav-sublink <?php echo $page === 'configuracoes' ? 'active' : ''; ?>">
+                                    <i class="fas fa-sliders-h"></i>
+                                    <span>Configurações Gerais</span>
+                                </a>
+                                <a href="index.php?page=logs&action=list" class="mobile-nav-sublink <?php echo $page === 'logs' ? 'active' : ''; ?>">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>Logs do Sistema</span>
+                                </a>
+                                <a href="index.php?page=backup" class="mobile-nav-sublink <?php echo $page === 'backup' ? 'active' : ''; ?>">
+                                    <i class="fas fa-download"></i>
+                                    <span>Backup</span>
+                                </a>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Ferramentas -->
+                        <?php if ($isAdmin): ?>
+                        <div class="mobile-nav-group">
+                            <div class="mobile-nav-group-header">
+                                <i class="fas fa-tools"></i>
+                                <span>Ferramentas</span>
+                                <i class="fas fa-chevron-down mobile-nav-arrow"></i>
+                            </div>
+                            <div class="mobile-nav-submenu">
+                                <a href="index.php?page=ferramentas" class="mobile-nav-sublink <?php echo $page === 'ferramentas' ? 'active' : ''; ?>">
+                                    <i class="fas fa-tools"></i>
+                                    <span>Ferramentas Gerais</span>
+                                </a>
+                                <a href="index.php?page=exportar" class="mobile-nav-sublink <?php echo $page === 'exportar' ? 'active' : ''; ?>">
+                                    <i class="fas fa-download"></i>
+                                    <span>Exportar Dados</span>
+                                </a>
+                                <a href="index.php?page=importar" class="mobile-nav-sublink <?php echo $page === 'importar' ? 'active' : ''; ?>">
+                                    <i class="fas fa-upload"></i>
+                                    <span>Importar Dados</span>
+                                </a>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Sair -->
+                        <div class="mobile-nav-item mobile-nav-logout">
+                            <a href="logout.php" class="mobile-nav-link">
+                                <i class="fas fa-sign-out-alt"></i>
+                                <span>Sair</span>
+                            </a>
+                        </div>
+                    </nav>
+                </div>
+            </div>
+        </div>
         
         <!-- Conteúdo Principal -->
         <main class="admin-main">
@@ -1211,8 +1461,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <script src="assets/js/config.js"></script>
     <script src="assets/js/admin.js"></script>
     <script src="assets/js/menu-flyout.js"></script>
+    <script src="assets/js/mobile-menu-clean.js"></script>
     <script src="assets/js/topbar-unified.js"></script>
     <script src="assets/js/components.js"></script>
+    
+    <!-- PWA Registration -->
+    <script src="/cfc-bom-conselho/pwa/pwa-register.js"></script>
+    
+    <!-- Performance Metrics -->
+    <script src="/cfc-bom-conselho/pwa/performance-metrics.js"></script>
+    
+    <!-- Automated PWA Tests -->
+    <script src="/cfc-bom-conselho/pwa/automated-test.js"></script>
     
     <!-- JavaScript das Funcionalidades Específicas -->
     <?php if ($page === 'cfcs'): ?>
