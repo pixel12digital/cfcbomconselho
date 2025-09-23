@@ -1,48 +1,41 @@
 <?php
 /**
- * Página de Gestão de Turmas
- * Baseada na análise do sistema eCondutor
- * 
- * @author Sistema CFC Bom Conselho
- * @version 1.0
- * @since 2024
+ * Página de Gestão de Turmas - Template
+ * Sistema CFC - Bom Conselho
  */
 
-// Incluir dependências
-require_once __DIR__ . '/../../includes/config.php';
-require_once __DIR__ . '/../../includes/database.php';
-require_once __DIR__ . '/../../includes/auth.php';
-require_once __DIR__ . '/../includes/turma_manager.php';
-
-// Verificar se o usuário está logado e tem permissão
-if (!isLoggedIn() || (!hasPermission('admin') && !hasPermission('instrutor'))) {
-    header('Location: ../index.php');
-    exit;
+// Verificar permissões (as variáveis já estão disponíveis do admin/index.php)
+if (!$isAdmin && !$isInstrutor) {
+    echo '<div class="alert alert-danger">Você não tem permissão para acessar esta página.</div>';
+    return;
 }
 
-// Obter dados do usuário logado
-$user = getCurrentUser();
-$userType = $user['tipo'] ?? 'admin';
-$userId = $user['id'] ?? null;
-$isAdmin = hasPermission('admin');
-$isInstrutor = hasPermission('instrutor');
-$db = Database::getInstance();
+// Incluir dependências específicas
+require_once __DIR__ . '/../includes/turma_manager.php';
 
 // Instanciar o gerenciador de turmas
 $turmaManager = new TurmaManager();
 
 // Buscar instrutores para o dropdown
-$db = Database::getInstance();
-$instrutores = $db->fetchAll("
-    SELECT id, nome, email 
-    FROM instrutores 
-    WHERE ativo = 1 
-    ORDER BY nome ASC
-");
+try {
+    $instrutores = $db->fetchAll("
+        SELECT id, nome, email 
+        FROM instrutores 
+        WHERE ativo = 1 
+        ORDER BY nome ASC
+    ");
+} catch (Exception $e) {
+    $instrutores = [];
+}
 
 // Buscar estatísticas
-$stats = $turmaManager->obterEstatisticas($user['cfc_id'] ?? 1);
-$estatisticas = $stats['sucesso'] ? $stats['dados'] : [];
+try {
+    $cfcIdParaStats = $isAdmin ? null : ($user['cfc_id'] ?? 1); // Admin vê estatísticas de todos os CFCs
+    $stats = $turmaManager->obterEstatisticas($cfcIdParaStats);
+    $estatisticas = $stats['sucesso'] ? $stats['dados'] : [];
+} catch (Exception $e) {
+    $estatisticas = [];
+}
 
 // Processar filtros
 $filtros = [
@@ -50,221 +43,173 @@ $filtros = [
     'data_inicio' => $_GET['data_inicio'] ?? '',
     'data_fim' => $_GET['data_fim'] ?? '',
     'status' => $_GET['status'] ?? '',
-    'tipo_aula' => $_GET['tipo_aula'] ?? '',
-    'cfc_id' => $user['cfc_id'] ?? 1,
-    'limite' => (int)($_GET['limite'] ?? 10),
-    'pagina' => (int)($_GET['pagina'] ?? 0)
+    'instrutor_id' => $_GET['instrutor_id'] ?? '',
+    'cfc_id' => $isAdmin ? null : ($user['cfc_id'] ?? 1) // Admin vê todas as turmas
 ];
 
-$resultado = $turmaManager->listarTurmas($filtros);
-$turmas = $resultado['sucesso'] ? $resultado['dados'] : [];
-$totalTurmas = $resultado['sucesso'] ? $resultado['total'] : 0;
+// Buscar turmas com filtros
+try {
+    $resultado = $turmaManager->listarTurmas($filtros);
+    $turmas = (is_array($resultado) && isset($resultado['sucesso']) && $resultado['sucesso']) 
+              ? $resultado['dados'] 
+              : [];
+} catch (Exception $e) {
+    $turmas = [];
+}
 
-// Calcular paginação
-$totalPaginas = ceil($totalTurmas / $filtros['limite']);
-$paginaAtual = $filtros['pagina'] + 1;
+// Processar ações
+$acao = $_GET['acao'] ?? $_POST['acao'] ?? '';
+$turma_id = $_GET['turma_id'] ?? null;
+
+if ($acao === 'excluir' && $turma_id) {
+    if ($turmaManager->excluirTurma($turma_id)) {
+        echo '<div class="alert alert-success">Turma excluída com sucesso!</div>';
+    } else {
+        echo '<div class="alert alert-danger">Erro ao excluir turma.</div>';
+    }
+}
+
+if ($acao === 'criar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $dadosTurma = [
+        'nome' => $_POST['nome'] ?? '',
+        'instrutor_id' => $_POST['instrutor_id'] ?? '',
+        'tipo_aula' => $_POST['tipo_aula'] ?? '',
+        'categoria_cnh' => $_POST['categoria_cnh'] ?? null,
+        'data_inicio' => $_POST['data_inicio'] ?? '',
+        'data_fim' => $_POST['data_fim'] ?? '',
+        'status' => $_POST['status'] ?? 'agendado',
+        'observacoes' => $_POST['observacoes'] ?? null,
+        'cfc_id' => $isAdmin ? 36 : ($user['cfc_id'] ?? 1) // Admin usa CFC 36 por padrão
+    ];
+    
+    $resultado = $turmaManager->criarTurma($dadosTurma);
+    
+    if ($resultado['sucesso']) {
+        echo '<div class="alert alert-success">Turma criada com sucesso!</div>';
+        // Redirecionar para evitar reenvio do formulário
+        header('Location: ?page=turmas&sucesso=1');
+        exit;
+    } else {
+        echo '<div class="alert alert-danger">Erro ao criar turma: ' . ($resultado['mensagem'] ?? 'Erro desconhecido') . '</div>';
+    }
+}
+
+// Verificar se houve sucesso na criação
+if (isset($_GET['sucesso']) && $_GET['sucesso'] == '1') {
+    echo '<div class="alert alert-success">Turma criada com sucesso!</div>';
+}
 ?>
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestão de Turmas - Sistema CFC</title>
-    
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Font Awesome -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    
-    <!-- CSS específico para a página de turmas -->
-    <style>
-    .page-header {
-        background: linear-gradient(135deg, #00A651 0%, #007A3D 100%);
-        color: white;
-        padding: 2rem 0;
-        margin-bottom: 2rem;
-        border-radius: 10px;
-    }
-    
-    .stats-card {
-        background: white;
-        border-radius: 10px;
-        padding: 1.5rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
-        border-left: 4px solid #00A651;
-    }
-    
-    .filters-section {
-        background: white;
-        border-radius: 10px;
-        padding: 1.5rem;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin-bottom: 2rem;
-    }
-    
-    .table-container {
-        background: white;
-        border-radius: 10px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        overflow: hidden;
-    }
-    
-    .btn-primary {
-        background: linear-gradient(135deg, #00A651 0%, #007A3D 100%);
-        border: none;
-        border-radius: 8px;
-        padding: 0.75rem 1.5rem;
-        font-weight: 600;
-        transition: all 0.3s ease;
-    }
-    
-    .btn-primary:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 15px rgba(0,166,81,0.3);
-    }
-    
-    .modal-content {
-        border-radius: 15px;
-        border: none;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-    }
-    
-    .modal-header {
-        background: linear-gradient(135deg, #00A651 0%, #007A3D 100%);
-        color: white;
-        border-radius: 15px 15px 0 0;
-    }
-    
-    .form-control:focus {
-        border-color: #00A651;
-        box-shadow: 0 0 0 0.2rem rgba(0,166,81,0.25);
-    }
-    
-    .badge {
-        font-size: 0.8rem;
-        padding: 0.5rem 0.75rem;
-        border-radius: 20px;
-    }
-    
-    .badge-success {
-        background: linear-gradient(135deg, #00A651 0%, #007A3D 100%);
-    }
-    
-    .badge-warning {
-        background: linear-gradient(135deg, #FFC107 0%, #FF8F00 100%);
-    }
-    
-    .badge-danger {
-        background: linear-gradient(135deg, #DC3545 0%, #C82333 100%);
-    }
-    
-    .badge-info {
-        background: linear-gradient(135deg, #17A2B8 0%, #138496 100%);
-    }
-    
-    .pagination-controls {
-        background: white;
-        padding: 1rem;
-        border-radius: 0 0 10px 10px;
-        border-top: 1px solid #e9ecef;
-    }
-    
-    .page-link {
-        color: #00A651;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-        margin: 0 2px;
-        transition: all 0.3s ease;
-    }
-    
-    .page-link:hover {
-        background: #00A651;
-        color: white;
-        border-color: #00A651;
-    }
-    
-    .page-item.active .page-link {
-        background: #00A651;
-        border-color: #00A651;
-    }
+<style>
+/* Estilos específicos para turmas */
+.stats-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+}
+.stats-card.success {
+    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+.stats-card.warning {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+.stats-card.info {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.375rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+.status-ativa { background-color: #d4edda; color: #155724; }
+.status-inativa { background-color: #f8d7da; color: #721c24; }
+.status-pendente { background-color: #fff3cd; color: #856404; }
+.status-indefinido { background-color: #e2e3e5; color: #383d41; }
+
+/* Correção para overlay do modal */
+.modal-backdrop {
+    z-index: 1040 !important;
+}
+
+.modal {
+    z-index: 1050 !important;
+}
+
+/* Garantir que o body não mantenha classes de modal */
+body.modal-open {
+    overflow: hidden;
+}
+
+/* Limpar backdrop quando modal é fechado */
+body:not(.modal-open) .modal-backdrop {
+    display: none !important;
+}
 </style>
 
-<!-- Cabeçalho da Página -->
-<div class="page-header">
-    <div class="container-fluid">
-        <div class="row align-items-center">
-            <div class="col-md-8">
-                <h1 class="mb-0">
-                    <i class="fas fa-graduation-cap me-3"></i>
-                    Gestão de Turmas
-                </h1>
-                <p class="mb-0 opacity-75">Gerencie suas turmas teóricas e práticas</p>
-            </div>
-            <div class="col-md-4 text-end">
-                <button class="btn btn-light btn-lg" onclick="abrirModalNovaTurma()">
-                    <i class="fas fa-plus me-2"></i>
-                    Nova Turma
-                </button>
+<!-- Header da página -->
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h2><i class="fas fa-chalkboard-teacher me-2"></i>Gestão de Turmas</h2>
+        <p class="text-muted mb-0">Gerencie as turmas teóricas do sistema</p>
+    </div>
+    <button class="btn btn-primary" onclick="novaTurma()">
+        <i class="fas fa-plus me-1"></i>Nova Turma
+    </button>
+</div>
+
+<!-- Cards de Estatísticas -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="stats-card">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="mb-0">Total de Turmas</h6>
+                    <h3 class="mb-0"><?php echo $estatisticas['total_turmas'] ?? 0; ?></h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-chalkboard-teacher fa-2x"></i>
+                </div>
             </div>
         </div>
     </div>
-</div>
-
-<!-- Estatísticas -->
-<div class="container-fluid">
-    <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="d-flex align-items-center">
-                    <div class="stats-icon me-3">
-                        <i class="fas fa-graduation-cap text-success" style="font-size: 2rem;"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0"><?php echo $estatisticas['total_turmas'] ?? 0; ?></h3>
-                        <p class="text-muted mb-0">Total de Turmas</p>
-                    </div>
+    <div class="col-md-3">
+        <div class="stats-card success">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="mb-0">Turmas Ativas</h6>
+                    <h3 class="mb-0"><?php echo $estatisticas['turmas_ativas'] ?? 0; ?></h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-check-circle fa-2x"></i>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="d-flex align-items-center">
-                    <div class="stats-icon me-3">
-                        <i class="fas fa-play-circle text-info" style="font-size: 2rem;"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0"><?php echo $estatisticas['turmas_ativas'] ?? 0; ?></h3>
-                        <p class="text-muted mb-0">Turmas Ativas</p>
-                    </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card warning">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="mb-0">Alunos Matriculados</h6>
+                    <h3 class="mb-0"><?php echo $estatisticas['total_matriculas'] ?? 0; ?></h3>
+                </div>
+                <div class="align-self-center">
+                    <i class="fas fa-users fa-2x"></i>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="d-flex align-items-center">
-                    <div class="stats-icon me-3">
-                        <i class="fas fa-calendar-check text-warning" style="font-size: 2rem;"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0"><?php echo $estatisticas['turmas_agendadas'] ?? 0; ?></h3>
-                        <p class="text-muted mb-0">Agendadas</p>
-                    </div>
+    </div>
+    <div class="col-md-3">
+        <div class="stats-card info">
+            <div class="d-flex justify-content-between">
+                <div>
+                    <h6 class="mb-0">Próximas Aulas</h6>
+                    <h3 class="mb-0"><?php echo $estatisticas['proximas_aulas'] ?? 0; ?></h3>
                 </div>
-            </div>
-        </div>
-        <div class="col-md-3">
-            <div class="stats-card">
-                <div class="d-flex align-items-center">
-                    <div class="stats-icon me-3">
-                        <i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i>
-                    </div>
-                    <div>
-                        <h3 class="mb-0"><?php echo $estatisticas['turmas_concluidas'] ?? 0; ?></h3>
-                        <p class="text-muted mb-0">Concluídas</p>
-                    </div>
+                <div class="align-self-center">
+                    <i class="fas fa-calendar-alt fa-2x"></i>
                 </div>
             </div>
         </div>
@@ -272,283 +217,252 @@ $paginaAtual = $filtros['pagina'] + 1;
 </div>
 
 <!-- Filtros -->
-<div class="container-fluid">
-    <div class="filters-section">
-        <h5 class="mb-3">
-            <i class="fas fa-filter me-2"></i>
-            Filtros de Busca
-        </h5>
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-filter me-2"></i>Filtros</h5>
+    </div>
+    <div class="card-body">
         <form method="GET" class="row g-3">
+            <input type="hidden" name="page" value="turmas">
             <div class="col-md-3">
-                <label class="form-label">Buscar</label>
-                <input type="text" class="form-control" name="busca" 
-                       value="<?php echo htmlspecialchars($filtros['busca']); ?>" 
-                       placeholder="Nome da turma, instrutor...">
+                <label for="busca" class="form-label">Buscar</label>
+                <input type="text" class="form-control" id="busca" name="busca" 
+                       placeholder="Nome da turma..." value="<?php echo htmlspecialchars($filtros['busca']); ?>">
             </div>
             <div class="col-md-2">
-                <label class="form-label">Data Início</label>
-                <input type="date" class="form-control" name="data_inicio" 
-                       value="<?php echo $filtros['data_inicio']; ?>">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Data Fim</label>
-                <input type="date" class="form-control" name="data_fim" 
-                       value="<?php echo $filtros['data_fim']; ?>">
-            </div>
-            <div class="col-md-2">
-                <label class="form-label">Status</label>
-                <select class="form-select" name="status">
+                <label for="status" class="form-label">Status</label>
+                <select class="form-select" id="status" name="status">
                     <option value="">Todos</option>
-                    <option value="agendado" <?php echo $filtros['status'] === 'agendado' ? 'selected' : ''; ?>>Agendado</option>
                     <option value="ativa" <?php echo $filtros['status'] === 'ativa' ? 'selected' : ''; ?>>Ativa</option>
                     <option value="inativa" <?php echo $filtros['status'] === 'inativa' ? 'selected' : ''; ?>>Inativa</option>
-                    <option value="concluida" <?php echo $filtros['status'] === 'concluida' ? 'selected' : ''; ?>>Concluída</option>
+                    <option value="pendente" <?php echo $filtros['status'] === 'pendente' ? 'selected' : ''; ?>>Pendente</option>
                 </select>
             </div>
             <div class="col-md-2">
-                <label class="form-label">Tipo</label>
-                <select class="form-select" name="tipo_aula">
+                <label for="instrutor_id" class="form-label">Instrutor</label>
+                <select class="form-select" id="instrutor_id" name="instrutor_id">
                     <option value="">Todos</option>
-                    <option value="teorica" <?php echo $filtros['tipo_aula'] === 'teorica' ? 'selected' : ''; ?>>Teórica</option>
-                    <option value="pratica" <?php echo $filtros['tipo_aula'] === 'pratica' ? 'selected' : ''; ?>>Prática</option>
+                    <?php foreach ($instrutores as $instrutor): ?>
+                    <option value="<?php echo $instrutor['id']; ?>" <?php echo $filtros['instrutor_id'] == $instrutor['id'] ? 'selected' : ''; ?>>
+                        <?php echo htmlspecialchars($instrutor['nome']); ?>
+                    </option>
+                    <?php endforeach; ?>
                 </select>
+            </div>
+            <div class="col-md-2">
+                <label for="data_inicio" class="form-label">Data Início</label>
+                <input type="date" class="form-control" id="data_inicio" name="data_inicio" value="<?php echo $filtros['data_inicio']; ?>">
+            </div>
+            <div class="col-md-2">
+                <label for="data_fim" class="form-label">Data Fim</label>
+                <input type="date" class="form-control" id="data_fim" name="data_fim" value="<?php echo $filtros['data_fim']; ?>">
             </div>
             <div class="col-md-1">
                 <label class="form-label">&nbsp;</label>
-                <button type="submit" class="btn btn-primary w-100">
-                    <i class="fas fa-search"></i>
-                </button>
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                    <a href="?page=turmas" class="btn btn-outline-secondary">
+                        <i class="fas fa-times"></i>
+                    </a>
+                </div>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Tabela de Turmas -->
-<div class="container-fluid">
-    <div class="table-container">
-        <div class="table-header p-3 border-bottom">
-            <div class="d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">
-                    <i class="fas fa-list me-2"></i>
-                    Lista de Turmas
-                </h5>
-                <span class="badge bg-primary">
-                    <?php echo $totalTurmas; ?> turma(s) encontrada(s)
-                </span>
-            </div>
-        </div>
-        
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Turmas</h5>
+    </div>
+    <div class="card-body">
         <div class="table-responsive">
-            <table class="table table-hover mb-0">
-                <thead class="table-light">
+            <table class="table table-hover">
+                <thead>
                     <tr>
-                        <th>Nome da Turma</th>
+                        <th>ID</th>
+                        <th>Nome</th>
                         <th>Instrutor</th>
-                        <th>Início</th>
-                        <th>Final</th>
+                        <th>Data Início</th>
+                        <th>Data Fim</th>
                         <th>Alunos</th>
-                        <th>Situação</th>
+                        <th>Status</th>
                         <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($turmas)): ?>
-                        <tr>
-                            <td colspan="7" class="text-center py-4">
-                                <i class="fas fa-inbox text-muted" style="font-size: 3rem;"></i>
-                                <p class="text-muted mt-2">Nenhuma turma encontrada</p>
-                            </td>
-                        </tr>
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-4">
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p>Nenhuma turma encontrada</p>
+                        </td>
+                    </tr>
                     <?php else: ?>
-                        <?php foreach ($turmas as $turma): ?>
-                            <tr>
-                                <td>
-                                    <div class="fw-bold"><?php echo htmlspecialchars($turma['nome']); ?></div>
-                                    <small class="text-muted"><?php echo ucfirst($turma['tipo_aula']); ?></small>
-                                </td>
-                                <td>
-                                    <div><?php echo htmlspecialchars($turma['instrutor_nome']); ?></div>
-                                    <small class="text-muted"><?php echo htmlspecialchars($turma['instrutor_email']); ?></small>
-                                </td>
-                                <td>
-                                    <?php if ($turma['data_inicio']): ?>
-                                        <?php echo date('d/m/Y', strtotime($turma['data_inicio'])); ?>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <?php if ($turma['data_fim']): ?>
-                                        <?php echo date('d/m/Y', strtotime($turma['data_fim'])); ?>
-                                    <?php else: ?>
-                                        <span class="text-muted">-</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td>
-                                    <span class="badge bg-info"><?php echo $turma['total_alunos']; ?></span>
-                                </td>
-                                <td>
-                                    <?php
-                                    $statusClass = match($turma['status']) {
-                                        'agendado' => 'warning',
-                                        'ativa' => 'success',
-                                        'inativa' => 'secondary',
-                                        'concluida' => 'info',
-                                        default => 'secondary'
-                                    };
-                                    ?>
-                                    <span class="badge bg-<?php echo $statusClass; ?>">
-                                        <?php echo ucfirst($turma['status']); ?>
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="btn-group" role="group">
-                                        <?php
-                                        // Buscar primeira aula da turma para deep links
-                                        $firstAula = $db->fetch("
-                                            SELECT id FROM turma_aulas 
-                                            WHERE turma_id = ? 
-                                            ORDER BY data_aula ASC, hora_inicio ASC 
-                                            LIMIT 1
-                                        ", [$turma['id']]);
-                                        $firstAulaId = $firstAula['id'] ?? null;
-                                        ?>
-                                        
-                                        <!-- Botões de Ação Rápida -->
-                                        <?php if ($userType === 'admin' || ($userType === 'instrutor' && $turma['instrutor_id'] == $userId)): ?>
-                                            <?php if ($firstAulaId): ?>
-                                                <a href="turma-chamada.php?turma_id=<?= $turma['id'] ?>&aula_id=<?= $firstAulaId ?>"
-                                                   class="btn btn-sm btn-outline-primary" title="Chamada">
-                                                    <i class="fas fa-clipboard-check"></i>
-                                                </a>
-                                                <a href="turma-diario.php?turma_id=<?= $turma['id'] ?>&aula_id=<?= $firstAulaId ?>"
-                                                   class="btn btn-sm btn-outline-info" title="Diário">
-                                                    <i class="fas fa-book-open"></i>
-                                                </a>
-                                            <?php endif; ?>
-                                        <?php endif; ?>
-
-                                        <?php if ($userType === 'admin'): ?>
-                                            <a href="turma-relatorios.php?turma_id=<?= $turma['id'] ?>"
-                                               class="btn btn-sm btn-outline-success" title="Relatórios">
-                                                <i class="fas fa-chart-bar"></i>
-                                            </a>
-                                        <?php endif; ?>
-
-                                        <!-- Botões de Gestão -->
-                                        <button class="btn btn-sm btn-outline-secondary" 
-                                                onclick="visualizarTurma(<?php echo $turma['id']; ?>)"
-                                                title="Visualizar">
-                                            <i class="fas fa-eye"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-warning" 
-                                                onclick="editarTurma(<?php echo $turma['id']; ?>)"
-                                                title="Editar">
-                                            <i class="fas fa-edit"></i>
-                                        </button>
-                                        <button class="btn btn-sm btn-outline-danger" 
-                                                onclick="excluirTurma(<?php echo $turma['id']; ?>)"
-                                                title="Excluir">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
+                    <?php foreach ($turmas as $turma): ?>
+                    <?php if (is_array($turma)): ?>
+                    <tr>
+                        <td><?php echo $turma['id'] ?? 'N/A'; ?></td>
+                        <td>
+                            <strong><?php echo htmlspecialchars($turma['nome'] ?? 'Nome não definido'); ?></strong><br>
+                            <small class="text-muted"><?php echo htmlspecialchars($turma['descricao'] ?? ''); ?></small>
+                        </td>
+                        <td>
+                            <?php if (!empty($turma['instrutor_nome'])): ?>
+                            <strong><?php echo htmlspecialchars($turma['instrutor_nome']); ?></strong><br>
+                            <small class="text-muted"><?php echo htmlspecialchars($turma['instrutor_email'] ?? ''); ?></small>
+                            <?php else: ?>
+                            <span class="text-muted">Não definido</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($turma['data_inicio'])): ?>
+                                <?php echo date('d/m/Y', strtotime($turma['data_inicio'])); ?>
+                            <?php else: ?>
+                                <span class="text-muted">Não definida</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($turma['data_fim'])): ?>
+                                <?php echo date('d/m/Y', strtotime($turma['data_fim'])); ?>
+                            <?php else: ?>
+                                <span class="text-muted">Não definida</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <span class="badge bg-info">
+                                <?php echo $turma['total_alunos'] ?? 0; ?> alunos
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-<?php echo $turma['status'] ?? 'indefinido'; ?>">
+                                <?php echo ucfirst($turma['status'] ?? 'Indefinido'); ?>
+                            </span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-outline-primary" onclick="visualizarTurma(<?php echo $turma['id'] ?? 0; ?>)" title="Visualizar">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                <button class="btn btn-outline-success" onclick="editarTurma(<?php echo $turma['id'] ?? 0; ?>)" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-outline-info" onclick="gerenciarAlunos(<?php echo $turma['id'] ?? 0; ?>)" title="Gerenciar Alunos">
+                                    <i class="fas fa-users"></i>
+                                </button>
+                                <button class="btn btn-outline-warning" onclick="calendarioTurma(<?php echo $turma['id'] ?? 0; ?>)" title="Calendário">
+                                    <i class="fas fa-calendar"></i>
+                                </button>
+                                <button class="btn btn-outline-danger" onclick="excluirTurma(<?php echo $turma['id'] ?? 0; ?>)" title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
+                    <?php endforeach; ?>
                     <?php endif; ?>
                 </tbody>
             </table>
         </div>
-        
-        <!-- Paginação -->
-        <?php if ($totalPaginas > 1): ?>
-            <div class="pagination-controls">
-                <nav aria-label="Paginação de turmas">
-                    <ul class="pagination justify-content-center mb-0">
-                        <?php if ($paginaAtual > 1): ?>
-                            <li class="page-item">
-                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $filtros['pagina'] - 1])); ?>">
-                                    <i class="fas fa-chevron-left"></i>
-                                </a>
-                            </li>
-                        <?php endif; ?>
-                        
-                        <?php for ($i = max(1, $paginaAtual - 2); $i <= min($totalPaginas, $paginaAtual + 2); $i++): ?>
-                            <li class="page-item <?php echo $i === $paginaAtual ? 'active' : ''; ?>">
-                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $i - 1])); ?>">
-                                    <?php echo $i; ?>
-                                </a>
-                            </li>
-                        <?php endfor; ?>
-                        
-                        <?php if ($paginaAtual < $totalPaginas): ?>
-                            <li class="page-item">
-                                <a class="page-link" href="?<?php echo http_build_query(array_merge($_GET, ['pagina' => $filtros['pagina'] + 1])); ?>">
-                                    <i class="fas fa-chevron-right"></i>
-                                </a>
-                            </li>
-                        <?php endif; ?>
-                    </ul>
-                </nav>
-            </div>
-        <?php endif; ?>
     </div>
 </div>
 
-<!-- Modal de Nova Turma -->
-<div class="modal fade" id="modalNovaTurma" tabindex="-1" aria-labelledby="modalNovaTurmaLabel" aria-hidden="true">
+<!-- Modal Nova Turma -->
+<div class="modal fade" id="modalNovaTurma" tabindex="-1" aria-labelledby="modalNovaTurmaLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true">
     <div class="modal-dialog modal-lg">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalNovaTurmaLabel">
-                    <i class="fas fa-plus me-2"></i>
-                    Nova Turma
+                    <i class="fas fa-plus me-2"></i>Nova Turma
                 </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body">
-                <form id="formNovaTurma">
+            <form id="formNovaTurma" method="POST" action="?page=turmas">
+                <input type="hidden" name="acao" value="criar">
+                <div class="modal-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Nome da Turma *</label>
-                                <input type="text" class="form-control" name="nome" required>
+                                <label for="nome" class="form-label">Nome da Turma *</label>
+                                <input type="text" class="form-control" id="nome" name="nome" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Tipo de Aula *</label>
-                                <select class="form-select" name="tipo_aula" required>
-                                    <option value="">Selecione...</option>
-                                    <option value="teorica">Teórica</option>
-                                    <option value="pratica">Prática</option>
-                                </select>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label class="form-label">Instrutor *</label>
-                                <select class="form-select" name="instrutor_id" required>
-                                    <option value="">Selecione...</option>
+                                <label for="instrutor_id" class="form-label">Instrutor *</label>
+                                <select class="form-select" id="instrutor_id" name="instrutor_id" required>
+                                    <option value="">Selecione um instrutor</option>
                                     <?php foreach ($instrutores as $instrutor): ?>
-                                        <option value="<?php echo $instrutor['id']; ?>">
-                                            <?php echo htmlspecialchars($instrutor['nome']); ?>
-                                        </option>
+                                    <option value="<?php echo $instrutor['id']; ?>">
+                                        <?php echo htmlspecialchars($instrutor['nome']); ?>
+                                    </option>
                                     <?php endforeach; ?>
                                 </select>
                             </div>
                         </div>
-                        <div class="col-md-6">
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-4">
                             <div class="mb-3">
-                                <label class="form-label">Status</label>
-                                <select class="form-select" name="status">
+                                <label for="tipo_aula" class="form-label">Tipo de Aula *</label>
+                                <select class="form-select" id="tipo_aula" name="tipo_aula" required onchange="atualizarPreviewDisciplinas()">
+                                    <option value="">Selecione o tipo</option>
+                                    <option value="teorica">Teórica</option>
+                                    <option value="pratica">Prática</option>
+                                    <option value="mista">Mista</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="categoria_cnh" class="form-label">Categoria CNH</label>
+                                <select class="form-select" id="categoria_cnh" name="categoria_cnh" onchange="atualizarPreviewDisciplinas()">
+                                    <option value="">Selecione a categoria</option>
+                                    <option value="A">A - Motocicleta</option>
+                                    <option value="B">B - Automóvel</option>
+                                    <option value="C">C - Caminhão</option>
+                                    <option value="D">D - Ônibus</option>
+                                    <option value="E">E - Carreta</option>
+                                    <option value="AB">AB - A + B</option>
+                                    <option value="AC">AC - A + C</option>
+                                    <option value="AD">AD - A + D</option>
+                                    <option value="AE">AE - A + E</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-3">
+                                <label for="status" class="form-label">Status *</label>
+                                <select class="form-select" id="status" name="status" required>
                                     <option value="agendado">Agendado</option>
                                     <option value="ativa">Ativa</option>
-                                    <option value="inativa">Inativa</option>
+                                    <option value="concluida">Concluída</option>
+                                    <option value="cancelada">Cancelada</option>
                                 </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview das Disciplinas (apenas para aulas teóricas) -->
+                    <div id="preview_disciplinas" class="mb-3" style="display: none;">
+                        <div class="card border-primary">
+                            <div class="card-header bg-primary text-white">
+                                <h6 class="mb-0">
+                                    <i class="fas fa-graduation-cap me-2"></i>
+                                    Preview das Disciplinas Teóricas
+                                </h6>
+                            </div>
+                            <div class="card-body">
+                                <div id="disciplinas_preview_content">
+                                    <div class="text-center text-muted">
+                                        <i class="fas fa-spinner fa-spin me-2"></i>
+                                        Carregando disciplinas...
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -556,133 +470,249 @@ $paginaAtual = $filtros['pagina'] + 1;
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Data de Início</label>
-                                <input type="date" class="form-control" name="data_inicio">
+                                <label for="data_inicio" class="form-label">Data de Início *</label>
+                                <input type="date" class="form-control" id="data_inicio" name="data_inicio" required>
                             </div>
                         </div>
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label">Data de Fim</label>
-                                <input type="date" class="form-control" name="data_fim">
+                                <label for="data_fim" class="form-label">Data de Fim *</label>
+                                <input type="date" class="form-control" id="data_fim" name="data_fim" required>
                             </div>
                         </div>
                     </div>
                     
                     <div class="mb-3">
-                        <label class="form-label">Observações</label>
-                        <textarea class="form-control" name="observacoes" rows="3"></textarea>
+                        <label for="observacoes" class="form-label">Observações</label>
+                        <textarea class="form-control" id="observacoes" name="observacoes" rows="3" placeholder="Observações sobre a turma..."></textarea>
                     </div>
-                </form>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-2"></i>
-                    Cancelar
-                </button>
-                <button type="button" class="btn btn-primary" onclick="salvarTurma()">
-                    <i class="fas fa-save me-2"></i>
-                    Salvar Turma
-                </button>
-            </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Salvar Turma
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
 </div>
 
-<!-- JavaScript específico para a página -->
 <script>
-// Função para abrir modal de nova turma
-function abrirModalNovaTurma() {
-    const modal = new bootstrap.Modal(document.getElementById('modalNovaTurma'));
+function novaTurma() {
+    // Abrir modal para nova turma
+    const modalElement = document.getElementById('modalNovaTurma');
+    const modal = new bootstrap.Modal(modalElement, {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+    
+    // Limpar formulário ao abrir
+    document.getElementById('formNovaTurma').reset();
+    
+    // Mostrar modal
     modal.show();
-}
-
-// Função para salvar turma
-function salvarTurma() {
-    const form = document.getElementById('formNovaTurma');
-    const formData = new FormData(form);
     
-    // Adicionar dados extras
-    formData.append('acao', 'criar');
-    
-    fetch('api/turmas.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.sucesso) {
-            // Mostrar mensagem de sucesso
-            showNotification('Turma criada com sucesso!', 'success');
-            
-            // Fechar modal
-            const modal = bootstrap.Modal.getInstance(document.getElementById('modalNovaTurma'));
-            modal.hide();
-            
-            // Recarregar página
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
-        } else {
-            showNotification(data.mensagem || 'Erro ao criar turma', 'danger');
-        }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        showNotification('Erro ao comunicar com o servidor', 'danger');
+    // Garantir que o backdrop seja removido quando o modal for fechado
+    modalElement.addEventListener('hidden.bs.modal', function () {
+        // Remover qualquer classe de backdrop que possa ter ficado
+        document.body.classList.remove('modal-open');
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
     });
 }
 
-// Função para visualizar turma
+// Validação do formulário
+document.getElementById('formNovaTurma').addEventListener('submit', function(e) {
+    const dataInicio = document.getElementById('data_inicio').value;
+    const dataFim = document.getElementById('data_fim').value;
+    
+    if (dataInicio && dataFim && new Date(dataInicio) >= new Date(dataFim)) {
+        e.preventDefault();
+        alert('A data de fim deve ser posterior à data de início.');
+        return false;
+    }
+    
+    // Mostrar loading no botão
+    const btnSubmit = this.querySelector('button[type="submit"]');
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando...';
+    btnSubmit.disabled = true;
+});
+
+// Função global para limpar backdrop
+function limparBackdrop() {
+    document.body.classList.remove('modal-open');
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    
+    // Forçar reflow para garantir limpeza
+    document.body.style.overflow = '';
+}
+
+// Adicionar event listeners para todos os botões de fechar
+document.addEventListener('DOMContentLoaded', function() {
+    // Botões de fechar do modal
+    const closeButtons = document.querySelectorAll('[data-bs-dismiss="modal"]');
+    closeButtons.forEach(button => {
+        button.addEventListener('click', limparBackdrop);
+    });
+    
+    // Clicar fora do modal também deve limpar
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-backdrop')) {
+            limparBackdrop();
+        }
+    });
+    
+    // Tecla ESC também deve limpar
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            limparBackdrop();
+        }
+    });
+});
+
 function visualizarTurma(id) {
-    showNotification('Funcionalidade em desenvolvimento', 'info');
+    // Implementar visualização da turma
+    alert('Visualização da turma ' + id + ' será implementada em breve.');
 }
 
-// Função para editar turma
 function editarTurma(id) {
-    showNotification('Funcionalidade em desenvolvimento', 'info');
+    // Implementar edição da turma
+    alert('Edição da turma ' + id + ' será implementada em breve.');
 }
 
-// Função para excluir turma
+function gerenciarAlunos(id) {
+    // Implementar gerenciamento de alunos
+    alert('Gerenciamento de alunos da turma ' + id + ' será implementado em breve.');
+}
+
+function calendarioTurma(id) {
+    // Implementar calendário da turma
+    alert('Calendário da turma ' + id + ' será implementado em breve.');
+}
+
 function excluirTurma(id) {
-    if (confirm('Tem certeza que deseja excluir esta turma?')) {
-        fetch('api/turmas.php', {
-            method: 'DELETE',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ id: id })
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.sucesso) {
-                showNotification('Turma excluída com sucesso!', 'success');
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
-            } else {
-                showNotification(data.mensagem || 'Erro ao excluir turma', 'danger');
-            }
-        })
-        .catch(error => {
-            console.error('Erro:', error);
-            showNotification('Erro ao comunicar com o servidor', 'danger');
-        });
+    if (confirm('Deseja realmente excluir esta turma?')) {
+        if (confirm('Esta ação não pode ser desfeita. Continuar?')) {
+            window.location.href = `?page=turmas&acao=excluir&turma_id=${id}`;
+        }
     }
 }
 
-// Função para mostrar notificações
-function showNotification(message, type = 'info') {
-    // Usar a função de notificação do sistema principal se disponível
-    if (typeof window.showNotification === 'function') {
-        window.showNotification(message, type);
+// Função para atualizar preview das disciplinas
+function atualizarPreviewDisciplinas() {
+    const tipoAula = document.getElementById('tipo_aula').value;
+    const categoriaCNH = document.getElementById('categoria_cnh').value;
+    const previewDiv = document.getElementById('preview_disciplinas');
+    const contentDiv = document.getElementById('disciplinas_preview_content');
+    
+    if (tipoAula === 'teorica' && categoriaCNH) {
+        previewDiv.style.display = 'block';
+        contentDiv.innerHTML = `
+            <div class="text-center text-muted">
+                <i class="fas fa-spinner fa-spin me-2"></i>
+                Carregando disciplinas para categoria ${categoriaCNH}...
+            </div>
+        `;
+        
+        // Buscar preview das disciplinas
+        fetch(`api/turma-grade-generator.php?turma_id=0&action=preview&categoria=${categoriaCNH}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    renderizarPreviewDisciplinas(data.data.disciplinas);
+                } else {
+                    contentDiv.innerHTML = `
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            ${data.message}
+                        </div>
+                    `;
+                }
+            })
+            .catch(error => {
+                contentDiv.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-circle me-2"></i>
+                        Erro ao carregar disciplinas: ${error.message}
+                    </div>
+                `;
+            });
     } else {
-        // Fallback simples
-        alert(message);
+        previewDiv.style.display = 'none';
     }
+}
+
+// Função para renderizar o preview das disciplinas
+function renderizarPreviewDisciplinas(disciplinas) {
+    const contentDiv = document.getElementById('disciplinas_preview_content');
+    
+    if (disciplinas.length === 0) {
+        contentDiv.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                Nenhuma disciplina configurada para esta categoria.
+            </div>
+        `;
+        return;
+    }
+    
+    const totalAulas = disciplinas.reduce((total, disc) => total + disc.aulas, 0);
+    
+    let html = `
+        <div class="row mb-3">
+            <div class="col-12">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle me-2"></i>
+                    <strong>Total de aulas:</strong> ${totalAulas} aulas teóricas
+                </div>
+            </div>
+        </div>
+        <div class="row">
+    `;
+    
+    disciplinas.forEach(disciplina => {
+        const corClasses = {
+            'primary': 'bg-primary',
+            'danger': 'bg-danger', 
+            'success': 'bg-success',
+            'warning': 'bg-warning',
+            'info': 'bg-info'
+        };
+        
+        html += `
+            <div class="col-md-6 col-lg-4 mb-2">
+                <div class="card border-${disciplina.cor} h-100">
+                    <div class="card-body p-2">
+                        <div class="d-flex align-items-center">
+                            <i class="${disciplina.icone} text-${disciplina.cor} me-2" style="font-size: 1.2em;"></i>
+                            <div class="flex-grow-1">
+                                <h6 class="card-title mb-0" style="font-size: 0.9em;">${disciplina.nome}</h6>
+                            </div>
+                            <span class="badge ${corClasses[disciplina.cor]} text-white" style="font-size: 0.8em;">
+                                ${disciplina.aulas} aulas
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+        </div>
+        <div class="mt-3">
+            <small class="text-muted">
+                <i class="fas fa-lightbulb me-1"></i>
+                A grade será gerada automaticamente com base nesta configuração.
+            </small>
+        </div>
+    `;
+    
+    contentDiv.innerHTML = html;
 }
 </script>
-
-<!-- Bootstrap JavaScript -->
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>

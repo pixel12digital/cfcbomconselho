@@ -1,15 +1,40 @@
 <?php
-// Verificar se estamos sendo incluídos pelo sistema de roteamento do admin
+// Esta página é incluída pelo sistema de roteamento do admin
+// As variáveis $user, $isAdmin, $isSecretaria, $isInstrutor já estão definidas no index.php
+
+// Verificar se estamos sendo acessados diretamente (sem template)
 if (!defined('ADMIN_ROUTING')) {
-    require_once '../../includes/config.php';
-    require_once '../../includes/database.php';
-    require_once '../../includes/auth.php';
-    
-    // Verificar se usuário está logado
-    if (!isLoggedIn()) {
-        header('Location: ../../index.php');
+    // Redirecionar para o template do admin
+    $aluno_id = $_GET['id'] ?? '';
+    if ($aluno_id) {
+        header("Location: ../index.php?page=historico-aluno&id=$aluno_id");
+        exit;
+    } else {
+        header('Location: ../index.php?page=alunos');
         exit;
     }
+}
+
+// Incluir dependências necessárias (caso não estejam disponíveis)
+if (!function_exists('db')) {
+    require_once '../../includes/database.php';
+}
+
+// Verificar se as variáveis estão definidas (fallback para compatibilidade)
+if (!isset($user)) {
+    $user = [
+        'id' => $_SESSION['user_id'] ?? null,
+        'nome' => $_SESSION['user_name'] ?? null,
+        'tipo' => $_SESSION['user_type'] ?? null
+    ];
+}
+if (!isset($isAdmin)) $isAdmin = ($user['tipo'] ?? '') === 'admin';
+if (!isset($isSecretaria)) $isSecretaria = ($user['tipo'] ?? '') === 'secretaria';
+if (!isset($isInstrutor)) $isInstrutor = ($user['tipo'] ?? '') === 'instrutor';
+
+// Garantir que o banco de dados está disponível
+if (!isset($db)) {
+    $db = db(); // Usar função global
 }
 
 // Verificar se ID do aluno foi fornecido
@@ -43,7 +68,7 @@ if (defined('ADMIN_ROUTING') && isset($aluno)) {
     $cfcData = $cfc;
 } else {
     // Buscar dados do banco
-    $alunoData = db()->fetch("
+    $alunoData = $db->fetch("
         SELECT a.*, c.nome as cfc_nome, c.cnpj as cfc_cnpj
         FROM alunos a 
         LEFT JOIN cfcs c ON a.cfc_id = c.id 
@@ -62,7 +87,7 @@ if (defined('ADMIN_ROUTING') && isset($aluno)) {
     
     $cfcData = null;
     if ($alunoData['cfc_id']) {
-        $cfcData = db()->fetch("SELECT * FROM cfcs WHERE id = ?", [$alunoData['cfc_id']]);
+        $cfcData = $db->fetch("SELECT * FROM cfcs WHERE id = ?", [$alunoData['cfc_id']]);
     }
 }
 
@@ -77,7 +102,7 @@ if (!$alunoData) {
 }
 
 // Buscar histórico de aulas
-$aulas = db()->fetchAll("
+$aulas = $db->fetchAll("
     SELECT a.*, i.credencial, COALESCE(u.nome, i.nome) as instrutor_nome, v.placa, v.modelo, v.marca
     FROM aulas a
     LEFT JOIN instrutores i ON a.instrutor_id = i.id
@@ -92,6 +117,36 @@ $totalAulas = count($aulas);
 $aulasConcluidas = count(array_filter($aulas, fn($a) => $a['status'] === 'concluida'));
 $aulasCanceladas = count(array_filter($aulas, fn($a) => $a['status'] === 'cancelada'));
 $aulasAgendadas = count(array_filter($aulas, fn($a) => $a['status'] === 'agendada'));
+
+// Buscar exames do aluno
+$exames = $db->fetchAll("
+    SELECT * FROM exames 
+    WHERE aluno_id = ? 
+    ORDER BY tipo, data_agendada DESC
+", [$alunoId]);
+
+// Separar exames por tipo
+$exameMedico = null;
+$examePsicotecnico = null;
+
+foreach ($exames as $exame) {
+    if ($exame['tipo'] === 'medico') {
+        $exameMedico = $exame;
+    } elseif ($exame['tipo'] === 'psicotecnico') {
+        $examePsicotecnico = $exame;
+    }
+}
+
+// Calcular se exames estão OK
+$examesOK = false;
+if ($exameMedico && $exameMedico['status'] === 'concluido' && $exameMedico['resultado'] === 'apto' &&
+    $examePsicotecnico && $examePsicotecnico['status'] === 'concluido' && $examePsicotecnico['resultado'] === 'apto') {
+    $examesOK = true;
+}
+
+// Verificar guards de bloqueio
+require_once __DIR__ . '/../includes/guards_exames.php';
+$bloqueioTeorica = GuardsExames::verificarBloqueioTeorica($alunoId);
 
 // Calcular estatísticas por tipo de aula
 // Para teóricas, contar apenas disciplinas únicas para evitar duplicação
@@ -372,7 +427,7 @@ if ($aulas) {
 }
 
 // Buscar próximas aulas
-$proximasAulas = db()->fetchAll("
+$proximasAulas = $db->fetchAll("
     SELECT a.*, i.credencial, COALESCE(u.nome, i.nome) as instrutor_nome, v.placa
     FROM aulas a
     LEFT JOIN instrutores i ON a.instrutor_id = i.id
@@ -384,69 +439,9 @@ $proximasAulas = db()->fetchAll("
 ", [$alunoId]);
 ?>
 
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Histórico do Aluno - Sistema CFC</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <link href="assets/css/admin.css" rel="stylesheet">
-    <link href="assets/css/action-buttons.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        /* Estilos para o modal de detalhes */
-        .modal-lg {
-            max-width: 800px;
-        }
-        
-        .modal-body .form-label {
-            color: #495057;
-            font-size: 0.9rem;
-        }
-        
-        .modal-body .text-primary {
-            color: #0d6efd !important;
-        }
-        
-        .modal-body .badge {
-            font-size: 0.8rem;
-        }
-        
-        .modal-body .alert-light {
-            background-color: #f8f9fa;
-            border: 1px solid #dee2e6;
-        }
-        
-        .modal-body hr {
-            margin: 1.5rem 0;
-        }
-        
-        .modal-body .row {
-            margin-bottom: 0.5rem;
-        }
-        
-        .modal-body .mb-3 {
-            margin-bottom: 1rem !important;
-        }
-        
-        .modal-body .text-muted {
-            font-size: 0.85rem;
-        }
-        
-        /* Animação suave para o modal */
-        .modal.fade .modal-dialog {
-            transition: transform 0.3s ease-out;
-        }
-        
-        .modal.show .modal-dialog {
-            transform: none;
-        }
-    </style>
-</head>
-<body>
-    <div class="container-fluid">
+<!-- Conteúdo da página de histórico do aluno -->
+
+<div class="container-fluid">
         <!-- Header -->
         <div class="row bg-primary text-white p-3 mb-4">
             <div class="col">
@@ -855,6 +850,282 @@ $proximasAulas = db()->fetchAll("
                                     </div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Exames DETRAN -->
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-stethoscope me-2"></i>
+                            Exames (DETRAN)
+                            <?php if ($examesOK): ?>
+                                <span class="badge bg-success ms-2">
+                                    <i class="fas fa-check-circle me-1"></i>OK
+                                </span>
+                            <?php else: ?>
+                                <span class="badge bg-warning ms-2">
+                                    <i class="fas fa-clock me-1"></i>Pendente
+                                </span>
+                            <?php endif; ?>
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            <!-- Exame Médico -->
+                            <div class="col-md-6">
+                                <div class="card border-<?php echo $exameMedico && $exameMedico['resultado'] === 'apto' ? 'success' : ($exameMedico && $exameMedico['resultado'] === 'inapto' ? 'danger' : 'warning'); ?>">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-user-md me-2"></i>
+                                            Exame Médico
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php if ($exameMedico): ?>
+                                            <!-- Status Badge -->
+                                            <div class="mb-2">
+                                                <?php if ($exameMedico['status'] === 'agendado'): ?>
+                                                    <span class="badge bg-primary">Agendado</span>
+                                                <?php elseif ($exameMedico['status'] === 'concluido'): ?>
+                                                    <span class="badge bg-success">Concluído</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-secondary">Cancelado</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            
+                                            <!-- Resultado Badge -->
+                                            <div class="mb-2">
+                                                <?php if ($exameMedico['resultado'] === 'apto'): ?>
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check me-1"></i>Apto
+                                                    </span>
+                                                <?php elseif ($exameMedico['resultado'] === 'inapto'): ?>
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-times me-1"></i>Inapto
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-clock me-1"></i>Pendente
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
+                                            
+                                            <!-- Informações -->
+                                            <div class="small text-muted">
+                                                <?php if ($exameMedico['data_agendada']): ?>
+                                                    <p><strong>Agendado:</strong> <?php echo date('d/m/Y H:i', strtotime($exameMedico['data_agendada'])); ?></p>
+                                                <?php endif; ?>
+                                                <?php if ($exameMedico['clinica_nome']): ?>
+                                                    <p><strong>Clínica:</strong> <?php echo htmlspecialchars($exameMedico['clinica_nome']); ?></p>
+                                                <?php endif; ?>
+                                                <?php if ($exameMedico['protocolo']): ?>
+                                                    <p><strong>Protocolo:</strong> <?php echo htmlspecialchars($exameMedico['protocolo']); ?></p>
+                                                <?php endif; ?>
+                                                <?php if ($exameMedico['data_resultado']): ?>
+                                                    <p><strong>Resultado em:</strong> <?php echo date('d/m/Y', strtotime($exameMedico['data_resultado'])); ?></p>
+                                                <?php endif; ?>
+                                                <?php if ($exameMedico['observacoes']): ?>
+                                                    <p><strong>Observações:</strong> <?php echo htmlspecialchars($exameMedico['observacoes']); ?></p>
+                                                <?php endif; ?>
+                                            </div>
+                                            
+                                            <!-- Ações -->
+                                            <?php if ($exameMedico['status'] === 'agendado' && ($isAdmin || $isSecretaria)): ?>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-sm btn-outline-primary" onclick="abrirModalResultado(<?php echo $exameMedico['id']; ?>, 'medico')">
+                                                        <i class="fas fa-edit me-1"></i>Lançar Resultado
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelarExame(<?php echo $exameMedico['id']; ?>)">
+                                                        <i class="fas fa-times me-1"></i>Cancelar
+                                                    </button>
+                                                </div>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <div class="text-center py-3">
+                                                <i class="fas fa-plus-circle fa-2x text-muted mb-2"></i>
+                                                <p class="text-muted mb-0">Nenhum exame agendado</p>
+                                                <?php if ($isAdmin || $isSecretaria): ?>
+                                                    <button class="btn btn-sm btn-primary mt-2" onclick="abrirModalAgendamento('medico')">
+                                                        <i class="fas fa-plus me-1"></i>Agendar Exame
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <!-- Exame Psicotécnico -->
+                            <div class="col-md-6">
+                                <div class="card border-<?php echo $examePsicotecnico && $examePsicotecnico['resultado'] === 'apto' ? 'success' : ($examePsicotecnico && $examePsicotecnico['resultado'] === 'inapto' ? 'danger' : 'warning'); ?>">
+                                    <div class="card-header bg-light">
+                                        <h6 class="card-title mb-0">
+                                            <i class="fas fa-brain me-2"></i>
+                                            Exame Psicotécnico
+                                        </h6>
+                                    </div>
+                                    <div class="card-body">
+                                        <?php if ($examePsicotecnico): ?>
+                                            <!-- Status Badge -->
+                                            <div class="mb-2">
+                                                <?php if ($examePsicotecnico['status'] === 'agendado'): ?>
+                                                    <span class="badge bg-primary">Agendado</span>
+                                                <?php elseif ($examePsicotecnico['status'] === 'concluido'): ?>
+                                                    <span class="badge bg-success">Concluído</span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-secondary">Cancelado</span>
+                                                <?php endif; ?>
+                                            </div>
+                                            
+                                            <!-- Resultado Badge -->
+                                            <div class="mb-2">
+                                                <?php if ($examePsicotecnico['resultado'] === 'apto'): ?>
+                                                    <span class="badge bg-success">
+                                                        <i class="fas fa-check me-1"></i>Apto
+                                                    </span>
+                                                <?php elseif ($examePsicotecnico['resultado'] === 'inapto'): ?>
+                                                    <span class="badge bg-danger">
+                                                        <i class="fas fa-times me-1"></i>Inapto
+                                                    </span>
+                                                <?php else: ?>
+                                                    <span class="badge bg-warning">
+                                                        <i class="fas fa-clock me-1"></i>Pendente
+                                                    </span>
+                                                <?php endif; ?>
+                                            </div>
+                                            
+                                            <!-- Informações -->
+                                            <div class="small text-muted">
+                                                <?php if ($examePsicotecnico['data_agendada']): ?>
+                                                    <p><strong>Agendado:</strong> <?php echo date('d/m/Y H:i', strtotime($examePsicotecnico['data_agendada'])); ?></p>
+                                                <?php endif; ?>
+                                                <?php if ($examePsicotecnico['clinica_nome']): ?>
+                                                    <p><strong>Clínica:</strong> <?php echo htmlspecialchars($examePsicotecnico['clinica_nome']); ?></p>
+                                                <?php endif; ?>
+                                                <?php if ($examePsicotecnico['protocolo']): ?>
+                                                    <p><strong>Protocolo:</strong> <?php echo htmlspecialchars($examePsicotecnico['protocolo']); ?></p>
+                                                <?php endif; ?>
+                                                <?php if ($examePsicotecnico['data_resultado']): ?>
+                                                    <p><strong>Resultado em:</strong> <?php echo date('d/m/Y', strtotime($examePsicotecnico['data_resultado'])); ?></p>
+                                                <?php endif; ?>
+                                                <?php if ($examePsicotecnico['observacoes']): ?>
+                                                    <p><strong>Observações:</strong> <?php echo htmlspecialchars($examePsicotecnico['observacoes']); ?></p>
+                                                <?php endif; ?>
+                                            </div>
+                                            
+                                            <!-- Ações -->
+                                            <?php if ($examePsicotecnico['status'] === 'agendado' && ($isAdmin || $isSecretaria)): ?>
+                                                <div class="mt-3">
+                                                    <button class="btn btn-sm btn-outline-primary" onclick="abrirModalResultado(<?php echo $examePsicotecnico['id']; ?>, 'psicotecnico')">
+                                                        <i class="fas fa-edit me-1"></i>Lançar Resultado
+                                                    </button>
+                                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelarExame(<?php echo $examePsicotecnico['id']; ?>)">
+                                                        <i class="fas fa-times me-1"></i>Cancelar
+                                                    </button>
+                                                </div>
+                                            <?php endif; ?>
+                                        <?php else: ?>
+                                            <div class="text-center py-3">
+                                                <i class="fas fa-plus-circle fa-2x text-muted mb-2"></i>
+                                                <p class="text-muted mb-0">Nenhum exame agendado</p>
+                                                <?php if ($isAdmin || $isSecretaria): ?>
+                                                    <button class="btn btn-sm btn-primary mt-2" onclick="abrirModalAgendamento('psicotecnico')">
+                                                        <i class="fas fa-plus me-1"></i>Agendar Exame
+                                                    </button>
+                                                <?php endif; ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Status Geral dos Exames -->
+                        <div class="mt-4 p-3 border rounded <?php echo $examesOK ? 'bg-success bg-opacity-10 border-success' : 'bg-warning bg-opacity-10 border-warning'; ?>">
+                            <div class="d-flex align-items-center">
+                                <?php if ($examesOK): ?>
+                                    <i class="fas fa-check-circle fa-2x text-success me-3"></i>
+                                    <div>
+                                        <h6 class="mb-1 text-success">Exames OK</h6>
+                                        <small class="text-muted">Aluno apto para prosseguir com aulas teóricas</small>
+                                    </div>
+                                <?php else: ?>
+                                    <i class="fas fa-exclamation-triangle fa-2x text-warning me-3"></i>
+                                    <div>
+                                        <h6 class="mb-1 text-warning">Exames Pendentes</h6>
+                                        <small class="text-muted">
+                                            <?php if (!$exameMedico): ?>
+                                                • Falta agendar exame médico<br>
+                                            <?php elseif ($exameMedico['resultado'] !== 'apto'): ?>
+                                                • Falta lançar resultado do exame médico<br>
+                                            <?php endif; ?>
+                                            <?php if (!$examePsicotecnico): ?>
+                                                • Falta agendar exame psicotécnico<br>
+                                            <?php elseif ($examePsicotecnico['resultado'] !== 'apto'): ?>
+                                                • Falta lançar resultado do exame psicotécnico<br>
+                                            <?php endif; ?>
+                                        </small>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Status de Bloqueios -->
+        <?php if (!$bloqueioTeorica['pode_prosseguir']): ?>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-warning">
+                    <div class="card-header bg-warning text-dark">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Bloqueios para Aulas Teóricas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-warning mb-0">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-lock me-2"></i>
+                                Aulas teóricas bloqueadas
+                            </h6>
+                            <p class="mb-2">O aluno não pode prosseguir com aulas teóricas pelos seguintes motivos:</p>
+                            <ul class="mb-0">
+                                <?php foreach ($bloqueioTeorica['motivos_bloqueio'] as $motivo): ?>
+                                    <li><?php echo htmlspecialchars($motivo); ?></li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php else: ?>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card border-success">
+                    <div class="card-header bg-success text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-check-circle me-2"></i>
+                            Liberado para Aulas Teóricas
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-success mb-0">
+                            <h6 class="alert-heading">
+                                <i class="fas fa-unlock me-2"></i>
+                                Tudo em ordem
+                            </h6>
+                            <p class="mb-0">O aluno está liberado para prosseguir com aulas teóricas. Exames OK e situação financeira regularizada.</p>
                         </div>
                     </div>
                 </div>
@@ -1700,6 +1971,290 @@ $proximasAulas = db()->fetchAll("
                 alert('Erro ao cancelar aula: ' + error.message);
             });
         }
+
+        // =====================================================
+        // FUNÇÕES PARA EXAMES
+        // =====================================================
+
+        function abrirModalAgendamento(tipo) {
+            console.log('🔍 Função abrirModalAgendamento chamada com tipo:', tipo);
+            
+            // Verificar se o Bootstrap está carregado
+            if (typeof bootstrap === 'undefined') {
+                console.error('❌ Bootstrap não está carregado!');
+                alert('Erro: Bootstrap não está carregado. Recarregue a página.');
+                return;
+            }
+            
+            // Verificar se o modal existe
+            const modalElement = document.getElementById('modalAgendamento');
+            if (!modalElement) {
+                console.error('❌ Modal modalAgendamento não encontrado!');
+                alert('Erro: Modal não encontrado. Recarregue a página.');
+                return;
+            }
+            
+            console.log('✅ Modal encontrado, criando instância Bootstrap...');
+            const modal = new bootstrap.Modal(modalElement);
+            
+            // Verificar se os elementos existem
+            const tipoExameElement = document.getElementById('tipoExame');
+            const tipoExameLabelElement = document.getElementById('tipoExameLabel');
+            
+            if (!tipoExameElement) {
+                console.error('❌ Elemento tipoExame não encontrado!');
+                return;
+            }
+            
+            if (!tipoExameLabelElement) {
+                console.error('❌ Elemento tipoExameLabel não encontrado!');
+                return;
+            }
+            
+            console.log('✅ Elementos encontrados, configurando valores...');
+            tipoExameElement.value = tipo;
+            tipoExameLabelElement.textContent = tipo === 'medico' ? 'Médico' : 'Psicotécnico';
+            
+            console.log('✅ Mostrando modal...');
+            modal.show();
+        }
+
+        function abrirModalResultado(exameId, tipo) {
+            const modal = new bootstrap.Modal(document.getElementById('modalResultado'));
+            document.getElementById('exameIdResultado').value = exameId;
+            document.getElementById('tipoExameResultado').value = tipo;
+            document.getElementById('tipoExameResultadoLabel').textContent = tipo === 'medico' ? 'Médico' : 'Psicotécnico';
+            modal.show();
+        }
+
+        function agendarExame() {
+            const form = document.getElementById('formAgendamento');
+            const formData = new FormData(form);
+            
+            // Mostrar loading
+            const btnSalvar = document.getElementById('btnSalvarAgendamento');
+            const loadingHtml = btnSalvar.innerHTML;
+            btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
+            btnSalvar.disabled = true;
+
+            fetch('api/exames.php', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Exame agendado com sucesso!');
+                    bootstrap.Modal.getInstance(document.getElementById('modalAgendamento')).hide();
+                    location.reload(); // Recarregar para mostrar o novo exame
+                } else {
+                    showToast('error', data.error || 'Erro ao agendar exame');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('error', 'Erro ao agendar exame');
+            })
+            .finally(() => {
+                btnSalvar.innerHTML = loadingHtml;
+                btnSalvar.disabled = false;
+            });
+        }
+
+        function lancarResultado() {
+            const form = document.getElementById('formResultado');
+            const formData = new FormData(form);
+            
+            // Mostrar loading
+            const btnSalvar = document.getElementById('btnSalvarResultado');
+            const loadingHtml = btnSalvar.innerHTML;
+            btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
+            btnSalvar.disabled = true;
+
+            fetch(`api/exames.php?id=${document.getElementById('exameIdResultado').value}`, {
+                method: 'PUT',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Resultado lançado com sucesso!');
+                    bootstrap.Modal.getInstance(document.getElementById('modalResultado')).hide();
+                    location.reload(); // Recarregar para mostrar o resultado
+                } else {
+                    showToast('error', data.error || 'Erro ao lançar resultado');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('error', 'Erro ao lançar resultado');
+            })
+            .finally(() => {
+                btnSalvar.innerHTML = loadingHtml;
+                btnSalvar.disabled = false;
+            });
+        }
+
+        function cancelarExame(exameId) {
+            if (!confirm('Tem certeza que deseja cancelar este exame?')) {
+                return;
+            }
+
+            fetch(`api/exames.php?id=${exameId}`, {
+                method: 'DELETE'
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showToast('success', 'Exame cancelado com sucesso!');
+                    location.reload();
+                } else {
+                    showToast('error', data.error || 'Erro ao cancelar exame');
+                }
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                showToast('error', 'Erro ao cancelar exame');
+            });
+        }
     </script>
-</body>
-</html>
+
+    <!-- Modal Agendamento de Exame -->
+    <div class="modal fade" id="modalAgendamento" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-calendar-plus me-2"></i>
+                        Agendar Exame <span id="tipoExameLabel"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formAgendamento">
+                        <input type="hidden" id="tipoExame" name="tipo">
+                        <input type="hidden" name="aluno_id" value="<?php echo $alunoId; ?>">
+                        
+                        <div class="mb-3">
+                            <label for="data_agendada" class="form-label">Data e Hora do Exame</label>
+                            <input type="datetime-local" class="form-control" id="data_agendada" name="data_agendada" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="clinica_nome" class="form-label">Nome da Clínica</label>
+                            <input type="text" class="form-control" id="clinica_nome" name="clinica_nome" placeholder="Ex: Clínica São Paulo">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="protocolo" class="form-label">Protocolo/Guia</label>
+                            <input type="text" class="form-control" id="protocolo" name="protocolo" placeholder="Ex: PROT-001">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="observacoes" class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes" name="observacoes" rows="3" placeholder="Observações sobre o agendamento..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnSalvarAgendamento" onclick="agendarExame()">
+                        <i class="fas fa-save me-2"></i>Agendar Exame
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Lançar Resultado -->
+    <div class="modal fade" id="modalResultado" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">
+                        <i class="fas fa-edit me-2"></i>
+                        Lançar Resultado - Exame <span id="tipoExameResultadoLabel"></span>
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="formResultado">
+                        <input type="hidden" id="exameIdResultado" name="exame_id">
+                        <input type="hidden" id="tipoExameResultado" name="tipo">
+                        
+                        <div class="mb-3">
+                            <label for="resultado" class="form-label">Resultado</label>
+                            <select class="form-control" id="resultado" name="resultado" required>
+                                <option value="">Selecione o resultado</option>
+                                <option value="apto">Apto</option>
+                                <option value="inapto">Inapto</option>
+                                <option value="pendente">Pendente</option>
+                            </select>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="data_resultado" class="form-label">Data do Resultado</label>
+                            <input type="date" class="form-control" id="data_resultado" name="data_resultado" value="<?php echo date('Y-m-d'); ?>">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="observacoes_resultado" class="form-label">Observações</label>
+                            <textarea class="form-control" id="observacoes_resultado" name="observacoes" rows="3" placeholder="Observações sobre o resultado..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="button" class="btn btn-primary" id="btnSalvarResultado" onclick="lancarResultado()">
+                        <i class="fas fa-save me-2"></i>Lançar Resultado
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="toast" class="toast" role="alert">
+            <div class="toast-header">
+                <i id="toastIcon" class="fas fa-info-circle text-primary me-2"></i>
+                <strong id="toastTitle" class="me-auto">Notificação</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div id="toastBody" class="toast-body"></div>
+        </div>
+    </div>
+
+    <script>
+        // Função para mostrar toast
+        function showToast(type, message) {
+            const toast = document.getElementById('toast');
+            const toastIcon = document.getElementById('toastIcon');
+            const toastTitle = document.getElementById('toastTitle');
+            const toastBody = document.getElementById('toastBody');
+            
+            // Configurar ícone e título baseado no tipo
+            switch(type) {
+                case 'success':
+                    toastIcon.className = 'fas fa-check-circle text-success me-2';
+                    toastTitle.textContent = 'Sucesso';
+                    toast.className = 'toast border-success';
+                    break;
+                case 'error':
+                    toastIcon.className = 'fas fa-exclamation-circle text-danger me-2';
+                    toastTitle.textContent = 'Erro';
+                    toast.className = 'toast border-danger';
+                    break;
+                default:
+                    toastIcon.className = 'fas fa-info-circle text-primary me-2';
+                    toastTitle.textContent = 'Informação';
+                    toast.className = 'toast border-primary';
+            }
+            
+            toastBody.textContent = message;
+            
+            // Mostrar toast
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+        }
+    </script>

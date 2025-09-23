@@ -496,7 +496,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 
                 <!-- Gestão de Turmas -->
                 <div class="nav-item">
-                    <a href="pages/turmas.php" class="nav-link <?php echo $page === 'turmas' ? 'active' : ''; ?>" title="Gestão de Turmas">
+                    <a href="?page=turmas" class="nav-link <?php echo $page === 'turmas' ? 'active' : ''; ?>" title="Gestão de Turmas">
                         <div class="nav-icon">
                             <i class="fas fa-graduation-cap"></i>
                         </div>
