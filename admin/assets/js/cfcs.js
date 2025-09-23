@@ -904,4 +904,3 @@ if (document.readyState === 'loading') {
     verificarScriptsDuplicados();
 }
 
-} // Fechamento do bloco else para evitar carregamento duplicado

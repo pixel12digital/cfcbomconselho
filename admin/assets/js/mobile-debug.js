@@ -6,6 +6,9 @@
 (function() {
     'use strict';
     
+    // DESABILITADO - Debug removido para produção
+    return;
+    
     // Detectar se é mobile
     function isMobile() {
         return window.innerWidth <= 768 || /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
