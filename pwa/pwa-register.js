@@ -29,6 +29,9 @@ class PWAManager {
         // Configurar eventos de atualização
         this.setupUpdateEvents();
         
+        // Configurar notificações
+        this.setupNotifications();
+        
         // Verificar se já está instalado
         this.checkInstallationStatus();
         
@@ -431,6 +434,91 @@ class PWAManager {
         if (this.registration) {
             await this.registration.update();
         }
+    }
+    
+    /**
+     * Configurar sistema de notificações
+     */
+    setupNotifications() {
+        console.log('[PWA] Configurando notificações...');
+        
+        // Verificar suporte a notificações
+        if (!('Notification' in window)) {
+            console.warn('[PWA] Notificações não suportadas');
+            return;
+        }
+        
+        // Verificar permissão atual
+        if (Notification.permission === 'granted') {
+            console.log('[PWA] Notificações já autorizadas');
+            this.showInstallPrompt();
+        } else if (Notification.permission === 'default') {
+            console.log('[PWA] Solicitando permissão para notificações...');
+            this.requestNotificationPermission();
+        } else {
+            console.log('[PWA] Notificações negadas pelo usuário');
+        }
+    }
+    
+    /**
+     * Solicitar permissão para notificações
+     */
+    async requestNotificationPermission() {
+        try {
+            const permission = await Notification.requestPermission();
+            
+            if (permission === 'granted') {
+                console.log('[PWA] Permissão para notificações concedida');
+                this.showInstallPrompt();
+                
+                // Enviar notificação de boas-vindas
+                this.sendWelcomeNotification();
+            } else {
+                console.log('[PWA] Permissão para notificações negada');
+            }
+        } catch (error) {
+            console.error('[PWA] Erro ao solicitar permissão:', error);
+        }
+    }
+    
+    /**
+     * Enviar notificação de boas-vindas
+     */
+    sendWelcomeNotification() {
+        if (Notification.permission === 'granted') {
+            const notification = new Notification('CFC Bom Conselho', {
+                body: 'Bem-vindo ao sistema administrativo! Você pode instalar este app para acesso rápido.',
+                icon: '/cfc-bom-conselho/pwa/icons/icon-192.png',
+                badge: '/cfc-bom-conselho/pwa/icons/icon-72.png',
+                tag: 'cfc-welcome',
+                requireInteraction: false,
+                silent: false
+            });
+            
+            // Fechar automaticamente após 5 segundos
+            setTimeout(() => {
+                notification.close();
+            }, 5000);
+        }
+    }
+    
+    /**
+     * Mostrar prompt de instalação
+     */
+    showInstallPrompt() {
+        // Verificar se já foi mostrado hoje
+        const lastShown = localStorage.getItem('pwa-install-prompt-last-shown');
+        const today = new Date().toDateString();
+        
+        if (lastShown === today) {
+            return; // Já foi mostrado hoje
+        }
+        
+        // Mostrar banner de instalação
+        this.showInstallBanner();
+        
+        // Salvar que foi mostrado hoje
+        localStorage.setItem('pwa-install-prompt-last-shown', today);
     }
 }
 

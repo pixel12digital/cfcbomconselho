@@ -355,14 +355,14 @@
 @media (max-width: 768px) {
     /* Mostrar botão hambúrguer */
     .mobile-menu-toggle {
-        display: flex;
+        display: flex !important;
         align-items: center;
         justify-content: center;
     }
     
     /* Ocultar sidebar em mobile */
     .admin-sidebar {
-        transform: translateX(-100%);
+        transform: translateX(-100%) !important;
         transition: transform 0.3s ease;
     }
     
@@ -372,6 +372,51 @@
         width: 100% !important;
         padding: 16px !important;
         margin-top: 0 !important;
+    }
+    
+    /* Garantir que o dashboard seja responsivo */
+    .dashboard-container {
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 16px !important;
+    }
+    
+    /* Ajustar cards do dashboard */
+    .dashboard-card {
+        width: 100% !important;
+        margin-bottom: 16px !important;
+    }
+    
+    /* Ajustar tabelas */
+    .table-responsive {
+        overflow-x: auto !important;
+    }
+    
+    /* Ajustar grid do dashboard */
+    .row {
+        margin: 0 !important;
+    }
+    
+    .col-md-3, .col-md-4, .col-md-6, .col-md-12 {
+        padding: 0 8px !important;
+        margin-bottom: 16px !important;
+    }
+    
+    /* Ajustar cards de estatísticas */
+    .card {
+        margin-bottom: 16px !important;
+        border-radius: 8px !important;
+    }
+    
+    /* Ajustar botões */
+    .btn {
+        width: 100% !important;
+        margin-bottom: 8px !important;
+    }
+    
+    /* Ajustar formulários */
+    .form-control {
+        font-size: 16px !important; /* Evitar zoom no iOS */
     }
     
     /* =====================================================
