@@ -1015,57 +1015,141 @@ console.log('✅ Funcionalidades específicas da página carregadas!');
         gap: 5px !important;
         flex-wrap: wrap !important;
     }
-    
-    .action-buttons .btn {
-        font-size: 10px !important;
-        padding: 0 !important;
-        margin: 0 !important;
-        white-space: nowrap !important;
-        width: 18px !important;
-        height: 18px !important;
-        min-width: 18px !important;
-        min-height: 18px !important;
-        max-width: 18px !important;
-        max-height: 18px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        border-radius: 3px !important;
-        line-height: 1 !important;
-    }
-    
-    .action-buttons .btn .me-1 {
-        margin-right: 0 !important;
-    }
-    
-    .action-buttons .btn i {
-        font-size: 8px !important;
-        line-height: 1 !important;
-        margin: 0 !important;
-    }
-    
-    .action-buttons .btn:not(:hover) {
-        color: transparent !important;
-    }
-    
-    .action-buttons .btn:hover {
-        color: white !important;
-    }
-    
-    .action-buttons .btn:hover::after {
-        content: attr(title);
-        position: absolute;
-        background: rgba(0,0,0,0.8);
-        color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-size: 11px;
-        white-space: nowrap;
-        z-index: 1000;
-        top: -30px;
-        left: 50%;
-        transform: translateX(-50%);
-    }
+}
+
+/* CSS AGRESSIVO PARA BOTÕES 18x18px - APLICAR EM TODOS OS DISPOSITIVOS */
+.action-buttons .btn,
+.action-buttons .btn-sm,
+.action-buttons .btn-primary,
+.action-buttons .btn-info,
+.action-buttons .btn-warning,
+.action-buttons .btn-secondary,
+.action-buttons .btn-success,
+.action-buttons .btn-danger,
+.action-buttons .btn-edit,
+.action-buttons .btn-view,
+.action-buttons .btn-manage,
+.action-buttons .btn-toggle,
+.action-buttons .btn-schedule,
+.action-buttons .btn-delete {
+    font-size: 8px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+    width: 18px !important;
+    height: 18px !important;
+    min-width: 18px !important;
+    min-height: 18px !important;
+    max-width: 18px !important;
+    max-height: 18px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border-radius: 3px !important;
+    line-height: 1 !important;
+    box-sizing: border-box !important;
+}
+
+.action-buttons .btn .me-1,
+.action-buttons .btn-sm .me-1,
+.action-buttons .btn-primary .me-1,
+.action-buttons .btn-info .me-1,
+.action-buttons .btn-warning .me-1,
+.action-buttons .btn-secondary .me-1,
+.action-buttons .btn-success .me-1,
+.action-buttons .btn-danger .me-1,
+.action-buttons .btn-edit .me-1,
+.action-buttons .btn-view .me-1,
+.action-buttons .btn-manage .me-1,
+.action-buttons .btn-toggle .me-1,
+.action-buttons .btn-schedule .me-1,
+.action-buttons .btn-delete .me-1 {
+    margin-right: 0 !important;
+    margin-left: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+.action-buttons .btn i,
+.action-buttons .btn-sm i,
+.action-buttons .btn-primary i,
+.action-buttons .btn-info i,
+.action-buttons .btn-warning i,
+.action-buttons .btn-secondary i,
+.action-buttons .btn-success i,
+.action-buttons .btn-danger i,
+.action-buttons .btn-edit i,
+.action-buttons .btn-view i,
+.action-buttons .btn-manage i,
+.action-buttons .btn-toggle i,
+.action-buttons .btn-schedule i,
+.action-buttons .btn-delete i {
+    font-size: 8px !important;
+    line-height: 1 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.action-buttons .btn:not(:hover),
+.action-buttons .btn-sm:not(:hover),
+.action-buttons .btn-primary:not(:hover),
+.action-buttons .btn-info:not(:hover),
+.action-buttons .btn-warning:not(:hover),
+.action-buttons .btn-secondary:not(:hover),
+.action-buttons .btn-success:not(:hover),
+.action-buttons .btn-danger:not(:hover),
+.action-buttons .btn-edit:not(:hover),
+.action-buttons .btn-view:not(:hover),
+.action-buttons .btn-manage:not(:hover),
+.action-buttons .btn-toggle:not(:hover),
+.action-buttons .btn-schedule:not(:hover),
+.action-buttons .btn-delete:not(:hover) {
+    color: transparent !important;
+}
+
+.action-buttons .btn:hover,
+.action-buttons .btn-sm:hover,
+.action-buttons .btn-primary:hover,
+.action-buttons .btn-info:hover,
+.action-buttons .btn-warning:hover,
+.action-buttons .btn-secondary:hover,
+.action-buttons .btn-success:hover,
+.action-buttons .btn-danger:hover,
+.action-buttons .btn-edit:hover,
+.action-buttons .btn-view:hover,
+.action-buttons .btn-manage:hover,
+.action-buttons .btn-toggle:hover,
+.action-buttons .btn-schedule:hover,
+.action-buttons .btn-delete:hover {
+    color: white !important;
+}
+
+.action-buttons .btn:hover::after,
+.action-buttons .btn-sm:hover::after,
+.action-buttons .btn-primary:hover::after,
+.action-buttons .btn-info:hover::after,
+.action-buttons .btn-warning:hover::after,
+.action-buttons .btn-secondary:hover::after,
+.action-buttons .btn-success:hover::after,
+.action-buttons .btn-danger:hover::after,
+.action-buttons .btn-edit:hover::after,
+.action-buttons .btn-view:hover::after,
+.action-buttons .btn-manage:hover::after,
+.action-buttons .btn-toggle:hover::after,
+.action-buttons .btn-schedule:hover::after,
+.action-buttons .btn-delete:hover::after {
+    content: attr(title);
+    position: absolute;
+    background: rgba(0,0,0,0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    white-space: nowrap;
+    z-index: 1000;
+    top: -30px;
+    left: 50%;
+    transform: translateX(-50%);
 }
 
 /* =====================================================
