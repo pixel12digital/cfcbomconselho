@@ -58,7 +58,7 @@ class AutomatedPWATest {
         console.log('📋 Testando Manifest...');
         
         try {
-            const response = await fetch('/cfc-bom-conselho/pwa/manifest.json');
+            const response = await fetch('../pwa/manifest.json');
             const manifest = await response.json();
             
             const checks = {
@@ -91,7 +91,7 @@ class AutomatedPWATest {
             const registration = await navigator.serviceWorker.getRegistration();
             const hasRegistration = !!registration;
             
-            const swResponse = await fetch('/cfc-bom-conselho/pwa/sw.js');
+            const swResponse = await fetch('../pwa/sw.js');
             const swText = await swResponse.text();
             
             const checks = {
@@ -144,10 +144,10 @@ class AutomatedPWATest {
         console.log('📡 Testando Funcionalidade Offline...');
         
         try {
-            const offlinePageResponse = await fetch('/cfc-bom-conselho/pwa/offline.html');
+            const offlinePageResponse = await fetch('../pwa/offline.html');
             const hasOfflinePage = offlinePageResponse.ok;
             
-            const swResponse = await fetch('/cfc-bom-conselho/pwa/sw.js');
+            const swResponse = await fetch('../pwa/sw.js');
             const swText = await swResponse.text();
             
             const checks = {
@@ -170,7 +170,7 @@ class AutomatedPWATest {
         console.log('🔄 Testando Sistema de Atualização...');
         
         try {
-            const swResponse = await fetch('/cfc-bom-conselho/pwa/sw.js');
+            const swResponse = await fetch('../pwa/sw.js');
             const swText = await swResponse.text();
             
             const checks = {
@@ -214,7 +214,7 @@ class AutomatedPWATest {
         console.log('🔒 Testando Segurança...');
         
         try {
-            const swResponse = await fetch('/cfc-bom-conselho/pwa/sw.js');
+            const swResponse = await fetch('../pwa/sw.js');
             const swText = await swResponse.text();
             
             const checks = {
@@ -282,7 +282,7 @@ class AutomatedPWATest {
         console.log('💾 Testando Cache...');
         
         try {
-            const swResponse = await fetch('/cfc-bom-conselho/pwa/sw.js');
+            const swResponse = await fetch('../pwa/sw.js');
             const swText = await swResponse.text();
             
             const checks = {
