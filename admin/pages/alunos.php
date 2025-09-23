@@ -1348,9 +1348,10 @@ body.modal-open #modalAluno .modal-dialog {
                             <i class="fas fa-check"></i>
                         </button>
                         <?php endif; ?>
-                        <button type="button" class="btn btn-sm btn-danger" onclick="excluirAluno(<?php echo $aluno['id']; ?>)">
+                        <!-- Botão de excluir desativado por segurança -->
+                        <!-- <button type="button" class="btn btn-sm btn-danger" onclick="excluirAluno(<?php echo $aluno['id']; ?>)">
                             <i class="fas fa-trash"></i>
-                        </button>
+                        </button> -->
                     </div>
                 </div>
                 <?php endforeach; ?>
