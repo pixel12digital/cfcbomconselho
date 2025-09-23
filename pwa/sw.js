@@ -4,7 +4,7 @@
  * Estratégias de cache otimizadas para PWA
  */
 
-const CACHE_VERSION = 'cfc-v1.0.1';
+const CACHE_VERSION = 'cfc-v1.0.2';
 const CACHE_NAME = `cfc-cache-${CACHE_VERSION}`;
 const OFFLINE_CACHE = 'cfc-offline-v1';
 
