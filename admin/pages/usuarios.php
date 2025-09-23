@@ -198,6 +198,191 @@ if ($action === 'list') {
     max-width: 32px !important;
 }
 
+/* =====================================================
+   RESPONSIVIDADE MOBILE - TABELA DE USUÁRIOS
+   ===================================================== */
+
+@media (max-width: 768px) {
+    /* Container da tabela responsivo */
+    .table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        border-radius: var(--border-radius-lg) !important;
+        box-shadow: var(--shadow-sm) !important;
+    }
+    
+    /* Tabela mobile */
+    .table {
+        min-width: 100% !important;
+        font-size: 14px !important;
+    }
+    
+    /* Cabeçalho da tabela mobile */
+    .table th {
+        padding: 8px 6px !important;
+        font-size: 12px !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Células da tabela mobile */
+    .table td {
+        padding: 8px 6px !important;
+        font-size: 13px !important;
+        white-space: nowrap !important;
+    }
+    
+    /* Ajustar larguras das colunas para mobile */
+    .table th:nth-child(1),
+    .table td:nth-child(1) {
+        width: 30% !important;
+        min-width: 120px !important;
+    }
+    
+    .table th:nth-child(2),
+    .table td:nth-child(2) {
+        width: 25% !important;
+        min-width: 100px !important;
+    }
+    
+    .table th:nth-child(3),
+    .table td:nth-child(3) {
+        width: 15% !important;
+        min-width: 70px !important;
+    }
+    
+    .table th:nth-child(4),
+    .table td:nth-child(4) {
+        width: 15% !important;
+        min-width: 70px !important;
+    }
+    
+    .table th:nth-child(5),
+    .table td:nth-child(5) {
+        width: 15% !important;
+        min-width: 80px !important;
+    }
+    
+    /* Botões de ação mobile */
+    .action-buttons-container {
+        gap: 4px !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .action-btn {
+        width: 28px !important;
+        height: 22px !important;
+        font-size: 11px !important;
+        min-width: 28px !important;
+        max-width: 28px !important;
+    }
+    
+    /* Card mobile */
+    .card {
+        margin: 0 !important;
+        border-radius: var(--border-radius-lg) !important;
+        box-shadow: var(--shadow-sm) !important;
+    }
+    
+    .card-header {
+        padding: var(--spacing-md) !important;
+    }
+    
+    .card-header h3 {
+        font-size: var(--font-size-lg) !important;
+    }
+    
+    .card-body {
+        padding: var(--spacing-md) !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Mobile pequeno - layout em cards */
+    .table-container {
+        overflow: visible !important;
+    }
+    
+    .table {
+        display: none !important;
+    }
+    
+    /* Cards para mobile pequeno */
+    .mobile-user-cards {
+        display: block !important;
+    }
+    
+    .mobile-user-card {
+        background: var(--white) !important;
+        border: 1px solid var(--gray-200) !important;
+        border-radius: var(--border-radius-lg) !important;
+        padding: var(--spacing-md) !important;
+        margin-bottom: var(--spacing-md) !important;
+        box-shadow: var(--shadow-sm) !important;
+    }
+    
+    .mobile-user-card:last-child {
+        margin-bottom: 0 !important;
+    }
+    
+    .mobile-user-header {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: flex-start !important;
+        margin-bottom: var(--spacing-sm) !important;
+    }
+    
+    .mobile-user-name {
+        font-weight: var(--font-weight-semibold) !important;
+        color: var(--gray-800) !important;
+        font-size: var(--font-size-md) !important;
+        margin: 0 !important;
+    }
+    
+    .mobile-user-badge {
+        font-size: 11px !important;
+        padding: 4px 8px !important;
+        border-radius: var(--border-radius) !important;
+    }
+    
+    .mobile-user-info {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: var(--spacing-sm) !important;
+        margin-bottom: var(--spacing-sm) !important;
+    }
+    
+    .mobile-user-field {
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    .mobile-user-label {
+        font-size: 11px !important;
+        color: var(--gray-500) !important;
+        font-weight: var(--font-weight-medium) !important;
+        margin-bottom: 2px !important;
+    }
+    
+    .mobile-user-value {
+        font-size: 13px !important;
+        color: var(--gray-700) !important;
+        font-weight: var(--font-weight-normal) !important;
+    }
+    
+    .mobile-user-actions {
+        display: flex !important;
+        gap: var(--spacing-xs) !important;
+        justify-content: flex-end !important;
+        margin-top: var(--spacing-sm) !important;
+    }
+    
+    .mobile-user-actions .action-btn {
+        width: 32px !important;
+        height: 28px !important;
+        font-size: 12px !important;
+    }
+}
+
 .action-btn i {
     margin: 0 !important;
     font-size: 12px !important;
@@ -327,6 +512,67 @@ if ($action === 'list') {
                             <?php endforeach; ?>
                         </tbody>
                     </table>
+                </div>
+                
+                <!-- Layout Mobile em Cards (oculto por padrão) -->
+                <div class="mobile-user-cards" style="display: none;">
+                    <?php foreach ($usuarios as $usuario): ?>
+                        <div class="mobile-user-card">
+                            <div class="mobile-user-header">
+                                <h4 class="mobile-user-name"><?php echo htmlspecialchars($usuario['nome']); ?></h4>
+                                <?php 
+                                $tipoDisplay = [
+                                    'admin' => ['text' => 'Admin', 'class' => 'danger'],
+                                    'secretaria' => ['text' => 'CFC', 'class' => 'primary'],
+                                    'instrutor' => ['text' => 'Instrutor', 'class' => 'warning'],
+                                    'aluno' => ['text' => 'Aluno', 'class' => 'info']
+                                ];
+                                $tipoInfo = $tipoDisplay[$usuario['tipo']] ?? ['text' => ucfirst($usuario['tipo']), 'class' => 'secondary'];
+                                ?>
+                                <span class="badge badge-<?php echo $tipoInfo['class']; ?> mobile-user-badge">
+                                    <?php echo $tipoInfo['text']; ?>
+                                </span>
+                            </div>
+                            
+                            <div class="mobile-user-info">
+                                <div class="mobile-user-field">
+                                    <span class="mobile-user-label">E-mail</span>
+                                    <span class="mobile-user-value"><?php echo htmlspecialchars($usuario['email']); ?></span>
+                                </div>
+                                <div class="mobile-user-field">
+                                    <span class="mobile-user-label">Status</span>
+                                    <span class="mobile-user-value">
+                                        <span class="badge badge-<?php echo $usuario['ativo'] ? 'success' : 'secondary'; ?>">
+                                            <?php echo $usuario['ativo'] ? 'Ativo' : 'Inativo'; ?>
+                                        </span>
+                                    </span>
+                                </div>
+                                <div class="mobile-user-field">
+                                    <span class="mobile-user-label">Criado em</span>
+                                    <span class="mobile-user-value"><?php echo date('d/m/Y', strtotime($usuario['criado_em'])); ?></span>
+                                </div>
+                                <div class="mobile-user-field">
+                                    <span class="mobile-user-label">Último acesso</span>
+                                    <span class="mobile-user-value">
+                                        <?php echo $usuario['ultimo_acesso'] ? date('d/m/Y H:i', strtotime($usuario['ultimo_acesso'])) : 'Nunca'; ?>
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            <div class="mobile-user-actions">
+                                <button class="btn btn-edit action-btn btn-editar-usuario" 
+                                        data-user-id="<?php echo $usuario['id']; ?>"
+                                        title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-danger action-btn btn-excluir-usuario" 
+                                        data-user-id="<?php echo $usuario['id']; ?>"
+                                        title="Excluir">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
             <?php else: ?>
                 <div class="text-center p-5">
@@ -1267,6 +1513,29 @@ document.addEventListener('DOMContentLoaded', function() {
     document.head.appendChild(style);
     
     console.log('Pagina de usuarios inicializada com sucesso!');
+    
+    // Função para alternar entre tabela e cards mobile
+    function toggleMobileLayout() {
+        const isMobile = window.innerWidth <= 480;
+        const tableContainer = document.querySelector('.table-container');
+        const mobileCards = document.querySelector('.mobile-user-cards');
+        
+        if (isMobile && mobileCards) {
+            // Mobile pequeno - mostrar cards
+            if (tableContainer) tableContainer.style.display = 'none';
+            mobileCards.style.display = 'block';
+        } else {
+            // Desktop/tablet - mostrar tabela
+            if (tableContainer) tableContainer.style.display = 'block';
+            if (mobileCards) mobileCards.style.display = 'none';
+        }
+    }
+    
+    // Executar na inicialização
+    toggleMobileLayout();
+    
+    // Executar no resize
+    window.addEventListener('resize', toggleMobileLayout);
 });
 
 // Verificação adicional após carregamento completo

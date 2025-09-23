@@ -25,7 +25,7 @@
             console.log(`CSS ${index + 1}:`, {
                 href: link.href,
                 loaded: link.sheet ? '✅ Carregado' : '❌ Não carregado',
-                rules: link.sheet ? link.sheet.cssRules.length : 0
+                rules: link.sheet ? (link.sheet.cssRules ? link.sheet.cssRules.length : 'N/A (CORS)') : 0
             });
         });
         
@@ -106,12 +106,17 @@
         let reloadCount = 0;
         
         stylesheets.forEach(link => {
-            if (!link.sheet || link.sheet.cssRules.length === 0) {
-                console.log('🔄 Recarregando CSS:', link.href);
-                const newLink = link.cloneNode(true);
-                newLink.href = link.href + '?v=' + Date.now();
-                link.parentNode.replaceChild(newLink, link);
-                reloadCount++;
+            try {
+                if (!link.sheet || (link.sheet.cssRules && link.sheet.cssRules.length === 0)) {
+                    console.log('🔄 Recarregando CSS:', link.href);
+                    const newLink = link.cloneNode(true);
+                    newLink.href = link.href + '?v=' + Date.now();
+                    link.parentNode.replaceChild(newLink, link);
+                    reloadCount++;
+                }
+            } catch (e) {
+                // Ignorar erros de CORS
+                console.log('⚠️ CSS com restrição CORS:', link.href);
             }
         });
         
