@@ -102,6 +102,162 @@ if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 }
 
 /* =====================================================
+   CSS RESPONSIVO PARA MOBILE - ALUNOS
+   ===================================================== */
+
+/* Layout responsivo para tablets */
+@media screen and (max-width: 768px), screen and (max-width: 900px) {
+    .card .card-body .table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    .card .card-body .table-container .table {
+        min-width: 600px !important;
+        width: 600px !important;
+        font-size: 14px !important;
+        table-layout: fixed !important;
+    }
+    
+    .card .card-body .table-container .table th,
+    .card .card-body .table-container .table td {
+        padding: 8px 6px !important;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+    }
+    
+    .action-buttons-compact {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px !important;
+        flex-wrap: nowrap !important;
+    }
+}
+
+/* Layout em cards para mobile */
+@media screen and (max-width: 480px), screen and (max-width: 600px) {
+    .card .card-body .table-container {
+        display: none !important;
+        overflow: visible !important;
+    }
+    
+    .card .card-body .table-container .table {
+        display: none !important;
+    }
+    
+    .card .card-body .mobile-aluno-cards {
+        display: block !important;
+        width: 100% !important;
+    }
+    
+    .mobile-aluno-card {
+        background: #fff !important;
+        border: 1px solid #e3e6f0 !important;
+        border-radius: 8px !important;
+        margin-bottom: 15px !important;
+        padding: 15px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    
+    .mobile-aluno-header {
+        display: flex !important;
+        align-items: center !important;
+        margin-bottom: 12px !important;
+    }
+    
+    .mobile-aluno-avatar {
+        margin-right: 12px !important;
+    }
+    
+    .mobile-aluno-avatar .avatar-title {
+        width: 40px !important;
+        height: 40px !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 16px !important;
+        font-weight: bold !important;
+    }
+    
+    .mobile-aluno-info {
+        flex: 1 !important;
+    }
+    
+    .mobile-aluno-title {
+        display: flex !important;
+        align-items: center !important;
+        margin-bottom: 4px !important;
+    }
+    
+    .mobile-aluno-title strong {
+        font-size: 16px !important;
+        color: #2c3e50 !important;
+        margin-right: 8px !important;
+    }
+    
+    .mobile-aluno-id {
+        font-size: 12px !important;
+        color: #6c757d !important;
+        background: #f8f9fa !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+    }
+    
+    .mobile-aluno-email {
+        font-size: 13px !important;
+        color: #6c757d !important;
+    }
+    
+    .mobile-aluno-status {
+        margin-left: auto !important;
+    }
+    
+    .mobile-aluno-body {
+        margin-bottom: 12px !important;
+    }
+    
+    .mobile-aluno-field {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .mobile-aluno-label {
+        font-size: 12px !important;
+        color: #6c757d !important;
+        font-weight: 500 !important;
+    }
+    
+    .mobile-aluno-value {
+        font-size: 13px !important;
+        color: #2c3e50 !important;
+    }
+    
+    .mobile-aluno-actions {
+        display: flex !important;
+        gap: 8px !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .mobile-aluno-actions .btn {
+        width: 35px !important;
+        height: 35px !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 14px !important;
+        border-radius: 6px !important;
+    }
+}
+
+/* =====================================================
    ESTILOS PARA MODAL DE AGENDAMENTO
    ===================================================== */
 
@@ -940,11 +1096,11 @@ body.modal-open #modalAluno .modal-dialog {
 
 <!-- Tabela de Alunos -->
 <div class="card shadow">
-    <div class="card-header bg-primary text-white">
-        <h5 class="mb-0 text-secondary"><i class="fas fa-list me-2"></i>Lista de Alunos</h5>
+    <div class="card-header bg-dark">
+        <h5 class="mb-0" style="color: #6c757d !important;"><i class="fas fa-list me-2"></i>Lista de Alunos</h5>
     </div>
     <div class="card-body">
-        <div class="table-responsive">
+        <div class="table-responsive table-container">
             <table class="table table-striped table-hover" id="tabelaAlunos">
                 <thead class="table-dark">
                     <tr>
@@ -1107,6 +1263,89 @@ body.modal-open #modalAluno .modal-dialog {
                     <?php endif; ?>
                 </tbody>
             </table>
+        </div>
+        
+        <!-- Layout em cards para mobile -->
+        <div class="mobile-aluno-cards" style="display: none;">
+            <?php if (!empty($alunos)): ?>
+                <?php foreach ($alunos as $aluno): ?>
+                <div class="mobile-aluno-card" data-aluno-id="<?php echo $aluno['id']; ?>">
+                    <div class="mobile-aluno-header">
+                        <div class="mobile-aluno-avatar">
+                            <div class="avatar-title bg-primary rounded-circle">
+                                <?php echo strtoupper(substr($aluno['nome'], 0, 1)); ?>
+                            </div>
+                        </div>
+                        <div class="mobile-aluno-info">
+                            <div class="mobile-aluno-title">
+                                <strong><?php echo htmlspecialchars($aluno['nome']); ?></strong>
+                                <span class="mobile-aluno-id">#<?php echo $aluno['id']; ?></span>
+                            </div>
+                            <?php if ($aluno['email']): ?>
+                            <div class="mobile-aluno-email"><?php echo htmlspecialchars($aluno['email']); ?></div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="mobile-aluno-status">
+                            <?php
+                            $statusClass = [
+                                'ativo' => 'success',
+                                'inativo' => 'danger',
+                                'concluido' => 'info'
+                            ];
+                            $statusText = [
+                                'ativo' => 'Ativo',
+                                'inativo' => 'Inativo',
+                                'concluido' => 'Concluído'
+                            ];
+                            ?>
+                            <span class="badge bg-<?php echo $statusClass[$aluno['status']] ?? 'secondary'; ?>">
+                                <?php echo $statusText[$aluno['status']] ?? ucfirst($aluno['status']); ?>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="mobile-aluno-body">
+                        <div class="mobile-aluno-field">
+                            <span class="mobile-aluno-label">Categoria</span>
+                            <span class="mobile-aluno-value">
+                                <?php 
+                                if (!empty($aluno['operacoes'])) {
+                                    $categorias = array_column($aluno['operacoes'], 'categoria_cnh');
+                                    echo implode(', ', array_unique($categorias));
+                                } else {
+                                    echo htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A');
+                                }
+                                ?>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="mobile-aluno-actions">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="visualizarAluno(<?php echo $aluno['id']; ?>)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-warning" onclick="editarAluno(<?php echo $aluno['id']; ?>)">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-info" onclick="agendarAula(<?php echo $aluno['id']; ?>)">
+                            <i class="fas fa-calendar-plus"></i>
+                        </button>
+                        <?php if ($aluno['status'] === 'ativo'): ?>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="desativarAluno(<?php echo $aluno['id']; ?>)">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                        <?php else: ?>
+                        <button type="button" class="btn btn-sm btn-success" onclick="ativarAluno(<?php echo $aluno['id']; ?>)">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <?php endif; ?>
+                        <button type="button" class="btn btn-sm btn-danger" onclick="excluirAluno(<?php echo $aluno['id']; ?>)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
     </div>
 </div>
@@ -4107,4 +4346,34 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-</script>
+
+// =====================================================
+// CONTROLE DE LAYOUT RESPONSIVO PARA ALUNOS
+// =====================================================
+
+function toggleMobileLayoutAlunos() {
+    const viewportWidth = window.innerWidth;
+    const isMobile = viewportWidth <= 600;
+    const tableContainer = document.querySelector('.table-container');
+    const mobileCards = document.querySelector('.mobile-aluno-cards');
+
+    if (isMobile && mobileCards) {
+        if (tableContainer) {
+            tableContainer.style.display = 'none';
+        }
+        mobileCards.style.display = 'block';
+    } else {
+        if (tableContainer) {
+            tableContainer.style.display = 'block';
+        }
+        if (mobileCards) {
+            mobileCards.style.display = 'none';
+        }
+    }
+}
+
+// Listener para redimensionamento da janela
+window.addEventListener('resize', toggleMobileLayoutAlunos);
+
+// Chamada inicial para definir o layout correto
+toggleMobileLayoutAlunos();
