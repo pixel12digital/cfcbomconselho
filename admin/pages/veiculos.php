@@ -312,6 +312,150 @@ try {
     </div>
 </div>
 
+<!-- Cards Mobile para Veículos -->
+<div class="mobile-veiculo-cards" id="mobileVeiculoCards">
+    <?php if (!empty($veiculos)): ?>
+        <?php foreach ($veiculos as $veiculo): ?>
+        <div class="mobile-veiculo-card">
+            <div class="mobile-veiculo-header">
+                <div class="mobile-veiculo-avatar">
+                    <i class="fas fa-car"></i>
+                </div>
+                <div class="mobile-veiculo-info">
+                    <div class="mobile-veiculo-title">
+                        <?php echo htmlspecialchars($veiculo['marca'] . ' ' . $veiculo['modelo']); ?>
+                    </div>
+                    <div class="mobile-veiculo-subtitle">
+                        ID: <?php echo $veiculo['id']; ?> • Ano/Modelo: <?php echo htmlspecialchars($veiculo['ano']); ?>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mobile-veiculo-body">
+                <div class="mobile-veiculo-field">
+                    <span class="mobile-veiculo-label">Placa:</span>
+                    <span class="mobile-veiculo-value">
+                        <code><?php echo htmlspecialchars($veiculo['placa']); ?></code>
+                    </span>
+                </div>
+                
+                <div class="mobile-veiculo-field">
+                    <span class="mobile-veiculo-label">Status:</span>
+                    <span class="mobile-veiculo-value">
+                        <?php
+                        $statusClass = [
+                            'ativo' => 'success',
+                            'inativo' => 'danger',
+                            'manutencao' => 'warning'
+                        ];
+                        $statusText = [
+                            'ativo' => 'Ativo',
+                            'inativo' => 'Inativo',
+                            'manutencao' => 'Em Manutenção'
+                        ];
+                        ?>
+                        <span class="badge bg-<?php echo $statusClass[$veiculo['status']] ?? 'secondary'; ?>">
+                            <?php echo $statusText[$veiculo['status']] ?? ucfirst($veiculo['status']); ?>
+                        </span>
+                    </span>
+                </div>
+                
+                <div class="mobile-veiculo-field">
+                    <span class="mobile-veiculo-label">Disponibilidade:</span>
+                    <span class="mobile-veiculo-value">
+                        <?php if ($veiculo['disponivel']): ?>
+                            <span class="badge bg-success">Disponível</span>
+                        <?php else: ?>
+                            <span class="badge bg-warning">Ocupado</span>
+                        <?php endif; ?>
+                        <br><small class="text-muted">
+                            <?php echo $veiculo['aulas_hoje'] ?? 0; ?> aulas hoje
+                        </small>
+                    </span>
+                </div>
+                
+                <div class="mobile-veiculo-field">
+                    <span class="mobile-veiculo-label">Próxima Manutenção:</span>
+                    <span class="mobile-veiculo-value">
+                        <?php if ($veiculo['proxima_manutencao']): ?>
+                            <small><?php echo date('d/m/Y', strtotime($veiculo['proxima_manutencao'])); ?></small>
+                            <?php 
+                            $dias_manutencao = (strtotime($veiculo['proxima_manutencao']) - time()) / (60 * 60 * 24);
+                            if ($dias_manutencao <= 7): ?>
+                                <br><span class="badge bg-danger">Urgente</span>
+                            <?php elseif ($dias_manutencao <= 30): ?>
+                                <br><span class="badge bg-warning">Próximo</span>
+                            <?php endif; ?>
+                        <?php else: ?>
+                            <span class="text-muted">Não agendada</span>
+                        <?php endif; ?>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="mobile-veiculo-actions">
+                <button type="button" class="btn btn-sm btn-primary" 
+                        onclick="editarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                        title="Editar dados do veículo">
+                    <i class="fas fa-edit"></i>
+                    <span>Editar</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-info" 
+                        onclick="visualizarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                        title="Ver detalhes completos do veículo">
+                    <i class="fas fa-eye"></i>
+                    <span>Ver</span>
+                </button>
+                <button type="button" class="btn btn-sm btn-warning" 
+                        onclick="agendarManutencao(<?php echo $veiculo['id']; ?>)" 
+                        title="Agendar manutenção para este veículo">
+                    <i class="fas fa-tools"></i>
+                    <span>Manutenção</span>
+                </button>
+                <?php if ($veiculo['status'] === 'ativo'): ?>
+                <button type="button" class="btn btn-sm btn-secondary" 
+                        onclick="desativarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                        title="Desativar veículo">
+                    <i class="fas fa-ban"></i>
+                    <span>Desativar</span>
+                </button>
+                <?php else: ?>
+                <button type="button" class="btn btn-sm btn-success" 
+                        onclick="ativarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                        title="Reativar veículo">
+                    <i class="fas fa-check"></i>
+                    <span>Ativar</span>
+                </button>
+                <?php endif; ?>
+                <button type="button" class="btn btn-sm btn-danger" 
+                        onclick="excluirVeiculo(<?php echo $veiculo['id']; ?>)" 
+                        title="Excluir veículo">
+                    <i class="fas fa-trash"></i>
+                    <span>Excluir</span>
+                </button>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <div class="mobile-veiculo-card text-center">
+            <div class="mobile-veiculo-header">
+                <div class="mobile-veiculo-avatar">
+                    <i class="fas fa-inbox"></i>
+                </div>
+                <div class="mobile-veiculo-info">
+                    <div class="mobile-veiculo-title">Nenhum veículo cadastrado</div>
+                    <div class="mobile-veiculo-subtitle">Cadastre o primeiro veículo para começar</div>
+                </div>
+            </div>
+            <div class="mobile-veiculo-actions">
+                <button class="btn btn-primary" onclick="abrirModalVeiculo()">
+                    <i class="fas fa-plus me-1"></i>Cadastrar Primeiro Veículo
+                </button>
+            </div>
+        </div>
+    <?php endif; ?>
+</div>
+
 <!-- Modal Customizado para Cadastro/Edição de Veículo -->
 <div id="modalVeiculo" class="custom-modal" style="display: none !important; visibility: hidden !important;">
     <div class="custom-modal-dialog">
@@ -571,7 +715,7 @@ try {
     </div>
 </div>
 
-<!-- CSS para botões de ação inline -->
+<!-- CSS para botões de ação inline e responsividade -->
 <style>
 .action-buttons-inline {
     display: flex;
@@ -598,21 +742,158 @@ try {
     margin: 0;
 }
 
-/* Responsivo para telas menores */
+/* CSS RESPONSIVO PARA MOBILE */
 @media (max-width: 768px) {
+    /* Ocultar tabela no mobile */
+    .table-responsive {
+        display: none !important;
+    }
+    
+    /* Mostrar cards mobile */
+    .mobile-veiculo-cards {
+        display: block !important;
+    }
+    
+    /* Cards de veículos */
+    .mobile-veiculo-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .mobile-veiculo-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .mobile-veiculo-avatar {
+        width: 50px;
+        height: 50px;
+        background: #007bff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+    
+    .mobile-veiculo-avatar i {
+        color: white;
+        font-size: 1.25rem;
+    }
+    
+    .mobile-veiculo-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .mobile-veiculo-title {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #212529;
+        margin-bottom: 0.25rem;
+    }
+    
+    .mobile-veiculo-subtitle {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .mobile-veiculo-body {
+        margin-bottom: 0.75rem;
+    }
+    
+    .mobile-veiculo-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        padding: 0.25rem 0;
+    }
+    
+    .mobile-veiculo-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .mobile-veiculo-value {
+        font-size: 0.875rem;
+        color: #212529;
+        font-weight: 500;
+    }
+    
+    .mobile-veiculo-value code {
+        background: #f8f9fa;
+        padding: 0.25rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.8rem;
+        color: #dc3545;
+    }
+    
+    .mobile-veiculo-value .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .mobile-veiculo-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+        justify-content: center;
+        padding-top: 0.75rem;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .mobile-veiculo-actions .btn {
+        flex: 1;
+        min-width: 60px;
+        height: 36px;
+        font-size: 0.75rem;
+        padding: 0.375rem 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.25rem;
+    }
+    
+    .mobile-veiculo-actions .btn i {
+        font-size: 0.875rem;
+    }
+}
+
+@media (min-width: 769px) {
+    /* Ocultar cards no desktop */
+    .mobile-veiculo-cards {
+        display: none !important;
+    }
+    
+    /* Mostrar tabela no desktop */
+    .table-responsive {
+        display: block !important;
+    }
+    
+    /* Botões desktop */
     .action-buttons-inline {
-        flex-direction: column;
-        gap: 2px;
+        flex-direction: row;
+        gap: 3px;
     }
     
     .action-buttons-inline .btn {
-        width: 28px;
-        height: 28px;
-        font-size: 10px;
+        width: 32px;
+        height: 32px;
+        font-size: 12px;
     }
     
     .action-buttons-inline .btn i {
-        font-size: 10px;
+        font-size: 12px;
     }
 }
 </style>
