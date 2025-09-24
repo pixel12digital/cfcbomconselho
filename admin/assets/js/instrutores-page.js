@@ -1028,7 +1028,13 @@ document.addEventListener('DOMContentLoaded', function() {
 function verificarLayoutMobile() {
     const isMobile = window.innerWidth <= 768;
     const tableContainer = document.querySelector('.table-responsive');
-    const mobileCards = document.getElementById('mobileInstrutorCards');
+    let mobileCards = document.getElementById('mobileInstrutorCards');
+    
+    // Fallback para encontrar o container mobile
+    if (!mobileCards) {
+        mobileCards = document.querySelector('.mobile-instrutor-cards');
+        console.log('🔍 Usando fallback .mobile-instrutor-cards:', !!mobileCards);
+    }
     
     console.log('📱 Verificando layout mobile:', {
         isMobile: isMobile,
@@ -1414,8 +1420,36 @@ function preencherTabelaInstrutores(instrutores) {
     console.log('  - tbody:', tbody);
     console.log('  - mobileCards:', mobileCards);
     
+    // Verificar se os elementos existem
+    if (!tbody) {
+        console.error('❌ Elemento #tabelaInstrutores tbody não encontrado!');
+        return;
+    }
+    
+    if (!mobileCards) {
+        console.error('❌ Elemento #mobileInstrutorCards não encontrado!');
+        console.log('🔍 Tentando criar elemento mobileInstrutorCards...');
+        
+        // Tentar encontrar o container mobile-instrutor-cards
+        const mobileContainer = document.querySelector('.mobile-instrutor-cards');
+        if (mobileContainer) {
+            console.log('✅ Container .mobile-instrutor-cards encontrado, usando ele');
+            mobileContainer.innerHTML = '';
+        } else {
+            console.error('❌ Container .mobile-instrutor-cards também não encontrado!');
+            return;
+        }
+    }
+    
     tbody.innerHTML = '';
-    mobileCards.innerHTML = '';
+    if (mobileCards) {
+        mobileCards.innerHTML = '';
+    } else {
+        const mobileContainer = document.querySelector('.mobile-instrutor-cards');
+        if (mobileContainer) {
+            mobileContainer.innerHTML = '';
+        }
+    }
     
     instrutores.forEach((instrutor, index) => {
         console.log(`📝 Processando instrutor ${index + 1}:`, instrutor.nome || instrutor.nome_usuario);
@@ -1512,12 +1546,24 @@ function preencherTabelaInstrutores(instrutores) {
                 </button>
             </div>
         `;
-               mobileCards.appendChild(card);
-               console.log(`✅ Card mobile criado para: ${nomeExibicao}`);
-           });
-           
-           console.log('📱 Cards mobile criados:', mobileCards.children.length);
-           console.log('🖥️ Linhas da tabela criadas:', tbody.children.length);
+        
+        // Adicionar card ao container correto
+        if (mobileCards) {
+            mobileCards.appendChild(card);
+        } else {
+            const mobileContainer = document.querySelector('.mobile-instrutor-cards');
+            if (mobileContainer) {
+                mobileContainer.appendChild(card);
+            }
+        }
+        
+        console.log(`✅ Card mobile criado para: ${nomeExibicao}`);
+    });
+    
+    // Log final
+    const finalMobileCards = mobileCards || document.querySelector('.mobile-instrutor-cards');
+    console.log('📱 Cards mobile criados:', finalMobileCards ? finalMobileCards.children.length : 0);
+    console.log('🖥️ Linhas da tabela criadas:', tbody.children.length);
            
            // Forçar exibição dos cards mobile após criação
            setTimeout(() => {
