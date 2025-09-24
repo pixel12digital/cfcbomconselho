@@ -1205,8 +1205,8 @@ function preencherModalVisualizacao(turma) {
             <!-- Progresso da Turma -->
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header bg-${corProgresso} text-white">
-                        <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Progresso da Turma</h6>
+                    <div class="card-header bg-light border-bottom">
+                        <h6 class="mb-0 text-dark"><i class="fas fa-chart-line me-2 text-secondary"></i>Progresso da Turma</h6>
                     </div>
                     <div class="card-body py-3">
                         <div class="d-flex justify-content-between align-items-center mb-3">
@@ -1239,8 +1239,8 @@ function preencherModalVisualizacao(turma) {
             <!-- Instrutor Responsável -->
             <div class="col-md-6">
                 <div class="card h-100">
-                    <div class="card-header bg-info text-white">
-                        <h6 class="mb-0"><i class="fas fa-user-tie me-2"></i>Instrutor Responsável</h6>
+                    <div class="card-header bg-light border-bottom">
+                        <h6 class="mb-0 text-dark"><i class="fas fa-user-tie me-2 text-secondary"></i>Instrutor Responsável</h6>
                     </div>
                     <div class="card-body text-center py-4">
                         <div class="mb-3">
@@ -1258,8 +1258,8 @@ function preencherModalVisualizacao(turma) {
             <!-- Estatísticas da Turma -->
             <div class="col-md-6">
                 <div class="card h-100">
-                    <div class="card-header bg-success text-white">
-                        <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estatísticas</h6>
+                    <div class="card-header bg-light border-bottom">
+                        <h6 class="mb-0 text-dark"><i class="fas fa-chart-bar me-2 text-secondary"></i>Estatísticas</h6>
                     </div>
                     <div class="card-body p-3">
                         <div class="row g-2">
@@ -1299,8 +1299,8 @@ function preencherModalVisualizacao(turma) {
             <!-- Alunos da Turma -->
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header bg-warning text-dark">
-                        <h6 class="mb-0"><i class="fas fa-users me-2"></i>Alunos Matriculados (${turma.total_alunos || 0})</h6>
+                    <div class="card-header bg-light border-bottom">
+                        <h6 class="mb-0 text-dark"><i class="fas fa-users me-2 text-secondary"></i>Alunos Matriculados (${turma.total_alunos || 0})</h6>
                     </div>
                     <div class="card-body">
                         ${turma.alunos && turma.alunos.length > 0 ? `
@@ -1343,8 +1343,8 @@ function preencherModalVisualizacao(turma) {
             <!-- Cronograma de Aulas -->
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Cronograma de Aulas</h6>
+                    <div class="card-header bg-light border-bottom">
+                        <h6 class="mb-0 text-dark"><i class="fas fa-calendar-alt me-2 text-secondary"></i>Cronograma de Aulas</h6>
                     </div>
                     <div class="card-body">
                         ${turma.aulas && turma.aulas.length > 0 ? `
@@ -1391,8 +1391,8 @@ function preencherModalVisualizacao(turma) {
             ${turma.observacoes ? `
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header bg-secondary text-white">
-                        <h6 class="mb-0"><i class="fas fa-sticky-note me-2"></i>Observações</h6>
+                    <div class="card-header bg-light border-bottom">
+                        <h6 class="mb-0 text-dark"><i class="fas fa-sticky-note me-2 text-secondary"></i>Observações</h6>
                     </div>
                     <div class="card-body">
                         <p class="mb-0">${turma.observacoes}</p>
