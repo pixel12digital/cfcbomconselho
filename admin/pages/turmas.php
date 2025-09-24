@@ -135,6 +135,32 @@ if (isset($_GET['sucesso'])) {
 ?>
 
 <style>
+/* CSS para Modal de Visualização */
+#modalVisualizarTurma .modal-body {
+    max-height: 80vh;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+    padding: 1.5rem;
+}
+
+#modalVisualizarTurma .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+#modalVisualizarTurma .modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#modalVisualizarTurma .modal-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+#modalVisualizarTurma .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
 /* Estilos específicos para turmas - Alinhados com identidade visual */
 .stats-card {
     background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
@@ -806,7 +832,7 @@ body:not(.modal-open) .modal-backdrop {
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="conteudoVisualizacaoTurma" style="max-height: 70vh; overflow-y: auto;">
+            <div class="modal-body" id="conteudoVisualizacaoTurma">
                 <div class="text-center">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Carregando...</span>
@@ -1194,10 +1220,10 @@ function preencherModalVisualizacao(turma) {
         <div class="row g-4">
             <!-- Cabeçalho da Turma -->
             <div class="col-12">
-                <div class="card border-0 bg-gradient" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);">
-                    <div class="card-body text-white text-center py-4">
-                        <h4 class="mb-2"><i class="fas fa-chalkboard-teacher me-2"></i>${turma.nome || 'N/A'}</h4>
-                        <p class="mb-0 opacity-75">Turma #${turma.id || 'N/A'} • ${turma.categoria_cnh || 'N/A'}</p>
+                <div class="card border-0 bg-light">
+                    <div class="card-body text-dark text-center py-4">
+                        <h4 class="mb-2 text-dark"><i class="fas fa-chalkboard-teacher me-2 text-secondary"></i>${turma.nome || 'N/A'}</h4>
+                        <p class="mb-0 text-muted">Turma #${turma.id || 'N/A'} • ${turma.categoria_cnh || 'N/A'}</p>
                     </div>
                 </div>
             </div>
