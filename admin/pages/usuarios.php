@@ -731,6 +731,71 @@ if ($action === 'list') {
     </div>
 </div>
 
+<!-- Modal de Credenciais -->
+<div id="credentialsModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">🔐 Credenciais Criadas</h3>
+            <button class="modal-close" onclick="closeCredentialsModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-success">
+                <i class="fas fa-check-circle"></i>
+                <strong>Senha redefinida com sucesso!</strong>
+            </div>
+            
+            <div class="credentials-container">
+                <div class="credential-item">
+                    <label class="credential-label">
+                        <i class="fas fa-envelope"></i>
+                        Email:
+                    </label>
+                    <div class="credential-value">
+                        <input type="text" id="credentialEmail" readonly value="" class="credential-input">
+                        <button class="btn btn-copy" onclick="copyToClipboard('credentialEmail')" title="Copiar email">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="credential-item">
+                    <label class="credential-label">
+                        <i class="fas fa-key"></i>
+                        Nova Senha Temporária:
+                    </label>
+                    <div class="credential-value">
+                        <input type="text" id="credentialPassword" readonly value="" class="credential-input">
+                        <button class="btn btn-copy" onclick="copyToClipboard('credentialPassword')" title="Copiar senha">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                        <button class="btn btn-toggle" onclick="togglePasswordVisibility()" title="Mostrar/Ocultar senha">
+                            <i class="fas fa-eye" id="toggleIcon"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>IMPORTANTE:</strong><br>
+                • Esta é uma nova senha temporária<br>
+                • A senha anterior foi invalidada<br>
+                • O usuário deve alterar no próximo acesso<br>
+                • Guarde estas informações em local seguro
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeCredentialsModal()">Fechar</button>
+            <button type="button" class="btn btn-success" onclick="copyAllCredentials()">
+                <i class="fas fa-copy"></i>
+                Copiar Tudo
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- Scripts específicos da página -->
 <script>
 // Verificar se as funções estão sendo definidas
@@ -1308,26 +1373,8 @@ function confirmResetPassword() {
                 console.log('🔐 Credenciais recebidas:', data.credentials);
                 const credentials = data.credentials;
                 
-                // Exibir credenciais em modal de alerta primeiro
-                const credentialsText = `
-🔐 SENHA REDEFINIDA COM SUCESSO!
-
-📧 Email: ${credentials.email}
-🔑 Nova Senha Temporária: ${credentials.senha_temporaria}
-
-⚠️ IMPORTANTE:
-• Esta é uma nova senha temporária
-• A senha anterior foi invalidada
-• O usuário deve alterar no próximo acesso
-• Guarde estas informações em local seguro
-
-Clique em "OK" para abrir a página completa de credenciais.
-                `;
-                
-                if (confirm(credentialsText)) {
-                    const credentialsUrl = `credenciais_criadas.php?credentials=${btoa(JSON.stringify(credentials))}`;
-                    window.open(credentialsUrl, '_blank');
-                }
+                // Exibir credenciais em modal customizado para facilitar cópia
+                showCredentialsModal(credentials);
             }
             
             // Não recarregar automaticamente - a página já está correta
@@ -1352,6 +1399,114 @@ Clique em "OK" para abrir a página completa de credenciais.
 
 // Garantir que a função esteja disponível globalmente
 window.confirmResetPassword = confirmResetPassword;
+
+// Mostrar modal de credenciais
+function showCredentialsModal(credentials) {
+    console.log('Exibindo modal de credenciais');
+    
+    // Preencher campos
+    document.getElementById('credentialEmail').value = credentials.email;
+    document.getElementById('credentialPassword').value = credentials.senha_temporaria;
+    
+    // Mostrar modal
+    const modal = document.getElementById('credentialsModal');
+    modal.classList.add('show');
+    
+    console.log('Modal de credenciais aberto');
+}
+
+// Garantir que a função esteja disponível globalmente
+window.showCredentialsModal = showCredentialsModal;
+
+// Fechar modal de credenciais
+function closeCredentialsModal() {
+    console.log('Fechando modal de credenciais');
+    const modal = document.getElementById('credentialsModal');
+    modal.classList.remove('show');
+}
+
+// Garantir que a função esteja disponível globalmente
+window.closeCredentialsModal = closeCredentialsModal;
+
+// Copiar para área de transferência
+function copyToClipboard(elementId) {
+    const element = document.getElementById(elementId);
+    const value = element.value;
+    
+    // Selecionar o texto
+    element.select();
+    element.setSelectionRange(0, 99999); // Para mobile
+    
+    // Copiar para área de transferência
+    navigator.clipboard.writeText(value).then(() => {
+        // Feedback visual
+        const button = element.parentElement.querySelector('.btn-copy');
+        const originalHTML = button.innerHTML;
+        button.innerHTML = '<i class="fas fa-check"></i>';
+        button.style.background = '#28a745';
+        
+        // Mostrar notificação
+        showNotification(`${elementId === 'credentialEmail' ? 'Email' : 'Senha'} copiado!`, 'success');
+        
+        // Restaurar botão após 2 segundos
+        setTimeout(() => {
+            button.innerHTML = originalHTML;
+            button.style.background = '#17a2b8';
+        }, 2000);
+        
+        console.log('Copiado para área de transferência:', value);
+    }).catch(err => {
+        console.error('Erro ao copiar:', err);
+        
+        // Fallback para navegadores mais antigos
+        try {
+            document.execCommand('copy');
+            showNotification(`${elementId === 'credentialEmail' ? 'Email' : 'Senha'} copiado!`, 'success');
+        } catch (fallbackErr) {
+            console.error('Fallback copy failed:', fallbackErr);
+            showNotification('Erro ao copiar. Tente selecionar e copiar manualmente.', 'error');
+        }
+    });
+}
+
+// Garantir que a função esteja disponível globalmente
+window.copyToClipboard = copyToClipboard;
+
+// Alternar visibilidade da senha
+function togglePasswordVisibility() {
+    const passwordInput = document.getElementById('credentialPassword');
+    const toggleIcon = document.getElementById('toggleIcon');
+    
+    if (passwordInput.type === 'password') {
+        passwordInput.type = 'text';
+        toggleIcon.className = 'fas fa-eye-slash';
+    } else {
+        passwordInput.type = 'password';
+        toggleIcon.className = 'fas fa-eye';
+    }
+}
+
+// Garantir que a função esteja disponível globalmente
+window.togglePasswordVisibility = togglePasswordVisibility;
+
+// Copiar todas as credenciais
+function copyAllCredentials() {
+    const email = document.getElementById('credentialEmail').value;
+    const password = document.getElementById('credentialPassword').value;
+    
+    const allCredentials = `Email: ${email}\nSenha: ${password}`;
+    
+    navigator.clipboard.writeText(allCredentials).then(() => {
+        showNotification('Todas as credenciais copiadas!', 'success');
+        console.log('Todas as credenciais copiadas');
+    }).catch(err => {
+        console.error('Erro ao copiar credenciais:', err);
+        showNotification('Erro ao copiar credenciais.', 'error');
+    });
+}
+
+// Garantir que a função esteja disponível globalmente
+window.copyAllCredentials = copyAllCredentials;
 
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
@@ -1881,6 +2036,134 @@ document.addEventListener('DOMContentLoaded', function() {
             color: #9ca3af !important;
             cursor: not-allowed !important;
         }
+        
+        /* Estilos para o modal de credenciais */
+        #credentialsModal {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            z-index: 999999 !important;
+            display: none !important;
+            align-items: center !important;
+            justify-content: center !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            pointer-events: none !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        #credentialsModal.show {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        
+        #credentialsModal .modal {
+            background: white !important;
+            border-radius: 8px !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+            max-width: 600px !important;
+            width: 90% !important;
+            max-height: 90vh !important;
+            overflow-y: auto !important;
+            position: relative !important;
+            margin: 20px !important;
+            z-index: 1000000 !important;
+            pointer-events: auto !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        .credentials-container {
+            margin: 20px 0 !important;
+        }
+        
+        .credential-item {
+            margin-bottom: 20px !important;
+            padding: 15px !important;
+            background: #f8f9fa !important;
+            border-radius: 8px !important;
+            border-left: 4px solid #28a745 !important;
+        }
+        
+        .credential-label {
+            display: block !important;
+            font-weight: 600 !important;
+            color: #495057 !important;
+            margin-bottom: 8px !important;
+            font-size: 14px !important;
+        }
+        
+        .credential-label i {
+            margin-right: 8px !important;
+            color: #28a745 !important;
+        }
+        
+        .credential-value {
+            display: flex !important;
+            align-items: center !important;
+            gap: 8px !important;
+        }
+        
+        .credential-input {
+            flex: 1 !important;
+            padding: 10px 12px !important;
+            border: 1px solid #ced4da !important;
+            border-radius: 4px !important;
+            font-size: 14px !important;
+            background: white !important;
+            color: #495057 !important;
+            font-family: 'Courier New', monospace !important;
+            font-weight: 600 !important;
+        }
+        
+        .btn-copy, .btn-toggle {
+            padding: 8px 12px !important;
+            border: none !important;
+            border-radius: 4px !important;
+            cursor: pointer !important;
+            font-size: 14px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            min-width: 40px !important;
+            height: 40px !important;
+        }
+        
+        .btn-copy {
+            background: #17a2b8 !important;
+            color: white !important;
+        }
+        
+        .btn-copy:hover {
+            background: #138496 !important;
+        }
+        
+        .btn-toggle {
+            background: #6c757d !important;
+            color: white !important;
+        }
+        
+        .btn-toggle:hover {
+            background: #5a6268 !important;
+        }
+        
+        .btn-success {
+            background: #28a745 !important;
+            color: white !important;
+            border: none !important;
+        }
+        
+        .btn-success:hover {
+            background: #218838 !important;
+        }
     `;
     document.head.appendChild(style);
     
@@ -1968,7 +2251,7 @@ window.addEventListener('load', function() {
     console.log('- saveUser:', typeof saveUser);
     
     // Verificar se todas as funções estão disponíveis
-    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification', 'showResetPasswordModal', 'closeResetPasswordModal', 'confirmResetPassword'];
+    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification', 'showResetPasswordModal', 'closeResetPasswordModal', 'confirmResetPassword', 'showCredentialsModal', 'closeCredentialsModal', 'copyToClipboard', 'togglePasswordVisibility', 'copyAllCredentials'];
     const funcoesFaltando = funcoes.filter(f => typeof window[f] !== 'function');
     
     if (funcoesFaltando.length > 0) {
@@ -1982,7 +2265,7 @@ window.addEventListener('load', function() {
 // Timeout adicional para garantir que as funções sejam definidas
 setTimeout(function() {
     console.log('Verificação de timeout das funções:');
-    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification', 'showResetPasswordModal', 'closeResetPasswordModal', 'confirmResetPassword'];
+    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification', 'showResetPasswordModal', 'closeResetPasswordModal', 'confirmResetPassword', 'showCredentialsModal', 'closeCredentialsModal', 'copyToClipboard', 'togglePasswordVisibility', 'copyAllCredentials'];
     funcoes.forEach(f => {
         if (typeof window[f] === 'function') {
             console.log(f + ': Disponível');
