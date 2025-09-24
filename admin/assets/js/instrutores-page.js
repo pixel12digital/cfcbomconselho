@@ -1022,6 +1022,35 @@ document.addEventListener('DOMContentLoaded', function() {
     // Verificar se estamos no mobile e ajustar layout
     verificarLayoutMobile();
     
+    // CORREÇÃO TEMPORÁRIA: Forçar exibição dos elementos após carregamento
+    setTimeout(() => {
+        console.log('🔧 CORREÇÃO TEMPORÁRIA: Forçando exibição dos elementos...');
+        
+        const tableContainer = document.querySelector('.table-responsive');
+        const mobileCards = document.getElementById('mobileInstrutorCards') || document.querySelector('.mobile-instrutor-cards');
+        
+        if (tableContainer) {
+            tableContainer.style.setProperty('display', 'block', 'important');
+            tableContainer.style.setProperty('visibility', 'visible', 'important');
+            tableContainer.style.setProperty('opacity', '1', 'important');
+            console.log('✅ Tabela forçada a aparecer');
+        }
+        
+        if (mobileCards) {
+            mobileCards.style.setProperty('display', 'block', 'important');
+            mobileCards.style.setProperty('visibility', 'visible', 'important');
+            mobileCards.style.setProperty('opacity', '1', 'important');
+            console.log('✅ Cards mobile forçados a aparecer');
+        }
+        
+        // Verificar se há dados na tabela
+        const tbody = document.querySelector('#tabelaInstrutores tbody');
+        if (tbody && tbody.children.length === 0) {
+            console.log('⚠️ Tabela vazia, recarregando dados...');
+            carregarInstrutores();
+        }
+    }, 500);
+    
     // Adicionar listener para fechar modal ao clicar fora
     if (modal) {
         modal.addEventListener('click', function(e) {

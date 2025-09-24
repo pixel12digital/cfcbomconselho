@@ -233,6 +233,7 @@
 }
 
 /* CSS ULTRA AGRESSIVO PARA MODAL DE VISUALIZAÇÃO - FORÇAR LAYOUT EM COLUNA ÚNICA */
+/* APENAS DENTRO DO MODAL DE VISUALIZAÇÃO */
 #modalVisualizacaoInstrutor .modal-body-responsive,
 #modalVisualizacaoInstrutor .modal-body-responsive *,
 .modal-visualizacao-responsive .modal-body-responsive,
