@@ -507,7 +507,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <span>CFCs</span>
                         </a>
                         <?php endif; ?>
-                        <a href="pages/alunos.php" class="nav-sublink <?php echo $page === 'alunos' ? 'active' : ''; ?>">
+                        <a href="index.php?page=alunos" class="nav-sublink <?php echo $page === 'alunos' ? 'active' : ''; ?>">
                             <i class="fas fa-graduation-cap"></i>
                             <span>Alunos</span>
                             <div class="nav-badge"><?php echo $stats['total_alunos']; ?></div>
@@ -742,7 +742,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <span>CFCs</span>
                                 </a>
                                 <?php endif; ?>
-                                <a href="pages/alunos.php" class="mobile-nav-sublink <?php echo $page === 'alunos' ? 'active' : ''; ?>">
+                                <a href="index.php?page=alunos" class="mobile-nav-sublink <?php echo $page === 'alunos' ? 'active' : ''; ?>">
                                     <i class="fas fa-graduation-cap"></i>
                                     <span>Alunos</span>
                                     <span class="mobile-nav-badge"><?php echo $stats['total_alunos']; ?></span>
@@ -1351,9 +1351,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             }
             
             if (file_exists($content_file)) {
+                // Definir constante para indicar que estamos no sistema de roteamento
+                define('ADMIN_ROUTING', true);
                 include $content_file;
             } else {
                 // Página padrão - Dashboard
+                define('ADMIN_ROUTING', true);
                 include 'pages/dashboard.php';
             }
             ?>

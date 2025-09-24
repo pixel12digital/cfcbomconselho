@@ -1,4 +1,11 @@
 <?php
+// Verificar se estamos sendo incluídos pelo sistema de roteamento do admin
+if (!defined('ADMIN_ROUTING')) {
+    // Se acessado diretamente, redirecionar para o sistema de roteamento
+    header('Location: ../index.php?page=alunos');
+    exit;
+}
+
 // Verificar se as variáveis estão definidas
 if (!isset($alunos)) $alunos = [];
 if (!isset($cfcs)) $cfcs = [];
