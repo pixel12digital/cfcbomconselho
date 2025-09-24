@@ -1203,6 +1203,21 @@ function showResetPasswordModal(userId, userName, userEmail) {
     document.getElementById('confirmResetPassword').checked = false;
     document.getElementById('confirmResetBtn').disabled = true;
     
+    // Garantir que a tabela de usuários esteja visível antes de abrir o modal
+    const tableContainer = document.querySelector('.table-container');
+    const mobileCards = document.querySelector('.mobile-user-cards');
+    
+    if (tableContainer) {
+        tableContainer.style.display = 'block';
+    }
+    
+    if (mobileCards) {
+        const viewportWidth = window.innerWidth;
+        if (viewportWidth <= 600) {
+            mobileCards.style.display = 'block';
+        }
+    }
+    
     // Mostrar modal
     const modal = document.getElementById('resetPasswordModal');
     modal.classList.add('show');
@@ -1223,6 +1238,24 @@ function closeResetPasswordModal() {
     resetPasswordUser = null;
     document.getElementById('confirmResetPassword').checked = false;
     document.getElementById('confirmResetBtn').disabled = true;
+    
+    // Garantir que a tabela de usuários esteja visível
+    const tableContainer = document.querySelector('.table-container');
+    const mobileCards = document.querySelector('.mobile-user-cards');
+    
+    if (tableContainer) {
+        tableContainer.style.display = 'block';
+        console.log('Tabela de usuários mantida visível');
+    }
+    
+    if (mobileCards) {
+        // Verificar se é mobile e ajustar visibilidade
+        const viewportWidth = window.innerWidth;
+        if (viewportWidth <= 600) {
+            mobileCards.style.display = 'block';
+            console.log('Cards mobile mantidos visíveis');
+        }
+    }
     
     console.log('Modal de redefinição de senha fechado com sucesso!');
 }
@@ -1852,6 +1885,35 @@ document.addEventListener('DOMContentLoaded', function() {
     document.head.appendChild(style);
     
     console.log('Pagina de usuarios inicializada com sucesso!');
+    
+    // Função de debug para verificar elementos da página
+    function debugPageElements() {
+        console.log('=== DEBUG ELEMENTOS DA PÁGINA ===');
+        
+        const tableContainer = document.querySelector('.table-container');
+        const mobileCards = document.querySelector('.mobile-user-cards');
+        const cardBody = document.querySelector('.card-body');
+        
+        console.log('Table Container:', tableContainer);
+        console.log('Mobile Cards:', mobileCards);
+        console.log('Card Body:', cardBody);
+        
+        if (tableContainer) {
+            console.log('Table Container Display:', window.getComputedStyle(tableContainer).display);
+            console.log('Table Container Visibility:', window.getComputedStyle(tableContainer).visibility);
+        }
+        
+        if (mobileCards) {
+            console.log('Mobile Cards Display:', window.getComputedStyle(mobileCards).display);
+            console.log('Mobile Cards Visibility:', window.getComputedStyle(mobileCards).visibility);
+        }
+        
+        console.log('Viewport Width:', window.innerWidth);
+        console.log('================================');
+    }
+    
+    // Executar debug após carregamento
+    setTimeout(debugPageElements, 1000);
     
     // Função para alternar entre tabela e cards mobile
     function toggleMobileLayout() {
