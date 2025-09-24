@@ -577,6 +577,102 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
     }
 }
 
+/* =====================================================
+   RESPONSIVIDADE PARA ABAS DO MODAL - MOBILE
+   ===================================================== */
+
+@media (max-width: 768px) {
+    /* Abas do modal - Mobile */
+    .modal#modalAluno .nav-tabs {
+        flex-wrap: wrap !important;
+        gap: 0.25rem !important;
+        padding: 0.5rem !important;
+        background-color: #f8f9fa !important;
+        border-radius: 0.5rem !important;
+        margin-bottom: 1rem !important;
+        border: none !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link {
+        flex: 1 1 calc(50% - 0.125rem) !important;
+        min-width: calc(50% - 0.125rem) !important;
+        max-width: calc(50% - 0.125rem) !important;
+        padding: 0.5rem 0.25rem !important;
+        font-size: 0.75rem !important;
+        text-align: center !important;
+        border-radius: 0.375rem !important;
+        margin: 0 !important;
+        border: 1px solid #dee2e6 !important;
+        background-color: white !important;
+        color: #6c757d !important;
+        transition: all 0.2s ease !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 60px !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link:hover {
+        background-color: #e9ecef !important;
+        color: #495057 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link.active {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border-color: #0d6efd !important;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3) !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link i {
+        display: block !important;
+        font-size: 1.1rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link span {
+        display: block !important;
+        font-weight: 500 !important;
+        line-height: 1.2 !important;
+        font-size: 0.7rem !important;
+    }
+    
+    /* Conteúdo das abas - Mobile */
+    .modal#modalAluno .tab-content {
+        padding: 0.5rem !important;
+    }
+    
+    .modal#modalAluno .tab-pane {
+        padding: 0.5rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Abas em uma coluna para telas muito pequenas */
+    .modal#modalAluno .nav-tabs .nav-link {
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        margin-bottom: 0.25rem !important;
+        min-height: 50px !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link:last-child {
+        margin-bottom: 0 !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link i {
+        font-size: 1rem !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link span {
+        font-size: 0.65rem !important;
+    }
+}
+
 /* Estilos dos formulários */
 .modal#modalAluno .form-label {
     font-weight: 600 !important;
@@ -1404,37 +1500,44 @@ body.modal-open #modalAluno .modal-dialog {
                     <ul class="nav nav-tabs" id="alunoTabs" role="tablist" style="margin: 0; border-bottom: 1px solid #dee2e6;">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="dados-tab" data-bs-toggle="tab" data-bs-target="#dados" type="button" role="tab">
-                                <i class="fas fa-user me-1"></i>Dados
+                                <i class="fas fa-user"></i>
+                                <span>Dados</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="matricula-tab" data-bs-toggle="tab" data-bs-target="#matricula" type="button" role="tab">
-                                <i class="fas fa-graduation-cap me-1"></i>Matrícula/Serviço
+                                <i class="fas fa-graduation-cap"></i>
+                                <span>Matrícula</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation" id="financeiro-tab-container" style="display: none;">
                             <button class="nav-link" id="financeiro-tab" data-bs-toggle="tab" data-bs-target="#financeiro" type="button" role="tab">
-                                <i class="fas fa-dollar-sign me-1"></i>Financeiro
+                                <i class="fas fa-dollar-sign"></i>
+                                <span>Financeiro</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation" id="documentos-tab-container" style="display: none;">
                             <button class="nav-link" id="documentos-tab" data-bs-toggle="tab" data-bs-target="#documentos" type="button" role="tab">
-                                <i class="fas fa-file-alt me-1"></i>Documentos
+                                <i class="fas fa-file-alt"></i>
+                                <span>Documentos</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="agenda-tab" data-bs-toggle="tab" data-bs-target="#agenda" type="button" role="tab">
-                                <i class="fas fa-calendar-alt me-1"></i>Agenda/Aulas
+                                <i class="fas fa-calendar-alt"></i>
+                                <span>Agenda</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="teorico-tab" data-bs-toggle="tab" data-bs-target="#teorico" type="button" role="tab">
-                                <i class="fas fa-chalkboard-teacher me-1"></i>Teórico
+                                <i class="fas fa-chalkboard-teacher"></i>
+                                <span>Teórico</span>
                             </button>
                         </li>
                         <li class="nav-item" role="presentation">
                             <button class="nav-link" id="historico-tab" data-bs-toggle="tab" data-bs-target="#historico" type="button" role="tab">
-                                <i class="fas fa-history me-1"></i>Histórico & Auditoria
+                                <i class="fas fa-history"></i>
+                                <span>Histórico</span>
                             </button>
                         </li>
                     </ul>
