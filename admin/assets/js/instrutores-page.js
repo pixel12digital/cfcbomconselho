@@ -968,6 +968,31 @@ function imprimirInstrutores() {
 
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Inicializando página de instrutores...');
+    
+    // Verificar se há parâmetros na URL que podem causar abertura automática do modal
+    const urlParams = new URLSearchParams(window.location.search);
+    const modalParam = urlParams.get('modal');
+    const novoParam = urlParams.get('novo');
+    const criarParam = urlParams.get('criar');
+    
+    console.log('🔍 Parâmetros da URL:', {
+        modal: modalParam,
+        novo: novoParam,
+        criar: criarParam,
+        url: window.location.href
+    });
+    
+    // Garantir que o modal esteja fechado no carregamento
+    const modal = document.getElementById('modalInstrutor');
+    if (modal) {
+        console.log('🔒 Forçando fechamento do modal no carregamento...');
+        modal.style.setProperty('display', 'none', 'important');
+        modal.classList.remove('show');
+        modal.style.setProperty('visibility', 'hidden', 'important');
+        modal.style.setProperty('opacity', '0', 'important');
+    }
+    
     // Carregar dados iniciais
     carregarInstrutores();
     
@@ -978,7 +1003,6 @@ document.addEventListener('DOMContentLoaded', function() {
     verificarLayoutMobile();
     
     // Adicionar listener para fechar modal ao clicar fora
-    const modal = document.getElementById('modalInstrutor');
     if (modal) {
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
@@ -996,6 +1020,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Listener para mudanças de tamanho da tela
     window.addEventListener('resize', verificarLayoutMobile);
+    
+    console.log('✅ Página de instrutores inicializada com sucesso');
 });
 
 // Função para verificar se estamos no mobile e ajustar layout
@@ -1340,15 +1366,30 @@ function carregarInstrutores() {
     
     // Carregar instrutores para a tabela
     fetch(urlInstrutores)
-        .then(response => response.json())
+        .then(response => {
+            console.log('📡 Resposta da API Instrutores:', response.status, response.statusText);
+            return response.json();
+        })
         .then(data => {
+            console.log('📊 Dados recebidos da API Instrutores:', data);
             if (data.success) {
+                console.log('✅ Sucesso ao carregar instrutores:', data.data.length, 'instrutores');
                 preencherTabelaInstrutores(data.data);
                 atualizarEstatisticas(data.data);
+                
+                // Forçar verificação do layout mobile após carregamento
+                setTimeout(() => {
+                    console.log('🔄 Verificando layout mobile após carregamento...');
+                    verificarLayoutMobile();
+                }, 200);
+            } else {
+                console.error('❌ Erro na API Instrutores:', data.error);
+                mostrarAlerta('Erro ao carregar instrutores: ' + (data.error || 'Erro desconhecido'), 'danger');
             }
         })
         .catch(error => {
-            console.error('Erro ao carregar instrutores:', error);
+            console.error('❌ Erro ao carregar instrutores:', error);
+            mostrarAlerta('Erro ao carregar instrutores: ' + error.message, 'danger');
         });
 }
 
@@ -1469,7 +1510,23 @@ function preencherTabelaInstrutores(instrutores) {
            
            // Forçar exibição dos cards mobile após criação
            setTimeout(() => {
+               console.log('🔄 Forçando verificação do layout após criação dos cards...');
                verificarLayoutMobile();
+               
+               // Verificar se os cards estão visíveis no mobile
+               const isMobile = window.innerWidth <= 768;
+               if (isMobile && mobileCards) {
+                   console.log('📱 Verificando visibilidade dos cards mobile...');
+                   console.log('  - mobileCards.style.display:', mobileCards.style.display);
+                   console.log('  - mobileCards.offsetHeight:', mobileCards.offsetHeight);
+                   console.log('  - mobileCards.children.length:', mobileCards.children.length);
+                   
+                   if (mobileCards.children.length > 0) {
+                       console.log('✅ Cards mobile criados e devem estar visíveis');
+                   } else {
+                       console.error('❌ Nenhum card mobile foi criado!');
+                   }
+               }
            }, 100);
 }
 
