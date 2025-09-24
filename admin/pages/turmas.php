@@ -101,23 +101,27 @@ if (isset($_GET['sucesso']) && $_GET['sucesso'] == '1') {
 ?>
 
 <style>
-/* Estilos específicos para turmas */
+/* Estilos específicos para turmas - Alinhados com identidade visual */
 .stats-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
     color: white;
-    border-radius: 10px;
+    border-radius: 8px;
     padding: 1.5rem;
     margin-bottom: 1rem;
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 .stats-card.success {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+    background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
 }
 .stats-card.warning {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+    color: #212529;
 }
 .stats-card.info {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
 }
+
 .status-badge {
     padding: 0.25rem 0.5rem;
     border-radius: 0.375rem;
@@ -128,6 +132,137 @@ if (isset($_GET['sucesso']) && $_GET['sucesso'] == '1') {
 .status-inativa { background-color: #f8d7da; color: #721c24; }
 .status-pendente { background-color: #fff3cd; color: #856404; }
 .status-indefinido { background-color: #e2e3e5; color: #383d41; }
+
+/* CSS RESPONSIVO PARA MOBILE */
+@media (max-width: 768px) {
+    /* Ocultar tabela no mobile */
+    .table-responsive {
+        display: none !important;
+    }
+    
+    /* Mostrar cards mobile */
+    .mobile-turma-cards {
+        display: block !important;
+    }
+    
+    /* Cards de turmas */
+    .mobile-turma-card {
+        background: white;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+        margin-bottom: 1rem;
+        padding: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .mobile-turma-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #e9ecef;
+    }
+    
+    .mobile-turma-avatar {
+        width: 50px;
+        height: 50px;
+        background: #007bff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 0.75rem;
+        flex-shrink: 0;
+    }
+    
+    .mobile-turma-avatar i {
+        color: white;
+        font-size: 1.25rem;
+    }
+    
+    .mobile-turma-info {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .mobile-turma-title {
+        font-weight: 600;
+        font-size: 1rem;
+        color: #212529;
+        margin-bottom: 0.25rem;
+    }
+    
+    .mobile-turma-subtitle {
+        font-size: 0.875rem;
+        color: #6c757d;
+    }
+    
+    .mobile-turma-body {
+        margin-bottom: 0.75rem;
+    }
+    
+    .mobile-turma-field {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 0.5rem;
+        padding: 0.25rem 0;
+    }
+    
+    .mobile-turma-label {
+        font-size: 0.875rem;
+        color: #6c757d;
+        font-weight: 500;
+    }
+    
+    .mobile-turma-value {
+        font-size: 0.875rem;
+        color: #212529;
+        font-weight: 500;
+    }
+    
+    .mobile-turma-value .badge {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.5rem;
+    }
+    
+    .mobile-turma-actions {
+        display: flex;
+        gap: 0.25rem;
+        flex-wrap: nowrap;
+        justify-content: center;
+        padding-top: 0.75rem;
+        border-top: 1px solid #e9ecef;
+    }
+    
+    .mobile-turma-actions .btn {
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 6px;
+        font-size: 0.875rem;
+    }
+    
+    .mobile-turma-actions .btn i {
+        font-size: 0.875rem;
+        margin: 0;
+    }
+}
+
+@media (min-width: 769px) {
+    /* Ocultar cards no desktop */
+    .mobile-turma-cards {
+        display: none !important;
+    }
+    
+    /* Mostrar tabela no desktop */
+    .table-responsive {
+        display: block !important;
+    }
+}
 
 /* Correção para overlay do modal */
 .modal-backdrop {
@@ -368,6 +503,133 @@ body:not(.modal-open) .modal-backdrop {
             </table>
         </div>
     </div>
+</div>
+
+<!-- Cards Mobile para Turmas -->
+<div class="mobile-turma-cards" id="mobileTurmaCards">
+    <?php if (!empty($turmas)): ?>
+        <?php foreach ($turmas as $turma): ?>
+        <div class="mobile-turma-card">
+            <div class="mobile-turma-header">
+                <div class="mobile-turma-avatar">
+                    <i class="fas fa-chalkboard-teacher"></i>
+                </div>
+                <div class="mobile-turma-info">
+                    <div class="mobile-turma-title">
+                        <?php echo htmlspecialchars($turma['nome']); ?>
+                    </div>
+                    <div class="mobile-turma-subtitle">
+                        ID: <?php echo $turma['id']; ?> • <?php echo htmlspecialchars($turma['categoria_cnh'] ?? 'N/A'); ?>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mobile-turma-body">
+                <div class="mobile-turma-field">
+                    <span class="mobile-turma-label">Instrutor:</span>
+                    <span class="mobile-turma-value">
+                        <?php echo htmlspecialchars($turma['instrutor_nome'] ?? 'N/A'); ?>
+                    </span>
+                </div>
+                
+                <div class="mobile-turma-field">
+                    <span class="mobile-turma-label">Data Início:</span>
+                    <span class="mobile-turma-value">
+                        <?php echo $turma['data_inicio'] ? date('d/m/Y', strtotime($turma['data_inicio'])) : 'N/A'; ?>
+                    </span>
+                </div>
+                
+                <div class="mobile-turma-field">
+                    <span class="mobile-turma-label">Data Fim:</span>
+                    <span class="mobile-turma-value">
+                        <?php echo $turma['data_fim'] ? date('d/m/Y', strtotime($turma['data_fim'])) : 'N/A'; ?>
+                    </span>
+                </div>
+                
+                <div class="mobile-turma-field">
+                    <span class="mobile-turma-label">Alunos:</span>
+                    <span class="mobile-turma-value">
+                        <span class="badge bg-info"><?php echo $turma['total_alunos'] ?? 0; ?></span>
+                    </span>
+                </div>
+                
+                <div class="mobile-turma-field">
+                    <span class="mobile-turma-label">Status:</span>
+                    <span class="mobile-turma-value">
+                        <?php
+                        $statusClass = [
+                            'ativa' => 'success',
+                            'inativa' => 'danger',
+                            'pendente' => 'warning'
+                        ];
+                        $statusText = [
+                            'ativa' => 'Ativa',
+                            'inativa' => 'Inativa',
+                            'pendente' => 'Pendente'
+                        ];
+                        ?>
+                        <span class="badge bg-<?php echo $statusClass[$turma['status']] ?? 'secondary'; ?>">
+                            <?php echo $statusText[$turma['status']] ?? ucfirst($turma['status']); ?>
+                        </span>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="mobile-turma-actions">
+                <button type="button" class="btn btn-sm btn-primary" 
+                        onclick="editarTurma(<?php echo $turma['id']; ?>)" 
+                        title="Editar turma">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-info" 
+                        onclick="visualizarTurma(<?php echo $turma['id']; ?>)" 
+                        title="Ver detalhes da turma">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-warning" 
+                        onclick="gerenciarAlunos(<?php echo $turma['id']; ?>)" 
+                        title="Gerenciar alunos da turma">
+                    <i class="fas fa-users"></i>
+                </button>
+                <?php if ($turma['status'] === 'ativa'): ?>
+                <button type="button" class="btn btn-sm btn-secondary" 
+                        onclick="desativarTurma(<?php echo $turma['id']; ?>)" 
+                        title="Desativar turma">
+                    <i class="fas fa-ban"></i>
+                </button>
+                <?php else: ?>
+                <button type="button" class="btn btn-sm btn-success" 
+                        onclick="ativarTurma(<?php echo $turma['id']; ?>)" 
+                        title="Ativar turma">
+                    <i class="fas fa-check"></i>
+                </button>
+                <?php endif; ?>
+                <button type="button" class="btn btn-sm btn-danger" 
+                        onclick="excluirTurma(<?php echo $turma['id']; ?>)" 
+                        title="Excluir turma">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    <?php else: ?>
+        <div class="mobile-turma-card text-center">
+            <div class="mobile-turma-header">
+                <div class="mobile-turma-avatar">
+                    <i class="fas fa-inbox"></i>
+                </div>
+                <div class="mobile-turma-info">
+                    <div class="mobile-turma-title">Nenhuma turma cadastrada</div>
+                    <div class="mobile-turma-subtitle">Crie a primeira turma para começar</div>
+                </div>
+            </div>
+            <div class="mobile-turma-actions">
+                <button class="btn btn-primary" onclick="novaTurma()">
+                    <i class="fas fa-plus me-1"></i>Nova Turma
+                </button>
+            </div>
+        </div>
+    <?php endif; ?>
 </div>
 
 <!-- Modal Nova Turma -->
