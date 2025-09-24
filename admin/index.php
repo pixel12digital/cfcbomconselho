@@ -517,7 +517,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <span>Instrutores</span>
                             <div class="nav-badge"><?php echo $stats['total_instrutores']; ?></div>
                         </a>
-                        <a href="pages/veiculos.php" class="nav-sublink <?php echo $page === 'veiculos' ? 'active' : ''; ?>">
+                        <a href="index.php?page=veiculos" class="nav-sublink <?php echo $page === 'veiculos' ? 'active' : ''; ?>">
                             <i class="fas fa-car"></i>
                             <span>Veículos</span>
                             <div class="nav-badge"><?php echo $stats['total_veiculos']; ?></div>
@@ -752,7 +752,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <span>Instrutores</span>
                                     <span class="mobile-nav-badge"><?php echo $stats['total_instrutores']; ?></span>
                                 </a>
-                                <a href="pages/veiculos.php" class="mobile-nav-sublink <?php echo $page === 'veiculos' ? 'active' : ''; ?>">
+                                <a href="index.php?page=veiculos" class="mobile-nav-sublink <?php echo $page === 'veiculos' ? 'active' : ''; ?>">
                                     <i class="fas fa-car"></i>
                                     <span>Veículos</span>
                                     <span class="mobile-nav-badge"><?php echo $stats['total_veiculos']; ?></span>
