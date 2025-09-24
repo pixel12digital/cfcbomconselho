@@ -732,11 +732,26 @@ function abrirModalVisualizacao(instrutor) {
     modal.style.setProperty('display', 'block', 'important');
     modal.style.setProperty('visibility', 'visible', 'important');
     modal.style.setProperty('opacity', '1', 'important');
+    modal.style.setProperty('z-index', '99999', 'important');
+    modal.style.setProperty('position', 'fixed', 'important');
+    modal.style.setProperty('top', '0', 'important');
+    modal.style.setProperty('left', '0', 'important');
+    modal.style.setProperty('width', '100vw', 'important');
+    modal.style.setProperty('height', '100vh', 'important');
     modal.classList.add('show');
+    
+    // Garantir que o modal-dialog seja visível
+    const modalDialog = modal.querySelector('.custom-modal-dialog');
+    if (modalDialog) {
+        modalDialog.style.setProperty('z-index', '100000', 'important');
+        modalDialog.style.setProperty('position', 'relative', 'important');
+        modalDialog.style.setProperty('opacity', '1', 'important');
+        modalDialog.style.setProperty('transform', 'translateY(0)', 'important');
+        modalDialog.style.setProperty('display', 'block', 'important');
+    }
     
     // Animar abertura
     setTimeout(() => {
-        const modalDialog = modal.querySelector('.custom-modal-dialog');
         if (modalDialog) {
             modalDialog.style.opacity = '1';
             modalDialog.style.transform = 'translateY(0)';
