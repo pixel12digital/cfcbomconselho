@@ -2106,8 +2106,9 @@ function criarModalVisualizacao() {
 }
 
 function preencherModalVisualizacao(instrutor) {
+    const modal = document.getElementById('modalVisualizacaoInstrutor');
     const conteudo = document.getElementById('conteudoVisualizacao');
-    if (!conteudo) return;
+    if (!modal || !conteudo) return;
     
     // Usar o nome correto (nome_usuario se nome estiver vazio)
     const nomeExibicao = instrutor.nome || instrutor.nome_usuario || 'N/A';
