@@ -3608,63 +3608,18 @@ document.addEventListener('keydown', function(e) {
 // FUNÇÕES PARA MODAL CUSTOMIZADO
 
 // Função para ajustar modal responsivo (deve ser global)
-function ajustarModalResponsivo() {
-    const modalDialog = document.querySelector('#modalAluno .custom-modal-dialog');
-    if (modalDialog) {
-        if (window.innerWidth <= 768) {
-            // Mobile - ocupar quase toda a tela
-            modalDialog.style.cssText = `
-                position: fixed !important;
-                top: 0.5rem !important;
-                left: 0.5rem !important;
-                right: 0.5rem !important;
-                bottom: 0.5rem !important;
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            `;
-        } else if (window.innerWidth <= 1200) {
-            // Tablet - margens menores
-            modalDialog.style.cssText = `
-                position: fixed !important;
-                top: 1rem !important;
-                left: 1rem !important;
-                right: 1rem !important;
-                bottom: 1rem !important;
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            `;
-        } else {
-            // Desktop - margens padrão
-            modalDialog.style.cssText = `
-                position: fixed !important;
-                top: 2rem !important;
-                left: 2rem !important;
-                right: 2rem !important;
-                bottom: 2rem !important;
-                width: auto !important;
-                height: auto !important;
-                margin: 0 !important;
-                padding: 0 !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-            `;
-        }
-    }
-}
+// Função removida - usando a versão mais completa abaixo
 
 function abrirModalAluno() {
     console.log('🚀 Abrindo modal customizado...');
+    
+    // Verificar se não há erro de sintaxe JavaScript
+    if (typeof fecharModalAluno === 'undefined') {
+        console.error('❌ ERRO: função fecharModalAluno não está definida!');
+        alert('Erro: Função de fechar modal não encontrada. Recarregue a página.');
+        return;
+    }
+    
     const modal = document.getElementById('modalAluno');
     if (modal) {
         modal.style.display = 'block';
@@ -4370,6 +4325,15 @@ const urlParams = new URLSearchParams(window.location.search);
 console.log('🔧 Parâmetros da URL:', urlParams.toString());
 if (urlParams.has('modal') || urlParams.has('novo') || urlParams.has('criar')) {
     console.log('⚠️ Parâmetro encontrado na URL que pode causar abertura automática do modal');
+}
+
+// PREVENIR ABERTURA AUTOMÁTICA DO MODAL
+console.log('🔧 Verificando se modal deve abrir automaticamente...');
+const modal = document.getElementById('modalAluno');
+if (modal && modal.style.display !== 'none') {
+    console.log('⚠️ Modal está visível - fechando automaticamente');
+    modal.style.display = 'none';
+    document.body.style.overflow = 'auto';
 }
 
 function toggleMobileLayoutAlunos() {
