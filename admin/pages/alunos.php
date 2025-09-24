@@ -3711,6 +3711,14 @@ function abrirModalAluno() {
     }
 }
 
+function fecharModalAluno() {
+    console.log('🚪 Fechando modal customizado...');
+    const modal = document.getElementById('modalAluno');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto'; // Restaurar scroll do body
+        console.log('✅ Modal customizado fechado!');
+    }
 }
 
 // Fechar modal ao clicar fora dele
@@ -4357,6 +4365,13 @@ console.log('🔧 SCRIPT ALUNOS CARREGADO - Verificando dados PHP');
 console.log('🔧 Total de alunos:', <?php echo count($alunos ?? []); ?>);
 console.log('🔧 Alunos data:', <?php echo json_encode($alunos ?? []); ?>);
 
+// Verificar se há parâmetros na URL que podem causar abertura automática do modal
+const urlParams = new URLSearchParams(window.location.search);
+console.log('🔧 Parâmetros da URL:', urlParams.toString());
+if (urlParams.has('modal') || urlParams.has('novo') || urlParams.has('criar')) {
+    console.log('⚠️ Parâmetro encontrado na URL que pode causar abertura automática do modal');
+}
+
 function toggleMobileLayoutAlunos() {
     console.log('🔧 toggleMobileLayoutAlunos executado - viewport:', window.innerWidth);
     const viewportWidth = window.innerWidth;
@@ -4461,16 +4476,6 @@ function abrirModalAluno() {
     if (modal) {
         modal.style.display = 'flex';
         ajustarModalResponsivo();
-    }
-}
-
-function fecharModalAluno() {
-    console.log('🚪 Fechando modal customizado...');
-    const modal = document.getElementById('modalAluno');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto'; // Restaurar scroll do body
-        console.log('✅ Modal customizado fechado!');
     }
 }
 
