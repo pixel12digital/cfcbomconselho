@@ -1163,86 +1163,231 @@ function abrirModalCalendario() {
 function preencherModalVisualizacao(turma) {
     const conteudo = document.getElementById('conteudoVisualizacaoTurma');
     
+    // Calcular progresso da turma
+    const dataInicio = turma.data_inicio ? new Date(turma.data_inicio) : null;
+    const dataFim = turma.data_fim ? new Date(turma.data_fim) : null;
+    const hoje = new Date();
+    
+    let progresso = 0;
+    let statusProgresso = 'Não iniciada';
+    let corProgresso = 'secondary';
+    
+    if (dataInicio && dataFim) {
+        const totalDias = Math.ceil((dataFim - dataInicio) / (1000 * 60 * 60 * 24));
+        const diasDecorridos = Math.ceil((hoje - dataInicio) / (1000 * 60 * 60 * 24));
+        
+        if (hoje < dataInicio) {
+            statusProgresso = 'Aguardando início';
+            corProgresso = 'warning';
+        } else if (hoje > dataFim) {
+            progresso = 100;
+            statusProgresso = 'Concluída';
+            corProgresso = 'success';
+        } else {
+            progresso = Math.min(100, Math.max(0, (diasDecorridos / totalDias) * 100));
+            statusProgresso = 'Em andamento';
+            corProgresso = 'primary';
+        }
+    }
+    
     conteudo.innerHTML = `
         <div class="row g-3">
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header bg-primary text-white">
-                        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações Básicas</h6>
+            <!-- Cabeçalho da Turma -->
+            <div class="col-12">
+                <div class="card border-0 bg-gradient" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);">
+                    <div class="card-body text-white text-center">
+                        <h4 class="mb-2"><i class="fas fa-chalkboard-teacher me-2"></i>${turma.nome || 'N/A'}</h4>
+                        <p class="mb-0 opacity-75">Turma #${turma.id || 'N/A'} • ${turma.categoria_cnh || 'N/A'}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Progresso da Turma -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-${corProgresso} text-white">
+                        <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Progresso da Turma</h6>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <strong>Nome:</strong><br>
-                            <span class="text-muted">${turma.nome || 'N/A'}</span>
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="fw-bold">${statusProgresso}</span>
+                            <span class="badge bg-${corProgresso}">${Math.round(progresso)}%</span>
                         </div>
-                        <div class="mb-3">
-                            <strong>ID:</strong><br>
-                            <span class="text-muted">#${turma.id || 'N/A'}</span>
+                        <div class="progress mb-3" style="height: 8px;">
+                            <div class="progress-bar bg-${corProgresso}" role="progressbar" 
+                                 style="width: ${progresso}%" aria-valuenow="${progresso}" 
+                                 aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
-                        <div class="mb-3">
-                            <strong>Tipo de Aula:</strong><br>
-                            <span class="badge bg-info">${turma.tipo_aula === 'teorica' ? 'Teórica' : 'Prática'}</span>
-                        </div>
-                        <div class="mb-3">
-                            <strong>Categoria CNH:</strong><br>
-                            <span class="badge bg-secondary">${turma.categoria_cnh || 'N/A'}</span>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted">Início</small><br>
+                                <strong>${turma.data_inicio ? new Date(turma.data_inicio).toLocaleDateString('pt-BR') : 'N/A'}</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Hoje</small><br>
+                                <strong>${hoje.toLocaleDateString('pt-BR')}</strong>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Fim</small><br>
+                                <strong>${turma.data_fim ? new Date(turma.data_fim).toLocaleDateString('pt-BR') : 'N/A'}</strong>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header bg-success text-white">
-                        <h6 class="mb-0"><i class="fas fa-user me-2"></i>Instrutor</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <strong>Nome:</strong><br>
-                            <span class="text-muted">${turma.instrutor_nome || 'N/A'}</span>
-                        </div>
-                        <div class="mb-3">
-                            <strong>Email:</strong><br>
-                            <span class="text-muted">${turma.instrutor_email || 'N/A'}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card h-100">
-                    <div class="card-header bg-warning text-dark">
-                        <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>Datas</h6>
-                    </div>
-                    <div class="card-body">
-                        <div class="mb-3">
-                            <strong>Data de Início:</strong><br>
-                            <span class="text-muted">${turma.data_inicio ? new Date(turma.data_inicio).toLocaleDateString('pt-BR') : 'N/A'}</span>
-                        </div>
-                        <div class="mb-3">
-                            <strong>Data de Fim:</strong><br>
-                            <span class="text-muted">${turma.data_fim ? new Date(turma.data_fim).toLocaleDateString('pt-BR') : 'N/A'}</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            
+            <!-- Instrutor Responsável -->
             <div class="col-md-6">
                 <div class="card h-100">
                     <div class="card-header bg-info text-white">
-                        <h6 class="mb-0"><i class="fas fa-users me-2"></i>Estatísticas</h6>
+                        <h6 class="mb-0"><i class="fas fa-user-tie me-2"></i>Instrutor Responsável</h6>
+                    </div>
+                    <div class="card-body text-center">
+                        <div class="mb-3">
+                            <div class="avatar-lg mx-auto mb-3" style="width: 80px; height: 80px; background: #17a2b8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-user fa-2x text-white"></i>
+                            </div>
+                        </div>
+                        <h5 class="mb-1">${turma.instrutor_nome || 'N/A'}</h5>
+                        <p class="text-muted mb-2">${turma.instrutor_email || 'N/A'}</p>
+                        <span class="badge bg-info">Instrutor Certificado</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Estatísticas da Turma -->
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estatísticas</h6>
                     </div>
                     <div class="card-body">
-                        <div class="mb-3">
-                            <strong>Status:</strong><br>
-                            <span class="badge bg-${turma.status === 'ativa' ? 'success' : turma.status === 'inativa' ? 'danger' : 'warning'}">
-                                ${turma.status === 'ativa' ? 'Ativa' : turma.status === 'inativa' ? 'Inativa' : 'Pendente'}
-                            </span>
-                        </div>
-                        <div class="mb-3">
-                            <strong>Alunos Matriculados:</strong><br>
-                            <span class="badge bg-primary">${turma.total_alunos || 0}</span>
+                        <div class="row g-3">
+                            <div class="col-6 text-center">
+                                <div class="border rounded p-3">
+                                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
+                                    <h4 class="mb-0">${turma.total_alunos || 0}</h4>
+                                    <small class="text-muted">Alunos Matriculados</small>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="border rounded p-3">
+                                    <i class="fas fa-book fa-2x text-warning mb-2"></i>
+                                    <h4 class="mb-0">${turma.aulas ? turma.aulas.length : 0}</h4>
+                                    <small class="text-muted">Aulas Programadas</small>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="border rounded p-3">
+                                    <i class="fas fa-clock fa-2x text-info mb-2"></i>
+                                    <h4 class="mb-0">${turma.tipo_aula === 'teorica' ? '45h' : '20h'}</h4>
+                                    <small class="text-muted">Carga Horária</small>
+                                </div>
+                            </div>
+                            <div class="col-6 text-center">
+                                <div class="border rounded p-3">
+                                    <i class="fas fa-graduation-cap fa-2x text-success mb-2"></i>
+                                    <h4 class="mb-0">${turma.categoria_cnh || 'N/A'}</h4>
+                                    <small class="text-muted">Categoria CNH</small>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
+            
+            <!-- Alunos da Turma -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="fas fa-users me-2"></i>Alunos Matriculados (${turma.total_alunos || 0})</h6>
+                    </div>
+                    <div class="card-body">
+                        ${turma.alunos && turma.alunos.length > 0 ? `
+                            <div class="row g-2">
+                                ${turma.alunos.slice(0, 6).map(aluno => `
+                                    <div class="col-md-4">
+                                        <div class="d-flex align-items-center p-2 border rounded">
+                                            <div class="avatar-sm me-3" style="width: 40px; height: 40px; background: #ffc107; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                                                <i class="fas fa-user text-dark"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold">${aluno.aluno_nome || 'N/A'}</div>
+                                                <small class="text-muted">${aluno.aluno_email || 'N/A'}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ${turma.alunos.length > 6 ? `
+                                <div class="text-center mt-3">
+                                    <button class="btn btn-outline-warning btn-sm" onclick="gerenciarAlunos(${turma.id})">
+                                        <i class="fas fa-eye me-1"></i>Ver todos os ${turma.alunos.length} alunos
+                                    </button>
+                                </div>
+                            ` : ''}
+                        ` : `
+                            <div class="text-center py-4">
+                                <i class="fas fa-user-plus fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Nenhum aluno matriculado</h5>
+                                <p class="text-muted">Esta turma ainda não possui alunos matriculados.</p>
+                                <button class="btn btn-warning" onclick="gerenciarAlunos(${turma.id})">
+                                    <i class="fas fa-user-plus me-1"></i>Matricular Alunos
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Cronograma de Aulas -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Cronograma de Aulas</h6>
+                    </div>
+                    <div class="card-body">
+                        ${turma.aulas && turma.aulas.length > 0 ? `
+                            <div class="row g-2">
+                                ${turma.aulas.slice(0, 4).map(aula => `
+                                    <div class="col-md-6">
+                                        <div class="d-flex align-items-center p-3 border rounded">
+                                            <div class="me-3">
+                                                <i class="fas fa-book fa-2x text-primary"></i>
+                                            </div>
+                                            <div class="flex-grow-1">
+                                                <div class="fw-bold">${aula.titulo || 'Aula ' + aula.ordem}</div>
+                                                <small class="text-muted">${aula.descricao || 'Conteúdo da aula'}</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="badge bg-primary">${aula.duracao || '2h'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                            ${turma.aulas.length > 4 ? `
+                                <div class="text-center mt-3">
+                                    <button class="btn btn-outline-primary btn-sm" onclick="calendarioTurma(${turma.id})">
+                                        <i class="fas fa-calendar me-1"></i>Ver cronograma completo
+                                    </button>
+                                </div>
+                            ` : ''}
+                        ` : `
+                            <div class="text-center py-4">
+                                <i class="fas fa-calendar-plus fa-3x text-muted mb-3"></i>
+                                <h5 class="text-muted">Cronograma não definido</h5>
+                                <p class="text-muted">Esta turma ainda não possui aulas programadas.</p>
+                                <button class="btn btn-primary" onclick="calendarioTurma(${turma.id})">
+                                    <i class="fas fa-calendar-plus me-1"></i>Criar Cronograma
+                                </button>
+                            </div>
+                        `}
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Observações -->
             ${turma.observacoes ? `
             <div class="col-12">
                 <div class="card">
