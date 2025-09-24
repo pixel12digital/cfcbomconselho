@@ -1246,10 +1246,11 @@ function confirmResetPassword() {
     
     console.log('Confirmando redefinição de senha para usuário ID: ' + resetPasswordUser.id);
     
-    // Mostrar loading
-    const loadingEl = document.querySelector('.card-body');
-    if (loadingEl) {
-        loadingEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Redefinindo senha...</p></div>';
+    // Desabilitar botão para evitar cliques múltiplos
+    const confirmBtn = document.getElementById('confirmResetBtn');
+    if (confirmBtn) {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redefinindo...';
     }
     
     // Fazer requisição para a API
@@ -1296,10 +1297,8 @@ Clique em "OK" para abrir a página completa de credenciais.
                 }
             }
             
-            // Recarregar página para mostrar dados atualizados
-            setTimeout(function() {
-                window.location.reload();
-            }, 1500);
+            // Não recarregar automaticamente - a página já está correta
+            console.log('Senha redefinida com sucesso - página permanece carregada');
         } else {
             showNotification(data.error || 'Erro ao redefinir senha', 'error');
         }
@@ -1309,10 +1308,12 @@ Clique em "OK" para abrir a página completa de credenciais.
         showNotification('Erro ao redefinir senha. Tente novamente.', 'error');
     })
     .finally(() => {
-        // Restaurar conteúdo da página
-        if (loadingEl) {
-            window.location.reload();
+        // Restaurar botão
+        if (confirmBtn) {
+            confirmBtn.disabled = false;
+            confirmBtn.innerHTML = '<i class="fas fa-key"></i> Redefinir Senha';
         }
+        console.log('Operação de redefinição de senha finalizada');
     });
 }
 
