@@ -3711,14 +3711,6 @@ function abrirModalAluno() {
     }
 }
 
-function fecharModalAluno() {
-    console.log('🚪 Fechando modal customizado...');
-    const modal = document.getElementById('modalAluno');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto'; // Restaurar scroll do body
-        console.log('✅ Modal customizado fechado!');
-    }
 }
 
 // Fechar modal ao clicar fora dele
@@ -4473,9 +4465,12 @@ function abrirModalAluno() {
 }
 
 function fecharModalAluno() {
+    console.log('🚪 Fechando modal customizado...');
     const modal = document.getElementById('modalAluno');
     if (modal) {
         modal.style.display = 'none';
+        document.body.style.overflow = 'auto'; // Restaurar scroll do body
+        console.log('✅ Modal customizado fechado!');
     }
 }
 
@@ -4487,6 +4482,24 @@ if (originalAbrirModalAluno) {
         setTimeout(ajustarModalResponsivo, 100);
     };
 }
+
+// Fechar modal ao clicar fora dele
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('modalAluno');
+    if (e.target === modal) {
+        fecharModalAluno();
+    }
+});
+
+// Fechar modal com ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('modalAluno');
+        if (modal && modal.style.display !== 'none') {
+            fecharModalAluno();
+        }
+    }
+});
 
 console.log('🔧 Sistema de modais responsivos inicializado');
 </script>
