@@ -2159,7 +2159,7 @@ function preencherModalVisualizacao(instrutor) {
                 <div class="instrutor-photo-container">
                     <img src="${urlFoto}" alt="Foto do instrutor" class="instrutor-photo" 
                          onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-                    <div class="instrutor-photo-placeholder" style="display: none;">
+                    <div class="instrutor-photo-placeholder" style="display: none !important;">
                         <i class="fas fa-user"></i>
                     </div>
                 </div>
@@ -2347,25 +2347,76 @@ function preencherModalVisualizacao(instrutor) {
             `;
         });
         
-        // FORÇAR PLACEHOLDER CIRCULAR COM CSS INLINE
+        // FORÇAR PLACEHOLDER CIRCULAR COM CSS INLINE E CONTROLAR VISIBILIDADE
         const placeholders = modalConteudo.querySelectorAll('.instrutor-photo-placeholder');
         placeholders.forEach(placeholder => {
-            placeholder.style.cssText = `
-                width: 120px !important;
-                height: 120px !important;
-                border-radius: 50% !important;
-                background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
-                display: flex !important;
-                align-items: center !important;
-                justify-content: center !important;
-                border: 4px solid #17a2b8 !important;
-                box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
-                margin: 0 auto !important;
-                max-width: 120px !important;
-                max-height: 120px !important;
-                min-width: 120px !important;
-                min-height: 120px !important;
-            `;
+            // Verificar se há uma imagem visível no mesmo container
+            const container = placeholder.closest('.instrutor-photo-container');
+            const img = container ? container.querySelector('.instrutor-photo') : null;
+            
+            if (img && img.style.display !== 'none' && img.complete && img.naturalHeight !== 0) {
+                // Se a imagem está carregada e visível, ocultar o placeholder
+                placeholder.style.cssText = `
+                    display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                `;
+            } else {
+                // Se não há imagem ou ela falhou, mostrar o placeholder
+                placeholder.style.cssText = `
+                    width: 120px !important;
+                    height: 120px !important;
+                    border-radius: 50% !important;
+                    background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+                    display: flex !important;
+                    align-items: center !important;
+                    justify-content: center !important;
+                    border: 4px solid #17a2b8 !important;
+                    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
+                    margin: 0 auto !important;
+                    max-width: 120px !important;
+                    max-height: 120px !important;
+                    min-width: 120px !important;
+                    min-height: 120px !important;
+                `;
+            }
+        });
+        
+        // Adicionar event listeners para controlar visibilidade quando imagem carregar/falhar
+        const images = modalConteudo.querySelectorAll('.instrutor-photo');
+        images.forEach(img => {
+            img.addEventListener('load', function() {
+                const placeholder = this.nextElementSibling;
+                if (placeholder && placeholder.classList.contains('instrutor-photo-placeholder')) {
+                    placeholder.style.cssText = `
+                        display: none !important;
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                    `;
+                }
+            });
+            
+            img.addEventListener('error', function() {
+                const placeholder = this.nextElementSibling;
+                if (placeholder && placeholder.classList.contains('instrutor-photo-placeholder')) {
+                    placeholder.style.cssText = `
+                        width: 120px !important;
+                        height: 120px !important;
+                        border-radius: 50% !important;
+                        background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+                        display: flex !important;
+                        align-items: center !important;
+                        justify-content: center !important;
+                        border: 4px solid #17a2b8 !important;
+                        box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
+                        margin: 0 auto !important;
+                        max-width: 120px !important;
+                        max-height: 120px !important;
+                        min-width: 120px !important;
+                        min-height: 120px !important;
+                    `;
+                }
+            });
         });
         
         console.log('🔧 CSS inline aplicado para forçar layout em coluna única e foto circular');

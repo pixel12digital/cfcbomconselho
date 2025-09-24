@@ -337,6 +337,20 @@
     min-height: 120px !important;
 }
 
+/* GARANTIR QUE PLACEHOLDER SEJA OCULTADO QUANDO IMAGEM ESTIVER VISÍVEL */
+.instrutor-photo-container:has(.instrutor-photo:not([style*="display: none"])) .instrutor-photo-placeholder {
+    display: none !important;
+}
+
+/* FALLBACK PARA NAVEGADORES SEM SUPORTE A :has() */
+.instrutor-photo-container .instrutor-photo-placeholder {
+    display: none !important;
+}
+
+.instrutor-photo-container .instrutor-photo-placeholder[style*="display: flex"] {
+    display: flex !important;
+}
+
 .instrutor-photo:hover {
     transform: scale(1.05) !important;
     box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4) !important;
