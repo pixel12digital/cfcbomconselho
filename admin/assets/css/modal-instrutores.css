@@ -232,13 +232,64 @@
     }
 }
 
+/* CSS ULTRA AGRESSIVO PARA MODAL DE VISUALIZAÇÃO - FORÇAR LAYOUT EM COLUNA ÚNICA */
+#modalVisualizacaoInstrutor .modal-body-responsive,
+#modalVisualizacaoInstrutor .modal-body-responsive *,
+.modal-visualizacao-responsive .modal-body-responsive,
+.modal-visualizacao-responsive .modal-body-responsive * {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    flex: none !important;
+    float: none !important;
+    clear: both !important;
+}
+
+/* FORÇAR TODAS AS COLUNAS PARA COLUNA ÚNICA */
+#modalVisualizacaoInstrutor .col-12,
+#modalVisualizacaoInstrutor .col-md-6,
+#modalVisualizacaoInstrutor .col-lg-6,
+#modalVisualizacaoInstrutor .col-xl-6,
+.modal-visualizacao-responsive .col-12,
+.modal-visualizacao-responsive .col-md-6,
+.modal-visualizacao-responsive .col-lg-6,
+.modal-visualizacao-responsive .col-xl-6 {
+    flex: 0 0 100% !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    display: block !important;
+    float: none !important;
+    clear: both !important;
+    margin-bottom: 0.5rem !important;
+}
+
+/* FORÇAR ROWS PARA COLUNA ÚNICA */
+#modalVisualizacaoInstrutor .row,
+.modal-visualizacao-responsive .row {
+    display: block !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    flex-wrap: nowrap !important;
+}
+
+/* FORÇAR CONTAINER FLUID PARA COLUNA ÚNICA */
+#modalVisualizacaoInstrutor .container-fluid,
+.modal-visualizacao-responsive .container-fluid {
+    display: block !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
 /* CSS ESPECÍFICO PARA CONTEÚDO DO MODAL DE VISUALIZAÇÃO - NOVO LAYOUT */
 .instrutor-visualizacao-content {
     padding: 0 !important;
+    display: block !important;
 }
 
 .instrutor-section {
     margin-bottom: 1.5rem !important;
+    display: block !important;
+    width: 100% !important;
 }
 
 .instrutor-section-title {
@@ -250,12 +301,12 @@
     border-bottom: 2px solid #17a2b8 !important;
     display: flex !important;
     align-items: center !important;
+    width: 100% !important;
 }
 
 .instrutor-fields {
-    display: grid !important;
-    grid-template-columns: 1fr !important;
-    gap: 0.75rem !important;
+    display: block !important;
+    width: 100% !important;
 }
 
 .instrutor-field {
@@ -263,7 +314,11 @@
     border-radius: 0.375rem !important;
     border-left: 3px solid #17a2b8 !important;
     padding: 0.75rem !important;
-    margin-bottom: 0 !important;
+    margin-bottom: 0.5rem !important;
+    display: block !important;
+    width: 100% !important;
+    float: none !important;
+    clear: both !important;
 }
 
 .instrutor-field strong {
@@ -272,6 +327,7 @@
     font-size: 0.9rem !important;
     display: block !important;
     margin-bottom: 0.25rem !important;
+    width: 100% !important;
 }
 
 .instrutor-value {
@@ -279,26 +335,13 @@
     font-size: 0.95rem !important;
     line-height: 1.4 !important;
     display: block !important;
+    width: 100% !important;
 }
 
 .instrutor-field .badge {
     font-size: 0.8rem !important;
     padding: 0.4rem 0.6rem !important;
-}
-
-/* LAYOUT RESPONSIVO PARA DESKTOP */
-@media (min-width: 768px) {
-    .instrutor-fields {
-        grid-template-columns: 1fr 1fr !important;
-        gap: 1rem !important;
-    }
-}
-
-@media (min-width: 992px) {
-    .instrutor-fields {
-        grid-template-columns: 1fr 1fr 1fr !important;
-        gap: 1rem !important;
-    }
+    display: inline-block !important;
 }
 
 /* RESPONSIVIDADE MOBILE */

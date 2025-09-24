@@ -2252,6 +2252,35 @@ function preencherModalVisualizacao(instrutor) {
         </div>
     `;
     
+    // FORÇAR CSS INLINE PARA GARANTIR LAYOUT EM COLUNA ÚNICA
+    const conteudo = modal.querySelector('.modal-body-responsive');
+    if (conteudo) {
+        // Aplicar CSS inline para forçar layout em coluna única
+        conteudo.style.cssText = `
+            display: block !important;
+            width: 100% !important;
+            padding: 1rem !important;
+        `;
+        
+        // Forçar todos os elementos filhos para coluna única
+        const elementos = conteudo.querySelectorAll('*');
+        elementos.forEach(el => {
+            if (el.classList.contains('col-md-6') || el.classList.contains('col-12') || el.classList.contains('row')) {
+                el.style.cssText = `
+                    display: block !important;
+                    width: 100% !important;
+                    max-width: 100% !important;
+                    flex: none !important;
+                    float: none !important;
+                    clear: both !important;
+                    margin-bottom: 0.5rem !important;
+                `;
+            }
+        });
+        
+        console.log('🔧 CSS inline aplicado para forçar layout em coluna única');
+    }
+    
     // Configurar botão de editar
     const btnEditar = document.getElementById('btnEditarInstrutor');
     if (btnEditar) {
