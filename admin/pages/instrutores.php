@@ -12,6 +12,142 @@ $pageTitle = 'Gestão de Instrutores';
 <!-- Incluir CSS do modal -->
 <link rel="stylesheet" href="assets/css/modal-instrutores.css">
 
+<style>
+/* CSS Responsivo para Instrutores */
+@media (max-width: 768px) {
+    /* Header responsivo */
+    .d-flex.justify-content-between {
+        flex-direction: column !important;
+        align-items: stretch !important;
+        gap: 1rem;
+    }
+    
+    .d-flex.justify-content-between h1 {
+        text-align: center;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .d-flex.justify-content-between .btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Filtros responsivos */
+    .card-body .row {
+        margin: 0 !important;
+    }
+    
+    .card-body .col-md-3 {
+        margin-bottom: 1rem;
+    }
+    
+    /* Estatísticas responsivas */
+    .row.mb-4 .col-md-3 {
+        margin-bottom: 1rem;
+    }
+    
+    /* Esconder tabela no mobile */
+    .table-responsive {
+        display: none !important;
+    }
+    
+    /* Mostrar cards no mobile */
+    .mobile-instrutor-cards {
+        display: block !important;
+    }
+}
+
+@media (min-width: 769px) {
+    /* Esconder cards no desktop */
+    .mobile-instrutor-cards {
+        display: none !important;
+    }
+}
+
+/* Cards mobile */
+.mobile-instrutor-cards {
+    display: none;
+}
+
+.mobile-instrutor-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.mobile-instrutor-header {
+    display: flex;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.mobile-instrutor-avatar {
+    margin-right: 1rem;
+}
+
+.mobile-instrutor-info {
+    flex: 1;
+}
+
+.mobile-instrutor-title {
+    font-weight: bold;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.mobile-instrutor-email {
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.mobile-instrutor-status {
+    margin-left: auto;
+}
+
+.mobile-instrutor-body {
+    margin-bottom: 1rem;
+}
+
+.mobile-instrutor-field {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5rem;
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #f8f9fa;
+}
+
+.mobile-instrutor-label {
+    font-weight: 500;
+    color: #6c757d;
+    font-size: 0.9rem;
+}
+
+.mobile-instrutor-value {
+    font-size: 0.9rem;
+}
+
+.mobile-instrutor-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.mobile-instrutor-actions .btn {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    border-radius: 0.375rem;
+}
+</style>
+
 <div class="container-fluid">
     <div class="row">
         <div class="col-12">
@@ -134,6 +270,11 @@ $pageTitle = 'Gestão de Instrutores';
                                 <!-- Preencher via JavaScript -->
                             </tbody>
                         </table>
+                    </div>
+                    
+                    <!-- Cards Mobile -->
+                    <div class="mobile-instrutor-cards" id="mobileInstrutorCards">
+                        <!-- Preencher via JavaScript -->
                     </div>
                 </div>
             </div>

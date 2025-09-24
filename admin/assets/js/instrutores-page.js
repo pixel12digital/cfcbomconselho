@@ -1302,15 +1302,18 @@ function carregarInstrutores() {
 
 function preencherTabelaInstrutores(instrutores) {
     const tbody = document.querySelector('#tabelaInstrutores tbody');
+    const mobileCards = document.getElementById('mobileInstrutorCards');
+    
     tbody.innerHTML = '';
+    mobileCards.innerHTML = '';
     
     instrutores.forEach(instrutor => {
-        const row = document.createElement('tr');
-        
         // Usar o nome correto (nome_usuario se nome estiver vazio)
         const nomeExibicao = instrutor.nome || instrutor.nome_usuario || 'N/A';
         const cfcExibicao = instrutor.cfc_nome || 'N/A';
         
+        // Criar linha da tabela (desktop)
+        const row = document.createElement('tr');
         row.innerHTML = `
             <td>
                 <div class="d-flex align-items-center">
@@ -1346,6 +1349,58 @@ function preencherTabelaInstrutores(instrutores) {
             </td>
         `;
         tbody.appendChild(row);
+        
+        // Criar card mobile
+        const card = document.createElement('div');
+        card.className = 'mobile-instrutor-card';
+        card.innerHTML = `
+            <div class="mobile-instrutor-header">
+                <div class="mobile-instrutor-avatar">
+                    <div class="avatar-sm bg-primary rounded-circle d-flex align-items-center justify-content-center" style="width: 40px; height: 40px;">
+                        <span class="text-white fw-bold">${nomeExibicao.charAt(0).toUpperCase()}</span>
+                    </div>
+                </div>
+                <div class="mobile-instrutor-info">
+                    <div class="mobile-instrutor-title">${nomeExibicao}</div>
+                    <div class="mobile-instrutor-email">${instrutor.email || 'N/A'}</div>
+                </div>
+                <div class="mobile-instrutor-status">
+                    <span class="badge ${instrutor.ativo ? 'bg-success' : 'bg-danger'}">
+                        ${instrutor.ativo ? 'ATIVO' : 'INATIVO'}
+                    </span>
+                </div>
+            </div>
+            
+            <div class="mobile-instrutor-body">
+                <div class="mobile-instrutor-field">
+                    <span class="mobile-instrutor-label">CFC:</span>
+                    <span class="mobile-instrutor-value">${cfcExibicao}</span>
+                </div>
+                <div class="mobile-instrutor-field">
+                    <span class="mobile-instrutor-label">Credencial:</span>
+                    <span class="mobile-instrutor-value">${instrutor.credencial || 'N/A'}</span>
+                </div>
+                <div class="mobile-instrutor-field">
+                    <span class="mobile-instrutor-label">Categorias:</span>
+                    <span class="mobile-instrutor-value">
+                        <span class="badge bg-info">${formatarCategorias(instrutor.categorias_json) || 'N/A'}</span>
+                    </span>
+                </div>
+            </div>
+            
+            <div class="mobile-instrutor-actions">
+                <button class="btn btn-info" onclick="visualizarInstrutor(${instrutor.id})" title="Visualizar">
+                    <i class="fas fa-eye"></i>
+                </button>
+                <button class="btn btn-primary" onclick="editarInstrutor(${instrutor.id})" title="Editar">
+                    <i class="fas fa-edit"></i>
+                </button>
+                <button class="btn btn-danger" onclick="excluirInstrutor(${instrutor.id})" title="Excluir">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        mobileCards.appendChild(card);
     });
 }
 
