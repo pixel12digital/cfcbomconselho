@@ -328,7 +328,7 @@ try {
 </div>
 
 <!-- Modal Customizado para Cadastro/Edição de Veículo -->
-<div id="modalVeiculo" class="custom-modal">
+<div id="modalVeiculo" class="custom-modal" style="display: none !important; visibility: hidden !important;">
     <div class="custom-modal-dialog">
         <div class="custom-modal-content">
             <form id="formVeiculo" method="POST" action="index.php?page=veiculos">
@@ -597,6 +597,31 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar busca
     inicializarBuscaVeiculo();
+    
+    // CORREÇÃO: Garantir que o modal não abra automaticamente
+    const modal = document.getElementById('modalVeiculo');
+    if (modal) {
+        // Forçar fechamento do modal se estiver aberto
+        modal.style.setProperty('display', 'none', 'important');
+        modal.classList.remove('show');
+        document.body.style.overflow = 'auto';
+        console.log('✅ Modal de veículo fechado automaticamente');
+    }
+    
+    // Verificar se há parâmetros na URL que possam causar abertura automática
+    const urlParams = new URLSearchParams(window.location.search);
+    const modalParam = urlParams.get('modal');
+    const novoParam = urlParams.get('novo');
+    const criarParam = urlParams.get('criar');
+    
+    if (modalParam || novoParam || criarParam) {
+        console.log('⚠️ Parâmetros detectados na URL que podem causar abertura automática:', {
+            modal: modalParam,
+            novo: novoParam,
+            criar: criarParam
+        });
+        // Não abrir o modal automaticamente
+    }
 });
 
 function inicializarMascarasVeiculo() {
@@ -1027,9 +1052,28 @@ function fecharModalVeiculo() {
     console.log('🚪 Fechando modal customizado...');
     const modal = document.getElementById('modalVeiculo');
     if (modal) {
-        modal.style.display = 'none';
+        // FORÇAR fechamento do modal
+        modal.style.setProperty('display', 'none', 'important');
+        modal.style.setProperty('visibility', 'hidden', 'important');
         modal.classList.remove('show');
+        modal.removeAttribute('data-opened');
         document.body.style.overflow = 'auto'; // Restaurar scroll do body
+        
+        // Limpar formulário
+        const form = modal.querySelector('form');
+        if (form) {
+            form.reset();
+        }
+        
+        // Resetar campos ocultos
+        const acaoVeiculo = document.getElementById('acaoVeiculo');
+        const veiculoId = document.getElementById('veiculo_id');
+        const modalTitle = document.getElementById('modalTitle');
+        
+        if (acaoVeiculo) acaoVeiculo.value = 'criar';
+        if (veiculoId) veiculoId.value = '';
+        if (modalTitle) modalTitle.textContent = 'Novo Veículo';
+        
         console.log('✅ Modal customizado fechado!');
     }
 }
