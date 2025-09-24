@@ -185,20 +185,19 @@ try {
             <table class="table table-striped table-hover" id="tabelaVeiculos">
                 <thead class="table-dark">
                     <tr>
-                        <th>ID</th>
-                        <th>Veículo</th>
-                        <th>Placa</th>
-                        <th>CFC</th>
-                        <th>Status</th>
-                        <th>Disponibilidade</th>
-                        <th>Próxima Manutenção</th>
-                        <th>Ações</th>
+                            <th>ID</th>
+                            <th>Veículo</th>
+                            <th>Placa</th>
+                            <th>Status</th>
+                            <th>Disponibilidade</th>
+                            <th>Próxima Manutenção</th>
+                            <th>Ações</th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php if (empty($veiculos)): ?>
                     <tr>
-                        <td colspan="8" class="text-center text-muted py-4">
+                        <td colspan="7" class="text-center text-muted py-4">
                             <i class="fas fa-inbox fa-3x mb-3"></i>
                             <p>Nenhum veículo cadastrado ainda.</p>
                             <button class="btn btn-primary" onclick="abrirModalVeiculo()">
@@ -225,9 +224,6 @@ try {
                             </td>
                             <td>
                                 <code class="fs-6"><?php echo htmlspecialchars($veiculo['placa']); ?></code>
-                            </td>
-                            <td>
-                                <span class="badge bg-info"><?php echo htmlspecialchars($veiculo['cfc_nome'] ?? 'N/A'); ?></span>
                             </td>
                             <td>
                                 <?php
@@ -271,51 +267,40 @@ try {
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <div class="action-buttons-container">
-                                    <!-- Botões principais em linha -->
-                                    <div class="action-buttons-primary">
-                                        <button type="button" class="btn btn-edit action-btn" 
-                                                onclick="editarVeiculo(<?php echo $veiculo['id']; ?>)" 
-                                                title="Editar dados do veículo">
-                                            <i class="fas fa-edit me-1"></i>Editar
-                                        </button>
-                                        <button type="button" class="btn btn-view action-btn" 
-                                                onclick="visualizarVeiculo(<?php echo $veiculo['id']; ?>)" 
-                                                title="Ver detalhes completos do veículo">
-                                            <i class="fas fa-eye me-1"></i>Ver
-                                        </button>
-                                        <button type="button" class="btn btn-maintenance action-btn" 
-                                                onclick="agendarManutencao(<?php echo $veiculo['id']; ?>)" 
-                                                title="Agendar manutenção para este veículo">
-                                            <i class="fas fa-tools me-1"></i>Manutenção
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Botões secundários em linha -->
-                                    <div class="action-buttons-secondary">
-                                        <?php if ($veiculo['ativo']): ?>
-                                        <button type="button" class="btn btn-toggle action-btn" 
-                                                onclick="desativarVeiculo(<?php echo $veiculo['id']; ?>)" 
-                                                title="Desativar veículo (não poderá ser usado em aulas)">
-                                            <i class="fas fa-ban me-1"></i>Desativar
-                                        </button>
-                                        <?php else: ?>
-                                        <button type="button" class="btn btn-schedule action-btn" 
-                                                onclick="ativarVeiculo(<?php echo $veiculo['id']; ?>)" 
-                                                title="Reativar veículo para uso em aulas">
-                                            <i class="fas fa-check me-1"></i>Ativar
-                                        </button>
-                                        <?php endif; ?>
-                                    </div>
-                                    
-                                    <!-- Botão de exclusão destacado -->
-                                    <div class="action-buttons-danger">
-                                        <button type="button" class="btn btn-delete action-btn" 
-                                                onclick="excluirVeiculo(<?php echo $veiculo['id']; ?>)" 
-                                                title="⚠️ EXCLUIR VEÍCULO - Esta ação não pode ser desfeita!">
-                                            <i class="fas fa-trash me-1"></i>Excluir
-                                        </button>
-                                    </div>
+                                <div class="action-buttons-inline">
+                                    <button type="button" class="btn btn-sm btn-primary" 
+                                            onclick="editarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                                            title="Editar dados do veículo">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-info" 
+                                            onclick="visualizarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                                            title="Ver detalhes completos do veículo">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-warning" 
+                                            onclick="agendarManutencao(<?php echo $veiculo['id']; ?>)" 
+                                            title="Agendar manutenção para este veículo">
+                                        <i class="fas fa-tools"></i>
+                                    </button>
+                                    <?php if ($veiculo['status'] === 'ativo'): ?>
+                                    <button type="button" class="btn btn-sm btn-secondary" 
+                                            onclick="desativarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                                            title="Desativar veículo">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                    <?php else: ?>
+                                    <button type="button" class="btn btn-sm btn-success" 
+                                            onclick="ativarVeiculo(<?php echo $veiculo['id']; ?>)" 
+                                            title="Reativar veículo">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                    <button type="button" class="btn btn-sm btn-danger" 
+                                            onclick="excluirVeiculo(<?php echo $veiculo['id']; ?>)" 
+                                            title="Excluir veículo">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </div>
                             </td>
                         </tr>
@@ -585,6 +570,52 @@ try {
         </div>
     </div>
 </div>
+
+<!-- CSS para botões de ação inline -->
+<style>
+.action-buttons-inline {
+    display: flex;
+    gap: 3px;
+    flex-wrap: nowrap;
+    justify-content: center;
+    align-items: center;
+}
+
+.action-buttons-inline .btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    font-size: 12px;
+    line-height: 1;
+}
+
+.action-buttons-inline .btn i {
+    font-size: 12px;
+    margin: 0;
+}
+
+/* Responsivo para telas menores */
+@media (max-width: 768px) {
+    .action-buttons-inline {
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .action-buttons-inline .btn {
+        width: 28px;
+        height: 28px;
+        font-size: 10px;
+    }
+    
+    .action-buttons-inline .btn i {
+        font-size: 10px;
+    }
+}
+</style>
 
 <!-- Scripts específicos para Veículos -->
 <script>
