@@ -712,8 +712,10 @@ function abrirModalVisualizacao(instrutor) {
     // Preencher dados do instrutor
     preencherModalVisualizacao(instrutor);
     
-    // Mostrar modal
-    modal.style.display = 'block';
+    // FORÇAR exibição do modal no mobile
+    modal.style.setProperty('display', 'block', 'important');
+    modal.style.setProperty('visibility', 'visible', 'important');
+    modal.style.setProperty('opacity', '1', 'important');
     modal.classList.add('show');
     
     // Animar abertura
@@ -724,6 +726,8 @@ function abrirModalVisualizacao(instrutor) {
             modalDialog.style.transform = 'translateY(0)';
         }
     }, 100);
+    
+    console.log('✅ Modal de visualização aberto com sucesso');
 }
 
 function fecharOutrosModais() {
@@ -2282,6 +2286,7 @@ function preencherModalVisualizacao(instrutor) {
 }
 
 function fecharModalVisualizacao() {
+    console.log('🚪 Fechando modal de visualização...');
     const modal = document.getElementById('modalVisualizacaoInstrutor');
     if (modal) {
         const modalDialog = modal.querySelector('.custom-modal-dialog');
@@ -2294,12 +2299,18 @@ function fecharModalVisualizacao() {
         modal.classList.remove('show');
         
         setTimeout(() => {
-            modal.style.display = 'none';
+            // FORÇAR fechamento do modal
+            modal.style.setProperty('display', 'none', 'important');
+            modal.style.setProperty('visibility', 'hidden', 'important');
+            modal.style.setProperty('opacity', '0', 'important');
+            
             // Limpar o conteúdo para evitar conflitos
             const conteudo = document.getElementById('conteudoVisualizacao');
             if (conteudo) {
                 conteudo.innerHTML = '';
             }
+            
+            console.log('✅ Modal de visualização fechado com sucesso');
         }, 300);
     }
 }
