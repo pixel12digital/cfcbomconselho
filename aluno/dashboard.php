@@ -9,18 +9,27 @@ require_once __DIR__ . '/../includes/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/services/SistemaNotificacoes.php';
 
-// Verificar autenticação
-$user = getCurrentUser();
-if (!$user || $user['tipo'] !== 'aluno') {
-    header('Location: /login.php');
+// Verificar autenticação específica para aluno
+if (!isset($_SESSION['aluno_id']) || $_SESSION['user_type'] !== 'aluno') {
+    header('Location: /login.php?type=aluno');
     exit();
 }
 
 $db = db();
 $notificacoes = new SistemaNotificacoes();
 
-// Buscar dados do aluno
-$aluno = $db->fetch("SELECT * FROM alunos WHERE id = ?", [$user['id']]);
+// Buscar dados do aluno - primeiro na tabela usuarios, depois na tabela alunos
+$aluno = $db->fetch("SELECT * FROM usuarios WHERE id = ? AND tipo = 'aluno'", [$_SESSION['aluno_id']]);
+
+if (!$aluno) {
+    // Se não encontrar na tabela usuarios, buscar na tabela alunos
+    $aluno = $db->fetch("SELECT * FROM alunos WHERE id = ?", [$_SESSION['aluno_id']]);
+}
+
+if (!$aluno) {
+    header('Location: /login.php?type=aluno');
+    exit();
+}
 
 // Buscar próximas aulas (próximos 14 dias)
 $proximasAulas = $db->fetchAll("
@@ -36,10 +45,10 @@ $proximasAulas = $db->fetchAll("
       AND a.status != 'cancelada'
     ORDER BY a.data_aula ASC, a.hora_inicio ASC
     LIMIT 10
-", [$user['id']]);
+", [$_SESSION['aluno_id']]);
 
 // Buscar notificações não lidas
-$notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($user['id'], 'aluno');
+$notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($_SESSION['aluno_id'], 'aluno');
 
 // Buscar status dos exames
 $exames = $db->fetchAll("
@@ -47,7 +56,7 @@ $exames = $db->fetchAll("
     FROM exames 
     WHERE aluno_id = ? 
     ORDER BY data_exame DESC
-", [$user['id']]);
+", [$_SESSION['aluno_id']]);
 
 // Verificar guardas de negócio
 $guardaExames = true;
