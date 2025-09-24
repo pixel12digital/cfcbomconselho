@@ -319,6 +319,7 @@
     margin-bottom: 0.5rem !important;
 }
 
+/* CSS ULTRA AGRESSIVO PARA FOTO DO INSTRUTOR - FORÇAR FORMATO CIRCULAR */
 .instrutor-photo {
     width: 120px !important;
     height: 120px !important;
@@ -328,6 +329,12 @@
     border: 4px solid #17a2b8 !important;
     box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
     transition: all 0.3s ease !important;
+    display: block !important;
+    margin: 0 auto !important;
+    max-width: 120px !important;
+    max-height: 120px !important;
+    min-width: 120px !important;
+    min-height: 120px !important;
 }
 
 .instrutor-photo:hover {
@@ -346,11 +353,34 @@
     border: 4px solid #17a2b8 !important;
     box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
     margin: 0 auto !important;
+    max-width: 120px !important;
+    max-height: 120px !important;
+    min-width: 120px !important;
+    min-height: 120px !important;
 }
 
 .instrutor-photo-placeholder i {
     font-size: 3rem !important;
     color: white !important;
+}
+
+/* FORÇAR TODAS AS IMAGENS DENTRO DO MODAL PARA FORMATO CIRCULAR */
+#modalVisualizacaoInstrutor img,
+.modal-visualizacao-responsive img,
+.instrutor-visualizacao-content img {
+    width: 120px !important;
+    height: 120px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    border: 4px solid #17a2b8 !important;
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
+    display: block !important;
+    margin: 0 auto !important;
+    max-width: 120px !important;
+    max-height: 120px !important;
+    min-width: 120px !important;
+    min-height: 120px !important;
 }
 
 .instrutor-photo-text {

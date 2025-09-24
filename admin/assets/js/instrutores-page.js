@@ -2327,7 +2327,48 @@ function preencherModalVisualizacao(instrutor) {
             }
         });
         
-        console.log('🔧 CSS inline aplicado para forçar layout em coluna única');
+        // FORÇAR FOTO CIRCULAR COM CSS INLINE
+        const fotos = modalConteudo.querySelectorAll('img');
+        fotos.forEach(img => {
+            img.style.cssText = `
+                width: 120px !important;
+                height: 120px !important;
+                border-radius: 50% !important;
+                object-fit: cover !important;
+                object-position: center !important;
+                border: 4px solid #17a2b8 !important;
+                box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
+                display: block !important;
+                margin: 0 auto !important;
+                max-width: 120px !important;
+                max-height: 120px !important;
+                min-width: 120px !important;
+                min-height: 120px !important;
+            `;
+        });
+        
+        // FORÇAR PLACEHOLDER CIRCULAR COM CSS INLINE
+        const placeholders = modalConteudo.querySelectorAll('.instrutor-photo-placeholder');
+        placeholders.forEach(placeholder => {
+            placeholder.style.cssText = `
+                width: 120px !important;
+                height: 120px !important;
+                border-radius: 50% !important;
+                background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+                display: flex !important;
+                align-items: center !important;
+                justify-content: center !important;
+                border: 4px solid #17a2b8 !important;
+                box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
+                margin: 0 auto !important;
+                max-width: 120px !important;
+                max-height: 120px !important;
+                min-width: 120px !important;
+                min-height: 120px !important;
+            `;
+        });
+        
+        console.log('🔧 CSS inline aplicado para forçar layout em coluna única e foto circular');
     }
     
     // Configurar botão de editar
