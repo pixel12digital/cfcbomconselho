@@ -94,9 +94,43 @@ if ($acao === 'criar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Verificar se houve sucesso na criação
-if (isset($_GET['sucesso']) && $_GET['sucesso'] == '1') {
-    echo '<div class="alert alert-success">Turma criada com sucesso!</div>';
+if ($acao === 'editar' && $_SERVER['REQUEST_METHOD'] === 'POST') {
+    $turmaId = $_POST['turma_id'] ?? null;
+    
+    if (!$turmaId) {
+        echo '<div class="alert alert-danger">ID da turma é obrigatório para edição.</div>';
+    } else {
+        $dadosTurma = [
+            'nome' => $_POST['nome'] ?? '',
+            'instrutor_id' => $_POST['instrutor_id'] ?? '',
+            'tipo_aula' => $_POST['tipo_aula'] ?? '',
+            'categoria_cnh' => $_POST['categoria_cnh'] ?? null,
+            'data_inicio' => $_POST['data_inicio'] ?? '',
+            'data_fim' => $_POST['data_fim'] ?? '',
+            'status' => $_POST['status'] ?? 'ativa',
+            'observacoes' => $_POST['observacoes'] ?? null
+        ];
+        
+        $resultado = $turmaManager->atualizarTurma($turmaId, $dadosTurma);
+        
+        if ($resultado['sucesso']) {
+            echo '<div class="alert alert-success">Turma atualizada com sucesso!</div>';
+            // Redirecionar para evitar reenvio do formulário
+            header('Location: ?page=turmas&sucesso=2');
+            exit;
+        } else {
+            echo '<div class="alert alert-danger">Erro ao atualizar turma: ' . ($resultado['mensagem'] ?? 'Erro desconhecido') . '</div>';
+        }
+    }
+}
+
+// Verificar se houve sucesso na criação ou edição
+if (isset($_GET['sucesso'])) {
+    if ($_GET['sucesso'] == '1') {
+        echo '<div class="alert alert-success">Turma criada com sucesso!</div>';
+    } elseif ($_GET['sucesso'] == '2') {
+        echo '<div class="alert alert-success">Turma atualizada com sucesso!</div>';
+    }
 }
 ?>
 
@@ -762,6 +796,144 @@ body:not(.modal-open) .modal-backdrop {
     </div>
 </div>
 
+<!-- Modal Visualizar Turma -->
+<div class="modal fade" id="modalVisualizarTurma" tabindex="-1" aria-labelledby="modalVisualizarTurmaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalVisualizarTurmaLabel">
+                    <i class="fas fa-eye me-2"></i>Detalhes da Turma
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="conteudoVisualizacaoTurma">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2">Carregando dados da turma...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Editar Turma -->
+<div class="modal fade" id="modalEditarTurma" tabindex="-1" aria-labelledby="modalEditarTurmaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEditarTurmaLabel">
+                    <i class="fas fa-edit me-2"></i>Editar Turma
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formEditarTurma" method="POST" action="?page=turmas">
+                <input type="hidden" name="acao" value="editar">
+                <input type="hidden" name="turma_id" id="editar_turma_id">
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="editar_nome" class="form-label">Nome da Turma *</label>
+                            <input type="text" class="form-control" id="editar_nome" name="nome" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editar_instrutor_id" class="form-label">Instrutor *</label>
+                            <select class="form-select" id="editar_instrutor_id" name="instrutor_id" required>
+                                <option value="">Selecione um instrutor</option>
+                                <?php foreach ($instrutores as $instrutor): ?>
+                                <option value="<?php echo $instrutor['id']; ?>">
+                                    <?php echo htmlspecialchars($instrutor['nome']); ?>
+                                </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editar_tipo_aula" class="form-label">Tipo de Aula *</label>
+                            <select class="form-select" id="editar_tipo_aula" name="tipo_aula" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="teorica">Teórica</option>
+                                <option value="pratica">Prática</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editar_categoria_cnh" class="form-label">Categoria CNH</label>
+                            <select class="form-select" id="editar_categoria_cnh" name="categoria_cnh">
+                                <option value="">Selecione a categoria</option>
+                                <option value="A">A - Motocicleta</option>
+                                <option value="B">B - Automóvel</option>
+                                <option value="C">C - Caminhão</option>
+                                <option value="D">D - Ônibus</option>
+                                <option value="E">E - Carreta</option>
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editar_data_inicio" class="form-label">Data de Início *</label>
+                            <input type="date" class="form-control" id="editar_data_inicio" name="data_inicio" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editar_data_fim" class="form-label">Data de Fim *</label>
+                            <input type="date" class="form-control" id="editar_data_fim" name="data_fim" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editar_status" class="form-label">Status *</label>
+                            <select class="form-select" id="editar_status" name="status" required>
+                                <option value="ativa">Ativa</option>
+                                <option value="inativa">Inativa</option>
+                                <option value="pendente">Pendente</option>
+                            </select>
+                        </div>
+                        <div class="col-12">
+                            <label for="editar_observacoes" class="form-label">Observações</label>
+                            <textarea class="form-control" id="editar_observacoes" name="observacoes" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Calendário da Turma -->
+<div class="modal fade" id="modalCalendarioTurma" tabindex="-1" aria-labelledby="modalCalendarioTurmaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalCalendarioTurmaLabel">
+                    <i class="fas fa-calendar-alt me-2"></i>Calendário de Aulas
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body" id="conteudoCalendarioTurma">
+                <div class="text-center">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2">Carregando calendário...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    <i class="fas fa-times me-1"></i>Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
 function novaTurma() {
     // Abrir modal para nova turma
@@ -838,23 +1010,59 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function visualizarTurma(id) {
-    // Implementar visualização da turma
-    window.open(`?page=turmas&acao=visualizar&turma_id=${id}`, '_blank');
+    // Carregar dados da turma e abrir modal de visualização
+    fetch(`api/turmas.php?id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso && data.dados) {
+                preencherModalVisualizacao(data.dados);
+                abrirModalVisualizacao();
+            } else {
+                alert('Erro ao carregar dados da turma: ' + (data.mensagem || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            alert('Erro ao carregar turma: ' + error.message);
+        });
 }
 
 function editarTurma(id) {
-    // Implementar edição da turma
-    window.open(`?page=turmas&acao=editar&turma_id=${id}`, '_blank');
+    // Carregar dados da turma e abrir modal de edição
+    fetch(`api/turmas.php?id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso && data.dados) {
+                preencherModalEdicao(data.dados);
+                abrirModalEdicao();
+            } else {
+                alert('Erro ao carregar dados da turma: ' + (data.mensagem || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            alert('Erro ao carregar turma: ' + error.message);
+        });
 }
 
 function gerenciarAlunos(id) {
-    // Implementar gerenciamento de alunos
-    window.open(`?page=turmas&acao=alunos&turma_id=${id}`, '_blank');
+    // Redirecionar para página de gerenciamento de alunos da turma
+    window.location.href = `?page=turmas-alunos&turma_id=${id}`;
 }
 
 function calendarioTurma(id) {
-    // Implementar calendário da turma
-    alert('Calendário da turma ' + id + ' será implementado em breve.');
+    // Carregar dados da turma e abrir modal de calendário
+    fetch(`api/turmas.php?id=${id}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso && data.dados) {
+                preencherModalCalendario(data.dados);
+                abrirModalCalendario();
+            } else {
+                alert('Erro ao carregar dados da turma: ' + (data.mensagem || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            alert('Erro ao carregar turma: ' + error.message);
+        });
 }
 
 function excluirTurma(id) {
@@ -920,6 +1128,213 @@ function desativarTurma(id) {
         });
     }
 }
+
+// Funções para gerenciar modais
+function abrirModalVisualizacao() {
+    const modalElement = document.getElementById('modalVisualizarTurma');
+    const modal = new bootstrap.Modal(modalElement, {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+    modal.show();
+}
+
+function abrirModalEdicao() {
+    const modalElement = document.getElementById('modalEditarTurma');
+    const modal = new bootstrap.Modal(modalElement, {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+    modal.show();
+}
+
+function abrirModalCalendario() {
+    const modalElement = document.getElementById('modalCalendarioTurma');
+    const modal = new bootstrap.Modal(modalElement, {
+        backdrop: true,
+        keyboard: true,
+        focus: true
+    });
+    modal.show();
+}
+
+function preencherModalVisualizacao(turma) {
+    const conteudo = document.getElementById('conteudoVisualizacaoTurma');
+    
+    conteudo.innerHTML = `
+        <div class="row g-3">
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-info-circle me-2"></i>Informações Básicas</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>Nome:</strong><br>
+                            <span class="text-muted">${turma.nome || 'N/A'}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>ID:</strong><br>
+                            <span class="text-muted">#${turma.id || 'N/A'}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Tipo de Aula:</strong><br>
+                            <span class="badge bg-info">${turma.tipo_aula === 'teorica' ? 'Teórica' : 'Prática'}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Categoria CNH:</strong><br>
+                            <span class="badge bg-secondary">${turma.categoria_cnh || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-success text-white">
+                        <h6 class="mb-0"><i class="fas fa-user me-2"></i>Instrutor</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>Nome:</strong><br>
+                            <span class="text-muted">${turma.instrutor_nome || 'N/A'}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Email:</strong><br>
+                            <span class="text-muted">${turma.instrutor_email || 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-warning text-dark">
+                        <h6 class="mb-0"><i class="fas fa-calendar me-2"></i>Datas</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>Data de Início:</strong><br>
+                            <span class="text-muted">${turma.data_inicio ? new Date(turma.data_inicio).toLocaleDateString('pt-BR') : 'N/A'}</span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Data de Fim:</strong><br>
+                            <span class="text-muted">${turma.data_fim ? new Date(turma.data_fim).toLocaleDateString('pt-BR') : 'N/A'}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card h-100">
+                    <div class="card-header bg-info text-white">
+                        <h6 class="mb-0"><i class="fas fa-users me-2"></i>Estatísticas</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <strong>Status:</strong><br>
+                            <span class="badge bg-${turma.status === 'ativa' ? 'success' : turma.status === 'inativa' ? 'danger' : 'warning'}">
+                                ${turma.status === 'ativa' ? 'Ativa' : turma.status === 'inativa' ? 'Inativa' : 'Pendente'}
+                            </span>
+                        </div>
+                        <div class="mb-3">
+                            <strong>Alunos Matriculados:</strong><br>
+                            <span class="badge bg-primary">${turma.total_alunos || 0}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            ${turma.observacoes ? `
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-secondary text-white">
+                        <h6 class="mb-0"><i class="fas fa-sticky-note me-2"></i>Observações</h6>
+                    </div>
+                    <div class="card-body">
+                        <p class="mb-0">${turma.observacoes}</p>
+                    </div>
+                </div>
+            </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+function preencherModalEdicao(turma) {
+    document.getElementById('editar_turma_id').value = turma.id;
+    document.getElementById('editar_nome').value = turma.nome || '';
+    document.getElementById('editar_instrutor_id').value = turma.instrutor_id || '';
+    document.getElementById('editar_tipo_aula').value = turma.tipo_aula || '';
+    document.getElementById('editar_categoria_cnh').value = turma.categoria_cnh || '';
+    document.getElementById('editar_data_inicio').value = turma.data_inicio || '';
+    document.getElementById('editar_data_fim').value = turma.data_fim || '';
+    document.getElementById('editar_status').value = turma.status || 'ativa';
+    document.getElementById('editar_observacoes').value = turma.observacoes || '';
+}
+
+function preencherModalCalendario(turma) {
+    const conteudo = document.getElementById('conteudoCalendarioTurma');
+    
+    conteudo.innerHTML = `
+        <div class="row">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-primary text-white">
+                        <h6 class="mb-0"><i class="fas fa-calendar-alt me-2"></i>Calendário de Aulas - ${turma.nome}</h6>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle me-2"></i>
+                            <strong>Funcionalidade em desenvolvimento:</strong> O calendário de aulas será implementado em breve.
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-calendar-plus fa-3x text-primary mb-3"></i>
+                                        <h5>Agendar Aulas</h5>
+                                        <p class="text-muted">Agende aulas teóricas e práticas para esta turma</p>
+                                        <button class="btn btn-primary" disabled>
+                                            <i class="fas fa-plus me-1"></i>Em Breve
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="card">
+                                    <div class="card-body text-center">
+                                        <i class="fas fa-list fa-3x text-success mb-3"></i>
+                                        <h5>Listar Aulas</h5>
+                                        <p class="text-muted">Visualize todas as aulas agendadas</p>
+                                        <button class="btn btn-success" disabled>
+                                            <i class="fas fa-list me-1"></i>Em Breve
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+}
+
+// Validação do formulário de edição
+document.getElementById('formEditarTurma').addEventListener('submit', function(e) {
+    const dataInicio = document.getElementById('editar_data_inicio').value;
+    const dataFim = document.getElementById('editar_data_fim').value;
+    
+    if (dataInicio && dataFim && new Date(dataInicio) >= new Date(dataFim)) {
+        e.preventDefault();
+        alert('A data de fim deve ser posterior à data de início.');
+        return false;
+    }
+    
+    // Mostrar loading no botão
+    const btnSubmit = this.querySelector('button[type="submit"]');
+    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando...';
+    btnSubmit.disabled = true;
+});
 
 // Função para atualizar preview das disciplinas
 function atualizarPreviewDisciplinas() {
