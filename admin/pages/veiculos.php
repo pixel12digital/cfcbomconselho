@@ -845,27 +845,31 @@ try {
     
     .mobile-veiculo-actions {
         display: flex;
-        gap: 0.5rem;
-        flex-wrap: wrap;
+        gap: 0.25rem;
+        flex-wrap: nowrap;
         justify-content: center;
         padding-top: 0.75rem;
         border-top: 1px solid #e9ecef;
     }
     
     .mobile-veiculo-actions .btn {
-        flex: 1;
-        min-width: 60px;
+        width: 36px;
         height: 36px;
-        font-size: 0.75rem;
-        padding: 0.375rem 0.5rem;
+        padding: 0;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 0.25rem;
+        border-radius: 6px;
+        font-size: 0.875rem;
     }
     
     .mobile-veiculo-actions .btn i {
         font-size: 0.875rem;
+        margin: 0;
+    }
+    
+    .mobile-veiculo-actions .btn span {
+        display: none;
     }
 }
 
