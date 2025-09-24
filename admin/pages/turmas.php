@@ -798,7 +798,7 @@ body:not(.modal-open) .modal-backdrop {
 
 <!-- Modal Visualizar Turma -->
 <div class="modal fade" id="modalVisualizarTurma" tabindex="-1" aria-labelledby="modalVisualizarTurmaLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog modal-xl">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title" id="modalVisualizarTurmaLabel">
@@ -806,7 +806,7 @@ body:not(.modal-open) .modal-backdrop {
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body" id="conteudoVisualizacaoTurma">
+            <div class="modal-body" id="conteudoVisualizacaoTurma" style="max-height: 70vh; overflow-y: auto;">
                 <div class="text-center">
                     <div class="spinner-border text-primary" role="status">
                         <span class="visually-hidden">Carregando...</span>
@@ -1191,11 +1191,11 @@ function preencherModalVisualizacao(turma) {
     }
     
     conteudo.innerHTML = `
-        <div class="row g-3">
+        <div class="row g-4">
             <!-- Cabeçalho da Turma -->
             <div class="col-12">
                 <div class="card border-0 bg-gradient" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);">
-                    <div class="card-body text-white text-center">
+                    <div class="card-body text-white text-center py-4">
                         <h4 class="mb-2"><i class="fas fa-chalkboard-teacher me-2"></i>${turma.nome || 'N/A'}</h4>
                         <p class="mb-0 opacity-75">Turma #${turma.id || 'N/A'} • ${turma.categoria_cnh || 'N/A'}</p>
                     </div>
@@ -1208,27 +1208,27 @@ function preencherModalVisualizacao(turma) {
                     <div class="card-header bg-${corProgresso} text-white">
                         <h6 class="mb-0"><i class="fas fa-chart-line me-2"></i>Progresso da Turma</h6>
                     </div>
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center mb-2">
+                    <div class="card-body py-3">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
                             <span class="fw-bold">${statusProgresso}</span>
-                            <span class="badge bg-${corProgresso}">${Math.round(progresso)}%</span>
+                            <span class="badge bg-${corProgresso} fs-6">${Math.round(progresso)}%</span>
                         </div>
-                        <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress mb-3" style="height: 10px;">
                             <div class="progress-bar bg-${corProgresso}" role="progressbar" 
                                  style="width: ${progresso}%" aria-valuenow="${progresso}" 
                                  aria-valuemin="0" aria-valuemax="100"></div>
                         </div>
                         <div class="row text-center">
                             <div class="col-4">
-                                <small class="text-muted">Início</small><br>
+                                <small class="text-muted d-block">Início</small>
                                 <strong>${turma.data_inicio ? new Date(turma.data_inicio).toLocaleDateString('pt-BR') : 'N/A'}</strong>
                             </div>
                             <div class="col-4">
-                                <small class="text-muted">Hoje</small><br>
+                                <small class="text-muted d-block">Hoje</small>
                                 <strong>${hoje.toLocaleDateString('pt-BR')}</strong>
                             </div>
                             <div class="col-4">
-                                <small class="text-muted">Fim</small><br>
+                                <small class="text-muted d-block">Fim</small>
                                 <strong>${turma.data_fim ? new Date(turma.data_fim).toLocaleDateString('pt-BR') : 'N/A'}</strong>
                             </div>
                         </div>
@@ -1242,14 +1242,14 @@ function preencherModalVisualizacao(turma) {
                     <div class="card-header bg-info text-white">
                         <h6 class="mb-0"><i class="fas fa-user-tie me-2"></i>Instrutor Responsável</h6>
                     </div>
-                    <div class="card-body text-center">
+                    <div class="card-body text-center py-4">
                         <div class="mb-3">
-                            <div class="avatar-lg mx-auto mb-3" style="width: 80px; height: 80px; background: #17a2b8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                            <div class="avatar-lg mx-auto mb-3" style="width: 70px; height: 70px; background: #17a2b8; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
                                 <i class="fas fa-user fa-2x text-white"></i>
                             </div>
                         </div>
                         <h5 class="mb-1">${turma.instrutor_nome || 'N/A'}</h5>
-                        <p class="text-muted mb-2">${turma.instrutor_email || 'N/A'}</p>
+                        <p class="text-muted mb-2 small">${turma.instrutor_email || 'N/A'}</p>
                         <span class="badge bg-info">Instrutor Certificado</span>
                     </div>
                 </div>
@@ -1261,34 +1261,34 @@ function preencherModalVisualizacao(turma) {
                     <div class="card-header bg-success text-white">
                         <h6 class="mb-0"><i class="fas fa-chart-bar me-2"></i>Estatísticas</h6>
                     </div>
-                    <div class="card-body">
-                        <div class="row g-3">
+                    <div class="card-body p-3">
+                        <div class="row g-2">
                             <div class="col-6 text-center">
-                                <div class="border rounded p-3">
-                                    <i class="fas fa-users fa-2x text-primary mb-2"></i>
-                                    <h4 class="mb-0">${turma.total_alunos || 0}</h4>
-                                    <small class="text-muted">Alunos Matriculados</small>
+                                <div class="border rounded p-2 h-100 d-flex flex-column justify-content-center">
+                                    <i class="fas fa-users fa-2x text-primary mb-1"></i>
+                                    <h5 class="mb-0">${turma.total_alunos || 0}</h5>
+                                    <small class="text-muted">Alunos</small>
                                 </div>
                             </div>
                             <div class="col-6 text-center">
-                                <div class="border rounded p-3">
-                                    <i class="fas fa-book fa-2x text-warning mb-2"></i>
-                                    <h4 class="mb-0">${turma.aulas ? turma.aulas.length : 0}</h4>
-                                    <small class="text-muted">Aulas Programadas</small>
+                                <div class="border rounded p-2 h-100 d-flex flex-column justify-content-center">
+                                    <i class="fas fa-book fa-2x text-warning mb-1"></i>
+                                    <h5 class="mb-0">${turma.aulas ? turma.aulas.length : 0}</h5>
+                                    <small class="text-muted">Aulas</small>
                                 </div>
                             </div>
                             <div class="col-6 text-center">
-                                <div class="border rounded p-3">
-                                    <i class="fas fa-clock fa-2x text-info mb-2"></i>
-                                    <h4 class="mb-0">${turma.tipo_aula === 'teorica' ? '45h' : '20h'}</h4>
-                                    <small class="text-muted">Carga Horária</small>
+                                <div class="border rounded p-2 h-100 d-flex flex-column justify-content-center">
+                                    <i class="fas fa-clock fa-2x text-info mb-1"></i>
+                                    <h5 class="mb-0">${turma.tipo_aula === 'teorica' ? '45h' : '20h'}</h5>
+                                    <small class="text-muted">Carga</small>
                                 </div>
                             </div>
                             <div class="col-6 text-center">
-                                <div class="border rounded p-3">
-                                    <i class="fas fa-graduation-cap fa-2x text-success mb-2"></i>
-                                    <h4 class="mb-0">${turma.categoria_cnh || 'N/A'}</h4>
-                                    <small class="text-muted">Categoria CNH</small>
+                                <div class="border rounded p-2 h-100 d-flex flex-column justify-content-center">
+                                    <i class="fas fa-graduation-cap fa-2x text-success mb-1"></i>
+                                    <h5 class="mb-0">${turma.categoria_cnh || 'N/A'}</h5>
+                                    <small class="text-muted">CNH</small>
                                 </div>
                             </div>
                         </div>
