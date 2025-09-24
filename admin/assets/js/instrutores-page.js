@@ -2155,22 +2155,26 @@ function preencherModalVisualizacao(instrutor) {
             urlFoto = `${baseUrl}/${instrutor.foto}`;
         }
         fotoHTML = `
-            <div class="row mb-4">
-                <div class="col-12">
-                    <h6 class="text-primary border-bottom pb-2 mb-3">
-                        <i class="fas fa-camera me-2"></i>Foto do Instrutor
-                    </h6>
-                </div>
-                <div class="col-12 text-center">
-                    <img src="${urlFoto}" alt="Foto do instrutor" 
-                         class="img-fluid rounded-circle border shadow-sm"
-                         style="max-width: 200px; max-height: 200px; object-fit: cover; border: 3px solid #dee2e6 !important;"
-                         onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
-                    <div style="display: none; color: #6c757d; font-size: 0.9rem;">
-                        <i class="fas fa-user-circle fa-3x"></i><br>
-                        Foto não disponível
+            <div class="instrutor-photo-section">
+                <div class="instrutor-photo-container">
+                    <img src="${urlFoto}" alt="Foto do instrutor" class="instrutor-photo" 
+                         onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <div class="instrutor-photo-placeholder" style="display: none;">
+                        <i class="fas fa-user"></i>
                     </div>
                 </div>
+                <div class="instrutor-photo-text">Foto do Instrutor</div>
+            </div>
+        `;
+    } else {
+        fotoHTML = `
+            <div class="instrutor-photo-section">
+                <div class="instrutor-photo-container">
+                    <div class="instrutor-photo-placeholder">
+                        <i class="fas fa-user"></i>
+                    </div>
+                </div>
+                <div class="instrutor-photo-text">Foto não disponível</div>
             </div>
         `;
     }

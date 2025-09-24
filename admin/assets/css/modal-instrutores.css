@@ -303,6 +303,63 @@
     width: 100% !important;
 }
 
+/* CSS ESPECÍFICO PARA FOTO DO INSTRUTOR */
+.instrutor-photo-section {
+    text-align: center !important;
+    margin-bottom: 1.5rem !important;
+    padding: 1rem !important;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    border-radius: 0.5rem !important;
+    border: 2px solid #dee2e6 !important;
+}
+
+.instrutor-photo-container {
+    position: relative !important;
+    display: inline-block !important;
+    margin-bottom: 0.5rem !important;
+}
+
+.instrutor-photo {
+    width: 120px !important;
+    height: 120px !important;
+    border-radius: 50% !important;
+    object-fit: cover !important;
+    object-position: center !important;
+    border: 4px solid #17a2b8 !important;
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
+    transition: all 0.3s ease !important;
+}
+
+.instrutor-photo:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 6px 20px rgba(23, 162, 184, 0.4) !important;
+}
+
+.instrutor-photo-placeholder {
+    width: 120px !important;
+    height: 120px !important;
+    border-radius: 50% !important;
+    background: linear-gradient(135deg, #6c757d 0%, #495057 100%) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 4px solid #17a2b8 !important;
+    box-shadow: 0 4px 12px rgba(23, 162, 184, 0.3) !important;
+    margin: 0 auto !important;
+}
+
+.instrutor-photo-placeholder i {
+    font-size: 3rem !important;
+    color: white !important;
+}
+
+.instrutor-photo-text {
+    color: #6c757d !important;
+    font-size: 0.9rem !important;
+    font-weight: 500 !important;
+    margin-top: 0.5rem !important;
+}
+
 .instrutor-fields {
     display: block !important;
     width: 100% !important;
@@ -354,6 +411,32 @@
         margin-bottom: 0.5rem !important;
     }
     
+    /* FOTO MOBILE - ESTILO REDES SOCIAIS */
+    .instrutor-photo-section {
+        padding: 0.75rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .instrutor-photo {
+        width: 100px !important;
+        height: 100px !important;
+        border-width: 3px !important;
+    }
+    
+    .instrutor-photo-placeholder {
+        width: 100px !important;
+        height: 100px !important;
+        border-width: 3px !important;
+    }
+    
+    .instrutor-photo-placeholder i {
+        font-size: 2.5rem !important;
+    }
+    
+    .instrutor-photo-text {
+        font-size: 0.8rem !important;
+    }
+    
     .instrutor-field {
         padding: 0.6rem !important;
     }
@@ -380,6 +463,32 @@
     .instrutor-section-title {
         font-size: 0.9rem !important;
         margin-bottom: 0.4rem !important;
+    }
+    
+    /* FOTO MOBILE PEQUENO - MAIS COMPACTO */
+    .instrutor-photo-section {
+        padding: 0.5rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+    
+    .instrutor-photo {
+        width: 80px !important;
+        height: 80px !important;
+        border-width: 2px !important;
+    }
+    
+    .instrutor-photo-placeholder {
+        width: 80px !important;
+        height: 80px !important;
+        border-width: 2px !important;
+    }
+    
+    .instrutor-photo-placeholder i {
+        font-size: 2rem !important;
+    }
+    
+    .instrutor-photo-text {
+        font-size: 0.75rem !important;
     }
     
     .instrutor-field {
