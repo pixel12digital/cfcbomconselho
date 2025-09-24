@@ -27,6 +27,17 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
    ESTILOS PARA OTIMIZAÇÃO DE ESPAÇO DESKTOP
    ===================================================== */
 
+/* FORÇAR MODAL FECHADO POR PADRÃO */
+#modalAluno {
+    display: none !important;
+    visibility: hidden !important;
+}
+
+#modalAluno.show {
+    display: none !important;
+    visibility: hidden !important;
+}
+
 /* Cards de estatísticas mais compactos */
 .card.border-left-primary,
 .card.border-left-success,
@@ -1368,7 +1379,7 @@ body.modal-open #modalAluno .modal-dialog {
 </div>
 
 <!-- Modal Customizado para Cadastro/Edição de Aluno -->
-<div id="modalAluno" class="custom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999;">
+<div id="modalAluno" class="custom-modal" style="display: none !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999;">
     <div class="custom-modal-dialog" style="position: fixed; top: 1rem; left: 1rem; right: 1rem; bottom: 1rem; width: auto; height: auto; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center;">
         <div class="custom-modal-content" style="width: 100%; height: auto; max-width: 1200px; max-height: 90vh; background: white; border: none; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; position: relative;">
             <form id="formAluno" method="POST">
@@ -4337,10 +4348,18 @@ if (urlParams.has('modal') || urlParams.has('novo') || urlParams.has('criar')) {
 // PREVENIR ABERTURA AUTOMÁTICA DO MODAL
 console.log('🔧 Verificando se modal deve abrir automaticamente...');
 const modal = document.getElementById('modalAluno');
-if (modal && modal.style.display !== 'none') {
-    console.log('⚠️ Modal está visível - fechando automaticamente');
+if (modal) {
+    // FORÇAR modal fechado ao carregar página
     modal.style.display = 'none';
     document.body.style.overflow = 'auto';
+    console.log('✅ Modal forçado para fechado');
+    
+    // Verificar se há algum CSS que está forçando o modal a aparecer
+    const computedStyle = window.getComputedStyle(modal);
+    if (computedStyle.display !== 'none') {
+        console.log('⚠️ CSS está forçando modal visível - corrigindo');
+        modal.style.setProperty('display', 'none', 'important');
+    }
 }
 
 function toggleMobileLayoutAlunos() {
@@ -4442,13 +4461,7 @@ window.addEventListener('resize', ajustarModalResponsivo);
 document.addEventListener('shown.bs.modal', ajustarModalResponsivo);
 
 // Ajustar modal customizado quando aberto
-function abrirModalAluno() {
-    const modal = document.getElementById('modalAluno');
-    if (modal) {
-        modal.style.display = 'flex';
-        ajustarModalResponsivo();
-    }
-}
+// Função removida - usando a versão mais completa acima
 
 // Override das funções existentes para incluir ajuste responsivo
 const originalAbrirModalAluno = window.abrirModalAluno;
