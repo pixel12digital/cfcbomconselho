@@ -175,7 +175,6 @@ class TurmaManager {
                     LEFT JOIN cfcs c ON t.cfc_id = c.id
                     WHERE t.id = ?";
             
-            $this->db->query($sql, [$turmaId]);
             $turma = $this->db->fetch($sql, [$turmaId]);
             
             if ($turma) {
@@ -184,6 +183,9 @@ class TurmaManager {
                 
                 // Buscar alunos matriculados
                 $turma['alunos'] = $this->buscarAlunosTurma($turmaId);
+                
+                // Contar total de alunos
+                $turma['total_alunos'] = count($turma['alunos']);
             }
             
             return [
@@ -371,10 +373,13 @@ class TurmaManager {
      * @return array Lista de aulas
      */
     private function buscarAulasTurma($turmaId) {
-        $sql = "SELECT * FROM turma_aulas WHERE turma_id = ? ORDER BY ordem ASC";
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$turmaId]);
-        return $this->db->fetchAll($sql, $params);
+        try {
+            $sql = "SELECT * FROM turma_aulas WHERE turma_id = ? ORDER BY ordem ASC";
+            return $this->db->fetchAll($sql, [$turmaId]);
+        } catch (Exception $e) {
+            // Se a tabela não existir, retornar array vazio
+            return [];
+        }
     }
     
     /**
@@ -383,19 +388,22 @@ class TurmaManager {
      * @return array Lista de alunos
      */
     private function buscarAlunosTurma($turmaId) {
-        $sql = "SELECT 
-                    ta.*,
-                    a.nome as aluno_nome,
-                    a.email as aluno_email,
-                    a.telefone as aluno_telefone
-                FROM turma_alunos ta
-                LEFT JOIN alunos a ON ta.aluno_id = a.id
-                WHERE ta.turma_id = ?
-                ORDER BY ta.data_matricula ASC";
-        
-        $stmt = $this->db->prepare($sql);
-        $stmt->execute([$turmaId]);
-        return $this->db->fetchAll($sql, $params);
+        try {
+            $sql = "SELECT 
+                        ta.*,
+                        a.nome as aluno_nome,
+                        a.email as aluno_email,
+                        a.telefone as aluno_telefone
+                    FROM turma_alunos ta
+                    LEFT JOIN alunos a ON ta.aluno_id = a.id
+                    WHERE ta.turma_id = ?
+                    ORDER BY ta.data_matricula ASC";
+            
+            return $this->db->fetchAll($sql, [$turmaId]);
+        } catch (Exception $e) {
+            // Se a tabela não existir, retornar array vazio
+            return [];
+        }
     }
     
     /**

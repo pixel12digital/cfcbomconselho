@@ -66,10 +66,24 @@ try {
     }
     
 } catch (Exception $e) {
+    // Log do erro para debug
+    error_log("Erro na API turmas.php: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    
     http_response_code(500);
     echo json_encode([
         'sucesso' => false,
         'mensagem' => 'Erro interno do servidor: ' . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
+} catch (Error $e) {
+    // Capturar erros fatais do PHP
+    error_log("Erro fatal na API turmas.php: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    
+    http_response_code(500);
+    echo json_encode([
+        'sucesso' => false,
+        'mensagem' => 'Erro interno do servidor'
     ], JSON_UNESCAPED_UNICODE);
 }
 
@@ -77,41 +91,70 @@ try {
  * Manipular requisições GET
  */
 function handleGetRequest($turmaManager) {
-    if (isset($_GET['id'])) {
-        // Buscar turma específica
-        $resultado = $turmaManager->buscarTurma($_GET['id']);
-        
-        if ($resultado['sucesso']) {
-            echo json_encode([
-                'sucesso' => true,
-                'dados' => $resultado['dados']
-            ], JSON_UNESCAPED_UNICODE);
+    try {
+        if (isset($_GET['id'])) {
+            // Buscar turma específica
+            $turmaId = (int)$_GET['id'];
+            
+            if ($turmaId <= 0) {
+                http_response_code(400);
+                echo json_encode([
+                    'sucesso' => false,
+                    'mensagem' => 'ID da turma inválido'
+                ], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+            
+            $resultado = $turmaManager->buscarTurma($turmaId);
+            
+            if ($resultado['sucesso']) {
+                if ($resultado['dados']) {
+                    echo json_encode([
+                        'sucesso' => true,
+                        'dados' => $resultado['dados']
+                    ], JSON_UNESCAPED_UNICODE);
+                } else {
+                    http_response_code(404);
+                    echo json_encode([
+                        'sucesso' => false,
+                        'mensagem' => 'Turma não encontrada'
+                    ], JSON_UNESCAPED_UNICODE);
+                }
+            } else {
+                http_response_code(500);
+                echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+            }
+            
+        } elseif (isset($_GET['estatisticas'])) {
+            // Obter estatísticas
+            $cfcId = $_GET['cfc_id'] ?? null;
+            $resultado = $turmaManager->obterEstatisticas($cfcId);
+            echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+            
         } else {
-            http_response_code(404);
+            // Listar turmas com filtros
+            $filtros = [
+                'busca' => $_GET['busca'] ?? '',
+                'data_inicio' => $_GET['data_inicio'] ?? '',
+                'data_fim' => $_GET['data_fim'] ?? '',
+                'status' => $_GET['status'] ?? '',
+                'tipo_aula' => $_GET['tipo_aula'] ?? '',
+                'cfc_id' => $_GET['cfc_id'] ?? $_SESSION['cfc_id'] ?? null,
+                'limite' => (int)($_GET['limite'] ?? 10),
+                'pagina' => (int)($_GET['pagina'] ?? 0)
+            ];
+            
+            $resultado = $turmaManager->listarTurmas($filtros);
             echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
         }
         
-    } elseif (isset($_GET['estatisticas'])) {
-        // Obter estatísticas
-        $cfcId = $_GET['cfc_id'] ?? null;
-        $resultado = $turmaManager->obterEstatisticas($cfcId);
-        echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
-        
-    } else {
-        // Listar turmas com filtros
-        $filtros = [
-            'busca' => $_GET['busca'] ?? '',
-            'data_inicio' => $_GET['data_inicio'] ?? '',
-            'data_fim' => $_GET['data_fim'] ?? '',
-            'status' => $_GET['status'] ?? '',
-            'tipo_aula' => $_GET['tipo_aula'] ?? '',
-            'cfc_id' => $_GET['cfc_id'] ?? $_SESSION['cfc_id'] ?? null,
-            'limite' => (int)($_GET['limite'] ?? 10),
-            'pagina' => (int)($_GET['pagina'] ?? 0)
-        ];
-        
-        $resultado = $turmaManager->listarTurmas($filtros);
-        echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+    } catch (Exception $e) {
+        error_log("Erro em handleGetRequest: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Erro ao processar requisição: ' . $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
     }
 }
 
