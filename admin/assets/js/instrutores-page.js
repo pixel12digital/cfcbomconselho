@@ -2118,7 +2118,8 @@ function preencherModalVisualizacao(instrutor) {
                 </div>
                 <div class="col-12 text-center">
                     <img src="${urlFoto}" alt="Foto do instrutor" 
-                         style="max-width: 200px; max-height: 200px; border-radius: 50%; object-fit: cover; border: 3px solid #dee2e6; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"
+                         class="img-fluid rounded-circle border shadow-sm"
+                         style="max-width: 200px; max-height: 200px; object-fit: cover; border: 3px solid #dee2e6 !important;"
                          onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
                     <div style="display: none; color: #6c757d; font-size: 0.9rem;">
                         <i class="fas fa-user-circle fa-3x"></i><br>
@@ -2140,37 +2141,37 @@ function preencherModalVisualizacao(instrutor) {
                         <i class="fas fa-user-tie me-2"></i>Informações Básicas
                     </h6>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Nome Completo:</strong><br>
                         <span class="text-muted">${nomeExibicao}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Email:</strong><br>
                         <span class="text-muted">${instrutor.email || 'N/A'}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>CPF:</strong><br>
                         <span class="text-muted">${instrutor.cpf || 'N/A'}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>CNH:</strong><br>
                         <span class="text-muted">${instrutor.cnh || 'N/A'}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Data de Nascimento:</strong><br>
                         <span class="text-muted">${dataNascimentoFormatada}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Telefone:</strong><br>
                         <span class="text-muted">${instrutor.telefone || 'N/A'}</span>
@@ -2185,25 +2186,25 @@ function preencherModalVisualizacao(instrutor) {
                         <i class="fas fa-id-card me-2"></i>Dados do Instrutor
                     </h6>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Credencial:</strong><br>
                         <span class="text-muted">${instrutor.credencial || 'N/A'}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>CFC:</strong><br>
                         <span class="text-muted">${cfcExibicao}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Categorias de Habilitação:</strong><br>
                         <span class="badge bg-info">${categoriasFormatadas}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Status:</strong><br>
                         <span class="badge ${instrutor.ativo ? 'bg-success' : 'bg-danger'}">
@@ -2211,7 +2212,7 @@ function preencherModalVisualizacao(instrutor) {
                         </span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Validade da Credencial:</strong><br>
                         <span class="text-muted">${validadeCredencialFormatada}</span>
@@ -2226,13 +2227,13 @@ function preencherModalVisualizacao(instrutor) {
                         <i class="fas fa-clock me-2"></i>Horários Disponíveis
                     </h6>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Dias da Semana:</strong><br>
                         <span class="text-muted">${diasFormatados}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Horário:</strong><br>
                         <span class="text-muted">${horarioInicioFormatado} - ${horarioFimFormatado}</span>
@@ -2247,19 +2248,19 @@ function preencherModalVisualizacao(instrutor) {
                         <i class="fas fa-map-marker-alt me-2"></i>Endereço
                     </h6>
                 </div>
-                <div class="col-md-12">
+                <div class="col-12">
                     <div class="mb-2">
                         <strong>Endereço:</strong><br>
                         <span class="text-muted">${instrutor.endereco || 'N/A'}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>Cidade:</strong><br>
                         <span class="text-muted">${instrutor.cidade || 'N/A'}</span>
                     </div>
                 </div>
-                <div class="col-md-6">
+                <div class="col-12 col-md-6">
                     <div class="mb-2">
                         <strong>UF:</strong><br>
                         <span class="text-muted">${instrutor.uf || 'N/A'}</span>

@@ -232,6 +232,104 @@
     }
 }
 
+/* CSS ESPECÍFICO PARA CONTEÚDO DO MODAL DE VISUALIZAÇÃO */
+.modal-body-responsive .container-fluid {
+    padding: 0 !important;
+}
+
+.modal-body-responsive .row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+}
+
+.modal-body-responsive .col-12,
+.modal-body-responsive .col-md-6 {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+}
+
+.modal-body-responsive h6 {
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.75rem !important;
+}
+
+.modal-body-responsive .mb-2 {
+    margin-bottom: 0.75rem !important;
+    padding: 0.5rem !important;
+    background-color: #f8f9fa !important;
+    border-radius: 0.375rem !important;
+    border-left: 3px solid #17a2b8 !important;
+}
+
+.modal-body-responsive strong {
+    color: #495057 !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+}
+
+.modal-body-responsive .text-muted {
+    color: #6c757d !important;
+    font-size: 0.95rem !important;
+    line-height: 1.4 !important;
+}
+
+.modal-body-responsive .badge {
+    font-size: 0.8rem !important;
+    padding: 0.4rem 0.6rem !important;
+}
+
+/* RESPONSIVIDADE ESPECÍFICA PARA CONTEÚDO */
+@media (max-width: 768px) {
+    .modal-body-responsive .mb-2 {
+        margin-bottom: 0.5rem !important;
+        padding: 0.75rem !important;
+    }
+    
+    .modal-body-responsive h6 {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .modal-body-responsive strong {
+        font-size: 0.85rem !important;
+    }
+    
+    .modal-body-responsive .text-muted {
+        font-size: 0.9rem !important;
+    }
+    
+    .modal-body-responsive .badge {
+        font-size: 0.75rem !important;
+        padding: 0.3rem 0.5rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal-body-responsive .mb-2 {
+        margin-bottom: 0.4rem !important;
+        padding: 0.6rem !important;
+    }
+    
+    .modal-body-responsive h6 {
+        font-size: 0.9rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+    
+    .modal-body-responsive strong {
+        font-size: 0.8rem !important;
+    }
+    
+    .modal-body-responsive .text-muted {
+        font-size: 0.85rem !important;
+    }
+    
+    .modal-body-responsive .badge {
+        font-size: 0.7rem !important;
+        padding: 0.25rem 0.4rem !important;
+    }
+}
+
 .custom-modal-dialog {
     position: relative;
     width: 95%;
