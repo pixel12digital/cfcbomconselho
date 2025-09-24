@@ -514,6 +514,7 @@ if ($action === 'list') {
                                                     data-user-id="<?php echo $usuario['id']; ?>"
                                                     data-user-name="<?php echo htmlspecialchars($usuario['nome']); ?>"
                                                     data-user-email="<?php echo htmlspecialchars($usuario['email']); ?>"
+                                                    data-user-type="<?php echo $usuario['tipo']; ?>"
                                                     title="Redefinir senha do usuário">
                                                 <i class="fas fa-key"></i>
                                             </button>
@@ -587,6 +588,7 @@ if ($action === 'list') {
                                         data-user-id="<?php echo $usuario['id']; ?>"
                                         data-user-name="<?php echo htmlspecialchars($usuario['nome']); ?>"
                                         data-user-email="<?php echo htmlspecialchars($usuario['email']); ?>"
+                                        data-user-type="<?php echo $usuario['tipo']; ?>"
                                         title="Redefinir Senha">
                                     <i class="fas fa-key"></i>
                                 </button>
@@ -748,13 +750,13 @@ if ($action === 'list') {
             
             <div class="credentials-container">
                 <div class="credential-item">
-                    <label class="credential-label">
-                        <i class="fas fa-envelope"></i>
-                        Email:
+                    <label class="credential-label" id="credentialLabel">
+                        <i class="fas fa-envelope" id="credentialIcon"></i>
+                        <span id="credentialLabelText">Email:</span>
                     </label>
                     <div class="credential-value">
                         <input type="text" id="credentialEmail" readonly value="" class="credential-input">
-                        <button class="btn btn-copy" onclick="copyToClipboard('credentialEmail')" title="Copiar email">
+                        <button class="btn btn-copy" onclick="copyToClipboard('credentialEmail')" title="Copiar" id="credentialCopyBtn">
                             <i class="fas fa-copy"></i>
                         </button>
                     </div>
@@ -1251,13 +1253,14 @@ window.showNotification = showNotification;
 let resetPasswordUser = null;
 
 // Mostrar modal de redefinição de senha
-function showResetPasswordModal(userId, userName, userEmail) {
+function showResetPasswordModal(userId, userName, userEmail, userType) {
     console.log('Função showResetPasswordModal chamada para usuário ID: ' + userId);
     
     resetPasswordUser = {
         id: userId,
         name: userName,
-        email: userEmail
+        email: userEmail,
+        type: userType
     };
     
     // Preencher dados do usuário no modal
@@ -1404,15 +1407,43 @@ window.confirmResetPassword = confirmResetPassword;
 function showCredentialsModal(credentials) {
     console.log('Exibindo modal de credenciais');
     
-    // Preencher campos
-    document.getElementById('credentialEmail').value = credentials.email;
+    // Determinar o tipo de campo baseado no tipo de usuário
+    const userType = credentials.tipo || (resetPasswordUser ? resetPasswordUser.type || 'admin' : 'admin');
+    const isStudent = userType === 'aluno';
+    
+    // Ajustar interface baseada no tipo de usuário
+    const credentialLabel = document.getElementById('credentialLabelText');
+    const credentialIcon = document.getElementById('credentialIcon');
+    const credentialInput = document.getElementById('credentialEmail');
+    const credentialCopyBtn = document.getElementById('credentialCopyBtn');
+    
+    if (isStudent) {
+        // Para alunos, mostrar CPF
+        credentialLabel.textContent = 'CPF:';
+        credentialIcon.className = 'fas fa-id-card';
+        credentialInput.placeholder = '000.000.000-00';
+        credentialCopyBtn.title = 'Copiar CPF';
+        
+        // Usar CPF das credenciais ou do usuário
+        const userCpf = credentials.cpf || (resetPasswordUser ? resetPasswordUser.cpf : '') || 'CPF não encontrado';
+        credentialInput.value = userCpf;
+    } else {
+        // Para outros usuários, mostrar email
+        credentialLabel.textContent = 'Email:';
+        credentialIcon.className = 'fas fa-envelope';
+        credentialInput.placeholder = 'usuario@email.com';
+        credentialCopyBtn.title = 'Copiar email';
+        credentialInput.value = credentials.email;
+    }
+    
+    // Preencher senha
     document.getElementById('credentialPassword').value = credentials.senha_temporaria;
     
     // Mostrar modal
     const modal = document.getElementById('credentialsModal');
     modal.classList.add('show');
     
-    console.log('Modal de credenciais aberto');
+    console.log('Modal de credenciais aberto para tipo:', userType, isStudent ? 'CPF' : 'Email');
 }
 
 // Garantir que a função esteja disponível globalmente
@@ -1446,7 +1477,9 @@ function copyToClipboard(elementId) {
         button.style.background = '#28a745';
         
         // Mostrar notificação
-        showNotification(`${elementId === 'credentialEmail' ? 'Email' : 'Senha'} copiado!`, 'success');
+        const credentialLabel = document.getElementById('credentialLabelText').textContent;
+        const fieldName = elementId === 'credentialEmail' ? credentialLabel.replace(':', '') : 'Senha';
+        showNotification(`${fieldName} copiado!`, 'success');
         
         // Restaurar botão após 2 segundos
         setTimeout(() => {
@@ -1461,7 +1494,9 @@ function copyToClipboard(elementId) {
         // Fallback para navegadores mais antigos
         try {
             document.execCommand('copy');
-            showNotification(`${elementId === 'credentialEmail' ? 'Email' : 'Senha'} copiado!`, 'success');
+            const credentialLabel = document.getElementById('credentialLabelText').textContent;
+            const fieldName = elementId === 'credentialEmail' ? credentialLabel.replace(':', '') : 'Senha';
+            showNotification(`${fieldName} copiado!`, 'success');
         } catch (fallbackErr) {
             console.error('Fallback copy failed:', fallbackErr);
             showNotification('Erro ao copiar. Tente selecionar e copiar manualmente.', 'error');
@@ -1491,10 +1526,11 @@ window.togglePasswordVisibility = togglePasswordVisibility;
 
 // Copiar todas as credenciais
 function copyAllCredentials() {
-    const email = document.getElementById('credentialEmail').value;
+    const credentialValue = document.getElementById('credentialEmail').value;
     const password = document.getElementById('credentialPassword').value;
+    const credentialLabel = document.getElementById('credentialLabelText').textContent;
     
-    const allCredentials = `Email: ${email}\nSenha: ${password}`;
+    const allCredentials = `${credentialLabel} ${credentialValue}\nSenha: ${password}`;
     
     navigator.clipboard.writeText(allCredentials).then(() => {
         showNotification('Todas as credenciais copiadas!', 'success');
@@ -1607,10 +1643,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const userIdFromButton = this.getAttribute('data-user-id');
             const userNameFromButton = this.getAttribute('data-user-name');
             const userEmailFromButton = this.getAttribute('data-user-email');
+            const userTypeFromButton = this.getAttribute('data-user-type') || 'admin';
             console.log('Botao de redefinir senha clicado para usuario ID: ' + userIdFromButton);
             
             if (typeof showResetPasswordModal === 'function') {
-                showResetPasswordModal(userIdFromButton, userNameFromButton, userEmailFromButton);
+                showResetPasswordModal(userIdFromButton, userNameFromButton, userEmailFromButton, userTypeFromButton);
             } else {
                 console.error('Funcao showResetPasswordModal nao esta disponivel!');
                 showNotification('Erro: Função de redefinição de senha não está disponível. Recarregue a página.', 'error');

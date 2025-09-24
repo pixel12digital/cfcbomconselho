@@ -106,7 +106,7 @@ try {
                 error_log('[USUARIOS API] Redefinindo senha para usuário ID: ' . $userId);
                 
                 // Verificar se usuário existe
-                $usuario = $db->fetch("SELECT id, nome, email, tipo FROM usuarios WHERE id = ?", [$userId]);
+                $usuario = $db->fetch("SELECT id, nome, email, cpf, tipo FROM usuarios WHERE id = ?", [$userId]);
                 if (!$usuario) {
                     error_log('[USUARIOS API] Usuário não encontrado para redefinição - ID: ' . $userId);
                     http_response_code(404);
@@ -138,6 +138,8 @@ try {
                         'message' => 'Senha redefinida com sucesso',
                         'credentials' => [
                             'email' => $usuario['email'],
+                            'cpf' => $usuario['cpf'] ?? '',
+                            'tipo' => $usuario['tipo'],
                             'senha_temporaria' => $novaSenhaTemporaria,
                             'message' => 'Nova senha temporária gerada'
                         ]
