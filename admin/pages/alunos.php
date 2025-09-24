@@ -27,15 +27,22 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
    ESTILOS PARA OTIMIZAÇÃO DE ESPAÇO DESKTOP
    ===================================================== */
 
-/* FORÇAR MODAL FECHADO POR PADRÃO */
+/* MODAL FECHADO POR PADRÃO - MAS PERMITIR ABERTURA */
 #modalAluno {
-    display: none !important;
-    visibility: hidden !important;
+    display: none;
+    visibility: hidden;
 }
 
 #modalAluno.show {
-    display: none !important;
-    visibility: hidden !important;
+    display: none;
+    visibility: hidden;
+}
+
+/* Permitir abertura quando definido via JavaScript */
+#modalAluno[style*="display: block"],
+#modalAluno[style*="display: flex"] {
+    display: block !important;
+    visibility: visible !important;
 }
 
 /* Cards de estatísticas mais compactos */
@@ -3631,17 +3638,14 @@ document.addEventListener('keydown', function(e) {
 function abrirModalAluno() {
     console.log('🚀 Abrindo modal customizado...');
     
-    // Verificar se não há erro de sintaxe JavaScript
-    if (typeof fecharModalAluno === 'undefined') {
-        console.error('❌ ERRO: função fecharModalAluno não está definida!');
-        alert('Erro: Função de fechar modal não encontrada. Recarregue a página.');
-        return;
-    }
-    
     const modal = document.getElementById('modalAluno');
     if (modal) {
-        modal.style.display = 'block';
+        // FORÇAR abertura do modal
+        modal.style.setProperty('display', 'block', 'important');
+        modal.style.setProperty('visibility', 'visible', 'important');
+        modal.setAttribute('data-opened', 'true'); // Marcar como aberto intencionalmente
         document.body.style.overflow = 'hidden'; // Prevenir scroll do body
+        console.log('✅ Modal aberto com sucesso');
         
         // SEMPRE definir como criar novo aluno quando esta função é chamada
         const acaoAluno = document.getElementById('acaoAluno');
@@ -3688,7 +3692,10 @@ function fecharModalAluno() {
     console.log('🚪 Fechando modal customizado...');
     const modal = document.getElementById('modalAluno');
     if (modal) {
-        modal.style.display = 'none';
+        // FORÇAR fechamento do modal
+        modal.style.setProperty('display', 'none', 'important');
+        modal.style.setProperty('visibility', 'hidden', 'important');
+        modal.removeAttribute('data-opened'); // Remover marcação de aberto
         document.body.style.overflow = 'auto'; // Restaurar scroll do body
         console.log('✅ Modal customizado fechado!');
     }
@@ -4349,16 +4356,15 @@ if (urlParams.has('modal') || urlParams.has('novo') || urlParams.has('criar')) {
 console.log('🔧 Verificando se modal deve abrir automaticamente...');
 const modal = document.getElementById('modalAluno');
 if (modal) {
-    // FORÇAR modal fechado ao carregar página
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-    console.log('✅ Modal forçado para fechado');
-    
     // Verificar se há algum CSS que está forçando o modal a aparecer
     const computedStyle = window.getComputedStyle(modal);
-    if (computedStyle.display !== 'none') {
-        console.log('⚠️ CSS está forçando modal visível - corrigindo');
+    if (computedStyle.display !== 'none' && !modal.hasAttribute('data-opened')) {
+        console.log('⚠️ Modal está visível sem ter sido aberto intencionalmente - fechando');
         modal.style.setProperty('display', 'none', 'important');
+        modal.style.setProperty('visibility', 'hidden', 'important');
+        document.body.style.overflow = 'auto';
+    } else {
+        console.log('✅ Modal está fechado corretamente');
     }
 }
 
