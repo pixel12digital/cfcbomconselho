@@ -31,32 +31,46 @@ if (!$aluno) {
     exit();
 }
 
-// Buscar próximas aulas (próximos 14 dias)
-$proximasAulas = $db->fetchAll("
-    SELECT a.*, 
-           i.nome as instrutor_nome,
-           v.modelo as veiculo_modelo, v.placa as veiculo_placa
-    FROM aulas a
-    JOIN instrutores i ON a.instrutor_id = i.id
-    LEFT JOIN veiculos v ON a.veiculo_id = v.id
-    WHERE a.aluno_id = ?
-      AND a.data_aula >= CURDATE() 
-      AND a.data_aula <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
-      AND a.status != 'cancelada'
-    ORDER BY a.data_aula ASC, a.hora_inicio ASC
-    LIMIT 10
-", [$_SESSION['aluno_id']]);
+// Buscar próximas aulas (próximos 14 dias) - se as tabelas existirem
+$proximasAulas = [];
+try {
+    $proximasAulas = $db->fetchAll("
+        SELECT a.*, 
+               i.nome as instrutor_nome,
+               v.modelo as veiculo_modelo, v.placa as veiculo_placa
+        FROM aulas a
+        JOIN instrutores i ON a.instrutor_id = i.id
+        LEFT JOIN veiculos v ON a.veiculo_id = v.id
+        WHERE a.aluno_id = ?
+          AND a.data_aula >= CURDATE() 
+          AND a.data_aula <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
+          AND a.status != 'cancelada'
+        ORDER BY a.data_aula ASC, a.hora_inicio ASC
+        LIMIT 10
+    ", [$_SESSION['aluno_id']]);
+} catch (Exception $e) {
+    // Tabelas não existem ou erro na query
+    error_log("[DASHBOARD ALUNO] Erro ao buscar aulas: " . $e->getMessage());
+    $proximasAulas = [];
+}
 
 // Buscar notificações não lidas
 $notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($_SESSION['aluno_id'], 'aluno');
 
-// Buscar status dos exames
-$exames = $db->fetchAll("
-    SELECT tipo, status, data_exame
-    FROM exames 
-    WHERE aluno_id = ? 
-    ORDER BY data_exame DESC
-", [$_SESSION['aluno_id']]);
+// Buscar status dos exames (se a tabela existir)
+$exames = [];
+try {
+    $exames = $db->fetchAll("
+        SELECT tipo, status, data_exame
+        FROM exames 
+        WHERE aluno_id = ? 
+        ORDER BY data_exame DESC
+    ", [$_SESSION['aluno_id']]);
+} catch (Exception $e) {
+    // Tabela exames não existe ou erro na query
+    error_log("[DASHBOARD ALUNO] Erro ao buscar exames: " . $e->getMessage());
+    $exames = [];
+}
 
 // Verificar guardas de negócio
 $guardaExames = true;
