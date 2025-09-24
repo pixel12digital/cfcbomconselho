@@ -974,6 +974,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configurar campos de data para funcionarem corretamente
     configurarCamposData();
     
+    // Verificar se estamos no mobile e ajustar layout
+    verificarLayoutMobile();
+    
     // Adicionar listener para fechar modal ao clicar fora
     const modal = document.getElementById('modalInstrutor');
     if (modal) {
@@ -990,7 +993,48 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    // Listener para mudanças de tamanho da tela
+    window.addEventListener('resize', verificarLayoutMobile);
 });
+
+// Função para verificar se estamos no mobile e ajustar layout
+function verificarLayoutMobile() {
+    const isMobile = window.innerWidth <= 768;
+    const tableContainer = document.querySelector('.table-responsive');
+    const mobileCards = document.getElementById('mobileInstrutorCards');
+    
+    console.log('📱 Verificando layout mobile:', {
+        isMobile: isMobile,
+        windowWidth: window.innerWidth,
+        tableContainer: !!tableContainer,
+        mobileCards: !!mobileCards
+    });
+    
+    if (isMobile) {
+        // Forçar exibição dos cards mobile
+        if (mobileCards) {
+            mobileCards.style.display = 'block';
+            console.log('✅ Cards mobile forçados a aparecer');
+        }
+        // Ocultar tabela
+        if (tableContainer) {
+            tableContainer.style.display = 'none';
+            console.log('✅ Tabela oculta no mobile');
+        }
+    } else {
+        // Forçar exibição da tabela
+        if (tableContainer) {
+            tableContainer.style.display = 'block';
+            console.log('✅ Tabela exibida no desktop');
+        }
+        // Ocultar cards mobile
+        if (mobileCards) {
+            mobileCards.style.display = 'none';
+            console.log('✅ Cards mobile ocultos no desktop');
+        }
+    }
+}
 
 // Função para configurar campos de data híbridos
 function configurarCamposData() {
@@ -1301,13 +1345,21 @@ function carregarInstrutores() {
 }
 
 function preencherTabelaInstrutores(instrutores) {
+    console.log('🔍 Preenchendo tabela e cards mobile com', instrutores.length, 'instrutores');
+    
     const tbody = document.querySelector('#tabelaInstrutores tbody');
     const mobileCards = document.getElementById('mobileInstrutorCards');
+    
+    console.log('📊 Elementos encontrados:');
+    console.log('  - tbody:', tbody);
+    console.log('  - mobileCards:', mobileCards);
     
     tbody.innerHTML = '';
     mobileCards.innerHTML = '';
     
-    instrutores.forEach(instrutor => {
+    instrutores.forEach((instrutor, index) => {
+        console.log(`📝 Processando instrutor ${index + 1}:`, instrutor.nome || instrutor.nome_usuario);
+        
         // Usar o nome correto (nome_usuario se nome estiver vazio)
         const nomeExibicao = instrutor.nome || instrutor.nome_usuario || 'N/A';
         const cfcExibicao = instrutor.cfc_nome || 'N/A';
@@ -1401,7 +1453,11 @@ function preencherTabelaInstrutores(instrutores) {
             </div>
         `;
         mobileCards.appendChild(card);
+        console.log(`✅ Card mobile criado para: ${nomeExibicao}`);
     });
+    
+    console.log('📱 Cards mobile criados:', mobileCards.children.length);
+    console.log('🖥️ Linhas da tabela criadas:', tbody.children.length);
 }
 
 // Função para formatar categorias de habilitação

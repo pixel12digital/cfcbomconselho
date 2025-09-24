@@ -55,11 +55,20 @@ $pageTitle = 'Gestão de Instrutores';
     .mobile-instrutor-cards {
         display: block !important;
     }
+    
+    /* Forçar exibição dos cards mobile */
+    #mobileInstrutorCards {
+        display: block !important;
+    }
 }
 
 @media (min-width: 769px) {
     /* Esconder cards no desktop */
     .mobile-instrutor-cards {
+        display: none !important;
+    }
+    
+    #mobileInstrutorCards {
         display: none !important;
     }
 }
