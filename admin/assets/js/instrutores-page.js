@@ -1014,23 +1014,31 @@ function verificarLayoutMobile() {
     if (isMobile) {
         // Forçar exibição dos cards mobile
         if (mobileCards) {
-            mobileCards.style.display = 'block';
+            mobileCards.style.setProperty('display', 'block', 'important');
+            mobileCards.style.setProperty('visibility', 'visible', 'important');
+            mobileCards.style.setProperty('opacity', '1', 'important');
             console.log('✅ Cards mobile forçados a aparecer');
         }
         // Ocultar tabela
         if (tableContainer) {
-            tableContainer.style.display = 'none';
+            tableContainer.style.setProperty('display', 'none', 'important');
             console.log('✅ Tabela oculta no mobile');
+        }
+        
+        // Verificar se há cards criados, se não, recarregar dados
+        if (mobileCards && mobileCards.children.length === 0) {
+            console.log('⚠️ Nenhum card mobile encontrado, recarregando dados...');
+            carregarInstrutores();
         }
     } else {
         // Forçar exibição da tabela
         if (tableContainer) {
-            tableContainer.style.display = 'block';
+            tableContainer.style.setProperty('display', 'block', 'important');
             console.log('✅ Tabela exibida no desktop');
         }
         // Ocultar cards mobile
         if (mobileCards) {
-            mobileCards.style.display = 'none';
+            mobileCards.style.setProperty('display', 'none', 'important');
             console.log('✅ Cards mobile ocultos no desktop');
         }
     }
@@ -1452,12 +1460,17 @@ function preencherTabelaInstrutores(instrutores) {
                 </button>
             </div>
         `;
-        mobileCards.appendChild(card);
-        console.log(`✅ Card mobile criado para: ${nomeExibicao}`);
-    });
-    
-    console.log('📱 Cards mobile criados:', mobileCards.children.length);
-    console.log('🖥️ Linhas da tabela criadas:', tbody.children.length);
+               mobileCards.appendChild(card);
+               console.log(`✅ Card mobile criado para: ${nomeExibicao}`);
+           });
+           
+           console.log('📱 Cards mobile criados:', mobileCards.children.length);
+           console.log('🖥️ Linhas da tabela criadas:', tbody.children.length);
+           
+           // Forçar exibição dos cards mobile após criação
+           setTimeout(() => {
+               verificarLayoutMobile();
+           }, 100);
 }
 
 // Função para formatar categorias de habilitação

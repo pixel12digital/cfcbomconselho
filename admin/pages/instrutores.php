@@ -51,14 +51,27 @@ $pageTitle = 'Gestão de Instrutores';
         display: none !important;
     }
     
-    /* Mostrar cards no mobile */
+    /* Mostrar cards no mobile - FORÇAR EXIBIÇÃO */
     .mobile-instrutor-cards {
         display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
     }
     
     /* Forçar exibição dos cards mobile */
     #mobileInstrutorCards {
         display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        min-height: 200px !important;
+    }
+    
+    /* Garantir que cards individuais sejam visíveis */
+    .mobile-instrutor-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        margin-bottom: 1rem !important;
     }
 }
 
