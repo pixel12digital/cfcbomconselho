@@ -1482,21 +1482,24 @@ body.modal-open #modalAluno .modal-dialog {
                     </div>
                     
                     <div class="mobile-aluno-actions">
-                        <button type="button" class="btn btn-sm btn-primary" onclick="visualizarAluno(<?php echo $aluno['id']; ?>)">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" title="Ver detalhes">
                             <i class="fas fa-eye"></i>
                         </button>
-                        <button type="button" class="btn btn-sm btn-warning" onclick="editarAluno(<?php echo $aluno['id']; ?>)">
+                        <button type="button" class="btn btn-sm btn-warning" onclick="editarAluno(<?php echo $aluno['id']; ?>)" title="Editar aluno">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button type="button" class="btn btn-sm btn-info" onclick="agendarAula(<?php echo $aluno['id']; ?>)">
+                        <button type="button" class="btn btn-sm btn-info" onclick="agendarAula(<?php echo $aluno['id']; ?>)" title="Agendar aula">
                             <i class="fas fa-calendar-plus"></i>
                         </button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="historicoAluno(<?php echo $aluno['id']; ?>)" title="Histórico de aulas">
+                            <i class="fas fa-history"></i>
+                        </button>
                         <?php if ($aluno['status'] === 'ativo'): ?>
-                        <button type="button" class="btn btn-sm btn-secondary" onclick="desativarAluno(<?php echo $aluno['id']; ?>)">
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="desativarAluno(<?php echo $aluno['id']; ?>)" title="Desativar aluno">
                             <i class="fas fa-ban"></i>
                         </button>
                         <?php else: ?>
-                        <button type="button" class="btn btn-sm btn-success" onclick="ativarAluno(<?php echo $aluno['id']; ?>)">
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="ativarAluno(<?php echo $aluno['id']; ?>)" title="Ativar aluno">
                             <i class="fas fa-check"></i>
                         </button>
                         <?php endif; ?>
