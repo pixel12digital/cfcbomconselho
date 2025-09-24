@@ -1034,34 +1034,45 @@ function verificarLayoutMobile() {
         isMobile: isMobile,
         windowWidth: window.innerWidth,
         tableContainer: !!tableContainer,
-        mobileCards: !!mobileCards
+        mobileCards: !!mobileCards,
+        mobileCardsChildren: mobileCards ? mobileCards.children.length : 0
     });
     
     if (isMobile) {
+        console.log('📱 MODO MOBILE ATIVADO');
+        
         // Forçar exibição dos cards mobile
         if (mobileCards) {
             mobileCards.style.setProperty('display', 'block', 'important');
             mobileCards.style.setProperty('visibility', 'visible', 'important');
             mobileCards.style.setProperty('opacity', '1', 'important');
             console.log('✅ Cards mobile forçados a aparecer');
+            
+            // Verificar se há cards criados
+            if (mobileCards.children.length === 0) {
+                console.log('⚠️ Nenhum card mobile encontrado, recarregando dados...');
+                carregarInstrutores();
+            } else {
+                console.log('✅ Cards mobile encontrados:', mobileCards.children.length);
+            }
+        } else {
+            console.error('❌ Elemento mobileInstrutorCards não encontrado!');
         }
+        
         // Ocultar tabela
         if (tableContainer) {
             tableContainer.style.setProperty('display', 'none', 'important');
             console.log('✅ Tabela oculta no mobile');
         }
-        
-        // Verificar se há cards criados, se não, recarregar dados
-        if (mobileCards && mobileCards.children.length === 0) {
-            console.log('⚠️ Nenhum card mobile encontrado, recarregando dados...');
-            carregarInstrutores();
-        }
     } else {
+        console.log('🖥️ MODO DESKTOP ATIVADO');
+        
         // Forçar exibição da tabela
         if (tableContainer) {
             tableContainer.style.setProperty('display', 'block', 'important');
             console.log('✅ Tabela exibida no desktop');
         }
+        
         // Ocultar cards mobile
         if (mobileCards) {
             mobileCards.style.setProperty('display', 'none', 'important');

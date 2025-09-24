@@ -73,6 +73,26 @@ $pageTitle = 'Gestão de Instrutores';
         opacity: 1 !important;
         margin-bottom: 1rem !important;
     }
+    
+    /* CSS ULTRA AGRESSIVO PARA MOBILE CARDS */
+    #mobileInstrutorCards,
+    .mobile-instrutor-cards,
+    .mobile-instrutor-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+        position: relative !important;
+        z-index: 1 !important;
+    }
+    
+    /* Forçar exibição mesmo com outros CSS */
+    body .mobile-instrutor-cards,
+    body #mobileInstrutorCards,
+    body .mobile-instrutor-card {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
+    }
 }
 
 @media (min-width: 769px) {
