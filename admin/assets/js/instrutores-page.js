@@ -2282,17 +2282,17 @@ function preencherModalVisualizacao(instrutor) {
     `;
     
     // FORÇAR CSS INLINE PARA GARANTIR LAYOUT EM COLUNA ÚNICA
-    const conteudo = modal.querySelector('.modal-body-responsive');
-    if (conteudo) {
+    const modalConteudo = modal.querySelector('.modal-body-responsive');
+    if (modalConteudo) {
         // Aplicar CSS inline para forçar layout em coluna única
-        conteudo.style.cssText = `
+        modalConteudo.style.cssText = `
             display: block !important;
             width: 100% !important;
             padding: 1rem !important;
         `;
         
         // Forçar todos os elementos filhos para coluna única
-        const elementos = conteudo.querySelectorAll('*');
+        const elementos = modalConteudo.querySelectorAll('*');
         elementos.forEach(el => {
             if (el.classList.contains('col-md-6') || el.classList.contains('col-12') || el.classList.contains('row')) {
                 el.style.cssText = `
@@ -2345,9 +2345,9 @@ function fecharModalVisualizacao() {
             modal.style.setProperty('opacity', '0', 'important');
             
             // Limpar o conteúdo para evitar conflitos
-            const conteudo = document.getElementById('conteudoVisualizacao');
-            if (conteudo) {
-                conteudo.innerHTML = '';
+            const conteudoVisualizacao = document.getElementById('conteudoVisualizacao');
+            if (conteudoVisualizacao) {
+                conteudoVisualizacao.innerHTML = '';
             }
             
             console.log('✅ Modal de visualização fechado com sucesso');
