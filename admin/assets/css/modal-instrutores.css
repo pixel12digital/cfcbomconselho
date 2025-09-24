@@ -137,7 +137,7 @@
 
 @media (max-width: 768px) {
     .custom-modal {
-        padding: 5px !important;
+        padding: 10px !important;
         position: fixed !important;
         top: 0 !important;
         left: 0 !important;
@@ -147,17 +147,108 @@
     }
     
     .custom-modal-dialog {
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        max-height: 100vh !important;
-        border-radius: 0 !important;
+        width: calc(100% - 20px) !important;
+        max-width: calc(100% - 20px) !important;
+        margin: 10px auto !important;
+        max-height: calc(100vh - 20px) !important;
+        border-radius: 12px !important;
     }
     
     .modal-body {
-        max-height: calc(100vh - 120px) !important;
-        padding: 0.75rem !important;
+        max-height: calc(100vh - 160px) !important;
+        padding: 1rem !important;
         overflow-y: auto !important;
+    }
+    
+    .modal-header,
+    .modal-footer {
+        padding: 1rem !important;
+    }
+    
+    .modal-title {
+        font-size: 1.1rem !important;
+    }
+    
+    .btn-close {
+        width: 36px !important;
+        height: 36px !important;
+        font-size: 1.25rem !important;
+    }
+    
+    /* Formulário responsivo com mais margem */
+    .container-fluid {
+        padding: 0.5rem !important;
+    }
+    
+    .row {
+        margin: 0 -0.25rem !important;
+    }
+    
+    .col-md-4,
+    .col-md-6,
+    .col-md-12 {
+        padding: 0.5rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+    
+    .form-control,
+    .form-select {
+        font-size: 16px !important; /* Evita zoom no iOS */
+        padding: 0.875rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .form-label {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.5rem !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Botões responsivos */
+    .modal-footer {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+        padding: 1rem !important;
+    }
+    
+    .modal-footer .btn {
+        width: 100% !important;
+        padding: 0.875rem !important;
+        font-size: 1rem !important;
+        font-weight: 600 !important;
+    }
+    
+    /* Seções do formulário com mais espaçamento */
+    .form-section {
+        margin-bottom: 1rem !important;
+        padding: 1rem !important;
+    }
+    
+    .section-header {
+        margin-bottom: 1rem !important;
+    }
+    
+    .section-title {
+        font-size: 1rem !important;
+        margin-bottom: 0.75rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .custom-modal {
+        padding: 5px !important;
+    }
+    
+    .custom-modal-dialog {
+        width: calc(100% - 10px) !important;
+        margin: 5px auto !important;
+        border-radius: 8px !important;
+        max-height: calc(100vh - 10px) !important;
+    }
+    
+    .modal-body {
+        padding: 0.75rem !important;
+        max-height: calc(100vh - 140px) !important;
     }
     
     .modal-header,
@@ -169,19 +260,16 @@
         font-size: 1rem !important;
     }
     
-    .btn-close {
-        width: 32px !important;
-        height: 32px !important;
-        font-size: 1.25rem !important;
+    /* Formulário em telas muito pequenas */
+    .form-control,
+    .form-select {
+        padding: 1rem !important;
+        font-size: 16px !important;
     }
     
-    /* Formulário responsivo */
-    .container-fluid {
-        padding: 0 !important;
-    }
-    
-    .row {
-        margin: 0 !important;
+    .form-label {
+        font-size: 0.9rem !important;
+        margin-bottom: 0.5rem !important;
     }
     
     .col-md-4,
@@ -191,52 +279,30 @@
         margin-bottom: 0.5rem !important;
     }
     
-    .form-control,
-    .form-select {
-        font-size: 16px !important; /* Evita zoom no iOS */
+    /* Modal de visualização em telas muito pequenas */
+    #modalVisualizacaoInstrutor .custom-modal-dialog {
+        width: calc(100% - 10px) !important;
+        margin: 5px auto !important;
+        border-radius: 8px !important;
+    }
+    
+    #modalVisualizacaoInstrutor .modal-body {
+        padding: 0.75rem !important;
+        max-height: calc(100vh - 140px) !important;
+    }
+    
+    #modalVisualizacaoInstrutor .card-body {
         padding: 0.75rem !important;
     }
     
-    .form-label {
+    #modalVisualizacaoInstrutor .btn-group .btn {
+        padding: 0.875rem !important;
         font-size: 0.9rem !important;
-        margin-bottom: 0.25rem !important;
     }
     
-    /* Botões responsivos */
-    .modal-footer {
-        flex-direction: column !important;
-        gap: 0.5rem !important;
-    }
-    
-    .modal-footer .btn {
-        width: 100% !important;
-        padding: 0.75rem !important;
-        font-size: 1rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .custom-modal {
-        padding: 5px;
-    }
-    
-    .custom-modal-dialog {
-        width: 100%;
-        border-radius: 8px;
-    }
-    
-    .modal-body {
-        padding: 0.75rem;
-        max-height: 70vh;
-    }
-    
-    .modal-header,
-    .modal-footer {
-        padding: 0.5rem 0.75rem;
-    }
-    
-    .modal-title {
-        font-size: 1rem;
+    #modalVisualizacaoInstrutor .avatar-lg {
+        width: 70px !important;
+        height: 70px !important;
     }
 }
 
@@ -366,51 +432,106 @@
         font-size: 16px; /* Evita zoom no iOS */
     }
     
-    /* Modal de visualização responsivo */
+    /* Modal de visualização responsivo - CORRIGIDO */
+    #modalVisualizacaoInstrutor {
+        padding: 10px !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 99999 !important;
+    }
+    
     #modalVisualizacaoInstrutor .custom-modal-dialog {
-        width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        max-height: 100vh !important;
-        border-radius: 0 !important;
+        width: calc(100% - 20px) !important;
+        max-width: calc(100% - 20px) !important;
+        margin: 10px auto !important;
+        max-height: calc(100vh - 20px) !important;
+        border-radius: 12px !important;
     }
     
     #modalVisualizacaoInstrutor .modal-body {
-        max-height: calc(100vh - 120px) !important;
-        padding: 0.75rem !important;
+        max-height: calc(100vh - 160px) !important;
+        padding: 1rem !important;
         overflow-y: auto !important;
     }
     
     #modalVisualizacaoInstrutor .modal-header,
     #modalVisualizacaoInstrutor .modal-footer {
-        padding: 0.75rem !important;
+        padding: 1rem !important;
     }
     
     #modalVisualizacaoInstrutor .modal-title {
-        font-size: 1rem !important;
+        font-size: 1.1rem !important;
     }
     
-    /* Cards de visualização responsivos */
-    .card {
-        margin-bottom: 0.5rem !important;
+    /* Cards de visualização responsivos - MELHORADOS */
+    #modalVisualizacaoInstrutor .card {
+        margin-bottom: 1rem !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1) !important;
     }
     
-    .card-body {
-        padding: 0.75rem !important;
+    #modalVisualizacaoInstrutor .card-body {
+        padding: 1rem !important;
     }
     
-    .row .col-md-6 {
-        margin-bottom: 0.5rem !important;
+    #modalVisualizacaoInstrutor .card-header {
+        padding: 0.75rem 1rem !important;
+        font-weight: 600 !important;
+        font-size: 0.95rem !important;
     }
     
-    /* Botões de ação responsivos */
-    .btn-group {
+    #modalVisualizacaoInstrutor .row .col-md-6 {
+        margin-bottom: 0.75rem !important;
+        padding: 0.25rem !important;
+    }
+    
+    /* Informações do instrutor - MOBILE FRIENDLY */
+    #modalVisualizacaoInstrutor .mb-3 {
+        margin-bottom: 1rem !important;
+    }
+    
+    #modalVisualizacaoInstrutor .mb-2 {
+        margin-bottom: 0.75rem !important;
+    }
+    
+    #modalVisualizacaoInstrutor .text-muted {
+        font-size: 0.9rem !important;
+        line-height: 1.4 !important;
+    }
+    
+    #modalVisualizacaoInstrutor .fw-bold {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    /* Botões de ação responsivos - MELHORADOS */
+    #modalVisualizacaoInstrutor .btn-group {
         flex-direction: column !important;
         width: 100% !important;
+        gap: 0.5rem !important;
     }
     
-    .btn-group .btn {
+    #modalVisualizacaoInstrutor .btn-group .btn {
         width: 100% !important;
-        margin-bottom: 0.25rem !important;
+        padding: 0.75rem !important;
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+        margin-bottom: 0 !important;
+    }
+    
+    /* Avatar responsivo */
+    #modalVisualizacaoInstrutor .avatar-lg {
+        width: 80px !important;
+        height: 80px !important;
+        margin: 0 auto 1rem auto !important;
+    }
+    
+    /* Badges responsivos */
+    #modalVisualizacaoInstrutor .badge {
+        font-size: 0.8rem !important;
+        padding: 0.5rem 0.75rem !important;
     }
 }
