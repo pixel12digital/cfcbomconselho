@@ -130,10 +130,44 @@ function handlePostRequest($turmaManager) {
         return;
     }
     
-    // Adicionar CFC do usuário logado
-    $dados['cfc_id'] = $_SESSION['cfc_id'] ?? 1;
+    // Verificar se é uma ação específica
+    $acao = $dados['acao'] ?? '';
     
-    $resultado = $turmaManager->criarTurma($dados);
+    switch ($acao) {
+        case 'ativar':
+            $turmaId = $dados['turma_id'] ?? null;
+            if (!$turmaId) {
+                http_response_code(400);
+                echo json_encode([
+                    'sucesso' => false,
+                    'mensagem' => 'ID da turma é obrigatório'
+                ], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+            
+            $resultado = $turmaManager->atualizarTurma($turmaId, ['status' => 'ativa']);
+            break;
+            
+        case 'desativar':
+            $turmaId = $dados['turma_id'] ?? null;
+            if (!$turmaId) {
+                http_response_code(400);
+                echo json_encode([
+                    'sucesso' => false,
+                    'mensagem' => 'ID da turma é obrigatório'
+                ], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+            
+            $resultado = $turmaManager->atualizarTurma($turmaId, ['status' => 'inativa']);
+            break;
+            
+        default:
+            // Criar nova turma
+            $dados['cfc_id'] = $_SESSION['cfc_id'] ?? 1;
+            $resultado = $turmaManager->criarTurma($dados);
+            break;
+    }
     
     if ($resultado['sucesso']) {
         http_response_code(201);

@@ -839,17 +839,17 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function visualizarTurma(id) {
     // Implementar visualização da turma
-    alert('Visualização da turma ' + id + ' será implementada em breve.');
+    window.open(`?page=turmas&acao=visualizar&turma_id=${id}`, '_blank');
 }
 
 function editarTurma(id) {
     // Implementar edição da turma
-    alert('Edição da turma ' + id + ' será implementada em breve.');
+    window.open(`?page=turmas&acao=editar&turma_id=${id}`, '_blank');
 }
 
 function gerenciarAlunos(id) {
     // Implementar gerenciamento de alunos
-    alert('Gerenciamento de alunos da turma ' + id + ' será implementado em breve.');
+    window.open(`?page=turmas&acao=alunos&turma_id=${id}`, '_blank');
 }
 
 function calendarioTurma(id) {
@@ -862,6 +862,62 @@ function excluirTurma(id) {
         if (confirm('Esta ação não pode ser desfeita. Continuar?')) {
             window.location.href = `?page=turmas&acao=excluir&turma_id=${id}`;
         }
+    }
+}
+
+function ativarTurma(id) {
+    if (confirm('Deseja ativar esta turma?')) {
+        // Implementar ativação da turma
+        fetch(`api/turmas.php`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                acao: 'ativar',
+                turma_id: id
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                alert('Turma ativada com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro ao ativar turma: ' + (data.mensagem || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            alert('Erro ao ativar turma: ' + error.message);
+        });
+    }
+}
+
+function desativarTurma(id) {
+    if (confirm('Deseja desativar esta turma?')) {
+        // Implementar desativação da turma
+        fetch(`api/turmas.php`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                acao: 'desativar',
+                turma_id: id
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                alert('Turma desativada com sucesso!');
+                location.reload();
+            } else {
+                alert('Erro ao desativar turma: ' + (data.mensagem || 'Erro desconhecido'));
+            }
+        })
+        .catch(error => {
+            alert('Erro ao desativar turma: ' + error.message);
+        });
     }
 }
 
