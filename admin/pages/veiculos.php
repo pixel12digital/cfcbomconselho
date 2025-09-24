@@ -398,40 +398,34 @@ try {
                         onclick="editarVeiculo(<?php echo $veiculo['id']; ?>)" 
                         title="Editar dados do veículo">
                     <i class="fas fa-edit"></i>
-                    <span>Editar</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-info" 
                         onclick="visualizarVeiculo(<?php echo $veiculo['id']; ?>)" 
                         title="Ver detalhes completos do veículo">
                     <i class="fas fa-eye"></i>
-                    <span>Ver</span>
                 </button>
                 <button type="button" class="btn btn-sm btn-warning" 
                         onclick="agendarManutencao(<?php echo $veiculo['id']; ?>)" 
                         title="Agendar manutenção para este veículo">
                     <i class="fas fa-tools"></i>
-                    <span>Manutenção</span>
                 </button>
                 <?php if ($veiculo['status'] === 'ativo'): ?>
                 <button type="button" class="btn btn-sm btn-secondary" 
                         onclick="desativarVeiculo(<?php echo $veiculo['id']; ?>)" 
                         title="Desativar veículo">
                     <i class="fas fa-ban"></i>
-                    <span>Desativar</span>
                 </button>
                 <?php else: ?>
                 <button type="button" class="btn btn-sm btn-success" 
                         onclick="ativarVeiculo(<?php echo $veiculo['id']; ?>)" 
                         title="Reativar veículo">
                     <i class="fas fa-check"></i>
-                    <span>Ativar</span>
                 </button>
                 <?php endif; ?>
                 <button type="button" class="btn btn-sm btn-danger" 
                         onclick="excluirVeiculo(<?php echo $veiculo['id']; ?>)" 
                         title="Excluir veículo">
                     <i class="fas fa-trash"></i>
-                    <span>Excluir</span>
                 </button>
             </div>
         </div>
@@ -866,10 +860,6 @@ try {
     .mobile-veiculo-actions .btn i {
         font-size: 0.875rem;
         margin: 0;
-    }
-    
-    .mobile-veiculo-actions .btn span {
-        display: none;
     }
 }
 
