@@ -1362,8 +1362,8 @@ body.modal-open #modalAluno .modal-dialog {
 
 <!-- Modal Customizado para Cadastro/Edição de Aluno -->
 <div id="modalAluno" class="custom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999;">
-    <div class="custom-modal-dialog" style="position: fixed; top: 2rem; left: 2rem; right: 2rem; bottom: 2rem; width: auto; height: auto; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center;">
-        <div class="custom-modal-content" style="width: 100%; height: auto; max-width: 95vw; max-height: 90vh; background: white; border: none; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; position: relative;">
+    <div class="custom-modal-dialog" style="position: fixed; top: 1rem; left: 1rem; right: 1rem; bottom: 1rem; width: auto; height: auto; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center;">
+        <div class="custom-modal-content" style="width: 100%; height: auto; max-width: 1200px; max-height: 90vh; background: white; border: none; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; position: relative;">
             <form id="formAluno" method="POST">
                 <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
                     <h5 class="modal-title" id="modalTitle" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
@@ -4397,4 +4397,96 @@ window.addEventListener('resize', toggleMobileLayoutAlunos);
 // Chamada inicial para definir o layout correto
 console.log('🔧 Inicializando layout responsivo para alunos');
 toggleMobileLayoutAlunos();
+
+// =====================================================
+// FUNÇÕES PARA MODAIS RESPONSIVOS
+// =====================================================
+
+function ajustarModalResponsivo() {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    
+    // Ajustar modal customizado de alunos
+    const modalAluno = document.getElementById('modalAluno');
+    if (modalAluno && modalAluno.style.display !== 'none') {
+        const modalDialog = modalAluno.querySelector('.custom-modal-dialog');
+        const modalContent = modalAluno.querySelector('.custom-modal-content');
+        
+        if (modalDialog && modalContent) {
+            if (viewportWidth <= 768) {
+                // Mobile: ocupar quase toda a tela
+                modalDialog.style.top = '0.5rem';
+                modalDialog.style.left = '0.5rem';
+                modalDialog.style.right = '0.5rem';
+                modalDialog.style.bottom = '0.5rem';
+                modalContent.style.maxWidth = '100%';
+                modalContent.style.maxHeight = '95vh';
+            } else if (viewportWidth <= 1200) {
+                // Tablet: tamanho médio
+                modalDialog.style.top = '1rem';
+                modalDialog.style.left = '1rem';
+                modalDialog.style.right = '1rem';
+                modalDialog.style.bottom = '1rem';
+                modalContent.style.maxWidth = '95vw';
+                modalContent.style.maxHeight = '90vh';
+            } else {
+                // Desktop: tamanho grande
+                modalDialog.style.top = '2rem';
+                modalDialog.style.left = '2rem';
+                modalDialog.style.right = '2rem';
+                modalDialog.style.bottom = '2rem';
+                modalContent.style.maxWidth = '1200px';
+                modalContent.style.maxHeight = '90vh';
+            }
+        }
+    }
+    
+    // Ajustar modais Bootstrap padrão
+    const modalsBootstrap = document.querySelectorAll('.modal.show');
+    modalsBootstrap.forEach(modal => {
+        const modalDialog = modal.querySelector('.modal-dialog');
+        if (modalDialog) {
+            if (viewportWidth <= 768) {
+                modalDialog.style.maxWidth = '95vw';
+                modalDialog.style.margin = '0.5rem auto';
+            } else {
+                modalDialog.style.maxWidth = '90vw';
+                modalDialog.style.margin = '1rem auto';
+            }
+        }
+    });
+}
+
+// Listener para redimensionamento da janela
+window.addEventListener('resize', ajustarModalResponsivo);
+
+// Ajustar quando modais são abertos
+document.addEventListener('shown.bs.modal', ajustarModalResponsivo);
+
+// Ajustar modal customizado quando aberto
+function abrirModalAluno() {
+    const modal = document.getElementById('modalAluno');
+    if (modal) {
+        modal.style.display = 'flex';
+        ajustarModalResponsivo();
+    }
+}
+
+function fecharModalAluno() {
+    const modal = document.getElementById('modalAluno');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Override das funções existentes para incluir ajuste responsivo
+const originalAbrirModalAluno = window.abrirModalAluno;
+if (originalAbrirModalAluno) {
+    window.abrirModalAluno = function() {
+        originalAbrirModalAluno();
+        setTimeout(ajustarModalResponsivo, 100);
+    };
+}
+
+console.log('🔧 Sistema de modais responsivos inicializado');
 </script>

@@ -247,6 +247,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <!-- CSS de Correções para Sidebar -->
     <link href="assets/css/sidebar-fixes.css" rel="stylesheet">
     
+    <!-- CSS para Modais Responsivos -->
+    <link href="assets/css/modals-responsive.css?v=<?php echo time(); ?>" rel="stylesheet">
+    
     <!-- CSS da Topbar Unificada -->
     <link href="assets/css/topbar-unified.css" rel="stylesheet">
     
