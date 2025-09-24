@@ -45,6 +45,12 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
     visibility: visible !important;
 }
 
+/* Garantir que modal seja visível quando aberto */
+#modalAluno[data-opened="true"] {
+    display: block !important;
+    visibility: visible !important;
+}
+
 /* Cards de estatísticas mais compactos */
 .card.border-left-primary,
 .card.border-left-success,
@@ -582,6 +588,17 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
    ===================================================== */
 
 @media (max-width: 768px) {
+    /* Garantir que modal seja visível no mobile */
+    #modalAluno[data-opened="true"] {
+        z-index: 99999 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0,0,0,0.5) !important;
+    }
+    
     /* Abas do modal - Mobile */
     .modal#modalAluno .nav-tabs {
         flex-wrap: wrap !important;
@@ -2263,7 +2280,10 @@ function abrirModalEdicao() {
     console.log('🚀 Abrindo modal para edição...');
     const modal = document.getElementById('modalAluno');
     if (modal) {
-        modal.style.display = 'block';
+        // FORÇAR abertura do modal para edição
+        modal.style.setProperty('display', 'block', 'important');
+        modal.style.setProperty('visibility', 'visible', 'important');
+        modal.setAttribute('data-opened', 'true'); // Marcar como aberto intencionalmente
         document.body.style.overflow = 'hidden'; // Prevenir scroll do body
         
         // Configurar para edição
