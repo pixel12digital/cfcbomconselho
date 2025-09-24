@@ -178,7 +178,7 @@ try {
 <!-- Tabela de Veículos -->
 <div class="card shadow">
     <div class="card-header bg-primary text-white">
-        <h5 class="mb-0"><i class="fas fa-list me-2"></i>Lista de Veículos</h5>
+        <h5 class="mb-0" style="color: #6c757d !important;"><i class="fas fa-list me-2"></i>Lista de Veículos</h5>
     </div>
     <div class="card-body">
         <div class="table-responsive">
