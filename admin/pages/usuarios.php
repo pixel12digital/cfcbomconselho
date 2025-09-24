@@ -866,11 +866,28 @@ function saveUser() {
             
             // Se foram criadas credenciais, exibir na tela
             if (data.credentials) {
+                console.log('🔐 Credenciais recebidas:', data.credentials);
                 const credentials = data.credentials;
-                const credentialsUrl = `credenciais_criadas.php?credentials=${btoa(JSON.stringify(credentials))}`;
-                setTimeout(function() {
+                
+                // Exibir credenciais em modal de alerta primeiro
+                const credentialsText = `
+🔐 CREDENCIAIS CRIADAS COM SUCESSO!
+
+📧 Email: ${credentials.email}
+🔑 Senha Temporária: ${credentials.senha_temporaria}
+
+⚠️ IMPORTANTE:
+• Esta é uma senha temporária
+• O usuário deve alterar no primeiro acesso
+• Guarde estas informações em local seguro
+
+Clique em "OK" para abrir a página completa de credenciais.
+                `;
+                
+                if (confirm(credentialsText)) {
+                    const credentialsUrl = `credenciais_criadas.php?credentials=${btoa(JSON.stringify(credentials))}`;
                     window.open(credentialsUrl, '_blank');
-                }, 1000);
+                }
             }
             
             // Recarregar página para mostrar dados atualizados
