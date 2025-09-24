@@ -181,19 +181,25 @@ async function abrirModalInstrutor() {
 }
 
 function fecharModalInstrutor() {
+    console.log('🚪 Fechando modal de instrutor...');
     const modal = document.getElementById('modalInstrutor');
-    modal.classList.remove('show');
-    
-    // Animar o fechamento
-    const modalDialog = modal.querySelector('.custom-modal-dialog');
-    if (modalDialog) {
-        modalDialog.style.opacity = '0';
-        modalDialog.style.transform = 'translateY(-20px)';
+    if (modal) {
+        // Remover classe show
+        modal.classList.remove('show');
+        
+        // Animar o fechamento
+        const modalDialog = modal.querySelector('.custom-modal-dialog');
+        if (modalDialog) {
+            modalDialog.style.opacity = '0';
+            modalDialog.style.transform = 'translateY(-20px)';
+        }
+        
+        // Forçar fechamento após animação
+        setTimeout(() => {
+            modal.style.setProperty('display', 'none', 'important');
+            console.log('✅ Modal de instrutor fechado com sucesso');
+        }, 300);
     }
-    
-    setTimeout(() => {
-        modal.style.display = 'none';
-    }, 300);
 }
 
 // Função para limpar campos do formulário de forma segura

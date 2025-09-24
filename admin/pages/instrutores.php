@@ -1,9 +1,9 @@
 <?php
-// Página de gerenciamento de instrutores - VERSÃO CORRIGIDA
-// Os includes já são feitos pelo admin/index.php
-// Apenas verificar se as funções estão disponíveis
-if (!function_exists('isLoggedIn') || !function_exists('hasPermission')) {
-    die('Funções de autenticação não disponíveis');
+// Verificar se estamos sendo incluídos pelo sistema de roteamento do admin
+if (!defined('ADMIN_ROUTING')) {
+    // Se acessado diretamente, redirecionar para o sistema de roteamento
+    header('Location: ../index.php?page=instrutores');
+    exit;
 }
 
 $pageTitle = 'Gestão de Instrutores';
@@ -519,6 +519,19 @@ $pageTitle = 'Gestão de Instrutores';
 
 <!-- JavaScript da página de instrutores - Carregado externamente para garantir ordem correta -->
 <script src="assets/js/instrutores-page.js"></script>
+
+<script>
+// Garantir que o modal não abra automaticamente
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalInstrutor');
+    if (modal) {
+        // Forçar fechamento do modal se estiver aberto
+        modal.style.setProperty('display', 'none', 'important');
+        modal.classList.remove('show');
+        console.log('✅ Modal de instrutor fechado automaticamente');
+    }
+});
+</script>
 <!-- instrutores.js já é carregado no index.php, não precisa carregar novamente -->
 
 <!-- Fim da página de instrutores -->

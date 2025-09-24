@@ -512,7 +512,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <span>Alunos</span>
                             <div class="nav-badge"><?php echo $stats['total_alunos']; ?></div>
                         </a>
-                        <a href="pages/instrutores.php" class="nav-sublink <?php echo $page === 'instrutores' ? 'active' : ''; ?>">
+                        <a href="index.php?page=instrutores" class="nav-sublink <?php echo $page === 'instrutores' ? 'active' : ''; ?>">
                             <i class="fas fa-chalkboard-teacher"></i>
                             <span>Instrutores</span>
                             <div class="nav-badge"><?php echo $stats['total_instrutores']; ?></div>
@@ -747,7 +747,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <span>Alunos</span>
                                     <span class="mobile-nav-badge"><?php echo $stats['total_alunos']; ?></span>
                                 </a>
-                                <a href="pages/instrutores.php" class="mobile-nav-sublink <?php echo $page === 'instrutores' ? 'active' : ''; ?>">
+                                <a href="index.php?page=instrutores" class="mobile-nav-sublink <?php echo $page === 'instrutores' ? 'active' : ''; ?>">
                                     <i class="fas fa-chalkboard-teacher"></i>
                                     <span>Instrutores</span>
                                     <span class="mobile-nav-badge"><?php echo $stats['total_instrutores']; ?></span>
