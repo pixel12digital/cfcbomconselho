@@ -2131,154 +2131,120 @@ function preencherModalVisualizacao(instrutor) {
     }
 
     conteudo.innerHTML = `
-        <div class="container-fluid" style="padding: 0;">
+        <div class="instrutor-visualizacao-content">
             ${fotoHTML}
             
             <!-- Informações Básicas -->
-            <div class="row mb-3">
-                <div class="col-12">
-                    <h6 class="text-primary border-bottom pb-2 mb-3">
-                        <i class="fas fa-user-tie me-2"></i>Informações Básicas
-                    </h6>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+            <div class="instrutor-section">
+                <h6 class="instrutor-section-title">
+                    <i class="fas fa-user-tie me-2"></i>Informações Básicas
+                </h6>
+                <div class="instrutor-fields">
+                    <div class="instrutor-field">
                         <strong>Nome Completo:</strong><br>
-                        <span class="text-muted">${nomeExibicao}</span>
+                        <span class="instrutor-value">${nomeExibicao}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>Email:</strong><br>
-                        <span class="text-muted">${instrutor.email || 'N/A'}</span>
+                        <span class="instrutor-value">${instrutor.email || 'N/A'}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>CPF:</strong><br>
-                        <span class="text-muted">${instrutor.cpf || 'N/A'}</span>
+                        <span class="instrutor-value">${instrutor.cpf || 'N/A'}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>CNH:</strong><br>
-                        <span class="text-muted">${instrutor.cnh || 'N/A'}</span>
+                        <span class="instrutor-value">${instrutor.cnh || 'N/A'}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>Data de Nascimento:</strong><br>
-                        <span class="text-muted">${dataNascimentoFormatada}</span>
+                        <span class="instrutor-value">${dataNascimentoFormatada}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>Telefone:</strong><br>
-                        <span class="text-muted">${instrutor.telefone || 'N/A'}</span>
+                        <span class="instrutor-value">${instrutor.telefone || 'N/A'}</span>
                     </div>
                 </div>
             </div>
             
             <!-- Dados do Instrutor -->
-            <div class="row mb-3">
-                <div class="col-12">
-                    <h6 class="text-primary border-bottom pb-2 mb-3">
-                        <i class="fas fa-id-card me-2"></i>Dados do Instrutor
-                    </h6>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+            <div class="instrutor-section">
+                <h6 class="instrutor-section-title">
+                    <i class="fas fa-id-card me-2"></i>Dados do Instrutor
+                </h6>
+                <div class="instrutor-fields">
+                    <div class="instrutor-field">
                         <strong>Credencial:</strong><br>
-                        <span class="text-muted">${instrutor.credencial || 'N/A'}</span>
+                        <span class="instrutor-value">${instrutor.credencial || 'N/A'}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>CFC:</strong><br>
-                        <span class="text-muted">${cfcExibicao}</span>
+                        <span class="instrutor-value">${cfcExibicao}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>Categorias de Habilitação:</strong><br>
                         <span class="badge bg-info">${categoriasFormatadas}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>Status:</strong><br>
                         <span class="badge ${instrutor.ativo ? 'bg-success' : 'bg-danger'}">
                             ${instrutor.ativo ? 'ATIVO' : 'INATIVO'}
                         </span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>Validade da Credencial:</strong><br>
-                        <span class="text-muted">${validadeCredencialFormatada}</span>
+                        <span class="instrutor-value">${validadeCredencialFormatada}</span>
                     </div>
                 </div>
             </div>
             
             <!-- Horários Disponíveis -->
-            <div class="row mb-3">
-                <div class="col-12">
-                    <h6 class="text-primary border-bottom pb-2 mb-3">
-                        <i class="fas fa-clock me-2"></i>Horários Disponíveis
-                    </h6>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+            <div class="instrutor-section">
+                <h6 class="instrutor-section-title">
+                    <i class="fas fa-clock me-2"></i>Horários Disponíveis
+                </h6>
+                <div class="instrutor-fields">
+                    <div class="instrutor-field">
                         <strong>Dias da Semana:</strong><br>
-                        <span class="text-muted">${diasFormatados}</span>
+                        <span class="instrutor-value">${diasFormatados}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>Horário:</strong><br>
-                        <span class="text-muted">${horarioInicioFormatado} - ${horarioFimFormatado}</span>
+                        <span class="instrutor-value">${horarioInicioFormatado} - ${horarioFimFormatado}</span>
                     </div>
                 </div>
             </div>
             
             <!-- Endereço -->
-            <div class="row mb-3">
-                <div class="col-12">
-                    <h6 class="text-primary border-bottom pb-2 mb-3">
-                        <i class="fas fa-map-marker-alt me-2"></i>Endereço
-                    </h6>
-                </div>
-                <div class="col-12">
-                    <div class="mb-2">
+            <div class="instrutor-section">
+                <h6 class="instrutor-section-title">
+                    <i class="fas fa-map-marker-alt me-2"></i>Endereço
+                </h6>
+                <div class="instrutor-fields">
+                    <div class="instrutor-field">
                         <strong>Endereço:</strong><br>
-                        <span class="text-muted">${instrutor.endereco || 'N/A'}</span>
+                        <span class="instrutor-value">${instrutor.endereco || 'N/A'}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>Cidade:</strong><br>
-                        <span class="text-muted">${instrutor.cidade || 'N/A'}</span>
+                        <span class="instrutor-value">${instrutor.cidade || 'N/A'}</span>
                     </div>
-                </div>
-                <div class="col-12 col-md-6">
-                    <div class="mb-2">
+                    <div class="instrutor-field">
                         <strong>UF:</strong><br>
-                        <span class="text-muted">${instrutor.uf || 'N/A'}</span>
+                        <span class="instrutor-value">${instrutor.uf || 'N/A'}</span>
                     </div>
                 </div>
             </div>
             
             <!-- Observações -->
             ${instrutor.observacoes ? `
-            <div class="row mb-3">
-                <div class="col-12">
-                    <h6 class="text-primary border-bottom pb-2 mb-3">
-                        <i class="fas fa-sticky-note me-2"></i>Observações
-                    </h6>
-                </div>
-                <div class="col-12">
-                    <div class="mb-2">
-                        <span class="text-muted">${instrutor.observacoes}</span>
+            <div class="instrutor-section">
+                <h6 class="instrutor-section-title">
+                    <i class="fas fa-sticky-note me-2"></i>Observações
+                </h6>
+                <div class="instrutor-fields">
+                    <div class="instrutor-field">
+                        <span class="instrutor-value">${instrutor.observacoes}</span>
                     </div>
                 </div>
             </div>

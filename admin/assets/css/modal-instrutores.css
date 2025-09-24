@@ -232,20 +232,130 @@
     }
 }
 
-/* CSS ESPECÍFICO PARA CONTEÚDO DO MODAL DE VISUALIZAÇÃO */
-.modal-body-responsive .container-fluid {
+/* CSS ESPECÍFICO PARA CONTEÚDO DO MODAL DE VISUALIZAÇÃO - NOVO LAYOUT */
+.instrutor-visualizacao-content {
     padding: 0 !important;
 }
 
-.modal-body-responsive .row {
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+.instrutor-section {
+    margin-bottom: 1.5rem !important;
 }
 
-.modal-body-responsive .col-12,
-.modal-body-responsive .col-md-6 {
-    padding-left: 0 !important;
-    padding-right: 0 !important;
+.instrutor-section-title {
+    color: #17a2b8 !important;
+    font-size: 1rem !important;
+    font-weight: 600 !important;
+    margin-bottom: 0.75rem !important;
+    padding-bottom: 0.5rem !important;
+    border-bottom: 2px solid #17a2b8 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.instrutor-fields {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+}
+
+.instrutor-field {
+    background-color: #f8f9fa !important;
+    border-radius: 0.375rem !important;
+    border-left: 3px solid #17a2b8 !important;
+    padding: 0.75rem !important;
+    margin-bottom: 0 !important;
+}
+
+.instrutor-field strong {
+    color: #495057 !important;
+    font-weight: 600 !important;
+    font-size: 0.9rem !important;
+    display: block !important;
+    margin-bottom: 0.25rem !important;
+}
+
+.instrutor-value {
+    color: #6c757d !important;
+    font-size: 0.95rem !important;
+    line-height: 1.4 !important;
+    display: block !important;
+}
+
+.instrutor-field .badge {
+    font-size: 0.8rem !important;
+    padding: 0.4rem 0.6rem !important;
+}
+
+/* LAYOUT RESPONSIVO PARA DESKTOP */
+@media (min-width: 768px) {
+    .instrutor-fields {
+        grid-template-columns: 1fr 1fr !important;
+        gap: 1rem !important;
+    }
+}
+
+@media (min-width: 992px) {
+    .instrutor-fields {
+        grid-template-columns: 1fr 1fr 1fr !important;
+        gap: 1rem !important;
+    }
+}
+
+/* RESPONSIVIDADE MOBILE */
+@media (max-width: 767px) {
+    .instrutor-section {
+        margin-bottom: 1rem !important;
+    }
+    
+    .instrutor-section-title {
+        font-size: 0.95rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .instrutor-field {
+        padding: 0.6rem !important;
+    }
+    
+    .instrutor-field strong {
+        font-size: 0.85rem !important;
+    }
+    
+    .instrutor-value {
+        font-size: 0.9rem !important;
+    }
+    
+    .instrutor-field .badge {
+        font-size: 0.75rem !important;
+        padding: 0.3rem 0.5rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .instrutor-section {
+        margin-bottom: 0.75rem !important;
+    }
+    
+    .instrutor-section-title {
+        font-size: 0.9rem !important;
+        margin-bottom: 0.4rem !important;
+    }
+    
+    .instrutor-field {
+        padding: 0.5rem !important;
+    }
+    
+    .instrutor-field strong {
+        font-size: 0.8rem !important;
+    }
+    
+    .instrutor-value {
+        font-size: 0.85rem !important;
+    }
+    
+    .instrutor-field .badge {
+        font-size: 0.7rem !important;
+        padding: 0.25rem 0.4rem !important;
+    }
 }
 
 .modal-body-responsive h6 {
