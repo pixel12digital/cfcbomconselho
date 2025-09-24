@@ -674,15 +674,26 @@ function preencherFormularioInstrutor(instrutor) {
 
 function visualizarInstrutor(id) {
     console.log('👁️ Visualizando instrutor ID:', id);
+    console.log('🔍 API_CONFIG:', API_CONFIG);
+    console.log('🔍 URL da API:', API_CONFIG.getRelativeApiUrl('INSTRUTORES'));
     
     try {
         // Buscar dados do instrutor
-        fetch(`${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`)
-            .then(response => response.json())
+        const url = `${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`;
+        console.log('🌐 Fazendo fetch para:', url);
+        
+        fetch(url)
+            .then(response => {
+                console.log('📡 Resposta recebida:', response.status, response.statusText);
+                return response.json();
+            })
             .then(data => {
+                console.log('📊 Dados recebidos:', data);
                 if (data.success && data.data) {
+                    console.log('✅ Dados válidos, abrindo modal de visualização...');
                     abrirModalVisualizacao(data.data);
                 } else {
+                    console.error('❌ Dados inválidos:', data);
                     mostrarAlerta('Erro ao carregar dados do instrutor: ' + (data.error || 'Dados não encontrados'), 'danger');
                 }
             })
@@ -699,8 +710,13 @@ function visualizarInstrutor(id) {
 function abrirModalVisualizacao(instrutor) {
     console.log('📋 Abrindo modal de visualização para instrutor:', instrutor);
     
-    // Verificar se há outros modais abertos e fechá-los primeiro
-    fecharOutrosModais();
+    // Fechar apenas o modal de edição, não o de visualização
+    const modalInstrutor = document.getElementById('modalInstrutor');
+    if (modalInstrutor && modalInstrutor.style.display === 'block') {
+        if (typeof fecharModalInstrutor === 'function') {
+            fecharModalInstrutor();
+        }
+    }
     
     // Criar modal se não existir
     let modal = document.getElementById('modalVisualizacaoInstrutor');
