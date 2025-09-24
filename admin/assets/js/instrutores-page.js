@@ -2033,27 +2033,26 @@ function verificarVinculacaoSelects(instrutor) {
 function criarModalVisualizacao() {
     const modal = document.createElement('div');
     modal.id = 'modalVisualizacaoInstrutor';
-    modal.className = 'custom-modal';
-    modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; overflow: auto;';
+    modal.className = 'custom-modal modal-visualizacao-responsive';
     
     modal.innerHTML = `
-        <div class="custom-modal-dialog" style="position: relative; width: 95%; max-width: 1000px; margin: 20px auto; background: white; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: block; opacity: 0; transform: translateY(-20px); transition: all 0.3s ease;">
-            <div class="modal-header" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
-                <h5 class="modal-title" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
+        <div class="custom-modal-dialog modal-dialog-responsive">
+            <div class="modal-header modal-header-responsive">
+                <h5 class="modal-title modal-title-responsive">
                     <i class="fas fa-eye me-2"></i>Visualizar Instrutor
                 </h5>
-                <button type="button" class="btn-close" onclick="fecharModalVisualizacao()" style="filter: invert(1); background: none; border: none; font-size: 1.25rem; color: white; opacity: 0.8; cursor: pointer;">&times;</button>
+                <button type="button" class="btn-close btn-close-responsive" onclick="fecharModalVisualizacao()">&times;</button>
             </div>
-            <div class="modal-body" style="overflow-y: auto; padding: 1.5rem; max-height: 70vh;">
+            <div class="modal-body modal-body-responsive">
                 <div id="conteudoVisualizacao">
                     <!-- Conteúdo será preenchido dinamicamente -->
                 </div>
             </div>
-            <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding: 0.75rem 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; flex-shrink: 0;">
-                <button type="button" class="btn btn-secondary" onclick="fecharModalVisualizacao()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+            <div class="modal-footer modal-footer-responsive">
+                <button type="button" class="btn btn-secondary btn-responsive" onclick="fecharModalVisualizacao()">
                     <i class="fas fa-times me-1"></i>Fechar
                 </button>
-                <button type="button" class="btn btn-primary" id="btnEditarInstrutor" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <button type="button" class="btn btn-primary btn-responsive" id="btnEditarInstrutor">
                     <i class="fas fa-edit me-1"></i>Editar
                 </button>
             </div>
