@@ -509,6 +509,15 @@ if ($action === 'list') {
                                                 <i class="fas fa-edit"></i>
                                             </button>
                                             
+                                            <!-- Botão de redefinir senha -->
+                                            <button class="btn btn-warning action-btn btn-redefinir-senha" 
+                                                    data-user-id="<?php echo $usuario['id']; ?>"
+                                                    data-user-name="<?php echo htmlspecialchars($usuario['nome']); ?>"
+                                                    data-user-email="<?php echo htmlspecialchars($usuario['email']); ?>"
+                                                    title="Redefinir senha do usuário">
+                                                <i class="fas fa-key"></i>
+                                            </button>
+                                            
                                             <!-- Botão de exclusão destacado -->
                                             <button class="btn btn-delete action-btn btn-excluir-usuario" 
                                                     data-user-id="<?php echo $usuario['id']; ?>"
@@ -573,6 +582,13 @@ if ($action === 'list') {
                                         data-user-id="<?php echo $usuario['id']; ?>"
                                         title="Editar">
                                     <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-warning action-btn btn-redefinir-senha" 
+                                        data-user-id="<?php echo $usuario['id']; ?>"
+                                        data-user-name="<?php echo htmlspecialchars($usuario['nome']); ?>"
+                                        data-user-email="<?php echo htmlspecialchars($usuario['email']); ?>"
+                                        title="Redefinir Senha">
+                                    <i class="fas fa-key"></i>
                                 </button>
                                 <button class="btn btn-danger action-btn btn-excluir-usuario" 
                                         data-user-id="<?php echo $usuario['id']; ?>"
@@ -661,6 +677,56 @@ if ($action === 'list') {
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="closeUserModal()">Cancelar</button>
             <button type="button" class="btn btn-primary" onclick="saveUser()">Salvar</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Redefinição de Senha -->
+<div id="resetPasswordModal" class="modal-overlay">
+    <div class="modal">
+        <div class="modal-header">
+            <h3 class="modal-title">Redefinir Senha</h3>
+            <button class="modal-close" onclick="closeResetPasswordModal()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="modal-body">
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <strong>Atenção!</strong> Esta ação irá gerar uma nova senha temporária para o usuário.
+            </div>
+            
+            <div class="user-info">
+                <h4>Dados do Usuário:</h4>
+                <p><strong>Nome:</strong> <span id="resetUserName"></span></p>
+                <p><strong>E-mail:</strong> <span id="resetUserEmail"></span></p>
+            </div>
+            
+            <div class="form-group">
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <strong>O que acontecerá:</strong><br>
+                    • Uma nova senha temporária será gerada automaticamente<br>
+                    • As credenciais serão exibidas na tela após a redefinição<br>
+                    • O usuário receberá as novas credenciais por e-mail<br>
+                    • A senha anterior será invalidada imediatamente<br>
+                    • O usuário deve alterar a senha no próximo acesso
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label">
+                    <input type="checkbox" id="confirmResetPassword" required>
+                    Confirmo que desejo redefinir a senha deste usuário
+                </label>
+            </div>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()">Cancelar</button>
+            <button type="button" class="btn btn-warning" id="confirmResetBtn" onclick="confirmResetPassword()" disabled>
+                <i class="fas fa-key"></i>
+                Redefinir Senha
+            </button>
         </div>
     </div>
 </div>
@@ -1116,6 +1182,143 @@ function showNotification(message, type = 'info') {
 // Garantir que a função esteja disponível globalmente
 window.showNotification = showNotification;
 
+// Variáveis globais para redefinição de senha
+let resetPasswordUser = null;
+
+// Mostrar modal de redefinição de senha
+function showResetPasswordModal(userId, userName, userEmail) {
+    console.log('Função showResetPasswordModal chamada para usuário ID: ' + userId);
+    
+    resetPasswordUser = {
+        id: userId,
+        name: userName,
+        email: userEmail
+    };
+    
+    // Preencher dados do usuário no modal
+    document.getElementById('resetUserName').textContent = userName;
+    document.getElementById('resetUserEmail').textContent = userEmail;
+    
+    // Resetar checkbox e botão
+    document.getElementById('confirmResetPassword').checked = false;
+    document.getElementById('confirmResetBtn').disabled = true;
+    
+    // Mostrar modal
+    const modal = document.getElementById('resetPasswordModal');
+    modal.classList.add('show');
+    
+    console.log('Modal de redefinição de senha aberto com sucesso!');
+}
+
+// Garantir que a função esteja disponível globalmente
+window.showResetPasswordModal = showResetPasswordModal;
+
+// Fechar modal de redefinição de senha
+function closeResetPasswordModal() {
+    console.log('Fechando modal de redefinição de senha...');
+    const modal = document.getElementById('resetPasswordModal');
+    modal.classList.remove('show');
+    
+    // Resetar dados
+    resetPasswordUser = null;
+    document.getElementById('confirmResetPassword').checked = false;
+    document.getElementById('confirmResetBtn').disabled = true;
+    
+    console.log('Modal de redefinição de senha fechado com sucesso!');
+}
+
+// Garantir que a função esteja disponível globalmente
+window.closeResetPasswordModal = closeResetPasswordModal;
+
+// Confirmar redefinição de senha
+function confirmResetPassword() {
+    console.log('Função confirmResetPassword chamada');
+    
+    if (!resetPasswordUser) {
+        showNotification('Erro: Dados do usuário não encontrados', 'error');
+        return;
+    }
+    
+    if (!document.getElementById('confirmResetPassword').checked) {
+        showNotification('Você deve confirmar a redefinição de senha', 'error');
+        return;
+    }
+    
+    console.log('Confirmando redefinição de senha para usuário ID: ' + resetPasswordUser.id);
+    
+    // Mostrar loading
+    const loadingEl = document.querySelector('.card-body');
+    if (loadingEl) {
+        loadingEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Redefinindo senha...</p></div>';
+    }
+    
+    // Fazer requisição para a API
+    fetch('api/usuarios.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            action: 'reset_password',
+            user_id: resetPasswordUser.id
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showNotification(data.message || 'Senha redefinida com sucesso!', 'success');
+            closeResetPasswordModal();
+            
+            // Se foram criadas credenciais, exibir na tela
+            if (data.credentials) {
+                console.log('🔐 Credenciais recebidas:', data.credentials);
+                const credentials = data.credentials;
+                
+                // Exibir credenciais em modal de alerta primeiro
+                const credentialsText = `
+🔐 SENHA REDEFINIDA COM SUCESSO!
+
+📧 Email: ${credentials.email}
+🔑 Nova Senha Temporária: ${credentials.senha_temporaria}
+
+⚠️ IMPORTANTE:
+• Esta é uma nova senha temporária
+• A senha anterior foi invalidada
+• O usuário deve alterar no próximo acesso
+• Guarde estas informações em local seguro
+
+Clique em "OK" para abrir a página completa de credenciais.
+                `;
+                
+                if (confirm(credentialsText)) {
+                    const credentialsUrl = `credenciais_criadas.php?credentials=${btoa(JSON.stringify(credentials))}`;
+                    window.open(credentialsUrl, '_blank');
+                }
+            }
+            
+            // Recarregar página para mostrar dados atualizados
+            setTimeout(function() {
+                window.location.reload();
+            }, 1500);
+        } else {
+            showNotification(data.error || 'Erro ao redefinir senha', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showNotification('Erro ao redefinir senha. Tente novamente.', 'error');
+    })
+    .finally(() => {
+        // Restaurar conteúdo da página
+        if (loadingEl) {
+            window.location.reload();
+        }
+    });
+}
+
+// Garantir que a função esteja disponível globalmente
+window.confirmResetPassword = confirmResetPassword;
+
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
     console.log('DOM carregado, verificando funcoes...');
@@ -1193,6 +1396,35 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 console.error('Funcao editUser nao esta disponivel!');
                 showNotification('Erro: Função de edição não está disponível. Recarregue a página.', 'error');
+            }
+        });
+    });
+    
+    // Configurar event listeners para botões de redefinição de senha
+    const resetPasswordButtons = document.querySelectorAll('.btn-redefinir-senha');
+    console.log('Encontrados ' + resetPasswordButtons.length + ' botoes de redefinir senha');
+    
+    resetPasswordButtons.forEach(function(button, index) {
+        const userId = button.getAttribute('data-user-id');
+        const userName = button.getAttribute('data-user-name');
+        const userEmail = button.getAttribute('data-user-email');
+        console.log('Configurando botao de redefinir senha ' + (index + 1) + ' para usuario ID: ' + userId);
+        
+        // Adicionar event listener
+        button.addEventListener('click', function(event) {
+            event.preventDefault();
+            event.stopPropagation();
+            
+            const userIdFromButton = this.getAttribute('data-user-id');
+            const userNameFromButton = this.getAttribute('data-user-name');
+            const userEmailFromButton = this.getAttribute('data-user-email');
+            console.log('Botao de redefinir senha clicado para usuario ID: ' + userIdFromButton);
+            
+            if (typeof showResetPasswordModal === 'function') {
+                showResetPasswordModal(userIdFromButton, userNameFromButton, userEmailFromButton);
+            } else {
+                console.error('Funcao showResetPasswordModal nao esta disponivel!');
+                showNotification('Erro: Função de redefinição de senha não está disponível. Recarregue a página.', 'error');
             }
         });
     });
@@ -1535,6 +1767,86 @@ document.addEventListener('DOMContentLoaded', function() {
             visibility: visible !important;
             opacity: 1 !important;
         }
+        
+        /* Estilos para o modal de redefinição de senha */
+        #resetPasswordModal {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            bottom: 0 !important;
+            background-color: rgba(0, 0, 0, 0.8) !important;
+            z-index: 999999 !important;
+            display: none !important;
+            align-items: center !important;
+            justify-content: center !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            pointer-events: none !important;
+            transition: all 0.3s ease !important;
+        }
+        
+        #resetPasswordModal.show {
+            display: flex !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+            pointer-events: auto !important;
+        }
+        
+        #resetPasswordModal .modal {
+            background: white !important;
+            border-radius: 8px !important;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5) !important;
+            max-width: 500px !important;
+            width: 90% !important;
+            max-height: 90vh !important;
+            overflow-y: auto !important;
+            position: relative !important;
+            margin: 20px !important;
+            z-index: 1000000 !important;
+            pointer-events: auto !important;
+            display: block !important;
+            visibility: visible !important;
+            opacity: 1 !important;
+        }
+        
+        #resetPasswordModal .user-info {
+            background: var(--gray-50) !important;
+            padding: 15px !important;
+            border-radius: 6px !important;
+            margin-bottom: 15px !important;
+            border-left: 4px solid var(--primary-color) !important;
+        }
+        
+        #resetPasswordModal .user-info h4 {
+            margin: 0 0 10px 0 !important;
+            color: var(--gray-800) !important;
+            font-size: 16px !important;
+        }
+        
+        #resetPasswordModal .user-info p {
+            margin: 5px 0 !important;
+            color: var(--gray-700) !important;
+            font-size: 14px !important;
+        }
+        
+        #resetPasswordModal .btn-warning {
+            background: #f59e0b !important;
+            color: white !important;
+            border: none !important;
+        }
+        
+        #resetPasswordModal .btn-warning:hover {
+            background: #d97706 !important;
+        }
+        
+        #resetPasswordModal .btn-warning:disabled {
+            background: #d1d5db !important;
+            color: #9ca3af !important;
+            cursor: not-allowed !important;
+        }
     `;
     document.head.appendChild(style);
     
@@ -1570,6 +1882,16 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Executar no resize
     window.addEventListener('resize', toggleMobileLayout);
+    
+    // Configurar event listener para checkbox de confirmação
+    const confirmCheckbox = document.getElementById('confirmResetPassword');
+    const confirmBtn = document.getElementById('confirmResetBtn');
+    
+    if (confirmCheckbox && confirmBtn) {
+        confirmCheckbox.addEventListener('change', function() {
+            confirmBtn.disabled = !this.checked;
+        });
+    }
 });
 
 // Verificação adicional após carregamento completo
@@ -1583,7 +1905,7 @@ window.addEventListener('load', function() {
     console.log('- saveUser:', typeof saveUser);
     
     // Verificar se todas as funções estão disponíveis
-    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification'];
+    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification', 'showResetPasswordModal', 'closeResetPasswordModal', 'confirmResetPassword'];
     const funcoesFaltando = funcoes.filter(f => typeof window[f] !== 'function');
     
     if (funcoesFaltando.length > 0) {
@@ -1597,7 +1919,7 @@ window.addEventListener('load', function() {
 // Timeout adicional para garantir que as funções sejam definidas
 setTimeout(function() {
     console.log('Verificação de timeout das funções:');
-    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification'];
+    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification', 'showResetPasswordModal', 'closeResetPasswordModal', 'confirmResetPassword'];
     funcoes.forEach(f => {
         if (typeof window[f] === 'function') {
             console.log(f + ': Disponível');

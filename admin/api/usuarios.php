@@ -83,15 +83,76 @@ try {
             break;
             
         case 'POST':
-            // Criar novo usuário
+            // Criar novo usuário ou redefinir senha
             $data = json_decode(file_get_contents('php://input'), true);
             
             if (!$data) {
                 $data = $_POST;
             }
             
-            error_log('[USUARIOS API] Dados recebidos para criação: ' . json_encode(array_keys($data)));
+            error_log('[USUARIOS API] Dados recebidos: ' . json_encode(array_keys($data)));
             
+            // Verificar se é redefinição de senha
+            if (isset($data['action']) && $data['action'] === 'reset_password') {
+                // Redefinir senha de usuário existente
+                if (empty($data['user_id'])) {
+                    error_log('[USUARIOS API] ID do usuário ausente para redefinição de senha');
+                    http_response_code(400);
+                    echo json_encode(['error' => 'ID do usuário é obrigatório', 'code' => 'MISSING_USER_ID']);
+                    exit;
+                }
+                
+                $userId = (int)$data['user_id'];
+                error_log('[USUARIOS API] Redefinindo senha para usuário ID: ' . $userId);
+                
+                // Verificar se usuário existe
+                $usuario = $db->fetch("SELECT id, nome, email, tipo FROM usuarios WHERE id = ?", [$userId]);
+                if (!$usuario) {
+                    error_log('[USUARIOS API] Usuário não encontrado para redefinição - ID: ' . $userId);
+                    http_response_code(404);
+                    echo json_encode(['error' => 'Usuário não encontrado', 'code' => 'USER_NOT_FOUND']);
+                    exit;
+                }
+                
+                error_log('[USUARIOS API] Usuário encontrado para redefinição: ' . $usuario['email']);
+                
+                // Gerar nova senha temporária
+                $novaSenhaTemporaria = CredentialManager::generateTemporaryPassword();
+                $senhaHash = password_hash($novaSenhaTemporaria, PASSWORD_DEFAULT);
+                
+                // Atualizar senha no banco
+                $result = $db->query("UPDATE usuarios SET senha = ?, atualizado_em = NOW() WHERE id = ?", [$senhaHash, $userId]);
+                
+                if ($result) {
+                    error_log('[USUARIOS API] Senha redefinida com sucesso - ID: ' . $userId);
+                    
+                    // Enviar credenciais por email
+                    CredentialManager::sendCredentials(
+                        $usuario['email'], 
+                        $novaSenhaTemporaria, 
+                        $usuario['tipo']
+                    );
+                    
+                    $response = [
+                        'success' => true, 
+                        'message' => 'Senha redefinida com sucesso',
+                        'credentials' => [
+                            'email' => $usuario['email'],
+                            'senha_temporaria' => $novaSenhaTemporaria,
+                            'message' => 'Nova senha temporária gerada'
+                        ]
+                    ];
+                    
+                    echo json_encode($response);
+                } else {
+                    error_log('[USUARIOS API] Erro ao redefinir senha - ID: ' . $userId);
+                    http_response_code(500);
+                    echo json_encode(['error' => 'Erro ao redefinir senha', 'code' => 'RESET_FAILED']);
+                }
+                break;
+            }
+            
+            // Criar novo usuário (código original)
             // Validações básicas
             if (empty($data['nome']) || empty($data['email']) || empty($data['tipo'])) {
                 error_log('[USUARIOS API] Dados obrigatórios ausentes');

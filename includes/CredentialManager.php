@@ -23,6 +23,13 @@ class CredentialManager {
     }
     
     /**
+     * Gerar senha temporária para redefinição (alias para compatibilidade)
+     */
+    public static function generateTemporaryPassword($length = 8) {
+        return self::generateTempPassword($length);
+    }
+    
+    /**
      * Criar credenciais automáticas para funcionário
      */
     public static function createEmployeeCredentials($dados) {
