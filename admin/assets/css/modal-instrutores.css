@@ -175,30 +175,30 @@
         font-size: 1.25rem !important;
     }
     
-    /* Formulário responsivo com mais margem */
-    .container-fluid {
+    /* Formulário responsivo com mais margem - APENAS DENTRO DE MODAIS */
+    .custom-modal .container-fluid {
         padding: 0.5rem !important;
     }
     
-    .row {
+    .custom-modal .row {
         margin: 0 -0.25rem !important;
     }
     
-    .col-md-4,
-    .col-md-6,
-    .col-md-12 {
+    .custom-modal .col-md-4,
+    .custom-modal .col-md-6,
+    .custom-modal .col-md-12 {
         padding: 0.5rem !important;
         margin-bottom: 0.75rem !important;
     }
     
-    .form-control,
-    .form-select {
+    .custom-modal .form-control,
+    .custom-modal .form-select {
         font-size: 16px !important; /* Evita zoom no iOS */
         padding: 0.875rem !important;
         margin-bottom: 0.5rem !important;
     }
     
-    .form-label {
+    .custom-modal .form-label {
         font-size: 0.95rem !important;
         margin-bottom: 0.5rem !important;
         font-weight: 600 !important;
@@ -260,21 +260,21 @@
         font-size: 1rem !important;
     }
     
-    /* Formulário em telas muito pequenas */
-    .form-control,
-    .form-select {
+    /* Formulário em telas muito pequenas - APENAS DENTRO DE MODAIS */
+    .custom-modal .form-control,
+    .custom-modal .form-select {
         padding: 1rem !important;
         font-size: 16px !important;
     }
     
-    .form-label {
+    .custom-modal .form-label {
         font-size: 0.9rem !important;
         margin-bottom: 0.5rem !important;
     }
     
-    .col-md-4,
-    .col-md-6,
-    .col-md-12 {
+    .custom-modal .col-md-4,
+    .custom-modal .col-md-6,
+    .custom-modal .col-md-12 {
         padding: 0.25rem !important;
         margin-bottom: 0.5rem !important;
     }
@@ -434,15 +434,15 @@
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
 
-/* Melhorias na responsividade dos campos */
+/* Melhorias na responsividade dos campos - APENAS DENTRO DE MODAIS */
 @media (max-width: 768px) {
-    .col-md-4,
-    .col-md-6 {
+    .custom-modal .col-md-4,
+    .custom-modal .col-md-6 {
         margin-bottom: 0.5rem;
     }
     
-    .form-control,
-    .form-select {
+    .custom-modal .form-control,
+    .custom-modal .form-select {
         font-size: 16px; /* Evita zoom no iOS */
     }
     
