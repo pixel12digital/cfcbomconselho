@@ -102,6 +102,20 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
     width: 28px;
     height: 28px;
     font-size: 0.8rem;
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Garantir que todos os botões de ação sejam visíveis */
+.btn-history,
+.btn-financial,
+.btn-edit,
+.btn-view,
+.btn-add {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 /* Responsividade melhorada */

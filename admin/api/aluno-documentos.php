@@ -23,6 +23,32 @@ require_once '../../includes/auth.php';
 try {
     $db = Database::getInstance();
     
+    // Verificar se a tabela aluno_documentos existe, se não, criar
+    $result = $db->query("SHOW TABLES LIKE 'aluno_documentos'");
+    if (!$result || $result->rowCount() === 0) {
+        // Criar tabela aluno_documentos
+        $db->query("
+            CREATE TABLE IF NOT EXISTS aluno_documentos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                aluno_id INT NOT NULL,
+                tipo_documento VARCHAR(50) NOT NULL,
+                nome_arquivo VARCHAR(255) NOT NULL,
+                caminho_arquivo VARCHAR(500) NOT NULL,
+                tamanho_arquivo INT DEFAULT 0,
+                tipo_mime VARCHAR(100) DEFAULT 'application/octet-stream',
+                descricao TEXT,
+                status ENUM('pendente', 'aprovado', 'rejeitado') DEFAULT 'pendente',
+                observacoes TEXT,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE,
+                INDEX idx_aluno_id (aluno_id),
+                INDEX idx_tipo_documento (tipo_documento),
+                INDEX idx_status (status)
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+        ");
+    }
+    
     // Verificar autenticação
     if (!isLoggedIn()) {
         http_response_code(401);
