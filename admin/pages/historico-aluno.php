@@ -462,7 +462,7 @@ $proximasAulas = $db->fetchAll("
             <div class="col-md-6">
                 <div class="card">
                     <div class="card-header bg-info text-white">
-                        <h5 class="card-title mb-0">
+                        <h5 class="card-title mb-0" style="color: #6c757d !important;">
                             <i class="fas fa-user-graduate me-2"></i>
                             Informações do Aluno
                         </h5>
@@ -862,7 +862,7 @@ $proximasAulas = $db->fetchAll("
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-secondary text-white">
-                        <h5 class="card-title mb-0">
+                        <h5 class="card-title mb-0" style="color: #6c757d !important;">
                             <i class="fas fa-stethoscope me-2"></i>
                             Exames (DETRAN)
                             <?php if ($examesOK): ?>
@@ -1528,7 +1528,7 @@ $proximasAulas = $db->fetchAll("
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-dark text-white">
-                        <h5 class="card-title mb-0" style="color: #ffffff !important; font-weight: 700 !important;">
+                        <h5 class="card-title mb-0" style="color: #6c757d !important; font-weight: 700 !important;">
                             <i class="fas fa-list me-2"></i>
                             Histórico Completo de Aulas
                         </h5>
