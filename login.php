@@ -32,12 +32,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Para alunos, usar sistema específico
             if ($selectedType === 'aluno') {
                 $db = db();
+                
+                // Primeiro, tentar buscar na tabela alunos
                 $aluno = $db->fetch("SELECT * FROM alunos WHERE cpf = ? AND ativo = 1", [$email]);
+                
+                // Se não encontrar na tabela alunos, buscar na tabela usuarios
+                if (!$aluno) {
+                    $aluno = $db->fetch("SELECT * FROM usuarios WHERE (cpf = ? OR email = ?) AND tipo = 'aluno' AND ativo = 1", [$email, $email]);
+                }
                 
                 if ($aluno && (password_verify($senha, $aluno['senha'] ?? '') || $senha === '123456')) {
                     $_SESSION['aluno_id'] = $aluno['id'];
                     $_SESSION['aluno_nome'] = $aluno['nome'];
-                    $_SESSION['aluno_cpf'] = $aluno['cpf'];
+                    $_SESSION['aluno_cpf'] = $aluno['cpf'] ?? $email;
                     $_SESSION['user_type'] = 'aluno';
                     $_SESSION['last_activity'] = time();
                     
