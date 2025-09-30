@@ -86,34 +86,118 @@ try {
 ?>
 
 <style>
-/* Estilos específicos para faturas */
+/* Estilos específicos para faturas - Alinhado ao template do projeto */
 .stats-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    border-radius: 10px;
+    background: var(--white);
+    color: var(--gray-700);
+    border: 1px solid var(--gray-200);
+    border-radius: var(--border-radius);
     padding: 1.5rem;
     margin-bottom: 1rem;
+    box-shadow: var(--shadow-sm);
+    transition: var(--transition-normal);
+    position: relative;
+    overflow: hidden;
 }
-.stats-card.success {
-    background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+
+.stats-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 4px;
+    height: 100%;
+    background: var(--primary-color);
 }
-.stats-card.warning {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+
+.stats-card:hover {
+    box-shadow: var(--shadow-md);
+    transform: translateY(-2px);
 }
-.stats-card.info {
-    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+
+.stats-card.success::before {
+    background: var(--success-color);
 }
+
+.stats-card.warning::before {
+    background: var(--warning-color);
+}
+
+.stats-card.info::before {
+    background: var(--info-color);
+}
+
+.stats-card h6 {
+    color: var(--gray-500);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stats-card h3 {
+    color: var(--gray-800);
+    font-size: var(--font-size-2xl);
+    font-weight: var(--font-weight-bold);
+    margin: 0;
+}
+
+.stats-card .fas {
+    color: var(--gray-400);
+    opacity: 0.7;
+}
+
+.stats-card.success .fas {
+    color: var(--success-color);
+}
+
+.stats-card.warning .fas {
+    color: var(--warning-color);
+}
+
+.stats-card.info .fas {
+    color: var(--info-color);
+}
+
 .status-badge {
-    padding: 0.25rem 0.5rem;
-    border-radius: 0.375rem;
-    font-size: 0.75rem;
-    font-weight: 500;
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--border-radius);
+    font-size: var(--font-size-xs);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
-.status-aberta { background-color: #fff3cd; color: #856404; }
-.status-paga { background-color: #d4edda; color: #155724; }
-.status-vencida { background-color: #f8d7da; color: #721c24; }
-.status-parcial { background-color: #d1ecf1; color: #0c5460; }
-.status-cancelada { background-color: #e2e3e5; color: #383d41; }
+
+.status-aberta { 
+    background-color: var(--blue-100); 
+    color: var(--blue-800); 
+    border: 1px solid var(--blue-200);
+}
+
+.status-paga { 
+    background-color: #dcfce7; 
+    color: #166534; 
+    border: 1px solid #bbf7d0;
+}
+
+.status-vencida { 
+    background-color: #fef2f2; 
+    color: #991b1b; 
+    border: 1px solid #fecaca;
+}
+
+.status-parcial { 
+    background-color: var(--blue-50); 
+    color: var(--blue-700); 
+    border: 1px solid var(--blue-200);
+}
+
+.status-cancelada { 
+    background-color: var(--gray-100); 
+    color: var(--gray-600); 
+    border: 1px solid var(--gray-200);
+}
 </style>
 
 <!-- Header da página -->
@@ -323,11 +407,402 @@ try {
     </div>
 </div>
 
+<!-- Modal Nova Fatura -->
+<div class="modal fade" id="modalNovaFatura" tabindex="-1" aria-labelledby="modalNovaFaturaLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalNovaFaturaLabel">
+                    <i class="fas fa-plus me-2"></i>Nova Fatura
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="formNovaFatura">
+                <div class="modal-body">
+                    <!-- Seção: Informações Básicas -->
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-info-circle me-2"></i>Informações Básicas
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="aluno_id_modal" class="form-label fw-semibold">
+                                    Aluno <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select form-select-lg" id="aluno_id_modal" name="aluno_id" required>
+                                    <option value="">Selecione um aluno</option>
+                                    <?php foreach ($alunos as $aluno): ?>
+                                    <option value="<?php echo $aluno['id']; ?>">
+                                        <?php echo htmlspecialchars($aluno['nome']); ?> - <?php echo $aluno['cpf']; ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="valor_total" class="form-label fw-semibold">
+                                    Valor Total <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group input-group-lg">
+                                    <span class="input-group-text bg-primary text-white">
+                                        <i class="fas fa-dollar-sign"></i>
+                                    </span>
+                                    <input type="number" class="form-control" id="valor_total" name="valor_total" 
+                                           step="0.01" min="0" required placeholder="0,00">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Separador Visual -->
+                    <hr class="my-4">
+
+                    <!-- Seção: Parcelamento -->
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-calculator me-2"></i>Parcelamento
+                        </h6>
+                        
+                        <!-- Checkbox de Parcelamento -->
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <div class="form-check form-switch form-check-lg">
+                                    <input class="form-check-input" type="checkbox" id="parcelamento" name="parcelamento">
+                                    <label class="form-check-label fw-semibold" for="parcelamento">
+                                        <i class="fas fa-credit-card me-2"></i>Parcelar esta fatura
+                                    </label>
+                                </div>
+                                <small class="text-muted">Marque para dividir o valor em múltiplas faturas</small>
+                            </div>
+                        </div>
+                        
+                        <!-- Configurações de Parcelamento -->
+                        <div id="config-parcelamento" style="display: none;">
+                            <div class="card border-primary">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0 text-primary">
+                                        <i class="fas fa-cog me-2"></i>Configuração de Parcelas
+                                    </h6>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row g-4">
+                                        <div class="col-12">
+                                            <label for="entrada" class="form-label fw-semibold fs-6">
+                                                <i class="fas fa-hand-holding-usd me-1"></i>Entrada
+                                            </label>
+                                            <div class="input-group input-group-lg">
+                                                <span class="input-group-text bg-success text-white fw-bold">R$</span>
+                                                <input type="number" class="form-control form-control-lg" id="entrada" name="entrada" 
+                                                       step="0.01" min="0" value="0" placeholder="0,00">
+                                            </div>
+                                            <small class="text-muted mt-2 d-block">Valor pago antecipadamente (opcional)</small>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="num_parcelas" class="form-label fw-semibold fs-6">
+                                                <i class="fas fa-list-ol me-1"></i>Número de Parcelas
+                                            </label>
+                                            <select class="form-select form-select-lg" id="num_parcelas" name="num_parcelas">
+                                                <option value="2">2 parcelas</option>
+                                                <option value="3">3 parcelas</option>
+                                                <option value="4" selected>4 parcelas</option>
+                                                <option value="5">5 parcelas</option>
+                                                <option value="6">6 parcelas</option>
+                                                <option value="8">8 parcelas</option>
+                                                <option value="10">10 parcelas</option>
+                                                <option value="12">12 parcelas</option>
+                                            </select>
+                                            <small class="text-muted mt-2 d-block">Quantidade de parcelas para dividir o valor</small>
+                                        </div>
+                                        <div class="col-12">
+                                            <label for="intervalo_parcelas" class="form-label fw-semibold fs-6">
+                                                <i class="fas fa-calendar-alt me-1"></i>Intervalo (dias)
+                                            </label>
+                                            <select class="form-select form-select-lg" id="intervalo_parcelas" name="intervalo_parcelas">
+                                                <option value="30" selected>30 dias</option>
+                                                <option value="15">15 dias</option>
+                                                <option value="45">45 dias</option>
+                                                <option value="60">60 dias</option>
+                                            </select>
+                                            <small class="text-muted mt-2 d-block">Intervalo entre cada parcela</small>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Resumo das Parcelas -->
+                                    <div id="resumo-parcelas" class="mt-4" style="display: none;">
+                                        <h6 class="text-success mb-3">
+                                            <i class="fas fa-table me-2"></i>Resumo das Parcelas
+                                        </h6>
+                                        <div class="table-responsive">
+                                            <table class="table table-hover table-bordered">
+                                                <thead class="table-success">
+                                                    <tr>
+                                                        <th class="text-center">Parcela</th>
+                                                        <th class="text-center">Valor</th>
+                                                        <th class="text-center">Vencimento</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody id="tabela-parcelas" class="table-light">
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Separador Visual -->
+                    <hr class="my-4">
+
+                    <!-- Seção: Detalhes da Fatura -->
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-file-invoice me-2"></i>Detalhes da Fatura
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="data_vencimento" class="form-label fw-semibold">
+                                    <i class="fas fa-calendar me-1"></i>Data de Vencimento <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control form-control-lg" id="data_vencimento" name="data_vencimento" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="status" class="form-label fw-semibold">
+                                    <i class="fas fa-flag me-1"></i>Status
+                                </label>
+                                <select class="form-select form-select-lg" id="status" name="status">
+                                    <option value="aberta" selected>Aberta</option>
+                                    <option value="paga">Paga</option>
+                                    <option value="parcial">Parcial</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Separador Visual -->
+                    <hr class="my-4">
+
+                    <!-- Seção: Descrição e Observações -->
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3">
+                            <i class="fas fa-edit me-2"></i>Descrição e Observações
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label for="descricao" class="form-label fw-semibold">
+                                    <i class="fas fa-align-left me-1"></i>Descrição <span class="text-danger">*</span>
+                                </label>
+                                <textarea class="form-control" id="descricao" name="descricao" rows="3" required 
+                                          placeholder="Ex: Mensalidade curso teórico - Janeiro 2024"></textarea>
+                                <small class="text-muted">Descreva o serviço ou produto da fatura</small>
+                            </div>
+                            <div class="col-12">
+                                <label for="observacoes" class="form-label fw-semibold">
+                                    <i class="fas fa-sticky-note me-1"></i>Observações
+                                </label>
+                                <textarea class="form-control" id="observacoes" name="observacoes" rows="2" 
+                                          placeholder="Observações adicionais (opcional)"></textarea>
+                                <small class="text-muted">Informações complementares sobre a fatura</small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save me-1"></i>Salvar Fatura
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
 <script>
-function novaFatura() {
-    // Implementar modal para nova fatura
-    alert('Funcionalidade de nova fatura será implementada em breve.');
+// Definir data de vencimento padrão (30 dias a partir de hoje)
+document.addEventListener('DOMContentLoaded', function() {
+    const dataVencimento = document.getElementById('data_vencimento');
+    if (dataVencimento && !dataVencimento.value) {
+        const hoje = new Date();
+        const vencimento = new Date(hoje.getTime() + (30 * 24 * 60 * 60 * 1000));
+        dataVencimento.value = vencimento.toISOString().split('T')[0];
+    }
+    
+    // Event listeners para parcelamento
+    setupParcelamentoEvents();
+});
+
+// Configurar eventos de parcelamento
+function setupParcelamentoEvents() {
+    const parcelamentoCheckbox = document.getElementById('parcelamento');
+    const configParcelamento = document.getElementById('config-parcelamento');
+    const valorTotal = document.getElementById('valor_total');
+    const entrada = document.getElementById('entrada');
+    const numParcelas = document.getElementById('num_parcelas');
+    const intervaloParcelas = document.getElementById('intervalo_parcelas');
+    const dataVencimento = document.getElementById('data_vencimento');
+    
+    // Toggle configuração de parcelamento
+    parcelamentoCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            configParcelamento.style.display = 'block';
+            dataVencimento.required = false;
+            calcularParcelas();
+        } else {
+            configParcelamento.style.display = 'none';
+            document.getElementById('resumo-parcelas').style.display = 'none';
+            dataVencimento.required = true;
+        }
+    });
+    
+    // Recalcular parcelas quando valores mudarem
+    [valorTotal, entrada, numParcelas, intervaloParcelas].forEach(element => {
+        element.addEventListener('input', calcularParcelas);
+        element.addEventListener('change', calcularParcelas);
+    });
 }
+
+// Calcular e exibir parcelas
+function calcularParcelas() {
+    const parcelamentoCheckbox = document.getElementById('parcelamento');
+    if (!parcelamentoCheckbox.checked) return;
+    
+    const valorTotal = parseFloat(document.getElementById('valor_total').value) || 0;
+    const entrada = parseFloat(document.getElementById('entrada').value) || 0;
+    const numParcelas = parseInt(document.getElementById('num_parcelas').value) || 1;
+    const intervaloDias = parseInt(document.getElementById('intervalo_parcelas').value) || 30;
+    const dataVencimento = document.getElementById('data_vencimento').value;
+    
+    if (valorTotal <= 0) {
+        document.getElementById('resumo-parcelas').style.display = 'none';
+        return;
+    }
+    
+    // Calcular valor das parcelas
+    const valorRestante = valorTotal - entrada;
+    const valorParcela = valorRestante / numParcelas;
+    
+    // Gerar tabela de parcelas
+    const tabelaParcelas = document.getElementById('tabela-parcelas');
+    tabelaParcelas.innerHTML = '';
+    
+    // Data base para cálculo
+    let dataBase = new Date();
+    if (dataVencimento) {
+        dataBase = new Date(dataVencimento);
+    }
+    
+    // Adicionar entrada se houver
+    if (entrada > 0) {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td><strong>Entrada</strong></td>
+            <td><strong>R$ ${entrada.toFixed(2).replace('.', ',')}</strong></td>
+            <td>${formatarData(dataBase)}</td>
+        `;
+        tabelaParcelas.appendChild(row);
+    }
+    
+    // Adicionar parcelas
+    for (let i = 1; i <= numParcelas; i++) {
+        const dataParcela = new Date(dataBase);
+        dataParcela.setDate(dataBase.getDate() + (i * intervaloDias));
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${i}ª parcela</td>
+            <td>R$ ${valorParcela.toFixed(2).replace('.', ',')}</td>
+            <td>${formatarData(dataParcela)}</td>
+        `;
+        tabelaParcelas.appendChild(row);
+    }
+    
+    // Mostrar resumo
+    document.getElementById('resumo-parcelas').style.display = 'block';
+    
+    // Validar se entrada não excede valor total
+    if (entrada > valorTotal) {
+        document.getElementById('entrada').classList.add('is-invalid');
+        showAlert('warning', 'O valor da entrada não pode ser maior que o valor total.');
+    } else {
+        document.getElementById('entrada').classList.remove('is-invalid');
+    }
+}
+
+// Formatar data para exibição
+function formatarData(data) {
+    return data.toLocaleDateString('pt-BR');
+}
+
+function novaFatura() {
+    // Limpar formulário
+    document.getElementById('formNovaFatura').reset();
+    
+    // Definir data de vencimento padrão
+    const hoje = new Date();
+    const vencimento = new Date(hoje.getTime() + (30 * 24 * 60 * 60 * 1000));
+    document.getElementById('data_vencimento').value = vencimento.toISOString().split('T')[0];
+    
+    // Resetar configurações de parcelamento
+    document.getElementById('parcelamento').checked = false;
+    document.getElementById('config-parcelamento').style.display = 'none';
+    document.getElementById('resumo-parcelas').style.display = 'none';
+    document.getElementById('entrada').value = '0';
+    document.getElementById('num_parcelas').value = '4';
+    document.getElementById('intervalo_parcelas').value = '30';
+    
+    // Mostrar modal
+    const modal = new bootstrap.Modal(document.getElementById('modalNovaFatura'));
+    modal.show();
+}
+
+// Submissão do formulário
+document.getElementById('formNovaFatura').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const submitBtn = this.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+    
+    // Desabilitar botão e mostrar loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando...';
+    
+    // Enviar via AJAX
+    fetch('?page=financeiro-faturas&action=create', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Sucesso
+            showAlert('success', 'Fatura criada com sucesso!');
+            
+            // Fechar modal
+            const modal = bootstrap.Modal.getInstance(document.getElementById('modalNovaFatura'));
+            modal.hide();
+            
+            // Recarregar página para mostrar nova fatura
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            // Erro
+            showAlert('danger', data.message || 'Erro ao criar fatura');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        showAlert('danger', 'Erro de conexão. Tente novamente.');
+    })
+    .finally(() => {
+        // Reabilitar botão
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    });
+});
 
 function visualizarFatura(id) {
     // Implementar visualização da fatura
@@ -345,6 +820,29 @@ function cancelarFatura(id) {
     if (confirm('Deseja cancelar esta fatura?')) {
         // Implementar cancelamento
         alert('Cancelamento será implementado em breve.');
+    }
+}
+
+// Função para mostrar alertas
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+    `;
+    
+    // Inserir no topo da página
+    const container = document.querySelector('.container-fluid, .container, main');
+    if (container) {
+        container.insertBefore(alertDiv, container.firstChild);
+        
+        // Remover após 5 segundos
+        setTimeout(() => {
+            if (alertDiv.parentNode) {
+                alertDiv.remove();
+            }
+        }, 5000);
     }
 }
 </script>

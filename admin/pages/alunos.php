@@ -12,10 +12,10 @@ if (!isset($cfcs)) $cfcs = [];
 if (!isset($mensagem)) $mensagem = '';
 if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 
-// Headers para evitar cache em produção
-header("Cache-Control: no-cache, no-store, must-revalidate");
-header("Pragma: no-cache");
-header("Expires: 0");
+// Headers para evitar cache em produção - removidos pois já há saída HTML
+// header("Cache-Control: no-cache, no-store, must-revalidate");
+// header("Pragma: no-cache");
+// header("Expires: 0");
 
 // Debug: Verificar se os dados estão sendo carregados
 error_log("DEBUG ALUNOS: Total de alunos carregados: " . count($alunos));

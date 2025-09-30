@@ -79,6 +79,144 @@ $action = $_GET['action'] ?? 'list';
 define('ADMIN_ROUTING', true);
 
 // Processamento de formulários POST - DEVE VIR ANTES DE QUALQUER SAÍDA HTML
+
+// Processamento de faturas
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'financeiro-faturas' && isset($_GET['action']) && $_GET['action'] === 'create') {
+    header('Content-Type: application/json');
+    
+    try {
+        // Validar dados obrigatórios
+        $aluno_id = $_POST['aluno_id'] ?? null;
+        $valor = $_POST['valor'] ?? null;
+        $data_vencimento = $_POST['data_vencimento'] ?? null;
+        $descricao = $_POST['descricao'] ?? null;
+        
+        if (!$aluno_id || !$valor || !$data_vencimento || !$descricao) {
+            throw new Exception('Todos os campos obrigatórios devem ser preenchidos.');
+        }
+        
+        // Verificar se o aluno existe
+        $aluno = $db->fetchRow("SELECT id, nome FROM alunos WHERE id = ?", [$aluno_id]);
+        if (!$aluno) {
+            throw new Exception('Aluno não encontrado.');
+        }
+        
+        // Verificar se é parcelamento
+        $parcelamento = isset($_POST['parcelamento']) && $_POST['parcelamento'] === 'on';
+        
+        if ($parcelamento) {
+            // Processar parcelamento
+            $valor_total = floatval($valor);
+            $entrada = floatval($_POST['entrada'] ?? 0);
+            $num_parcelas = intval($_POST['num_parcelas'] ?? 1);
+            $intervalo_dias = intval($_POST['intervalo_parcelas'] ?? 30);
+            
+            // Validar parcelamento
+            if ($entrada > $valor_total) {
+                throw new Exception('O valor da entrada não pode ser maior que o valor total.');
+            }
+            
+            if ($num_parcelas < 1) {
+                throw new Exception('Número de parcelas deve ser maior que zero.');
+            }
+            
+            // Calcular valor das parcelas
+            $valor_restante = $valor_total - $entrada;
+            $valor_parcela = $valor_restante / $num_parcelas;
+            
+            // Data base para cálculo
+            $data_base = new DateTime($data_vencimento);
+            $faturas_criadas = [];
+            
+            // Criar entrada se houver
+            if ($entrada > 0) {
+                $dados_entrada = [
+                    'aluno_id' => $aluno_id,
+                    'valor' => $entrada,
+                    'data_vencimento' => $data_base->format('Y-m-d'),
+                    'descricao' => $descricao . ' - Entrada',
+                    'observacoes' => $_POST['observacoes'] ?? null,
+                    'status' => $_POST['status'] ?? 'aberta',
+                    'criado_em' => date('Y-m-d H:i:s'),
+                    'criado_por' => $user['id']
+                ];
+                
+                $fatura_id = $db->insert('financeiro_faturas', $dados_entrada);
+                if ($fatura_id) {
+                    $faturas_criadas[] = $fatura_id;
+                }
+            }
+            
+            // Criar parcelas
+            for ($i = 1; $i <= $num_parcelas; $i++) {
+                $data_parcela = clone $data_base;
+                $data_parcela->add(new DateInterval('P' . ($i * $intervalo_dias) . 'D'));
+                
+                $dados_parcela = [
+                    'aluno_id' => $aluno_id,
+                    'valor' => $valor_parcela,
+                    'data_vencimento' => $data_parcela->format('Y-m-d'),
+                    'descricao' => $descricao . " - {$i}ª parcela de {$num_parcelas}",
+                    'observacoes' => $_POST['observacoes'] ?? null,
+                    'status' => $_POST['status'] ?? 'aberta',
+                    'criado_em' => date('Y-m-d H:i:s'),
+                    'criado_por' => $user['id']
+                ];
+                
+                $fatura_id = $db->insert('financeiro_faturas', $dados_parcela);
+                if ($fatura_id) {
+                    $faturas_criadas[] = $fatura_id;
+                }
+            }
+            
+            if (count($faturas_criadas) > 0) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Fatura parcelada criada com sucesso! ' . count($faturas_criadas) . ' faturas geradas.',
+                    'faturas_criadas' => $faturas_criadas,
+                    'parcelamento' => true
+                ]);
+            } else {
+                throw new Exception('Erro ao criar faturas parceladas.');
+            }
+            
+        } else {
+            // Fatura única
+            $dados = [
+                'aluno_id' => $aluno_id,
+                'valor' => floatval($valor),
+                'data_vencimento' => $data_vencimento,
+                'descricao' => $descricao,
+                'observacoes' => $_POST['observacoes'] ?? null,
+                'status' => $_POST['status'] ?? 'aberta',
+                'criado_em' => date('Y-m-d H:i:s'),
+                'criado_por' => $user['id']
+            ];
+            
+            // Inserir fatura
+            $fatura_id = $db->insert('financeiro_faturas', $dados);
+            
+            if ($fatura_id) {
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Fatura criada com sucesso!',
+                    'fatura_id' => $fatura_id,
+                    'parcelamento' => false
+                ]);
+            } else {
+                throw new Exception('Erro ao criar fatura no banco de dados.');
+            }
+        }
+        
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => $e->getMessage()
+        ]);
+    }
+    exit;
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     // Processar formulário de veículos diretamente
     try {
@@ -1351,12 +1489,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             }
             
             if (file_exists($content_file)) {
-                // Definir constante para indicar que estamos no sistema de roteamento
-                define('ADMIN_ROUTING', true);
+                // Incluir arquivo da página
                 include $content_file;
             } else {
                 // Página padrão - Dashboard
-                define('ADMIN_ROUTING', true);
                 include 'pages/dashboard.php';
             }
             ?>
