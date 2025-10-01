@@ -179,6 +179,107 @@ try {
         // Continuar mesmo com erro, pois pode ser problema de permissão
     }
     
+    // Verificar e adicionar campo renach se não existir
+    try {
+        $result = $db->query("SHOW COLUMNS FROM alunos LIKE 'renach'");
+        $rows = $result->fetchAll();
+        if (!$result || count($rows) === 0) {
+            if (function_exists('error_log')) {
+                error_log('[API Alunos] Campo renach não existe, adicionando...');
+            }
+            
+            // Adicionar campo renach
+            $db->query("ALTER TABLE alunos ADD COLUMN renach VARCHAR(11) DEFAULT '' AFTER rg");
+            
+            if (function_exists('error_log')) {
+                error_log('[API Alunos] Campo renach adicionado com sucesso');
+            }
+        }
+    } catch (Exception $e) {
+        if (function_exists('error_log')) {
+            error_log('[API Alunos] Erro ao verificar/adicionar campo renach: ' . $e->getMessage());
+        }
+        // Continuar mesmo com erro, pois pode ser problema de permissão
+    }
+    
+    // Verificar e adicionar campo foto se não existir
+    try {
+        $result = $db->query("SHOW COLUMNS FROM alunos LIKE 'foto'");
+        $rows = $result->fetchAll();
+        if (!$result || count($rows) === 0) {
+            if (function_exists('error_log')) {
+                error_log('[API Alunos] Campo foto não existe, adicionando...');
+            }
+            
+            // Adicionar campo foto
+            $db->query("ALTER TABLE alunos ADD COLUMN foto VARCHAR(255) DEFAULT '' AFTER renach");
+            
+            if (function_exists('error_log')) {
+                error_log('[API Alunos] Campo foto adicionado com sucesso');
+            }
+        }
+    } catch (Exception $e) {
+        if (function_exists('error_log')) {
+            error_log('[API Alunos] Erro ao verificar/adicionar campo foto: ' . $e->getMessage());
+        }
+        // Continuar mesmo com erro, pois pode ser problema de permissão
+    }
+    
+    // Processar upload de foto se houver
+    $caminhoFoto = '';
+    
+    if (LOG_ENABLED) {
+        error_log('[API Alunos] Verificando upload de foto...');
+        error_log('[API Alunos] $_FILES: ' . print_r($_FILES, true));
+        error_log('[API Alunos] $_POST: ' . print_r($_POST, true));
+    }
+    
+    if (isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+        $uploadDir = '../uploads/alunos/';
+        
+        // Criar diretório se não existir
+        if (!is_dir($uploadDir)) {
+            mkdir($uploadDir, 0755, true);
+        }
+        
+        $fileInfo = pathinfo($_FILES['foto']['name']);
+        $extension = strtolower($fileInfo['extension']);
+        
+        // Validar extensão
+        $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        if (!in_array($extension, $allowedExtensions)) {
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] Extensão de arquivo não permitida: ' . $extension);
+            }
+            sendJsonResponse(['success' => false, 'error' => 'Formato de arquivo não permitido. Use JPG, PNG, GIF ou WebP.'], 400);
+        }
+        
+        // Validar tamanho (2MB máximo)
+        if ($_FILES['foto']['size'] > 2 * 1024 * 1024) {
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] Arquivo muito grande: ' . $_FILES['foto']['size'] . ' bytes');
+            }
+            sendJsonResponse(['success' => false, 'error' => 'Arquivo muito grande. Máximo 2MB.'], 400);
+        }
+        
+        // Gerar nome único para o arquivo
+        $nomeArquivo = 'aluno_' . time() . '_' . uniqid() . '.' . $extension;
+        $caminhoCompleto = $uploadDir . $nomeArquivo;
+        
+        // Mover arquivo
+        if (move_uploaded_file($_FILES['foto']['tmp_name'], $caminhoCompleto)) {
+            $caminhoFoto = 'admin/uploads/alunos/' . $nomeArquivo;
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] Foto salva com sucesso: ' . $caminhoFoto);
+            }
+        } else {
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] Erro ao salvar foto');
+            }
+            sendJsonResponse(['success' => false, 'error' => 'Erro ao salvar foto'], 500);
+        }
+    }
+    
 } catch (Exception $e) {
     if (function_exists('error_log')) {
         error_log('[API Alunos] Erro de conexão com banco: ' . $e->getMessage());
@@ -366,6 +467,8 @@ try {
                 'nome' => $data['nome'],
                 'cpf' => $data['cpf'],
                 'rg' => $data['rg'] ?? '',
+                'renach' => $data['renach'] ?? '',
+                'foto' => $caminhoFoto ?: ($data['foto'] ?? ''),
                 'data_nascimento' => $data['data_nascimento'] ?? null,
                 'naturalidade' => $data['naturalidade'] ?? '',
                 'nacionalidade' => $data['nacionalidade'] ?? 'Brasileira',

@@ -1100,6 +1100,7 @@ body.modal-open #modalAluno .modal-dialog {
     box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
 }
 
+
 .toast {
     min-width: 350px;
     max-width: 450px;
@@ -1352,8 +1353,13 @@ body.modal-open #modalAluno .modal-dialog {
                             <td>
                                 <?php 
                                 // Mostrar operações dinâmicas em vez de categoria única
-                                if (!empty($aluno['operacoes']) && is_array($aluno['operacoes'])) {
-                                    foreach ($aluno['operacoes'] as $index => $operacao) {
+                                $operacoes = $aluno['operacoes'];
+                                if (is_string($operacoes)) {
+                                    $operacoes = json_decode($operacoes, true);
+                                }
+                                
+                                if (!empty($operacoes) && is_array($operacoes)) {
+                                    foreach ($operacoes as $index => $operacao) {
                                         $badgeClass = '';
                                         $tipoText = '';
                                         
@@ -1518,8 +1524,18 @@ body.modal-open #modalAluno .modal-dialog {
                             <span class="mobile-aluno-value">
                                 <?php 
                                 if (!empty($aluno['operacoes'])) {
-                                    $categorias = array_column($aluno['operacoes'], 'categoria_cnh');
-                                    echo implode(', ', array_unique($categorias));
+                                    // Verificar se operacoes é string JSON e converter para array
+                                    $operacoes = $aluno['operacoes'];
+                                    if (is_string($operacoes)) {
+                                        $operacoes = json_decode($operacoes, true);
+                                    }
+                                    
+                                    if (is_array($operacoes) && !empty($operacoes)) {
+                                        $categorias = array_column($operacoes, 'categoria');
+                                        echo implode(', ', array_unique($categorias));
+                                    } else {
+                                        echo htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A');
+                                    }
                                 } else {
                                     echo htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A');
                                 }
@@ -1636,6 +1652,37 @@ body.modal-open #modalAluno .modal-dialog {
                                     <i class="fas fa-user me-1"></i>Informações Pessoais
                                 </h6>
                             </div>
+                            
+                            <!-- Campo de Foto -->
+                            <div class="col-12 mb-3">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <div class="mb-2">
+                                            <label for="foto" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Foto (Opcional)</label>
+                                            <input type="file" class="form-control" id="foto" name="foto" accept="image/*" 
+                                                   style="padding: 0.4rem; font-size: 0.85rem;" onchange="previewFotoAluno(this)">
+                                            <small class="text-muted" style="font-size: 0.75rem;">📷 JPG, PNG, GIF, WebP até 2MB</small>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="text-center">
+                                            <div id="preview-container-aluno" style="display: none;">
+                                                <img id="foto-preview-aluno" src="" alt="Preview da foto" 
+                                                     style="max-width: 150px; max-height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dee2e6;">
+                                                <div class="mt-2">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerFotoAluno()">
+                                                        <i class="fas fa-trash"></i> Remover
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div id="placeholder-foto-aluno" class="text-muted" style="font-size: 0.8rem;">
+                                                <i class="fas fa-user-circle fa-3x"></i><br>
+                                                Nenhuma foto selecionada
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="col-md-3">
                                 <div class="mb-1">
                                     <label for="nome" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nome Completo *</label>
@@ -1657,6 +1704,14 @@ body.modal-open #modalAluno .modal-dialog {
                                     <label for="rg" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">RG</label>
                                     <input type="text" class="form-control" id="rg" name="rg" 
                                            placeholder="Digite o RG (aceita letras)" maxlength="30" style="padding: 0.4rem; font-size: 0.85rem;">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="mb-1">
+                                    <label for="renach" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Renach *</label>
+                                    <input type="text" class="form-control" id="renach" name="renach" required 
+                                           placeholder="PE000000000" maxlength="11" style="padding: 0.4rem; font-size: 0.85rem;"
+                                           data-mask="renach">
                                 </div>
                             </div>
                             <div class="col-md-2">
@@ -2089,10 +2144,15 @@ body.modal-open #modalAluno .modal-dialog {
                             <?php foreach ($alunos as $aluno): ?>
                                 <option value="<?php echo intval($aluno['id']); ?>" data-nome="<?php echo htmlspecialchars($aluno['nome']); ?>">
                                     <?php echo htmlspecialchars($aluno['nome']); ?> - <?php 
-                                    if (!empty($aluno['operacoes']) && is_array($aluno['operacoes'])) {
+                                    $operacoes = $aluno['operacoes'];
+                                    if (is_string($operacoes)) {
+                                        $operacoes = json_decode($operacoes, true);
+                                    }
+                                    
+                                    if (!empty($operacoes) && is_array($operacoes)) {
                                         $categorias = array_map(function($op) { 
                                             return $op['categoria'] ?? $op['categoria_cnh'] ?? 'N/A'; 
-                                        }, $aluno['operacoes']);
+                                        }, $operacoes);
                                         echo implode(', ', $categorias);
                                     } else {
                                         echo htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A');
@@ -2480,6 +2540,7 @@ function preencherFormularioAluno(aluno) {
         'nome': aluno.nome || '',
         'cpf': aluno.cpf || '',
         'rg': aluno.rg || '',
+        'renach': aluno.renach || '',
         'data_nascimento': aluno.data_nascimento || '',
         'naturalidade': aluno.naturalidade || '',
         'nacionalidade': aluno.nacionalidade || '',
@@ -2489,6 +2550,11 @@ function preencherFormularioAluno(aluno) {
         'status': aluno.status || 'ativo',
         'atividade_remunerada': aluno.atividade_remunerada || 0
     };
+    
+    // Carregar foto existente se houver
+    if (aluno.foto) {
+        carregarFotoExistenteAluno(aluno.foto);
+    }
     
     console.log('📝 Campos a serem preenchidos:', campos);
     
@@ -2700,8 +2766,22 @@ function preencherModalVisualizacao(aluno) {
     const html = `
         <div class="row">
             <div class="col-md-8">
-                <h4>${aluno.nome}</h4>
-                <p class="text-muted">CPF: ${aluno.cpf}</p>
+                <div class="d-flex align-items-center">
+                    ${aluno.foto && aluno.foto !== 'Array' ? `
+                        <img src="${aluno.foto.startsWith('http') ? aluno.foto : window.location.origin + window.location.pathname.split('/').slice(0, -2).join('/') + '/' + aluno.foto}" 
+                             alt="Foto do aluno" class="rounded-circle me-3" 
+                             style="width: 60px; height: 60px; object-fit: cover; border: 2px solid #dee2e6;">
+                    ` : `
+                        <div class="rounded-circle me-3 d-flex align-items-center justify-content-center bg-light" 
+                             style="width: 60px; height: 60px; border: 2px solid #dee2e6;">
+                            <i class="fas fa-user text-muted"></i>
+                        </div>
+                    `}
+                    <div>
+                        <h4 class="mb-0">${aluno.nome}</h4>
+                        <p class="text-muted mb-0">CPF: ${aluno.cpf}</p>
+                    </div>
+                </div>
             </div>
             <div class="col-md-4 text-end">
                 <span class="badge bg-${aluno.status === 'ativo' ? 'success' : (aluno.status === 'concluido' ? 'info' : 'danger')} fs-6">
@@ -2716,6 +2796,7 @@ function preencherModalVisualizacao(aluno) {
             <div class="col-md-6">
                 <h6><i class="fas fa-info-circle me-2"></i>Informações Pessoais</h6>
                 <p><strong>RG:</strong> ${aluno.rg || 'Não informado'}</p>
+                <p><strong>Renach:</strong> ${aluno.renach || 'Não informado'}</p>
                 <p><strong>Data de Nascimento:</strong> ${aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'Não informado'}</p>
                 <p><strong>Naturalidade:</strong> ${aluno.naturalidade || 'Não informado'}</p>
                 <p><strong>Nacionalidade:</strong> ${aluno.nacionalidade || 'Não informado'}</p>
@@ -3861,6 +3942,9 @@ function abrirModalAluno() {
             operacoesContainer.innerHTML = '';
             contadorOperacoes = 0;
             console.log('🧹 Seção de operações limpa');
+            
+            // Adicionar operação padrão automaticamente
+            adicionarOperacao();
         }
         
         const alunoIdField = document.getElementById('aluno_id_hidden');
@@ -3965,6 +4049,7 @@ function salvarAluno() {
         return;
     }
     
+    
     // Mostrar loading no botão
     const btnSalvar = document.getElementById('btnSalvarAluno');
     const textoOriginal = btnSalvar.innerHTML;
@@ -3974,51 +4059,62 @@ function salvarAluno() {
     // Coletar operações de habilitação
     const operacoes = coletarDadosOperacoes();
     
-    // Preparar dados para envio
-    const dados = {
-        nome: formData.get('nome'),
-        cpf: formData.get('cpf'),
-        rg: formData.get('rg'),
-        data_nascimento: formData.get('data_nascimento'),
-        naturalidade: formData.get('naturalidade'),
-        nacionalidade: formData.get('nacionalidade'),
-        email: formData.get('email'),
-        telefone: formData.get('telefone'),
-        status: formData.get('status'),
-        cfc_id: formData.get('cfc_id'),
-        // Removido: tipo_servico e categoria_cnh - agora usamos apenas operacoes
-        operacoes: operacoes, // Adicionar operações
-        atividade_remunerada: formData.get('atividade_remunerada') ? 1 : 0,
-        cep: formData.get('cep'),
-        endereco: formData.get('logradouro'), // Mapear logradouro para endereco
-        numero: formData.get('numero'),
-        bairro: formData.get('bairro'),
-        cidade: formData.get('cidade'),
-        estado: formData.get('uf'), // Mapear uf para estado
-        observacoes: formData.get('observacoes')
-    };
+    // Preparar dados para envio usando FormData para suportar upload de arquivo
+    const dadosFormData = new FormData();
+    dadosFormData.append('nome', formData.get('nome'));
+    dadosFormData.append('cpf', formData.get('cpf'));
+    dadosFormData.append('rg', formData.get('rg') || '');
+    dadosFormData.append('renach', formData.get('renach') || '');
+    dadosFormData.append('data_nascimento', formData.get('data_nascimento') || '');
+    dadosFormData.append('naturalidade', formData.get('naturalidade') || '');
+    dadosFormData.append('nacionalidade', formData.get('nacionalidade') || '');
+    dadosFormData.append('email', formData.get('email') || '');
+    dadosFormData.append('telefone', formData.get('telefone') || '');
+    dadosFormData.append('status', formData.get('status') || '');
+    dadosFormData.append('cfc_id', formData.get('cfc_id') || '');
+    dadosFormData.append('operacoes', JSON.stringify(operacoes));
+    dadosFormData.append('atividade_remunerada', formData.get('atividade_remunerada') ? 1 : 0);
+    dadosFormData.append('cep', formData.get('cep') || '');
+    dadosFormData.append('endereco', formData.get('logradouro') || '');
+    dadosFormData.append('numero', formData.get('numero') || '');
+    dadosFormData.append('bairro', formData.get('bairro') || '');
+    dadosFormData.append('cidade', formData.get('cidade') || '');
+    dadosFormData.append('estado', formData.get('uf') || '');
+    dadosFormData.append('observacoes', formData.get('observacoes') || '');
+    
+    // Adicionar foto se houver
+    const fotoInput = document.getElementById('foto');
+    if (fotoInput && fotoInput.files && fotoInput.files[0]) {
+        console.log('📷 Arquivo de foto encontrado:', fotoInput.files[0]);
+        dadosFormData.append('foto', fotoInput.files[0]);
+    } else {
+        console.log('📷 Nenhum arquivo de foto selecionado');
+    }
     
     // Determinar se é criação ou edição
     const acao = formData.get('acao');
     const alunoId = formData.get('aluno_id');
     
     if (acao === 'editar' && alunoId) {
-        dados.id = alunoId;
+        dadosFormData.append('id', alunoId);
     }
     
     // Fazer requisição para a API
-    console.log('📤 Enviando dados para API:', dados);
+    console.log('📤 Enviando dados para API via FormData');
     console.log('📤 Operações coletadas:', operacoes);
     console.log('📤 Ação:', acao);
     console.log('📤 Aluno ID:', alunoId);
     
+    // Debug FormData
+    console.log('📤 FormData contents:');
+    for (let [key, value] of dadosFormData.entries()) {
+        console.log(`  ${key}:`, value);
+    }
+    
     const timestamp = new Date().getTime();
     fetch(`api/alunos.php?t=${timestamp}`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dados)
+        body: dadosFormData // Usar FormData em vez de JSON
     })
     .then(response => {
         console.log('Resposta da API:', response);
@@ -4084,15 +4180,22 @@ function adicionarOperacao() {
                 <div class="col-md-3">
                     <select class="form-select form-select-sm" name="operacao_tipo_${contadorOperacoes}" onchange="carregarCategoriasOperacao(${contadorOperacoes})">
                         <option value="">Tipo de Operação</option>
-                        <option value="primeira_habilitacao">🏍️ Primeira Habilitação</option>
+                        <option value="primeira_habilitacao" selected>🏍️ Primeira Habilitação</option>
                         <option value="adicao">➕ Adição de Categoria</option>
                         <option value="mudanca">🔄 Mudança de Categoria</option>
                         <option value="aula_avulsa">📚 Aula Avulsa</option>
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <select class="form-select form-select-sm" name="operacao_categoria_${contadorOperacoes}" disabled>
-                        <option value="">Selecione o tipo primeiro</option>
+                    <select class="form-select form-select-sm" name="operacao_categoria_${contadorOperacoes}">
+                        <option value="">Selecione a categoria</option>
+                        <option value="A">A - Motocicleta</option>
+                        <option value="B" selected>B - Automóvel</option>
+                        <option value="AB">AB - Motocicleta + Automóvel</option>
+                        <option value="ACC">ACC - Acionamento de Câmbio Automático</option>
+                        <option value="C">C - Veículo de Carga</option>
+                        <option value="D">D - Veículo de Passageiros</option>
+                        <option value="E">E - Combinação de Veículos</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -4218,7 +4321,9 @@ function carregarOperacoesExistentes(operacoes) {
     
     // Verificar se operacoes é um array válido
     if (!Array.isArray(operacoes) || operacoes.length === 0) {
-        console.log('⚠️ Nenhuma operação para carregar ou operacoes não é array');
+        console.log('⚠️ Nenhuma operação para carregar ou operacoes não é array - adicionando operação padrão');
+        // Adicionar operação padrão se não houver operações
+        adicionarOperacao();
         return;
     }
     
@@ -4812,4 +4917,160 @@ function validarCPFAntesEnvio() {
 }
 
 console.log('✅ Validação de CPF inicializada');
+
+// =====================================================
+// MÁSCARA DE RENACH
+// =====================================================
+
+function aplicarMascaraRenach(input) {
+    let valor = input.value.replace(/\D/g, '').toUpperCase();
+    
+    // Se não começar com PE, adiciona automaticamente
+    if (!valor.startsWith('PE')) {
+        valor = 'PE' + valor;
+    }
+    
+    // Limita a 11 caracteres (PE + 9 dígitos)
+    if (valor.length > 11) {
+        valor = valor.substring(0, 11);
+    }
+    
+    input.value = valor;
+}
+
+// Aplicar máscara de Renach quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    const renachInput = document.getElementById('renach');
+    
+    if (renachInput) {
+        // Aplicar máscara enquanto digita
+        renachInput.addEventListener('input', function() {
+            aplicarMascaraRenach(this);
+        });
+        
+        // Preencher "PE" automaticamente ao focar se estiver vazio
+        renachInput.addEventListener('focus', function() {
+            if (this.value === '') {
+                this.value = 'PE';
+            }
+        });
+    }
+});
+
+console.log('✅ Máscara de Renach inicializada');
+
+// =====================================================
+// FUNÇÕES DE GERENCIAMENTO DE FOTO DO ALUNO
+// =====================================================
+
+/**
+ * Preview da foto selecionada
+ */
+function previewFotoAluno(input) {
+    console.log('📷 Preview da foto do aluno iniciado...');
+    
+    if (input.files && input.files[0]) {
+        const file = input.files[0];
+        
+        // Validar tipo de arquivo
+        if (!file.type.startsWith('image/')) {
+            alert('⚠️ Por favor, selecione apenas arquivos de imagem (JPG, PNG, GIF, WebP)');
+            input.value = '';
+            return;
+        }
+        
+        // Validar tamanho (2MB máximo)
+        if (file.size > 2 * 1024 * 1024) {
+            alert('⚠️ O arquivo deve ter no máximo 2MB');
+            input.value = '';
+            return;
+        }
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const preview = document.getElementById('foto-preview-aluno');
+            const container = document.getElementById('preview-container-aluno');
+            const placeholder = document.getElementById('placeholder-foto-aluno');
+            
+            preview.src = e.target.result;
+            container.style.display = 'block';
+            placeholder.style.display = 'none';
+            
+            console.log('✅ Preview da foto do aluno carregado com sucesso');
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+/**
+ * Remover foto selecionada
+ */
+function removerFotoAluno() {
+    console.log('🗑️ Removendo foto do aluno...');
+    
+    const input = document.getElementById('foto');
+    const preview = document.getElementById('foto-preview-aluno');
+    const container = document.getElementById('preview-container-aluno');
+    const placeholder = document.getElementById('placeholder-foto-aluno');
+    
+    input.value = '';
+    preview.src = '';
+    container.style.display = 'none';
+    placeholder.style.display = 'block';
+    
+    console.log('✅ Foto do aluno removida com sucesso');
+}
+
+/**
+ * Carregar foto existente do aluno
+ */
+function carregarFotoExistenteAluno(caminhoFoto) {
+    console.log('📷 Carregando foto existente do aluno:', caminhoFoto);
+    
+    if (caminhoFoto && caminhoFoto.trim() !== '') {
+        const preview = document.getElementById('foto-preview-aluno');
+        const container = document.getElementById('preview-container-aluno');
+        const placeholder = document.getElementById('placeholder-foto-aluno');
+        
+        // Construir URL completa da foto
+        let urlFoto;
+        if (caminhoFoto.startsWith('http')) {
+            urlFoto = caminhoFoto;
+        } else {
+            // Construir URL baseada no contexto atual
+            const baseUrl = window.location.origin;
+            const basePath = window.location.pathname.split('/').slice(0, -2).join('/');
+            urlFoto = `${baseUrl}${basePath}/${caminhoFoto}`;
+        }
+        
+        console.log('📷 URL da foto do aluno construída:', urlFoto);
+        
+        preview.src = urlFoto;
+        container.style.display = 'block';
+        placeholder.style.display = 'none';
+        
+        // Verificar se a imagem carregou
+        preview.onload = function() {
+            console.log('✅ Foto existente do aluno carregada com sucesso');
+        };
+        
+        preview.onerror = function() {
+            console.error('❌ Erro ao carregar foto do aluno:', urlFoto);
+            // Se der erro, mostrar placeholder
+            container.style.display = 'none';
+            placeholder.style.display = 'block';
+        };
+    } else {
+        // Se não há foto, mostrar placeholder
+        const container = document.getElementById('preview-container-aluno');
+        const placeholder = document.getElementById('placeholder-foto-aluno');
+        
+        container.style.display = 'none';
+        placeholder.style.display = 'block';
+        
+        console.log('ℹ️ Nenhuma foto existente do aluno encontrada');
+    }
+}
+
+console.log('✅ Funções de foto do aluno inicializadas');
 </script>
