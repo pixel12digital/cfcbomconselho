@@ -1053,6 +1053,53 @@ body.modal-open #modalAluno .modal-dialog {
     z-index: 9999 !important;
 }
 
+/* =====================================================
+   ESTILOS PARA VALIDAÇÃO DE CPF
+   ===================================================== */
+
+.cpf-validation-feedback {
+    font-size: 0.75rem !important;
+    margin-top: 0.25rem !important;
+    padding: 0.25rem 0.5rem !important;
+    border-radius: 0.25rem !important;
+    display: none !important;
+}
+
+.cpf-validation-feedback.valid {
+    background-color: #d1edff !important;
+    color: #0c5460 !important;
+    border: 1px solid #bee5eb !important;
+    display: block !important;
+}
+
+.cpf-validation-feedback.invalid {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+    border: 1px solid #f5c6cb !important;
+    display: block !important;
+}
+
+.cpf-validation-feedback::before {
+    content: "✓ ";
+    font-weight: bold;
+}
+
+.cpf-validation-feedback.invalid::before {
+    content: "✗ ";
+    font-weight: bold;
+}
+
+/* Estilos para campo CPF com validação */
+#cpf.valid {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+}
+
+#cpf.invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
 .toast {
     min-width: 350px;
     max-width: 450px;
@@ -1600,7 +1647,9 @@ body.modal-open #modalAluno .modal-dialog {
                                 <div class="mb-1">
                                     <label for="cpf" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CPF *</label>
                                     <input type="text" class="form-control" id="cpf" name="cpf" required 
-                                           placeholder="000.000.000-00" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="000.000.000-00" style="padding: 0.4rem; font-size: 0.85rem;"
+                                           data-mask="cpf" data-validate="required|cpf" maxlength="14">
+                                    <div class="cpf-validation-feedback" style="font-size: 0.75rem; margin-top: 0.25rem; display: none;"></div>
                                 </div>
                             </div>
                             <div class="col-md-2">
@@ -3901,6 +3950,21 @@ function salvarAluno() {
     const form = document.getElementById('formAluno');
     const formData = new FormData(form);
     
+    // Validar CPF antes de prosseguir
+    const cpfInput = document.getElementById('cpf');
+    if (cpfInput && cpfInput.value.length === 14) {
+        const cpfLimpo = cpfInput.value.replace(/\D/g, '');
+        if (!validarCPF(cpfLimpo)) {
+            alert('Por favor, digite um CPF válido.');
+            cpfInput.focus();
+            return;
+        }
+    } else if (cpfInput && cpfInput.value.length > 0) {
+        alert('Por favor, digite um CPF completo.');
+        cpfInput.focus();
+        return;
+    }
+    
     // Mostrar loading no botão
     const btnSalvar = document.getElementById('btnSalvarAluno');
     const textoOriginal = btnSalvar.innerHTML;
@@ -4635,4 +4699,117 @@ document.addEventListener('keydown', function(e) {
 });
 
 console.log('🔧 Sistema de modais responsivos inicializado');
+
+// =====================================================
+// VALIDAÇÃO DE CPF EM TEMPO REAL
+// =====================================================
+
+function validarCPF(cpf) {
+    // Remove caracteres não numéricos
+    cpf = cpf.replace(/\D/g, '');
+    
+    // Verifica se tem 11 dígitos
+    if (cpf.length !== 11) return false;
+    
+    // Verifica se todos os dígitos são iguais
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+    
+    // Validação do primeiro dígito verificador
+    let soma = 0;
+    for (let i = 0; i < 9; i++) {
+        soma += parseInt(cpf[i]) * (10 - i);
+    }
+    let resto = soma % 11;
+    let digito1 = resto < 2 ? 0 : 11 - resto;
+    
+    if (parseInt(cpf[9]) !== digito1) return false;
+    
+    // Validação do segundo dígito verificador
+    soma = 0;
+    for (let i = 0; i < 10; i++) {
+        soma += parseInt(cpf[i]) * (11 - i);
+    }
+    resto = soma % 11;
+    let digito2 = resto < 2 ? 0 : 11 - resto;
+    
+    return parseInt(cpf[10]) === digito2;
+}
+
+function aplicarMascaraCPF(input) {
+    let valor = input.value.replace(/\D/g, '');
+    let valorFormatado = valor.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    input.value = valorFormatado;
+}
+
+function mostrarFeedbackCPF(input, isValid) {
+    const feedback = input.parentNode.querySelector('.cpf-validation-feedback');
+    
+    if (isValid) {
+        input.classList.remove('invalid');
+        input.classList.add('valid');
+        feedback.textContent = 'CPF válido';
+        feedback.className = 'cpf-validation-feedback valid';
+    } else {
+        input.classList.remove('valid');
+        input.classList.add('invalid');
+        feedback.textContent = 'CPF inválido';
+        feedback.className = 'cpf-validation-feedback invalid';
+    }
+}
+
+function ocultarFeedbackCPF(input) {
+    const feedback = input.parentNode.querySelector('.cpf-validation-feedback');
+    input.classList.remove('valid', 'invalid');
+    feedback.style.display = 'none';
+    feedback.className = 'cpf-validation-feedback';
+}
+
+// Aplicar validação de CPF quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    const cpfInput = document.getElementById('cpf');
+    
+    if (cpfInput) {
+        // Aplicar máscara enquanto digita
+        cpfInput.addEventListener('input', function() {
+            aplicarMascaraCPF(this);
+            
+            // Validar CPF quando tiver 14 caracteres (com máscara)
+            if (this.value.length === 14) {
+                const cpfLimpo = this.value.replace(/\D/g, '');
+                const isValid = validarCPF(cpfLimpo);
+                mostrarFeedbackCPF(this, isValid);
+            } else if (this.value.length < 14) {
+                ocultarFeedbackCPF(this);
+            }
+        });
+        
+        // Validar ao sair do campo
+        cpfInput.addEventListener('blur', function() {
+            if (this.value.length === 14) {
+                const cpfLimpo = this.value.replace(/\D/g, '');
+                const isValid = validarCPF(cpfLimpo);
+                mostrarFeedbackCPF(this, isValid);
+            }
+        });
+        
+        // Limpar validação ao focar
+        cpfInput.addEventListener('focus', function() {
+            if (this.value.length < 14) {
+                ocultarFeedbackCPF(this);
+            }
+        });
+    }
+});
+
+// Função para validar CPF antes do envio do formulário
+function validarCPFAntesEnvio() {
+    const cpfInput = document.getElementById('cpf');
+    if (cpfInput && cpfInput.value.length === 14) {
+        const cpfLimpo = cpfInput.value.replace(/\D/g, '');
+        return validarCPF(cpfLimpo);
+    }
+    return false;
+}
+
+console.log('✅ Validação de CPF inicializada');
 </script>

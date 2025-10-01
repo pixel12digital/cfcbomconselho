@@ -752,6 +752,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <i class="fas fa-file-alt"></i>
                             <span>Relatório de ATA</span>
                         </a>
+                        <a href="pages/vagas-candidatos.php" class="nav-sublink">
+                            <i class="fas fa-briefcase"></i>
+                            <span>Vagas e Candidatos</span>
+                        </a>
                     </div>
                 </div>
                 <?php endif; ?>

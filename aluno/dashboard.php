@@ -10,53 +10,64 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/services/SistemaNotificacoes.php';
 
 // Verificar autenticação específica para aluno
-if (!isset($_SESSION['aluno_id']) || $_SESSION['user_type'] !== 'aluno') {
-    header('Location: /login.php?type=aluno');
+if (!isLoggedIn()) {
+    header('Location: login.php');
+    exit();
+}
+
+$user = getCurrentUser();
+if (!$user || $user['tipo'] !== 'aluno') {
+    header('Location: login.php');
     exit();
 }
 
 $db = db();
 $notificacoes = new SistemaNotificacoes();
 
-// Buscar dados do aluno - primeiro na tabela usuarios, depois na tabela alunos
-$aluno = $db->fetch("SELECT * FROM usuarios WHERE id = ? AND tipo = 'aluno'", [$_SESSION['aluno_id']]);
+// Buscar dados do aluno na tabela usuarios
+$aluno = $db->fetch("SELECT * FROM usuarios WHERE id = ? AND tipo = 'aluno'", [$user['id']]);
 
 if (!$aluno) {
-    // Se não encontrar na tabela usuarios, buscar na tabela alunos
-    $aluno = $db->fetch("SELECT * FROM alunos WHERE id = ?", [$_SESSION['aluno_id']]);
-}
-
-if (!$aluno) {
-    header('Location: /login.php?type=aluno');
+    header('Location: login.php');
     exit();
 }
 
-// Buscar próximas aulas (próximos 14 dias)
-$proximasAulas = $db->fetchAll("
-    SELECT a.*, 
-           i.nome as instrutor_nome,
-           v.modelo as veiculo_modelo, v.placa as veiculo_placa
-    FROM aulas a
-    JOIN instrutores i ON a.instrutor_id = i.id
-    LEFT JOIN veiculos v ON a.veiculo_id = v.id
-    WHERE a.aluno_id = ?
-      AND a.data_aula >= CURDATE() 
-      AND a.data_aula <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
-      AND a.status != 'cancelada'
-    ORDER BY a.data_aula ASC, a.hora_inicio ASC
-    LIMIT 10
-", [$_SESSION['aluno_id']]);
+// Buscar o ID do aluno na tabela alunos usando o CPF
+$alunoDados = $db->fetch("SELECT id FROM alunos WHERE cpf = ?", [$aluno['cpf']]);
+$alunoId = $alunoDados ? $alunoDados['id'] : null;
+
+// Buscar próximas aulas (próximos 14 dias) - apenas se aluno existe na tabela alunos
+$proximasAulas = [];
+if ($alunoId) {
+    $proximasAulas = $db->fetchAll("
+        SELECT a.*, 
+               i.nome as instrutor_nome,
+               v.modelo as veiculo_modelo, v.placa as veiculo_placa
+        FROM aulas a
+        JOIN instrutores i ON a.instrutor_id = i.id
+        LEFT JOIN veiculos v ON a.veiculo_id = v.id
+        WHERE a.aluno_id = ?
+          AND a.data_aula >= CURDATE() 
+          AND a.data_aula <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
+          AND a.status != 'cancelada'
+        ORDER BY a.data_aula ASC, a.hora_inicio ASC
+        LIMIT 10
+    ", [$alunoId]);
+}
 
 // Buscar notificações não lidas
-$notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($_SESSION['aluno_id'], 'aluno');
+$notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($user['id'], 'aluno');
 
-// Buscar status dos exames
-$exames = $db->fetchAll("
-    SELECT tipo, status, data_exame
-    FROM exames 
-    WHERE aluno_id = ? 
-    ORDER BY data_exame DESC
-", [$_SESSION['aluno_id']]);
+// Buscar status dos exames - apenas se aluno existe na tabela alunos
+$exames = [];
+if ($alunoId) {
+    $exames = $db->fetchAll("
+        SELECT tipo, status, data_agendada as data_exame
+        FROM exames 
+        WHERE aluno_id = ? 
+        ORDER BY data_agendada DESC
+    ", [$alunoId]);
+}
 
 // Verificar guardas de negócio
 $guardaExames = true;
@@ -76,6 +87,28 @@ $homeUrl = '/aluno/dashboard.php';
 // Incluir layout mobile-first
 ob_start();
 ?>
+<!-- Header com Logout -->
+<div class="row mb-3">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center">
+            <h1 class="h3 mb-0">
+                <i class="fas fa-user-graduate me-2"></i>
+                Dashboard do Aluno
+            </h1>
+            <div class="d-flex gap-2">
+                <span class="badge bg-primary">
+                    <i class="fas fa-user me-1"></i>
+                    <?php echo htmlspecialchars($aluno['nome']); ?>
+                </span>
+                <a href="logout.php" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-sign-out-alt me-1"></i>
+                    Sair
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Conteúdo do Dashboard -->
 <div class="row">
     <div class="col-12">
@@ -681,5 +714,10 @@ ob_start();
             }
         }
     </style>
-</body>
-</html>
+
+<?php
+$pageContent = ob_get_clean();
+
+// Incluir layout mobile-first
+include __DIR__ . '/../includes/layout/mobile-first.php';
+?>

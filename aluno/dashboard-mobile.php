@@ -10,44 +10,64 @@ require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/services/SistemaNotificacoes.php';
 
 // Verificar autenticação
+if (!isLoggedIn()) {
+    header('Location: login.php');
+    exit();
+}
+
 $user = getCurrentUser();
 if (!$user || $user['tipo'] !== 'aluno') {
-    header('Location: /login.php');
+    header('Location: login.php');
     exit();
 }
 
 $db = db();
 $notificacoes = new SistemaNotificacoes();
 
-// Buscar dados do aluno
-$aluno = $db->fetch("SELECT * FROM alunos WHERE id = ?", [$user['id']]);
+// Buscar dados do aluno na tabela usuarios
+$aluno = $db->fetch("SELECT * FROM usuarios WHERE id = ? AND tipo = 'aluno'", [$user['id']]);
 
-// Buscar próximas aulas (próximos 14 dias)
-$proximasAulas = $db->fetchAll("
-    SELECT a.*, 
-           i.nome as instrutor_nome,
-           v.modelo as veiculo_modelo, v.placa as veiculo_placa
-    FROM aulas a
-    JOIN instrutores i ON a.instrutor_id = i.id
-    LEFT JOIN veiculos v ON a.veiculo_id = v.id
-    WHERE a.aluno_id = ? 
-      AND a.data_aula >= CURDATE() 
-      AND a.data_aula <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
-      AND a.status != 'cancelada'
-    ORDER BY a.data_aula ASC, a.hora_inicio ASC
-    LIMIT 10
-", [$user['id']]);
+if (!$aluno) {
+    header('Location: login.php');
+    exit();
+}
+
+// Buscar o ID do aluno na tabela alunos usando o CPF
+$alunoDados = $db->fetch("SELECT id FROM alunos WHERE cpf = ?", [$aluno['cpf']]);
+$alunoId = $alunoDados ? $alunoDados['id'] : null;
+
+// Buscar próximas aulas (próximos 14 dias) - apenas se aluno existe na tabela alunos
+$proximasAulas = [];
+if ($alunoId) {
+    $proximasAulas = $db->fetchAll("
+        SELECT a.*, 
+               i.nome as instrutor_nome,
+               v.modelo as veiculo_modelo, v.placa as veiculo_placa
+        FROM aulas a
+        JOIN instrutores i ON a.instrutor_id = i.id
+        LEFT JOIN veiculos v ON a.veiculo_id = v.id
+        WHERE a.aluno_id = ? 
+          AND a.data_aula >= CURDATE() 
+          AND a.data_aula <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
+          AND a.status != 'cancelada'
+        ORDER BY a.data_aula ASC, a.hora_inicio ASC
+        LIMIT 10
+    ", [$alunoId]);
+}
 
 // Buscar notificações não lidas
 $notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($user['id'], 'aluno');
 
-// Buscar status dos exames
-$exames = $db->fetchAll("
-    SELECT tipo, status, data_exame
-    FROM exames 
-    WHERE aluno_id = ? 
-    ORDER BY data_exame DESC
-", [$user['id']]);
+// Buscar status dos exames - apenas se aluno existe na tabela alunos
+$exames = [];
+if ($alunoId) {
+    $exames = $db->fetchAll("
+        SELECT tipo, status, data_agendada as data_exame
+        FROM exames 
+        WHERE aluno_id = ? 
+        ORDER BY data_agendada DESC
+    ", [$alunoId]);
+}
 
 // Verificar guardas de negócio
 $guardaExames = true;

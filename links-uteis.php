@@ -9,15 +9,18 @@
         :root {
             --primary-color: #1a365d;        /* Azul escuro do logo */
             --secondary-color: #f7b731;      /* Amarelo do logo */
+            --secondary-gradient: linear-gradient(135deg, #FFFC03 0%, #FCCE1C 100%); /* Gradiente amarelo */
             --accent-color: #2d3748;         /* Azul médio */
             --success-color: #38a169;        /* Verde do logo */
             --warning-color: #f7b731;        /* Amarelo do logo */
+            --warning-gradient: linear-gradient(135deg, #FFFC03 0%, #FCCE1C 100%); /* Gradiente amarelo */
             --danger-color: #e53e3e;         /* Vermelho do logo */
             --light-color: #f7fafc;          /* Branco suave */
             --dark-color: #1a365d;           /* Azul escuro */
             --logo-blue: #1a365d;            /* Azul principal do logo */
             --logo-green: #38a169;           /* Verde do logo */
             --logo-yellow: #f7b731;          /* Amarelo do logo */
+            --logo-yellow-gradient: linear-gradient(135deg, #FFFC03 0%, #FCCE1C 100%); /* Gradiente amarelo */
             --logo-red: #e53e3e;             /* Vermelho do logo */
         }
         * {
@@ -65,7 +68,10 @@
         
         .header-info .info-item i {
             font-size: 16px;
-            color: var(--logo-yellow, #f7b731);
+            background: var(--logo-yellow-gradient, linear-gradient(135deg, #FFFC03 0%, #FCCE1C 100%));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .main-header {
@@ -118,11 +124,14 @@
         
         .nav-menu a:hover,
         .nav-menu a.active {
-            color: var(--logo-yellow, #f7b731);
+            background: var(--logo-yellow-gradient, linear-gradient(135deg, #FFFC03 0%, #FCCE1C 100%));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         .login-btn {
-            background: var(--logo-yellow, #f7b731);
+            background: var(--logo-yellow-gradient, linear-gradient(135deg, #FFFC03 0%, #FCCE1C 100%));
             color: var(--logo-blue, #1a365d);
             padding: 10px 20px;
             border-radius: 25px;
@@ -183,7 +192,7 @@
         .link-item:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            border-left-color: var(--logo-yellow, #f7b731);
+            border-left-color: #FFFC03;
         }
         
         .link-title {
@@ -324,8 +333,28 @@
             display: flex;
             align-items: center;
             gap: 12px;
-            color: #ccc;
+            color: #333 !important;
             font-size: 0.95rem;
+            font-weight: 500;
+        }
+        
+        /* Estilos específicos para textos de contato */
+        .contact-info .contact-item span {
+            color: #333 !important;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        
+        /* Estilos específicos para textos de contato no footer */
+        .footer .contact-info .contact-item span {
+            color: #e8e8e8 !important;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .footer .contact-column .contact-item span {
+            color: #e8e8e8 !important;
+            font-weight: 500;
         }
         
         .contact-item .contact-icon {
@@ -497,10 +526,11 @@
         /* Footer Bottom */
         .footer-bottom {
             text-align: center;
-            color: #999;
+            color: #ccc !important;
             font-size: 0.9rem;
             position: relative;
             z-index: 1;
+            font-weight: 400;
         }
         
         /* Botões Flutuantes */

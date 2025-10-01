@@ -56,7 +56,10 @@ require_once 'includes/config.php';
         }
         
         .modal-header i {
-            color: #f7b731 !important;
+            background: linear-gradient(135deg, #FFFC03 0%, #FCCE1C 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
             text-shadow: none;
         }
         
@@ -195,15 +198,18 @@ require_once 'includes/config.php';
         :root {
             --primary-color: #1a365d;        /* Azul escuro do logo */
             --secondary-color: #f7b731;      /* Amarelo do logo */
+            --secondary-gradient: linear-gradient(135deg, #FFFC03 0%, #FCCE1C 100%); /* Gradiente amarelo */
             --accent-color: #2d3748;         /* Azul médio */
             --success-color: #38a169;        /* Verde do logo */
             --warning-color: #f7b731;        /* Amarelo do logo */
+            --warning-gradient: linear-gradient(135deg, #FFFC03 0%, #FCCE1C 100%); /* Gradiente amarelo */
             --danger-color: #e53e3e;         /* Vermelho do logo */
             --light-color: #f7fafc;          /* Branco suave */
             --dark-color: #1a365d;           /* Azul escuro */
             --logo-blue: #1a365d;            /* Azul principal do logo */
             --logo-green: #38a169;           /* Verde do logo */
             --logo-yellow: #f7b731;          /* Amarelo do logo */
+            --logo-yellow-gradient: linear-gradient(135deg, #FFFC03 0%, #FCCE1C 100%); /* Gradiente amarelo */
             --logo-red: #e53e3e;             /* Vermelho do logo */
         }
         
@@ -519,6 +525,33 @@ require_once 'includes/config.php';
         
         .contact-item span {
             line-height: 1.4;
+            color: #333 !important;
+            font-weight: 500;
+        }
+        
+        /* Estilos específicos para textos de contato */
+        .contact-info .contact-item span {
+            color: #333 !important;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        
+        .modal .contact-info .contact-item span {
+            color: #333 !important;
+            font-weight: 500;
+            font-size: 1rem;
+        }
+        
+        /* Estilos específicos para textos de contato no footer */
+        .footer .contact-info .contact-item span {
+            color: #e8e8e8 !important;
+            font-weight: 500;
+            font-size: 0.95rem;
+        }
+        
+        .footer .contact-column .contact-item span {
+            color: #e8e8e8 !important;
+            font-weight: 500;
         }
         
         /* Overlay para fechar menu */
@@ -744,7 +777,7 @@ require_once 'includes/config.php';
         .btn:focus-visible,
         .nav-menu a:focus-visible,
         .mobile-menu-nav a:focus-visible {
-            outline: 3px solid #f7b731;
+            outline: 3px solid #FFFC03;
             outline-offset: 2px;
         }
         
@@ -2449,68 +2482,41 @@ require_once 'includes/config.php';
             transform: translate(-50%, -50%);
         }
         
-        .info-icon.vehicle::before {
-            width: 40px;
-            height: 20px;
-            background: var(--logo-red);
-            border-radius: 8px 8px 4px 4px;
-        }
-        
-        .info-icon.vehicle::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 8px;
-            height: 8px;
-            background: var(--logo-blue);
+        /* Estilos para ícones profissionais */
+        .info-icon.professional {
+            width: 70px;
+            height: 70px;
+            background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
             border-radius: 50%;
-            margin-top: -2px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
+            position: relative;
+            margin: 0 auto 20px;
         }
         
-        .info-icon.shield::before {
-            width: 0;
-            height: 0;
-            border-left: 20px solid transparent;
-            border-right: 20px solid transparent;
-            border-bottom: 30px solid var(--logo-blue);
-            border-radius: 4px 4px 0 0;
+        .info-icon.professional:hover {
+            transform: translateY(-5px) scale(1.05);
+            box-shadow: 0 15px 35px rgba(0,0,0,0.15);
         }
         
-        .info-icon.shield::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 30px;
-            height: 20px;
-            background: var(--logo-blue);
-            border-radius: 0 0 4px 4px;
-            margin-top: 5px;
+        .info-icon.professional i {
+            font-size: 2rem;
+            background: linear-gradient(135deg, #FEFE01 0%, #fbbf24 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            transition: all 0.3s ease;
         }
         
-        .info-icon.wrench::before {
-            width: 30px;
-            height: 4px;
-            background: var(--logo-yellow);
-            border-radius: 2px;
-            transform: translate(-50%, -50%) rotate(45deg);
-        }
-        
-        .info-icon.wrench::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 8px;
-            height: 8px;
-            background: var(--logo-yellow);
-            border-radius: 50%;
-            margin-top: -8px;
-            margin-left: 8px;
+        .info-icon.professional:hover i {
+            transform: scale(1.1);
+            background: linear-gradient(135deg, #FEFE01 0%, #f59e0b 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
         
         @keyframes float {
@@ -2560,40 +2566,13 @@ require_once 'includes/config.php';
                 padding: 25px;
             }
             
-            .info-icon {
-                width: 50px;
-                height: 50px;
+            .info-icon.professional {
+                width: 60px;
+                height: 60px;
             }
             
-            .info-icon.vehicle::before {
-                width: 35px;
-                height: 18px;
-            }
-            
-            .info-icon.vehicle::after {
-                width: 6px;
-                height: 6px;
-            }
-            
-            .info-icon.shield::before {
-                border-left: 15px solid transparent;
-                border-right: 15px solid transparent;
-                border-bottom: 25px solid #3498db;
-            }
-            
-            .info-icon.shield::after {
-                width: 25px;
-                height: 15px;
-            }
-            
-            .info-icon.wrench::before {
-                width: 25px;
-                height: 3px;
-            }
-            
-            .info-icon.wrench::after {
-                width: 6px;
-                height: 6px;
+            .info-icon.professional i {
+                font-size: 1.8rem;
             }
             
             .info-card h4 {
@@ -2609,6 +2588,19 @@ require_once 'includes/config.php';
             
             .gallery-image {
                 height: 120px;
+            }
+            
+            .info-icon.professional {
+                width: 50px;
+                height: 50px;
+            }
+            
+            .info-icon.professional i {
+                font-size: 1.5rem;
+            }
+            
+            .info-card h4 {
+                font-size: 1.2rem;
             }
         }
         
@@ -3503,8 +3495,9 @@ require_once 'includes/config.php';
             display: flex;
             align-items: center;
             gap: 12px;
-            color: #ccc;
+            color: #333 !important;
             font-size: 0.95rem;
+            font-weight: 500;
         }
         
         .contact-item .contact-icon {
@@ -3646,10 +3639,11 @@ require_once 'includes/config.php';
         /* Footer Bottom */
         .footer-bottom {
             text-align: center;
-            color: #999;
+            color: #ccc !important;
             font-size: 0.9rem;
             position: relative;
             z-index: 1;
+            font-weight: 400;
         }
         
         
@@ -3916,7 +3910,7 @@ require_once 'includes/config.php';
                     <li><a href="#home" class="active">HOME</a></li>
                     <li><a href="#formacao-completa">SOBRE</a></li>
                     <li><a href="#servicos">SERVIÇOS</a></li>
-                    <li><a href="#trabalhe">TRABALHE CONOSCO</a></li>
+                    <li><a href="trabalhe-conosco.php">TRABALHE CONOSCO</a></li>
                     <li><a href="#contato">CONTATO</a></li>
                 </ul>
             </nav>
@@ -4381,19 +4375,25 @@ require_once 'includes/config.php';
                 
                 <div class="fleet-info">
                     <div class="info-card">
-                        <div class="info-icon vehicle"></div>
+                        <div class="info-icon professional">
+                            <i class="fas fa-car-side"></i>
+                        </div>
                         <h4>Veículos Modernos</h4>
                         <p>Frota constantemente atualizada com os mais recentes modelos e tecnologias de segurança.</p>
                     </div>
                     
                     <div class="info-card">
-                        <div class="info-icon shield"></div>
+                        <div class="info-icon professional">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
                         <h4>Ambiente Seguro</h4>
                         <p>Pátio amplo e seguro, projetado para proporcionar o melhor ambiente de aprendizado.</p>
                     </div>
                     
                     <div class="info-card">
-                        <div class="info-icon wrench"></div>
+                        <div class="info-icon professional">
+                            <i class="fas fa-tools"></i>
+                        </div>
                         <h4>Manutenção Regular</h4>
                         <p>Todos os veículos passam por manutenção preventiva e revisões periódicas.</p>
                     </div>
@@ -4563,19 +4563,19 @@ require_once 'includes/config.php';
                                    <h5>Informações de Contato</h5>
                                    <div class="contact-item">
                                        <span class="contact-icon phone"></span>
-                                       <span>Telefone: (87) 98145-0308</span>
+                                       <span>Ligue para nós: (87) 98145-0308</span>
                                    </div>
                                    <div class="contact-item">
                                        <span class="contact-icon whatsapp"></span>
-                                       <span>WhatsApp: (87) 98145-0308</span>
+                                       <span>💬 WhatsApp: (87) 98145-0308</span>
                                    </div>
                                    <div class="contact-item">
                                        <span class="contact-icon email"></span>
-                                       <span>E-mail: contato@cfcbomconselho.com.br</span>
+                                       <span>Escreva-nos: contato@cfcbomconselho.com.br</span>
                                    </div>
                                    <div class="contact-item">
                                        <span class="contact-icon location"></span>
-                                       <span>Endereço: Bom Conselho - PE</span>
+                                       <span>Venha nos visitar: Bom Conselho - PE</span>
                                    </div>
                                </div>
                                
@@ -4610,7 +4610,7 @@ require_once 'includes/config.php';
                     <ul class="footer-links">
                         <li><a href="#home">Home</a></li>
                         <li><a href="#servicos">Serviços</a></li>
-                        <li><a href="#trabalhe-conosco">Trabalhe Conosco</a></li>
+                        <li><a href="trabalhe-conosco.php">Trabalhe Conosco</a></li>
                         <li><a href="links-uteis.php">Links Úteis</a></li>
                         <li><a href="login.php?type=aluno">Portal do Aluno</a></li>
                         <li><a href="login.php?type=admin">Portal do CFC</a></li>
@@ -4691,16 +4691,19 @@ require_once 'includes/config.php';
             window.open(whatsappURL, '_blank');
         }
         
-        // Smooth scrolling para links âncora
+        // Smooth scrolling para links âncora (apenas links internos)
         document.querySelectorAll('a[href^="#"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
-                e.preventDefault();
-                const target = document.querySelector(this.getAttribute('href'));
-                if (target) {
-                    target.scrollIntoView({
-                        behavior: 'smooth',
-                        block: 'start'
-                    });
+                // Verificar se é um link interno (não contém http/https)
+                if (!this.href.includes('http') && !this.href.includes('login.php')) {
+                    e.preventDefault();
+                    const target = document.querySelector(this.getAttribute('href'));
+                    if (target) {
+                        target.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'start'
+                        });
+                    }
                 }
             });
         });
@@ -4781,13 +4784,16 @@ require_once 'includes/config.php';
         function initSmoothScroll() {
             document.querySelectorAll('a[href^="#"]').forEach(anchor => {
                 anchor.addEventListener('click', function (e) {
-                    e.preventDefault();
-                    const target = document.querySelector(this.getAttribute('href'));
-                    if (target) {
-                        target.scrollIntoView({
-                            behavior: 'smooth',
-                            block: 'start'
-                        });
+                    // Verificar se é um link interno (não contém http/https)
+                    if (!this.href.includes('http') && !this.href.includes('login.php')) {
+                        e.preventDefault();
+                        const target = document.querySelector(this.getAttribute('href'));
+                        if (target) {
+                            target.scrollIntoView({
+                                behavior: 'smooth',
+                                block: 'start'
+                            });
+                        }
                     }
                 });
             });

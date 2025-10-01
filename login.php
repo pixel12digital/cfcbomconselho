@@ -8,9 +8,14 @@ require_once 'includes/config.php';
 require_once 'includes/database.php';
 require_once 'includes/auth.php';
 
-// Se já estiver logado, redirecionar para dashboard
+// Se já estiver logado, redirecionar para dashboard apropriado
 if (isLoggedIn()) {
-    header('Location: admin/');
+    $user = getCurrentUser();
+    if ($user && $user['tipo'] === 'aluno') {
+        header('Location: aluno/dashboard.php');
+    } else {
+        header('Location: admin/');
+    }
     exit;
 }
 
@@ -59,10 +64,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     error_log("[LOGIN ALUNO] Verificação de senha - Válida: " . ($senhaValida ? "SIM" : "NÃO") . ", Padrão: " . ($senhaDefault ? "SIM" : "NÃO"));
                     
                     if ($senhaValida || $senhaDefault) {
-                        $_SESSION['aluno_id'] = $aluno['id'];
-                        $_SESSION['aluno_nome'] = $aluno['nome'];
-                        $_SESSION['aluno_cpf'] = $aluno['cpf'] ?? $email;
-                        $_SESSION['user_type'] = 'aluno';
+                        // Usar o sistema de autenticação unificado
+                        $_SESSION['user_id'] = $aluno['id'];
+                        $_SESSION['user_email'] = $aluno['email'] ?? $aluno['cpf'] . '@aluno.cfc';
+                        $_SESSION['user_tipo'] = 'aluno';
                         $_SESSION['last_activity'] = time();
                         
                         error_log("[LOGIN ALUNO] Login bem-sucedido para ID: " . $aluno['id']);
