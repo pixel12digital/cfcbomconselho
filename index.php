@@ -17,7 +17,180 @@ require_once 'includes/config.php';
     <link rel="stylesheet" href="assets/css/responsive-utilities.css">
     <link rel="stylesheet" href="assets/css/cfc-responsive.css?v=<?php echo time(); ?>">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
+        /* Estilos específicos para o modal */
+        .modal {
+            z-index: 1055 !important;
+        }
+        
+        .modal-backdrop {
+            z-index: 1050 !important;
+        }
+        
+        .modal-dialog {
+            margin: 1.75rem auto;
+        }
+        
+        .modal-content {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, #1a365d, #2d3748);
+            color: #ffffff !important;
+            border-radius: 12px 12px 0 0;
+            border-bottom: none;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header .modal-title {
+            color: #ffffff !important;
+            font-weight: 700;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header i {
+            color: #f7b731 !important;
+            text-shadow: none;
+        }
+        
+        .modal-header .btn-close {
+            filter: none !important;
+            opacity: 1 !important;
+            background: #ffffff !important;
+            background-image: none !important;
+            border-radius: 50%;
+            width: 36px !important;
+            height: 36px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            transition: all 0.3s ease;
+            border: 2px solid #ffffff !important;
+            position: relative;
+            z-index: 10;
+            color: #1a365d !important;
+        }
+        
+        .modal-header .btn-close::before {
+            content: '✕';
+            font-size: 18px;
+            font-weight: bold;
+            color: #1a365d !important;
+            line-height: 1;
+            display: block;
+        }
+        
+        .modal-header .btn-close::after {
+            display: none !important;
+        }
+        
+        .modal-header .btn-close:hover {
+            background: #f8f9fa !important;
+            border-color: #ffffff !important;
+            transform: scale(1.1);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+        }
+        
+        .modal-header .btn-close:focus {
+            box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7) !important;
+            outline: none;
+            background: #ffffff !important;
+        }
+        
+        .modal-header .btn-close:active {
+            transform: scale(0.95);
+            background: #e9ecef !important;
+        }
+        
+        /* Estilo adicional com máxima especificidade */
+        #modalMatricula .modal-header .btn-close {
+            background: #ffffff !important;
+            color: #1a365d !important;
+        }
+        
+        #modalMatricula .modal-header .btn-close::before {
+            color: #1a365d !important;
+        }
+        
+        .modal-body {
+            padding: 2rem;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #1a365d !important;
+            font-size: 14px;
+        }
+        
+        .form-control, .form-select {
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #1a365d;
+            box-shadow: 0 0 0 3px rgba(26, 54, 93, 0.1);
+        }
+        
+        .form-control::placeholder {
+            color: #94a3b8;
+            opacity: 1;
+        }
+        
+        .text-danger {
+            color: #e53e3e !important;
+            font-weight: 600;
+        }
+        
+        .text-muted {
+            color: #64748b !important;
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #25d366, #128c7e);
+            border: none;
+            padding: 12px 24px;
+            font-weight: 600;
+            color: #ffffff !important;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success:hover {
+            background: linear-gradient(135deg, #128c7e, #25d366);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+        }
+        
+        .btn-success:focus {
+            box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.3);
+            outline: none;
+        }
+        
+        .btn-success:active {
+            transform: translateY(0);
+        }
+        
+        /* Melhorias de acessibilidade para ícones */
+        .fas, .fab {
+            color: inherit;
+        }
+        
+        /* Contraste melhorado para asteriscos obrigatórios */
+        .text-danger {
+            color: #dc2626 !important;
+            font-weight: 700;
+        }
         /* Cores Principais - Alinhadas ao Logo */
         :root {
             --primary-color: #1a365d;        /* Azul escuro do logo */
@@ -1507,6 +1680,12 @@ require_once 'includes/config.php';
             font-size: 1.2rem;
         }
         
+        .cta-button i,
+        .cta-button .fab {
+            font-size: 1.2rem;
+            color: inherit;
+        }
+        
         /* Responsividade para a seção de apresentação */
         @media (max-width: 768px) {
             .main-title {
@@ -1780,7 +1959,7 @@ require_once 'includes/config.php';
         
         /* Seção de Serviços */
         .services-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, var(--logo-blue) 0%, var(--accent-color) 100%);
             padding: 80px 0;
             position: relative;
             overflow: hidden;
@@ -1831,7 +2010,7 @@ require_once 'includes/config.php';
             transform: translateX(-50%);
             width: 80px;
             height: 3px;
-            background: linear-gradient(90deg, #f39c12, #e67e22);
+            background: linear-gradient(90deg, var(--logo-yellow), var(--logo-green));
             border-radius: 2px;
         }
         
@@ -1868,13 +2047,14 @@ require_once 'includes/config.php';
             width: 80px;
             height: 80px;
             border-radius: 50%;
-            background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+            background: linear-gradient(135deg, var(--logo-yellow) 0%, var(--logo-green) 100%);
             display: inline-flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto;
             position: relative;
             animation: pulse 2s infinite;
+            box-shadow: 0 8px 20px rgba(247, 183, 49, 0.3);
         }
         
         @keyframes pulse {
@@ -1887,6 +2067,12 @@ require_once 'includes/config.php';
             font-size: 1.2rem;
             font-weight: bold;
             color: white;
+        }
+        
+        .icon-circle i {
+            font-size: 2rem;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
         .card-content h4 {
@@ -2025,6 +2211,11 @@ require_once 'includes/config.php';
         
         .button-icon {
             font-size: 1.3rem;
+        }
+        
+        .cta-button .fab {
+            font-size: 1.3rem;
+            color: inherit;
         }
         
         .button-ripple {
@@ -3612,7 +3803,16 @@ require_once 'includes/config.php';
         .formacao-card:hover {
             transform: translateY(-10px);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-            border-color: var(--logo-green);
+            border-color: var(--logo-yellow);
+        }
+        
+        .formacao-card:hover .icon-circle {
+            transform: scale(1.1);
+            box-shadow: 0 12px 30px rgba(247, 183, 49, 0.4);
+        }
+        
+        .formacao-card:hover .icon-circle i {
+            transform: scale(1.1);
         }
         
         .formacao-card .card-icon {
@@ -3622,13 +3822,19 @@ require_once 'includes/config.php';
         .formacao-card .icon-circle {
             width: 80px;
             height: 80px;
-            background: linear-gradient(135deg, var(--logo-green) 0%, #2f855a 100%);
+            background: linear-gradient(135deg, var(--logo-yellow) 0%, #f6ad55 100%);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
             margin: 0 auto;
-            box-shadow: 0 8px 20px rgba(56, 161, 105, 0.3);
+            box-shadow: 0 8px 20px rgba(247, 183, 49, 0.3);
+        }
+        
+        .formacao-card .icon-circle i {
+            font-size: 2rem;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
         
         .formacao-card .icon-text {
@@ -3787,10 +3993,10 @@ require_once 'includes/config.php';
                 <p class="hero-subtitle">Centro de Formação de Condutores</p>
                 <p class="hero-description">Sua jornada para a habilitação começa aqui. Aulas teóricas e práticas com instrutores qualificados.</p>
                 <div class="hero-buttons">
-                    <a href="#contato" class="btn btn-primary">
+                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#modalMatricula" onclick="openMatriculaModal()">
                         <i class="fas fa-user-plus"></i>
                         Matricule-se Agora
-                    </a>
+                    </button>
                     <a href="#formacao-completa" class="btn btn-secondary">
                         <i class="fas fa-info-circle"></i>
                         Saiba Mais
@@ -3801,7 +4007,7 @@ require_once 'includes/config.php';
     </section>
 
     <!-- Seção de Navegação -->
-    <section class="navigation-section">
+    <section id="formacao-completa" class="navigation-section">
         <div class="container">
             <div class="nav-grid">
                 <div class="nav-item">
@@ -3847,7 +4053,7 @@ require_once 'includes/config.php';
                     <div class="formacao-card">
                         <div class="card-icon">
                             <div class="icon-circle">
-                                <span class="icon-text">📚</span>
+                                <i class="fas fa-graduation-cap"></i>
                             </div>
                         </div>
                         <div class="card-content">
@@ -3858,7 +4064,7 @@ require_once 'includes/config.php';
                     <div class="formacao-card">
                         <div class="card-icon">
                             <div class="icon-circle">
-                                <span class="icon-text">🚗</span>
+                                <i class="fas fa-car-side"></i>
                             </div>
                         </div>
                         <div class="card-content">
@@ -3869,7 +4075,7 @@ require_once 'includes/config.php';
                     <div class="formacao-card">
                         <div class="card-icon">
                             <div class="icon-circle">
-                                <span class="icon-text">📋</span>
+                                <i class="fas fa-file-alt"></i>
                             </div>
                         </div>
                         <div class="card-content">
@@ -3880,7 +4086,7 @@ require_once 'includes/config.php';
                     <div class="formacao-card">
                         <div class="card-icon">
                             <div class="icon-circle">
-                                <span class="icon-text">🎯</span>
+                                <i class="fas fa-laptop"></i>
                             </div>
                         </div>
                         <div class="card-content">
@@ -3927,8 +4133,8 @@ require_once 'includes/config.php';
                         
                         <div class="call-to-action">
                             <p class="cta-text">Faça já sua matrícula e dê o primeiro passo rumo à liberdade e segurança no trânsito.</p>
-                            <a href="#contato" class="cta-button">
-                                <span class="cta-icon">📞</span>
+                            <a href="https://wa.me/5587981450308" target="_blank" class="cta-button">
+                                <i class="fab fa-whatsapp"></i>
                                 Fale Conosco Agora
                             </a>
                         </div>
@@ -4027,7 +4233,7 @@ require_once 'includes/config.php';
                     <div class="service-card animated-card">
                         <div class="card-icon">
                             <div class="icon-circle">
-                                <span class="icon-text">CNH</span>
+                                <i class="fas fa-id-card"></i>
                             </div>
                         </div>
                         <div class="card-content">
@@ -4040,7 +4246,7 @@ require_once 'includes/config.php';
                     <div class="service-card animated-card">
                         <div class="card-icon">
                             <div class="icon-circle">
-                                <span class="icon-text">🔄</span>
+                                <i class="fas fa-sync-alt"></i>
                             </div>
                         </div>
                         <div class="card-content">
@@ -4053,7 +4259,7 @@ require_once 'includes/config.php';
                     <div class="service-card animated-card">
                         <div class="card-icon">
                             <div class="icon-circle">
-                                <span class="icon-text">📚</span>
+                                <i class="fas fa-graduation-cap"></i>
                             </div>
                         </div>
                         <div class="card-content">
@@ -4097,8 +4303,8 @@ require_once 'includes/config.php';
                        <div class="cta-content">
                            <h4>Pronto para Começar?</h4>
                            <p>Faça já sua matrícula e dê o primeiro passo rumo à liberdade e segurança no trânsito.</p>
-                           <a href="#contato" class="cta-button">
-                               <span class="button-icon">📞</span>
+                           <a href="https://wa.me/5587981450308" target="_blank" class="cta-button">
+                               <i class="fab fa-whatsapp"></i>
                                <span class="button-text">Fale Conosco Agora</span>
                                <div class="button-ripple"></div>
                            </a>
@@ -4802,11 +5008,316 @@ require_once 'includes/config.php';
             
             // Verificar novamente após um delay para garantir que Font Awesome carregou
             setTimeout(checkFontAwesome, 1000);
+            
+            // Debug do modal
+            console.log('Bootstrap carregado:', typeof bootstrap !== 'undefined');
+            console.log('Modal element:', document.getElementById('modalMatricula'));
+            
+            // Configurar event listeners para o modal
+            setupModalEventListeners();
         });
 
         // Event listeners
         window.addEventListener('orientationchange', handleOrientationChange);
         window.addEventListener('resize', setViewportHeight);
+    </script>
+
+    <!-- Modal de Matrícula -->
+    <div class="modal fade" id="modalMatricula" tabindex="-1" aria-labelledby="modalMatriculaLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalMatriculaLabel">
+                        <i class="fas fa-user-plus text-primary me-2"></i>
+                        Matricule-se Agora
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="text-muted mb-4">Preencha os dados abaixo e entraremos em contato via WhatsApp:</p>
+                    
+                    <form id="formMatricula" onsubmit="handleMatriculaSubmit(event)">
+                        <div class="mb-3">
+                            <label for="nome" class="form-label">
+                                <i class="fas fa-user text-primary me-1"></i>
+                                Nome Completo <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="nome" name="nome" required 
+                                   placeholder="Digite seu nome completo">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="telefone" class="form-label">
+                                <i class="fas fa-phone text-primary me-1"></i>
+                                Telefone/WhatsApp <span class="text-danger">*</span>
+                            </label>
+                            <input type="tel" class="form-control" id="telefone" name="telefone" required 
+                                   placeholder="(84) 99999-9999" 
+                                   maxlength="15"
+                                   oninput="formatPhone(this)">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="email" class="form-label">
+                                <i class="fas fa-envelope text-primary me-1"></i>
+                                Email (opcional)
+                            </label>
+                            <input type="email" class="form-control" id="email" name="email" 
+                                   placeholder="seuemail@exemplo.com">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="servico" class="form-label">
+                                <i class="fas fa-car text-primary me-1"></i>
+                                Serviço de Interesse
+                            </label>
+                            <select class="form-select" id="servico" name="servico" onchange="toggleObservacoes()">
+                                <option value="">Selecione um serviço</option>
+                                <option value="primeira-habilitacao">Primeira Habilitação</option>
+                                <option value="renovacao">Renovação de CNH</option>
+                                <option value="mudanca-categoria">Mudança de Categoria</option>
+                                <option value="adicao-categoria">Adição de Categoria</option>
+                                <option value="reciclagem">Reciclagem</option>
+                                <option value="aulas-teoricas">Aulas Teóricas</option>
+                                <option value="aulas-praticas">Aulas Práticas</option>
+                                <option value="simulador">Simulador</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+                        
+                        <div id="observacoes" class="mb-3" style="display: none;">
+                            <label for="observacoes-text" class="form-label">
+                                <i class="fas fa-comment text-primary me-1"></i>
+                                Observações
+                            </label>
+                            <textarea class="form-control" id="observacoes-text" name="observacoes" rows="3" 
+                                      placeholder="Descreva sua necessidade ou dúvida..."></textarea>
+                        </div>
+                        
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-success btn-lg">
+                                <i class="fab fa-whatsapp me-2"></i>
+                                Enviar via WhatsApp
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <small class="text-muted">
+                        <i class="fas fa-info-circle me-1"></i>
+                        Seus dados serão enviados via WhatsApp para nossa equipe de atendimento.
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Funcionalidade do modal de matrícula
+        function handleMatriculaSubmit(event) {
+            event.preventDefault();
+            
+            const form = document.getElementById('formMatricula');
+            const formData = new FormData(form);
+            
+            // Validar campos obrigatórios
+            const nome = formData.get('nome');
+            const telefone = formData.get('telefone');
+            
+            if (!nome.trim()) {
+                alert('Por favor, informe seu nome.');
+                return;
+            }
+            
+            if (!telefone.trim()) {
+                alert('Por favor, informe seu telefone/WhatsApp.');
+                return;
+            }
+            
+            // Montar mensagem para WhatsApp
+            let mensagem = `Olá! Gostaria de me matricular no CFC Bom Conselho.\n\n`;
+            mensagem += `*Nome:* ${nome}\n`;
+            mensagem += `*Telefone/WhatsApp:* ${telefone}\n`;
+            
+            if (formData.get('email')) {
+                mensagem += `*Email:* ${formData.get('email')}\n`;
+            }
+            
+            if (formData.get('servico')) {
+                mensagem += `*Serviço de interesse:* ${formData.get('servico')}\n`;
+            }
+            
+            if (formData.get('observacoes')) {
+                mensagem += `*Observações:* ${formData.get('observacoes')}\n`;
+            }
+            
+            mensagem += `\nAguardo seu contato!`;
+            
+            // Número do WhatsApp do CFC Bom Conselho
+            const whatsappNumber = '5587981450308'; // (87) 98145-0308
+            const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(mensagem)}`;
+            
+            // Abrir WhatsApp
+            window.open(whatsappUrl, '_blank');
+            
+            // Fechar modal
+            if (typeof bootstrap !== 'undefined') {
+                const modal = bootstrap.Modal.getInstance(document.getElementById('modalMatricula'));
+                if (modal) {
+                    modal.hide();
+                } else {
+                    closeModal();
+                }
+            } else {
+                closeModal();
+            }
+            
+            // Limpar formulário
+            form.reset();
+            document.getElementById('observacoes').style.display = 'none';
+        }
+        
+        // Mostrar/ocultar campo de observações
+        function toggleObservacoes() {
+            const servico = document.getElementById('servico').value;
+            const observacoesField = document.getElementById('observacoes');
+            
+            if (servico === 'outros') {
+                observacoesField.style.display = 'block';
+                observacoesField.querySelector('textarea').required = true;
+            } else {
+                observacoesField.style.display = 'none';
+                observacoesField.querySelector('textarea').required = false;
+            }
+        }
+        
+        // Formatação do telefone
+        function formatPhone(input) {
+            let value = input.value.replace(/\D/g, '');
+            
+            if (value.length <= 2) {
+                value = value;
+            } else if (value.length <= 7) {
+                value = `(${value.slice(0, 2)}) ${value.slice(2)}`;
+            } else {
+                value = `(${value.slice(0, 2)}) ${value.slice(2, 7)}-${value.slice(7, 11)}`;
+            }
+            
+            input.value = value;
+        }
+        
+        // Função para abrir o modal de matrícula
+        function openMatriculaModal() {
+            console.log('Tentando abrir modal...');
+            
+            // Tentar usar Bootstrap primeiro
+            if (typeof bootstrap !== 'undefined') {
+                const modalElement = document.getElementById('modalMatricula');
+                if (modalElement) {
+                    const modal = new bootstrap.Modal(modalElement);
+                    modal.show();
+                    console.log('Modal aberto via Bootstrap');
+                    return;
+                }
+            }
+            
+            // Fallback: mostrar modal manualmente
+            const modal = document.getElementById('modalMatricula');
+            if (modal) {
+                modal.style.display = 'block';
+                modal.classList.add('show');
+                document.body.classList.add('modal-open');
+                
+                // Adicionar backdrop
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop fade show';
+                backdrop.id = 'modalBackdrop';
+                document.body.appendChild(backdrop);
+                
+                console.log('Modal aberto manualmente');
+            } else {
+                console.error('Modal não encontrado!');
+            }
+        }
+        
+        // Função para fechar modal manualmente
+        function closeModal() {
+            const modal = document.getElementById('modalMatricula');
+            
+            // Tentar usar Bootstrap primeiro
+            if (typeof bootstrap !== 'undefined') {
+                const modalInstance = bootstrap.Modal.getInstance(modal);
+                if (modalInstance) {
+                    modalInstance.hide();
+                    return;
+                }
+            }
+            
+            // Fallback: fechar manualmente
+            if (modal) {
+                modal.style.display = 'none';
+                modal.classList.remove('show');
+                modal.setAttribute('aria-hidden', 'true');
+                modal.removeAttribute('aria-modal');
+            }
+            
+            // Remover backdrop manual
+            const backdrop = document.getElementById('modalBackdrop');
+            if (backdrop) {
+                backdrop.remove();
+            }
+            
+            // Remover todas as classes modal-open do body
+            document.body.classList.remove('modal-open');
+            document.body.style.overflow = '';
+            document.body.style.paddingRight = '';
+            
+            // Remover todos os backdrops que possam existir
+            const allBackdrops = document.querySelectorAll('.modal-backdrop');
+            allBackdrops.forEach(backdrop => backdrop.remove());
+        }
+        
+        // Configurar event listeners para o modal
+        function setupModalEventListeners() {
+            const modal = document.getElementById('modalMatricula');
+            if (!modal) return;
+            
+            // Event listener para fechar com ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const modalShown = modal.classList.contains('show') || modal.style.display === 'block';
+                    if (modalShown) {
+                        closeModal();
+                    }
+                }
+            });
+            
+            // Event listener para clicar fora do modal
+            modal.addEventListener('click', function(e) {
+                if (e.target === modal) {
+                    closeModal();
+                }
+            });
+            
+            // Event listener para quando o modal é escondido via Bootstrap
+            modal.addEventListener('hidden.bs.modal', function() {
+                // Garantir limpeza completa
+                document.body.classList.remove('modal-open');
+                document.body.style.overflow = '';
+                document.body.style.paddingRight = '';
+                const allBackdrops = document.querySelectorAll('.modal-backdrop');
+                allBackdrops.forEach(backdrop => backdrop.remove());
+            });
+            
+            // Event listener para quando o modal é mostrado via Bootstrap
+            modal.addEventListener('shown.bs.modal', function() {
+                // Focar no primeiro campo
+                const firstInput = modal.querySelector('input');
+                if (firstInput) {
+                    setTimeout(() => firstInput.focus(), 100);
+                }
+            });
+        }
     </script>
 </body>
 </html>
