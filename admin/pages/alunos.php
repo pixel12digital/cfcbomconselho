@@ -1607,7 +1607,7 @@ body.modal-open #modalAluno .modal-dialog {
                                 <div class="mb-1">
                                     <label for="rg" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">RG</label>
                                     <input type="text" class="form-control" id="rg" name="rg" 
-                                           placeholder="00.000.000-0" style="padding: 0.4rem; font-size: 0.85rem;">
+                                           placeholder="Digite o RG (aceita letras)" maxlength="30" style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
                             <div class="col-md-2">
@@ -2213,10 +2213,8 @@ function inicializarMascarasAluno() {
             mask: '000.000.000-00'
         });
         
-        // Máscara para RG
-        new IMask(document.getElementById('rg'), {
-            mask: '00.000.000-0'
-        });
+        // RG sem máscara - aceita todos os formatos dos estados brasileiros
+        // (alguns estados usam letras e formatos variados)
         
         // Máscara para telefone
         new IMask(document.getElementById('telefone'), {

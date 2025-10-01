@@ -473,31 +473,38 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             display: none !important;
         }
         
-        .back-to-site {
-            position: absolute;
-            top: 20px;
-            left: 20px;
+        .back-to-site-btn {
+            display: inline-block;
+            width: 100%;
+            padding: 12px 20px;
+            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
             color: white;
             text-decoration: none;
-            padding: 10px 15px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 20px;
-            font-size: 14px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 500;
             transition: all 0.3s ease;
+            text-align: center;
+            margin-bottom: 20px;
+            border: 2px solid transparent;
         }
         
-        .back-to-site:hover {
-            background: rgba(255,255,255,0.2);
+        .back-to-site-btn:hover {
+            background: linear-gradient(135deg, #7f8c8d 0%, #636e72 100%);
             color: white;
             text-decoration: none;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(127, 140, 141, 0.3);
+            border-color: rgba(255, 255, 255, 0.2);
+        }
+        
+        .back-to-site-btn:active {
+            transform: translateY(0);
         }
     </style>
 </head>
 <body>
     <div class="login-container">
-        <!-- Link para voltar ao site -->
-        <a href="index.php" class="back-to-site">← Voltar ao Site</a>
-        
         <!-- Painel Esquerdo - Seleção de Tipo de Usuário -->
         <div class="left-panel">
             <div class="logo-section">
@@ -506,7 +513,12 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         </div>
             
             <div class="user-types">
-                <?php foreach ($userTypes as $type => $config): ?>
+                <?php foreach ($userTypes as $type => $config): 
+                    // Portal do Aluno: mostrar APENAS Aluno
+                    if ($userType === 'aluno' && $type !== 'aluno') continue;
+                    // Portal do CFC: NÃO mostrar Aluno
+                    if ($userType !== 'aluno' && $type === 'aluno') continue;
+                ?>
                     <a href="?type=<?php echo $type; ?>" class="user-type-card <?php echo $userType === $type ? 'active' : ''; ?>">
                         <div class="user-type-title"><?php echo $config['title']; ?></div>
                     </a>
@@ -586,6 +598,10 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             </form>
             
             <div class="login-footer">
+                <a href="index.php" class="back-to-site-btn">
+                    ← Voltar ao Site
+                </a>
+                
                 <p>Problemas para acessar? Entre em contato com o suporte</p>
                 
                 <div class="support-info">

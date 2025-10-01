@@ -393,6 +393,38 @@ require_once 'includes/config.php';
             background: #f6ad55;
         }
         
+        /* Botão de Seta */
+        .arrow-btn {
+            background: var(--logo-yellow);
+            color: var(--logo-blue);
+            padding: 12px 16px;
+            border: none;
+            border-radius: 50%;
+            font-weight: 600;
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(247, 183, 49, 0.3);
+            width: 48px;
+            height: 48px;
+            min-width: 48px;
+        }
+        
+        .arrow-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(247, 183, 49, 0.4);
+            text-decoration: none;
+            color: var(--logo-blue);
+            background: #f6ad55;
+        }
+        
+        .arrow-btn i {
+            font-size: 18px;
+        }
+        
         /* Hero Section Redesenhado */
         .hero {
             position: relative;
@@ -3068,6 +3100,17 @@ require_once 'includes/config.php';
                 font-size: 14px;
             }
             
+            .arrow-btn {
+                width: 44px;
+                height: 44px;
+                min-width: 44px;
+                padding: 10px 14px;
+            }
+            
+            .arrow-btn i {
+                font-size: 16px;
+            }
+            
             .hero h1 {
                 font-size: 24px;
             }
@@ -3102,6 +3145,17 @@ require_once 'includes/config.php';
                 font-size: 13px;
             }
             
+            .arrow-btn {
+                width: 40px;
+                height: 40px;
+                min-width: 40px;
+                padding: 8px 12px;
+            }
+            
+            .arrow-btn i {
+                font-size: 14px;
+            }
+            
             .hero h1 {
                 font-size: 22px;
             }
@@ -3127,6 +3181,17 @@ require_once 'includes/config.php';
             
             .login-btn {
                 padding: 6px 10px;
+                font-size: 12px;
+            }
+            
+            .arrow-btn {
+                width: 36px;
+                height: 36px;
+                min-width: 36px;
+                padding: 6px 10px;
+            }
+            
+            .arrow-btn i {
                 font-size: 12px;
             }
             
@@ -3650,8 +3715,8 @@ require_once 'includes/config.php';
                 </ul>
             </nav>
             
-            <a href="login.php" class="login-btn" title="Acessar Sistema">
-                Entrar
+            <a href="#footer" class="login-btn arrow-btn" title="Ir para o rodapé">
+                <i class="fas fa-arrow-down"></i>
             </a>
             
             <!-- Botão Hambúrguer Mobile -->
@@ -3695,8 +3760,8 @@ require_once 'includes/config.php';
                 </div>
             </div>
             
-            <a href="login.php" style="background: var(--logo-yellow); color: var(--logo-blue); margin: 20px; border-radius: 25px; text-align: center;">
-                Entrar
+            <a href="#footer" class="arrow-btn" style="background: var(--logo-yellow); color: var(--logo-blue); margin: 20px; border-radius: 25px; text-align: center; padding: 12px 16px;">
+                <i class="fas fa-arrow-down"></i>
             </a>
         </nav>
     </div>
@@ -4318,7 +4383,7 @@ require_once 'includes/config.php';
     </main>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer class="footer" id="footer">
         <div class="container">
             <div class="footer-content">
                 <!-- Coluna 1: Logo -->
@@ -4341,8 +4406,8 @@ require_once 'includes/config.php';
                         <li><a href="#servicos">Serviços</a></li>
                         <li><a href="#trabalhe-conosco">Trabalhe Conosco</a></li>
                         <li><a href="links-uteis.php">Links Úteis</a></li>
-                        <li><a href="#portal-aluno">Portal do Aluno</a></li>
-                        <li><a href="#portal-cfc">Portal do CFC</a></li>
+                        <li><a href="login.php?type=aluno">Portal do Aluno</a></li>
+                        <li><a href="login.php?type=admin">Portal do CFC</a></li>
                     </ul>
                 </div>
                 
