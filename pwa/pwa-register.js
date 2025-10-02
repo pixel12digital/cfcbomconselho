@@ -65,7 +65,13 @@ class PWAManager {
             console.log('[PWA] beforeinstallprompt disparado');
             e.preventDefault();
             this.deferredPrompt = e;
-            this.showInstallBanner();
+            
+            // Só mostrar banner se ainda deve mostrar baseado nas escolhas do usuário
+            if (this.shouldShowInstallPrompt()) {
+                this.showInstallBanner();
+            } else {
+                console.log('[PWA] beforeinstallprompt ignorado - usuário já escolheu anteriormente');
+            }
         });
         
         // Evento appinstalled - quando o app é instalado
@@ -148,10 +154,10 @@ class PWAManager {
                     <p>${options.message}</p>
                 </div>
                 <div class="pwa-banner-actions">
-                    <button class="pwa-banner-btn pwa-banner-btn-primary" onclick="this.closest('.pwa-banner').remove()">
+                    <button class="pwa-banner-btn pwa-banner-btn-primary" onclick="window.pwaManager.handleInstallChoice('accept')">
                         ${options.buttonText}
                     </button>
-                    <button class="pwa-banner-btn pwa-banner-btn-secondary" onclick="this.closest('.pwa-banner').remove()">
+                    <button class="pwa-banner-btn pwa-banner-btn-secondary" onclick="window.pwaManager.handleInstallChoice('dismiss')">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
@@ -163,7 +169,9 @@ class PWAManager {
         
         // Configurar ação do botão
         const button = banner.querySelector('.pwa-banner-btn-primary');
-        button.addEventListener('click', options.buttonAction);
+        if (options.buttonAction) {
+            button.addEventListener('click', options.buttonAction);
+        }
         
         return banner;
     }
@@ -451,7 +459,7 @@ class PWAManager {
         // Verificar permissão atual
         if (Notification.permission === 'granted') {
             console.log('[PWA] Notificações já autorizadas');
-            this.showInstallPrompt();
+            this.maybeShowInstallPrompt();
         } else if (Notification.permission === 'default') {
             console.log('[PWA] Solicitando permissão para notificações...');
             this.requestNotificationPermission();
@@ -469,7 +477,7 @@ class PWAManager {
             
             if (permission === 'granted') {
                 console.log('[PWA] Permissão para notificações concedida');
-                this.showInstallPrompt();
+                this.maybeShowInstallPrompt();
                 
                 // Enviar notificação de boas-vindas
                 this.sendWelcomeNotification();
@@ -503,18 +511,93 @@ class PWAManager {
     }
     
     /**
-     * Mostrar prompt de instalação
+     * Controlar escolha do usuário sobre instalação
+     */
+    handleInstallChoice(choice) {
+        const banner = document.querySelector('.pwa-banner');
+        if (banner) {
+            banner.remove();
+        }
+        
+        const now = new Date().getTime();
+        
+        if (choice === 'accept') {
+            // Usuário aceitou instalar - executar instalação
+            this.installApp();
+            // Salvar que foi aceito (não mostrar mais por 90 dias)
+            localStorage.setItem('pwa-install-user-choice', 'accepted');
+            localStorage.setItem('pwa-install-choice-timestamp', now + (90 * 24 * 60 * 60 * 1000)); // 90 dias
+        } else if (choice === 'dismiss') {
+            // Usuário dismissou - não mostrar por 30 dias
+            localStorage.setItem('pwa-install-user-choice', 'dismissed');
+            localStorage.setItem('pwa-install-choice-timestamp', now + (30 * 24 * 60 * 60 * 1000)); // 30 dias
+            console.log('[PWA] Usuário dismissou o prompt de instalação por 30 dias');
+        }
+    }
+
+    /**
+     * Verificar se deve mostrar prompt de instalação
+     */
+    shouldShowInstallPrompt() {
+        const userChoice = localStorage.getItem('pwa-install-user-choice');
+        const choiceTimestamp = localStorage.getItem('pwa-install-choice-timestamp');
+        const now = new Date().getTime();
+        
+        // Se já foi escolhido e ainda não expirou, não mostrar
+        if (userChoice && choiceTimestamp) {
+            if (now < parseInt(choiceTimestamp)) {
+                return false; // Ainda dentro do período de repouso
+            }
+        }
+        
+        // Se foi aceito e não expirou, nunca mais mostrar
+        if (userChoice === 'accepted' && now < parseInt(choiceTimestamp)) {
+            return false;
+        }
+        
+        // Limpar dados expirados
+        if (now >= parseInt(choiceTimestamp)) {
+            localStorage.removeItem('pwa-install-user-choice');
+            localStorage.removeItem('pwa-install-choice-timestamp');
+        }
+        
+        return true; // Pode mostrar
+    }
+
+    /**
+     * Verificar se deve mostrar prompt e eventualmente mostrar
+     */
+    maybeShowInstallPrompt() {
+        // Sempre verificar se deve mostrar antes de tentar mostrar
+        if (this.shouldShowInstallPrompt()) {
+            console.log('[PWA] Condições atendidas, mostrando prompt de instalação');
+            this.showInstallPrompt();
+        } else {
+            console.log('[PWA] Condições não atendidas para mostrar prompt de instalação');
+        }
+    }
+
+    /**
+     * Mostrar prompt de instalação (método interno - use maybeShowInstallPrompt)
      */
     showInstallPrompt() {
-        // Verificar se já foi mostrado hoje
+        // Verificar se já foi mostrado hoje (limitação adicional)
         const lastShown = localStorage.getItem('pwa-install-prompt-last-shown');
         const today = new Date().toDateString();
         
         if (lastShown === today) {
-            return; // Já foi mostrado hoje
+            console.log('[PWA] Prompt já foi mostrado hoje - pule');
+            return;
+        }
+        
+        // Verificar se está instalado como PWA (verificação final)
+        if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+            console.log('[PWA] App já está instalado como PWA - pule');
+            return;
         }
         
         // Mostrar banner de instalação
+        console.log('[PWA] Mostrando prompt de instalação');
         this.showInstallBanner();
         
         // Salvar que foi mostrado hoje
@@ -522,11 +605,27 @@ class PWAManager {
     }
 }
 
+// Função utilitária para reset das escolhas PWA (para debugging/admin)
+window.resetPWAChoices = function() {
+    localStorage.removeItem('pwa-install-user-choice');
+    localStorage.removeItem('pwa-install-choice-timestamp');
+    localStorage.removeItem('pwa-install-prompt-last-shown');
+    console.log('[PWA] Escolhas de instalação resetadas');
+};
+
 // Inicializar PWA Manager quando DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
     // Verificar se estamos na área admin
     if (window.location.pathname.includes('/admin/')) {
         window.pwaManager = new PWAManager();
+        
+        // Debug: mostrar estado das escolhas do usuário
+        if (localStorage.getItem('pwa-install-user-choice')) {
+            const choice = localStorage.getItem('pwa-install-user-choice');
+            const timestamp = localStorage.getItem('pwa-install-choice-timestamp');
+            const expiry = new Date(parseInt(timestamp));
+            console.log(`[PWA] Estado anterior: ${choice}, expira em: ${expiry.toLocaleString()}`);
+        }
     }
 });
 

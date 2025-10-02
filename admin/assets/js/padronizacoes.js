@@ -95,7 +95,27 @@ class UIPadronizacoes {
         const feedback = document.createElement('div');
         feedback.className = isValid ? 'valid-feedback' : 'invalid-feedback';
         feedback.textContent = isValid ? '✓' : message;
+        feedback.style.cssText = `
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            opacity: ${isValid ? '1' : '1'};
+            visibility: visible;
+        `;
         input.parentNode.appendChild(feedback);
+
+        // Se válido, ocultar após 1.5 segundos mantendo contorno verde
+        if (isValid) {
+            setTimeout(() => {
+                if (feedback.parentNode === input.parentNode) {
+                    feedback.style.opacity = '0';
+                    feedback.style.visibility = 'hidden';
+                    setTimeout(() => {
+                        if (feedback.parentNode === input.parentNode) {
+                            feedback.remove();
+                        }
+                    }, 300);
+                }
+            }, 1500);
+        }
     }
 
     isValidCPF(cpf) {

@@ -96,6 +96,9 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
 .action-buttons-compact {
     min-width: 180px;
     justify-content: center;
+    /* CORREÇÃO: Garantir que os ícones fiquem SEMPRE atrás dos modais */
+    z-index: 1 !important;
+    position: relative !important;
 }
 
 .action-icon-btn {
@@ -105,6 +108,21 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
     display: inline-flex !important;
     visibility: visible !important;
     opacity: 1 !important;
+    /* CORREÇÃO: z-index baixo para ficar atrás dos modais */
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+/* CORREÇÃO: Estilo especial para quando modal estiver aberto */
+body:has(#modalVisualizarAluno.show) .action-icon-btn,
+body:has(#modalAluno[data-opened="true"]) .action-icon-btn {
+    z-index: 1 !important;
+    pointer-events: none !important;
+}
+
+body:has(#modalVisualizarAluno.show) .action-buttons-compact,
+body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
+    z-index: 1 !important;
 }
 
 /* Garantir que todos os botões de ação sejam visíveis */
@@ -223,19 +241,7 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
         margin-bottom: 12px !important;
     }
     
-    .mobile-aluno-avatar {
-        margin-right: 12px !important;
-    }
-    
-    .mobile-aluno-avatar .avatar-title {
-        width: 40px !important;
-        height: 40px !important;
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        font-size: 16px !important;
-        font-weight: bold !important;
-    }
+    /* Avatar mobile removido - CSS órfão removido */
     
     .mobile-aluno-info {
         flex: 1 !important;
@@ -497,40 +503,92 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
    Sobrescrevendo Bootstrap com especificidade máxima
    ===================================================== */
 
-/* Forçar modal fullscreen com especificidade máxima */
-.modal#modalAluno .modal-dialog.modal-fullscreen {
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    margin: 0 !important;
+/* Modal quase fullscreen com margens pequenas */
+.modal#modalAluno .modal-dialog {
+    max-width: calc(100vw - 2rem) !important;
+    max-height: calc(100vh - 2rem) !important;
+    width: calc(100vw - 2rem) !important;
+    height: calc(100vh - 2rem) !important;
+    margin: 1rem !important;
     padding: 0 !important;
 }
 
+/* Para telas muito pequenas, usar margens menores */
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-dialog {
+        max-width: calc(100vw - 0.5rem) !important;
+        max-height: calc(100vh - 0.5rem) !important;
+        width: calc(100vw - 0.5rem) !important;
+        height: calc(100vh - 0.5rem) !important;
+        margin: 0.25rem !important;
+    }
+}
+
 .modal#modalAluno .modal-content {
-    height: 100vh !important;
-    border-radius: 0 !important;
+    height: 100% !important;
+    border-radius: 0.5rem !important;
     border: none !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
 }
 
 .modal#modalAluno .modal-body {
-    max-height: calc(100vh - 120px) !important;
+    max-height: calc(100% - 120px) !important;
     overflow-y: auto !important;
-    padding: 2rem !important;
+    padding: 1.5rem !important;
     background-color: #f8f9fa !important;
+}
+
+/* Responsividade do modal-body */
+@media (max-width: 768px) {
+    .modal#modalAluno .modal-body {
+        padding: 1rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-body {
+        padding: 0.75rem !important;
+    }
 }
 
 .modal#modalAluno .modal-header {
     background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%) !important;
     color: white !important;
     border-bottom: none !important;
-    padding: 1.5rem 2rem !important;
+    padding: 1rem 1.5rem !important;
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+
+/* Responsividade do modal-header */
+@media (max-width: 768px) {
+    .modal#modalAluno .modal-header {
+        padding: 0.75rem 1rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-header {
+        padding: 0.5rem 0.75rem !important;
+    }
 }
 
 .modal#modalAluno .modal-title {
     color: white !important;
     font-weight: 600 !important;
     font-size: 1.5rem !important;
+}
+
+/* Responsividade do modal-title */
+@media (max-width: 768px) {
+    .modal#modalAluno .modal-title {
+        font-size: 1.25rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-title {
+        font-size: 1.1rem !important;
+    }
 }
 
 .modal#modalAluno .btn-close {
@@ -540,7 +598,21 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
 .modal#modalAluno .modal-footer {
     background-color: #f8f9fa !important;
     border-top: 1px solid #dee2e6 !important;
-    padding: 1.5rem 2rem !important;
+    padding: 1rem 1.5rem !important;
+    border-radius: 0 0 0.5rem 0.5rem !important;
+}
+
+/* Responsividade do modal-footer */
+@media (max-width: 768px) {
+    .modal#modalAluno .modal-footer {
+        padding: 0.75rem 1rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-footer {
+        padding: 0.5rem 0.75rem !important;
+    }
 }
 
 /* Melhorias para scroll do modal */
@@ -1053,6 +1125,7 @@ body.modal-open #modalAluno .modal-dialog {
     z-index: 9999 !important;
 }
 
+
 /* =====================================================
    ESTILOS PARA VALIDAÇÃO DE CPF
    ===================================================== */
@@ -1063,6 +1136,9 @@ body.modal-open #modalAluno .modal-dialog {
     padding: 0.25rem 0.5rem !important;
     border-radius: 0.25rem !important;
     display: none !important;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    opacity: 0;
+    visibility: hidden;
 }
 
 .cpf-validation-feedback.valid {
@@ -1070,6 +1146,8 @@ body.modal-open #modalAluno .modal-dialog {
     color: #0c5460 !important;
     border: 1px solid #bee5eb !important;
     display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .cpf-validation-feedback.invalid {
@@ -1077,6 +1155,8 @@ body.modal-open #modalAluno .modal-dialog {
     color: #721c24 !important;
     border: 1px solid #f5c6cb !important;
     display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
 }
 
 .cpf-validation-feedback::before {
@@ -1087,6 +1167,19 @@ body.modal-open #modalAluno .modal-dialog {
 .cpf-validation-feedback.invalid::before {
     content: "✗ ";
     font-weight: bold;
+}
+
+/* Manter contorno verde visível mesmo sem mensagem */
+input[type="text"].valid, 
+input.form-control.valid {
+    border-color: var(--success-color, #28a745) !important;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+}
+
+input[type="text"].invalid, 
+input.form-control.invalid {
+    border-color: var(--danger-color, #dc3545) !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
 }
 
 /* Estilos para campo CPF com validação */
@@ -1173,17 +1266,17 @@ body.modal-open #modalAluno .modal-dialog {
 <div class="row mb-4">
     <div class="col-md-3">
         <div class="input-group">
-            <span class="input-group-text">🔍</span>
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
             <input type="text" class="form-control" id="buscaAluno" placeholder="Buscar aluno..." data-validate="minLength:2">
         </div>
     </div>
     <div class="col-md-2">
         <select class="form-select" id="filtroStatus">
             <option value="">Todos os Status</option>
-            <option value="ativo">✅ Ativo</option>
-            <option value="inativo">❌ Inativo</option>
-            <option value="concluido">🎓 Concluído</option>
-            <option value="pendente">⏳ Pendente</option>
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
+            <option value="concluido">Concluído</option>
+            <option value="pendente">Pendente</option>
         </select>
     </div>
     <div class="col-md-2">
@@ -1197,24 +1290,24 @@ body.modal-open #modalAluno .modal-dialog {
     <div class="col-md-2">
         <select class="form-select" id="filtroCategoria">
             <option value="">Todas as Categorias</option>
-            <option value="A">🚗 Categoria A</option>
-            <option value="B">🚙 Categoria B</option>
-            <option value="C">🚐 Categoria C</option>
-            <option value="D">🚛 Categoria D</option>
-            <option value="E">🚜 Categoria E</option>
-            <option value="AB">🚗🚙 Categoria AB</option>
-            <option value="AC">🚗🚐 Categoria AC</option>
-            <option value="AD">🚗🚛 Categoria AD</option>
-            <option value="AE">🚗🚜 Categoria AE</option>
+            <option value="A">Categoria A</option>
+            <option value="B">Categoria B</option>
+            <option value="C">Categoria C</option>
+            <option value="D">Categoria D</option>
+            <option value="E">Categoria E</option>
+            <option value="AB">Categoria AB</option>
+            <option value="AC">Categoria AC</option>
+            <option value="AD">Categoria AD</option>
+            <option value="AE">Categoria AE</option>
         </select>
     </div>
     <div class="col-md-3">
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-outline-info" onclick="limparFiltros()">
-                🗑️ Limpar
+                Limpar
             </button>
             <button type="button" class="btn btn-outline-success" onclick="exportarFiltros()">
-                📥 Exportar
+                Exportar
             </button>
         </div>
     </div>
@@ -1337,11 +1430,6 @@ body.modal-open #modalAluno .modal-dialog {
                             <td><?php echo $aluno['id']; ?></td>
                             <td>
                                 <div class="d-flex align-items-center">
-                                    <div class="avatar-sm me-3">
-                                        <div class="avatar-title bg-primary rounded-circle">
-                                            <?php echo strtoupper(substr($aluno['nome'], 0, 1)); ?>
-                                        </div>
-                                    </div>
                                     <div>
                                         <strong><?php echo htmlspecialchars($aluno['nome']); ?></strong>
                                         <?php if ($aluno['email']): ?>
@@ -1369,28 +1457,28 @@ body.modal-open #modalAluno .modal-dialog {
                                         switch ($tipo) {
                                             case 'primeira_habilitacao':
                                                 $badgeClass = 'bg-primary';
-                                                $tipoText = '🏍️';
+                                                $tipoText = '';
                                                 break;
                                             case 'adicao':
                                                 $badgeClass = 'badge-status-ativo';
-                                                $tipoText = '➕';
+                                                $tipoText = '';
                                                 break;
                                             case 'mudanca':
                                                 $badgeClass = 'badge-status-pendente';
-                                                $tipoText = '🔄';
+                                                $tipoText = '';
                                                 break;
                                             case 'aula_avulsa':
                                                 $badgeClass = 'bg-info';
-                                                $tipoText = '📚';
+                                                $tipoText = '';
                                                 break;
                                             default:
                                                 $badgeClass = 'badge-status-inativo';
-                                                $tipoText = '📋';
+                                                $tipoText = '';
                                         }
                                         
                                         if ($index > 0) echo '<br>';
                                         echo '<span class="badge ' . $badgeClass . ' me-1" title="' . ucfirst(str_replace('_', ' ', $tipo)) . '">' . 
-                                             $tipoText . ' ' . htmlspecialchars($categoria) . '</span>';
+                                             htmlspecialchars($categoria) . '</span>';
                                     }
                                 } else {
                                     // Fallback para categoria antiga se não houver operações
@@ -1485,11 +1573,6 @@ body.modal-open #modalAluno .modal-dialog {
                 <?php foreach ($alunos as $aluno): ?>
                 <div class="mobile-aluno-card" data-aluno-id="<?php echo $aluno['id']; ?>">
                     <div class="mobile-aluno-header">
-                        <div class="mobile-aluno-avatar">
-                            <div class="avatar-title bg-primary rounded-circle">
-                                <?php echo strtoupper(substr($aluno['nome'], 0, 1)); ?>
-                            </div>
-                        </div>
                         <div class="mobile-aluno-info">
                             <div class="mobile-aluno-title">
                                 <strong><?php echo htmlspecialchars($aluno['nome']); ?></strong>
@@ -1746,9 +1829,45 @@ body.modal-open #modalAluno .modal-dialog {
                         <div class="row mb-2">
                             <div class="col-md-3">
                                 <div class="mb-1">
-                                    <label for="naturalidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Naturalidade</label>
-                                    <input type="text" class="form-control" id="naturalidade" name="naturalidade" 
-                                           placeholder="Cidade - UF" style="padding: 0.4rem; font-size: 0.85rem;">
+                                    <label for="naturalidade_estado" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Estado</label>
+                                    <select class="form-select" id="naturalidade_estado" name="naturalidade_estado" style="padding: 0.4rem; font-size: 0.85rem;">
+                                        <option value="">Selecione o estado...</option>
+                                        <option value="AC">Acre</option>
+                                        <option value="AL">Alagoas</option>
+                                        <option value="AP">Amapá</option>
+                                        <option value="AM">Amazonas</option>
+                                        <option value="BA">Bahia</option>
+                                        <option value="CE">Ceará</option>
+                                        <option value="DF">Distrito Federal</option>
+                                        <option value="ES">Espírito Santo</option>
+                                        <option value="GO">Goiás</option>
+                                        <option value="MA">Maranhão</option>
+                                        <option value="MT">Mato Grosso</option>
+                                        <option value="MS">Mato Grosso do Sul</option>
+                                        <option value="MG">Minas Gerais</option>
+                                        <option value="PA">Pará</option>
+                                        <option value="PB">Paraíba</option>
+                                        <option value="PR">Paraná</option>
+                                        <option value="PE">Pernambuco</option>
+                                        <option value="PI">Piauí</option>
+                                        <option value="RJ">Rio de Janeiro</option>
+                                        <option value="RN">Rio Grande do Norte</option>
+                                        <option value="RS">Rio Grande do Sul</option>
+                                        <option value="RO">Rondônia</option>
+                                        <option value="RR">Roraima</option>
+                                        <option value="SC">Santa Catarina</option>
+                                        <option value="SP">São Paulo</option>
+                                        <option value="SE">Sergipe</option>
+                                        <option value="TO">Tocantins</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="mb-1">
+                                    <label for="naturalidade_municipio" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Município</label>
+                                    <select class="form-select" id="naturalidade_municipio" name="naturalidade_municipio" style="padding: 0.4rem; font-size: 0.85rem;" disabled>
+                                        <option value="">Primeiro selecione o estado</option>
+                                    </select>
                                 </div>
                             </div>
                             <div class="col-md-3">
@@ -1756,6 +1875,16 @@ body.modal-open #modalAluno .modal-dialog {
                                     <label for="nacionalidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nacionalidade</label>
                                     <input type="text" class="form-control" id="nacionalidade" name="nacionalidade" 
                                            placeholder="Brasileira" style="padding: 0.4rem; font-size: 0.85rem;">
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="mb-1">
+                                    <label class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">&nbsp;</label>
+                                    <input type="hidden" id="naturalidade" name="naturalidade">
+                                    <button type="button" class="btn btn-outline-secondary w-100" id="btnLimparNaturalidade" 
+                                            style="padding: 0.4rem; font-size: 0.8rem;" title="Limpar seleção">
+                                        <i class="fas fa-times"></i>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -1827,35 +1956,61 @@ body.modal-open #modalAluno .modal-dialog {
                                     <i class="fas fa-map-marker-alt me-1"></i>Endereço
                                 </h6>
                             </div>
-                            <div class="col-md-2">
+                            
+                            <!-- Primeira linha: CEP e Logradouro -->
+                            <div class="col-md-3">
                                 <div class="mb-1">
                                     <label for="cep" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CEP</label>
+                                    <div class="input-group">
                                     <input type="text" class="form-control" id="cep" name="cep" 
-                                           placeholder="00000-000" style="padding: 0.4rem; font-size: 0.85rem;">
+                                               placeholder="00000-000" style="padding: 0.4rem; font-size: 0.85rem;"
+                                               maxlength="9">
+                                        <button type="button" class="btn btn-outline-primary" id="btnBuscarCEP" 
+                                                style="padding: 0.4rem 0.6rem; font-size: 0.8rem;"
+                                                title="Buscar endereço pelo CEP">
+                                            <i class="fas fa-search"></i>
+                                        </button>
+                                        <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" 
+                                           target="_blank" 
+                                           class="btn btn-outline-success" 
+                                           style="padding: 0.4rem 0.6rem; font-size: 0.8rem;"
+                                           title="Buscar CEP no site dos Correios">
+                                            <i class="fas fa-external-link-alt"></i>
+                                        </a>
                                 </div>
                             </div>
-                            <div class="col-md-4">
+                            </div>
+                            <div class="col-md-6">
                                 <div class="mb-1">
                                     <label for="logradouro" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Logradouro</label>
                                     <input type="text" class="form-control" id="logradouro" name="logradouro" 
                                            placeholder="Rua, Avenida, etc." style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-3">
                                 <div class="mb-1">
                                     <label for="numero" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Número</label>
                                     <input type="text" class="form-control" id="numero" name="numero" 
                                            placeholder="123" style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            
+                            <!-- Segunda linha: Bairro, Cidade e UF -->
+                            <div class="col-md-4">
                                 <div class="mb-1">
                                     <label for="bairro" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Bairro</label>
                                     <input type="text" class="form-control" id="bairro" name="bairro" 
                                            placeholder="Centro, Jardim, etc." style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
-                            <div class="col-md-2">
+                            <div class="col-md-5">
+                                <div class="mb-1">
+                                    <label for="cidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Cidade</label>
+                                    <input type="text" class="form-control" id="cidade" name="cidade" 
+                                           placeholder="Nome da cidade" style="padding: 0.4rem; font-size: 0.85rem;">
+                                </div>
+                            </div>
+                            <div class="col-md-3">
                                 <div class="mb-1">
                                     <label for="uf" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">UF</label>
                                     <select class="form-select" id="uf" name="uf" style="padding: 0.4rem; font-size: 0.85rem;">
@@ -1888,13 +2043,6 @@ body.modal-open #modalAluno .modal-dialog {
                                         <option value="SE">Sergipe</option>
                                         <option value="TO">Tocantins</option>
                                     </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-1">
-                                    <label for="cidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Cidade</label>
-                                    <input type="text" class="form-control" id="cidade" name="cidade" 
-                                           placeholder="Nome da cidade" style="padding: 0.4rem; font-size: 0.85rem;">
                                 </div>
                             </div>
                         </div>
@@ -2038,6 +2186,7 @@ body.modal-open #modalAluno .modal-dialog {
         </div>
     </div>
 </div>
+
 
 <!-- Modal para Visualização de Aluno -->
 <div class="modal fade" id="modalVisualizarAluno" tabindex="-1" aria-labelledby="modalVisualizarAlunoLabel" aria-hidden="true">
@@ -2343,20 +2492,605 @@ function inicializarMascarasAluno() {
             buscarCEP(cep);
         }
     });
+    
+    // Busca de CEP ao pressionar Enter
+    document.getElementById('cep').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const cep = this.value.replace(/\D/g, '');
+            if (cep.length === 8) {
+                buscarCEP(cep);
+            } else {
+                mostrarFeedbackCEP('warning', 'CEP deve ter 8 dígitos. Exemplo: 12345-678');
+            }
+        }
+    });
+    
+    // Botão de busca manual
+    document.getElementById('btnBuscarCEP').addEventListener('click', function() {
+        const cepInput = document.getElementById('cep');
+        const cep = cepInput.value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            buscarCEP(cep);
+        } else {
+            mostrarFeedbackCEP('warning', 'CEP deve ter 8 dígitos. Exemplo: 12345-678');
+            cepInput.focus();
+        }
+    });
+    
+    // Botão de busca por rua agora é um link direto para os Correios
+    
+    // Event listeners para naturalidade
+    document.getElementById('naturalidade_estado').addEventListener('change', function() {
+        const estado = this.value;
+        const municipioSelect = document.getElementById('naturalidade_municipio');
+        
+        console.log('Estado selecionado:', estado); // Debug
+        
+        if (estado) {
+            carregarMunicipios(estado);
+            municipioSelect.disabled = false;
+        } else {
+            municipioSelect.innerHTML = '<option value="">Primeiro selecione o estado</option>';
+            municipioSelect.disabled = true;
+            atualizarNaturalidade();
+        }
+    });
+    
+    document.getElementById('naturalidade_municipio').addEventListener('change', function() {
+        atualizarNaturalidade();
+    });
+    
+    document.getElementById('btnLimparNaturalidade').addEventListener('click', function() {
+        document.getElementById('naturalidade_estado').value = '';
+        document.getElementById('naturalidade_municipio').innerHTML = '<option value="">Primeiro selecione o estado</option>';
+        document.getElementById('naturalidade_municipio').disabled = true;
+        document.getElementById('naturalidade').value = '';
+    });
 }
 
 function buscarCEP(cep) {
+    // Mostrar indicador de carregamento
+    const cepInput = document.getElementById('cep');
+    const originalPlaceholder = cepInput.placeholder;
+    cepInput.placeholder = 'Buscando...';
+    cepInput.style.backgroundColor = '#f8f9fa';
+    
+    // Adicionar ícone de carregamento
+    const loadingIcon = document.createElement('span');
+    loadingIcon.innerHTML = ' <i class="fas fa-spinner fa-spin text-primary"></i>';
+    loadingIcon.id = 'cep-loading';
+    cepInput.parentNode.appendChild(loadingIcon);
+    
     fetch(`https://viacep.com.br/ws/${cep}/json/`)
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Erro na requisição');
+            }
+            return response.json();
+        })
         .then(data => {
+            // Remover indicador de carregamento
+            cepInput.placeholder = originalPlaceholder;
+            cepInput.style.backgroundColor = '';
+            const loadingElement = document.getElementById('cep-loading');
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+            
             if (!data.erro) {
-                document.getElementById('logradouro').value = data.logradouro;
-                document.getElementById('bairro').value = data.bairro;
-                document.getElementById('cidade').value = data.localidade;
-                document.getElementById('uf').value = data.uf;
+                // Preencher campos automaticamente
+                document.getElementById('logradouro').value = data.logradouro || '';
+                document.getElementById('bairro').value = data.bairro || '';
+                document.getElementById('cidade').value = data.localidade || '';
+                document.getElementById('uf').value = data.uf || '';
+                
+                // Mostrar feedback de sucesso
+                mostrarFeedbackCEP('success', 'Endereço encontrado e preenchido automaticamente!');
+                
+                // Destacar campos preenchidos
+                ['logradouro', 'bairro', 'cidade', 'uf'].forEach(campo => {
+                    const elemento = document.getElementById(campo);
+                    if (elemento) {
+                        elemento.style.backgroundColor = '#d4edda';
+                        setTimeout(() => {
+                            elemento.style.backgroundColor = '';
+                        }, 2000);
+                    }
+                });
+            } else {
+                mostrarFeedbackCEP('warning', 'CEP não encontrado. Verifique o número digitado.');
+                cepInput.style.borderColor = '#ffc107';
+                setTimeout(() => {
+                    cepInput.style.borderColor = '';
+                }, 3000);
             }
         })
-        .catch(error => console.error('Erro ao buscar CEP:', error));
+        .catch(error => {
+            console.error('Erro ao buscar CEP:', error);
+            
+            // Remover indicador de carregamento
+            cepInput.placeholder = originalPlaceholder;
+            cepInput.style.backgroundColor = '';
+            const loadingElement = document.getElementById('cep-loading');
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+            
+            mostrarFeedbackCEP('error', 'Erro ao buscar CEP. Verifique sua conexão e tente novamente.');
+            cepInput.style.borderColor = '#dc3545';
+            setTimeout(() => {
+                cepInput.style.borderColor = '';
+            }, 3000);
+        });
+}
+
+function mostrarFeedbackCEP(tipo, mensagem) {
+    // Remover feedback anterior se existir
+    const feedbackAnterior = document.getElementById('cep-feedback');
+    if (feedbackAnterior) {
+        feedbackAnterior.remove();
+    }
+    
+    // Criar elemento de feedback
+    const feedback = document.createElement('div');
+    feedback.id = 'cep-feedback';
+    feedback.className = `alert alert-${tipo === 'success' ? 'success' : tipo === 'warning' ? 'warning' : 'danger'} alert-dismissible fade show`;
+    feedback.style.cssText = 'position: fixed; top: 20px; right: 20px; z-index: 9999; min-width: 300px; font-size: 0.9rem;';
+    feedback.innerHTML = `
+        <i class="fas fa-${tipo === 'success' ? 'check-circle' : tipo === 'warning' ? 'exclamation-triangle' : 'times-circle'} me-2"></i>
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Adicionar ao body
+    document.body.appendChild(feedback);
+    
+    // Remover automaticamente após 5 segundos
+    setTimeout(() => {
+        if (feedback.parentNode) {
+            feedback.remove();
+        }
+    }, 5000);
+}
+
+
+// Funções para naturalidade
+// Globais para evitar carregamentos duplicados
+let carregamentoMunicipios = {}; // Estado -> Promise em andamento
+
+function carregarMunicipios(estado) {
+    const municipioSelect = document.getElementById('naturalidade_municipio');
+    
+    if (!municipioSelect) {
+        console.error('❌ Select de município não encontrado');
+        return Promise.reject('Select de município não encontrado');
+    }
+    
+    console.log('🔄 Carregando municípios para estado:', estado);
+    
+    // Se já está no meio de um carregamento para este estado, retornar a promessa existente
+    if (carregamentoMunicipios[estado]) {
+        console.log('⏭️ Carregamento já em andamento para', estado, '- aguardando...');
+        return carregamentoMunicipios[estado];
+    }
+    
+    // Verificar se os municípios já estão carregados para este estado
+    const opcoesAtuais = Array.from(municipioSelect.options).map(o => o.value).slice(1);
+    const municipiosEsperados = getMunicipiosPorEstado(estado);
+    
+    // Se não há municípios para este estado, manter placeholder e desabilitar
+    if (municipiosEsperados.length === 0) {
+        municipioSelect.innerHTML = '<option value="">Estado não configurado</option>';
+        municipioSelect.disabled = true;
+        console.warn('⚠️ Estado', estado, 'não possui municípios configurados');
+        return Promise.resolve();
+    }
+    
+    if (opcoesAtuais.length > 0 && municipiosEsperados.length === opcoesAtuais.length) {
+        console.log('✅ Municípios já estão carregados para', estado);
+        municipioSelect.disabled = false;
+        return Promise.resolve();
+    }
+    
+    // Mostrar indicador de carregamento
+    municipioSelect.innerHTML = '<option value="">Carregando municípios...</option>';
+    municipioSelect.disabled = true;
+    
+    // Usar lista estática de municípios (resolvendo problema de CSP)
+    const municipios = getMunicipiosPorEstado(estado);
+    
+    console.log('Municípios encontrados:', municipios); // Debug
+    
+    // Criar e armazenar a Promise para evitar carregamentos duplicados
+    const promiseEmAndamento = new Promise((resolve, reject) => {
+        setTimeout(() => {
+            try {
+                municipioSelect.innerHTML = '<option value="">Selecione o município...</option>';
+                
+                // Ordenar municípios alfabeticamente
+                municipios.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+                
+                municipios.forEach(municipio => {
+                    const option = document.createElement('option');
+                    option.value = municipio;
+                    option.textContent = municipio;
+                    municipioSelect.appendChild(option);
+                });
+                
+                municipioSelect.disabled = false;
+                console.log('✅ Municípios carregados no select:', municipioSelect.options.length);
+                
+                // Limpar a referência ao carregamento
+                delete carregamentoMunicipios[estado];
+                
+                // Disparar evento de mudança para notificar que os municípios foram carregados
+                municipioSelect.dispatchEvent(new Event('change'));
+                
+                resolve();
+            } catch (error) {
+                console.error('❌ Erro ao carregar municípios', error);
+                delete carregamentoMunicipios[estado];
+                reject(error);
+            }
+        }, 100);
+    });
+    
+    // Armazenar a Promise em andamento
+    carregamentoMunicipios[estado] = promiseEmAndamento;
+    
+    return promiseEmAndamento;
+}
+
+function atualizarNaturalidade() {
+    const estado = document.getElementById('naturalidade_estado').value;
+    const municipio = document.getElementById('naturalidade_municipio').value;
+    const naturalidadeInput = document.getElementById('naturalidade');
+    
+    console.log('Atualizando naturalidade - Estado:', estado, 'Município:', municipio); // Debug
+    
+    if (estado && municipio) {
+        // Converter sigla do estado para nome completo
+        const nomeEstado = getNomeEstadoPorSigla(estado);
+        naturalidadeInput.value = `${municipio} - ${nomeEstado}`;
+        console.log('Naturalidade atualizada:', naturalidadeInput.value); // Debug
+    } else {
+        naturalidadeInput.value = '';
+        console.log('Naturalidade limpa'); // Debug
+    }
+}
+
+function extrairEstadoNaturalidade(naturalidade) {
+    console.log('🔍 extrairEstadoNaturalidade - Input:', naturalidade);
+    if (!naturalidade) return '';
+    const partes = naturalidade.split(' - ');
+    console.log('🔍 extrairEstadoNaturalidade - Partes:', partes);
+    if (partes.length > 1) {
+        const nomeEstado = partes[1];
+        console.log('🔍 extrairEstadoNaturalidade - Nome do estado:', nomeEstado);
+        // Converter nome do estado para sigla
+        const sigla = getSiglaEstadoPorNome(nomeEstado);
+        console.log('🔍 extrairEstadoNaturalidade - Sigla resultante:', sigla);
+        return sigla;
+    }
+    return '';
+}
+
+function extrairMunicipioNaturalidade(naturalidade) {
+    console.log('🔍 extrairMunicipioNaturalidade - Input:', naturalidade);
+    if (!naturalidade) return '';
+    const partes = naturalidade.split(' - ');
+    console.log('🔍 extrairMunicipioNaturalidade - Partes:', partes);
+    console.log('🔍 extrairMunicipioNaturalidade - Partes.length:', partes.length);
+    const municipio = partes.length > 1 ? partes[0] : '';
+    console.log('🔍 extrairMunicipioNaturalidade - Município resultante:', municipio);
+    console.log('🔍 extrairMunicipioNaturalidade - Município trim:', municipio.trim());
+    return municipio.trim();
+}
+
+// Lista estática de municípios por estado (principais municípios)
+function getMunicipiosPorEstado(estado) {
+    console.log('Buscando municípios para estado:', estado); // Debug
+    
+    const municipios = {
+        'PE': [
+            'Recife', 'Olinda', 'Jaboatão dos Guararapes', 'Caruaru', 'Petrolina', 
+            'Paulista', 'Cabo de Santo Agostinho', 'Camaragibe', 'Garanhuns', 'Vitória de Santo Antão',
+            'Igarassu', 'São Lourenço da Mata', 'Abreu e Lima', 'Ipojuca', 'Santa Cruz do Capibaribe',
+            'Carpina', 'Belo Jardim', 'Gravatá', 'Escada', 'Goiana', 'Serra Talhada', 'Araripina',
+            'Bom Conselho', 'Palmares', 'Bezerros', 'Limoeiro', 'Surubim', 'Pesqueira', 'Salgueiro',
+            'Timbaúba', 'Moreno', 'São Bento do Una', 'Barreiros', 'Custódia', 'Buíque', 'Lajedo',
+            'Águas Belas', 'Canhotinho', 'Correntes', 'Tupanatinga', 'Caetés', 'Calçado', 'Jupi',
+            'Jurema', 'Lagoa do Ouro', 'Palmeirina', 'Paranatama', 'Pedra', 'Quipapá', 'Salgadinho',
+            'São João', 'Tacaimbó', 'Tacaratu', 'Terezinha', 'Venturosa'
+        ],
+        'SP': [
+            'São Paulo', 'Guarulhos', 'Campinas', 'São Bernardo do Campo', 'Santo André',
+            'Osasco', 'Ribeirão Preto', 'Sorocaba', 'Mauá', 'São José dos Campos',
+            'Mogi das Cruzes', 'Diadema', 'Jundiaí', 'Carapicuíba', 'Piracicaba',
+            'Bauru', 'Itaquaquecetuba', 'Franca', 'São Vicente', 'Praia Grande',
+            'Guarujá', 'Taubaté', 'Limeira', 'Suzano', 'Sumaré', 'Barueri', 'Embu das Artes',
+            'São José do Rio Preto', 'Mogi Guaçu', 'Americana', 'Araraquara', 'Jacareí',
+            'Presidente Prudente', 'Marília', 'Itapevi', 'Cotia', 'Ferraz de Vasconcelos',
+            'Indaiatuba', 'Hortolândia', 'Rio Claro', 'Cubatão', 'Itapecerica da Serra'
+        ],
+        'RJ': [
+            'Rio de Janeiro', 'São Gonçalo', 'Duque de Caxias', 'Nova Iguaçu', 'Niterói',
+            'Belford Roxo', 'São João de Meriti', 'Campos dos Goytacazes', 'Petrópolis', 'Volta Redonda',
+            'Magé', 'Macaé', 'Itaboraí', 'Cabo Frio', 'Angra dos Reis', 'Nova Friburgo',
+            'Barra Mansa', 'Teresópolis', 'Mesquita', 'Maricá', 'Nilópolis', 'Queimados',
+            'São Pedro da Aldeia', 'Rio das Ostras', 'Itaguaí', 'Japeri', 'Cachoeiras de Macacu',
+            'Resende', 'Barra do Piraí', 'Valença', 'Vassouras', 'Três Rios', 'Paraíba do Sul',
+            'Sapucaia', 'Paty do Alferes', 'Miguel Pereira', 'Engenheiro Paulo de Frontin'
+        ],
+        'MG': [
+            'Belo Horizonte', 'Uberlândia', 'Contagem', 'Juiz de Fora', 'Betim', 'Montes Claros',
+            'Ribeirão das Neves', 'Uberaba', 'Governador Valadares', 'Ipatinga', 'Sete Lagoas',
+            'Divinópolis', 'Santa Luzia', 'Ibirité', 'Poços de Caldas', 'Patos de Minas',
+            'Pouso Alegre', 'Teófilo Otoni', 'Barbacena', 'Sabará', 'Vespasiano', 'Conselheiro Lafaiete',
+            'Varginha', 'Araguari', 'Itabira', 'Passos', 'Lavras', 'Araxá', 'Coronel Fabriciano',
+            'Ubá', 'Muriaé', 'Formiga', 'Caratinga', 'Ituiutaba', 'Nova Lima', 'João Monlevade',
+            'Pará de Minas', 'Timóteo', 'Ouro Preto', 'Mariana', 'Diamantina', 'São João del Rei'
+        ],
+        'BA': [
+            'Salvador', 'Feira de Santana', 'Vitória da Conquista', 'Camaçari', 'Juazeiro',
+            'Lauro de Freitas', 'Ilhéus', 'Itabuna', 'Jequié', 'Teixeira de Freitas',
+            'Barreiras', 'Alagoinhas', 'Porto Seguro', 'Simões Filho', 'Paulo Afonso',
+            'Eunápolis', 'Guanambi', 'Jacobina', 'Serra do Ramalho', 'Senhor do Bonfim',
+            'Dias d\'Ávila', 'Valença', 'Conceição do Coité', 'Bom Jesus da Lapa', 'Candeias',
+            'Santo Antônio de Jesus', 'Euclides da Cunha', 'Santo Amaro', 'Casa Nova', 'Cruz das Almas',
+            'Mata de São João', 'Serrinha', 'Sobradinho', 'Xique-Xique', 'Ribeira do Pombal',
+            'Castro Alves', 'Mucuri', 'Correntina', 'Livramento de Nossa Senhora', 'Remanso'
+        ],
+        'PB': [
+            'João Pessoa', 'Campina Grande', 'Santa Rita', 'Patos', 'Bayeux', 'Sousa',
+            'Cajazeiras', 'Guarabira', 'Mamanguape', 'Cabedelo', 'Monteiro', 'Esperança',
+            'Queimadas', 'Pombal', 'Itabaiana', 'Conde', 'Alagoa Grande', 'Bananeiras',
+            'Areia', 'Solânea', 'Picuí', 'Princesa Isabel', 'Cuité', 'Sapé', 'Rio Tinto',
+            'Alagoa Nova', 'Lagoa Seca', 'Massaranduba', 'Pilões', 'Serra Branca', 'Sumé',
+            'Taperoá', 'Teixeira', 'Uiraúna', 'Vieirópolis', 'Cacimba de Dentro', 'Cacimba de Areia',
+            'Cacimbas', 'Caiçara', 'Cajazeirinhas', 'Caldas Brandão', 'Camalaú', 'Capim',
+            'Carrapateira', 'Catingueira', 'Catolé do Rocha', 'Caturité', 'Coremas', 'Coxixola',
+            'Cuitegi', 'Curral de Cima', 'Curral Velho', 'Damião', 'Desterro', 'Diamante',
+            'Dona Inês', 'Duas Estradas', 'Emas', 'Fagundes', 'Frei Martinho', 'Gado Bravo',
+            'Gurinhém', 'Gurjão', 'Ibiara', 'Igaracy', 'Imaculada', 'Ingá', 'Itaporanga',
+            'Itapororoca', 'Itatuba', 'Jacaraú', 'Jericó', 'Joca Claudino', 'Juarez Távora',
+            'Juazeirinho', 'Junco do Seridó', 'Juripiranga', 'Juru', 'Lagoa', 'Lagoa de Dentro',
+            'Lagoa do Mato', 'Lastro', 'Livramento', 'Logradouro', 'Lucena', 'Mãe d\'Água',
+            'Malta', 'Manaíra', 'Marcação', 'Mari', 'Marizópolis', 'Maturéia', 'Mogeiro',
+            'Montadas', 'Monte Horebe', 'Nazarezinho', 'Nova Floresta', 'Nova Olinda', 'Nova Palmeira',
+            'Olho d\'Água', 'Olivedos', 'Ouro Velho', 'Parari', 'Passagem', 'Paulista',
+            'Pedra Branca', 'Pedra Lavrada', 'Pedras de Fogo', 'Pedro Régis', 'Piancó', 'Pilar',
+            'Pilõezinhos', 'Pirpirituba', 'Pitimbu', 'Pocinhos', 'Poço Dantas', 'Poço de José de Moura',
+            'Pombal', 'Prata', 'Princesa Isabel', 'Puxinanã', 'Queimadas', 'Quixabá',
+            'Remígio', 'Riachão', 'Riachão do Bacamarte', 'Riachão do Poço', 'Riacho de Santo Antônio',
+            'Riacho dos Cavalos', 'Ribeira', 'Rio Tinto', 'Salgadinho', 'Salgado de São Félix',
+            'Santa Cecília', 'Santa Cruz', 'Santa Helena', 'Santa Inês', 'Santa Luzia',
+            'Santa Teresinha', 'Santana de Mangueira', 'Santana dos Garrotes', 'Santo André',
+            'São Bentinho', 'São Bento', 'São Domingos', 'São Domingos do Cariri', 'São Francisco',
+            'São João do Cariri', 'São João do Rio do Peixe', 'São João do Tigre', 'São José da Lagoa Tapada',
+            'São José de Caiana', 'São José de Espinharas', 'São José de Piranhas', 'São José de Princesa',
+            'São José do Bonfim', 'São José do Brejo do Cruz', 'São José do Sabugi', 'São José dos Cordeiros',
+            'São José dos Ramos', 'São Mamede', 'São Miguel de Taipu', 'São Sebastião de Lagoa de Roça',
+            'São Sebastião do Umbuzeiro', 'Sapé', 'Seridó', 'Serra Branca', 'Serra da Raiz',
+            'Serra Grande', 'Serra Redonda', 'Serraria', 'Sertãozinho', 'Sobrado', 'Solânea',
+            'Soledade', 'Sossêgo', 'Sousa', 'Sumé', 'Tacima', 'Taperoá', 'Tavares',
+            'Teixeira', 'Tenório', 'Triunfo', 'Uiraúna', 'Umbuzeiro', 'Várzea',
+            'Vieirópolis', 'Vista Serrana', 'Zabelê'
+        ],
+        'SC': [
+            'Florianópolis', 'Joinville', 'Blumenau', 'São José', 'Criciúma', 'Chapecó',
+            'Itajaí', 'Balneário Camboriú', 'Lages', 'Jaraguá do Sul', 'Palhoça', 'Caxias do Sul',
+            'Tubarão', 'Navegantes', 'Americana', 'Camboriú', 'Gaspar', 'Brusque', 'Pomerode',
+            'Corupá', 'Luiz Alves', 'Guaramirim', 'Massaranduba', 'Schroeder', 'São Bento do Sul',
+            'Rio Negrinho', 'Mafra', 'Rio do Sul', 'São Miguel do Oeste', 'Araranguá', 'Sombrio',
+            'Laguna', 'Urussanga', 'Cocal do Sul', 'Morro da Fumaça', 'Tubarão', 'Capivari de Baixo',
+            'Gravatal', 'Armazém', 'Braço do Norte', 'São Ludgero', 'Orleans', 'Capivari de Baixo',
+            'Lauro Muller', 'Meleiro', 'Pescaria Brava', 'Praia Grande', 'Timbó', 'Rio do Oeste',
+            'Ponte Alta', 'Agrolândia', 'Atalanta', 'Chapadão do Lageado', 'Dona Emma', 'Ibirama',
+            'Lontras'
+        ],
+        'AL': [
+            'Maceió', 'Arapiraca', 'Rio Largo', 'Marechal Deodoro', 'Palmeira dos Índios',
+            'União dos Palmares', 'São Luís do Quitunde', 'Murici', 'Satuba', 'Messias',
+            'Barra de Santo Antônio', 'Barra de São Miguel', 'Coruripe', 'Penedo', 'Porto de Pedras',
+            'Porto Real do Colégio', 'São Miguel dos Campos', 'Viçosa', 'Limoeiro de Anadia',
+            'Mata Grande', 'Canhotinho', 'Quebrangulo', 'Major Isidoro', 'Feliz Deserto',
+            'Traipu', 'Santana do Ipanema', 'Palmeira dos Índios', 'São Miguel dos Milagres',
+            'Igaci', 'Maragogi', 'São José da Tapera', 'Lagoa da Canoa', 'Carneiros',
+            'Águas Belas', 'Boca da Mata', 'Pindoba', 'Passo de Camaragibe', 'Minador do Negrão',
+            'Olho d\'Água do Casado', 'São Sebastião', 'Porto Calvo', 'Mata Grande', 'Pindorama'
+        ],
+        'AM': [
+            'Manaus', 'Coari', 'Rio Preto da Eva', 'Itacoatiara', 'Manicoré', 'Tefé',
+            'Tabatinga', 'Santo Antônio do Içá', 'Lábrea', 'Benjamin Constant', 'Barcelos',
+            'Codajás', 'Iranduba', 'Careiro da Várzea', 'Anamã', 'Autazes', 'Beruri',
+            'Boa Vista do Ramos', 'Caapiranga', 'Canutama', 'Capixaba', 'Envira',
+            'Fonte Boa', 'Humaitá', 'Ipixuna', 'Itamarati', 'Japurá', 'Juruá',
+            'Maués', 'Nhamundá', 'Nova Olinda do Norte', 'Parintins', 'Santa Isabel do Rio Negro',
+            'São Gabriel da Cachoeira', 'Silves', 'Uruará', 'Tonantins', 'Tapauá',
+            'Canafístula', 'Anori', 'Careiro', 'Itapiranga', 'São Paulo de Olivença'
+        ],
+        'RS': [
+            'Porto Alegre', 'Caxias do Sul', 'Pelotas', 'Canoas', 'Gravataí', 'Viamão',
+            'Novo Hamburgo', 'São Leopoldo', 'Rio Grande', 'Alvorada', 'Santa Maria',
+            'Guaíba', 'Cachoeirinha', 'Bagé', 'Bento Gonçalves', 'Erechim', 'Passo Fundo',
+            'Sapucaia do Sul', 'Uruguaiana', 'Santa Cruz do Sul', 'Venâncio Aires', 'Farroupilha',
+            'Montenegro', 'Osório', 'Pantano Grande', 'São Borja', 'Torres', 'Pelotas',
+            'Livramento', 'Quaraí', 'Sant\'Ana do Livramento', 'Alegrete', 'São Gabriel',
+            'Não-Me-Toque', 'Espumoso', 'Soledade', 'Três Passos', 'Frederico Westphalen',
+            'Carazinho', 'Nova Prata', 'Gravatal', 'Ijuí', 'Santa Rosa', 'Três de Maio'
+        ],
+        'GO': [
+            'Goiânia', 'Aparecida de Goiânia', 'Anápolis', 'Rio Verde', 'Luziânia', 'Águas Lindas de Goiás',
+            'Valparaíso de Goiás', 'Trindade', 'Formosa', 'Novo Gama', 'Planaltina', 'Senador Canedo',
+            'Catalão', 'Caldas Novas', 'Itumbiara', 'Jataí', 'Mineiros', 'Morrinhos',
+            'Goianésia', 'São Luís de Montes Belos', 'Quirinópolis', 'Cidade Ocidental', 'Montes Claros de Goiás',
+            'Corumbaíba', 'Ceres', 'Uberlândia', 'Santo Antônio de Goiás', 'Inhumas',
+            'Palmas', 'Paraúna', 'Pirenópolis', 'Pires do Rio', 'Piracanjuba', 'Posse',
+            'Rubiataba', 'Silvânia', 'Sumário', 'Turvânia', 'Vianópolis', 'Vicentinópolis'
+        ],
+        'AC': [
+            'Rio Branco', 'Cruzeiro do Sul', 'Sena Madureira', 'Tarauacá', 'Feijó', 'Brasiléia',
+            'Xapuri', 'Mâncio Lima', 'Acrelândia', 'Bujari', 'Capixaba', 'Epitaciolândia',
+            'Jordão', 'Manoel Urbano', 'Marechal Thaumaturgo', 'Plácido de Castro',
+            'Porto Acre', 'Porto Walter', 'Rodrigues Alves', 'Santa Rosa do Purus',
+            'Senador Guiomard', 'Tarauacá', 'Assis Brasil', 'Enéas Marques'
+        ],
+        'AP': [
+            'Macapá', 'Santana', 'Laranjal do Jari', 'Oiapoque', 'Porto Grande', 'Mazagão',
+            'Vitória do Jari', 'Amapá', 'Calçoene', 'Cutias', 'Ferreira Gomes', 'Itaubal',
+            'Pedra Branca do Amapari', 'Pracuúba', 'Serra do Navio', 'Tartarugalzinho'
+        ],
+        'CE': [
+            'Fortaleza', 'Caucaia', 'Juazeiro do Norte', 'Maracanaú', 'Sobral', 'Itapipoca',
+            'Crato', 'Quixadá', 'Iguatu', 'Pacatuba', 'Aquiraz', 'Maranguape', 'Marco',
+            'Mucambo', 'Pacoti', 'Pindoretama', 'Redenção', 'São Gonçalo do Amarante',
+            'Senador Pompeu', 'Tabuleiro do Norte', 'Tarrafas', 'Tauá', 'Tejuçuoca',
+            'Tianguá', 'Trairi', 'Tururu', 'Ubajara', 'Umari', 'Umirim', 'Uruburetama'
+        ],
+        'MA': [
+            'São Luís', 'Imperatriz', 'São José de Ribamar', 'Timon', 'Caxias', 'Codó',
+            'Paço do Lumiar', 'Açailândia', 'Bacabal', 'Balsas', 'Zé Doca', 'Santa Inês',
+            'Barra do Corda', 'Santa Luzia', 'Chapadinha', 'Pinheiro', 'Araguanã', 'Arari',
+            'Axixá', 'Bacurituba', 'Barro Branco', 'Barro Duro', 'Bom Jesus das Selvas',
+            'Cajapió', 'Cajari', 'Cantanhede', 'Carutapera', 'Cedral', 'Centro do Guilherme',
+            'Centro Novo do Maranhão', 'Colinas', 'Conchas', 'Coroatá', 'Cururupu',
+            'Dom Pedro', 'Esperantinópolis', 'Estreito', 'Formosa da Serra Negra'
+        ],
+        'MT': [
+            'Cuiabá', 'Várzea Grande', 'Rondonópolis', 'Sorriso', 'Cáceres', 'Sinop',
+            'Tangará da Serra', 'Lucas do Rio Verde', 'Barra do Garidos', 'Campo Verde',
+            'Colíder', 'Diamantino', 'Guarantã do Norte', 'Mirassol d\'Oeste', 'Nova Mutum',
+            'Nova Xavantina', 'Poconé', 'Pontes e Lacerda', 'Primavera do Leste', 'Santo Antônio do Leverger',
+            'São José do Xingu', 'Tapurah', 'Vila Rica', 'Alto Paraguai', 'Alto Taquari',
+            'Apiacás', 'Araguaiana', 'Araguainha', 'Arenápolis', 'Aripuanã', 'Barão de Melgaço',
+            'Barra do Bugres', 'Barra do Garidos', 'Bom Jesus do Araguaia', 'Brasnorte', 'Campinápolis'
+        ],
+        'MS': [
+            'Campo Grande', 'Dourados', 'Três Lagoas', 'Corumbá', 'Ponta Porã', 'Naviraí',
+            'Nova Andradina', 'Sidrolândia', 'Paranaíba', 'Aquidauana', 'Maracaju', 'Coxim',
+            'Bonito', 'Jardim', 'Amambai', 'Pedro Gomes', 'Miranda', 'Anastácio',
+            'Bandeirantes', 'Bela Vista', 'Caarapó', 'Cassilândia', 'Chapadão do Sul',
+            'Eldorâdo', 'Guia Lopes da Laguna', 'Icaraíma', 'Inocência', 'Itaporã',
+            'Ivinhema', 'Ladário', 'Lodo Pinto', 'Mundo Novo', 'Nioaque', 'Nova Alvorada do Sul',
+            'Nova Esperança do Sul', 'Porto Murtinho', 'Ribas do Rio Pardo', 'Rio Negro'
+        ],
+        'PA': [
+            'Belém', 'Ananindeua', 'Santarém', 'Marabá', 'Parauapebas', 'Castanhal', 'Abaetetuba',
+            'Cametá', 'Marituba', 'Benevides', 'Bragança', 'Breves', 'Itaituba', 'Oriximiná',
+            'Altamira', 'Barcarena', 'Conceição do Araguaia', 'Capanema', 'Tucuruí', 'Paragominas',
+            'Redenção', 'Faro', 'Limoeiro do Ajuru', 'Oeiras do Pará', 'Terra Alta', 'Tomé-Açu',
+            'Cachoeira do Piriá', 'Garrafão do Norte', 'Baião', 'Pacajá', 'Dom Eliseu', 'Rondon do Pará',
+            'Jacareacanga', 'Eldorado dos Carajás', 'Itupiranga', 'Goianésia do Pará', 'São Miguel do Guamá',
+            'Senador José Porfírio', 'Uruará', 'Vitória do Xingu', 'Xinguara', 'Tailândia', 'Ipixuna do Pará'
+        ],
+        'RO': [
+            'Porto Velho', 'Ji-Paraná', 'Ariquemes', 'Vilhena', 'Cacoal', 'Rolim de Moura', 'Guajará-Mirim',
+            'Jaru', 'Ouro Preto do Oeste', 'Buritis', 'Nova Mamoré', 'Alto Alegre dos Parecis', 'Alvorada D\'Oeste',
+            'Cabixi', 'Campo Novo de Rondônia', 'Candeias do Jamari', 'Caxiuanã', 'Colorado do Oeste',
+            'Costa Marques', 'Cujubim', 'Espigão D\'Oeste', 'Humaitá', 'Guajará-Mirim', 'Mirante da Serra',
+            'Minister Andréazza', 'Monte Negro', 'Nova Brasilândia D\'Oeste', 'Novo Triunfo', 'Parecis',
+            'Pimenta Bueno', 'Presidente Médici', 'Rio Crespo', 'Seringueiras', 'Theobroma',
+            'Vale do Paraíso', 'Vista Alegre do Abunã'
+        ],
+        'RR': [
+            'Boa Vista', 'Rorainópolis', 'Caracaraí', 'Alto Alegre', 'Bonfim', 'Cantá', 'Caroebe',
+            'Iracema', 'Mucajaí', 'Normandia', 'Pacaraima', 'Santa Elisabeth do Rio Novo',
+            'São João da Baliza', 'São Luiz', 'Uiramutã', 'Amajari', 'Crec¸ia', 'Pedra Branca do Amapari'
+        ],
+        'PI': [
+            'Teresina', 'Parnaíba', 'Picos', 'Piripiri', 'Floriano', 'Campo Maior', 'Barras',
+            'União', 'Altos', 'Caxias', 'Esperantina', 'São Raimundo Nonato', 'Corrente',
+            'Valença do Piauí', 'Piripiri', 'São João do Piauí', 'Caxias do Sul do Piauí',
+            'Pedro II', 'Cocal', 'São Miguel do Tapuio', 'Teresina', 'Timon', 'Gilbués',
+            'José de Freitas', 'Nazaré do Piauí', 'Simplício Mendes', 'Simões', 'São João do Piauí'
+        ],
+        'ES': [
+            'Vitória', 'Vila Velha', 'Cariacica', 'Serra', 'Linhares', 'São Mateus', 'Colatina',
+            'Guarapari', 'Aracruz', 'Viana', 'Nova Venécia', 'Barra de São Francisco', 'São Gabriel da Palha',
+            'Santa Teresa', 'Baixo Guandu', 'Montanha', 'Ecoporanga', 'Jaguaré', 'Iconha', 'Iúna',
+            'Itapemirim', 'Laranja da Terra', 'Mantenópolis', 'Mimoso do Sul', 'Muqui',
+            'Pinheiros', 'Rio Novo do Sul', 'São Domingos do Norte', 'Vargem Alta', 'Venda Nova do Imigrante'
+        ],
+        'DF': [
+            'Brasília', 'Sobradinho', 'Taguatinga', 'Ceilândia', 'Planaltina', 'Santa Maria',
+            'São Sebastião', 'Gama', 'Samambaia', 'Riacho Fundo', 'Arniqueira', 'Brazlândia',
+            'Candangolândia', 'Cruzeiro', 'Estrutural', 'Fercal', 'Guará', 'Itapoã',
+            'Jardim Botânico', 'Lago Norte', 'Lago Sul', 'Núcleo Bandeirante', 'Paranoá',
+            'Pernambuco', 'Recanto das Emas', 'SCIA', 'SIA', 'Sudoeste/Octogonal',
+            'Varjão', 'Vicente Pires'
+        ],
+        'PR': [
+            'Curitiba', 'Londrina', 'Maringá', 'Ponta Grossa', 'Cascavel', 'São José dos Pinhais',
+            'Foz do Iguaçu', 'Colombo', 'Guarapuava', 'Paranaguá', 'Araucária', 'Toledo',
+            'Apucarana', 'Mafra', 'Pinhais', 'Santo Antônio da Platina', 'Medianeira', 'Umuarama',
+            'Cambé', 'Francisco Beltrão', 'Irati', 'Piraquara', 'Arapongas', 'Telêmaco Borba',
+            'Fazenda Rio Grande', 'Quatro Barras', 'Campo Mourão', 'Jaguariaiva', 'Campo Largo',
+            'Laranjeiras do Sul', 'Sarandi', 'Nova Londrina', 'Reserva', 'Pitanga', 'Tupãssi'
+        ],
+        'RN': [
+            'Natal', 'Mossoró', 'Parnamirim', 'São Gonçalo do Amarante', 'Macaíba', 'Ceará-Mirim',
+            'Currais Novos', 'Caicó', 'Açu', 'Nova Cruz', 'João Câmara', 'São Paulo do Potengi',
+            'Pau dos Ferros', 'Santa Cruz', 'Extremoz', 'Jucurutu', 'São Miguel', 'Baraúna',
+            'Acari', 'Almino Afonso', 'Água Nova', 'Alexandria', 'Alto do Rodrigues',
+            'Angicos', 'Antônio Martins', 'Apodi', 'Areia Branca', 'Arês', 'Augusto Severo',
+            'Baía Formosa', 'Bangu', 'Bento Fernandes', 'Bodó', 'Bom Jesus', 'Brejinho'
+        ]
+    };
+    
+    const resultado = municipios[estado] || [];
+    console.log('Resultado da busca para estado "' + estado + '":', resultado); // Debug
+    console.log('🔍 Total de municípios encontrados:', resultado.length);
+    
+    if (estado === 'PE') {
+        console.log('🔍 Verificando se Bom Conselho está na lista:', resultado.includes('Bom Conselho'));
+        console.log('🔍 Lista completa de municípios PE:', resultado);
+    }
+    
+    if (resultado.length === 0) {
+        console.warn('⚠️ Nenhum município encontrado para estado:', estado);
+        
+        // Alertar usuário sobre estado não configurado
+        setTimeout(() => {
+            if (typeof mostrarAlerta === 'function') {
+                mostrarAlerta(`Estado "${estado}" não possui municípios configurados. Entre em contato com o suporte.`, 'warning');
+            } else {
+                alert(`Estado "${estado}" não possui municípios configurados. Entre em contato com o suporte.`);
+            }
+        }, 1000);
+    } else {
+        console.log('✅ Municípios carregados para', estado, ':', resultado.slice(0, 5), resultado.length > 5 ? '...e mais ' + (resultado.length - 5) + ' municípios' : '');
+    }
+    
+    return resultado;
+}
+
+// Funções auxiliares para conversão entre sigla e nome do estado
+function getNomeEstadoPorSigla(sigla) {
+    const estados = {
+        'AC': 'Acre', 'AL': 'Alagoas', 'AP': 'Amapá', 'AM': 'Amazonas', 'BA': 'Bahia',
+        'CE': 'Ceará', 'DF': 'Distrito Federal', 'ES': 'Espírito Santo', 'GO': 'Goiás',
+        'MA': 'Maranhão', 'MT': 'Mato Grosso', 'MS': 'Mato Grosso do Sul', 'MG': 'Minas Gerais',
+        'PA': 'Pará', 'PB': 'Paraíba', 'PR': 'Paraná', 'PE': 'Pernambuco', 'PI': 'Piauí',
+        'RJ': 'Rio de Janeiro', 'RN': 'Rio Grande do Norte', 'RS': 'Rio Grande do Sul',
+        'RO': 'Rondônia', 'RR': 'Roraima', 'SC': 'Santa Catarina', 'SP': 'São Paulo',
+        'SE': 'Sergipe', 'TO': 'Tocantins'
+    };
+    return estados[sigla] || sigla;
+}
+
+function getSiglaEstadoPorNome(nome) {
+    const estados = {
+        'Acre': 'AC', 'Alagoas': 'AL', 'Amapá': 'AP', 'Amazonas': 'AM', 'Bahia': 'BA',
+        'Ceará': 'CE', 'Distrito Federal': 'DF', 'Espírito Santo': 'ES', 'Goiás': 'GO',
+        'Maranhão': 'MA', 'Mato Grosso': 'MT', 'Mato Grosso do Sul': 'MS', 'Minas Gerais': 'MG',
+        'Pará': 'PA', 'Paraíba': 'PB', 'Paraná': 'PR', 'Pernambuco': 'PE', 'Piauí': 'PI',
+        'Rio de Janeiro': 'RJ', 'Rio Grande do Norte': 'RN', 'Rio Grande do Sul': 'RS',
+        'Rondônia': 'RO', 'Roraima': 'RR', 'Santa Catarina': 'SC', 'São Paulo': 'SP',
+        'Sergipe': 'SE', 'Tocantins': 'TO'
+    };
+    return estados[nome] || nome;
 }
 
 function inicializarFiltrosAluno() {
@@ -2427,7 +3161,7 @@ function abrirModalEdicao() {
     }
 }
 
-function editarAluno(id) {
+window.editarAluno = function(id) {
     console.log('🚀 editarAluno chamada com ID:', id);
     
     // Verificar se os elementos necessários existem
@@ -2453,7 +3187,10 @@ function editarAluno(id) {
     
     // Buscar dados do aluno (usando nova API funcional)
     const timestamp = new Date().getTime();
-    fetch(API_CONFIG.getRelativeApiUrl('ALUNOS') + `?id=${id}&t=${timestamp}`)
+    const url = API_CONFIG.getRelativeApiUrl('ALUNOS') + `?id=${id}&t=${timestamp}`;
+    console.log(`📡 URL final da requisição: ${url}`);
+    
+    fetch(url)
         .then(response => {
             console.log(`📨 Resposta recebida - Status: ${response.status}, OK: ${response.ok}`);
             console.log(`📨 URL da resposta: ${response.url}`);
@@ -2479,6 +3216,10 @@ function editarAluno(id) {
         })
         .then(data => {
             console.log('📄 Dados recebidos:', data);
+            console.log('📄 Dados do aluno:', data.aluno);
+            console.log('📄 Naturalidade do aluno:', data.aluno?.naturalidade);
+            console.log('📄 Todos os campos do aluno:', Object.keys(data.aluno || {}));
+            console.log('📄 Estrutura completa do aluno:', JSON.stringify(data.aluno, null, 2));
             
             if (data.success) {
                 console.log('✅ Success = true, configurando modal...');
@@ -2498,13 +3239,49 @@ function editarAluno(id) {
                 abrirModalEdicao();
                 console.log('🪟 Modal de edição aberto!');
                 
-                // Preencher formulário DEPOIS com delay para garantir que o modal esteja renderizado
-                setTimeout(() => {
-                    console.log('🔄 Chamando preencherFormularioAluno com dados:', data.aluno);
+                // Função melhorada para garantir que o modal esteja totalmente carregado
+                function esperarModalPronto() {
+                    return new Promise((resolve) => {
+                        const checkModal = () => {
+                            const modal = document.getElementById('modalAluno');
+                            const form = document.getElementById('formAluno');
+                            const estadoSelect = document.getElementById('naturalidade_estado');
+                            
+                            if (modal && modal.style.display === 'block' && 
+                                form && estadoSelect) {
+                                console.log('✅ Modal totalmente carregado e pronto');
+                                resolve();
+                            } else {
+                                console.log('⏳ Aguardando modal carregar...', {
+                                    modalVisible: modal?.style.display === 'block',
+                                    formExists: !!form,
+                                    estadoExists: !!estadoSelect
+                                });
+                                setTimeout(checkModal, 50);
+                            }
+                        };
+                        checkModal();
+                    });
+                }
+                
+                // Aguardar modal estar pronto, então preencher
+                esperarModalPronto().then(() => {
+                    console.log('🔄 Callando preencherFormularioAluno com dados:', data.aluno);
+                    console.log('🔄 Naturalidade disponível:', data.aluno.naturalidade);
                     console.log('🔄 Timestamp:', new Date().toISOString());
                     preencherFormularioAluno(data.aluno);
                     console.log('✅ Formulário preenchido - função executada');
-                }, 200); // Aumentar delay para 200ms
+                    
+                    // Aplicar validação automática após preenchimento
+                    setTimeout(() => {
+                        validarCampoCPFAutomaticamente();
+                    }, 500);
+                    
+                    // Aplicar validação também após 1 segundo para garantir
+                    setTimeout(() => {
+                        aplicarValidacaoCPFFormulario();
+                    }, 1000);
+                });
                 
             } else {
                 console.error('❌ Success = false, erro:', data.error);
@@ -2526,6 +3303,9 @@ function preencherFormularioAluno(aluno) {
     console.log('  - Email:', aluno.email);
     console.log('  - Telefone:', aluno.telefone);
     console.log('  - CFC ID:', aluno.cfc_id);
+    console.log('  - Naturalidade:', aluno.naturalidade);
+    console.log('  - Nacionalidade:', aluno.nacionalidade);
+    
     
     // Verificar se o modal está aberto
     const modal = document.getElementById('modalAluno');
@@ -2543,6 +3323,8 @@ function preencherFormularioAluno(aluno) {
         'renach': aluno.renach || '',
         'data_nascimento': aluno.data_nascimento || '',
         'naturalidade': aluno.naturalidade || '',
+        'naturalidade_estado': extrairEstadoNaturalidade(aluno.naturalidade),
+        'naturalidade_municipio': extrairMunicipioNaturalidade(aluno.naturalidade),
         'nacionalidade': aluno.nacionalidade || '',
         'email': aluno.email || '',
         'telefone': aluno.telefone || '',
@@ -2558,12 +3340,18 @@ function preencherFormularioAluno(aluno) {
     
     console.log('📝 Campos a serem preenchidos:', campos);
     
-    // Preencher cada campo se ele existir
+    // Preencher cada campo se ele existir (exceto naturalidade que será tratada separadamente)
     console.log('🔍 Verificando elementos do formulário...');
     console.log('🔍 Modal visível?', document.getElementById('modalAluno')?.style.display);
     console.log('🔍 Formulário existe?', document.getElementById('formAluno') ? 'Sim' : 'Não');
     
     Object.keys(campos).forEach(campoId => {
+        // Pular campos de naturalidade que serão tratados separadamente
+        if (campoId === 'naturalidade_estado' || campoId === 'naturalidade_municipio') {
+            console.log(`⏭️ Pulando campo ${campoId} - será tratado separadamente`);
+            return;
+        }
+        
         const elemento = document.getElementById(campoId);
         console.log(`🔍 Campo ${campoId}:`, elemento ? '✅ Existe' : '❌ Não existe');
         if (elemento) {
@@ -2644,6 +3432,155 @@ function preencherFormularioAluno(aluno) {
             'uf': endereco.uf || ''
         };
         
+        // Preencher campos de naturalidade
+        console.log('🔍 Dados de naturalidade recebidos:', {
+            'aluno.naturalidade': aluno.naturalidade
+        });
+        
+        const estadoNaturalidade = extrairEstadoNaturalidade(aluno.naturalidade || '');
+        const municipioNaturalidade = extrairMunicipioNaturalidade(aluno.naturalidade || '');
+        
+        console.log('🔍 Dados extraídos:', {
+            'estadoNaturalidade': estadoNaturalidade,
+            'municipioNaturalidade': municipioNaturalidade,
+            'naturalidade_completa': aluno.naturalidade || ''
+        });
+        console.log('🔍 Verificando se estado é PE:', estadoNaturalidade === 'PE');
+        console.log('🔍 Verificando se município é Bom Conselho:', municipioNaturalidade === 'Bom Conselho');
+        
+        if (estadoNaturalidade) {
+            console.log('🔄 Carregando naturalidade - Estado:', estadoNaturalidade, 'Município:', municipioNaturalidade);
+            
+            const estadoSelect = document.getElementById('naturalidade_estado');
+            if (!estadoSelect) {
+                console.error('❌ Campo naturalidade_estado não encontrado');
+                return;
+            }
+            
+            estadoSelect.value = estadoNaturalidade;
+            
+            // Usar Promise melhorada com tratamento de erro
+            carregarMunicipios(estadoNaturalidade)
+                .then(() => {
+                console.log('✅ Municípios carregados, definindo valor:', municipioNaturalidade);
+                
+                // Sempre tentar definir o município se ele existir
+                if (municipioNaturalidade) {
+                    // Aguardar um pouco mais para garantir que o select foi populado
+                    setTimeout(() => {
+                        const municipioSelect = document.getElementById('naturalidade_municipio');
+                        console.log('🔍 Tentando definir município:', municipioNaturalidade);
+                        console.log('🔍 Opções disponíveis antes:', Array.from(municipioSelect.options).map(o => o.value));
+                        console.log('🔍 Total de opções:', municipioSelect.options.length);
+                        console.log('🔍 Primeiras 10 opções:', Array.from(municipioSelect.options).slice(0, 10).map(o => o.value));
+                        
+                        // Verificar se o município existe nas opções
+                        const opcoes = Array.from(municipioSelect.options).map(o => o.value);
+                        const municipioExiste = opcoes.includes(municipioNaturalidade);
+                        console.log('🔍 Município existe nas opções?', municipioExiste);
+                        console.log('🔍 Município procurado:', municipioNaturalidade);
+                        console.log('🔍 Tipo do município procurado:', typeof municipioNaturalidade);
+                        console.log('🔍 Tamanho do município procurado:', municipioNaturalidade.length);
+                        
+                        if (municipioExiste) {
+                            console.log('🔍 Definindo valor do select...');
+                            municipioSelect.value = municipioNaturalidade;
+                            console.log('✅ Valor do município definido:', municipioSelect.value);
+                            console.log('🔍 Verificando se foi definido corretamente...');
+                            console.log('🔍 Valor atual do select:', municipioSelect.value);
+                            console.log('🔍 Valor esperado:', municipioNaturalidade);
+                            console.log('🔍 São iguais?', municipioSelect.value === municipioNaturalidade);
+                        } else {
+                            console.error('❌ Município não encontrado nas opções:', municipioNaturalidade);
+                            console.log('🔍 Opções disponíveis:', opcoes);
+                            console.log('🔍 Buscando correspondência exata...');
+                            
+                            // Tentar encontrar correspondência exata (case insensitive)
+                            const municipioEncontrado = opcoes.find(opcao => 
+                                opcao.toLowerCase() === municipioNaturalidade.toLowerCase()
+                            );
+                            
+                            if (municipioEncontrado) {
+                                console.log('✅ Município encontrado (case insensitive):', municipioEncontrado);
+                                municipioSelect.value = municipioEncontrado;
+                            } else {
+                                console.log('🔍 Buscando correspondência parcial...');
+                                const municipioParcial = opcoes.find(opcao => 
+                                    opcao.toLowerCase().includes(municipioNaturalidade.toLowerCase()) ||
+                                    municipioNaturalidade.toLowerCase().includes(opcao.toLowerCase())
+                                );
+                                
+                                if (municipioParcial) {
+                                    console.log('✅ Município encontrado (parcial):', municipioParcial);
+                                    municipioSelect.value = municipioParcial;
+                                } else {
+                                    console.error('❌ Nenhuma correspondência encontrada para:', municipioNaturalidade);
+                                }
+                            }
+                        }
+                        
+                        // Atualizar naturalidade após definir o município
+                        console.log('🔍 Chamando atualizarNaturalidade...');
+                        atualizarNaturalidade();
+                        console.log('🔍 atualizarNaturalidade executada');
+                        
+                        // Validar se o campo foi preenchido corretamente
+                        setTimeout(() => {
+                            const valorAtual = municipioSelect.value;
+                            if (String(valorAtual).trim() !== String(municipioNaturalidade).trim()) {
+                                console.error(`❌ ERRO: Campo naturalidade_municipio não foi preenchido corretamente!`);
+                                console.error(`  - Esperado: "${municipioNaturalidade}"`);
+                                console.error(`  - Atual: "${valorAtual}"`);
+                            } else {
+                                console.log(`✅ Campo naturalidade_municipio preenchido corretamente`);
+                            }
+                        }, 100);
+                    }, 50);
+                } else {
+                    // Não há município salvo, mas há estado selecionado
+                    // Os municípios já foram carregados pelo carregarMunicipios()
+                    // O dropdown está pronto para seleção manual
+                    console.log('ℹ️ Não há município salvo, dropdown pronto para seleção manual');
+                    console.log('ℹ️ Municípios disponíveis:', Array.from(document.getElementById('naturalidade_municipio').options).length);
+                }
+            })
+                .catch(error => {
+                    console.error('❌ Erro ao carregar municípios:', error);
+                    console.warn('⚠️ Tentando novamente em 500ms...');
+                    
+                    // Tentar novamente após um delay maior
+                    setTimeout(() => {
+                        carregarMunicipios(estadoNaturalidade)
+                            .then(() => {
+                                if (municipioNaturalidade) {
+                                    const municipioSelect = document.getElementById('naturalidade_municipio');
+                                    municipioSelect.value = municipioNaturalidade;
+                                    atualizarNaturalidade();
+                                    console.log('✅ Município definido na segunda tentativa');
+                                }
+                            })
+                            .catch(err => {
+                                console.error('❌ Falha na segunda tentativa:', err);
+                                mostrarAlerta('Erro ao carregar municípios. Recarregue a página.', 'warning');
+                            });
+                    }, 500);
+                });
+        } else {
+            // Não há estado extraído da naturalidade
+            console.log('ℹ️ Nenhum estado extraído da naturalidade');
+            
+            // Verificar se há estado definido no campo visualmente
+            const estadoVisual = document.getElementById('naturalidade_estado')?.value || '';
+            console.log('🔍 Estado visual no formulário:', estadoVisual);
+            
+            if (estadoVisual) {
+                console.log('🔄 Estado encontrado visualmente, carregando municípios...');
+                carregarMunicipios(estadoVisual).then(() => {
+                    console.log('✅ Municípios carregados para estado visual:', estadoVisual);
+                });
+            }
+        }
+        
         Object.keys(camposEndereco).forEach(campoId => {
             const elemento = document.getElementById(campoId);
             if (elemento) {
@@ -2674,7 +3611,17 @@ function preencherFormularioAluno(aluno) {
 }
 
 function visualizarAluno(id) {
-    console.log('🚀 visualizarAluno chamada com ID:', id);
+    console.log('🚀 visualizandoAluno chamada com ID:', id);
+
+    // GARANTIR que nenhum outro modal está aberto
+    console.log('🔍 Verificando e fechando modais conflitantes...');
+    const modalAlunoParaVisualizacao = document.getElementById('modalAluno');
+    if (modalAlunoParaVisualizacao && modalAlunoParaVisualizacao.style.display !== 'none') {
+        console.log('⚠️ Forçando fechamento do modalAluno conflitante...');
+        modalAlunoParaVisualizacao.style.setProperty('display', 'none', 'important');
+        modalAlunoParaVisualizacao.style.setProperty('visibility', 'hidden', 'important');
+        modalAlunoParaVisualizacao.removeAttribute('data-opened');
+    }
 
     // Verificar se os elementos necessários existem
     const modalElement = document.getElementById('modalVisualizarAluno');
@@ -2727,10 +3674,73 @@ function visualizarAluno(id) {
                 preencherModalVisualizacao(data.aluno);
                 console.log('✅ Modal preenchido');
 
-                // Abrir modal
-                const modal = new bootstrap.Modal(modalElement);
-                modal.show();
-                console.log('🪟 Modal de visualização aberto!');
+                // CORREÇÃO: Usar método manual para evitar conflitos do Bootstrap
+                console.log('🔧 Abrindo modal SEM usar Bootstrap para evitar conflitos...');
+                modalElement.classList.add('show');
+                modalElement.style.setProperty('display', 'block', 'important');
+                modalElement.style.setProperty('visibility', 'visible', 'important');
+                
+                // Criar backdrop manualmente com controle total
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop fade show';
+                backdrop.id = 'backdrop-visualizar-aluno';
+                backdrop.style.zIndex = '1040'; // Menor que o modal
+                document.body.appendChild(backdrop);
+                
+                // Prevenir scroll do body
+                document.body.classList.add('modal-open');
+                document.body.style.overflow = 'hidden';
+                
+                console.log('🪟 Modal de visualização aberto manualmente!');
+                
+                // CORREÇÃO: Diminuir z-index dos ícones de ação quando modal abrir
+                aplicarCorrecaoZIconsAction('open');
+                
+                // Função para fechar o modal corretamente
+                function fecharModalVisualizacao() {
+                    console.log('🧹 Fechando modal de visualização...');
+                    modalElement.classList.remove('show');
+                    modalElement.style.setProperty('display', 'none', 'important');
+                    modalElement.style.setProperty('visibility', 'hidden');
+
+                    // Remover backdrop específico
+                    const backdrop = document.getElementById('backdrop-visualizar-aluno');
+                    if (backdrop) {
+                        backdrop.remove();
+                    }
+
+                    // Remover outros backdrops que possam ter sido criados
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(b => b.remove());
+                    
+                    // Restaurar estado do body
+                    document.body.style.overflow = 'auto';
+                    document.body.classList.remove('modal-open');
+                    
+                    // CORREÇÃO: Restaurar z-index dos ícones de ação quando modal fechar
+                    aplicarCorrecaoZIconsAction('close');
+                    
+                    console.log('✅ Modal de visualização fechado completamente');
+                }
+
+                // Adicionar evento aos botões de fechar
+                setTimeout(() => {
+                    const btnFechar = modalElement.querySelector('[data-bs-dismiss="modal"]');
+                    const btnClose = modalElement.querySelector('.btn-close');
+                    
+                    if (btnFechar) {
+                        btnFechar.onclick = fecharModalVisualizacao;
+                    }
+                    if (btnClose) {
+                        btnClose.onclick = fecharModalVisualizacao;
+                    }
+                    
+                    // Fechar ao clicar no backdrop
+                    const backdrop = document.getElementById('backdrop-visualizar-aluno');
+                    if (backdrop) {
+                        backdrop.onclick = fecharModalVisualizacao;
+                    }
+                }, 100);
 
             } else {
                 console.error('❌ Success = false, erro:', data.error);
@@ -2827,9 +3837,34 @@ function preencherModalVisualizacao(aluno) {
     `;
     
     document.getElementById('modalVisualizarAlunoBody').innerHTML = html;
+    
+    // CORREÇÃO: Configurar botão "Editar Aluno" sem usar Bootstrap Modal
     document.getElementById('btnEditarVisualizacao').onclick = () => {
-        bootstrap.Modal.getInstance(document.getElementById('modalVisualizarAluno')).hide();
-        editarAluno(aluno.id);
+        console.log('✏️ Botão Editar Aluno clicado, fechando modal de visualização...');
+        
+        // Fechar modal de visualização manualmente
+        const modalElement = document.getElementById('modalVisualizarAluno');
+        if (modalElement) {
+            modalElement.classList.remove('show');
+            modalElement.style.setProperty('display', 'none', 'important');
+            modalElement.style.setProperty('visibility', 'hidden');
+        }
+        
+        // Limpar backdrop
+        const backdrop = document.getElementById('backdrop-visualizar-aluno');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        
+        // Restaurar estado do body
+        document.body.style.overflow = 'auto';
+        document.body.classList.remove('modal-open');
+        
+        // Aguardar um pouco antes de abrir modal de edição
+        setTimeout(() => {
+            console.log('🪟 Abrindo modal de edição...');
+            editarAluno(aluno.id);
+        }, 200);
     };
 }
 
@@ -3906,6 +4941,23 @@ document.addEventListener('keydown', function(e) {
 function abrirModalAluno() {
     console.log('🚀 Abrindo modal customizado...');
     
+    // PROTEGER contra conflitos com modal de visualização
+    console.log('🔒 Verificando conflitos com modal de visualização...');
+    const modalVisualizar = document.getElementById('modalVisualizarAluno');
+    if (modalVisualizar && modalVisualizar.style.display !== 'none') {
+        console.log('⚠️ Fechando modal de visualização antes de abrir modal de edição...');
+        modalVisualizar.classList.remove('show');
+        modalVisualizar.style.setProperty('display', 'none', 'important');
+        
+        // Limpar backdrop de visualização
+        const backdrop = document.getElementById('backdrop-visualizar-aluno');
+        if (backdrop) {
+            backdrop.remove();
+        }
+        
+        document.body.classList.remove('modal-open');
+    }
+    
     const modal = document.getElementById('modalAluno');
     if (modal) {
         // FORÇAR abertura do modal
@@ -3913,7 +4965,11 @@ function abrirModalAluno() {
         modal.style.setProperty('visibility', 'visible', 'important');
         modal.setAttribute('data-opened', 'true'); // Marcar como aberto intencionalmente
         document.body.style.overflow = 'hidden'; // Prevenir scroll do body
-        console.log('✅ Modal aberto com sucesso');
+        
+        // CORREÇÃO: Diminuir z-index dos ícones de ação quando modal de edição abrir
+        aplicarCorrecaoZIconsAction('open');
+        
+        console.log('✅ Modal de edição aberto com sucesso');
         
         // SEMPRE definir como criar novo aluno quando esta função é chamada
         const acaoAluno = document.getElementById('acaoAluno');
@@ -3930,6 +4986,9 @@ function abrirModalAluno() {
             formAluno.reset();
             console.log('🧹 Formulário limpo para novo aluno');
         }
+        
+        // Resetar campos específicos que não são tratados pelo reset padrão
+        resetFormulario();
         
         const modalTitle = document.getElementById('modalTitle');
         if (modalTitle) {
@@ -3968,30 +5027,165 @@ function fecharModalAluno() {
         modal.style.setProperty('visibility', 'hidden', 'important');
         modal.removeAttribute('data-opened'); // Remover marcação de aberto
         document.body.style.overflow = 'auto'; // Restaurar scroll do body
+        
+        // CORREÇÃO: Restaurar z-index dos ícones de ação quando modal de edição fechar
+        aplicarCorrecaoZIconsAction('close');
+        
+        // Resetar campos de naturalidade para evitar problemas
+        resetFormulario();
+        
         console.log('✅ Modal customizado fechado!');
     }
 }
 
-// Fechar modal ao clicar fora dele
-document.addEventListener('click', function(e) {
-    const modal = document.getElementById('modalAluno');
-    if (e.target === modal) {
-        fecharModalAluno();
+// Função para resetar o formulário de alunos
+function resetFormulario() {
+    console.log('🔄 Resetando formulário de alunos...');
+    
+    // Resetar campos de naturalidade
+    const estadoSelect = document.getElementById('naturalidade_estado');
+    const municipioSelect = document.getElementById('naturalidade_municipio');
+    const naturalidadeInput = document.getElementById('naturalidade');
+    
+    if (estadoSelect) {
+        estadoSelect.value = '';
     }
-});
-
-// Fechar modal com ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const modal = document.getElementById('modalAluno');
-        if (modal && modal.style.display === 'block') {
-            fecharModalAluno();
+    
+    if (municipioSelect) {
+        municipioSelect.innerHTML = '<option value="">Primeiro selecione o estado</option>';
+        municipioSelect.disabled = true;
+        municipioSelect.value = '';
+    }
+    
+    if (naturalidadeInput) {
+        naturalidadeInput.value = '';
+    }
+    
+    // Resetar outros campos principais
+    const campos = [
+        'nome', 'cpf', 'rg', 'renach', 'data_nascimento', 
+        'nacionalidade', 'email', 'telefone', 'status', 'cfc_id'
+    ];
+    
+    campos.forEach(campoId => {
+        const campo = document.getElementById(campoId);
+        if (campo) {
+            campo.value = '';
         }
+    });
+    
+    // Resetar campos de endereço
+    const camposEndereco = [
+        'cep', 'logradouro', 'numero', 'bairro', 'cidade', 'uf', 'complemento'
+    ];
+    
+    camposEndereco.forEach(campuId => {
+        const campo = document.getElementById(campuId);
+        if (campo) {
+            campo.value = '';
+        }
+    });
+    
+    console.log('✅ Formulário resetado completamente');
+}
+
+
+// FUNÇÃO PARA CORRIGIR Z-INDEX DOS ÍCONES DE AÇÃO
+function aplicarCorrecaoZIconsAction(acao) {
+    console.log(`🔧 Aplicando correção de z-index para ícones de ação: ${acao}`);
+    
+    const actionButtons = document.querySelectorAll('.action-icon-btn');
+    const actionContainers = document.querySelectorAll('.action-buttons-compact');
+    
+    if (acao === 'open') {
+        // Diminuir z-index quando modal abrir
+        actionButtons.forEach(btn => {
+            btn.style.setProperty('z-index', '1', 'important');
+            btn.style.setProperty('pointer-events', 'none', 'important');
+        });
+        
+        actionContainers.forEach(container => {
+            container.style.setProperty('z-index', '1', 'important');
+        });
+        
+        console.log('🔽 z-index dos ícones diminuído para ficar atrás do modal');
+    } else if (acao === 'close') {
+        // Restaurar z-index quando modal fechar
+        actionButtons.forEach(btn => {
+            btn.style.removeProperty('z-index');
+            btn.style.removeProperty('pointer-events');
+        });
+        
+        actionContainers.forEach(container => {
+            container.style.removeProperty('z-index');
+        });
+        
+        console.log('🔺 z-index dos ícones restaurado ao normal');
     }
-});
+}
+
+// FUNÇÃO GLOBAL PARA LIMPEZA DE CONFLITOS ENTRE MODAIS
+function limparTodosModais() {
+    console.log('🧹 Limpando todos os modais conflitantes...');
+    
+    // Aplicar correção aos ícones
+    aplicarCorrecaoZIconsAction('close');
+    
+    // Limpar modal de visualização
+    const modalVisualizar = document.getElementById('modalVisualizarAluno');
+    if (modalVisualizar) {
+        modalVisualizar.classList.remove('show');
+        modalVisualizar.style.setProperty('display', 'none', 'important');
+        modalVisualizar.style.setProperty('visibility', 'hidden');
+    }
+    
+    // Limpar modal de edição
+    const modalAlunoParaLimpeza = document.getElementById('modalAluno');
+    if (modalAlunoParaLimpeza) {
+        modalAlunoParaLimpeza.style.setProperty('display', 'none', 'important');
+        modalAlunoParaLimpeza.style.setProperty('visibility', 'hidden');
+        modalAlunoParaLimpeza.removeAttribute('data-opened');
+    }
+    
+    // Limpar todos os backdrops
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    
+    // Restaurar estado do body
+    document.body.style.overflow = 'auto';
+    document.body.classList.remove('modal-open');
+    
+    console.log('✅ Todos os modais limpos!');
+}
+
+// Event listeners para modal de alunos já estão definidos em inicializarModalAluno()
 
 // Inicializar funcionalidades quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
+    // Limpar qualquer modal conflitante na inicialização
+    limparTodosModais();
+    
+    // Observar quando modais são abertos para aplicar validação CPF
+    const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'style') {
+                const target = mutation.target;
+                if (target.id === 'modalAluno' && target.style.display === 'block') {
+                    // Modal foi aberto, aplicar validação após um pequeno delay
+                    setTimeout(() => {
+                        aplicarValidacaoCPFFormulario();
+                    }, 300);
+                }
+            }
+        });
+    });
+    
+    // Observar mudanças no modal de alunos
+    const modalAlunoObserver = document.getElementById('modalAluno');
+    if (modalAlunoObserver) {
+        observer.observe(modalAlunoObserver, { attributes: true });
+    }
+    
     // Aplicar máscaras se disponível
     if (typeof inputMasks !== 'undefined') {
         inputMasks.applyMasks();
@@ -4002,20 +5196,25 @@ document.addEventListener('DOMContentLoaded', function() {
         notifications.info('Página de alunos carregada com sucesso!');
     }
     
-    // Configurar tooltips e popovers se disponível
+    // Configurar tooltips e popovers se disponível (evitar duplicação)
     if (typeof bootstrap !== 'undefined') {
-        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function (tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
+        const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]:not([data-bs-tooltip-initialized])'));
+        tooltipTriggerList.forEach(function (tooltipTriggerEl) {
+            try {
+                new bootstrap.Tooltip(tooltipTriggerEl);
+                tooltipTriggerEl.setAttribute('data-bs-tooltip-initialized', 'true');
+            } catch (error) {
+                console.warn('Tooltip já inicializado para:', tooltipTriggerEl);
+            }
         });
     }
     
     // Modal customizado - não precisamos mais do código do Bootstrap
     
     // Aplicar responsividade quando o modal abrir
-    const modalAluno = document.getElementById('modalAluno');
-    if (modalAluno) {
-        modalAluno.addEventListener('DOMNodeInserted', ajustarModalResponsivo);
+    const modalAlunoResponsivity = document.getElementById('modalAluno');
+    if (modalAlunoResponsivity) {
+        modalAlunoResponsivity.addEventListener('DOMNodeInserted', ajustarModalResponsivo);
     }
     
     // Aplicar responsividade no resize da janela
@@ -4066,7 +5265,33 @@ function salvarAluno() {
     dadosFormData.append('rg', formData.get('rg') || '');
     dadosFormData.append('renach', formData.get('renach') || '');
     dadosFormData.append('data_nascimento', formData.get('data_nascimento') || '');
-    dadosFormData.append('naturalidade', formData.get('naturalidade') || '');
+    // Debug dos campos de naturalidade
+    const naturalidadeField = document.getElementById('naturalidade');
+    const estadoField = document.getElementById('naturalidade_estado');
+    const municipioField = document.getElementById('naturalidade_municipio');
+    
+    console.log('🔍 Debug naturalidade antes do envio:');
+    console.log('  Campo naturalidade:', naturalidadeField?.value || 'não existe');
+    console.log('  Campo naturalidade_estado:', estadoField?.value || 'não existe');
+    console.log('  Campo naturalidade_municipio:', municipioField?.value || 'não existe');
+    
+    // Se campos individuais estão preenchidos mas o campo naturalidade está vazio, reconstruir
+    let naturalidadeValue = formData.get('naturalidade') || '';
+    if (!naturalidadeValue && estadoField?.value && municipioField?.value) {
+        const nomeEstado = getNomeEstadoPorSigla(estadoField.value);
+        naturalidadeValue = `${municipioField.value} - ${nomeEstado}`;
+        console.log('🔄 Naturalidade reconstruída:', naturalidadeValue);
+        
+        // Atualizar o campo hidden para ser enviado corretamente
+        if (naturalidadeField) {
+            naturalidadeField.value = naturalidadeValue;
+        }
+    }
+    
+    dadosFormData.append('naturalidade', naturalidadeValue);
+    // Adicionar campos de naturalidade separadamente (para campos disabled não são enviados automaticamente)
+    dadosFormData.append('naturalidade_estado', estadoField?.value || '');
+    dadosFormData.append('naturalidade_municipio', municipioField?.value || '');
     dadosFormData.append('nacionalidade', formData.get('nacionalidade') || '');
     dadosFormData.append('email', formData.get('email') || '');
     dadosFormData.append('telefone', formData.get('telefone') || '');
@@ -4081,6 +5306,18 @@ function salvarAluno() {
     dadosFormData.append('cidade', formData.get('cidade') || '');
     dadosFormData.append('estado', formData.get('uf') || '');
     dadosFormData.append('observacoes', formData.get('observacoes') || '');
+    
+    // Adicionar ID do aluno se for edição
+    const alunoIdHidden = document.getElementById('aluno_id_hidden');
+    const acaoAluno = document.getElementById('acaoAluno');
+    const isEditing = acaoAluno && acaoAluno.value === 'editar';
+    
+    if (isEditing && alunoIdHidden && alunoIdHidden.value) {
+        dadosFormData.append('id', alunoIdHidden.value);
+        console.log('📝 Enviando ID do aluno para edição:', alunoIdHidden.value);
+    } else {
+        console.log('📝 Criando novo aluno (sem ID)');
+    }
     
     // Adicionar foto se houver
     const fotoInput = document.getElementById('foto');
@@ -4717,10 +5954,10 @@ function ajustarModalResponsivo() {
     const viewportHeight = window.innerHeight;
     
     // Ajustar modal customizado de alunos
-    const modalAluno = document.getElementById('modalAluno');
-    if (modalAluno && modalAluno.style.display !== 'none') {
-        const modalDialog = modalAluno.querySelector('.custom-modal-dialog');
-        const modalContent = modalAluno.querySelector('.custom-modal-content');
+    const modalAlunoResponsivo = document.getElementById('modalAluno');
+    if (modalAlunoResponsivo && modalAlunoResponsivo.style.display !== 'none') {
+        const modalDialog = modalAlunoResponsivo.querySelector('.custom-modal-dialog');
+        const modalContent = modalAlunoResponsivo.querySelector('.custom-modal-content');
         
         if (modalDialog && modalContent) {
             if (viewportWidth <= 768) {
@@ -4785,29 +6022,34 @@ if (originalAbrirModalAluno) {
     };
 }
 
-// Fechar modal ao clicar fora dele
-document.addEventListener('click', function(e) {
-    const modal = document.getElementById('modalAluno');
-    if (e.target === modal) {
-        fecharModalAluno();
-    }
-});
-
-// Fechar modal com ESC
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
-        const modal = document.getElementById('modalAluno');
-        if (modal && modal.style.display !== 'none') {
-            fecharModalAluno();
-        }
-    }
-});
-
 console.log('🔧 Sistema de modais responsivos inicializado');
 
 // =====================================================
 // VALIDAÇÃO DE CPF EM TEMPO REAL
 // =====================================================
+
+// Função utilitária para aplicar validação em todos os CPF da página
+function aplicarValidacaoCPFFormulario() {
+    const formulariosComCPF = document.querySelectorAll('form input[name="cpf"], #cpf');
+    
+    formulariosComCPF.forEach(input => {
+        // Primeiro, limpar qualquer feedback anterior
+        const feedbackExistente = input.parentNode.querySelector('.cpf-validation-feedback');
+        if (feedbackExistente && feedbackExistente.classList.contains('valid')) {
+            feedbackExistente.remove();
+        }
+        
+        if (input.value.length === 14) {
+            const cpfLimpo = input.value.replace(/\D/g, '');
+            const isValid = validarCPF(cpfLimpo);
+            
+            if (isValid) {
+                // Re-aplicar validação correta com timer de ocultação
+                mostrarFeedbackCPF(input, true);
+            }
+        }
+    });
+}
 
 function validarCPF(cpf) {
     // Remove caracteres não numéricos
@@ -4854,19 +6096,40 @@ function mostrarFeedbackCPF(input, isValid) {
         input.classList.add('valid');
         feedback.textContent = 'CPF válido';
         feedback.className = 'cpf-validation-feedback valid';
+        
+        // Ocultar mensagem após 1.5 segundos quando válido, mantendo contorno verde
+        setTimeout(() => {
+            if (feedback.parentNode === input.parentNode) { // Verificar se ainda existe
+                feedback.style.opacity = '0';
+                feedback.style.visibility = 'hidden';
+                // Manter apenas contorno verde do campo
+                setTimeout(() => {
+                    feedback.style.display = 'none';
+                }, 300); // Aguardar transição CSS terminar
+            }
+        }, 1500);
     } else {
         input.classList.remove('valid');
         input.classList.add('invalid');
         feedback.textContent = 'CPF inválido';
         feedback.className = 'cpf-validation-feedback invalid';
+
+
+        // Mostrar mensagem de erro por mais tempo
+        feedback.style.display = 'block';
+        feedback.style.opacity = '1';
+        feedback.style.visibility = 'visible';
     }
 }
 
 function ocultarFeedbackCPF(input) {
     const feedback = input.parentNode.querySelector('.cpf-validation-feedback');
-    input.classList.remove('valid', 'invalid');
-    feedback.style.display = 'none';
-    feedback.className = 'cpf-validation-feedback';
+    if (feedback) {
+        input.classList.remove('valid', 'invalid');
+        feedback.style.display = 'none';
+        feedback.className = 'cpf-validation-feedback';
+        feedback.textContent = ''; // Limpar conteúdo
+    }
 }
 
 // Aplicar validação de CPF quando o DOM estiver pronto
@@ -4914,6 +6177,30 @@ function validarCPFAntesEnvio() {
         return validarCPF(cpfLimpo);
     }
     return false;
+}
+
+// Função para validar CPF automaticamente após carregamento de dados
+function validarCampoCPFAutomaticamente() {
+    console.log('🔍 Validando CPF automaticamente...');
+    const cpfInput = document.getElementById('cpf');
+    
+    if (cpfInput && cpfInput.value.length === 14) {
+        const cpfLimpo = cpfInput.value.replace(/\D/g, '');
+        const isValid = validarCPF(cpfLimpo);
+        
+        console.log(`✅ CPF automaticamente validado: ${cpfInput.value} -> ${isValid ? 'VÁLIDO' : 'INVÁLIDO'}`);
+        
+        if (isValid) {
+            // Só mostrar feedback se for válido (ocultará automaticamente após 1.5s)
+            mostrarFeedbackCPF(cpfInput, true);
+        } else {
+            // Se inválido, só marcar visualmente sem texto persistente
+            cpfInput.classList.add('invalid');
+            cpfInput.classList.remove('valid');
+        }
+    } else {
+        console.log('⚠️ CPF não tem 14 caracteres, não validando automaticamente');
+    }
 }
 
 console.log('✅ Validação de CPF inicializada');
