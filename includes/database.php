@@ -26,27 +26,57 @@ class Database {
     
     private function connect() {
         try {
+            // Configurações específicas para conexão remota
             $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=" . DB_CHARSET;
             $options = [
                 PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
                 PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
                 PDO::ATTR_EMULATE_PREPARES => false,
                 PDO::MYSQL_ATTR_INIT_COMMAND => "SET NAMES " . DB_CHARSET,
-                PDO::ATTR_PERSISTENT => true,
-                PDO::ATTR_TIMEOUT => DB_TIMEOUT,
+                PDO::ATTR_PERSISTENT => false, // Desabilitado para conexão remota
+                PDO::ATTR_TIMEOUT => 30, // Timeout maior para conexão remota
                 PDO::MYSQL_ATTR_USE_BUFFERED_QUERY => true,
                 PDO::MYSQL_ATTR_LOCAL_INFILE => false
             ];
             
+            if (LOG_ENABLED && LOG_LEVEL === 'DEBUG') {
+                error_log('Tentando conectar: ' . $dsn . ' | Usuário: ' . DB_USER);
+            }
+            
             $this->connection = new PDO($dsn, DB_USER, DB_PASS, $options);
             
-            if (LOG_ENABLED && LOG_LEVEL === 'DEBUG') {
-                error_log('Conexão com banco de dados estabelecida com sucesso');
+            if (LOG_ENABLED) {
+                error_log('✅ Conexão com banco de dados estabelecida com sucesso');
+                error_log('📋 DSN: ' . $dsn);
+                error_log('👤 Usuário: ' . DB_USER);
             }
             
         } catch (PDOException $e) {
-            $this->logError('Erro na conexão com banco de dados: ' . $e->getMessage());
-            throw new Exception('Erro na conexão com banco de dados');
+            $errorInfo = [
+                'message' => $e->getMessage(),
+                'code' => $e->getCode(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'dsn' => $dsn,
+                'user' => DB_USER,
+                'timestamp' => date('Y-m-d H:i:s')
+            ];
+            
+            $this->logError('❌ Erro na conexão com banco de dados:');
+            $this->logError('📋 Detalhes: ' . json_encode($errorInfo, JSON_PRETTY_PRINT));
+            
+            // Melhor tratamento de erros específicos
+            if ($e->getCode() == 2002) {
+                throw new Exception('🏠 Host ' . DB_HOST . ' não encontrado. Verifique se o acesso remoto está liberado na Hostinger.');
+            } elseif ($e->getCode() == 1045) {
+                throw new Exception('🔐 Credenciais inválidas (usuário/senha). Verifique nas configurações da Hostinger.');
+            } elseif ($e->getCode() == 1049) {
+                throw new Exception('📁 Banco de dados "' . DB_NAME . '" não existe. Crie o banco na Hostinger.');
+            } elseif ($e->getCode() == 2006) {
+                throw new Exception('🔌 Conexão perdida com o servidor MySQL. Tente novamente.');
+            } else {
+                throw new Exception('🚫 Erro desconhecido: ' . $e->getMessage() . ' (Código: ' . $e->getCode() . ')');
+            }
         }
     }
     
