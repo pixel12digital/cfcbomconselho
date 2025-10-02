@@ -10,8 +10,8 @@ if (!function_exists('ob_get_level') || ob_get_level() === 0) {
 
 // Configurações do Banco de Dados
 define('DB_HOST', 'auth-db1607.hstgr.io');
-define('DB_NAME', 'u342734079_cfcbomconselho');
-define('DB_USER', 'u342734079_cfcbomconselho');
+define('DB_NAME', 'u502697186_cfcbomconselho');
+define('DB_USER', 'u502697186_cfcbomconselho');
 define('DB_PASS', 'Los@ngo#081081');
 define('DB_CHARSET', 'utf8mb4');
 
