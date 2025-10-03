@@ -72,7 +72,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         
                         error_log("[LOGIN ALUNO] Login bem-sucedido para ID: " . $aluno['id']);
                         $success = 'Login realizado com sucesso';
-                        header('Refresh: 1; URL=aluno/dashboard.php');
+                        
+                        // Limpar buffer antes do redirecionamento
+                        if (ob_get_level()) {
+                            ob_end_clean();
+                        }
+                        
+                        header('Location: aluno/dashboard.php');
                         exit;
                     } else {
                         error_log("[LOGIN ALUNO] Senha inválida para ID: " . $aluno['id']);
@@ -88,7 +94,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if ($result['success']) {
                 $success = $result['message'];
-                header('Refresh: 1; URL=admin/');
+                
+                // Limpar buffer antes do redirecionamento
+                if (ob_get_level()) {
+                    ob_end_clean();
+                }
+                
+                header('Location: admin/');
                 exit;
             } else {
                 $error = $result['message'];
