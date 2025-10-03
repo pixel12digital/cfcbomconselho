@@ -1,0 +1,28 @@
+name: Deploy to Hostinger
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Deploy to Hostinger
+      uses: appleboy/ssh-action@v0.1.5
+      with:
+        host: ${{ secrets.HOSTINGER_HOST }}
+        username: ${{ secrets.HOSTINGER_USERNAME }}
+        key: ${{ secrets.HOSTINGER_SSH_KEY }}
+        script: |
+          cd /public_html
+          git pull origin master
+          # Limpar cache se necessário
+          find . -type f -name "*.php" -exec chmod 644 {} \;
+          find . -type d -exec chmod 755 {} \;

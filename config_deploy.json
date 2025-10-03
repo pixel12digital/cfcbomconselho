@@ -1,0 +1,13 @@
+{
+  "deploy_secret": "cfc_deploy_2024",
+  "branch": "master",
+  "repository": "git@github.com:pixel12digital/cfcbomconselho.git",
+  "path": "./",
+  "log_file": "logs/deploy.log",
+  "backup_enabled": true,
+  "cache_clear": true,
+  "permissions": {
+    "files": "644",
+    "directories": "755"
+  }
+}
