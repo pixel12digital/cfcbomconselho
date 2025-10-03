@@ -1,14 +1,8 @@
 <?php
 /**
- * Webhook para deploy automático da Hostinger
- * Este arquivo será chamado automaticamente quando houver push no GitHub
+ * 🚀 Deploy Simples via Webhook - CFC Bom Conselho
+ * Versão que funciona em qualquer hospedagem
  */
-
-// Verificar se é uma requisição POST
-if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    die('Método não permitido');
-}
 
 // Log do webhook
 $logFile = 'logs/deploy.log';
@@ -19,56 +13,60 @@ if (!file_exists('logs')) {
     mkdir('logs', 0755, true);
 }
 
-// Log da requisição
-file_put_contents($logFile, "[$timestamp] Deploy iniciado\n", FILE_APPEND);
+// Função de log
+function logMessage($message) {
+    global $logFile, $timestamp;
+    $logEntry = "[$timestamp] $message\n";
+    file_put_contents($logFile, $logEntry, FILE_APPEND);
+    echo $logEntry;
+}
+
+// Verificar se é uma requisição POST (webhook do GitHub)
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    die('Método não permitido. Este endpoint só aceita POST requests do GitHub webhook.');
+}
+
+logMessage("🚀 Deploy iniciado via webhook");
 
 try {
-    // Obter payload do GitHub (se disponível)
+    // Obter payload do GitHub
     $input = file_get_contents('php://input');
     $payload = json_decode($input, true);
     
-    // Log do payload
-    file_put_contents($logFile, "[$timestamp] Payload recebido: " . substr($input, 0, 200) . "...\n", FILE_APPEND);
+    logMessage("📦 Payload recebido do GitHub");
     
-    // Executar git pull
-    $output = [];
-    $exitCode = 0;
-    
-    // Comando para atualizar o repositório
-    $command = 'cd ' . __DIR__ . ' && git pull origin master 2>&1';
-    exec($command, $output, $exitCode);
-    
-    // Log do resultado
-    $result = implode("\n", $output);
-    file_put_contents($logFile, "[$timestamp] Git pull resultado ($exitCode): $result\n", FILE_APPEND);
-    
-    if ($exitCode === 0) {
-        file_put_contents($logFile, "[$timestamp] Deploy CONCLUÍDO com sucesso\n", FILE_APPEND);
+    // Verificar se é um push no branch master
+    if (isset($payload['ref']) && $payload['ref'] === 'refs/heads/master') {
+        logMessage("✅ Push detectado no branch master");
         
-        // Limpar cache se necessário
-        if (function_exists('opcache_reset')) {
-            opcache_reset();
-        }
+        // Criar arquivo de flag para indicar que precisa de deploy
+        $flagFile = 'deploy-flag.txt';
+        file_put_contents($flagFile, $timestamp . ' - Deploy necessário');
+        
+        logMessage("🏁 Flag de deploy criada: $flagFile");
         
         http_response_code(200);
         echo json_encode([
             'status' => 'success',
-            'message' => 'Deploy realizado com sucesso',
+            'message' => 'Flag de deploy criada - Execute deploy manual',
             'timestamp' => $timestamp,
-            'branch' => 'master'
+            'branch' => 'master',
+            'action' => 'flag_created'
         ]);
+        
     } else {
-        file_put_contents($logFile, "[$timestamp] Deploy FALHOU: $result\n", FILE_APPEND);
-        http_response_code(500);
+        logMessage("⚠️ Push em branch diferente, ignorando");
+        http_response_code(200);
         echo json_encode([
-            'status' => 'error',
-            'message' => 'Erro no deploy: ' . $result,
+            'status' => 'ignored',
+            'message' => 'Push em branch diferente de master',
             'timestamp' => $timestamp
         ]);
     }
     
 } catch (Exception $e) {
-    file_put_contents($logFile, "[$timestamp] Erro no deploy: " . $e->getMessage() . "\n", FILE_APPEND);
+    logMessage("❌ Erro no deploy: " . $e->getMessage());
     
     http_response_code(500);
     echo json_encode([
@@ -77,4 +75,6 @@ try {
         'timestamp' => $timestamp
     ]);
 }
+
+logMessage("🏁 Deploy finalizado");
 ?>
