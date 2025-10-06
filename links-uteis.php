@@ -982,33 +982,33 @@
                     </div>
                     
                     <div class="link-item">
-                        <h3 class="link-title">SuperPrati Admin</h3>
-                        <p class="link-description">Página de administração para login no sistema SuperPrati, especificamente para a localidade de Pernambuco.</p>
-                        <a href="https://admin.superprati.com.br/" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <h3 class="link-title">Portal SuperPrati</h3>
+                        <p class="link-description">Portal oficial do sistema SuperPrati para administração e gestão de CFCs.</p>
+                        <a href="https://www.superprati.com.br/" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">
-                        <h3 class="link-title">SuperPrati Instrutor</h3>
-                        <p class="link-description">Página de recursos e suporte para instrutores.</p>
-                        <a href="https://instrutor.superprati.com.br/" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <h3 class="link-title">Sistema de Habilitação</h3>
+                        <p class="link-description">Sistema oficial do DETRAN para processos de habilitação e renovação.</p>
+                        <a href="https://www.detran.pe.gov.br/servicos/habilitacao" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">
-                        <h3 class="link-title">Exame Teórico SuperPrati</h3>
-                        <p class="link-description">Página de login para gestores do sistema de exames teóricos da SuperPrati.</p>
-                        <a href="https://exame.superprati.com.br/" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <h3 class="link-title">Consulta de Processos</h3>
+                        <p class="link-description">Consulta de processos de habilitação e renovação no DETRAN-PE.</p>
+                        <a href="https://www.detran.pe.gov.br/consulta-processos" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">
-                        <h3 class="link-title">Onboarding Digital</h3>
-                        <p class="link-description">Página de login para o sistema Onboarding Digital.</p>
-                        <a href="https://onboarding.digital/" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <h3 class="link-title">Portal do CFC</h3>
+                        <p class="link-description">Portal oficial para Centros de Formação de Condutores.</p>
+                        <a href="https://www.detran.pe.gov.br/portal-cfc" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">
-                        <h3 class="link-title">Onboarding Admin</h3>
-                        <p class="link-description">Página de login para o sistema onboarding admin.</p>
-                        <a href="https://admin.onboarding.digital/" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <h3 class="link-title">Agendamento Online</h3>
+                        <p class="link-description">Sistema de agendamento online para exames e serviços do DETRAN.</p>
+                        <a href="https://www.detran.pe.gov.br/agendamento" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">
