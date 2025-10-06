@@ -21,10 +21,10 @@ function logMessage($message) {
     echo $logEntry;
 }
 
-// Carregar token de teste (opcional) de config/deploy-token.php
+// Carregar token de teste (opcional) de config/deploy-token.txt
 $testToken = null;
-if (file_exists(__DIR__ . '/config/deploy-token.php')) {
-    $testToken = trim(@file_get_contents(__DIR__ . '/config/deploy-token.php')) ?: null;
+if (file_exists(__DIR__ . '/config/deploy-token.txt')) {
+    $testToken = trim(@file_get_contents(__DIR__ . '/config/deploy-token.txt')) ?: null;
 }
 
 // Verificar método: permitir GET somente em modo de teste com token
