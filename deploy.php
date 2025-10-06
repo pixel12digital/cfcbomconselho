@@ -45,20 +45,67 @@ try {
     if (isset($payload['ref']) && $payload['ref'] === 'refs/heads/master') {
         logMessage("✅ Push detectado no branch master");
         
-        // Criar arquivo de flag para indicar que precisa de deploy
-        $flagFile = 'deploy-flag.txt';
-        file_put_contents($flagFile, $timestamp . ' - Deploy necessário');
+        // Executar deploy automático
+        logMessage("🔄 Executando git pull...");
         
-        logMessage("🏁 Flag de deploy criada: $flagFile");
+        $commands = [
+            'git fetch --all',
+            'git reset --hard origin/master',
+            'git clean -fd',
+            'git pull --rebase --autostash'
+        ];
         
-        http_response_code(200);
-        echo json_encode([
-            'status' => 'success',
-            'message' => 'Flag de deploy criada - Execute deploy manual',
-            'timestamp' => $timestamp,
-            'branch' => 'master',
-            'action' => 'flag_created'
-        ]);
+        $deploySuccess = true;
+        $output = [];
+        
+        foreach ($commands as $cmd) {
+            $descriptor = [1 => ['pipe', 'w'], 2 => ['pipe', 'w']];
+            $proc = proc_open($cmd, $descriptor, $pipes, __DIR__);
+            
+            if (is_resource($proc)) {
+                $stdout = stream_get_contents($pipes[1]);
+                $stderr = stream_get_contents($pipes[2]);
+                fclose($pipes[1]);
+                fclose($pipes[2]);
+                $exit = proc_close($proc);
+                
+                logMessage("$cmd => exit:$exit");
+                if ($stdout) logMessage("STDOUT: " . trim($stdout));
+                if ($stderr) logMessage("STDERR: " . trim($stderr));
+                
+                if ($exit !== 0) {
+                    $deploySuccess = false;
+                    logMessage("❌ Erro no comando: $cmd");
+                    break;
+                }
+            } else {
+                $deploySuccess = false;
+                logMessage("❌ Falha ao executar: $cmd");
+                break;
+            }
+        }
+        
+        if ($deploySuccess) {
+            logMessage("✅ Deploy concluído com sucesso");
+            http_response_code(200);
+            echo json_encode([
+                'status' => 'success',
+                'message' => 'Deploy executado com sucesso',
+                'timestamp' => $timestamp,
+                'branch' => 'master',
+                'action' => 'deploy_completed'
+            ]);
+        } else {
+            logMessage("❌ Deploy falhou");
+            http_response_code(500);
+            echo json_encode([
+                'status' => 'error',
+                'message' => 'Deploy falhou - verifique logs',
+                'timestamp' => $timestamp,
+                'branch' => 'master',
+                'action' => 'deploy_failed'
+            ]);
+        }
         
     } else {
         logMessage("⚠️ Push em branch diferente, ignorando");
