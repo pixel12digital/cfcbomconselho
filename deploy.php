@@ -21,21 +21,35 @@ function logMessage($message) {
     echo $logEntry;
 }
 
-// Verificar se é uma requisição POST (webhook do GitHub)
+// Carregar token de teste (opcional) de config/deploy-token.php
+$testToken = null;
+if (file_exists(__DIR__ . '/config/deploy-token.php')) {
+    $testToken = trim(@file_get_contents(__DIR__ . '/config/deploy-token.php')) ?: null;
+}
+
+// Verificar método: permitir GET somente em modo de teste com token
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    http_response_code(405);
-    die('Método não permitido. Este endpoint só aceita POST requests do GitHub webhook.');
+    $isTest = isset($_GET['test']) && isset($_GET['token']) && $testToken && hash_equals($testToken, (string)$_GET['token']);
+    if (!$isTest) {
+        http_response_code(405);
+        die('Método não permitido. Este endpoint só aceita POST requests do GitHub webhook.');
+    }
+    logMessage('🧪 Modo teste via GET autorizado por token');
 }
 
 logMessage("🚀 Deploy iniciado via webhook");
 
 try {
-    // Obter payload do GitHub
+    // Obter payload do GitHub (ou simular em teste)
     $input = file_get_contents('php://input');
     $payload = json_decode($input, true);
-    
-    logMessage("📦 Payload recebido do GitHub");
-    
+
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        $payload = ['ref' => 'refs/heads/master', 'test' => true];
+    } else {
+        logMessage("📦 Payload recebido do GitHub");
+    }
+
     // Verificar se é um push no branch master
     if (isset($payload['ref']) && $payload['ref'] === 'refs/heads/master') {
         logMessage("✅ Push detectado no branch master");
@@ -52,7 +66,8 @@ try {
             'message' => 'Flag de deploy criada - Execute deploy manual',
             'timestamp' => $timestamp,
             'branch' => 'master',
-            'action' => 'flag_created'
+            'action' => 'flag_created',
+            'test_mode' => ($_SERVER['REQUEST_METHOD'] === 'GET')
         ]);
         
     } else {
