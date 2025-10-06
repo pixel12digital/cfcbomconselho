@@ -847,7 +847,7 @@ require_once 'includes/config.php';
             gap: 15px !important;
         }
         
-        /* Botão WhatsApp Padrão - Forçar estilos */
+        /* Botões flutuantes padrão (ícone apenas) */
         .floating-btn {
             width: 56px !important;
             height: 56px !important;
@@ -882,6 +882,42 @@ require_once 'includes/config.php';
         
         .floating-btn.whatsapp:hover {
             background: #20c05a !important;
+        }
+        
+        /* Botão Ligar Agora (ícone telefone) */
+        .floating-btn.call {
+            background: var(--logo-yellow) !important;
+            color: var(--logo-blue) !important;
+            font-size: 22px !important;
+        }
+        .floating-btn.call:hover {
+            filter: brightness(0.95) !important;
+        }
+
+        /* Scroll to top circular */
+        .scroll-top {
+            width: 50px !important;
+            height: 50px !important;
+            border-radius: 50% !important;
+            background: #ffffff !important;
+            border: 2px solid rgba(0,0,0,0.08) !important;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            cursor: pointer !important;
+            transition: all 0.3s ease !important;
+        }
+        .scroll-top:hover {
+            transform: translateY(-2px) !important;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.2) !important;
+        }
+        .scroll-top .scroll-icon {
+            width: 0;
+            height: 0;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-bottom: 12px solid var(--logo-yellow);
         }
         
         /* Contain para melhor performance de layout */
@@ -4752,11 +4788,22 @@ require_once 'includes/config.php';
         });
     </script>
 
-    <!-- Floating Button WhatsApp -->
+    <!-- Botões Flutuantes: WhatsApp, Ligar Agora e Scroll Top -->
     <div class="floating-buttons" id="floating-buttons">
         <a href="https://wa.me/5587981450308" class="floating-btn whatsapp" target="_blank" rel="noopener" aria-label="WhatsApp">
-            <i class="fab fa-whatsapp"></i>
+            <svg viewBox="0 0 32 32" width="26" height="26" fill="#ffffff" aria-hidden="true">
+                <path d="M19.11 17.43c-.3-.16-1.76-.87-2.03-.97-.27-.1-.47-.16-.67.16-.2.32-.77.97-.95 1.17-.18.2-.35.23-.65.08-.3-.16-1.25-.46-2.38-1.47-.88-.78-1.48-1.73-1.65-2.03-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.53.15-.18.2-.3.3-.5.1-.2.05-.37-.03-.53-.08-.16-.67-1.62-.92-2.22-.24-.58-.5-.5-.67-.5-.17 0-.37-.02-.57-.02-.2 0-.53.08-.81.37-.27.3-1.06 1.03-1.06 2.51s1.09 2.91 1.24 3.11c.15.2 2.14 3.27 5.19 4.6.73.32 1.3.51 1.74.65.73.23 1.39.2 1.92.12.59-.09 1.76-.72 2.01-1.41.25-.7.25-1.29.17-1.41-.07-.12-.27-.2-.57-.35z"/>
+                <path d="M27.1 4.9C24.2 2 20.3.5 16.2.5 7.9.5 1.2 7.2 1.2 15.5c0 2.6.7 5.1 2.1 7.3L1 31l8.4-2.2c2.2 1.2 4.7 1.8 7.3 1.8 8.3 0 15-6.7 15-15 0-4.1-1.6-8-4.6-10.9zM16.7 27.6c-2.3 0-4.6-.6-6.6-1.8l-.5-.3-5 1.3 1.3-4.9-.3-.5c-1.3-2.1-1.9-4.4-1.9-6.8 0-7.2 5.9-13.1 13.1-13.1 3.5 0 6.8 1.4 9.2 3.8 2.4 2.4 3.8 5.7 3.8 9.2-.1 7.2-6 13.1-13.5 13.1z"/>
+            </svg>
         </a>
+        <a href="tel:+5587981450308" class="floating-btn call" aria-label="Ligar Agora">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor" aria-hidden="true">
+                <path d="M6.62 10.79a15.05 15.05 0 006.59 6.59l2.2-2.2c.27-.27.67-.36 1.02-.24 1.12.37 2.33.57 3.57.57.55 0 1 .45 1 1V20c0 .55-.45 1-1 1C12.4 21 3 11.6 3 1c0-.55.45-1 1-1h2.5c.55 0 1 .45 1 1 0 1.24.2 2.45.57 3.57.11.35.03.74-.24 1.02l-2.21 2.2z"/>
+            </svg>
+        </a>
+        <button class="scroll-top" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Voltar ao topo">
+            <span class="scroll-icon"></span>
+        </button>
     </div>
 
     <!-- JavaScript para Responsividade -->
