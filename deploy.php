@@ -48,7 +48,12 @@ try {
         // Executar deploy automático
         logMessage("🔄 Executando git pull...");
         
+        // Verificar se git está disponível
+        $gitCheck = shell_exec('which git 2>/dev/null || where git 2>/dev/null');
+        logMessage("Git path: " . trim($gitCheck ?: 'não encontrado'));
+        
         $commands = [
+            'git --version',
             'git fetch --all',
             'git reset --hard origin/master',
             'git clean -fd',
