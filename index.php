@@ -2404,6 +2404,111 @@ require_once 'includes/config.php';
             border-radius: 2px;
         }
         
+        /* Fotos de Destaque */
+        .fleet-highlight {
+            margin: 60px 0;
+        }
+        
+        .highlight-images {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 30px;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .highlight-item {
+            position: relative;
+            border-radius: 25px;
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .highlight-item:hover {
+            transform: translateY(-20px) scale(1.02);
+            box-shadow: 0 30px 60px rgba(0, 0, 0, 0.4);
+        }
+        
+        .highlight-image {
+            width: 100%;
+            height: 300px;
+            object-fit: cover;
+            transition: transform 0.4s ease;
+        }
+        
+        .highlight-item:hover .highlight-image {
+            transform: scale(1.1);
+        }
+        
+        .highlight-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: linear-gradient(135deg, rgba(243, 156, 18, 0.9) 0%, rgba(230, 126, 34, 0.9) 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .highlight-item:hover .highlight-overlay {
+            opacity: 1;
+        }
+        
+        .highlight-content {
+            text-align: center;
+            color: white;
+            padding: 20px;
+            transform: translateY(20px);
+            transition: transform 0.3s ease;
+        }
+        
+        .highlight-item:hover .highlight-content {
+            transform: translateY(0);
+        }
+        
+        .highlight-content h4 {
+            font-size: 1.8rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .highlight-content p {
+            font-size: 1.1rem;
+            font-weight: 500;
+            opacity: 0.95;
+            line-height: 1.4;
+            text-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+        }
+        
+        /* Responsivo para fotos de destaque */
+        @media (max-width: 768px) {
+            .highlight-images {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .highlight-image {
+                height: 250px;
+            }
+            
+            .highlight-content h4 {
+                font-size: 1.5rem;
+            }
+            
+            .highlight-content p {
+                font-size: 1rem;
+            }
+        }
+        
         /* Galeria de Frota */
         .fleet-gallery {
             display: grid;
@@ -4350,6 +4455,31 @@ require_once 'includes/config.php';
             <div class="fleet-content">
                 <h2 class="fleet-title">Frota Moderna e Pátio Completo</h2>
                 <h3 class="fleet-subtitle">Treinamento Prático com Veículos Atualizados em um Ambiente Seguro</h3>
+                
+                <!-- Fotos de Destaque -->
+                <div class="fleet-highlight">
+                    <div class="highlight-images">
+                        <div class="highlight-item">
+                            <img src="assets/img/frota-destaque01.jpg" alt="Frota Moderna - Destaque 1" class="highlight-image">
+                            <div class="highlight-overlay">
+                                <div class="highlight-content">
+                                    <h4>Frota Atualizada</h4>
+                                    <p>Veículos modernos e seguros para seu aprendizado</p>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="highlight-item">
+                            <img src="assets/img/frota-destaque02.jpg" alt="Pátio Completo - Destaque 2" class="highlight-image">
+                            <div class="highlight-overlay">
+                                <div class="highlight-content">
+                                    <h4>Pátio Completo</h4>
+                                    <p>Ambiente seguro e equipado para aulas práticas</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
                 
                 <div class="fleet-gallery">
                     <div class="gallery-item" data-image="1">
