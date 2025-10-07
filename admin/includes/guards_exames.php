@@ -59,7 +59,7 @@ class GuardsExames {
             }
         }
         
-        // Exames OK = ambos aptos
+        // Exames OK = ambos aptos (inapto_temporario é considerado não apto para aulas teóricas)
         return ($medico && $medico['resultado'] === 'apto') && 
                ($psicotecnico && $psicotecnico['resultado'] === 'apto');
     }

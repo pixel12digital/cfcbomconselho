@@ -4,15 +4,77 @@
  * Endpoints para gestão de exames médico e psicotécnico
  */
 
-require_once '../../includes/config.php';
-require_once '../../includes/database.php';
-require_once '../../includes/auth.php';
+// Configurar relatório de erros
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Não exibir erros na tela para não quebrar JSON
+ini_set('log_errors', 1);
+ini_set('error_log', __DIR__ . '/../logs/exames_api_errors.log');
+
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
+
+// Limpar qualquer saída anterior
+if (ob_get_level()) {
+    ob_clean();
+}
+
+// Iniciar buffer de saída para capturar qualquer output inesperado
+ob_start();
+
+// Definir headers
+header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+header('Access-Control-Allow-Headers: Content-Type');
+
+// Função para retornar JSON de forma segura
+function returnJsonResponse($data) {
+    error_log("[EXAMES API] returnJsonResponse chamada com: " . print_r($data, true));
+    
+    // Limpar qualquer output anterior e parar qualquer buffer
+    while (ob_get_level()) {
+        ob_end_clean();
+    }
+    
+    // Limpar qualquer saída anterior
+    if (headers_sent()) {
+        error_log("[EXAMES API] Headers já enviados, não é possível enviar JSON");
+        return;
+    }
+    
+    // Definir headers novamente para garantir
+    header('Content-Type: application/json; charset=utf-8');
+    
+    $json = json_encode($data, JSON_UNESCAPED_UNICODE);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log("[EXAMES API] Erro ao codificar JSON: " . json_last_error_msg());
+        $json = json_encode([
+            'success' => false,
+            'error' => 'Erro ao codificar JSON: ' . json_last_error_msg(),
+            'code' => 'JSON_ERROR'
+        ], JSON_UNESCAPED_UNICODE);
+    }
+    
+    error_log("[EXAMES API] JSON a ser enviado: " . $json);
+    echo $json;
+    exit;
+}
 
 // Verificar autenticação
-if (!isLoggedIn()) {
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+error_log("[EXAMES API] Session ID: " . session_id());
+error_log("[EXAMES API] Session data: " . print_r($_SESSION, true));
+error_log("[EXAMES API] POST data: " . print_r($_POST, true));
+
+if (!isset($_SESSION['user_id']) || !isLoggedIn()) {
+    error_log("[EXAMES API] Usuário não autenticado");
     http_response_code(401);
-    echo json_encode(['error' => 'Não autenticado', 'code' => 'UNAUTHORIZED']);
-    exit;
+    returnJsonResponse(['error' => 'Não autenticado', 'code' => 'UNAUTHORIZED']);
 }
 
 // Obter dados do usuário logado
@@ -27,50 +89,75 @@ $canWrite = $isAdmin || $isSecretaria;
 
 if (!$canRead) {
     http_response_code(403);
-    echo json_encode(['error' => 'Sem permissão para acessar exames', 'code' => 'FORBIDDEN']);
-    exit;
+    returnJsonResponse(['error' => 'Sem permissão para acessar exames', 'code' => 'FORBIDDEN']);
 }
 
 $db = db();
 $method = $_SERVER['REQUEST_METHOD'];
 
+// Tratar requisições OPTIONS (preflight)
+if ($method === 'OPTIONS') {
+    http_response_code(200);
+    exit;
+}
+
 try {
+    error_log("[EXAMES API] Processando requisição - Método: $method");
     switch ($method) {
         case 'GET':
+            error_log("[EXAMES API] Chamando handleGet");
             handleGet($db, $canWrite);
             break;
         case 'POST':
             if (!$canWrite) {
                 http_response_code(403);
-                echo json_encode(['error' => 'Sem permissão para criar exames', 'code' => 'FORBIDDEN']);
-                exit;
+                returnJsonResponse(['error' => 'Sem permissão para criar exames', 'code' => 'FORBIDDEN']);
             }
-            handlePost($db, $user);
+            
+            // Verificar ação específica
+            $action = $_POST['action'] ?? 'create';
+            
+            switch ($action) {
+                case 'create':
+                    handlePost($db, $user);
+                    break;
+                case 'update':
+                    handlePut($db, $user);
+                    break;
+                case 'delete':
+                    handleDelete($db, $user);
+                    break;
+                default:
+                    handlePost($db, $user);
+                    break;
+            }
             break;
         case 'PUT':
             if (!$canWrite) {
                 http_response_code(403);
-                echo json_encode(['error' => 'Sem permissão para editar exames', 'code' => 'FORBIDDEN']);
-                exit;
+                returnJsonResponse(['error' => 'Sem permissão para editar exames', 'code' => 'FORBIDDEN']);
             }
             handlePut($db, $user);
             break;
         case 'DELETE':
             if (!$canWrite) {
                 http_response_code(403);
-                echo json_encode(['error' => 'Sem permissão para cancelar exames', 'code' => 'FORBIDDEN']);
-                exit;
+                returnJsonResponse(['error' => 'Sem permissão para cancelar exames', 'code' => 'FORBIDDEN']);
             }
             handleDelete($db, $user);
             break;
         default:
             http_response_code(405);
-            echo json_encode(['error' => 'Método não permitido', 'code' => 'METHOD_NOT_ALLOWED']);
+            returnJsonResponse(['error' => 'Método não permitido', 'code' => 'METHOD_NOT_ALLOWED']);
     }
 } catch (Exception $e) {
     error_log('[EXAMES API] Erro: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['error' => 'Erro interno do servidor', 'code' => 'INTERNAL_ERROR']);
+    returnJsonResponse([
+        'error' => 'Erro interno do servidor', 
+        'code' => 'INTERNAL_ERROR',
+        'message' => $e->getMessage()
+    ]);
 }
 
 /**
@@ -84,16 +171,14 @@ function handleGet($db, $canWrite) {
     
     if (!$alunoId) {
         http_response_code(400);
-        echo json_encode(['error' => 'ID do aluno é obrigatório', 'code' => 'MISSING_ALUNO_ID']);
-        return;
+        returnJsonResponse(['error' => 'ID do aluno é obrigatório', 'code' => 'MISSING_ALUNO_ID']);
     }
     
     // Verificar se aluno existe
     $aluno = $db->fetch("SELECT id, nome FROM alunos WHERE id = ?", [$alunoId]);
     if (!$aluno) {
         http_response_code(404);
-        echo json_encode(['error' => 'Aluno não encontrado', 'code' => 'ALUNO_NOT_FOUND']);
-        return;
+        returnJsonResponse(['error' => 'Aluno não encontrado', 'code' => 'ALUNO_NOT_FOUND']);
     }
     
     // Construir query
@@ -122,7 +207,7 @@ function handleGet($db, $canWrite) {
         'exames_ok' => calcularExamesOK($exames)
     ];
     
-    echo json_encode($response);
+    returnJsonResponse($response);
 }
 
 /**
@@ -140,24 +225,21 @@ function handlePost($db, $user) {
     foreach ($required as $field) {
         if (empty($data[$field])) {
             http_response_code(400);
-            echo json_encode(['error' => "Campo '$field' é obrigatório", 'code' => 'MISSING_FIELD']);
-            return;
+            returnJsonResponse(['error' => "Campo '$field' é obrigatório", 'code' => 'MISSING_FIELD']);
         }
     }
     
     // Validar tipo
     if (!in_array($data['tipo'], ['medico', 'psicotecnico'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'Tipo deve ser "medico" ou "psicotecnico"', 'code' => 'INVALID_TIPO']);
-        return;
+        returnJsonResponse(['error' => 'Tipo deve ser "medico" ou "psicotecnico"', 'code' => 'INVALID_TIPO']);
     }
     
     // Verificar se aluno existe
     $aluno = $db->fetch("SELECT id FROM alunos WHERE id = ?", [$data['aluno_id']]);
     if (!$aluno) {
         http_response_code(404);
-        echo json_encode(['error' => 'Aluno não encontrado', 'code' => 'ALUNO_NOT_FOUND']);
-        return;
+        returnJsonResponse(['error' => 'Aluno não encontrado', 'code' => 'ALUNO_NOT_FOUND']);
     }
     
     // Verificar se já existe exame ativo do mesmo tipo
@@ -168,8 +250,7 @@ function handlePost($db, $user) {
     
     if ($existing) {
         http_response_code(409);
-        echo json_encode(['error' => "Já existe exame {$data['tipo']} ativo para este aluno", 'code' => 'EXAME_EXISTS']);
-        return;
+        returnJsonResponse(['error' => "Já existe exame {$data['tipo']} ativo para este aluno", 'code' => 'EXAME_EXISTS']);
     }
     
     // Preparar dados para inserção
@@ -195,14 +276,14 @@ function handlePost($db, $user) {
         error_log("[EXAMES API] Exame criado - ID: $exameId, Tipo: {$data['tipo']}, Aluno: {$data['aluno_id']}, Usuário: {$user['id']}");
         
         http_response_code(201);
-        echo json_encode([
+        returnJsonResponse([
             'success' => true,
             'message' => 'Exame agendado com sucesso',
             'exame' => $exame
         ]);
     } else {
         http_response_code(500);
-        echo json_encode(['error' => 'Erro ao criar exame', 'code' => 'CREATE_ERROR']);
+        returnJsonResponse(['error' => 'Erro ao criar exame', 'code' => 'CREATE_ERROR']);
     }
 }
 
@@ -210,26 +291,26 @@ function handlePost($db, $user) {
  * PUT - Atualizar exame (lançar resultado)
  */
 function handlePut($db, $user) {
-    $exameId = $_GET['id'] ?? null;
+    $exameId = $_POST['exame_id'] ?? $_GET['id'] ?? null;
     
     if (!$exameId) {
         http_response_code(400);
-        echo json_encode(['error' => 'ID do exame é obrigatório', 'code' => 'MISSING_ID']);
-        return;
+        returnJsonResponse(['error' => 'ID do exame é obrigatório', 'code' => 'MISSING_ID']);
     }
     
-    $data = json_decode(file_get_contents('php://input'), true);
+    // Para ações via POST, usar $_POST diretamente
+    $data = $_POST;
     
-    if (!$data) {
-        $data = $_POST;
+    // Se não há dados no POST, tentar json_decode
+    if (empty($data)) {
+        $data = json_decode(file_get_contents('php://input'), true);
     }
     
     // Verificar se exame existe
     $exame = $db->fetch("SELECT * FROM exames WHERE id = ?", [$exameId]);
     if (!$exame) {
         http_response_code(404);
-        echo json_encode(['error' => 'Exame não encontrado', 'code' => 'EXAME_NOT_FOUND']);
-        return;
+        returnJsonResponse(['error' => 'Exame não encontrado', 'code' => 'EXAME_NOT_FOUND']);
     }
     
     // Preparar dados para atualização
@@ -246,20 +327,18 @@ function handlePut($db, $user) {
     }
     
     // Validações
-    if (isset($updateData['resultado']) && !in_array($updateData['resultado'], ['apto', 'inapto', 'pendente'])) {
+    if (isset($updateData['resultado']) && !in_array($updateData['resultado'], ['apto', 'inapto', 'inapto_temporario', 'pendente'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'Resultado deve ser "apto", "inapto" ou "pendente"', 'code' => 'INVALID_RESULTADO']);
-        return;
+        returnJsonResponse(['error' => 'Resultado deve ser "apto", "inapto", "inapto_temporario" ou "pendente"', 'code' => 'INVALID_RESULTADO']);
     }
     
     if (isset($updateData['status']) && !in_array($updateData['status'], ['agendado', 'concluido', 'cancelado'])) {
         http_response_code(400);
-        echo json_encode(['error' => 'Status deve ser "agendado", "concluido" ou "cancelado"', 'code' => 'INVALID_STATUS']);
-        return;
+        returnJsonResponse(['error' => 'Status deve ser "agendado", "concluido" ou "cancelado"', 'code' => 'INVALID_STATUS']);
     }
     
     // Se lançando resultado, marcar como concluído
-    if (isset($updateData['resultado']) && in_array($updateData['resultado'], ['apto', 'inapto'])) {
+    if (isset($updateData['resultado']) && in_array($updateData['resultado'], ['apto', 'inapto', 'inapto_temporario'])) {
         $updateData['status'] = 'concluido';
         if (empty($updateData['data_resultado'])) {
             $updateData['data_resultado'] = date('Y-m-d');
@@ -267,7 +346,7 @@ function handlePut($db, $user) {
     }
     
     // Atualizar exame
-    $success = $db->update('exames', $updateData, ['id' => $exameId]);
+    $success = $db->update('exames', $updateData, 'id = ?', [$exameId]);
     
     if ($success) {
         // Buscar exame atualizado
@@ -276,14 +355,14 @@ function handlePut($db, $user) {
         // Log de auditoria
         error_log("[EXAMES API] Exame atualizado - ID: $exameId, Status: {$updateData['status']}, Resultado: {$updateData['resultado']}, Usuário: {$user['id']}");
         
-        echo json_encode([
+        returnJsonResponse([
             'success' => true,
             'message' => 'Exame atualizado com sucesso',
             'exame' => $exameAtualizado
         ]);
     } else {
         http_response_code(500);
-        echo json_encode(['error' => 'Erro ao atualizar exame', 'code' => 'UPDATE_ERROR']);
+        returnJsonResponse(['error' => 'Erro ao atualizar exame', 'code' => 'UPDATE_ERROR']);
     }
 }
 
@@ -291,39 +370,37 @@ function handlePut($db, $user) {
  * DELETE - Cancelar exame
  */
 function handleDelete($db, $user) {
-    $exameId = $_GET['id'] ?? null;
+    $exameId = $_POST['exame_id'] ?? $_GET['id'] ?? null;
     
     if (!$exameId) {
         http_response_code(400);
-        echo json_encode(['error' => 'ID do exame é obrigatório', 'code' => 'MISSING_ID']);
-        return;
+        returnJsonResponse(['error' => 'ID do exame é obrigatório', 'code' => 'MISSING_ID']);
     }
     
     // Verificar se exame existe
     $exame = $db->fetch("SELECT * FROM exames WHERE id = ?", [$exameId]);
     if (!$exame) {
         http_response_code(404);
-        echo json_encode(['error' => 'Exame não encontrado', 'code' => 'EXAME_NOT_FOUND']);
-        return;
+        returnJsonResponse(['error' => 'Exame não encontrado', 'code' => 'EXAME_NOT_FOUND']);
     }
     
     // Marcar como cancelado (soft delete)
     $success = $db->update('exames', [
         'status' => 'cancelado',
         'atualizado_por' => $user['id']
-    ], ['id' => $exameId]);
+    ], 'id = ?', [$exameId]);
     
     if ($success) {
         // Log de auditoria
         error_log("[EXAMES API] Exame cancelado - ID: $exameId, Usuário: {$user['id']}");
         
-        echo json_encode([
+        returnJsonResponse([
             'success' => true,
             'message' => 'Exame cancelado com sucesso'
         ]);
     } else {
         http_response_code(500);
-        echo json_encode(['error' => 'Erro ao cancelar exame', 'code' => 'DELETE_ERROR']);
+        returnJsonResponse(['error' => 'Erro ao cancelar exame', 'code' => 'DELETE_ERROR']);
     }
 }
 
@@ -343,6 +420,7 @@ function calcularExamesOK($exames) {
         }
     }
     
+    // Exames OK = ambos aptos (inapto_temporario é considerado não apto para aulas teóricas)
     return ($medico && $medico['resultado'] === 'apto') && 
            ($psicotecnico && $psicotecnico['resultado'] === 'apto');
 }

@@ -495,6 +495,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
         .admin-sidebar:hover {
             width: 70px !important;
         }
+        
     </style>
     
     <!-- CSS Inline para Garantir Funcionamento em Produção -->
@@ -680,6 +681,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <i class="fas fa-calendar-alt"></i>
                             <span>Agendamento</span>
                             <div class="nav-badge"><?php echo $stats['total_aulas']; ?></div>
+                        </a>
+                        <a href="index.php?page=exames" class="nav-sublink <?php echo $page === 'exames' ? 'active' : ''; ?>">
+                            <i class="fas fa-stethoscope"></i>
+                            <span>Exames Médicos</span>
                         </a>
                     </div>
                 </div>
@@ -915,6 +920,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <i class="fas fa-calendar-alt"></i>
                                     <span>Agendamento</span>
                                     <span class="mobile-nav-badge"><?php echo $stats['total_aulas']; ?></span>
+                                </a>
+                                <a href="index.php?page=exames" class="mobile-nav-sublink <?php echo $page === 'exames' ? 'active' : ''; ?>">
+                                    <i class="fas fa-stethoscope"></i>
+                                    <span>Exames Médicos</span>
                                 </a>
                             </div>
                         </div>
@@ -1612,6 +1621,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <script src="assets/js/menu-flyout.js"></script>
     <script src="assets/js/mobile-menu-clean.js"></script>
     <script src="assets/js/topbar-unified.js"></script>
+    
     <script src="assets/js/components.js"></script>
     
     <!-- PWA Registration -->

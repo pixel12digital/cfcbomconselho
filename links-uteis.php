@@ -972,19 +972,19 @@
                     <div class="link-item">
                         <h3 class="link-title">Autenticação DETRAN-PE</h3>
                         <p class="link-description">Página de autenticação para serviços de habilitação do DETRAN Pernambuco.</p>
-                        <a href="https://www.detran.pe.gov.br/autenticacao" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <a href="https://online8.detran.pe.gov.br/Habilitacao/ReforOnLine_BIO/startuser.aspx" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">
-                        <h3 class="link-title">Conta Digital</h3>
-                        <p class="link-description">Página de login para acesso à conta digital no site Pilota.app.</p>
-                        <a href="https://pilota.app/" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <h3 class="link-title">Conta Pilotar</h3>
+                        <p class="link-description">Página de login para acesso à conta digital no site Pilotar.app.</p>
+                        <a href="https://conta.pilotar.app/#/login" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">
-                        <h3 class="link-title">Portal SuperPrati</h3>
+                        <h3 class="link-title">Portal Super Prati</h3>
                         <p class="link-description">Portal oficial do sistema SuperPrati para administração e gestão de CFCs.</p>
-                        <a href="https://www.superprati.com.br/" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <a href="https://admin-pe.superprati.co/Login.aspx?ReturnUrl=%2f" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">
@@ -1008,7 +1008,7 @@
                     <div class="link-item">
                         <h3 class="link-title">Agendamento Online</h3>
                         <p class="link-description">Sistema de agendamento online para exames e serviços do DETRAN.</p>
-                        <a href="https://www.detran.pe.gov.br/agendamento" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <a href="https://exame-teorico.superprati.co/gestor/login" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">

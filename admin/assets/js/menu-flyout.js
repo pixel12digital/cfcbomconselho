@@ -24,7 +24,8 @@ document.addEventListener('DOMContentLoaded', function() {
         'operacional': {
             title: 'Operacional',
             items: [
-                { icon: 'fas fa-calendar-alt', text: 'Agendamento', href: '?page=agendamento' }
+                { icon: 'fas fa-calendar-alt', text: 'Agendamento', href: '?page=agendamento' },
+                { icon: 'fas fa-stethoscope', text: 'Exames Médicos', href: '?page=exames' }
             ]
         },
         'turmas': {

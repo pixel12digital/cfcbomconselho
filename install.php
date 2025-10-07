@@ -141,6 +141,28 @@ try {
                 criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (usuario_id) REFERENCES usuarios(id)
             )
+        ",
+        'exames' => "
+            CREATE TABLE IF NOT EXISTS exames (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                aluno_id INT NOT NULL,
+                tipo ENUM('medico', 'psicotecnico') NOT NULL,
+                status ENUM('agendado', 'concluido', 'cancelado') DEFAULT 'agendado',
+                resultado ENUM('apto', 'inapto', 'inapto_temporario', 'pendente') DEFAULT 'pendente',
+                clinica_nome VARCHAR(200),
+                protocolo VARCHAR(100),
+                data_agendada DATE NOT NULL,
+                data_resultado DATE,
+                observacoes TEXT,
+                anexos TEXT,
+                criado_por INT,
+                atualizado_por INT,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (aluno_id) REFERENCES alunos(id),
+                FOREIGN KEY (criado_por) REFERENCES usuarios(id),
+                FOREIGN KEY (atualizado_por) REFERENCES usuarios(id)
+            )
         "
     ];
     
