@@ -14,6 +14,54 @@
     margin: 1rem auto !important;
 }
 
+/* MODAL DE EXAMES - LARGURA RESPONSIVA */
+html body #modalAgendarExame .modal-dialog {
+    max-width: min(1400px, 95vw) !important;
+    width: min(1400px, 95vw) !important;
+    margin: 0 auto !important;
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    top: auto !important;
+    bottom: auto !important;
+    transform: none !important;
+    flex: none !important;
+}
+
+@media (min-width: 992px) {
+    /* Garantir que o modal seja centralizado quando visível */
+    html body #modalAgendarExame.show {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+    }
+    
+    /* Largura responsiva para desktop */
+    html body #modalAgendarExame .modal-dialog,
+    html body .modal#modalAgendarExame .modal-dialog,
+    html body .modal.fade#modalAgendarExame .modal-dialog,
+    html body .modal.show#modalAgendarExame .modal-dialog,
+    html body .modal.modal-exame#modalAgendarExame .modal-dialog {
+        max-width: min(1400px, 95vw) !important;
+        width: min(1400px, 95vw) !important;
+        margin: 0 auto !important;
+        position: relative !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        flex: none !important;
+    }
+    
+    /* Garantir que o modal-body não tenha scroll no desktop */
+    html body #modalAgendarExame .modal-body {
+        overflow: visible !important;
+        max-height: none !important;
+        height: auto !important;
+    }
+}
+
 /* Modal responsivo para telas pequenas */
 @media (max-width: 768px) {
     .modal-dialog {
@@ -21,6 +69,21 @@
         width: 95vw !important;
         margin: 0.5rem auto !important;
         max-height: 95vh !important;
+    }
+    
+    /* Mobile para modal de exames */
+    #modalAgendarExame .modal-dialog {
+        max-width: 95vw !important;
+        width: 95vw !important;
+        margin: 0.5rem !important;
+        height: 90vh !important;
+        max-height: 90vh !important;
+    }
+    
+    #modalAgendarExame .modal-body {
+        flex: 1 !important;
+        overflow-y: auto !important;
+        max-height: calc(90vh - 120px) !important;
     }
     
     .modal-content {

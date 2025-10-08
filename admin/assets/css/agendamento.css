@@ -255,6 +255,13 @@
     max-width: 600px;
 }
 
+/* EXCEÇÃO: Modal de exames não deve usar essas regras */
+.modal.modal-exame .modal-content {
+    transform: none !important;
+    transition: none !important;
+    max-width: none !important;
+}
+
 .modal-overlay[style*="display: flex"] .modal-content {
     transform: scale(1);
 }

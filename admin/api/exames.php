@@ -244,13 +244,30 @@ function handlePost($db, $user) {
     
     // Verificar se já existe exame ativo do mesmo tipo
     $existing = $db->fetch("
-        SELECT id FROM exames 
+        SELECT id, data_agendada, status, resultado FROM exames 
         WHERE aluno_id = ? AND tipo = ? AND status IN ('agendado', 'concluido')
     ", [$data['aluno_id'], $data['tipo']]);
     
     if ($existing) {
-        http_response_code(409);
-        returnJsonResponse(['error' => "Já existe exame {$data['tipo']} ativo para este aluno", 'code' => 'EXAME_EXISTS']);
+        $dataFormatada = date('d/m/Y', strtotime($existing['data_agendada']));
+        $statusTexto = $existing['status'] === 'agendado' ? 'agendado' : 'concluído';
+        $resultadoTexto = $existing['resultado'] ? " (Resultado: {$existing['resultado']})" : '';
+        
+        // Retornar mensagem amigável em vez de erro 409
+        $tipoExameTexto = $data['tipo'] === 'medico' ? 'médico' : 'psicotécnico';
+        
+        returnJsonResponse([
+            'success' => false,
+            'message' => "⚠️ Já existe um exame {$tipoExameTexto} {$statusTexto} para este aluno na data {$dataFormatada}{$resultadoTexto}",
+            'friendly_message' => "Não é possível agendar um novo exame {$tipoExameTexto} para este aluno, pois já existe um {$statusTexto}. Para agendar um novo exame, primeiro cancele o exame existente na lista de exames.",
+            'code' => 'EXAME_EXISTS',
+            'existing_exam' => [
+                'id' => $existing['id'],
+                'data_agendada' => $existing['data_agendada'],
+                'status' => $existing['status'],
+                'resultado' => $existing['resultado']
+            ]
+        ]);
     }
     
     // Preparar dados para inserção

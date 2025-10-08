@@ -310,12 +310,215 @@ try {
     box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
 }
 
+/* Modal de Exames - CSS ULTRA ESPECÍFICO */
+html body #modalAgendarExame {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    z-index: 1055 !important;
+    display: none !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    max-width: none !important;
+}
+
+html body #modalAgendarExame.show {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;  /* REMOVER: padding não deve estar no overlay */
+}
+
+#modalAgendarExame .modal-content {
+    height: auto !important;
+    max-height: none !important;
+}
+
+#modalAgendarExame .modal-body {
+    overflow: visible !important;
+    max-height: none !important;
+    height: auto !important;
+    padding: 2rem !important;
+}
+
+/* Desktop - Layout amplo */
+@media (min-width: 992px) {
+    /* Garantir que o modal seja centralizado quando visível */
+    html body #modalAgendarExame.show {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 0 !important;  /* REMOVER: padding não deve estar no overlay */
+    }
+    
+    /* Garantir que o modal-dialog seja centralizado verticalmente COM GUTTER */
+    html body #modalAgendarExame .modal-dialog {
+        margin: 4rem auto !important;  /* GUTTER DESKTOP: 4rem top/bottom, auto left/right */
+        align-self: center !important;
+        max-height: calc(100vh - 8rem) !important;  /* Respeitar gutter vertical */
+    }
+    
+    /* Largura responsiva para desktop COM GUTTER LATERAL */
+    html body #modalAgendarExame .modal-dialog,
+    html body .modal#modalAgendarExame .modal-dialog,
+    html body .modal.fade#modalAgendarExame .modal-dialog,
+    html body .modal.show#modalAgendarExame .modal-dialog,
+    html body .modal.modal-exame#modalAgendarExame .modal-dialog {
+        margin: 4rem auto !important;  /* GUTTER DESKTOP: 4rem top/bottom, auto left/right */
+        max-width: min(1400px, calc(100vw - 8rem)) !important;  /* Respeitar gutter lateral */
+        width: min(1400px, calc(100vw - 8rem)) !important;  /* Respeitar gutter lateral */
+        position: relative !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        flex: none !important;
+    }
+    
+    #modalAgendarExame .form-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr 1fr !important;
+        gap: 1.25rem 2rem !important;  /* REDUZIDO: 1.25rem vertical, 2rem horizontal */
+    }
+    
+    #modalAgendarExame .form-grid .field-full {
+        grid-column: 1 / -1 !important;
+    }
+    
+    #modalAgendarExame .form-floating {
+        margin-bottom: 0.75rem !important;  /* REDUZIDO: de 1.75rem para 0.75rem */
+    }
+    
+    #modalAgendarExame .form-floating > .form-control,
+    #modalAgendarExame .form-floating > .form-select {
+        height: calc(5rem + 2px) !important;  /* AUMENTADO: de 4.25rem para 5rem para evitar clipping */
+        padding: 1.75rem 1rem 1.75rem 1rem !important;  /* AUMENTADO: bottom padding de 1.5rem para 1.75rem */
+        font-size: 1.1rem !important;
+        line-height: 1.5 !important;  /* FIX: line-height adequado para evitar clipping */
+    }
+    
+    #modalAgendarExame .form-floating > label {
+        padding: 1.75rem 1rem 0.5rem 1rem !important;  /* AUMENTADO: bottom padding de 0 para 0.5rem */
+        font-size: 1.1rem !important;
+        margin-bottom: 0.5rem !important;  /* REDUZIDO MOBILE: de 0.75rem para 0.5rem */
+        transition: transform 0.2s ease-in-out !important;  /* Transição suave */
+    }
+    
+    /* Estados filled/focus para desktop */
+    #modalAgendarExame .form-floating > .form-control:not(:placeholder-shown) ~ label,
+    #modalAgendarExame .form-floating > .form-select:not([value=""]) ~ label,
+    #modalAgendarExame .form-floating > input[type="date"]:not(:placeholder-shown) ~ label,
+    #modalAgendarExame .form-floating > .form-control:focus ~ label,
+    #modalAgendarExame .form-floating > .form-select:focus ~ label,
+    #modalAgendarExame .form-floating > input[type="date"]:focus ~ label,
+    #modalAgendarExame .form-floating > .form-control.has-value ~ label,
+    #modalAgendarExame .form-floating > .form-select.has-value ~ label,
+    #modalAgendarExame .form-floating > input[type="date"].has-value ~ label,
+    #modalAgendarExame .form-floating > .form-control.is-focused ~ label,
+    #modalAgendarExame .form-floating > .form-select.is-focused ~ label,
+    #modalAgendarExame .form-floating > input[type="date"].is-focused ~ label {
+        transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;  /* GAP FORÇADO: -1.5rem */
+        opacity: 0.65 !important;
+    }
+}
+
+/* Mobile - Tela cheia com scroll */
+@media (max-width: 991px) {
+    #modalAgendarExame {
+        padding: 0 !important;  /* REMOVER: padding não deve estar no overlay */
+    }
+    
+    #modalAgendarExame .modal-dialog {
+        max-width: calc(100vw - 2rem) !important;  /* GUTTER MOBILE: 1rem de cada lado */
+        width: calc(100vw - 2rem) !important;  /* GUTTER MOBILE: 1rem de cada lado */
+        margin: 1rem auto !important;  /* GUTTER MOBILE: 1rem top/bottom, auto left/right */
+        height: calc(100vh - 2rem) !important;  /* Respeitar gutter vertical */
+        max-height: calc(100vh - 2rem) !important;  /* Respeitar gutter vertical */
+    }
+    
+    #modalAgendarExame .modal-content {
+        width: 100% !important;
+        height: 100% !important;
+        max-height: 90vh !important;
+        display: flex !important;
+        flex-direction: column !important;
+    }
+    
+    #modalAgendarExame .modal-body {
+        flex: 1 !important;
+        padding: 1.5rem !important;  /* PADDING MOBILE: reduzido mas consistente */
+        overflow-y: auto !important;
+        max-height: calc(90vh - 120px) !important;
+    }
+    
+    #modalAgendarExame .form-grid {
+        width: 100% !important;
+        display: grid !important;
+        grid-template-columns: 1fr !important;
+        gap: 0.75rem !important;  /* REDUZIDO: de 1rem para 0.75rem */
+    }
+}
+
+#modalAgendarExame .modal-header,
+#modalAgendarExame .modal-footer {
+    flex-shrink: 0 !important;
+}
+
+/* REGRA CORRIGIDA PARA LARGURA RESPONSIVA E CENTRALIZAÇÃO */
+@media (min-width: 992px) {
+    /* Largura responsiva baseada no viewport COM GUTTER */
+    html body .modal#modalAgendarExame .modal-dialog,
+    html body .modal.fade#modalAgendarExame .modal-dialog,
+    html body .modal.show#modalAgendarExame .modal-dialog,
+    html body .modal.modal-exame#modalAgendarExame .modal-dialog,
+    html body .modal-dialog-centered#modalAgendarExame .modal-dialog,
+    html body #modalAgendarExame.modal .modal-dialog.modal-dialog-centered {
+        max-width: min(1400px, calc(100vw - 8rem)) !important;  /* Respeitar gutter lateral */
+        width: min(1400px, calc(100vw - 8rem)) !important;  /* Respeitar gutter lateral */
+        min-width: min(1200px, calc(100vw - 8rem)) !important;  /* Respeitar gutter lateral */
+        margin: 4rem auto !important;  /* GUTTER DESKTOP: 4rem top/bottom, auto left/right */
+        position: relative !important;
+        left: auto !important;
+        right: auto !important;
+        top: auto !important;
+        bottom: auto !important;
+        transform: none !important;
+        flex: none !important;
+    }
+    
+    /* Garantir que o conteúdo também seja largo */
+    html body .modal#modalAgendarExame .modal-content,
+    html body .modal.fade#modalAgendarExame .modal-content,
+    html body .modal.show#modalAgendarExame .modal-content,
+    html body .modal.modal-exame#modalAgendarExame .modal-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 100% !important;
+    }
+    
+    /* Garantir que o modal-body não tenha scroll no desktop */
+    html body .modal#modalAgendarExame .modal-body,
+    html body .modal.fade#modalAgendarExame .modal-body,
+    html body .modal.show#modalAgendarExame .modal-body,
+    html body .modal.modal-exame#modalAgendarExame .modal-body {
+        overflow: visible !important;
+        max-height: none !important;
+        height: auto !important;
+    }
+}
+
 .modal-exame .modal-header {
     background: #023A8D;
     color: white;
     border-radius: 15px 15px 0 0;
     border-bottom: none;
-    padding: 25px;
+    padding: 1.5rem 2rem;  /* PADDING INTERNO: consistente com body e footer */
 }
 
 .modal-exame .modal-title {
@@ -324,14 +527,242 @@ try {
 }
 
 .modal-exame .modal-body {
-    padding: 30px;
+    padding: 2rem;  /* PADDING INTERNO: espaçamento interno consistente */
 }
 
 .modal-exame .modal-footer {
     border-top: 1px solid #f1f3f4;
-    padding: 20px 30px;
+    padding: 1.5rem 2rem;  /* PADDING INTERNO: consistente com o body */
     background-color: #f8f9fa;
     border-radius: 0 0 15px 15px;
+}
+
+/* Layout responsivo do formulário */
+#modalAgendarExame .form-grid {
+    display: grid;
+    gap: 1rem;  /* REDUZIDO: de 1.5rem para 1rem */
+    width: 100%;
+}
+
+/* Desktop - 3 colunas */
+@media (min-width: 992px) {
+    #modalAgendarExame .form-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-rows: auto auto auto;
+    }
+    
+    #modalAgendarExame .form-grid .field-full {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Tablet - 2 colunas */
+@media (min-width: 768px) and (max-width: 991px) {
+    #modalAgendarExame .form-grid {
+        grid-template-columns: 1fr 1fr;
+        grid-template-rows: auto auto auto auto;
+    }
+    
+    #modalAgendarExame .form-grid .field-full {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Mobile - 1 coluna */
+@media (max-width: 767px) {
+    #modalAgendarExame .form-grid {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+    }
+}
+
+/* Mobile - Modal responsivo */
+@media (max-width: 767px) {
+    #modalAgendarExame .modal-dialog {
+        max-width: calc(100vw - 1rem);  /* GUTTER MOBILE PEQUENO: 0.5rem de cada lado */
+        width: calc(100vw - 1rem);  /* GUTTER MOBILE PEQUENO: 0.5rem de cada lado */
+        margin: 0.5rem auto;  /* GUTTER MOBILE PEQUENO: 0.5rem top/bottom, auto left/right */
+    }
+    
+    #modalAgendarExame .modal-body {
+        padding: 1rem;
+    }
+    
+    #modalAgendarExame .modal-header {
+        padding: 1.25rem 1.5rem;  /* PADDING MOBILE: consistente */
+    }
+    
+    #modalAgendarExame .modal-footer {
+        padding: 1.25rem 1.5rem;  /* PADDING MOBILE: consistente */
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    #modalAgendarExame .btn {
+        width: 100%;
+        margin: 0;
+    }
+}
+
+/* Estilos específicos para o modal de agendar exame */
+.modal-exame .form-floating {
+    margin-bottom: 1.25rem;
+}
+
+/* CORREÇÃO FORÇADA: Labels flutuantes com gap adequado */
+.modal-exame .form-floating > .form-control:focus ~ label,
+.modal-exame .form-floating > .form-select:focus ~ label,
+.modal-exame .form-floating > input[type="date"]:focus ~ label {
+    color: #023A8D !important;
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;  /* GAP FORÇADO: -1.5rem */
+    opacity: 0.65 !important;
+}
+
+.modal-exame .form-floating > .form-control:not(:placeholder-shown) ~ label,
+.modal-exame .form-floating > .form-select:not([value=""]) ~ label,
+.modal-exame .form-floating > .form-control[value]:not([value=""]) ~ label,
+.modal-exame .form-floating > .form-select[value]:not([value=""]) ~ label,
+.modal-exame .form-floating > input[type="date"][value]:not([value=""]) ~ label,
+.modal-exame .form-floating > input[type="date"]:not(:placeholder-shown) ~ label {
+    opacity: 0.65 !important;
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;  /* GAP FORÇADO: -1.5rem */
+}
+
+.modal-exame .form-floating > label {
+    padding: 1.25rem 0.75rem 0.5rem 0.75rem;  /* AUMENTADO: bottom padding de 0 para 0.5rem */
+    margin-bottom: 0.5rem;
+    transition: transform 0.2s ease-in-out;  /* Transição suave */
+}
+
+.modal-exame .form-floating > .form-control,
+.modal-exame .form-floating > .form-select {
+    height: calc(4.5rem + 2px);  /* AUMENTADO: de 3.75rem para 4.5rem para evitar clipping */
+    padding: 1.5rem 0.75rem 1.25rem 0.75rem;  /* AUMENTADO: bottom padding de 1rem para 1.25rem */
+    line-height: 1.5;  /* FIX: line-height adequado para evitar clipping */
+}
+
+.modal-exame .form-floating > .form-control:focus,
+.modal-exame .form-floating > .form-select:focus {
+    border-color: #023A8D;
+    box-shadow: 0 0 0 0.2rem rgba(2, 58, 141, 0.25);
+}
+
+/* Regras específicas para textarea */
+.modal-exame .form-floating > textarea.form-control {
+    padding-top: 1.5rem !important;
+    overflow-y: hidden !important;
+    resize: vertical !important;
+    min-height: 80px !important;
+}
+
+.modal-exame .form-floating > textarea.form-control:focus {
+    overflow-y: auto !important;
+}
+
+/* Regras específicas para input[type="date"] */
+.modal-exame .form-floating > input[type="date"]:not(:placeholder-shown) ~ label,
+.modal-exame .form-floating > input[type="date"]:focus ~ label,
+.modal-exame .form-floating > input[type="date"][value]:not([value=""]) ~ label {
+    opacity: 0.65 !important;
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;  /* GAP FORÇADO: -1.5rem */
+}
+
+/* Classes CSS para controle dinâmico via JavaScript */
+.modal-exame .form-floating > .form-control.has-value ~ label,
+.modal-exame .form-floating > .form-select.has-value ~ label,
+.modal-exame .form-floating > input[type="date"].has-value ~ label {
+    opacity: 0.65 !important;
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;  /* GAP FORÇADO: -1.5rem */
+}
+
+.modal-exame .form-floating > .form-control.is-focused ~ label,
+.modal-exame .form-floating > .form-select.is-focused ~ label,
+.modal-exame .form-floating > input[type="date"].is-focused ~ label {
+    color: #023A8D !important;
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;  /* GAP FORÇADO: -1.5rem */
+    opacity: 0.65 !important;
+}
+
+/* REGRA SUPER ESPECÍFICA: Sobrescrever Bootstrap completamente */
+html body .modal-exame .form-floating > .form-control:not(:placeholder-shown) ~ label,
+html body .modal-exame .form-floating > .form-select:not([value=""]) ~ label,
+html body .modal-exame .form-floating > input[type="date"]:not(:placeholder-shown) ~ label,
+html body .modal-exame .form-floating > .form-control:focus ~ label,
+html body .modal-exame .form-floating > .form-select:focus ~ label,
+html body .modal-exame .form-floating > input[type="date"]:focus ~ label {
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;
+    opacity: 0.65 !important;
+}
+
+/* REGRA RADICAL: Forçar em TODOS os labels quando há valor */
+html body .modal-exame .form-floating label {
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;
+    opacity: 0.65 !important;
+}
+
+/* REGRA ULTRA ESPECÍFICA: Para o modal de exames especificamente */
+html body #modalAgendarExame .form-floating label,
+html body #modalAgendarExame .modal-exame .form-floating label {
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;
+    opacity: 0.65 !important;
+}
+
+/* REGRA FINAL: Forçar em TODOS os estados possíveis */
+html body #modalAgendarExame .form-floating > .form-control ~ label,
+html body #modalAgendarExame .form-floating > .form-select ~ label,
+html body #modalAgendarExame .form-floating > input[type="date"] ~ label,
+html body #modalAgendarExame .form-floating > textarea ~ label {
+    transform: scale(0.85) translateY(-1.5rem) translateX(0.15rem) !important;
+    opacity: 0.65 !important;
+}
+
+/* Melhorias para seções */
+.modal-exame h6 {
+    font-weight: 600;
+    border-bottom: 2px solid #e9ecef;
+    padding-bottom: 0.5rem;
+}
+
+.modal-exame .text-primary {
+    color: #023A8D !important;
+}
+
+/* Alert personalizado */
+.modal-exame .alert-info {
+    background-color: #e3f2fd;
+    border-color: #023A8D;
+    color: #023A8D;
+    padding: 0.75rem 1rem;  /* COMPACTO: padding reduzido para consistência */
+    margin-bottom: 0;  /* REMOVER: margin bottom para evitar espaços extras */
+}
+
+.modal-exame .alert-info i {
+    color: #F7931E;
+}
+
+/* Botões melhorados */
+.modal-exame .btn-primary {
+    background-color: #023A8D;
+    border-color: #023A8D;
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+}
+
+.modal-exame .btn-primary:hover {
+    background-color: #022a73;
+    border-color: #022a73;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(2, 58, 141, 0.3);
+}
+
+.modal-exame .btn-outline-secondary {
+    font-weight: 600;
+    padding: 0.75rem 1.5rem;
+}
+
+.modal-exame .btn-outline-secondary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(108, 117, 125, 0.3);
 }
 
 /* Formulário */
@@ -581,6 +1012,41 @@ try {
     .modal-exame .modal-footer {
         padding: 15px 20px;
     }
+    
+    /* Ajustes específicos para mobile no modal de agendar exame */
+    .modal-exame .modal-xl {
+        max-width: 100%;
+    }
+    
+    .modal-exame .row.g-3 {
+        --bs-gutter-x: 1rem;
+    }
+    
+    .modal-exame .form-floating > .form-control,
+    .modal-exame .form-floating > .form-select {
+        height: calc(4rem + 2px);  /* AUMENTADO: de 3.25rem para 4rem para evitar clipping */
+        padding: 1.125rem 0.75rem 1rem 0.75rem;  /* AUMENTADO: bottom padding de 0.75rem para 1rem */
+    }
+    
+    .modal-exame .form-floating > label {
+        padding: 1rem 0.75rem 0.25rem 0.75rem;  /* AUMENTADO: bottom padding de 0 para 0.25rem */
+        margin-bottom: 0.25rem;
+    }
+    
+    .modal-exame h6 {
+        font-size: 1rem;
+        margin-bottom: 1rem;
+    }
+    
+    .modal-exame .alert-info {
+        padding: 0.75rem;
+        font-size: 0.9rem;
+    }
+    
+    .modal-exame .btn {
+        padding: 0.5rem 1rem;
+        font-size: 0.9rem;
+    }
 }
 
 @media (max-width: 480px) {
@@ -633,6 +1099,61 @@ try {
         padding: 5px 10px;
         border-radius: 6px;
     }
+    
+    /* Modal para telas muito pequenas */
+    .modal-exame .modal-dialog {
+        margin: 5px;
+        max-width: calc(100% - 10px);
+    }
+    
+    .modal-exame .modal-body {
+        padding: 1rem;  /* PADDING TELAS PEQUENAS: mínimo mas consistente */
+    }
+    
+    .modal-exame .modal-header {
+        padding: 1rem;  /* PADDING TELAS PEQUENAS: mínimo mas consistente */
+    }
+    
+    .modal-exame .modal-footer {
+        padding: 1rem;  /* PADDING TELAS PEQUENAS: mínimo mas consistente */
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .modal-exame .btn {
+        width: 100%;
+        margin: 0;
+    }
+    
+    .modal-exame .row.g-3 {
+        --bs-gutter-x: 0.5rem;
+    }
+    
+    .modal-exame .form-floating {
+        margin-bottom: 0.5rem;  /* REDUZIDO: de 0.75rem para 0.5rem */
+    }
+    
+    .modal-exame .form-floating > .form-control,
+    .modal-exame .form-floating > .form-select {
+        height: calc(3.5rem + 2px);  /* AUMENTADO: de 3rem para 3.5rem para evitar clipping */
+        padding: 1rem 0.75rem 0.625rem 0.75rem;  /* AUMENTADO: top padding de 0.875rem para 1rem */
+        font-size: 0.9rem;
+    }
+    
+    .modal-exame .form-floating > label {
+        padding: 0.875rem 0.75rem 0.25rem 0.75rem;  /* RESPIRA: bottom padding para separar do valor */
+        font-size: 0.9rem;
+    }
+    
+    .modal-exame .alert-info {
+        padding: 0.5rem;
+        font-size: 0.85rem;
+        text-align: center;
+    }
+    
+    .modal-exame .alert-info i {
+        display: none; /* Esconder ícone em telas muito pequenas */
+    }
 }
 
 /* Desktop - Mostrar tabela normal */
@@ -643,6 +1164,68 @@ try {
     
     .table {
         display: table;
+    }
+    
+    /* Modal otimizado para desktop - sem scroll */
+    .modal-exame .modal-dialog {
+        max-height: 85vh;
+        height: auto;
+    }
+    
+    .modal-exame .modal-content {
+        max-height: 85vh;
+        display: flex;
+        flex-direction: column;
+        height: auto;
+    }
+    
+    .modal-exame .modal-body {
+        flex: 1;
+        overflow-y: visible;
+        padding: 30px;
+    }
+    
+    .modal-exame .form-floating {
+        margin-bottom: 1.5rem;
+    }
+    
+    .modal-exame .row.g-4 {
+        --bs-gutter-x: 1.5rem;
+        --bs-gutter-y: 1.5rem;
+    }
+    
+    .modal-exame .form-floating > .form-control,
+    .modal-exame .form-floating > .form-select {
+        height: calc(4.5rem + 2px);  /* AUMENTADO: de 3.75rem para 4.5rem para evitar clipping */
+        padding: 1.25rem 0.75rem 1rem 0.75rem;  /* AUMENTADO: bottom padding de 0 para 1rem */
+        font-size: 1rem;
+    }
+    
+    .modal-exame .form-floating > label {
+        padding: 1.25rem 0.75rem 0.5rem 0.75rem;  /* AUMENTADO: bottom padding de 0 para 0.5rem */
+        font-size: 1rem;
+    }
+    
+    .modal-exame .modal-header {
+        padding: 25px 30px !important;
+    }
+    
+    .modal-exame .modal-footer {
+        padding: 20px 30px !important;
+    }
+    
+    .modal-exame .modal-title {
+        font-size: 1.3rem !important;
+    }
+    
+    .modal-exame .alert-info {
+        padding: 1rem 1.25rem;
+        font-size: 0.95rem;
+    }
+    
+    /* Layout otimizado para desktop */
+    #modalAgendarExame .form-floating {
+        margin-bottom: 1.5rem;
     }
 }
 
@@ -1024,7 +1607,7 @@ try {
 
 <!-- Modal Agendar Exame -->
 <div class="modal fade modal-exame" id="modalAgendarExame" tabindex="-1">
-    <div class="modal-dialog modal-lg">
+    <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
                 <h5 class="modal-title">
@@ -1034,72 +1617,83 @@ try {
             </div>
             <div class="modal-body">
                 <form id="formAgendarExame">
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Aluno *</label>
-                                <select class="form-control" name="aluno_id" required>
-                                    <option value="">Selecione um aluno</option>
-                                    <?php foreach ($alunos as $aluno): ?>
-                                        <option value="<?php echo $aluno['id']; ?>">
-                                            <?php echo htmlspecialchars($aluno['nome'] . ' - ' . $aluno['cpf']); ?>
-                                        </option>
-                                    <?php endforeach; ?>
-                                </select>
-                            </div>
+                    <!-- Layout responsivo com CSS Grid -->
+                    <div class="form-grid">
+                        <!-- Primeira linha - 3 campos -->
+                        <div class="form-floating">
+                            <select class="form-select" name="aluno_id" id="aluno_id" required>
+                                <option value="">Selecione um aluno</option>
+                                <?php foreach ($alunos as $aluno): ?>
+                                    <option value="<?php echo $aluno['id']; ?>">
+                                        <?php echo htmlspecialchars($aluno['nome'] . ' - ' . $aluno['cpf']); ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                            <label for="aluno_id">
+                                <i class="fas fa-user me-1"></i>Aluno *
+                            </label>
                         </div>
                         
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Tipo de Exame *</label>
-                                <select class="form-control" name="tipo" required>
-                                    <option value="">Selecione o tipo</option>
-                                    <option value="medico">Exame Médico</option>
-                                    <option value="psicotecnico">Exame Psicotécnico</option>
-                                </select>
-                            </div>
+                        <div class="form-floating">
+                            <select class="form-select" name="tipo" id="tipo_exame" required>
+                                <option value="">Selecione o tipo</option>
+                                <option value="medico">Exame Médico</option>
+                                <option value="psicotecnico">Exame Psicotécnico</option>
+                            </select>
+                            <label for="tipo_exame">
+                                <i class="fas fa-clipboard-list me-1"></i>Tipo de Exame *
+                            </label>
+                        </div>
+                        
+                        <div class="form-floating">
+                            <input type="date" class="form-control" name="data_agendada" id="data_agendada" required>
+                            <label for="data_agendada">
+                                <i class="fas fa-calendar me-1"></i>Data do Exame *
+                            </label>
+                        </div>
+                        
+                        <!-- Segunda linha - 2 campos -->
+                        <div class="form-floating">
+                            <input type="text" class="form-control" name="clinica_nome" id="clinica_nome" placeholder="Nome da clínica">
+                            <label for="clinica_nome">
+                                <i class="fas fa-hospital me-1"></i>Clínica
+                            </label>
+                        </div>
+                        
+                        <div class="form-floating">
+                            <input type="text" class="form-control" name="protocolo" id="protocolo" placeholder="Número do protocolo">
+                            <label for="protocolo">
+                                <i class="fas fa-hashtag me-1"></i>Protocolo
+                            </label>
+                        </div>
+                        
+                        <!-- Terceira linha - 1 campo (observações) -->
+                        <div class="form-floating field-full">
+                            <textarea class="form-control" name="observacoes" id="observacoes" placeholder="Observações adicionais" style="height: 80px; overflow-y: hidden; padding-top: 1.5rem;"></textarea>
+                            <label for="observacoes">
+                                <i class="fas fa-sticky-note me-1"></i>Observações
+                            </label>
                         </div>
                     </div>
                     
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Data do Exame *</label>
-                                <input type="date" class="form-control" name="data_agendada" required>
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Clínica</label>
-                                <input type="text" class="form-control" name="clinica_nome" placeholder="Nome da clínica">
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Protocolo</label>
-                                <input type="text" class="form-control" name="protocolo" placeholder="Número do protocolo">
-                            </div>
-                        </div>
-                        
-                        <div class="col-md-6">
-                            <div class="form-group">
-                                <label class="form-label">Observações</label>
-                                <input type="text" class="form-control" name="observacoes" placeholder="Observações adicionais">
+                    <!-- Dica informativa -->
+                    <div class="mt-2">  <!-- REDUZIDO: de mt-3 para mt-2 -->
+                        <div class="alert alert-info d-flex align-items-center mb-0" role="alert">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            <div>
+                                <strong>Dica:</strong> Todos os campos marcados com * são obrigatórios. 
+                                Você pode agendar exames médico e psicotécnico para o mesmo aluno em datas diferentes.
                             </div>
                         </div>
                     </div>
                 </form>
             </div>
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
                     <i class="fas fa-times me-2"></i>Cancelar
                 </button>
                 <button type="button" class="btn btn-primary" onclick="agendarExame()">
-                    <i class="fas fa-save me-2"></i>Agendar Exame
+                    <i class="fas fa-calendar-check me-2"></i>Agendar Exame
                 </button>
             </div>
         </div>
@@ -1270,11 +1864,36 @@ class SistemaExames {
 
 // Funções globais
 function abrirModalAgendar() {
+    console.log('🔍 DEBUG: Iniciando abertura do modal');
+    
     const modal = new bootstrap.Modal(document.getElementById('modalAgendarExame'));
     modal.show();
     
     // Limpar formulário
     document.getElementById('formAgendarExame').reset();
+    
+    // CORREÇÃO RESPONSIVA: Ajustar largura baseada no viewport
+    setTimeout(() => {
+        const modalElement = document.getElementById('modalAgendarExame');
+        const modalDialog = modalElement.querySelector('.modal-dialog');
+        
+        if (modalElement && modalDialog) {
+            console.log('🔍 DEBUG: Aplicando correção responsiva');
+            
+            // Calcular largura responsiva COM GUTTER
+            const viewportWidth = window.innerWidth;
+            const gutter = viewportWidth >= 992 ? 128 : 32; // 4rem desktop, 1rem mobile
+            const maxWidth = Math.min(1400, viewportWidth - gutter);
+            
+            // Aplicar largura responsiva
+            modalDialog.style.width = maxWidth + 'px';
+            modalDialog.style.maxWidth = maxWidth + 'px';
+            modalDialog.style.marginLeft = 'auto';
+            modalDialog.style.marginRight = 'auto';
+            
+            console.log('🔍 DEBUG: Largura responsiva aplicada:', maxWidth + 'px');
+        }
+    }, 100);
 }
 
 function abrirModalResultado(exameId) {
@@ -1289,6 +1908,132 @@ function abrirModalResultado(exameId) {
     document.getElementById('exame_id_resultado').value = exameId;
     document.querySelector('input[name="data_resultado"]').value = new Date().toISOString().split('T')[0];
 }
+
+// Configurar modal responsivo - SIMPLES COM DEBUG
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalAgendarExame');
+    if (modal) {
+        modal.addEventListener('shown.bs.modal', function() {
+            const modalDialog = modal.querySelector('.modal-dialog');
+            const modalBody = modal.querySelector('.modal-body');
+            
+            if (modalDialog && modalBody) {
+                // CORREÇÃO RESPONSIVA: Ajustar largura baseada no viewport COM GUTTER
+                const viewportWidth = window.innerWidth;
+                if (viewportWidth >= 992) {
+                    // Desktop: usar largura responsiva COM GUTTER
+                    const gutter = 128; // 4rem = 64px * 2 (lados)
+                    const maxWidth = Math.min(1400, viewportWidth - gutter);
+                    modalDialog.style.width = maxWidth + 'px';
+                    modalDialog.style.maxWidth = maxWidth + 'px';
+                    modalDialog.style.marginLeft = 'auto';
+                    modalDialog.style.marginRight = 'auto';
+                    modalBody.style.overflow = 'visible';
+                    modalBody.style.maxHeight = 'none';
+                } else {
+                    // Mobile: usar viewport width COM GUTTER
+                    const gutter = 32; // 1rem = 16px * 2 (lados)
+                    const maxWidth = viewportWidth - gutter;
+                    modalDialog.style.width = maxWidth + 'px';
+                    modalDialog.style.maxWidth = maxWidth + 'px';
+                    modalBody.style.overflowY = 'auto';
+                    modalBody.style.maxHeight = 'calc(90vh - 120px)';
+                }
+            }
+            
+            // CORREÇÃO LABELS FLUTUANTES: Controle dinâmico dos estados
+            const formControls = modal.querySelectorAll('.form-floating > .form-control, .form-floating > .form-select, .form-floating > input[type="date"]');
+            
+            // FUNÇÃO RADICAL: Forçar transform em todos os labels
+            function forceAllLabels() {
+                const allLabels = modal.querySelectorAll('.form-floating label');
+                allLabels.forEach(function(label) {
+                    label.style.setProperty('transform', 'scale(0.85) translateY(-1.5rem) translateX(0.15rem)', 'important');
+                    label.style.setProperty('opacity', '0.65', 'important');
+                });
+            }
+            
+            // FUNÇÃO: Forçar altura correta dos inputs para evitar clipping
+            function fixInputHeights() {
+                const inputs = modal.querySelectorAll('.form-floating > .form-control, .form-floating > .form-select, .form-floating > input[type="date"]');
+                inputs.forEach(function(input) {
+                    // Forçar altura mínima para evitar clipping
+                    if (window.innerWidth >= 992) {
+                        input.style.setProperty('height', 'calc(5rem + 2px)', 'important');
+                    } else if (window.innerWidth >= 768) {
+                        input.style.setProperty('height', 'calc(4.5rem + 2px)', 'important');
+                    } else {
+                        input.style.setProperty('height', 'calc(4rem + 2px)', 'important');
+                    }
+                });
+            }
+            
+            formControls.forEach(function(control) {
+                // Função para atualizar estado
+                function updateFloatingLabel() {
+                    const hasValue = control.value && control.value.trim() !== '';
+                    
+                    if (hasValue) {
+                        control.classList.add('has-value');
+                        // Forçar aplicação do transform via style inline
+                        const label = control.nextElementSibling;
+                        if (label) {
+                            label.style.setProperty('transform', 'scale(0.85) translateY(-1.5rem) translateX(0.15rem)', 'important');
+                            label.style.setProperty('opacity', '0.65', 'important');
+                        }
+                    } else {
+                        control.classList.remove('has-value');
+                        const label = control.nextElementSibling;
+                        if (label) {
+                            label.style.setProperty('transform', 'scale(0.85) translateY(-1.5rem) translateX(0.15rem)', 'important');
+                            label.style.setProperty('opacity', '0.65', 'important');
+                        }
+                    }
+                }
+                
+                // Eventos para atualizar estado
+                control.addEventListener('input', function() {
+                    updateFloatingLabel();
+                    forceAllLabels(); // Forçar em todos
+                });
+                control.addEventListener('change', function() {
+                    updateFloatingLabel();
+                    forceAllLabels(); // Forçar em todos
+                });
+                control.addEventListener('focus', function() {
+                    control.classList.add('is-focused');
+                    const label = control.nextElementSibling;
+                    if (label) {
+                        label.style.setProperty('transform', 'scale(0.85) translateY(-1.5rem) translateX(0.15rem)', 'important');
+                        label.style.setProperty('opacity', '0.65', 'important');
+                        label.style.setProperty('color', '#023A8D', 'important');
+                    }
+                    forceAllLabels(); // Forçar em todos
+                });
+                control.addEventListener('blur', function() {
+                    control.classList.remove('is-focused');
+                    const label = control.nextElementSibling;
+                    if (label) {
+                        label.style.setProperty('color', '', 'important');
+                        updateFloatingLabel();
+                    }
+                    forceAllLabels(); // Forçar em todos
+                });
+                
+                // Estado inicial
+                updateFloatingLabel();
+            });
+            
+            // FORÇAR TODOS OS LABELS E ALTURAS IMEDIATAMENTE
+            setTimeout(function() {
+                forceAllLabels();
+                fixInputHeights();
+            }, 100);
+        });
+        
+    }
+});
+
 
 function agendarExame() {
     const form = document.getElementById('formAgendarExame');
@@ -1337,15 +2082,17 @@ function agendarExame() {
     .then(data => {
         console.log('Parsed data:', data);
         if (data.success) {
-            alert('Exame agendado com sucesso!');
+            alert('✅ Exame agendado com sucesso!');
             location.reload();
         } else {
-            alert('Erro ao agendar exame: ' + (data.error || data.mensagem || 'Erro desconhecido'));
+            // Mostrar mensagem amigável em vez de erro técnico
+            const message = data.friendly_message || data.message || data.error || 'Erro desconhecido';
+            alert(message);
         }
     })
     .catch(error => {
         console.error('Erro completo:', error);
-        alert('Erro ao agendar exame: ' + error.message);
+        alert('❌ Erro ao agendar exame: ' + error.message);
     });
 }
 

@@ -471,6 +471,22 @@
     position: relative;
 }
 
+/* EXCEÇÃO: Modal de exames não deve ter limitação de largura */
+.modal.modal-exame {
+    max-width: none !important;
+    width: auto !important;
+    overflow: visible !important;
+    background: transparent !important;  /* REMOVER BACKGROUND BRANCO */
+    box-shadow: none !important;         /* REMOVER SOMBRA */
+}
+
+/* Garantir que o modal-content do modal de exames também não tenha overflow */
+.modal.modal-exame .modal-content {
+    overflow: visible !important;
+    max-width: none !important;
+    width: 100% !important;
+}
+
 .modal-header {
     padding: var(--spacing-xl);
     border-bottom: 1px solid var(--gray-200);
