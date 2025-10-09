@@ -124,6 +124,9 @@ try {
                 case 'update':
                     handlePut($db, $user);
                     break;
+                case 'cancel':
+                    handleCancel($db, $user);
+                    break;
                 case 'delete':
                     handleDelete($db, $user);
                     break;
@@ -161,10 +164,26 @@ try {
 }
 
 /**
- * GET - Listar exames
+ * GET - Listar exames ou buscar exame específico
  */
 function handleGet($db, $canWrite) {
-    // Parâmetros de filtro
+    $exameId = $_GET['id'] ?? null;
+    
+    // Se foi solicitado um exame específico
+    if ($exameId) {
+        $exame = $db->fetch("SELECT * FROM exames WHERE id = ?", [$exameId]);
+        if (!$exame) {
+            http_response_code(404);
+            returnJsonResponse(['error' => 'Exame não encontrado', 'code' => 'EXAME_NOT_FOUND']);
+        }
+        
+        returnJsonResponse([
+            'success' => true,
+            'exame' => $exame
+        ]);
+    }
+    
+    // Parâmetros de filtro para listagem
     $alunoId = $_GET['aluno_id'] ?? null;
     $tipo = $_GET['tipo'] ?? null;
     $status = $_GET['status'] ?? null;
@@ -242,10 +261,10 @@ function handlePost($db, $user) {
         returnJsonResponse(['error' => 'Aluno não encontrado', 'code' => 'ALUNO_NOT_FOUND']);
     }
     
-    // Verificar se já existe exame ativo do mesmo tipo
+    // Verificar se já existe exame ativo do mesmo tipo (excluindo cancelados)
     $existing = $db->fetch("
         SELECT id, data_agendada, status, resultado FROM exames 
-        WHERE aluno_id = ? AND tipo = ? AND status IN ('agendado', 'concluido')
+        WHERE aluno_id = ? AND tipo = ? AND status IN ('agendado', 'concluido', 'pendente')
     ", [$data['aluno_id'], $data['tipo']]);
     
     if ($existing) {
@@ -336,7 +355,7 @@ function handlePut($db, $user) {
     ];
     
     // Campos que podem ser atualizados
-    $allowedFields = ['status', 'resultado', 'data_resultado', 'observacoes', 'anexos'];
+    $allowedFields = ['status', 'resultado', 'data_resultado', 'observacoes', 'anexos', 'aluno_id', 'tipo', 'data_agendada', 'clinica_nome', 'protocolo'];
     foreach ($allowedFields as $field) {
         if (isset($data[$field]) && $data[$field] !== '') {
             $updateData[$field] = $data[$field];
@@ -349,16 +368,40 @@ function handlePut($db, $user) {
         returnJsonResponse(['error' => 'Resultado deve ser "apto", "inapto", "inapto_temporario" ou "pendente"', 'code' => 'INVALID_RESULTADO']);
     }
     
-    if (isset($updateData['status']) && !in_array($updateData['status'], ['agendado', 'concluido', 'cancelado'])) {
+    if (isset($updateData['status']) && !in_array($updateData['status'], ['agendado', 'concluido', 'cancelado', 'pendente'])) {
         http_response_code(400);
-        returnJsonResponse(['error' => 'Status deve ser "agendado", "concluido" ou "cancelado"', 'code' => 'INVALID_STATUS']);
+        returnJsonResponse(['error' => 'Status deve ser "agendado", "concluido", "cancelado" ou "pendente"', 'code' => 'INVALID_STATUS']);
     }
     
-    // Se lançando resultado, marcar como concluído
-    if (isset($updateData['resultado']) && in_array($updateData['resultado'], ['apto', 'inapto', 'inapto_temporario'])) {
-        $updateData['status'] = 'concluido';
-        if (empty($updateData['data_resultado'])) {
-            $updateData['data_resultado'] = date('Y-m-d');
+    if (isset($updateData['tipo']) && !in_array($updateData['tipo'], ['medico', 'psicotecnico'])) {
+        http_response_code(400);
+        returnJsonResponse(['error' => 'Tipo deve ser "medico" ou "psicotecnico"', 'code' => 'INVALID_TIPO']);
+    }
+    
+    // Verificar se aluno existe (se foi alterado)
+    if (isset($updateData['aluno_id'])) {
+        $aluno = $db->fetch("SELECT id FROM alunos WHERE id = ?", [$updateData['aluno_id']]);
+        if (!$aluno) {
+            http_response_code(404);
+            returnJsonResponse(['error' => 'Aluno não encontrado', 'code' => 'ALUNO_NOT_FOUND']);
+        }
+    }
+    
+    // Se lançando resultado, definir status baseado no resultado
+    if (isset($updateData['resultado'])) {
+        if (in_array($updateData['resultado'], ['apto', 'inapto'])) {
+            $updateData['status'] = 'concluido';
+            if (empty($updateData['data_resultado'])) {
+                $updateData['data_resultado'] = date('Y-m-d');
+            }
+        } elseif ($updateData['resultado'] === 'inapto_temporario') {
+            $updateData['status'] = 'pendente';
+            if (empty($updateData['data_resultado'])) {
+                $updateData['data_resultado'] = date('Y-m-d');
+            }
+        } elseif ($updateData['resultado'] === 'pendente') {
+            $updateData['status'] = 'agendado';
+            $updateData['data_resultado'] = null;
         }
     }
     
@@ -384,9 +427,9 @@ function handlePut($db, $user) {
 }
 
 /**
- * DELETE - Cancelar exame
+ * CANCEL - Cancelar exame (soft delete)
  */
-function handleDelete($db, $user) {
+function handleCancel($db, $user) {
     $exameId = $_POST['exame_id'] ?? $_GET['id'] ?? null;
     
     if (!$exameId) {
@@ -399,6 +442,14 @@ function handleDelete($db, $user) {
     if (!$exame) {
         http_response_code(404);
         returnJsonResponse(['error' => 'Exame não encontrado', 'code' => 'EXAME_NOT_FOUND']);
+    }
+    
+    // Verificar se já está cancelado
+    if ($exame['status'] === 'cancelado') {
+        returnJsonResponse([
+            'success' => false,
+            'message' => 'Este exame já está cancelado'
+        ]);
     }
     
     // Marcar como cancelado (soft delete)
@@ -417,7 +468,48 @@ function handleDelete($db, $user) {
         ]);
     } else {
         http_response_code(500);
-        returnJsonResponse(['error' => 'Erro ao cancelar exame', 'code' => 'DELETE_ERROR']);
+        returnJsonResponse(['error' => 'Erro ao cancelar exame', 'code' => 'CANCEL_ERROR']);
+    }
+}
+
+/**
+ * DELETE - Excluir exame definitivamente (hard delete)
+ */
+function handleDelete($db, $user) {
+    $exameId = $_POST['exame_id'] ?? $_GET['id'] ?? null;
+    
+    if (!$exameId) {
+        http_response_code(400);
+        returnJsonResponse(['error' => 'ID do exame é obrigatório', 'code' => 'MISSING_ID']);
+    }
+    
+    // Verificar se usuário é admin
+    if ($user['tipo'] !== 'admin') {
+        http_response_code(403);
+        returnJsonResponse(['error' => 'Apenas administradores podem excluir exames definitivamente', 'code' => 'ADMIN_REQUIRED']);
+    }
+    
+    // Verificar se exame existe
+    $exame = $db->fetch("SELECT * FROM exames WHERE id = ?", [$exameId]);
+    if (!$exame) {
+        http_response_code(404);
+        returnJsonResponse(['error' => 'Exame não encontrado', 'code' => 'EXAME_NOT_FOUND']);
+    }
+    
+    // Excluir definitivamente do banco
+    $success = $db->delete('exames', 'id = ?', [$exameId]);
+    
+    if ($success) {
+        // Log de auditoria
+        error_log("[EXAMES API] Exame excluído definitivamente - ID: $exameId, Usuário: {$user['id']}");
+        
+        returnJsonResponse([
+            'success' => true,
+            'message' => 'Exame excluído definitivamente'
+        ]);
+    } else {
+        http_response_code(500);
+        returnJsonResponse(['error' => 'Erro ao excluir exame', 'code' => 'DELETE_ERROR']);
     }
 }
 

@@ -17,6 +17,15 @@ if (!isset($exames)) $exames = [];
 if (!isset($mensagem)) $mensagem = '';
 if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 
+// Verificar se usuário é admin usando a mesma função da API
+$isAdmin = false;
+$user = getCurrentUser();
+if ($user && $user['tipo'] === 'admin') {
+    $isAdmin = true;
+}
+
+// Verificação de admin concluída
+
 // Obter dados necessários para a página
 try {
     $db = db();
@@ -253,7 +262,7 @@ try {
 }
 
 .badge-pendente {
-    background-color: #6c757d;
+    background-color: #F7931E;
     color: white;
     border: none;
 }
@@ -1296,6 +1305,7 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
     <div class="exames-header">
         <h1><i class="fas fa-stethoscope me-3"></i>Exames Médicos e Psicotécnicos</h1>
         <p>Gestão completa de exames com calendário, status e validação para aulas teóricas</p>
+        
     </div>
 
     <!-- Cards de Status -->
@@ -1460,29 +1470,24 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                                 </td>
                                 <td>
                                     <div class="d-flex flex-wrap gap-2">
-                                        <?php if ($exame['status'] === 'agendado'): ?>
-                                            <button class="btn-exame btn-resultado" 
-                                                    onclick="abrirModalResultado(<?php echo $exame['id']; ?>)"
-                                                    title="Lançar Resultado">
-                                                <i class="fas fa-clipboard-check"></i>
-                                            </button>
-                                            <button class="btn-exame btn-cancelar" 
+                                        <button class="btn-exame btn-primary" 
+                                                onclick="editarExame(<?php echo $exame['id']; ?>)"
+                                                title="Editar Exame">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <?php if ($exame['status'] !== 'cancelado'): ?>
+                                            <button class="btn-exame btn-warning" 
                                                     onclick="cancelarExame(<?php echo $exame['id']; ?>)"
                                                     title="Cancelar Exame">
-                                                <i class="fas fa-times"></i>
+                                                <i class="fas fa-ban"></i>
                                             </button>
-                                        <?php elseif ($exame['status'] === 'concluido'): ?>
-                                            <span class="badge bg-success">
-                                                <i class="fas fa-check me-1"></i>Concluído
-                                            </span>
-                                        <?php elseif ($exame['status'] === 'cancelado'): ?>
-                                            <span class="badge bg-danger">
-                                                <i class="fas fa-times me-1"></i>Cancelado
-                                            </span>
-                                        <?php else: ?>
-                                            <span class="badge bg-secondary">
-                                                <i class="fas fa-question me-1"></i><?php echo ucfirst($exame['status']); ?>
-                                            </span>
+                                        <?php endif; ?>
+                                        <?php if ($isAdmin): ?>
+                                            <button class="btn-exame btn-danger" 
+                                                    onclick="excluirExame(<?php echo $exame['id']; ?>)"
+                                                    title="Excluir Definitivamente">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
                                         <?php endif; ?>
                                     </div>
                                 </td>
@@ -1573,29 +1578,24 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                         </div>
 
                         <div class="exam-actions">
-                            <?php if ($exame['status'] === 'agendado'): ?>
-                                <button class="btn-exame btn-resultado" 
-                                        onclick="abrirModalResultado(<?php echo $exame['id']; ?>)"
-                                        title="Lançar Resultado">
-                                    <i class="fas fa-clipboard-check me-1"></i>Resultado
-                                </button>
-                                <button class="btn-exame btn-cancelar" 
+                            <button class="btn-exame btn-primary" 
+                                    onclick="editarExame(<?php echo $exame['id']; ?>)"
+                                    title="Editar Exame">
+                                <i class="fas fa-edit me-1"></i>Editar
+                            </button>
+                            <?php if ($exame['status'] !== 'cancelado'): ?>
+                                <button class="btn-exame btn-warning" 
                                         onclick="cancelarExame(<?php echo $exame['id']; ?>)"
                                         title="Cancelar Exame">
-                                    <i class="fas fa-times me-1"></i>Cancelar
+                                    <i class="fas fa-ban me-1"></i>Cancelar
                                 </button>
-                            <?php elseif ($exame['status'] === 'concluido'): ?>
-                                <span class="badge bg-success w-100 text-center">
-                                    <i class="fas fa-check me-1"></i>Concluído
-                                </span>
-                            <?php elseif ($exame['status'] === 'cancelado'): ?>
-                                <span class="badge bg-danger w-100 text-center">
-                                    <i class="fas fa-times me-1"></i>Cancelado
-                                </span>
-                            <?php else: ?>
-                                <span class="badge bg-secondary w-100 text-center">
-                                    <i class="fas fa-question me-1"></i><?php echo ucfirst($exame['status']); ?>
-                                </span>
+                            <?php endif; ?>
+                            <?php if ($isAdmin): ?>
+                                <button class="btn-exame btn-danger" 
+                                        onclick="excluirExame(<?php echo $exame['id']; ?>)"
+                                        title="Excluir Definitivamente">
+                                    <i class="fas fa-trash me-1"></i>Excluir
+                                </button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -1871,6 +1871,21 @@ function abrirModalAgendar() {
     
     // Limpar formulário
     document.getElementById('formAgendarExame').reset();
+    
+    // Restaurar título original
+    document.querySelector('#modalAgendarExame .modal-title').innerHTML = 
+        '<i class="fas fa-calendar-plus me-2"></i>Agendar Novo Exame';
+    
+    // Restaurar botão original
+    const btnAgendar = document.querySelector('#modalAgendarExame .btn-primary');
+    btnAgendar.innerHTML = '<i class="fas fa-calendar-check me-2"></i>Agendar Exame';
+    btnAgendar.onclick = agendarExame;
+    
+    // Remover campo hidden de edição se existir
+    const hiddenField = document.getElementById('exame_id_edicao');
+    if (hiddenField) {
+        hiddenField.remove();
+    }
     
     // CORREÇÃO RESPONSIVA: Ajustar largura baseada no viewport
     setTimeout(() => {
@@ -2274,9 +2289,15 @@ function atualizarStatusNaInterface(exameId, resultado) {
     let novoStatus = 'agendado';
     let novaClasse = 'badge-agendado';
     
-    if (resultado === 'apto' || resultado === 'inapto' || resultado === 'inapto_temporario') {
+    if (resultado === 'apto' || resultado === 'inapto') {
         novoStatus = 'concluido';
         novaClasse = 'badge-concluido';
+    } else if (resultado === 'inapto_temporario') {
+        novoStatus = 'pendente';
+        novaClasse = 'badge-pendente';
+    } else if (resultado === 'pendente') {
+        novoStatus = 'agendado';
+        novaClasse = 'badge-agendado';
     }
     
     // Atualizar na tabela (desktop)
@@ -2292,6 +2313,11 @@ function atualizarStatusNaInterface(exameId, resultado) {
             const dataResultadoCell = linha.querySelector('td:nth-child(7)'); // Coluna da data do resultado
             if (dataResultadoCell) {
                 dataResultadoCell.textContent = new Date().toLocaleDateString('pt-BR');
+            }
+        } else {
+            const dataResultadoCell = linha.querySelector('td:nth-child(7)'); // Coluna da data do resultado
+            if (dataResultadoCell) {
+                dataResultadoCell.textContent = '-';
             }
         }
     }
@@ -2310,12 +2336,11 @@ function atualizarStatusNaInterface(exameId, resultado) {
             if (dataResultadoValue) {
                 dataResultadoValue.textContent = new Date().toLocaleDateString('pt-BR');
             }
-        }
-        
-        // Atualizar as ações do card
-        const actionsContainer = card.querySelector('.exam-actions');
-        if (actionsContainer && novoStatus === 'concluido') {
-            actionsContainer.innerHTML = '<span class="badge bg-success w-100 text-center"><i class="fas fa-check me-1"></i>Concluído</span>';
+        } else {
+            const dataResultadoValue = card.querySelector('.exam-result-date-item .exam-detail-value');
+            if (dataResultadoValue) {
+                dataResultadoValue.textContent = '-';
+            }
         }
     }
 }
@@ -2339,6 +2364,227 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
             notificacao.remove();
         }
     }, 3000);
+}
+
+// Funções para editar e excluir exames
+function editarExame(exameId) {
+    // Buscar dados do exame
+    fetch(`api/exames.php?id=${exameId}`)
+    .then(response => response.json())
+    .then(data => {
+        if (data.success && data.exame) {
+            const exame = data.exame;
+            
+            // Abrir modal de agendamento
+            const modal = new bootstrap.Modal(document.getElementById('modalAgendarExame'));
+            modal.show();
+            
+            // Preencher formulário com dados do exame
+            document.getElementById('aluno_id').value = exame.aluno_id;
+            document.getElementById('tipo_exame').value = exame.tipo;
+            document.getElementById('data_agendada').value = exame.data_agendada;
+            document.getElementById('clinica_nome').value = exame.clinica_nome || '';
+            document.getElementById('protocolo').value = exame.protocolo || '';
+            document.getElementById('observacoes').value = exame.observacoes || '';
+            
+            // Alterar título do modal
+            document.querySelector('#modalAgendarExame .modal-title').innerHTML = 
+                '<i class="fas fa-edit me-2"></i>Editar Exame';
+            
+            // Alterar botão de ação
+            const btnAgendar = document.querySelector('#modalAgendarExame .btn-primary');
+            btnAgendar.innerHTML = '<i class="fas fa-save me-2"></i>Salvar Alterações';
+            btnAgendar.onclick = () => salvarEdicaoExame(exameId);
+            
+            // Adicionar campo hidden para indicar que é edição
+            let hiddenField = document.getElementById('exame_id_edicao');
+            if (!hiddenField) {
+                hiddenField = document.createElement('input');
+                hiddenField.type = 'hidden';
+                hiddenField.id = 'exame_id_edicao';
+                hiddenField.name = 'exame_id';
+                document.getElementById('formAgendarExame').appendChild(hiddenField);
+            }
+            hiddenField.value = exameId;
+            
+            // Forçar atualização dos labels flutuantes
+            setTimeout(() => {
+                const formControls = document.querySelectorAll('#modalAgendarExame .form-floating > .form-control, #modalAgendarExame .form-floating > .form-select, #modalAgendarExame .form-floating > input[type="date"]');
+                formControls.forEach(control => {
+                    if (control.value) {
+                        control.classList.add('has-value');
+                        const label = control.nextElementSibling;
+                        if (label) {
+                            label.style.setProperty('transform', 'scale(0.85) translateY(-1.5rem) translateX(0.15rem)', 'important');
+                            label.style.setProperty('opacity', '0.65', 'important');
+                        }
+                    }
+                });
+            }, 100);
+            
+        } else {
+            alert('Erro ao carregar dados do exame: ' + (data.error || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao carregar exame:', error);
+        alert('Erro ao carregar dados do exame. Tente novamente.');
+    });
+}
+
+function salvarEdicaoExame(exameId) {
+    const form = document.getElementById('formAgendarExame');
+    const formData = new FormData(form);
+    
+    // Validações
+    if (!formData.get('aluno_id')) {
+        alert('Selecione um aluno');
+        return;
+    }
+    
+    if (!formData.get('tipo')) {
+        alert('Selecione o tipo de exame');
+        return;
+    }
+    
+    if (!formData.get('data_agendada')) {
+        alert('Selecione a data do exame');
+        return;
+    }
+    
+    // Adicionar ação de update
+    formData.append('action', 'update');
+    formData.append('exame_id', exameId);
+    
+    // Enviar dados
+    fetch('api/exames.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Edit response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return response.text().then(text => {
+            console.log('Edit response text:', text);
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('JSON parse error:', e);
+                console.error('Response text was:', text);
+                throw new Error('Invalid JSON response');
+            }
+        });
+    })
+    .then(data => {
+        console.log('Edit parsed data:', data);
+        if (data.success) {
+            alert('✅ Exame atualizado com sucesso!');
+            location.reload();
+        } else {
+            const message = data.friendly_message || data.message || data.error || 'Erro desconhecido';
+            alert(message);
+        }
+    })
+    .catch(error => {
+        console.error('Erro completo na edição:', error);
+        alert('❌ Erro ao atualizar exame: ' + error.message);
+    });
+}
+
+function cancelarExame(exameId) {
+    if (!confirm('Tem certeza que deseja cancelar este exame? O exame ficará marcado como cancelado e será possível agendar um novo exame para o aluno.')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'cancel');
+    formData.append('exame_id', exameId);
+    
+    fetch('api/exames.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Cancel response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return response.text().then(text => {
+            console.log('Cancel response text:', text);
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('JSON parse error:', e);
+                console.error('Response text was:', text);
+                throw new Error('Invalid JSON response');
+            }
+        });
+    })
+    .then(data => {
+        console.log('Cancel parsed data:', data);
+        if (data.success) {
+            alert('Exame cancelado com sucesso!');
+            location.reload();
+        } else {
+            alert('Erro ao cancelar exame: ' + (data.error || data.mensagem || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro completo no cancelamento:', error);
+        alert('Erro ao cancelar exame: ' + error.message);
+    });
+}
+
+function excluirExame(exameId) {
+    if (!confirm('⚠️ ATENÇÃO: Esta ação irá EXCLUIR DEFINITIVAMENTE o exame do sistema. Esta ação não pode ser desfeita e todos os dados relacionados serão perdidos.\n\nTem certeza que deseja continuar?')) {
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('action', 'delete');
+    formData.append('exame_id', exameId);
+    
+    fetch('api/exames.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('Delete response status:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        return response.text().then(text => {
+            console.log('Delete response text:', text);
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('JSON parse error:', e);
+                console.error('Response text was:', text);
+                throw new Error('Invalid JSON response');
+            }
+        });
+    })
+    .then(data => {
+        console.log('Delete parsed data:', data);
+        if (data.success) {
+            alert('Exame excluído definitivamente!');
+            location.reload();
+        } else {
+            alert('Erro ao excluir exame: ' + (data.error || data.mensagem || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('Erro completo na exclusão:', error);
+        alert('Erro ao excluir exame: ' + error.message);
+    });
 }
 
 // Inicializar sistema quando a página carregar
