@@ -10,9 +10,31 @@ ini_set('display_errors', 0); // Não exibir erros na tela para não quebrar JSO
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../logs/exames_api_errors.log');
 
-require_once __DIR__ . '/../../includes/config.php';
-require_once __DIR__ . '/../../includes/database.php';
-require_once __DIR__ . '/../../includes/auth.php';
+// Detectar caminho correto dos includes
+$possiblePaths = [
+    __DIR__ . '/../../includes/config.php',  // Produção
+    __DIR__ . '/../includes/config.php',     // Desenvolvimento
+    dirname(__DIR__, 2) . '/includes/config.php'  // Alternativo
+];
+
+$configPath = null;
+foreach ($possiblePaths as $path) {
+    if (file_exists($path)) {
+        $configPath = $path;
+        break;
+    }
+}
+
+if (!$configPath) {
+    error_log("[EXAMES API] Erro: Não foi possível encontrar config.php");
+    http_response_code(500);
+    echo json_encode(['error' => 'Configuração não encontrada']);
+    exit;
+}
+
+require_once $configPath;
+require_once dirname($configPath) . '/database.php';
+require_once dirname($configPath) . '/auth.php';
 
 // Limpar qualquer saída anterior
 if (ob_get_level()) {
