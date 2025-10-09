@@ -10,38 +10,11 @@ ini_set('display_errors', 0); // Não exibir erros na tela para não quebrar JSO
 ini_set('log_errors', 1);
 ini_set('error_log', __DIR__ . '/../logs/exames_api_errors.log');
 
-// Detectar caminho correto dos includes
-$documentRoot = $_SERVER['DOCUMENT_ROOT'] ?? dirname(__DIR__, 2);
-$possiblePaths = [
-    $documentRoot . '/includes/config.php',           // Produção (document root)
-    __DIR__ . '/../../includes/config.php',           // Desenvolvimento
-    __DIR__ . '/../includes/config.php',              // Alternativo
-    dirname(__DIR__, 2) . '/includes/config.php'      // Fallback
-];
-
-error_log("[EXAMES API] Document Root: " . $documentRoot);
-error_log("[EXAMES API] Current Dir: " . __DIR__);
-
-$configPath = null;
-foreach ($possiblePaths as $index => $path) {
-    error_log("[EXAMES API] Testando path $index: " . $path . " - Existe: " . (file_exists($path) ? 'SIM' : 'NÃO'));
-    if (file_exists($path)) {
-        $configPath = $path;
-        error_log("[EXAMES API] Config encontrado em: " . $path);
-        break;
-    }
-}
-
-if (!$configPath) {
-    error_log("[EXAMES API] ERRO: Nenhum config.php encontrado");
-    http_response_code(500);
-    echo json_encode(['error' => 'Configuração não encontrada', 'paths_tested' => $possiblePaths]);
-    exit;
-}
-
-require_once $configPath;
-require_once dirname($configPath) . '/database.php';
-require_once dirname($configPath) . '/auth.php';
+// Caminho correto baseado no teste
+$includesPath = __DIR__ . '/../../includes/';
+require_once $includesPath . 'config.php';
+require_once $includesPath . 'database.php';
+require_once $includesPath . 'auth.php';
 
 // Limpar qualquer saída anterior
 if (ob_get_level()) {
