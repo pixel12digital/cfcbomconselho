@@ -44,7 +44,23 @@ try {
     $db = db();
     $method = $_SERVER['REQUEST_METHOD'];
     
-    if ($method === 'POST') {
+    if ($method === 'GET') {
+        // Buscar exame específico
+        $exameId = $_GET['id'] ?? null;
+        if ($exameId) {
+            $exame = $db->fetch("SELECT * FROM exames WHERE id = ?", [$exameId]);
+            if ($exame) {
+                returnJson([
+                    'success' => true,
+                    'exame' => $exame
+                ]);
+            } else {
+                returnJson(['error' => 'Exame não encontrado']);
+            }
+        } else {
+            returnJson(['error' => 'ID do exame é obrigatório']);
+        }
+    } elseif ($method === 'POST') {
         $action = $_POST['action'] ?? 'create';
         
         switch ($action) {

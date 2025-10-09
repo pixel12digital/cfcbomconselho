@@ -2071,9 +2071,10 @@ function agendarExame() {
     }
     
     // Enviar dados
-    fetch('api/exames_simple.php', {
+    fetch('api/exames_simple.php?t=' + Date.now(), {
         method: 'POST',
-        body: formData
+        body: formData,
+        cache: 'no-cache'
     })
     .then(response => {
         console.log('Response status:', response.status);
@@ -2128,9 +2129,10 @@ function salvarResultado() {
     formData.append('exame_id', exameId);
     
     // Enviar dados
-    fetch('api/exames_simple.php', {
+    fetch('api/exames_simple.php?t=' + Date.now(), {
         method: 'POST',
-        body: formData
+        body: formData,
+        cache: 'no-cache'
     })
     .then(response => response.json())
     .then(data => {
@@ -2157,9 +2159,10 @@ function cancelarExame(exameId) {
     formData.append('action', 'delete');
     formData.append('exame_id', exameId);
     
-    fetch('api/exames_simple.php', {
+    fetch('api/exames_simple.php?t=' + Date.now(), {
         method: 'POST',
-        body: formData
+        body: formData,
+        cache: 'no-cache'
     })
     .then(response => {
         console.log('Cancel response status:', response.status);
@@ -2221,9 +2224,10 @@ function alterarResultado(selectElement) {
         formData.append('data_resultado', new Date().toISOString().split('T')[0]);
     }
     
-    fetch('api/exames_simple.php', {
+    fetch('api/exames_simple.php?t=' + Date.now(), {
         method: 'POST',
-        body: formData
+        body: formData,
+        cache: 'no-cache'
     })
     .then(response => {
         console.log('Update response status:', response.status);
@@ -2369,7 +2373,9 @@ function mostrarNotificacao(mensagem, tipo = 'info') {
 // Funções para editar e excluir exames
 function editarExame(exameId) {
     // Buscar dados do exame
-    fetch(`api/exames.php?id=${exameId}`)
+    fetch(`api/exames_simple.php?id=${exameId}&t=${Date.now()}`, {
+        cache: 'no-cache'
+    })
     .then(response => response.json())
     .then(data => {
         if (data.success && data.exame) {
@@ -2457,9 +2463,10 @@ function salvarEdicaoExame(exameId) {
     formData.append('exame_id', exameId);
     
     // Enviar dados
-    fetch('api/exames_simple.php', {
+    fetch('api/exames_simple.php?t=' + Date.now(), {
         method: 'POST',
-        body: formData
+        body: formData,
+        cache: 'no-cache'
     })
     .then(response => {
         console.log('Edit response status:', response.status);
@@ -2504,9 +2511,10 @@ function cancelarExame(exameId) {
     formData.append('action', 'cancel');
     formData.append('exame_id', exameId);
     
-    fetch('api/exames_simple.php', {
+    fetch('api/exames_simple.php?t=' + Date.now(), {
         method: 'POST',
-        body: formData
+        body: formData,
+        cache: 'no-cache'
     })
     .then(response => {
         console.log('Cancel response status:', response.status);
@@ -2550,9 +2558,10 @@ function excluirExame(exameId) {
     formData.append('action', 'delete');
     formData.append('exame_id', exameId);
     
-    fetch('api/exames_simple.php', {
+    fetch('api/exames_simple.php?t=' + Date.now(), {
         method: 'POST',
-        body: formData
+        body: formData,
+        cache: 'no-cache'
     })
     .then(response => {
         console.log('Delete response status:', response.status);
