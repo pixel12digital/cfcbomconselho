@@ -2071,7 +2071,7 @@ function agendarExame() {
     }
     
     // Enviar dados
-    fetch('api/exames.php', {
+    fetch('api/exames_simple.php', {
         method: 'POST',
         body: formData
     })
@@ -2128,7 +2128,7 @@ function salvarResultado() {
     formData.append('exame_id', exameId);
     
     // Enviar dados
-    fetch('api/exames.php', {
+    fetch('api/exames_simple.php', {
         method: 'POST',
         body: formData
     })
@@ -2157,7 +2157,7 @@ function cancelarExame(exameId) {
     formData.append('action', 'delete');
     formData.append('exame_id', exameId);
     
-    fetch('api/exames.php', {
+    fetch('api/exames_simple.php', {
         method: 'POST',
         body: formData
     })
@@ -2221,7 +2221,7 @@ function alterarResultado(selectElement) {
         formData.append('data_resultado', new Date().toISOString().split('T')[0]);
     }
     
-    fetch('api/exames.php', {
+    fetch('api/exames_simple.php', {
         method: 'POST',
         body: formData
     })
@@ -2457,7 +2457,7 @@ function salvarEdicaoExame(exameId) {
     formData.append('exame_id', exameId);
     
     // Enviar dados
-    fetch('api/exames.php', {
+    fetch('api/exames_simple.php', {
         method: 'POST',
         body: formData
     })
@@ -2504,7 +2504,7 @@ function cancelarExame(exameId) {
     formData.append('action', 'cancel');
     formData.append('exame_id', exameId);
     
-    fetch('api/exames.php', {
+    fetch('api/exames_simple.php', {
         method: 'POST',
         body: formData
     })
@@ -2550,7 +2550,7 @@ function excluirExame(exameId) {
     formData.append('action', 'delete');
     formData.append('exame_id', exameId);
     
-    fetch('api/exames.php', {
+    fetch('api/exames_simple.php', {
         method: 'POST',
         body: formData
     })
