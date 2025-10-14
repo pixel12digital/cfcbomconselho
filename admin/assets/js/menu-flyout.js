@@ -31,8 +31,8 @@ document.addEventListener('DOMContentLoaded', function() {
         'turmas': {
             title: 'Turmas Teóricas',
             items: [
-                { icon: 'fas fa-plus', text: 'Nova Turma', href: '?page=turmas&action=create' },
-                { icon: 'fas fa-list', text: 'Lista de Turmas', href: '?page=turmas' },
+                { icon: 'fas fa-plus', text: 'Nova Turma', href: '?page=turmas-teoricas&acao=nova&step=1' },
+                { icon: 'fas fa-list', text: 'Todas as Turmas', href: '?page=turmas-teoricas' },
                 { icon: 'fas fa-tachometer-alt', text: 'Dashboard', href: '?page=turma-dashboard' },
                 { icon: 'fas fa-calendar-alt', text: 'Calendário de Aulas', href: '?page=turma-calendario' },
                 { icon: 'fas fa-user-plus', text: 'Matrículas', href: '?page=turma-matriculas' },
@@ -61,6 +61,8 @@ document.addEventListener('DOMContentLoaded', function() {
         'configuracoes': {
             title: 'Configurações',
             items: [
+                { icon: 'fas fa-layer-group', text: 'Categorias de Habilitação', href: '?page=configuracoes-categorias' },
+                { icon: 'fas fa-door-open', text: 'Salas de Aula', href: '?page=configuracoes-salas' },
                 { icon: 'fas fa-cog', text: 'Configurações Gerais', href: '?page=configuracoes' },
                 { icon: 'fas fa-user-cog', text: 'Perfil', href: '?page=perfil' },
                 { icon: 'fas fa-shield-alt', text: 'Segurança', href: '?page=seguranca' }

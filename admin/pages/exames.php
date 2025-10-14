@@ -1771,44 +1771,25 @@ class SistemaExames {
         let totalInaptos = 0;
         let totalAgendados = 0;
         
-        // Agrupar exames por aluno para contar apenas os que estão aptos em ambos
-        const examesPorAluno = {};
-        
+        // Contar exames individuais baseado no status e resultado
         exames.forEach(exame => {
-            if (!examesPorAluno[exame.aluno_id]) {
-                examesPorAluno[exame.aluno_id] = {
-                    medico: null,
-                    psicotecnico: null
-                };
-            }
-            
-            if (exame.tipo === 'medico') {
-                examesPorAluno[exame.aluno_id].medico = exame;
-            } else if (exame.tipo === 'psicotecnico') {
-                examesPorAluno[exame.aluno_id].psicotecnico = exame;
-            }
-        });
-        
-        // Contar estatísticas
-        Object.values(examesPorAluno).forEach(examesAluno => {
-            if (examesAluno.medico && examesAluno.medico.status === 'concluido' && 
-                examesAluno.psicotecnico && examesAluno.psicotecnico.status === 'concluido') {
-                
-                if (examesAluno.medico.resultado === 'apto' && examesAluno.psicotecnico.resultado === 'apto') {
-                    totalAptos++;
-                } else if (examesAluno.medico.resultado === 'inapto' || examesAluno.psicotecnico.resultado === 'inapto' ||
-                          examesAluno.medico.resultado === 'inapto_temporario' || examesAluno.psicotecnico.resultado === 'inapto_temporario') {
-                    totalInaptos++;
-                }
-            }
-        });
-        
-        exames.forEach(exame => {
+            // Contar exames agendados
             if (exame.status === 'agendado') {
                 totalAgendados++;
+                
+                // Contar exames pendentes (agendados sem resultado ou com resultado pendente)
+                if (!exame.resultado || exame.resultado === 'pendente') {
+                    totalPendentes++;
+                }
             }
-            if (exame.status === 'agendado' && (!exame.resultado || exame.resultado === 'pendente')) {
-                totalPendentes++;
+            
+            // Contar exames concluídos
+            if (exame.status === 'concluido') {
+                if (exame.resultado === 'apto') {
+                    totalAptos++;
+                } else if (exame.resultado === 'inapto' || exame.resultado === 'inapto_temporario') {
+                    totalInaptos++;
+                }
             }
         });
         

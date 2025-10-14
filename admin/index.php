@@ -691,7 +691,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 
                 <!-- Gestão de Turmas -->
                 <div class="nav-item">
-                    <a href="?page=turmas" class="nav-link <?php echo $page === 'turmas' ? 'active' : ''; ?>" title="Gestão de Turmas">
+                    <a href="?page=turmas-teoricas" class="nav-link <?php echo $page === 'turmas-teoricas' ? 'active' : ''; ?>" title="Gestão de Turmas">
                         <div class="nav-icon">
                             <i class="fas fa-graduation-cap"></i>
                         </div>
@@ -781,6 +781,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         <a href="index.php?page=configuracoes-categorias" class="nav-sublink <?php echo $page === 'configuracoes-categorias' ? 'active' : ''; ?>">
                             <i class="fas fa-layer-group"></i>
                             <span>Categorias de Habilitação</span>
+                        </a>
+                        <a href="index.php?page=configuracoes-salas" class="nav-sublink <?php echo $page === 'configuracoes-salas' ? 'active' : ''; ?>">
+                            <i class="fas fa-door-open"></i>
+                            <span>Salas de Aula</span>
                         </a>
                         <a href="index.php?page=configuracoes&action=geral" class="nav-sublink <?php echo $page === 'configuracoes' ? 'active' : ''; ?>">
                             <i class="fas fa-sliders-h"></i>
@@ -930,7 +934,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         
                         <!-- Gestão de Turmas -->
                         <div class="mobile-nav-item">
-                            <a href="?page=turmas" class="mobile-nav-link <?php echo $page === 'turmas' ? 'active' : ''; ?>">
+                            <a href="?page=turmas-teoricas" class="mobile-nav-link <?php echo $page === 'turmas-teoricas' ? 'active' : ''; ?>">
                                 <i class="fas fa-graduation-cap"></i>
                                 <span>Gestão de Turmas</span>
                             </a>
@@ -1411,18 +1415,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     break;
 
                 // === CASES PARA TURMAS TEÓRICAS ===
-                case 'turmas':
-                // Casos legados removidos - funcionalidade migrada para turmas.php
-                    // Carregar dados básicos para todas as páginas de turmas
+                case 'turmas-teoricas':
+                    // Carregar dados básicos para todas as páginas de turmas teóricas
                     try {
                         $turmas = $db->fetchAll("
                             SELECT t.*, i.nome as instrutor_nome, c.nome as cfc_nome,
                                    COUNT(ta.id) as total_alunos_matriculados
-                            FROM turmas t
-                            LEFT JOIN instrutores i ON t.instrutor_id = i.id
+                            FROM turmas_teoricas t
+                            LEFT JOIN instrutores i ON t.criado_por = i.usuario_id
                             LEFT JOIN cfcs c ON t.cfc_id = c.id
                             LEFT JOIN turma_alunos ta ON t.id = ta.turma_id
-                            WHERE t.tipo_aula = 'teorica'
                             GROUP BY t.id
                             ORDER BY t.data_inicio DESC
                         ");
@@ -1455,7 +1457,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     
                     // Dados específicos por página
                     switch ($page) {
-                        // Casos legados removidos - funcionalidade migrada para turmas.php
+                        // Casos específicos para turmas teóricas
                     }
                     break;
                     

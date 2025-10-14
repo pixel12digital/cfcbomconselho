@@ -324,7 +324,25 @@ class TurmaManager {
      */
     public function matricularAluno($turmaId, $alunoId) {
         try {
-            // Verificar se aluno já está matriculado
+            // Incluir sistema de guards para validação de exames
+            require_once __DIR__ . '/../../includes/guards/AgendamentoGuards.php';
+            $guards = new AgendamentoGuards();
+            
+            // VALIDAÇÃO 1: Verificar se exames estão aprovados
+            $validacaoExames = $guards->verificarExamesOK($alunoId);
+            if (!$validacaoExames['permitido']) {
+                // Mensagens amigáveis baseadas no tipo de erro
+                $mensagem = $this->formatarMensagemExame($validacaoExames);
+                
+                return [
+                    'sucesso' => false,
+                    'mensagem' => $mensagem,
+                    'tipo_erro' => 'exames_pendentes',
+                    'detalhes' => $validacaoExames['detalhes'] ?? null
+                ];
+            }
+            
+            // VALIDAÇÃO 2: Verificar se aluno já está matriculado
             $matriculaExistente = $this->db->fetch(
                 "SELECT id FROM turma_alunos WHERE turma_id = ? AND aluno_id = ?",
                 [$turmaId, $alunoId]
@@ -333,16 +351,26 @@ class TurmaManager {
             if ($matriculaExistente) {
                 return [
                     'sucesso' => false,
-                    'mensagem' => 'Aluno já está matriculado nesta turma'
+                    'mensagem' => '📚 Este aluno já está matriculado nesta turma.',
+                    'tipo_erro' => 'ja_matriculado'
                 ];
             }
             
-            // Verificar se turma está ativa
-            $turma = $this->db->fetch("SELECT status FROM turmas WHERE id = ?", [$turmaId]);
-            if (!$turma || $turma['status'] !== 'ativo') {
+            // VALIDAÇÃO 3: Verificar se turma está ativa
+            $turma = $this->db->fetch("SELECT status, nome FROM turmas WHERE id = ?", [$turmaId]);
+            if (!$turma) {
                 return [
                     'sucesso' => false,
-                    'mensagem' => 'Turma não está ativa para matrículas'
+                    'mensagem' => '❌ Turma não encontrada.',
+                    'tipo_erro' => 'turma_nao_encontrada'
+                ];
+            }
+            
+            if ($turma['status'] !== 'ativo' && $turma['status'] !== 'ativa') {
+                return [
+                    'sucesso' => false,
+                    'mensagem' => "📋 A turma \"{$turma['nome']}\" não está ativa para novas matrículas.",
+                    'tipo_erro' => 'turma_inativa'
                 ];
             }
             
@@ -356,7 +384,7 @@ class TurmaManager {
             
             return [
                 'sucesso' => true,
-                'mensagem' => 'Aluno matriculado com sucesso!'
+                'mensagem' => '✅ Aluno matriculado com sucesso na turma!'
             ];
             
         } catch (Exception $e) {
@@ -364,6 +392,57 @@ class TurmaManager {
                 'sucesso' => false,
                 'mensagem' => 'Erro ao matricular aluno: ' . $e->getMessage()
             ];
+        }
+    }
+    
+    /**
+     * Formattar mensagem amigável para erros de exames
+     * @param array $validacaoExames Resultado da validação dos exames
+     * @return string Mensagem formatada
+     */
+    private function formatarMensagemExame($validacaoExames) {
+        $tipo = $validacaoExames['tipo'] ?? '';
+        $detalhes = $validacaoExames['detalhes'] ?? [];
+        
+        switch ($tipo) {
+            case 'aluno_nao_encontrado':
+                return '❌ Aluno não encontrado no sistema.';
+                
+            case 'exames_nao_aprovados':
+                $mensagens = ['🩺 Para matricular o aluno na turma, é necessário que os exames estejam aprovados:'];
+                
+                if (isset($detalhes['exame_medico'])) {
+                    $statusMedico = $detalhes['exame_medico'];
+                    if (empty($statusMedico) || $statusMedico === 'pendente') {
+                        $mensagens[] = '• Exame médico: Ainda não realizado';
+                    } elseif ($statusMedico === 'inapto' || $statusMedico === 'inapto_temporario') {
+                        $mensagens[] = '• Exame médico: Reprovado (' . $statusMedico . ')';
+                    } else {
+                        $mensagens[] = '• Exame médico: ' . ucfirst($statusMedico);
+                    }
+                }
+                
+                if (isset($detalhes['exame_psicologico'])) {
+                    $statusPsico = $detalhes['exame_psicologico'];
+                    if (empty($statusPsico) || $statusPsico === 'pendente') {
+                        $mensagens[] = '• Exame psicológico: Ainda não realizado';
+                    } elseif ($statusPsico === 'inapto' || $statusPsico === 'inapto_temporario') {
+                        $mensagens[] = '• Exame psicológico: Reprovado (' . $statusPsico . ')';
+                    } else {
+                        $mensagens[] = '• Exame psicológico: ' . ucfirst($statusPsico);
+                    }
+                }
+                
+                $mensagens[] = '';
+                $mensagens[] = '💡 Providencie a aprovação dos exames pendentes antes de matricular o aluno na turma.';
+                
+                return implode("\n", $mensagens);
+                
+            case 'erro_sistema':
+                return '⚠️ Erro temporário ao verificar os exames. Tente novamente em alguns instantes.';
+                
+            default:
+                return '❌ ' . ($validacaoExames['motivo'] ?? 'Não foi possível matricular o aluno na turma.');
         }
     }
     
