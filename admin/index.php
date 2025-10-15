@@ -388,6 +388,188 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <!-- CSS para Modais Responsivos -->
     <link href="assets/css/modals-responsive.css?v=<?php echo time(); ?>" rel="stylesheet">
     
+    <!-- CSS para Sistema de Modal Singleton -->
+    <style>
+        /* Modal Root - Sistema Singleton */
+        #modal-root {
+            position: relative;
+            z-index: 10000;
+        }
+        
+        /* Backdrop único - Sistema Singleton */
+        #modal-root .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+        
+        /* Wrapper do modal centralizado - Sistema Singleton */
+        #modal-root .modal-wrapper {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        /* Caixa do modal - Sistema Singleton */
+        #modal-root .modal {
+            width: min(90vw, 1200px);
+            max-height: min(85vh, 900px);
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* Header do modal - Sistema Singleton */
+        #modal-root .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        
+        /* ÚNICO scroll fica no corpo do modal - Sistema Singleton */
+        #modal-root .modal-content {
+            overflow-y: auto !important;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+            padding: 1.5rem;
+            flex: 1;
+        }
+        
+        /* Footer do modal - Sistema Singleton */
+        #modal-root .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        /* Botão de fechar - Sistema Singleton */
+        #modal-root .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: color 0.15s ease-in-out;
+        }
+        
+        #modal-root .modal-close:hover {
+            color: #000;
+        }
+        
+        /* Mobile: full-screen - Sistema Singleton */
+        @media (max-width: 768px) {
+            #modal-root .modal-wrapper {
+                padding: 0;
+            }
+            
+            #modal-root .modal {
+                width: 100vw;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            
+            #modal-root .modal-header,
+            #modal-root .modal-content,
+            #modal-root .modal-footer {
+                padding: 1rem;
+            }
+        }
+        
+        /* Animação de entrada - Sistema Singleton */
+        #modal-root .modal-wrapper {
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        
+        @keyframes modalFadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        /* Scrollbar personalizada - Sistema Singleton */
+        #modal-root .modal-content::-webkit-scrollbar {
+            width: 6px;
+        }
+        
+        #modal-root .modal-content::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        
+        #modal-root .modal-content::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        
+        #modal-root .modal-content::-webkit-scrollbar-thumb:hover {
+            background: #a8a8a8;
+        }
+        
+        /* Remover rolagem interna - APENAS modal-content pode ter scroll */
+        #modal-root .disciplinas-grid,
+        #modal-root .panel,
+        #modal-root .cards-wrapper,
+        #modal-root .disciplinas-panel,
+        #modal-root .card,
+        #modal-root .card-body,
+        #modal-root .modal-body {
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+        }
+        
+        /* Remover moldura decorativa se existir */
+        #modal-root .panel,
+        #modal-root .cards-wrapper,
+        #modal-root .disciplinas-panel {
+            box-shadow: none !important;
+            border: 0 !important;
+            padding: 0 !important;
+        }
+        
+        /* Neutralizar regras globais do modals-responsive.css */
+        #modal-root .modal-body {
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+        }
+        
+        /* Forçar que APENAS modal-content tenha scroll */
+        #modal-root .modal-content {
+            overflow-y: auto !important;
+        }
+        
+        #modal-root .modal-content > *:not(.modal-header):not(.modal-footer) {
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+        }
+    </style>
+    
     <!-- CSS da Topbar Unificada -->
     <link href="assets/css/topbar-unified.css" rel="stylesheet">
     
@@ -786,6 +968,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <i class="fas fa-door-open"></i>
                             <span>Salas de Aula</span>
                         </a>
+                        <a href="index.php?page=configuracoes-disciplinas" class="nav-sublink <?php echo $page === 'configuracoes-disciplinas' ? 'active' : ''; ?>">
+                            <i class="fas fa-book"></i>
+                            <span>Disciplinas</span>
+                        </a>
                         <a href="index.php?page=configuracoes&action=geral" class="nav-sublink <?php echo $page === 'configuracoes' ? 'active' : ''; ?>">
                             <i class="fas fa-sliders-h"></i>
                             <span>Configurações Gerais</span>
@@ -1000,6 +1186,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                 <a href="index.php?page=configuracoes-categorias" class="mobile-nav-sublink <?php echo $page === 'configuracoes-categorias' ? 'active' : ''; ?>">
                                     <i class="fas fa-layer-group"></i>
                                     <span>Categorias de Habilitação</span>
+                                </a>
+                                <a href="index.php?page=configuracoes-salas" class="mobile-nav-sublink <?php echo $page === 'configuracoes-salas' ? 'active' : ''; ?>">
+                                    <i class="fas fa-door-open"></i>
+                                    <span>Salas de Aula</span>
+                                </a>
+                                <a href="index.php?page=configuracoes-disciplinas" class="mobile-nav-sublink <?php echo $page === 'configuracoes-disciplinas' ? 'active' : ''; ?>">
+                                    <i class="fas fa-book"></i>
+                                    <span>Disciplinas</span>
                                 </a>
                                 <a href="index.php?page=configuracoes&action=geral" class="mobile-nav-sublink <?php echo $page === 'configuracoes' ? 'active' : ''; ?>">
                                     <i class="fas fa-sliders-h"></i>
@@ -1652,5 +1846,150 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     
     <!-- Mobile Debug Script -->
     <script src="assets/js/mobile-debug.js"></script>
+    
+    <!-- Sistema de Modal Singleton -->
+    <script>
+        // Sistema de Modal Singleton - Namespace específico
+        window.SingletonModalSystem = {
+            // Abrir modal singleton
+            open: function(render) {
+                // Verificar se já existe modal aberto
+                if (document.body.dataset.singletonModalOpen === '1') {
+                    console.log('⚠️ Modal já está aberto, apenas atualizando conteúdo');
+                    this.update(render);
+                    return;
+                }
+                
+                const root = document.getElementById('modal-root');
+                if (!root) {
+                    console.error('❌ Modal root não encontrado');
+                    return;
+                }
+                
+                // Limpar qualquer modal anterior
+                root.innerHTML = '';
+                
+                // Criar backdrop
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop';
+                backdrop.onclick = () => this.close();
+                
+                // Criar wrapper do modal
+                const wrapper = document.createElement('div');
+                wrapper.className = 'modal-wrapper';
+                
+                // Renderizar conteúdo do modal
+                const modalContent = render();
+                if (modalContent) {
+                    wrapper.appendChild(modalContent);
+                }
+                
+                // Adicionar ao root
+                root.appendChild(backdrop);
+                root.appendChild(wrapper);
+                
+                // Marcar como aberto
+                document.body.dataset.singletonModalOpen = '1';
+                document.body.style.overflow = 'hidden';
+                
+                // Adicionar listener para ESC
+                document.addEventListener('keydown', this.handleEscape);
+                
+                // Focus trap
+                this.setupFocusTrap(wrapper);
+                
+                console.log('✅ Modal singleton aberto');
+            },
+            
+            // Atualizar conteúdo do modal existente
+            update: function(render) {
+                const wrapper = document.querySelector('#modal-root .modal-wrapper');
+                if (wrapper) {
+                    wrapper.innerHTML = '';
+                    const modalContent = render();
+                    if (modalContent) {
+                        wrapper.appendChild(modalContent);
+                        this.setupFocusTrap(wrapper);
+                    }
+                }
+            },
+            
+            // Fechar modal
+            close: function() {
+                const root = document.getElementById('modal-root');
+                if (root) {
+                    root.innerHTML = '';
+                }
+                
+                // Limpar estado
+                delete document.body.dataset.singletonModalOpen;
+                document.body.style.overflow = '';
+                
+                // Remover listener ESC
+                document.removeEventListener('keydown', this.handleEscape);
+                
+                console.log('✅ Modal singleton fechado');
+            },
+            
+            // Handler para tecla ESC
+            handleEscape: function(event) {
+                if (event.key === 'Escape') {
+                    window.SingletonModalSystem.close();
+                }
+            },
+            
+            // Setup focus trap
+            setupFocusTrap: function(wrapper) {
+                const focusableElements = wrapper.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                
+                if (focusableElements.length === 0) return;
+                
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+                
+                wrapper.addEventListener('keydown', function(event) {
+                    if (event.key === 'Tab') {
+                        if (event.shiftKey) {
+                            if (document.activeElement === firstElement) {
+                                event.preventDefault();
+                                lastElement.focus();
+                            }
+                        } else {
+                            if (document.activeElement === lastElement) {
+                                event.preventDefault();
+                                firstElement.focus();
+                            }
+                        }
+                    }
+                });
+                
+                // Focar no primeiro elemento
+                setTimeout(() => firstElement.focus(), 100);
+            }
+        };
+        
+        // Função de conveniência global para sistema singleton
+        window.openSingletonModal = function(render) {
+            window.SingletonModalSystem.open(render);
+        };
+        
+        window.closeSingletonModal = function() {
+            window.SingletonModalSystem.close();
+        };
+        
+        // Manter compatibilidade com código existente
+        window.openModal = function(render) {
+            window.SingletonModalSystem.open(render);
+        };
+        
+        window.closeModal = function() {
+            window.SingletonModalSystem.close();
+        };
+    </script>
+    
+    <!-- Modal Root para modais singleton -->
+    <div id="modal-root"></div>
 </body>
 </html>

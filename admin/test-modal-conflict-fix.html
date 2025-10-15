@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Conflito Modal Fix</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            margin: 0.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .btn-warning { background-color: #ffc107; color: black; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.error { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+        .status.warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 Teste de Conflito Modal Fix</h1>
+        <p>Este teste verifica se os conflitos entre sistemas de modal foram resolvidos.</p>
+        
+        <div class="status warning">
+            ⚠️ Simulando ambiente com múltiplos sistemas de modal
+        </div>
+        
+        <div>
+            <button class="btn-primary" onclick="testarSistemaSingleton()">Testar Sistema Singleton</button>
+            <button class="btn-secondary" onclick="testarConflitos()">Testar Conflitos</button>
+            <button class="btn-warning" onclick="simularBootstrap()">Simular Bootstrap</button>
+            <button class="btn-success" onclick="limparLog()">Limpar Log</button>
+        </div>
+        
+        <div class="log" id="log">
+            <div>📋 Log de testes de conflito:</div>
+        </div>
+    </div>
+
+    <!-- Simular Bootstrap Modal -->
+    <div class="modal fade" id="bootstrapModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Modal Bootstrap</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    Este é um modal Bootstrap simulado.
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Simular ModalSystem customizado -->
+    <div id="customModalRoot"></div>
+
+    <!-- Sistema de Modal Singleton -->
+    <style>
+        #modal-root {
+            position: relative;
+            z-index: 10000;
+        }
+        
+        #modal-root .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+        
+        #modal-root .modal-wrapper {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        #modal-root .modal {
+            width: min(90vw, 1200px);
+            max-height: min(85vh, 900px);
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #modal-root .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        
+        #modal-root .modal-content {
+            overflow-y: auto;
+            padding: 1.5rem;
+            flex: 1;
+        }
+        
+        #modal-root .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        #modal-root .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: color 0.15s ease-in-out;
+        }
+        
+        #modal-root .modal-close:hover {
+            color: #000;
+        }
+        
+        @media (max-width: 768px) {
+            #modal-root .modal-wrapper {
+                padding: 0;
+            }
+            
+            #modal-root .modal {
+                width: 100vw;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            
+            #modal-root .modal-header,
+            #modal-root .modal-content,
+            #modal-root .modal-footer {
+                padding: 1rem;
+            }
+        }
+    </style>
+
+    <script>
+        // Simular Bootstrap
+        function simularBootstrap() {
+            log('🔧 Simulando modal Bootstrap...');
+            const modal = document.getElementById('bootstrapModal');
+            modal.classList.add('show');
+            modal.style.display = 'block';
+            
+            setTimeout(() => {
+                modal.classList.remove('show');
+                modal.style.display = 'none';
+                log('✅ Modal Bootstrap fechado');
+            }, 2000);
+        }
+
+        // Simular ModalSystem customizado
+        function simularCustomModal() {
+            log('🔧 Simulando ModalSystem customizado...');
+            const root = document.getElementById('customModalRoot');
+            const modal = document.createElement('div');
+            modal.className = 'modal-overlay';
+            modal.style.cssText = `
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0,0,0,0.5);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                z-index: 9999;
+            `;
+            
+            const content = document.createElement('div');
+            content.innerHTML = '<div style="background: white; padding: 2rem; border-radius: 8px;">Modal Customizado</div>';
+            modal.appendChild(content);
+            root.appendChild(modal);
+            
+            setTimeout(() => {
+                root.innerHTML = '';
+                log('✅ Modal customizado fechado');
+            }, 2000);
+        }
+
+        // Sistema de Modal Singleton - Namespace específico
+        window.SingletonModalSystem = {
+            open: function(render) {
+                if (document.body.dataset.singletonModalOpen === '1') {
+                    log('⚠️ Modal singleton já está aberto, apenas atualizando conteúdo');
+                    this.update(render);
+                    return;
+                }
+                
+                const root = document.getElementById('modal-root');
+                if (!root) {
+                    log('❌ Modal root não encontrado');
+                    return;
+                }
+                
+                root.innerHTML = '';
+                
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop';
+                backdrop.onclick = () => this.close();
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'modal-wrapper';
+                
+                const modalContent = render();
+                if (modalContent) {
+                    wrapper.appendChild(modalContent);
+                }
+                
+                root.appendChild(backdrop);
+                root.appendChild(wrapper);
+                
+                document.body.dataset.singletonModalOpen = '1';
+                document.body.style.overflow = 'hidden';
+                
+                document.addEventListener('keydown', this.handleEscape);
+                this.setupFocusTrap(wrapper);
+                
+                log('✅ Modal singleton aberto');
+            },
+            
+            update: function(render) {
+                const wrapper = document.querySelector('#modal-root .modal-wrapper');
+                if (wrapper) {
+                    wrapper.innerHTML = '';
+                    const modalContent = render();
+                    if (modalContent) {
+                        wrapper.appendChild(modalContent);
+                        this.setupFocusTrap(wrapper);
+                    }
+                }
+            },
+            
+            close: function() {
+                const root = document.getElementById('modal-root');
+                if (root) {
+                    root.innerHTML = '';
+                }
+                
+                delete document.body.dataset.singletonModalOpen;
+                document.body.style.overflow = '';
+                document.removeEventListener('keydown', this.handleEscape);
+                
+                log('✅ Modal singleton fechado');
+            },
+            
+            handleEscape: function(event) {
+                if (event.key === 'Escape') {
+                    window.SingletonModalSystem.close();
+                }
+            },
+            
+            setupFocusTrap: function(wrapper) {
+                const focusableElements = wrapper.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                
+                if (focusableElements.length === 0) return;
+                
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+                
+                wrapper.addEventListener('keydown', function(event) {
+                    if (event.key === 'Tab') {
+                        if (event.shiftKey) {
+                            if (document.activeElement === firstElement) {
+                                event.preventDefault();
+                                lastElement.focus();
+                            }
+                        } else {
+                            if (document.activeElement === lastElement) {
+                                event.preventDefault();
+                                firstElement.focus();
+                            }
+                        }
+                    }
+                });
+                
+                setTimeout(() => firstElement.focus(), 100);
+            }
+        };
+        
+        window.openModal = function(render) {
+            window.SingletonModalSystem.open(render);
+        };
+        
+        window.closeModal = function() {
+            window.SingletonModalSystem.close();
+        };
+
+        // Funções de teste
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logElement.innerHTML += `<div>[${time}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function limparLog() {
+            document.getElementById('log').innerHTML = '<div>📋 Log de testes de conflito:</div>';
+        }
+
+        function testarSistemaSingleton() {
+            log('🧪 Testando sistema singleton...');
+            
+            window.openModal(function() {
+                const modal = document.createElement('div');
+                modal.className = 'modal';
+                modal.innerHTML = `
+                    <div class="modal-header" style="background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%); color: white;">
+                        <h5>Modal Singleton</h5>
+                        <button type="button" class="modal-close text-white" onclick="window.closeModal()">
+                            ×
+                        </button>
+                    </div>
+                    <div class="modal-content">
+                        <p>✅ Sistema Singleton funcionando!</p>
+                        <p><strong>Namespace:</strong> SingletonModalSystem</p>
+                        <p><strong>Dataset:</strong> singletonModalOpen</p>
+                        <p><strong>CSS:</strong> #modal-root específico</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button class="btn-secondary" onclick="window.closeModal()">Fechar</button>
+                    </div>
+                `;
+                return modal;
+            });
+        }
+
+        function testarConflitos() {
+            log('🔍 Testando conflitos entre sistemas...');
+            
+            // Testar se múltiplos sistemas podem coexistir
+            log('1. Abrindo modal singleton...');
+            testarSistemaSingleton();
+            
+            setTimeout(() => {
+                log('2. Tentando abrir modal customizado...');
+                simularCustomModal();
+                
+                setTimeout(() => {
+                    log('3. Verificando se singleton ainda funciona...');
+                    if (document.body.dataset.singletonModalOpen === '1') {
+                        log('✅ Sistema singleton não foi afetado por conflitos');
+                    } else {
+                        log('❌ Sistema singleton foi afetado por conflitos');
+                    }
+                }, 1000);
+            }, 1000);
+        }
+
+        // Log inicial
+        window.addEventListener('load', () => {
+            log('🎯 Sistema de teste de conflitos carregado');
+            log('📋 Testes disponíveis:');
+            log('  • Sistema Singleton - Testa funcionalidade isolada');
+            log('  • Testar Conflitos - Simula múltiplos sistemas');
+            log('  • Simular Bootstrap - Testa coexistência');
+        });
+    </script>
+
+    <!-- Modal Root -->
+    <div id="modal-root"></div>
+</body>
+</html>

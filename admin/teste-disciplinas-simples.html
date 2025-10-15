@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Simples - Disciplinas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        /* Melhorar tamanho dos campos no desktop */
+        @media (min-width: 992px) {
+            .disciplina-item .form-select {
+                font-size: 1rem;
+                padding: 0.75rem 1rem;
+            }
+            
+            .disciplina-item .form-control {
+                font-size: 1rem;
+                padding: 0.75rem 1rem;
+            }
+            
+            .disciplina-item .input-group-text {
+                font-size: 1rem;
+                padding: 0.75rem 0.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header">
+                        <h4><i class="fas fa-graduation-cap me-2"></i>Teste Simples - Disciplinas Dinâmicas</h4>
+                        <small class="text-muted">Versão 2.0 - Layout otimizado</small>
+                    </div>
+                    <div class="card-body">
+                        <form>
+                            <!-- Seleção do Curso -->
+                            <div class="mb-4">
+                                <label for="curso_tipo" class="form-label">Tipo de Curso *</label>
+                                <select id="curso_tipo" name="curso_tipo" class="form-select" required>
+                                    <option value="">Selecione o tipo de curso...</option>
+                                    <option value="formacao_45h">📚 Curso de Formação 45h</option>
+                                    <option value="formacao_acc_20h">📖 Curso ACC 20h</option>
+                                    <option value="reciclagem_infrator">🔄 Reciclagem para Infrator</option>
+                                    <option value="atualizacao">🆕 Curso de Atualização</option>
+                                </select>
+                            </div>
+
+                            <!-- Disciplinas Dinâmicas -->
+                            <div class="mb-4">
+                                <label>
+                                    <i class="fas fa-book me-1"></i>Disciplinas do Curso
+                                </label>
+                                <div class="mb-2">
+                                    <div id="disciplinas-container">
+                                        <!-- Disciplinas selecionadas serão carregadas aqui -->
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="adicionarDisciplina()" style="font-size: 0.8rem;">
+                                        <i class="fas fa-plus me-1"></i>Adicionar Disciplina
+                                    </button>
+                                </div>
+                                <small class="text-muted">
+                                    <i class="fas fa-lightbulb me-1"></i>
+                                    Selecione as disciplinas que serão ministradas nesta turma
+                                </small>
+                                <div class="mt-2">
+                                    <small class="text-primary">
+                                        <i class="fas fa-clock me-1"></i>
+                                        Total de horas: <strong id="total-horas-disciplinas">0</strong>h
+                                    </small>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Sistema de Disciplinas Dinâmicas (baseado na lógica do cadastro de alunos)
+        console.log('🚀 Sistema de disciplinas dinâmicas carregado! v2.0 - ' + new Date().toISOString());
+        let contadorDisciplinas = 0;
+
+        // Disciplinas disponíveis por tipo de curso
+        const disciplinasPorCurso = {
+            'formacao_45h': [
+                { value: 'legislacao_transito', text: '📋 Legislação de Trânsito', aulas: 18, cor: '#dc3545' },
+                { value: 'direcao_defensiva', text: '🛡️ Direção Defensiva', aulas: 16, cor: '#28a745' },
+                { value: 'primeiros_socorros', text: '🚑 Primeiros Socorros', aulas: 4, cor: '#ffc107' },
+                { value: 'meio_ambiente_cidadania', text: '🌱 Meio Ambiente e Cidadania', aulas: 4, cor: '#17a2b8' },
+                { value: 'mecanica_basica', text: '🔧 Mecânica Básica', aulas: 3, cor: '#6c757d' }
+            ],
+            'formacao_acc_20h': [
+                { value: 'legislacao_transito', text: '📋 Legislação de Trânsito', aulas: 8, cor: '#dc3545' },
+                { value: 'direcao_defensiva', text: '🛡️ Direção Defensiva', aulas: 8, cor: '#28a745' },
+                { value: 'primeiros_socorros', text: '🚑 Primeiros Socorros', aulas: 2, cor: '#ffc107' },
+                { value: 'meio_ambiente_cidadania', text: '🌱 Meio Ambiente e Cidadania', aulas: 2, cor: '#17a2b8' }
+            ],
+            'reciclagem_infrator': [
+                { value: 'legislacao_transito', text: '📋 Legislação de Trânsito', aulas: 15, cor: '#dc3545' },
+                { value: 'direcao_defensiva', text: '🛡️ Direção Defensiva', aulas: 15, cor: '#28a745' }
+            ],
+            'atualizacao': [
+                { value: 'legislacao_transito', text: '📋 Legislação de Trânsito', aulas: 8, cor: '#dc3545' },
+                { value: 'direcao_defensiva', text: '🛡️ Direção Defensiva', aulas: 7, cor: '#28a745' }
+            ]
+        };
+
+        function adicionarDisciplina() {
+            console.log('🎯 Função adicionarDisciplina chamada!');
+            const cursoSelect = document.getElementById('curso_tipo');
+            if (!cursoSelect || !cursoSelect.value) {
+                alert('⚠️ Selecione primeiro o tipo de curso!');
+                cursoSelect.focus();
+                return;
+            }
+            
+            contadorDisciplinas++;
+            const container = document.getElementById('disciplinas-container');
+            
+            if (!container) {
+                console.error('❌ Container de disciplinas não encontrado!');
+                alert('ERRO: Container de disciplinas não encontrado!');
+                return;
+            }
+            
+            const disciplinaHtml = `
+                <div class="disciplina-item border rounded p-3 mb-3" data-disciplina-id="${contadorDisciplinas}">
+                    <div class="row align-items-center">
+                        <div class="col-lg-7 col-md-6">
+                            <select class="form-select" name="disciplina_${contadorDisciplinas}" onchange="atualizarDisciplina(${contadorDisciplinas})">
+                                <option value="">Selecione a disciplina...</option>
+                            </select>
+                        </div>
+                        <div class="col-lg-2 col-md-3">
+                            <div class="input-group">
+                                <input type="number" class="form-control disciplina-horas" 
+                                       name="disciplina_horas_${contadorDisciplinas}" 
+                                       placeholder="Horas" 
+                                       min="1" 
+                                       max="50"
+                                       onchange="atualizarPreview()"
+                                       style="display: none;">
+                                <span class="input-group-text" style="display: none;">h</span>
+                            </div>
+                        </div>
+                        <div class="col-lg-2 col-md-2">
+                            <small class="text-muted disciplina-info" style="display: none;">
+                                <span class="aulas-obrigatorias"></span> aulas (padrão)
+                            </small>
+                        </div>
+                        <div class="col-lg-1 col-md-1">
+                            <button type="button" class="btn btn-outline-danger btn-sm" onclick="removerDisciplina(${contadorDisciplinas})" title="Remover disciplina">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('beforeend', disciplinaHtml);
+            carregarDisciplinas(contadorDisciplinas);
+        }
+
+        function carregarDisciplinas(disciplinaId) {
+            const cursoSelect = document.getElementById('curso_tipo');
+            const disciplinaSelect = document.querySelector(`select[name="disciplina_${disciplinaId}"]`);
+            
+            if (!cursoSelect || !disciplinaSelect) {
+                console.warn(`⚠️ Elementos não encontrados para disciplina ${disciplinaId}`);
+                return;
+            }
+            
+            const cursoTipo = cursoSelect.value;
+            const disciplinas = disciplinasPorCurso[cursoTipo] || [];
+            
+            // Limpar opções anteriores
+            disciplinaSelect.innerHTML = '<option value="">Selecione a disciplina...</option>';
+            
+            // Adicionar opções disponíveis
+            disciplinas.forEach(disciplina => {
+                const option = document.createElement('option');
+                option.value = disciplina.value;
+                option.textContent = disciplina.text;
+                option.dataset.aulas = disciplina.aulas;
+                option.dataset.cor = disciplina.cor;
+                disciplinaSelect.appendChild(option);
+            });
+            
+            console.log(`✅ Disciplinas carregadas para curso ${cursoTipo}:`, disciplinas.length);
+        }
+
+        function atualizarDisciplina(disciplinaId) {
+            const disciplinaSelect = document.querySelector(`select[name="disciplina_${disciplinaId}"]`);
+            const infoElement = document.querySelector(`[data-disciplina-id="${disciplinaId}"] .disciplina-info`);
+            const aulasElement = infoElement?.querySelector('.aulas-obrigatorias');
+            const horasInput = document.querySelector(`input[name="disciplina_horas_${disciplinaId}"]`);
+            const horasGroup = horasInput?.closest('.input-group');
+            const horasLabel = horasGroup?.querySelector('.input-group-text');
+            
+            if (!disciplinaSelect || !infoElement) return;
+            
+            const selectedOption = disciplinaSelect.options[disciplinaSelect.selectedIndex];
+            
+            if (selectedOption.value) {
+                const aulas = selectedOption.dataset.aulas;
+                const cor = selectedOption.dataset.cor;
+                
+                aulasElement.textContent = aulas;
+                infoElement.style.display = 'block';
+                
+                // Mostrar campo de horas e configurar valor padrão
+                if (horasInput && horasGroup && horasLabel) {
+                    horasInput.value = aulas; // Definir valor padrão
+                    horasInput.style.display = 'block';
+                    horasGroup.style.display = 'flex';
+                    horasLabel.style.display = 'inline-block';
+                }
+                
+                // Aplicar cor da disciplina
+                const disciplinaItem = disciplinaSelect.closest('.disciplina-item');
+                disciplinaItem.style.borderLeft = `4px solid ${cor}`;
+                
+                console.log(`✅ Disciplina selecionada: ${selectedOption.textContent} (${aulas} aulas padrão)`);
+            } else {
+                infoElement.style.display = 'none';
+                
+                // Esconder campo de horas
+                if (horasInput && horasGroup && horasLabel) {
+                    horasInput.style.display = 'none';
+                    horasGroup.style.display = 'none';
+                    horasLabel.style.display = 'none';
+                    horasInput.value = '';
+                }
+                
+                const disciplinaItem = disciplinaSelect.closest('.disciplina-item');
+                disciplinaItem.style.borderLeft = '';
+            }
+            
+            atualizarPreview();
+        }
+
+        function removerDisciplina(disciplinaId) {
+            const disciplinaItem = document.querySelector(`[data-disciplina-id="${disciplinaId}"]`);
+            if (disciplinaItem) {
+                disciplinaItem.remove();
+                console.log(`🗑️ Disciplina ${disciplinaId} removida`);
+                atualizarPreview();
+            }
+        }
+
+        function atualizarPreview() {
+            const disciplinas = document.querySelectorAll('#disciplinas-container .disciplina-item');
+            let totalHoras = 0;
+            let disciplinasComHoras = [];
+            
+            disciplinas.forEach(item => {
+                const select = item.querySelector('select');
+                const horasInput = item.querySelector('.disciplina-horas');
+                
+                if (select && select.value && horasInput && horasInput.value) {
+                    const selectedOption = select.options[select.selectedIndex];
+                    const horas = parseInt(horasInput.value) || 0;
+                    const cor = selectedOption.dataset.cor;
+                    
+                    totalHoras += horas;
+                    disciplinasComHoras.push({
+                        nome: selectedOption.textContent,
+                        horas: horas,
+                        cor: cor
+                    });
+                }
+            });
+            
+            // Atualizar indicador de total de horas se existir
+            const totalHorasElement = document.getElementById('total-horas-disciplinas');
+            if (totalHorasElement) {
+                totalHorasElement.textContent = totalHoras;
+            }
+            
+            console.log(`📊 Total de horas calculado: ${totalHoras}h`, disciplinasComHoras);
+        }
+
+        // Recarregar disciplinas quando curso mudar
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('📄 DOM carregado - sistema pronto!');
+            const cursoSelect = document.getElementById('curso_tipo');
+            if (cursoSelect) {
+                cursoSelect.addEventListener('change', function() {
+                    // Limpar disciplinas existentes quando curso mudar
+                    const container = document.getElementById('disciplinas-container');
+                    if (container) {
+                        container.innerHTML = '';
+                        contadorDisciplinas = 0;
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+

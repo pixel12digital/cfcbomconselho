@@ -63,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
             items: [
                 { icon: 'fas fa-layer-group', text: 'Categorias de Habilitação', href: '?page=configuracoes-categorias' },
                 { icon: 'fas fa-door-open', text: 'Salas de Aula', href: '?page=configuracoes-salas' },
+                { icon: 'fas fa-book', text: 'Disciplinas', href: '?page=configuracoes-disciplinas' },
                 { icon: 'fas fa-cog', text: 'Configurações Gerais', href: '?page=configuracoes' },
                 { icon: 'fas fa-user-cog', text: 'Perfil', href: '?page=perfil' },
                 { icon: 'fas fa-shield-alt', text: 'Segurança', href: '?page=seguranca' }

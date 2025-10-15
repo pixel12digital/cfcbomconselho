@@ -404,49 +404,68 @@ function gerarHtmlDisciplinas($disciplinas) {
         $statusColor = $disciplina['ativa'] ? '#28a745' : '#dc3545';
         
         $html .= '
-        <div class="col-lg-4 col-md-6 col-12 mb-3">
-            <div class="card h-100 shadow-sm border-0 disciplina-card" style="transition: all 0.3s ease; cursor: pointer;" onclick="visualizarDisciplina(' . $disciplina['id'] . ')">
-                <div class="card-header border-0 p-3" style="background: linear-gradient(135deg, ' . $disciplina['cor_hex'] . ' 0%, ' . $disciplina['cor_hex'] . 'dd 100%); color: white; position: relative;">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-1 fw-bold">
-                                <i class="fas fa-' . $disciplina['icone'] . ' me-2"></i>
-                                ' . htmlspecialchars($disciplina['nome']) . '
-                            </h6>
-                            <small class="opacity-75">' . htmlspecialchars($disciplina['codigo']) . '</small>
-                        </div>
-                        <span class="badge rounded-pill px-2 py-1" style="background-color: rgba(255,255,255,0.25); color: white; font-size: 0.7rem;">
-                            ' . $statusText . '
-                        </span>
-                    </div>
-                    <div class="position-absolute top-0 end-0 me-3 mt-2">
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-light rounded-circle p-1" style="width: 28px; height: 28px; padding: 0;" data-bs-toggle="dropdown" onclick="event.stopPropagation();">
-                                <i class="fas fa-ellipsis-v" style="font-size: 0.8rem;"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end">
-                                <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); editarDisciplina(' . $disciplina['id'] . ');"><i class="fas fa-edit me-2"></i>Editar</a></li>
-                                <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); excluirDisciplina(' . $disciplina['id'] . ');"><i class="fas fa-trash me-2"></i>Excluir</a></li>
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-                <div class="card-body p-3">
-                    <div class="row g-2 mb-3">
-                        <div class="col-12">
-                            <div class="d-flex align-items-center text-muted">
-                                <i class="fas fa-clock me-2" style="color: ' . $disciplina['cor_hex'] . ';"></i>
-                                <span class="fw-semibold">' . $disciplina['carga_horaria_padrao'] . ' aulas</span>
+        <div class="col-lg-4 col-md-6 col-12 mb-4">
+            <div class="card h-100 border-0 shadow-sm disciplina-card" style="transition: all 0.3s ease; border-radius: 15px; overflow: hidden;">
+                <!-- Header com gradiente -->
+                <div class="card-header border-0 p-0" style="background: linear-gradient(135deg, ' . $disciplina['cor_hex'] . ' 0%, ' . $disciplina['cor_hex'] . 'dd 100%); position: relative;">
+                    <div class="p-3 text-white">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="flex-grow-1">
+                                <div class="d-flex align-items-center mb-2">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center me-3" 
+                                         style="width: 2.5rem; height: 2.5rem; background: rgba(255,255,255,0.2);">
+                                        <i class="fas fa-' . $disciplina['icone'] . ' text-white" style="font-size: 1.1rem;"></i>
+                                    </div>
+                                    <div class="flex-grow-1">
+                                        <h6 class="mb-1 fw-bold text-white">' . htmlspecialchars($disciplina['nome']) . '</h6>
+                                        <small class="opacity-75 text-white">' . htmlspecialchars($disciplina['codigo']) . '</small>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="badge rounded-pill px-2 py-1" style="background-color: rgba(255,255,255,0.25); color: white; font-size: 0.7rem;">
+                                    ' . ($disciplina['ativa'] ? '✅ ATIVO' : '❌ INATIVO') . '
+                                </span>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-light rounded-circle p-1" style="width: 28px; height: 28px; padding: 0;" data-bs-toggle="dropdown" onclick="event.stopPropagation();">
+                                        <i class="fas fa-ellipsis-v" style="font-size: 0.8rem;"></i>
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#" onclick="event.stopPropagation(); editarDisciplina(' . $disciplina['id'] . ');"><i class="fas fa-edit me-2"></i>Editar</a></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="event.stopPropagation(); excluirDisciplina(' . $disciplina['id'] . ');"><i class="fas fa-trash me-2"></i>Excluir</a></li>
+                                    </ul>
+                                </div>
                             </div>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Corpo do card -->
+                <div class="card-body p-3">
+                    <!-- Informações principais -->
+                    <div class="row g-2 mb-3">
+                        <div class="col-12">
+                            <div class="d-flex align-items-center justify-content-between p-2 rounded" style="background: #f8f9fa;">
+                                <div class="d-flex align-items-center">
+                                    <i class="fas fa-clock me-2" style="color: ' . $disciplina['cor_hex'] . ';"></i>
+                                    <span class="fw-semibold text-dark">Carga Horária</span>
+                                </div>
+                                <span class="badge bg-primary">' . $disciplina['carga_horaria_padrao'] . ' aulas</span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Descrição -->
                     <div class="disciplina-descricao">
                         <small class="text-muted lh-sm">' . nl2br(htmlspecialchars($disciplina['descricao'])) . '</small>
                     </div>
                 </div>
+                
+                <!-- Footer com ações -->
                 <div class="card-footer border-0 bg-transparent p-3 pt-0">
-                    <div class="d-grid gap-2">
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="event.stopPropagation(); editarDisciplina(' . $disciplina['id'] . ');">
+                    <div class="d-grid">
+                        <button type="button" class="btn btn-outline-primary btn-sm rounded-pill" onclick="event.stopPropagation(); editarDisciplina(' . $disciplina['id'] . ');" 
+                                style="border-color: ' . $disciplina['cor_hex'] . '; color: ' . $disciplina['cor_hex'] . ';">
                             <i class="fas fa-edit me-1"></i> Editar Disciplina
                         </button>
                     </div>

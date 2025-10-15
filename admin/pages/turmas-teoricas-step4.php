@@ -53,6 +53,9 @@ try {
     $alunosMatriculados = [];
 }
 
+// Adicionar contagem de alunos matriculados ao array da turma
+$turmaAtual['alunos_matriculados'] = count($alunosMatriculados);
+
 // Buscar alunos elegíveis (com exames aprovados e não matriculados)
 try {
     $alunosElegiveis = $db->fetchAll("
@@ -85,8 +88,10 @@ $elegiveisAprovados = array_filter($alunosElegiveis, fn($a) => $a['status_elegib
 $elegiveisComPendencias = array_filter($alunosElegiveis, fn($a) => $a['status_elegibilidade'] === 'pendente');
 
 // Calcular estatísticas
-$vagasDisponiveis = $turmaAtual['max_alunos'] - $turmaAtual['alunos_matriculados'];
-$percentualOcupacao = $turmaAtual['max_alunos'] > 0 ? round(($turmaAtual['alunos_matriculados'] / $turmaAtual['max_alunos']) * 100, 1) : 0;
+$maxAlunos = $turmaAtual['max_alunos'] ?? 10;
+$alunosMatriculados = $turmaAtual['alunos_matriculados'] ?? 0;
+$vagasDisponiveis = $maxAlunos - $alunosMatriculados;
+$percentualOcupacao = $maxAlunos > 0 ? round(($alunosMatriculados / $maxAlunos) * 100, 1) : 0;
 ?>
 
 <div style="display: flex; gap: 30px;">
@@ -99,7 +104,7 @@ $percentualOcupacao = $turmaAtual['max_alunos'] > 0 ? round(($turmaAtual['alunos
                     <div><strong>Nome:</strong> <?= htmlspecialchars($turmaAtual['nome']) ?></div>
                     <div><strong>Sala:</strong> <?= htmlspecialchars($turmaAtual['sala_nome']) ?></div>
                     <div><strong>Curso:</strong> <?= htmlspecialchars($turmaAtual['curso_nome']) ?></div>
-                    <div><strong>Vagas:</strong> <?= $turmaAtual['alunos_matriculados'] ?>/<?= $turmaAtual['max_alunos'] ?> (<?= $vagasDisponiveis ?> disponíveis)</div>
+                    <div><strong>Vagas:</strong> <?= $alunosMatriculados ?>/<?= $maxAlunos ?> (<?= $vagasDisponiveis ?> disponíveis)</div>
                 </div>
             </div>
         </div>
@@ -110,7 +115,7 @@ $percentualOcupacao = $turmaAtual['max_alunos'] > 0 ? round(($turmaAtual['alunos
             
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
                 <div style="background: linear-gradient(135deg, #023A8D, #1a4fa0); color: white; padding: 20px; border-radius: 8px; text-align: center;">
-                    <div style="font-size: 2rem; font-weight: bold;"><?= $turmaAtual['alunos_matriculados'] ?></div>
+                    <div style="font-size: 2rem; font-weight: bold;"><?= $alunosMatriculados ?></div>
                     <div style="opacity: 0.9; font-size: 0.9rem;">Matriculados</div>
                 </div>
                 
@@ -134,7 +139,7 @@ $percentualOcupacao = $turmaAtual['max_alunos'] > 0 ? round(($turmaAtual['alunos
             <div style="background: #f8f9fa; padding: 15px; border-radius: 8px;">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
                     <span style="font-weight: 600;">Ocupação da Turma</span>
-                    <span style="font-size: 0.9rem; color: #666;"><?= $turmaAtual['alunos_matriculados'] ?> de <?= $turmaAtual['max_alunos'] ?> vagas</span>
+                    <span style="font-size: 0.9rem; color: #666;"><?= $alunosMatriculados ?> de <?= $maxAlunos ?> vagas</span>
                 </div>
                 <div style="width: 100%; height: 12px; background: #e9ecef; border-radius: 6px; overflow: hidden;">
                     <div style="width: <?= $percentualOcupacao ?>%; height: 100%; background: linear-gradient(90deg, #023A8D, #F7931E); transition: width 0.3s ease;"></div>
@@ -282,7 +287,7 @@ $percentualOcupacao = $turmaAtual['max_alunos'] > 0 ? round(($turmaAtual['alunos
         </div>
         
         <!-- Ações da turma -->
-        <?php if ($turmaAtual['status'] === 'completa' && $turmaAtual['alunos_matriculados'] > 0): ?>
+        <?php if ($turmaAtual['status'] === 'completa' && $alunosMatriculados > 0): ?>
             <div class="form-section">
                 <h4>🎯 Ações da Turma</h4>
                 
@@ -320,13 +325,13 @@ $percentualOcupacao = $turmaAtual['max_alunos'] > 0 ? round(($turmaAtual['alunos
     </a>
     
     <div>
-        <?php if ($turmaAtual['status'] === 'completa' && $turmaAtual['alunos_matriculados'] > 0): ?>
+        <?php if ($turmaAtual['status'] === 'completa' && $alunosMatriculados > 0): ?>
             <button type="button" onclick="ativarTurma()" class="btn-primary">
                 🎯 Finalizar e Ativar Turma
             </button>
         <?php else: ?>
             <div style="text-align: right; color: #666; font-size: 0.9rem;">
-                <?php if ($turmaAtual['alunos_matriculados'] === 0): ?>
+                <?php if ($alunosMatriculados === 0): ?>
                     Matricule pelo menos um aluno para ativar a turma
                 <?php else: ?>
                     Turma pronta para ser ativada

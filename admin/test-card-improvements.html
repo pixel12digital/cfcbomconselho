@@ -1,0 +1,861 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Melhorias dos Cards</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        button {
+            padding: 0.75rem 1.5rem;
+            margin: 0.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .btn-primary { background-color: #007bff; color: white; }
+        .btn-secondary { background-color: #6c757d; color: white; }
+        .btn-success { background-color: #28a745; color: white; }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 1rem 0;
+            font-family: monospace;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 0.5rem;
+            margin: 0.5rem 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .status.success { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+        .status.warning { background-color: #fff3cd; color: #856404; border: 1px solid #ffeaa7; }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>📝 Teste de Melhorias dos Cards</h1>
+        <p>Este teste verifica se as melhorias nos cards de disciplinas estão funcionando corretamente.</p>
+        
+        <div class="status success">
+            ✅ Melhorias implementadas: Largura mínima maior, inputs 100%, texto não truncado
+        </div>
+        
+        <div>
+            <button class="btn-primary" onclick="testarCardsComTextosLongos()">Testar com Textos Longos</button>
+            <button class="btn-success" onclick="testarCardsResponsivos()">Testar Responsividade</button>
+            <button class="btn-secondary" onclick="verificarScrollUnico()">🔍 Verificar Scroll Único</button>
+            <button class="btn-secondary" onclick="limparLog()">Limpar Log</button>
+        </div>
+        
+        <div class="log" id="log">
+            <div>📋 Log de teste de melhorias:</div>
+        </div>
+    </div>
+
+    <!-- Sistema de Modal Singleton -->
+    <style>
+        #modal-root {
+            position: relative;
+            z-index: 10000;
+        }
+        
+        #modal-root .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 9999;
+            backdrop-filter: blur(2px);
+        }
+        
+        #modal-root .modal-wrapper {
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1rem;
+        }
+        
+        #modal-root .modal {
+            width: min(90vw, 1200px);
+            max-height: min(85vh, 900px);
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #modal-root .modal-header {
+            padding: 1.5rem;
+            border-bottom: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+        
+        /* ÚNICO scroll fica aqui - corpo do modal */
+        #modal-root .modal-content {
+            overflow-y: auto;
+            overscroll-behavior: contain;
+            scrollbar-gutter: stable;
+            padding: 1.5rem;
+            flex: 1;
+        }
+        
+        #modal-root .modal-footer {
+            padding: 1.5rem;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            flex-shrink: 0;
+        }
+        
+        #modal-root .modal-close {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #6c757d;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: color 0.15s ease-in-out;
+        }
+        
+        #modal-root .modal-close:hover {
+            color: #000;
+        }
+        
+        /* Grid de disciplinas - SEM scroll interno */
+        .disciplinas-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+            gap: 1.5rem;
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+        }
+        
+        /* Garantir que nenhum wrapper interno tenha scroll */
+        .panel, .cards-wrapper, .disciplinas-panel, .suas-disciplinas {
+            overflow: visible !important;
+            max-height: none !important;
+            height: auto !important;
+            box-shadow: none;
+            border: 0;
+            padding: 0;
+        }
+        
+        /* Cards de disciplinas melhorados */
+        .disciplina-card {
+            background: white;
+            border: 1px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.5rem;
+            min-height: 240px;
+            min-width: 320px;
+            transition: all 0.2s ease;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .disciplina-card:hover {
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+            border-color: #007bff;
+        }
+        
+        /* Card nova disciplina */
+        .disciplina-card.disciplina-nova {
+            border-color: #28a745;
+            border-width: 2px !important;
+            box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+            animation: pulse-green 2s infinite;
+        }
+        
+        @keyframes pulse-green {
+            0% {
+                box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+            }
+            50% {
+                box-shadow: 0 0 0 0.4rem rgba(40, 167, 69, 0.4);
+            }
+            100% {
+                box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+            }
+        }
+        
+        /* Campos editáveis nos cards */
+        .disciplina-card .form-control {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 0.75rem;
+            font-size: 0.95rem;
+            width: 100%;
+            min-height: 44px;
+            line-height: 1.4;
+        }
+        
+        .disciplina-card .form-control:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .disciplina-card .form-control-sm {
+            font-size: 0.85rem;
+            padding: 0.5rem 0.75rem;
+            min-height: 40px;
+            width: 100%;
+        }
+        
+        .disciplina-card textarea.form-control {
+            resize: vertical;
+            min-height: 88px;
+            width: 100%;
+            line-height: 1.4;
+        }
+        
+        /* Menu kebab acima do campo */
+        .disciplina-card-menu {
+            width: 36px;
+            height: 36px;
+            border: none;
+            background: #f8f9fa;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-left: auto;
+        }
+        
+        .disciplina-card-menu:hover {
+            background: #e9ecef;
+        }
+        
+        /* Estatísticas com flex-wrap */
+        .disciplina-card-stats {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1rem;
+            flex-wrap: wrap;
+        }
+        
+        .disciplina-card-aulas {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        @media (max-width: 768px) {
+            #modal-root .modal-wrapper {
+                padding: 0;
+            }
+            
+            #modal-root .modal {
+                width: 100vw;
+                max-height: 100vh;
+                border-radius: 0;
+            }
+            
+            #modal-root .modal-header,
+            #modal-root .modal-content,
+            #modal-root .modal-footer {
+                padding: 1rem;
+            }
+            
+            .disciplinas-grid {
+                grid-template-columns: 1fr !important;
+                gap: 1rem !important;
+            }
+            
+            .disciplina-card {
+                min-height: 200px;
+                padding: 1rem;
+                min-width: 100%;
+            }
+            
+            .disciplina-card .form-control {
+                min-height: 48px;
+                font-size: 1rem;
+            }
+            
+            .disciplina-card textarea.form-control {
+                min-height: 100px;
+            }
+        }
+        
+        @media (min-width: 1200px) {
+            .disciplinas-grid {
+                grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+                gap: 2rem;
+            }
+        }
+    </style>
+
+    <script>
+        // Sistema de Modal Singleton
+        window.SingletonModalSystem = {
+            open: function(render) {
+                if (document.body.dataset.singletonModalOpen === '1') {
+                    log('⚠️ Modal singleton já está aberto, apenas atualizando conteúdo');
+                    this.update(render);
+                    return;
+                }
+                
+                const root = document.getElementById('modal-root');
+                if (!root) {
+                    log('❌ Modal root não encontrado');
+                    return;
+                }
+                
+                root.innerHTML = '';
+                
+                const backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop';
+                backdrop.onclick = () => this.close();
+                
+                const wrapper = document.createElement('div');
+                wrapper.className = 'modal-wrapper';
+                
+                const modalContent = render();
+                if (modalContent) {
+                    wrapper.appendChild(modalContent);
+                }
+                
+                root.appendChild(backdrop);
+                root.appendChild(wrapper);
+                
+                document.body.dataset.singletonModalOpen = '1';
+                document.body.style.overflow = 'hidden';
+                
+                document.addEventListener('keydown', this.handleEscape);
+                this.setupFocusTrap(wrapper);
+                
+                log('✅ Modal singleton aberto');
+            },
+            
+            update: function(render) {
+                const wrapper = document.querySelector('#modal-root .modal-wrapper');
+                if (wrapper) {
+                    wrapper.innerHTML = '';
+                    const modalContent = render();
+                    if (modalContent) {
+                        wrapper.appendChild(modalContent);
+                        this.setupFocusTrap(wrapper);
+                    }
+                }
+            },
+            
+            close: function() {
+                const root = document.getElementById('modal-root');
+                if (root) {
+                    root.innerHTML = '';
+                }
+                
+                delete document.body.dataset.singletonModalOpen;
+                document.body.style.overflow = '';
+                document.removeEventListener('keydown', this.handleEscape);
+                
+                log('✅ Modal singleton fechado');
+            },
+            
+            handleEscape: function(event) {
+                if (event.key === 'Escape') {
+                    window.SingletonModalSystem.close();
+                }
+            },
+            
+            setupFocusTrap: function(wrapper) {
+                const focusableElements = wrapper.querySelectorAll(
+                    'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+                );
+                
+                if (focusableElements.length === 0) return;
+                
+                const firstElement = focusableElements[0];
+                const lastElement = focusableElements[focusableElements.length - 1];
+                
+                wrapper.addEventListener('keydown', function(event) {
+                    if (event.key === 'Tab') {
+                        if (event.shiftKey) {
+                            if (document.activeElement === firstElement) {
+                                event.preventDefault();
+                                lastElement.focus();
+                            }
+                        } else {
+                            if (document.activeElement === lastElement) {
+                                event.preventDefault();
+                                firstElement.focus();
+                            }
+                        }
+                    }
+                });
+                
+                setTimeout(() => firstElement.focus(), 100);
+            }
+        };
+        
+        window.openModal = function(render) {
+            window.SingletonModalSystem.open(render);
+        };
+        
+        window.closeModal = function() {
+            window.SingletonModalSystem.close();
+        };
+
+        // Funções de teste
+        function log(message) {
+            const logElement = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logElement.innerHTML += `<div>[${time}] ${message}</div>`;
+            logElement.scrollTop = logElement.scrollHeight;
+        }
+
+        function limparLog() {
+            document.getElementById('log').innerHTML = '<div>📋 Log de teste de melhorias:</div>';
+        }
+
+        function criarModalDisciplinas(disciplinas) {
+            const modal = document.createElement('div');
+            modal.className = 'modal';
+            modal.innerHTML = `
+                <div class="modal-header" style="background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%); color: white;">
+                    <div class="d-flex align-items-center">
+                        <div class="me-3">
+                            <span style="font-size: 1.8rem; color: #F7931E;">🎓</span>
+                        </div>
+                        <div>
+                            <h5 class="modal-title mb-1 fw-bold">Gerenciar Disciplinas</h5>
+                            <small class="opacity-75">Configure e organize as disciplinas do curso</small>
+                        </div>
+                    </div>
+                    <button type="button" class="modal-close text-white" onclick="window.closeModal()">
+                        ×
+                    </button>
+                </div>
+                
+                <div class="modal-content">
+                    <div class="mb-4">
+                        <div class="position-relative">
+                            <input type="text" class="form-control form-control-lg border-0 shadow-sm" 
+                                   placeholder="Buscar disciplinas..." 
+                                   style="padding-left: 3rem; background-color: white;">
+                            <span style="position: absolute; top: 50%; left: 0; transform: translateY(-50%); margin-left: 1rem; color: #6c757d;">🔍</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="d-flex align-items-center justify-content-center">
+                            <div class="d-flex align-items-center">
+                                <div class="flex-shrink-0">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 2.5rem; height: 2.5rem; background: linear-gradient(135deg, #023A8D, #1e5bb8);">
+                                        <span style="color: white; font-size: 1rem;">📚</span>
+                                    </div>
+                                </div>
+                                <div class="flex-grow-1 ms-3">
+                                    <h6 class="mb-0 fw-bold text-dark">Total de Disciplinas: <span class="text-primary">${disciplinas.length}</span></h6>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <div>
+                            <h6 class="mb-1 fw-semibold text-dark">Suas Disciplinas</h6>
+                            <small class="text-muted">Gerencie e organize as disciplinas do curso</small>
+                        </div>
+                        <button type="button" class="btn btn-primary btn-lg shadow-sm" onclick="abrirModalNovaDisciplina()"
+                                style="background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%); border: none; border-radius: 10px;">
+                            ➕ Nova Disciplina
+                        </button>
+                    </div>
+                    
+                    <div class="disciplinas-grid">
+                        ${disciplinas.map(disciplina => `
+                            <div class="disciplina-card" data-cor="${disciplina.cor}" data-id="${disciplina.id}">
+                                <!-- Menu kebab acima do campo -->
+                                <div class="dropdown mb-2">
+                                    <button class="disciplina-card-menu" data-bs-toggle="dropdown">
+                                        ⋯
+                                    </button>
+                                    <ul class="dropdown-menu dropdown-menu-end">
+                                        <li><a class="dropdown-item" href="#">
+                                            <i class="fas fa-save me-2"></i>Salvar
+                                        </a></li>
+                                        <li><a class="dropdown-item" href="#">
+                                            <i class="fas fa-copy me-2"></i>Duplicar
+                                        </a></li>
+                                        <li><hr class="dropdown-divider"></li>
+                                        <li><a class="dropdown-item text-danger" href="#">
+                                            <i class="fas fa-trash me-2"></i>Excluir
+                                        </a></li>
+                                    </ul>
+                                </div>
+                                
+                                <!-- Título -->
+                                <input type="text" class="form-control disciplina-nome-editavel mb-3" 
+                                       value="${disciplina.nome}" 
+                                       placeholder="Nome da disciplina">
+                                
+                                <!-- Slug -->
+                                <input type="text" class="form-control form-control-sm disciplina-codigo-editavel mb-3" 
+                                       value="${disciplina.codigo}" 
+                                       placeholder="Código da disciplina">
+                                
+                                <!-- Linha: aulas + status -->
+                                <div class="disciplina-card-stats">
+                                    <div class="disciplina-card-aulas">
+                                        <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: ${disciplina.cor_hex || '#007bff'}"></span>
+                                        <input type="number" class="form-control form-control-sm disciplina-aulas-editavel d-inline-block" 
+                                               value="${disciplina.aulas}" 
+                                               style="width: 80px; display: inline-block !important;">
+                                        <span class="ms-1">aulas</span>
+                                    </div>
+                                    <span class="badge bg-success">ATIVA</span>
+                                </div>
+                                
+                                <!-- Descrição -->
+                                <textarea class="form-control disciplina-descricao-editavel" 
+                                          placeholder="Descrição da disciplina"
+                                          rows="3">${disciplina.descricao || ''}</textarea>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="modal-footer">
+                    <div class="d-flex justify-content-between align-items-center w-100">
+                        <div class="d-flex align-items-center">
+                            <small class="text-muted me-3">
+                                ℹ️ As alterações são salvas automaticamente
+                            </small>
+                        </div>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-secondary" onclick="window.closeModal()">
+                                ❌ Fechar
+                            </button>
+                            <button type="button" class="btn btn-primary shadow-sm" 
+                                    style="background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%); border: none; border-radius: 8px;">
+                                💾 Salvar Alterações
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            return modal;
+        }
+
+        function testarCardsComTextosLongos() {
+            log('🧪 Testando cards com textos longos...');
+            const disciplinas = [
+                {
+                    id: 1,
+                    nome: 'Meio Ambiente e Cidadania no Trânsito Urbano',
+                    codigo: 'meio_ambiente_cidadania_transito_urbano',
+                    aulas: 18,
+                    cor: 'green',
+                    cor_hex: '#28a745',
+                    descricao: 'Esta disciplina aborda questões ambientais relacionadas ao trânsito e desenvolvimento da cidadania no ambiente urbano, incluindo sustentabilidade, poluição sonora e visual, e responsabilidade social.'
+                },
+                {
+                    id: 2,
+                    nome: 'Legislação de Trânsito e Direitos dos Usuários',
+                    codigo: 'legislacao_transito_direitos_usuarios',
+                    aulas: 24,
+                    cor: 'blue',
+                    cor_hex: '#007bff',
+                    descricao: 'Estudo aprofundado das leis de trânsito, direitos e deveres dos condutores, pedestres e ciclistas, incluindo o Código de Trânsito Brasileiro e suas atualizações.'
+                },
+                {
+                    id: 3,
+                    nome: 'Direção Defensiva e Prevenção de Acidentes',
+                    codigo: 'direcao_defensiva_prevencao_acidentes',
+                    aulas: 12,
+                    cor: 'red',
+                    cor_hex: '#dc3545',
+                    descricao: 'Técnicas de direção defensiva, análise de riscos, prevenção de acidentes e comportamento seguro no trânsito.'
+                }
+            ];
+            
+            window.openModal(() => criarModalDisciplinas(disciplinas));
+            log('✅ Modal aberto com textos longos - verifique se não há truncagem');
+            
+            // Verificar scroll após abrir o modal
+            setTimeout(() => verificarScrollUnico(), 500);
+        }
+
+        function testarCardsResponsivos() {
+            log('🧪 Testando responsividade dos cards...');
+            const disciplinas = [
+                {
+                    id: 1,
+                    nome: 'Disciplina 1',
+                    codigo: 'disciplina_1',
+                    aulas: 10,
+                    cor: 'green',
+                    cor_hex: '#28a745',
+                    descricao: 'Descrição da disciplina 1.'
+                },
+                {
+                    id: 2,
+                    nome: 'Disciplina 2',
+                    codigo: 'disciplina_2',
+                    aulas: 15,
+                    cor: 'blue',
+                    cor_hex: '#007bff',
+                    descricao: 'Descrição da disciplina 2.'
+                }
+            ];
+            
+            window.openModal(() => criarModalDisciplinas(disciplinas));
+            log('✅ Modal aberto - teste redimensionando a janela para verificar responsividade');
+            
+            // Verificar scroll após abrir o modal
+            setTimeout(() => verificarScrollUnico(), 500);
+        }
+
+        // Função para criar nova disciplina (simulada para teste)
+        function abrirModalNovaDisciplina() {
+            log('➕ Criando nova disciplina dentro do modal...');
+            
+            const container = document.querySelector('#modal-root .disciplinas-grid');
+            if (!container) {
+                log('❌ Container de disciplinas não encontrado');
+                return;
+            }
+            
+            const novoId = 'temp_' + Date.now();
+            
+            const novoCardHtml = `
+                <div class="disciplina-card disciplina-nova" data-id="${novoId}" style="border-color: #28a745; border-width: 2px;">
+                    <!-- Menu kebab acima do campo -->
+                    <div class="dropdown mb-2">
+                        <button class="disciplina-card-menu" data-bs-toggle="dropdown">
+                            ⋯
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" onclick="salvarNovaDisciplina('${novoId}')">
+                                <i class="fas fa-save me-2"></i>Salvar
+                            </a></li>
+                            <li><a class="dropdown-item" href="#" onclick="cancelarNovaDisciplina('${novoId}')">
+                                <i class="fas fa-times me-2"></i>Cancelar
+                            </a></li>
+                        </ul>
+                    </div>
+                    
+                    <!-- Título -->
+                    <input type="text" class="form-control disciplina-nome-editavel mb-3" 
+                           value="" 
+                           placeholder="Nome da disciplina"
+                           style="border-color: #28a745;">
+                    
+                    <!-- Slug -->
+                    <input type="text" class="form-control form-control-sm disciplina-codigo-editavel mb-3" 
+                           value="" 
+                           placeholder="Código da disciplina"
+                           style="border-color: #28a745;">
+                    
+                    <!-- Linha: aulas + status -->
+                    <div class="disciplina-card-stats">
+                        <div class="disciplina-card-aulas">
+                            <span class="inline-block w-2.5 h-2.5 rounded-full" style="background-color: #28a745;"></span>
+                            <input type="number" class="form-control form-control-sm disciplina-aulas-editavel d-inline-block" 
+                                   value="10" 
+                                   style="width: 80px; display: inline-block !important; border-color: #28a745;">
+                            <span class="ms-1">aulas</span>
+                        </div>
+                        <span class="badge bg-success">NOVA</span>
+                    </div>
+                    
+                    <!-- Descrição -->
+                    <textarea class="form-control disciplina-descricao-editavel" 
+                              rows="3" 
+                              placeholder="Descrição da disciplina"
+                              style="border-color: #28a745;"></textarea>
+                </div>
+            `;
+            
+            container.insertAdjacentHTML('afterbegin', novoCardHtml);
+            
+            const nomeInput = container.querySelector(`[data-id="${novoId}"] input`);
+            if (nomeInput) {
+                nomeInput.focus();
+            }
+            
+            log('✅ Nova disciplina criada - preencha os campos e teste Salvar/Cancelar');
+        }
+
+        function salvarNovaDisciplina(disciplinaId) {
+            log('💾 Salvando nova disciplina (simulado)...');
+            const card = document.querySelector(`[data-id="${disciplinaId}"]`);
+            if (card) {
+                card.classList.remove('disciplina-nova');
+                card.style.borderColor = '';
+                card.style.borderWidth = '';
+                const badge = card.querySelector('.badge');
+                badge.textContent = 'ATIVA';
+                log('✅ Nova disciplina salva com sucesso!');
+            }
+        }
+
+        function cancelarNovaDisciplina(disciplinaId) {
+            log('❌ Cancelando nova disciplina...');
+            const card = document.querySelector(`[data-id="${disciplinaId}"]`);
+            if (card) {
+                card.remove();
+                log('✅ Nova disciplina cancelada');
+            }
+        }
+
+        // Função para salvar todas as alterações
+        function salvarAlteracoesDisciplinas() {
+            log('💾 Salvando todas as alterações das disciplinas...');
+            
+            // Coletar todas as disciplinas modificadas
+            const disciplinasModificadas = [];
+            const cards = document.querySelectorAll('#modal-root .disciplina-card');
+            
+            cards.forEach(card => {
+                const disciplinaId = card.getAttribute('data-id');
+                if (!disciplinaId || disciplinaId.startsWith('temp_')) {
+                    return; // Pular disciplinas temporárias
+                }
+                
+                const nome = card.querySelector('input[data-field="nome"]')?.value?.trim();
+                const codigo = card.querySelector('input[data-field="codigo"]')?.value?.trim();
+                const cargaHoraria = card.querySelector('input[data-field="carga_horaria_padrao"]')?.value;
+                const descricao = card.querySelector('textarea[data-field="descricao"]')?.value?.trim();
+                
+                if (nome && codigo) {
+                    disciplinasModificadas.push({
+                        id: disciplinaId,
+                        nome: nome,
+                        codigo: codigo,
+                        carga_horaria_padrao: cargaHoraria || 10,
+                        descricao: descricao || ''
+                    });
+                }
+            });
+            
+            if (disciplinasModificadas.length === 0) {
+                log('ℹ️ Nenhuma disciplina modificada para salvar');
+                window.closeModal();
+                return;
+            }
+            
+            log(`💾 Salvando ${disciplinasModificadas.length} disciplinas (simulado)...`);
+            
+            // Simular salvamento
+            setTimeout(() => {
+                const sucessos = disciplinasModificadas.length;
+                log(`✅ Todas as ${sucessos} disciplinas foram salvas com sucesso!`);
+                alert(`✅ Todas as ${sucessos} disciplinas foram salvas com sucesso!`);
+                
+                // Fechar modal após salvar
+                window.closeModal();
+            }, 1000);
+        }
+
+        // Função para verificar scroll único
+        function verificarScrollUnico() {
+            log('🔍 Verificando se há apenas um scroll no modal...');
+            
+            const modalContent = document.querySelector('#modal-root .modal-content');
+            const disciplinasGrid = document.querySelector('#modal-root .disciplinas-grid');
+            const cardsWrapper = document.querySelector('#modal-root .cards-wrapper');
+            const panel = document.querySelector('#modal-root .panel');
+            
+            if (modalContent) {
+                const modalContentOverflow = getComputedStyle(modalContent).overflowY;
+                log(`📋 Modal Content overflow-y: ${modalContentOverflow}`);
+            }
+            
+            if (disciplinasGrid) {
+                const gridOverflow = getComputedStyle(disciplinasGrid).overflowY;
+                log(`📋 Disciplinas Grid overflow-y: ${gridOverflow}`);
+            }
+            
+            if (cardsWrapper) {
+                const wrapperOverflow = getComputedStyle(cardsWrapper).overflowY;
+                log(`📋 Cards Wrapper overflow-y: ${wrapperOverflow}`);
+            }
+            
+            if (panel) {
+                const panelOverflow = getComputedStyle(panel).overflowY;
+                log(`📋 Panel overflow-y: ${panelOverflow}`);
+            }
+            
+            // Contar elementos com overflow-y: auto
+            const allElements = document.querySelectorAll('#modal-root *');
+            let scrollElements = 0;
+            
+            allElements.forEach(el => {
+                const overflowY = getComputedStyle(el).overflowY;
+                if (overflowY === 'auto' || overflowY === 'scroll') {
+                    scrollElements++;
+                    log(`⚠️ Elemento com scroll encontrado: ${el.tagName}.${el.className} (overflow-y: ${overflowY})`);
+                }
+            });
+            
+            if (scrollElements === 1) {
+                log('✅ PERFEITO! Apenas 1 elemento com scroll encontrado');
+            } else if (scrollElements === 0) {
+                log('⚠️ Nenhum elemento com scroll encontrado');
+            } else {
+                log(`❌ PROBLEMA! ${scrollElements} elementos com scroll encontrados`);
+            }
+        }
+
+        // Log inicial
+        window.addEventListener('load', () => {
+            log('🎯 Sistema de teste de melhorias carregado');
+            log('📋 Testes disponíveis:');
+            log('  • Textos Longos - Testa se títulos longos não são truncados');
+            log('  • Responsividade - Testa comportamento em diferentes tamanhos');
+            log('  • Nova Disciplina - Testa criação de disciplina inline');
+            log('  • Verificar Scroll - Verifica se há apenas um scroll no modal');
+            log('✅ Melhorias implementadas:');
+            log('  • Largura mínima: 320px (desktop) / 100% (mobile)');
+            log('  • Inputs ocupam 100% da largura do card');
+            log('  • Altura mínima da textarea: 88px');
+            log('  • Menu kebab posicionado acima do campo');
+            log('  • Flex-wrap na área de aulas + status');
+            log('  • Nova disciplina criada inline (não abre modal)');
+            log('  • Scroll único no corpo do modal (sem scroll interno)');
+        });
+    </script>
+
+    <!-- Modal Root -->
+    <div id="modal-root"></div>
+</body>
+</html>
