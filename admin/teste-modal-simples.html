@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Modal Simples - CFC Bom Conselho</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="assets/css/popup-reference.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .test-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        /* Estilos específicos para garantir funcionamento dos botões */
+        #modalEditarTurma .popup-modal-close,
+        #modalEditarTurma .popup-secondary-button,
+        #modalEditarTurma .popup-save-button {
+            cursor: pointer !important;
+            pointer-events: auto !important;
+            z-index: 1000 !important;
+            position: relative !important;
+        }
+
+        #modalEditarTurma .popup-modal-close:hover {
+            background-color: rgba(255, 255, 255, 0.2) !important;
+            transform: scale(1.1) !important;
+        }
+
+        #modalEditarTurma .popup-secondary-button:hover {
+            background: #f8f9fa !important;
+            border-color: #023A8D !important;
+            color: #023A8D !important;
+        }
+
+        #modalEditarTurma .popup-save-button:hover {
+            transform: translateY(-1px) !important;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15) !important;
+            background: linear-gradient(135deg, #1e5bb8 0%, #023A8D 100%) !important;
+        }
+
+        /* Garantir que o modal seja clicável */
+        #modalEditarTurma {
+            pointer-events: auto !important;
+            display: none !important;
+        }
+
+        #modalEditarTurma.show {
+            display: flex !important;
+            pointer-events: auto !important;
+        }
+
+        /* Garantir que o backdrop funcione */
+        #modalEditarTurma::before {
+            content: '' !important;
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            background-color: rgba(0, 0, 0, 0.5) !important;
+            z-index: -1 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="mb-4">
+            <i class="fas fa-bug me-2" style="color: #023A8D;"></i>
+            Teste Modal Simples
+        </h1>
+        
+        <div class="alert alert-info">
+            <h5>🧪 Teste dos Botões</h5>
+            <p>Clique no botão abaixo para abrir o modal e testar os botões:</p>
+            <button type="button" class="btn btn-primary" onclick="abrirModalEditarTurma()">
+                <i class="fas fa-edit me-2"></i>Abrir Modal Editar Turma
+            </button>
+        </div>
+
+        <div class="alert alert-warning">
+            <h5>🔍 Verificações</h5>
+            <p>Teste cada funcionalidade:</p>
+            <ul>
+                <li><strong>Botão X:</strong> Deve fechar o modal</li>
+                <li><strong>Botão Cancelar:</strong> Deve fechar o modal</li>
+                <li><strong>Botão Salvar:</strong> Deve mostrar alert de sucesso</li>
+                <li><strong>ESC:</strong> Deve fechar o modal</li>
+                <li><strong>Clique no backdrop:</strong> Deve fechar o modal</li>
+            </ul>
+        </div>
+
+        <div class="alert alert-success">
+            <h5>📋 Console do Navegador</h5>
+            <p>Abra o console (F12) para ver as mensagens de debug:</p>
+            <ul>
+                <li>🔧 Inicializando sistema de modal isolado...</li>
+                <li>📂 Abrindo modal de edição de turma...</li>
+                <li>❌ Fechando modal de edição de turma...</li>
+                <li>💾 Salvando edição da turma...</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- Modal para Editar Turma - Padrão CFC Bom Conselho -->
+    <div class="popup-modal" id="modalEditarTurma">
+        <div class="popup-modal-wrapper">
+            
+            <!-- HEADER -->
+            <div class="popup-modal-header">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                    <div class="header-text">
+                        <h5>Editar Turma</h5>
+                        <small>Modifique as informações da turma</small>
+                    </div>
+                </div>
+                <button type="button" class="popup-modal-close" onclick="fecharModalEditarTurma()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- CONTEÚDO -->
+            <div class="popup-modal-content">
+                <form method="POST" id="formEditarTurma">
+                    <input type="hidden" name="action" value="editar_turma">
+                    
+                    <!-- Seção de Informações Básicas -->
+                    <div class="popup-section-header">
+                        <div class="popup-section-title">
+                            <h6>Informações Básicas</h6>
+                            <small>Dados principais da turma</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <label for="nomeTurma" class="form-label">Nome da Turma *</label>
+                            <input type="text" 
+                                   id="nomeTurma"
+                                   class="form-control" 
+                                   name="nome" 
+                                   value="Formação CNH AB" 
+                                   required
+                                   aria-describedby="nomeTurmaHelp">
+                            <div id="nomeTurmaHelp" class="form-text">Nome que identifica a turma</div>
+                        </div>
+                        
+                        <div class="col-md-12 mb-3">
+                            <label for="observacoesTurma" class="form-label">Observações</label>
+                            <textarea id="observacoesTurma"
+                                      class="form-control" 
+                                      name="descricao" 
+                                      rows="3"
+                                      aria-describedby="observacoesTurmaHelp">Teste</textarea>
+                            <div id="observacoesTurmaHelp" class="form-text">Informações adicionais sobre a turma</div>
+                        </div>
+                    </div>
+
+                    <!-- Seção de Datas e Configurações -->
+                    <div class="popup-section-header mt-4">
+                        <div class="popup-section-title">
+                            <h6>Datas e Configurações</h6>
+                            <small>Período e limites da turma</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="dataInicio" class="form-label">Data de Início</label>
+                            <input type="date" 
+                                   id="dataInicio"
+                                   class="form-control" 
+                                   name="data_inicio" 
+                                   value="2025-10-15"
+                                   aria-describedby="dataInicioHelp">
+                            <div id="dataInicioHelp" class="form-text">Data de início das aulas</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="dataFim" class="form-label">Data de Término</label>
+                            <input type="date" 
+                                   id="dataFim"
+                                   class="form-control" 
+                                   name="data_fim" 
+                                   value="2025-10-29"
+                                   aria-describedby="dataFimHelp">
+                            <div id="dataFimHelp" class="form-text">Data de término das aulas</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="maxAlunos" class="form-label">Máx. Alunos</label>
+                            <input type="number" 
+                                   id="maxAlunos"
+                                   class="form-control" 
+                                   name="max_alunos" 
+                                   value="10" 
+                                   min="0"
+                                   aria-describedby="maxAlunosHelp">
+                            <div id="maxAlunosHelp" class="form-text">Número máximo de alunos na turma</div>
+                        </div>
+                        
+                        <div class="col-md-6 mb-3">
+                            <label for="statusTurma" class="form-label">Status</label>
+                            <select id="statusTurma" 
+                                    class="form-select" 
+                                    name="status"
+                                    aria-describedby="statusTurmaHelp">
+                                <option value="criando">Criando</option>
+                                <option value="agendando">Agendando</option>
+                                <option value="completa">Completa</option>
+                                <option value="ativa" selected>Ativa</option>
+                                <option value="concluida">Concluída</option>
+                                <option value="cancelada">Cancelada</option>
+                            </select>
+                            <div id="statusTurmaHelp" class="form-text">Status atual da turma</div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+            
+            <!-- FOOTER -->
+            <div class="popup-modal-footer">
+                <div class="popup-footer-info">
+                    <small>
+                        <i class="fas fa-info-circle"></i>
+                        As alterações serão salvas permanentemente
+                    </small>
+                </div>
+                <div class="popup-footer-actions">
+                    <button type="button" class="popup-secondary-button" onclick="fecharModalEditarTurma()">
+                        <i class="fas fa-times"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="popup-save-button" onclick="salvarEdicaoTurma()">
+                        <i class="fas fa-save"></i>
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <script>
+    // Sistema de Modal Isolado - CFC Bom Conselho
+    (function() {
+        'use strict';
+        
+        console.log('🔧 Inicializando sistema de modal isolado...');
+        
+        // Variáveis globais do modal
+        let modalInstance = null;
+        let isInitialized = false;
+        
+        // Função para inicializar o modal
+        function initializeModal() {
+            if (isInitialized) return;
+            
+            console.log('🔧 Inicializando modal de edição de turma...');
+            
+            // Verificar se o modal existe
+            const modal = document.getElementById('modalEditarTurma');
+            if (!modal) {
+                console.error('❌ Modal não encontrado no DOM');
+                return;
+            }
+            
+            // Configurar event listeners
+            setupEventListeners();
+            
+            // Marcar como inicializado
+            isInitialized = true;
+            console.log('✅ Modal inicializado com sucesso');
+        }
+        
+        // Configurar event listeners
+        function setupEventListeners() {
+            // Event listener para ESC
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && modalInstance && modalInstance.isOpen) {
+                    console.log('⌨️ Fechando modal com ESC');
+                    closeModal();
+                }
+            });
+            
+            // Event listener para clique no backdrop
+            document.addEventListener('click', function(e) {
+                if (e.target && e.target.classList.contains('popup-modal') && modalInstance && modalInstance.isOpen) {
+                    console.log('🖱️ Fechando modal clicando no backdrop');
+                    closeModal();
+                }
+            });
+        }
+        
+        // Função para abrir modal
+        function openModal() {
+            console.log('📂 Abrindo modal de edição de turma...');
+            
+            const modal = document.getElementById('modalEditarTurma');
+            if (!modal) {
+                console.error('❌ Modal não encontrado');
+                return;
+            }
+            
+            // Criar instância do modal
+            modalInstance = {
+                element: modal,
+                isOpen: true
+            };
+            
+            // Mostrar modal
+            modal.style.display = 'flex';
+            modal.classList.add('show', 'popup-fade-in');
+            document.body.style.overflow = 'hidden';
+            
+            console.log('✅ Modal aberto com sucesso');
+        }
+        
+        // Função para fechar modal
+        function closeModal() {
+            console.log('❌ Fechando modal de edição de turma...');
+            
+            if (!modalInstance) {
+                console.error('❌ Instância do modal não encontrada');
+                return;
+            }
+            
+            const modal = modalInstance.element;
+            
+            // Esconder modal
+            modal.classList.remove('show', 'popup-fade-in');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+            
+            // Limpar instância
+            modalInstance.isOpen = false;
+            modalInstance = null;
+            
+            console.log('✅ Modal fechado com sucesso');
+        }
+        
+        // Função para salvar
+        function saveModal() {
+            console.log('💾 Salvando edição da turma...');
+            
+            const form = document.getElementById('formEditarTurma');
+            if (!form) {
+                console.error('❌ Formulário não encontrado');
+                alert('Erro: Formulário não encontrado.');
+                return;
+            }
+            
+            // Validar campos obrigatórios
+            const nomeTurma = document.getElementById('nomeTurma');
+            if (nomeTurma && !nomeTurma.value.trim()) {
+                alert('Por favor, preencha o nome da turma.');
+                nomeTurma.focus();
+                return;
+            }
+            
+            console.log('✅ Submetendo formulário...');
+            alert('✅ Formulário salvo com sucesso! (Simulação)');
+            // form.submit(); // Comentado para teste
+        }
+        
+        // Expor funções globalmente
+        window.abrirModalEditarTurma = openModal;
+        window.fecharModalEditarTurma = closeModal;
+        window.salvarEdicaoTurma = saveModal;
+        
+        // Inicializar quando DOM estiver pronto
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initializeModal);
+        } else {
+            initializeModal();
+        }
+        
+    })();
+    </script>
+</body>
+</html>

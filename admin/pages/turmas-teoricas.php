@@ -268,54 +268,8 @@ if (isset($_GET['sucesso'])) {
     text-align: center;
 }
 
-.wizard-steps {
-    display: flex;
-    justify-content: center;
-    margin-top: 15px;
-}
+/* CSS do wizard-steps removido - não é mais necessário */
 
-.wizard-step-btn {
-    display: flex;
-    align-items: center;
-    margin: 0 10px;
-    padding: 8px 16px;
-    border-radius: 20px;
-    background: rgba(255,255,255,0.2);
-    font-size: 14px;
-    transition: all 0.3s ease;
-    border: none;
-    cursor: pointer;
-    color: inherit;
-    text-decoration: none;
-    outline: none;
-    pointer-events: auto;
-    z-index: 10;
-    position: relative;
-}
-
-.wizard-step-btn:hover {
-    background: rgba(255,255,255,0.3);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-}
-
-.wizard-step-btn.active {
-    background: #F7931E;
-    font-weight: bold;
-    color: white;
-}
-
-.wizard-step-btn.active:hover {
-    background: #e8831a;
-}
-
-.wizard-step-btn.completed {
-    background: rgba(255,255,255,0.3);
-}
-
-.wizard-step-btn.completed:hover {
-    background: rgba(255,255,255,0.4);
-}
 
 /* Manter compatibilidade com wizard-step antigo */
 .wizard-step {
@@ -564,22 +518,10 @@ if (isset($_GET['sucesso'])) {
 
 <div class="turma-wizard">
     <div class="wizard-header">
-        <h2>📚 Sistema de Turmas Teóricas</h2>
-        <div class="wizard-steps">
-            <button type="button" class="wizard-step-btn <?= ($step == '1') ? 'active' : (($step > '1') ? 'completed' : '') ?>" onclick="navegarParaEtapa(1)" title="Ir para Dados Básicos">
-                📝 1. Dados Básicos
-            </button>
-            <button type="button" class="wizard-step-btn <?= ($step == '2') ? 'active' : (($step > '2') ? 'completed' : '') ?>" onclick="navegarParaEtapa(2)" title="Ir para Agendamento">
-                📅 2. Agendamento
-            </button>
-            <button type="button" class="wizard-step-btn <?= ($step == '3') ? 'active' : (($step > '3') ? 'completed' : '') ?>" onclick="navegarParaEtapa(3)" title="Ir para Carga Horária">
-                ⏱️ 3. Carga Horária
-            </button>
-            <button type="button" class="wizard-step-btn <?= ($step == '4') ? 'active' : '' ?>" onclick="navegarParaEtapa(4)" title="Ir para Alunos">
-                👥 4. Alunos
-            </button>
-        </div>
-        
+        <h2 class="d-flex align-items-center text-white">
+            <i class="fas fa-graduation-cap me-2" aria-hidden="true"></i>
+            Gestão de Turmas
+        </h2>
     </div>
     
     <div class="wizard-content">
@@ -2254,10 +2196,12 @@ document.addEventListener('DOMContentLoaded', function() {
 // ==========================================
 
 /**
- * Navegar para uma etapa específica
+ * Navegar para uma etapa específica - FUNÇÃO DESABILITADA
  * @param {number} etapa - Número da etapa (1, 2, 3, 4)
  */
 function navegarParaEtapa(etapa) {
+    console.log('⚠️ Função navegarParaEtapa desabilitada - wizard removido');
+    return;
     console.log('🎯 Navegando para etapa:', etapa);
     
     // Verificar se há turma_id na URL
