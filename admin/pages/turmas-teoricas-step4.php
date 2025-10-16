@@ -11,7 +11,7 @@ if (!$turmaAtual) {
 
 // Verificar se turma está pronta para receber alunos
 if ($turmaAtual['status'] !== 'completa' && $turmaAtual['status'] !== 'ativa') {
-    echo '<div class="alert alert-danger">❌ A turma deve estar completa antes de matricular alunos.</div>';
+    echo '<div class="alert alert-danger">❌ A turma deve ter todas as disciplinas agendadas antes de matricular alunos.</div>';
     return;
 }
 
@@ -287,7 +287,7 @@ $percentualOcupacao = $maxAlunos > 0 ? round(($alunosMatriculados / $maxAlunos) 
         </div>
         
         <!-- Ações da turma -->
-        <?php if ($turmaAtual['status'] === 'completa' && $alunosMatriculados > 0): ?>
+        <?php if ($turmaAtual['status'] === 'completa'): ?>
             <div class="form-section">
                 <h4>🎯 Ações da Turma</h4>
                 
@@ -296,7 +296,7 @@ $percentualOcupacao = $maxAlunos > 0 ? round(($alunosMatriculados / $maxAlunos) 
                             onclick="ativarTurma()" 
                             class="btn-primary" 
                             style="width: 100%; padding: 12px; text-align: left;">
-                        🚀 Ativar Turma e Iniciar Aulas
+                        🚀 Ativar Turma e Disponibilizar para Matrículas
                     </button>
                     
                     <button type="button" 
@@ -325,17 +325,13 @@ $percentualOcupacao = $maxAlunos > 0 ? round(($alunosMatriculados / $maxAlunos) 
     </a>
     
     <div>
-        <?php if ($turmaAtual['status'] === 'completa' && $alunosMatriculados > 0): ?>
+        <?php if ($turmaAtual['status'] === 'completa'): ?>
             <button type="button" onclick="ativarTurma()" class="btn-primary">
-                🎯 Finalizar e Ativar Turma
+                🎯 Ativar Turma e Disponibilizar para Matrículas
             </button>
         <?php else: ?>
             <div style="text-align: right; color: #666; font-size: 0.9rem;">
-                <?php if ($alunosMatriculados === 0): ?>
-                    Matricule pelo menos um aluno para ativar a turma
-                <?php else: ?>
-                    Turma pronta para ser ativada
-                <?php endif; ?>
+                Complete o agendamento das disciplinas para ativar a turma
             </div>
         <?php endif; ?>
     </div>

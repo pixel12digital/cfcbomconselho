@@ -225,6 +225,15 @@ $stats = [
                        class="btn-secondary" style="padding: 8px 16px; font-size: 0.9rem; margin-left: 10px;">
                         👁️ Detalhes
                     </a>
+                    
+                    <?php if (in_array($turma['status'], ['criando', 'completa']) && $turma['alunos_matriculados'] == 0): ?>
+                        <button type="button" 
+                                onclick="excluirTurma(<?= $turma['id'] ?>, '<?= htmlspecialchars($turma['nome']) ?>')" 
+                                class="btn-danger" 
+                                style="padding: 8px 16px; font-size: 0.9rem; margin-left: 10px;">
+                            🗑️ Excluir
+                        </button>
+                    <?php endif; ?>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -237,3 +246,71 @@ $stats = [
         </div>
     <?php endif; ?>
 <?php endif; ?>
+
+<style>
+.btn-danger {
+    background: #dc3545;
+    color: white;
+    text-decoration: none;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+    border: none;
+    cursor: pointer;
+}
+
+.btn-danger:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+}
+</style>
+
+<script>
+// Função para excluir turma
+function excluirTurma(turmaId, nomeTurma) {
+    if (confirm(`Tem certeza que deseja excluir a turma "${nomeTurma}"?\n\nEsta ação não pode ser desfeita.`)) {
+        // Fazer requisição para excluir
+        const formData = new FormData();
+        formData.append('acao', 'excluir');
+        formData.append('turma_id', turmaId);
+        
+        fetch('/cfc-bom-conselho/admin/api/turmas-teoricas.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => {
+            console.log('Status da resposta:', response.status);
+            console.log('Headers da resposta:', response.headers);
+            
+            // Verificar se a resposta é JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Resposta não é JSON válido. Content-Type: ' + contentType);
+            }
+            
+            return response.text().then(text => {
+                console.log('Resposta bruta:', text);
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Erro ao fazer parse do JSON:', e);
+                    console.error('Texto recebido:', text);
+                    throw new Error('Resposta não é JSON válido: ' + text.substring(0, 200));
+                }
+            });
+        })
+        .then(data => {
+            console.log('Dados processados:', data);
+            if (data.sucesso) {
+                alert('✅ Turma excluída com sucesso!');
+                location.reload();
+            } else {
+                alert('❌ Erro ao excluir turma: ' + data.mensagem);
+            }
+        })
+        .catch(error => {
+            console.error('Erro completo:', error);
+            alert('❌ Erro ao excluir turma: ' + error.message);
+        });
+    }
+}
+</script>

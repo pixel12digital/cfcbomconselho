@@ -8,9 +8,6 @@
  * @since 2024
  */
 
-// Definir caminho base
-$base_path = dirname(dirname(__DIR__));
-
 // Forçar charset UTF-8 para evitar problemas de codificação
 if (!headers_sent()) {
     header('Content-Type: text/html; charset=UTF-8');
@@ -19,10 +16,10 @@ if (!headers_sent()) {
     header('Expires: 0');
 }
 
-// Incluir arquivos necessários
-require_once $base_path . '/includes/config.php';
-require_once $base_path . '/includes/database.php';
-require_once $base_path . '/includes/auth.php';
+// Incluir arquivos necessários usando caminho relativo confiável
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/database.php';
+require_once __DIR__ . '/../../includes/auth.php';
 
 // Verificar se o usuário está logado e tem permissão de admin ou instrutor
 if (!isLoggedIn() || (!hasPermission('admin') && !hasPermission('instrutor'))) {
@@ -36,6 +33,9 @@ $userType = $user['tipo'] ?? 'admin';
 $userId = $user['id'] ?? null;
 $isAdmin = hasPermission('admin');
 $isInstrutor = hasPermission('instrutor');
+
+// Definir instância do banco de dados
+$db = Database::getInstance();
 
 // Incluir dependências específicas
 require_once __DIR__ . '/../includes/TurmaTeoricaManager.php';
@@ -246,6 +246,487 @@ if (isset($_GET['sucesso'])) {
 
 <!-- Bootstrap CSS -->
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+
+<!-- CSS de Referência para Modais Padronizados -->
+<link href="assets/css/popup-reference.css" rel="stylesheet">
+
+<style>
+/* Otimizações específicas para o modal de salas */
+#modalGerenciarSalas .popup-modal-wrapper {
+    max-height: 90vh;
+    height: 90vh;
+}
+
+#modalGerenciarSalas .popup-modal-content {
+    max-height: calc(90vh - 200px);
+    overflow-y: auto;
+    padding: 1rem 1.5rem;
+}
+
+#modalGerenciarSalas .popup-items-grid {
+    max-height: calc(90vh - 350px);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+}
+
+#modalGerenciarSalas .popup-item-card {
+    min-height: 180px;
+    max-height: 200px;
+}
+
+#modalGerenciarSalas #formulario-nova-sala {
+    max-height: calc(90vh - 200px);
+    overflow-y: auto;
+}
+
+#modalGerenciarSalas #formulario-nova-sala .form-control {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+}
+
+#modalGerenciarSalas #formulario-nova-sala .form-check {
+    margin-bottom: 0.5rem;
+}
+
+#modalGerenciarSalas #formulario-nova-sala .form-check-label {
+    font-size: 0.85rem;
+}
+
+/* Scrollbar personalizada para o modal */
+#modalGerenciarSalas .popup-modal-content::-webkit-scrollbar,
+#modalGerenciarSalas .popup-items-grid::-webkit-scrollbar {
+    width: 6px;
+}
+
+#modalGerenciarSalas .popup-modal-content::-webkit-scrollbar-track,
+#modalGerenciarSalas .popup-items-grid::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+#modalGerenciarSalas .popup-modal-content::-webkit-scrollbar-thumb,
+#modalGerenciarSalas .popup-items-grid::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 3px;
+}
+
+#modalGerenciarSalas .popup-modal-content::-webkit-scrollbar-thumb:hover,
+#modalGerenciarSalas .popup-items-grid::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Otimização do layout da seção header */
+#modalGerenciarSalas .popup-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    gap: 1rem;
+}
+
+#modalGerenciarSalas .popup-section-header .popup-section-title {
+    flex: 1;
+}
+
+#modalGerenciarSalas .popup-section-header .popup-stats-item {
+    flex-shrink: 0;
+    margin: 0 !important;
+}
+
+#modalGerenciarSalas .popup-section-header .popup-primary-button {
+    flex-shrink: 0;
+}
+
+/* Otimizações específicas para o modal de disciplinas */
+#modalGerenciarDisciplinas {
+    z-index: 1055;
+}
+
+#modalGerenciarDisciplinas .popup-modal-wrapper {
+    max-height: 90vh;
+    height: 90vh;
+}
+
+/* Garantir que não haja backdrop indesejado */
+#modalGerenciarDisciplinas::before {
+    display: none !important;
+}
+
+/* Remover qualquer backdrop do Bootstrap */
+.modal-backdrop {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* Garantir que o body não tenha classes de modal */
+body.modal-open {
+    overflow: auto !important;
+    padding-right: 0 !important;
+}
+
+/* Remover qualquer elemento com background escuro */
+*[style*="background-color: rgba(0, 0, 0"] {
+    display: none !important;
+}
+
+*[style*="background: rgba(0, 0, 0"] {
+    display: none !important;
+}
+
+/* Garantir que o modal de disciplinas não tenha backdrop */
+#modalGerenciarDisciplinas {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+#modalGerenciarDisciplinas::before,
+#modalGerenciarDisciplinas::after {
+    display: none !important;
+    content: none !important;
+}
+
+/* Sobrescrever o background escuro do popup-modal para disciplinas */
+#modalGerenciarDisciplinas.popup-modal {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+/* Remover qualquer pseudo-elemento que possa criar background escuro */
+#modalGerenciarDisciplinas.popup-modal::before {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+    background-color: transparent !important;
+}
+
+/* CSS específico para modal de disciplinas customizado */
+.modal-disciplinas-custom {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background-color: transparent !important;
+    background: transparent !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    z-index: 1055 !important;
+    padding: 2rem !important;
+    overflow: hidden !important;
+}
+
+.modal-disciplinas-custom::before,
+.modal-disciplinas-custom::after {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+    background-color: transparent !important;
+}
+
+/* Sobrescrever completamente o popup-modal para disciplinas */
+.modal-disciplinas-custom.popup-modal {
+    background-color: transparent !important;
+    background: transparent !important;
+}
+
+/* Garantir que o wrapper tenha o background branco (padrão) */
+.modal-disciplinas-custom .popup-modal-wrapper {
+    background: #fff !important;
+    border-radius: 16px !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2) !important;
+    display: grid !important;
+    grid-template-rows: auto 1fr auto !important; /* igual ao padrão */
+    overflow: hidden !important; /* bordas arredondadas visíveis */
+    position: relative !important;
+    max-width: 95vw !important;
+    width: 95vw !important;
+    max-height: calc(100vh - 4rem) !important; /* igual ao padrão */
+}
+
+/* Garantir que o conteúdo tenha scroll interno */
+.modal-disciplinas-custom .popup-modal-content {
+    overflow-y: auto !important;
+    max-height: calc(100vh - 300px) !important;
+}
+
+/* CORREÇÃO DEFINITIVA - Sobrescrever o popup-reference.css */
+#modalGerenciarDisciplinas.modal-disciplinas-custom {
+    background-color: transparent !important;
+    background: transparent !important;
+    background-image: none !important;
+}
+
+/* ELIMINAR COMPLETAMENTE OS PSEUDO-ELEMENTOS */
+#modalGerenciarDisciplinas.modal-disciplinas-custom::before,
+#modalGerenciarDisciplinas.modal-disciplinas-custom::after {
+    display: none !important;
+    content: none !important;
+    background: none !important;
+    background-color: transparent !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    position: absolute !important;
+    top: -9999px !important;
+    left: -9999px !important;
+}
+
+/* Garantir que não haja herança de background escuro */
+#modalGerenciarDisciplinas.modal-disciplinas-custom,
+#modalGerenciarDisciplinas.modal-disciplinas-custom * {
+    background-color: transparent !important;
+}
+
+/* Exceto o wrapper que deve ser branco */
+#modalGerenciarDisciplinas.modal-disciplinas-custom .popup-modal-wrapper {
+    background: #fff !important;
+    background-color: #fff !important;
+}
+
+/* Garantir que o botão X seja clicável */
+#modalGerenciarDisciplinas .popup-modal-close {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    z-index: 1060 !important;
+    position: relative !important;
+    background: transparent !important;
+    border: none !important;
+    padding: 8px !important;
+    color: #666 !important;
+    font-size: 18px !important;
+    line-height: 1 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 50% !important;
+    transition: all 0.2s ease !important;
+}
+
+#modalGerenciarDisciplinas .popup-modal-close:hover {
+    background-color: rgba(0, 0, 0, 0.1) !important;
+    color: #333 !important;
+    transform: scale(1.1) !important;
+}
+
+#modalGerenciarDisciplinas .popup-modal-close:active {
+    transform: scale(0.95) !important;
+}
+
+/* Garantir que o botão Fechar seja clicável */
+#modalGerenciarDisciplinas .popup-secondary-button {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    z-index: 1060 !important;
+    position: relative !important;
+    background: #6c757d !important;
+    border: 1px solid #6c757d !important;
+    color: white !important;
+    padding: 8px 16px !important;
+    border-radius: 6px !important;
+    font-size: 14px !important;
+    transition: all 0.2s ease !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+}
+
+#modalGerenciarDisciplinas .popup-secondary-button:hover {
+    background: #5a6268 !important;
+    border-color: #5a6268 !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+#modalGerenciarDisciplinas .popup-secondary-button:active {
+    transform: translateY(0) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1) !important;
+}
+
+/* Header do modal de disciplinas com padding reduzido em 20% */
+.modal-disciplinas-custom .popup-modal-header {
+    padding: 1.2rem 2rem !important;
+    min-height: auto !important;
+    max-height: none !important;
+}
+
+.modal-disciplinas-custom .popup-modal-header .header-content {
+    align-items: center !important;
+    height: 100% !important;
+}
+
+.modal-disciplinas-custom .popup-modal-header .header-icon {
+    margin-right: 1rem !important;
+}
+
+.modal-disciplinas-custom .popup-modal-header .header-text h5 {
+    margin-bottom: 0.25rem !important;
+}
+
+.modal-disciplinas-custom .popup-modal-header .header-text small {
+    opacity: 0.75 !important;
+}
+
+/* SOLUÇÃO RADICAL - Remover qualquer elemento com background escuro */
+*[style*="background-color: rgba(0, 0, 0"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+*[style*="background: rgba(0, 0, 0"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+#modalGerenciarDisciplinas .popup-modal-content {
+    max-height: none;
+    overflow-y: visible;
+    padding: 0.5rem 2rem 1.5rem 2rem;
+}
+
+#modalGerenciarDisciplinas .popup-items-grid {
+    max-height: none;
+    overflow-y: visible;
+    padding-right: 0.5rem;
+}
+
+#modalGerenciarDisciplinas .popup-item-card {
+    min-height: 180px;
+    max-height: 200px;
+}
+
+#modalGerenciarDisciplinas #formulario-nova-disciplina {
+    max-height: none;
+    overflow-y: visible;
+}
+
+#modalGerenciarDisciplinas #formulario-nova-disciplina .form-control {
+    font-size: 0.9rem;
+    padding: 0.5rem 0.75rem;
+}
+
+/* Ajustar footer do modal de disciplinas */
+#modalGerenciarDisciplinas .popup-modal-footer {
+    padding: 1rem 2rem !important;
+    min-height: auto !important;
+}
+
+/* Reduzir espaçamento da barra de busca */
+#modalGerenciarDisciplinas .popup-search-container {
+    margin-bottom: 1rem !important;
+}
+
+/* Reduzir espaçamento da seção de disciplinas */
+#modalGerenciarDisciplinas .popup-section-header {
+    margin-bottom: 1rem !important;
+}
+
+/* Scrollbar personalizada apenas para o modal pai */
+#modalGerenciarDisciplinas::-webkit-scrollbar {
+    width: 8px;
+}
+
+#modalGerenciarDisciplinas::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#modalGerenciarDisciplinas::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+#modalGerenciarDisciplinas::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Responsividade para mobile */
+@media (max-width: 767.98px) {
+    #modalGerenciarSalas .popup-modal-wrapper {
+        max-height: 100vh;
+        height: 100vh;
+    }
+    
+    #modalGerenciarSalas .popup-modal-content {
+        max-height: calc(100vh - 150px);
+        padding: 1rem;
+    }
+    
+    #modalGerenciarSalas .popup-items-grid {
+        max-height: calc(100vh - 300px);
+    }
+    
+    #modalGerenciarSalas .popup-item-card {
+        min-height: 150px;
+        max-height: 170px;
+    }
+    
+    /* Layout mobile para header */
+    #modalGerenciarSalas .popup-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    #modalGerenciarSalas .popup-section-header .popup-stats-item {
+        align-self: flex-end;
+    }
+    
+    #modalGerenciarSalas .popup-section-header .popup-primary-button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    /* Responsividade para modal de disciplinas */
+    #modalGerenciarDisciplinas .popup-modal-wrapper {
+        min-height: 100vh;
+        margin: 0 !important;
+    }
+    
+    #modalGerenciarDisciplinas .popup-modal-content {
+        max-height: none;
+        padding: 0.25rem 1rem 1rem 1rem;
+    }
+    
+    #modalGerenciarDisciplinas .popup-modal-header {
+        padding: 0.8rem 1.5rem !important;
+    }
+    
+    #modalGerenciarDisciplinas .popup-modal-footer {
+        padding: 0.75rem 1rem !important;
+    }
+    
+    #modalGerenciarDisciplinas .popup-items-grid {
+        max-height: none;
+    }
+    
+    #modalGerenciarDisciplinas .popup-item-card {
+        min-height: 150px;
+        max-height: 170px;
+    }
+    
+    #modalGerenciarDisciplinas .popup-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    #modalGerenciarDisciplinas .popup-section-header .popup-stats-item {
+        align-self: flex-end;
+    }
+    
+    #modalGerenciarDisciplinas .popup-section-header .popup-primary-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+</style>
 
 <!-- Meta tags para evitar cache -->
 <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
@@ -618,7 +1099,7 @@ if (isset($_GET['sucesso'])) {
                         </div>
                         <small class="text-muted">
                             <i class="fas fa-info-circle me-1"></i>
-                            <?php echo count($cursosDisponiveis); ?> tipo(s) de curso cadastrado(s) - 
+                            <?php echo count($cursosDisponiveis); ?> curso(s) cadastrado(s) - 
                             <a href="#" onclick="abrirModalTiposCursoInterno()" class="text-primary">Clique aqui para gerenciar</a>
                         </small>
                     </div>
@@ -2896,34 +3377,160 @@ function carregarDisciplinasDoBanco() {
 }
 </script>
 
-<!-- Modal Gerenciar Salas -->
-<div class="modal fade" id="modalGerenciarSalas" tabindex="-1" aria-labelledby="modalGerenciarSalasLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalGerenciarSalasLabel">
-                    <i class="fas fa-door-open me-2"></i>Gerenciar Salas
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6>Salas Cadastradas</h6>
-                    <button class="btn btn-primary btn-sm" onclick="abrirModalNovaSalaInterno()">
-                        <i class="fas fa-plus me-1"></i>Nova Sala
-                    </button>
+<!-- Modal Gerenciar Salas - Padrão -->
+<div class="popup-modal" id="modalGerenciarSalas" style="display: none;">
+    <div class="popup-modal-wrapper">
+        
+        <!-- HEADER -->
+        <div class="popup-modal-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <i class="fas fa-door-open"></i>
                 </div>
-                <div id="lista-salas-modal">
+                <div class="header-text">
+                    <h5>Gerenciar Salas</h5>
+                    <small>Configure e organize as salas de aula disponíveis</small>
+                </div>
+            </div>
+            <button type="button" class="popup-modal-close" onclick="fecharModalSalas()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- CONTEÚDO -->
+        <div class="popup-modal-content">
+            
+            <!-- Seção Otimizada - Título, Estatísticas e Botão na mesma linha -->
+            <div class="popup-section-header">
+                <div class="popup-section-title">
+                    <h6>Salas Cadastradas</h6>
+                    <small>Gerencie e organize as salas de aula do CFC</small>
+                </div>
+                <div class="popup-stats-item" style="margin: 0;">
+                    <div class="popup-stats-icon">
+                        <div class="icon-circle">
+                            <i class="fas fa-door-open"></i>
+                        </div>
+                    </div>
+                    <div class="popup-stats-text">
+                        <h6 style="margin: 0;">Total: <span class="stats-number" id="total-salas">0</span></h6>
+                    </div>
+                </div>
+                <button type="button" class="popup-primary-button" onclick="abrirModalNovaSalaInterno()">
+                    <i class="fas fa-plus"></i>
+                    Nova Sala
+                </button>
+            </div>
+            
+            <!-- Conteúdo Principal - Lista de Salas -->
+            <div id="conteudo-principal">
+                <!-- Grid de Salas -->
+                <div class="popup-items-grid" id="lista-salas-modal">
                     <!-- Lista de salas será carregada via AJAX -->
-                    <div class="text-center py-3">
-                        <i class="fas fa-spinner fa-spin"></i> Carregando salas...
+                    <div class="popup-loading-state show">
+                        <div class="popup-loading-spinner"></div>
+                        <div class="popup-loading-text">
+                            <h6>Carregando salas...</h6>
+                            <p>Aguarde enquanto buscamos suas salas cadastradas</p>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            
+            <!-- Formulário Nova Sala (oculto inicialmente) -->
+            <div id="formulario-nova-sala" style="display: none;">
+                <div class="popup-section-header">
+                    <div class="popup-section-title">
+                        <h6>Nova Sala</h6>
+                        <small>Preencha os dados da nova sala de aula</small>
+                    </div>
+                    <button type="button" class="popup-secondary-button" onclick="voltarParaLista()">
+                        <i class="fas fa-arrow-left"></i>
+                        Voltar
+                    </button>
+                </div>
+                
+                <form id="formNovaSalaIntegrado" class="mt-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nome_sala_integrado" class="form-label">Nome da Sala *</label>
+                                <input type="text" class="form-control" id="nome_sala_integrado" name="nome" required placeholder="Ex: Sala 1, Laboratório">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="capacidade_sala_integrado" class="form-label">Capacidade *</label>
+                                <input type="number" class="form-control" id="capacidade_sala_integrado" name="capacidade" min="1" max="100" value="30" required>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Equipamentos</label>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="equipamentos[projetor]" id="projetor_sala_integrado">
+                                    <label class="form-check-label" for="projetor_sala_integrado">Projetor</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="equipamentos[quadro]" id="quadro_sala_integrado">
+                                    <label class="form-check-label" for="quadro_sala_integrado">Quadro</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="equipamentos[ar_condicionado]" id="ar_sala_integrado">
+                                    <label class="form-check-label" for="ar_sala_integrado">Ar Condicionado</label>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="equipamentos[computadores]" id="computadores_sala_integrado">
+                                    <label class="form-check-label" for="computadores_sala_integrado">Computadores</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="equipamentos[internet]" id="internet_sala_integrado">
+                                    <label class="form-check-label" for="internet_sala_integrado">Internet</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="equipamentos[som]" id="som_sala_integrado">
+                                    <label class="form-check-label" for="som_sala_integrado">Sistema de Som</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="popup-secondary-button" onclick="voltarParaLista()">
+                            <i class="fas fa-times"></i>
+                            Cancelar
+                        </button>
+                        <button type="submit" class="popup-save-button">
+                            <i class="fas fa-save"></i>
+                            Salvar Sala
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+        </div>
+        
+        <!-- FOOTER -->
+        <div class="popup-modal-footer">
+            <div class="popup-footer-info">
+                <small>
+                    <i class="fas fa-info-circle"></i>
+                    As alterações são salvas automaticamente
+                </small>
+            </div>
+            <div class="popup-footer-actions">
+                <button type="button" class="popup-secondary-button" onclick="fecharModalSalas()">
+                    <i class="fas fa-times"></i>
+                    Fechar
+                </button>
             </div>
         </div>
+        
     </div>
 </div>
 
@@ -2999,34 +3606,151 @@ function carregarDisciplinasDoBanco() {
     </div>
 </div>
 
-<!-- Modal Gerenciar Tipos de Curso -->
-<div class="modal fade" id="modalGerenciarTiposCurso" tabindex="-1" aria-labelledby="modalGerenciarTiposCursoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalGerenciarTiposCursoLabel">
-                    <i class="fas fa-graduation-cap me-2"></i>Gerenciar Tipos de Curso
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h6>Tipos de Curso Cadastrados</h6>
-                    <button class="btn btn-primary btn-sm" onclick="abrirModalNovoTipoCurso()">
-                        <i class="fas fa-plus me-1"></i>Novo Tipo de Curso
-                    </button>
+<!-- Modal Gerenciar Tipos de Curso - Padrão -->
+<div class="popup-modal" id="modalGerenciarTiposCurso" style="display: none;">
+    <div class="popup-modal-wrapper">
+        
+        <!-- HEADER -->
+        <div class="popup-modal-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <i class="fas fa-graduation-cap"></i>
                 </div>
-                <div id="lista-tipos-curso-modal">
+                <div class="header-text">
+                    <h5>Gerenciar Cursos</h5>
+                    <small>Configure e organize os cursos disponíveis</small>
+                </div>
+            </div>
+            <button type="button" class="popup-modal-close" onclick="fecharModalTiposCurso()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- CONTEÚDO -->
+        <div class="popup-modal-content">
+            
+            <!-- Seção Otimizada - Título, Estatísticas e Botão na mesma linha -->
+            <div class="popup-section-header">
+                <div class="popup-section-title">
+                    <h6>Cursos Cadastrados</h6>
+                    <small>Gerencie e organize os cursos do CFC</small>
+                </div>
+                <div class="popup-stats-item" style="margin: 0;">
+                    <div class="popup-stats-icon">
+                        <div class="icon-circle">
+                            <i class="fas fa-graduation-cap"></i>
+                        </div>
+                    </div>
+                    <div class="popup-stats-text">
+                        <h6 style="margin: 0;">Total: <span class="stats-number" id="total-tipos-curso">0</span></h6>
+                    </div>
+                </div>
+                <button type="button" class="popup-primary-button" onclick="abrirFormularioNovoTipoCurso()">
+                    <i class="fas fa-plus"></i>
+                    Novo Curso
+                </button>
+            </div>
+            
+            <!-- Conteúdo Principal - Lista de Tipos de Curso -->
+            <div id="conteudo-principal-tipos">
+                <!-- Grid de Tipos de Curso -->
+                <div class="popup-items-grid" id="lista-tipos-curso-modal">
                     <!-- Lista de tipos de curso será carregada via AJAX -->
-                    <div class="text-center py-3">
-                        <i class="fas fa-spinner fa-spin"></i> Carregando tipos de curso...
+                    <div class="popup-loading-state show">
+                        <div class="popup-loading-spinner"></div>
+                        <div class="popup-loading-text">
+                            <h6>Carregando cursos...</h6>
+                            <p>Aguarde enquanto buscamos os cursos cadastrados</p>
+                        </div>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            
+            <!-- Formulário Novo Tipo de Curso (oculto inicialmente) -->
+            <div id="formulario-novo-tipo-curso" style="display: none;">
+                <div class="popup-section-header">
+                <div class="popup-section-title">
+                    <h6>Novo Curso</h6>
+                    <small>Preencha os dados do novo curso</small>
+                </div>
+                    <button type="button" class="popup-secondary-button" onclick="voltarParaListaTipos()">
+                        <i class="fas fa-arrow-left"></i>
+                        Voltar
+                    </button>
+                </div>
+                
+                <form id="formNovoTipoCursoIntegrado" class="mt-3">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="codigo_tipo_integrado" class="form-label">Código do Curso *</label>
+                                <input type="text" class="form-control" id="codigo_tipo_integrado" name="codigo" required placeholder="Ex: formacao_45h, reciclagem_infrator">
+                                <small class="text-muted">Use apenas letras, números e underscore</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="nome_tipo_integrado" class="form-label">Nome do Curso *</label>
+                                <input type="text" class="form-control" id="nome_tipo_integrado" name="nome" required placeholder="Ex: Formação de Condutores">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="descricao_tipo_integrado" class="form-label">Descrição</label>
+                        <textarea class="form-control" id="descricao_tipo_integrado" name="descricao" rows="3" placeholder="Descrição detalhada do curso"></textarea>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="carga_horaria_integrado" class="form-label">Carga Horária Total *</label>
+                                <input type="number" class="form-control" id="carga_horaria_integrado" name="carga_horaria_total" min="1" max="200" value="45" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <div class="form-check mt-4">
+                                    <input class="form-check-input" type="checkbox" id="ativo_tipo_integrado" name="ativo" value="1" checked>
+                                    <label class="form-check-label" for="ativo_tipo_integrado">
+                                        Tipo de curso ativo
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex gap-2 justify-content-end">
+                        <button type="button" class="popup-secondary-button" onclick="voltarParaListaTipos()">
+                            <i class="fas fa-times"></i>
+                            Cancelar
+                        </button>
+                        <button type="submit" class="popup-save-button">
+                            <i class="fas fa-save"></i>
+                            Salvar Curso
+                        </button>
+                    </div>
+                </form>
+            </div>
+            
+        </div>
+        
+        <!-- FOOTER -->
+        <div class="popup-modal-footer">
+            <div class="popup-footer-info">
+                <small>
+                    <i class="fas fa-info-circle"></i>
+                    As alterações são salvas automaticamente
+                </small>
+            </div>
+            <div class="popup-footer-actions">
+                <button type="button" class="popup-secondary-button" onclick="fecharModalTiposCurso()">
+                    <i class="fas fa-times"></i>
+                    Fechar
+                </button>
             </div>
         </div>
+        
     </div>
 </div>
 
@@ -3320,34 +4044,114 @@ function carregarDisciplinasDoBanco() {
 </div>
 
 <script>
-// Carregar salas quando modal abrir
-document.getElementById('modalGerenciarSalas').addEventListener('show.bs.modal', function() {
-    recarregarSalas();
+// Função para abrir modal de gerenciamento de salas (padrão)
+function abrirModalSalasInterno() {
+    console.log('🔧 Tentando abrir modal de salas...');
+    const popup = document.getElementById('modalGerenciarSalas');
+    if (popup) {
+        console.log('✅ Modal encontrado, abrindo...');
+        popup.style.display = 'flex';
+        popup.classList.add('show', 'popup-fade-in');
+        document.body.style.overflow = 'hidden';
+        recarregarSalas();
+    } else {
+        console.error('❌ Modal modalGerenciarSalas não encontrado');
+    }
+}
+
+// Função para fechar modal de gerenciamento de salas (padrão)
+function fecharModalSalas() {
+    const popup = document.getElementById('modalGerenciarSalas');
+    if (popup) {
+        popup.classList.remove('show');
+        popup.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Event listeners para fechar modal com ESC e backdrop
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modalSalas = document.getElementById('modalGerenciarSalas');
+        const modalTipos = document.getElementById('modalGerenciarTiposCurso');
+        const modalDisciplinas = document.getElementById('modalGerenciarDisciplinas');
+        
+        if (modalSalas && modalSalas.classList.contains('show')) {
+            fecharModalSalas();
+        } else if (modalTipos && modalTipos.classList.contains('show')) {
+            fecharModalTiposCurso();
+        } else if (modalDisciplinas && modalDisciplinas.classList.contains('show')) {
+            fecharModalDisciplinas();
+        } else {
+            // Se nenhum modal específico estiver aberto, limpar tudo
+            limparModaisAntigos();
+        }
+    }
 });
 
-// Função para abrir modal interno de gerenciamento de salas
-function abrirModalSalasInterno() {
-    const modal = new bootstrap.Modal(document.getElementById('modalGerenciarSalas'));
-    modal.show();
-}
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('popup-modal')) {
+        // Verificar qual modal está aberto
+        const modalSalas = document.getElementById('modalGerenciarSalas');
+        const modalTipos = document.getElementById('modalGerenciarTiposCurso');
+        const modalDisciplinas = document.getElementById('modalGerenciarDisciplinas');
+        
+        if (modalSalas && modalSalas.classList.contains('show')) {
+            fecharModalSalas();
+        } else if (modalTipos && modalTipos.classList.contains('show')) {
+            fecharModalTiposCurso();
+        } else if (modalDisciplinas && modalDisciplinas.classList.contains('show')) {
+            fecharModalDisciplinas();
+        } else {
+            // Se nenhum modal específico estiver aberto, limpar tudo
+            limparModaisAntigos();
+        }
+    }
+});
 
 // Função para recarregar lista de salas via AJAX
 function recarregarSalas() {
+    console.log('🔄 Iniciando carregamento de salas...');
+    
+    // Mostrar loading state
+    const salasContainer = document.getElementById('lista-salas-modal');
+    if (!salasContainer) {
+        console.error('❌ Container lista-salas-modal não encontrado');
+        return;
+    }
+    
+    salasContainer.innerHTML = `
+        <div class="popup-loading-state show">
+            <div class="popup-loading-spinner"></div>
+            <div class="popup-loading-text">
+                <h6>Carregando salas...</h6>
+                <p>Aguarde enquanto buscamos suas salas cadastradas</p>
+            </div>
+        </div>
+    `;
+    
+    console.log('📡 Fazendo requisição para API...');
     fetch('/cfc-bom-conselho/admin/api/salas-clean.php?acao=listar')
         .then(response => {
+            console.log('📥 Resposta recebida:', response.status, response.statusText);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
             // Verificar se a resposta é realmente JSON
             const contentType = response.headers.get('content-type');
+            console.log('📄 Content-Type:', contentType);
             if (!contentType || !contentType.includes('application/json')) {
                 throw new Error('Resposta não é JSON válido. Content-Type: ' + contentType);
             }
             return response.text().then(text => {
+                console.log('📝 Texto recebido:', text.substring(0, 200) + '...');
                 try {
-                    return JSON.parse(text);
+                    const data = JSON.parse(text);
+                    console.log('✅ JSON parseado com sucesso:', data);
+                    return data;
                 } catch (e) {
-                    console.error('Texto recebido:', text);
+                    console.error('❌ Erro ao parsear JSON:', e);
+                    console.error('📝 Texto completo:', text);
                     throw new Error('JSON inválido: ' + e.message);
                 }
             });
@@ -3363,34 +4167,205 @@ function recarregarSalas() {
                     selectSala.innerHTML += `<option value="${sala.id}">${sala.nome} (Capacidade: ${sala.capacidade} alunos)</option>`;
                 });
                 
-                // Atualizar lista no modal
-                salasContainer.innerHTML = data.html;
+                // Atualizar contador de salas no modal
+                const totalSalas = document.getElementById('total-salas');
+                if (totalSalas) {
+                    totalSalas.textContent = data.salas.length;
+                }
                 
-                // Atualizar contador
+                // Atualizar lista no modal com o novo padrão
+                if (data.salas.length === 0) {
+                    salasContainer.innerHTML = `
+                        <div class="popup-empty-state show">
+                            <div class="empty-icon">
+                                <i class="fas fa-door-open"></i>
+                            </div>
+                            <h5>Nenhuma sala encontrada</h5>
+                            <p>Crie sua primeira sala de aula para começar</p>
+                            <button type="button" class="popup-primary-button" onclick="abrirModalNovaSalaInterno()">
+                                <i class="fas fa-plus"></i>
+                                Criar Primeira Sala
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // Converter HTML das salas para o novo padrão
+                    let htmlSalas = '';
+                    data.salas.forEach(sala => {
+                        const statusClass = sala.ativa == 1 ? 'active' : '';
+                        const statusText = sala.ativa == 1 ? 'ATIVA' : 'INATIVA';
+                        const statusColor = sala.ativa == 1 ? '#28a745' : '#6c757d';
+                        
+                        htmlSalas += `
+                            <div class="popup-item-card ${statusClass}">
+                                <div class="popup-item-card-header">
+                                    <div class="popup-item-card-content">
+                                        <h6 class="popup-item-card-title">${sala.nome}</h6>
+                                        <div class="popup-item-card-code" style="background: ${statusColor}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold;">
+                                            ${statusText}
+                                        </div>
+                                        <div class="popup-item-card-description" style="margin-top: 0.5rem;">
+                                            <i class="fas fa-users" style="color: #6c757d; margin-right: 0.5rem;"></i>
+                                            Capacidade: ${sala.capacidade} alunos
+                                        </div>
+                                    </div>
+                                    <div class="popup-item-card-actions">
+                                        <button type="button" class="popup-item-card-menu" onclick="editarSala(${sala.id}, '${sala.nome}', ${sala.capacidade}, ${sala.ativa})" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="popup-item-card-menu" onclick="confirmarExclusaoSala(${sala.id}, '${sala.nome}')" title="Excluir" style="color: #dc3545;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    salasContainer.innerHTML = htmlSalas;
+                }
+                
+                // Atualizar contador na página principal
                 const smallText = document.querySelector('small.text-muted');
                 if (smallText) {
                     smallText.innerHTML = `<i class="fas fa-info-circle me-1"></i>${data.salas.length} sala(s) cadastrada(s) - <a href="#" onclick="abrirModalSalasInterno()" class="text-primary">Clique aqui para gerenciar</a>`;
                 }
             } else {
                 console.error('Erro na resposta:', data.mensagem);
-                document.getElementById('lista-salas-modal').innerHTML = '<div class="alert alert-danger">Erro ao carregar salas: ' + data.mensagem + '</div>';
+                salasContainer.innerHTML = `
+                    <div class="popup-error-state show">
+                        <div class="error-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h5>Erro ao carregar salas</h5>
+                        <p>${data.mensagem}</p>
+                        <button type="button" class="popup-secondary-button" onclick="recarregarSalas()">
+                            <i class="fas fa-redo"></i>
+                            Tentar Novamente
+                        </button>
+                    </div>
+                `;
             }
         })
         .catch(error => {
             console.error('Erro ao recarregar salas:', error);
-            document.getElementById('lista-salas-modal').innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Erro ao carregar salas:</strong> ${error.message || 'Erro de conexão'}
-                    <br><small class="text-muted">Verifique se o servidor está funcionando corretamente.</small>
-                </div>`;
+            salasContainer.innerHTML = `
+                <div class="popup-error-state show">
+                    <div class="error-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h5>Erro de conexão</h5>
+                    <p>${error.message || 'Não foi possível conectar ao servidor'}</p>
+                    <button type="button" class="popup-secondary-button" onclick="recarregarSalas()">
+                        <i class="fas fa-redo"></i>
+                        Tentar Novamente
+                    </button>
+                </div>
+            `;
         });
 }
 
-// Função para abrir modal de nova sala
+// Função para abrir formulário de nova sala (integrado)
 function abrirModalNovaSalaInterno() {
-    const modal = new bootstrap.Modal(document.getElementById('modalNovaSalaInterno'));
-    modal.show();
+    console.log('🔧 Abrindo formulário Nova Sala integrado...');
+    
+    // Esconder conteúdo principal
+    const conteudoPrincipal = document.getElementById('conteudo-principal');
+    const formularioNovaSala = document.getElementById('formulario-nova-sala');
+    
+    if (conteudoPrincipal && formularioNovaSala) {
+        conteudoPrincipal.style.display = 'none';
+        formularioNovaSala.style.display = 'block';
+        
+        // Limpar formulário
+        document.getElementById('formNovaSalaIntegrado').reset();
+        document.getElementById('capacidade_sala_integrado').value = '30';
+        
+        // Focar no primeiro campo
+        document.getElementById('nome_sala_integrado').focus();
+    } else {
+        console.error('❌ Elementos do formulário não encontrados');
+    }
+}
+
+// Função para voltar para a lista de salas
+function voltarParaLista() {
+    console.log('🔧 Voltando para lista de salas...');
+    
+    const conteudoPrincipal = document.getElementById('conteudo-principal');
+    const formularioNovaSala = document.getElementById('formulario-nova-sala');
+    
+    if (conteudoPrincipal && formularioNovaSala) {
+        formularioNovaSala.style.display = 'none';
+        conteudoPrincipal.style.display = 'block';
+    }
+}
+
+// Event listener para o formulário integrado
+document.addEventListener('DOMContentLoaded', function() {
+    const formNovaSalaIntegrado = document.getElementById('formNovaSalaIntegrado');
+    if (formNovaSalaIntegrado) {
+        formNovaSalaIntegrado.addEventListener('submit', function(e) {
+            e.preventDefault();
+            salvarNovaSalaIntegrada();
+        });
+    }
+});
+
+// Função para salvar nova sala (integrada)
+function salvarNovaSalaIntegrada() {
+    console.log('💾 Salvando nova sala integrada...');
+    
+    const form = document.getElementById('formNovaSalaIntegrado');
+    const formData = new FormData(form);
+    
+    // Adicionar equipamentos
+    const equipamentos = {};
+    const checkboxes = form.querySelectorAll('input[name^="equipamentos"]:checked');
+    checkboxes.forEach(checkbox => {
+        const key = checkbox.name.replace('equipamentos[', '').replace(']', '');
+        equipamentos[key] = true;
+    });
+    formData.set('equipamentos', JSON.stringify(equipamentos));
+    
+    fetch('/cfc-bom-conselho/admin/api/salas-clean.php?acao=criar', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            console.log('✅ Sala criada com sucesso!');
+            
+            // Voltar para a lista
+            voltarParaLista();
+            
+            // Recarregar salas
+            recarregarSalas();
+            
+            // Mostrar mensagem de sucesso
+            const salasContainer = document.getElementById('lista-salas-modal');
+            salasContainer.innerHTML = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Sucesso!</strong> Sala "${data.sala.nome}" criada com sucesso!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Remover mensagem após 3 segundos
+            setTimeout(() => {
+                recarregarSalas();
+            }, 3000);
+        } else {
+            console.error('❌ Erro ao criar sala:', data.mensagem);
+            alert('Erro ao criar sala: ' + data.mensagem);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro na requisição:', error);
+        alert('Erro ao salvar sala: ' + error.message);
+    });
 }
 
 // Função para editar sala
@@ -3404,24 +4379,184 @@ function editarSala(id, nome, capacidade, ativa) {
     modal.show();
 }
 
+// Função para confirmar exclusão de sala
+function confirmarExclusaoSala(id, nome) {
+    console.log('🗑️ Confirmando exclusão da sala:', nome, 'ID:', id);
+    
+    if (confirm(`Tem certeza que deseja excluir a sala "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+        excluirSala(id, nome);
+    }
+}
+
 // Função para excluir sala
 function excluirSala(id, nome) {
-    document.getElementById('excluir_sala_id').value = id;
-    document.getElementById('nome_sala_exclusao').textContent = nome;
+    console.log('🗑️ Excluindo sala:', nome, 'ID:', id);
     
-    const modal = new bootstrap.Modal(document.getElementById('modalConfirmarExclusao'));
-    modal.show();
+    // Mostrar loading
+    const salasContainer = document.getElementById('lista-salas-modal');
+    salasContainer.innerHTML = `
+        <div class="popup-loading-state show">
+            <div class="popup-loading-spinner"></div>
+            <div class="popup-loading-text">
+                <h6>Excluindo sala...</h6>
+                <p>Aguarde enquanto processamos a exclusão</p>
+            </div>
+        </div>
+    `;
+    
+    fetch('/cfc-bom-conselho/admin/api/salas-clean.php?acao=excluir', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `id=${id}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            console.log('✅ Sala excluída com sucesso!');
+            
+            // Mostrar mensagem de sucesso
+            salasContainer.innerHTML = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Sucesso!</strong> Sala "${nome}" foi excluída com sucesso!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Recarregar salas após 2 segundos
+            setTimeout(() => {
+                recarregarSalas();
+            }, 2000);
+        } else {
+            console.error('❌ Erro ao excluir sala:', data.mensagem);
+            salasContainer.innerHTML = `
+                <div class="popup-error-state show">
+                    <div class="error-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h5>Erro ao excluir sala</h5>
+                    <p>${data.mensagem}</p>
+                    <button type="button" class="popup-secondary-button" onclick="recarregarSalas()">
+                        <i class="fas fa-redo"></i>
+                        Voltar à Lista
+                    </button>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro na requisição:', error);
+        salasContainer.innerHTML = `
+            <div class="popup-error-state show">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h5>Erro de conexão</h5>
+                <p>Não foi possível conectar ao servidor</p>
+                <button type="button" class="popup-secondary-button" onclick="recarregarSalas()">
+                    <i class="fas fa-redo"></i>
+                    Tentar Novamente
+                </button>
+            </div>
+        `;
+    });
 }
 
-// Função para abrir modal interno de gerenciamento de tipos de curso
+// Função para confirmar exclusão (versão antiga - removida)
+// function confirmarExclusao() {
+//     const id = document.getElementById('excluir_sala_id').value;
+//     const nome = document.getElementById('nome_sala_exclusao').textContent;
+//     const modal = new bootstrap.Modal(document.getElementById('modalConfirmarExclusao'));
+//     modal.show();
+// }
+
+// Função para abrir modal de gerenciamento de cursos (padrão)
 function abrirModalTiposCursoInterno() {
-    const modal = new bootstrap.Modal(document.getElementById('modalGerenciarTiposCurso'));
-    modal.show();
-    recarregarTiposCurso();
+    console.log('🔧 Tentando abrir modal de cursos...');
+    const popup = document.getElementById('modalGerenciarTiposCurso');
+    if (popup) {
+        console.log('✅ Modal encontrado, abrindo...');
+        popup.style.display = 'flex';
+        popup.classList.add('show', 'popup-fade-in');
+        document.body.style.overflow = 'hidden';
+        recarregarTiposCurso();
+    } else {
+        console.error('❌ Modal modalGerenciarTiposCurso não encontrado');
+    }
 }
 
-// Função para recarregar lista de tipos de curso via AJAX
+// Função para fechar modal de gerenciamento de cursos (padrão)
+function fecharModalTiposCurso() {
+    console.log('🔧 Fechando modal de cursos...');
+    const popup = document.getElementById('modalGerenciarTiposCurso');
+    if (popup) {
+        popup.classList.remove('show');
+        popup.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Função para abrir formulário de novo curso (integrado)
+function abrirFormularioNovoTipoCurso() {
+    console.log('🔧 Abrindo formulário Novo Curso integrado...');
+    
+    // Esconder conteúdo principal
+    const conteudoPrincipal = document.getElementById('conteudo-principal-tipos');
+    const formularioNovoTipo = document.getElementById('formulario-novo-tipo-curso');
+    
+    if (conteudoPrincipal && formularioNovoTipo) {
+        conteudoPrincipal.style.display = 'none';
+        formularioNovoTipo.style.display = 'block';
+        
+        // Limpar formulário
+        document.getElementById('formNovoTipoCursoIntegrado').reset();
+        document.getElementById('carga_horaria_integrado').value = '45';
+        document.getElementById('ativo_tipo_integrado').checked = true;
+        
+        // Focar no primeiro campo
+        document.getElementById('codigo_tipo_integrado').focus();
+    } else {
+        console.error('❌ Elementos do formulário não encontrados');
+    }
+}
+
+// Função para voltar para a lista de cursos
+function voltarParaListaTipos() {
+    console.log('🔧 Voltando para lista de cursos...');
+    
+    const conteudoPrincipal = document.getElementById('conteudo-principal-tipos');
+    const formularioNovoTipo = document.getElementById('formulario-novo-tipo-curso');
+    
+    if (conteudoPrincipal && formularioNovoTipo) {
+        formularioNovoTipo.style.display = 'none';
+        conteudoPrincipal.style.display = 'block';
+    }
+}
+
+// Função para recarregar lista de cursos via AJAX
 function recarregarTiposCurso() {
+    console.log('🔄 Iniciando carregamento de cursos...');
+    
+    // Mostrar loading state
+    const tiposContainer = document.getElementById('lista-tipos-curso-modal');
+    if (!tiposContainer) {
+        console.error('❌ Container lista-tipos-curso-modal não encontrado');
+        return;
+    }
+    
+    tiposContainer.innerHTML = `
+        <div class="popup-loading-state show">
+            <div class="popup-loading-spinner"></div>
+                        <div class="popup-loading-text">
+                            <h6>Carregando cursos...</h6>
+                            <p>Aguarde enquanto buscamos os cursos cadastrados</p>
+                        </div>
+        </div>
+    `;
+    
+    console.log('📡 Fazendo requisição para API...');
     fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
@@ -3442,41 +4577,262 @@ function recarregarTiposCurso() {
             });
         })
         .then(data => {
+            console.log('✅ Dados recebidos:', data);
             if (data.sucesso) {
                 const selectCurso = document.getElementById('curso_tipo');
                 const tiposContainer = document.getElementById('lista-tipos-curso-modal');
                 
+                // Atualizar contador de tipos no modal
+                const totalTipos = document.getElementById('total-tipos-curso');
+                if (totalTipos) {
+                    totalTipos.textContent = data.tipos.length;
+                }
+                
                 // Atualizar dropdown
-                selectCurso.innerHTML = '<option value="">Selecione o tipo de curso...</option>';
-                data.tipos.forEach(tipo => {
-                    selectCurso.innerHTML += `<option value="${tipo.codigo}">${tipo.nome}</option>`;
-                });
+                if (selectCurso) {
+                    selectCurso.innerHTML = '<option value="">Selecione o tipo de curso...</option>';
+                    data.tipos.forEach(tipo => {
+                        selectCurso.innerHTML += `<option value="${tipo.codigo}">${tipo.nome}</option>`;
+                    });
+                }
                 
-                // Atualizar lista no modal
-                tiposContainer.innerHTML = data.html;
+                // Atualizar lista no modal com o novo padrão
+                if (data.tipos.length === 0) {
+                    tiposContainer.innerHTML = `
+                        <div class="popup-empty-state show">
+                            <div class="empty-icon">
+                                <i class="fas fa-graduation-cap"></i>
+                            </div>
+                            <h5>Nenhum curso encontrado</h5>
+                            <p>Crie seu primeiro curso para começar</p>
+                            <button type="button" class="popup-primary-button" onclick="abrirFormularioNovoTipoCurso()">
+                                <i class="fas fa-plus"></i>
+                                Criar Primeiro Curso
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // Converter HTML dos tipos para o novo padrão
+                    let htmlTipos = '';
+                    data.tipos.forEach(tipo => {
+                        const statusClass = tipo.ativo == 1 ? 'active' : '';
+                        const statusText = tipo.ativo == 1 ? 'ATIVO' : 'INATIVO';
+                        const statusColor = tipo.ativo == 1 ? '#28a745' : '#6c757d';
+                        
+                        htmlTipos += `
+                            <div class="popup-item-card ${statusClass}">
+                                <div class="popup-item-card-header">
+                                    <div class="popup-item-card-content">
+                                        <h6 class="popup-item-card-title">${tipo.nome}</h6>
+                                        <div class="popup-item-card-code" style="background: ${statusColor}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold;">
+                                            ${statusText}
+                                        </div>
+                                        <div class="popup-item-card-description" style="margin-top: 0.5rem;">
+                                            <div><strong>Código:</strong> ${tipo.codigo}</div>
+                                            <div><strong>Carga Horária:</strong> ${tipo.carga_horaria_total} horas</div>
+                                            ${tipo.descricao ? `<div><strong>Descrição:</strong> ${tipo.descricao}</div>` : ''}
+                                        </div>
+                                    </div>
+                                    <div class="popup-item-card-actions">
+                                        <button type="button" class="popup-item-card-menu" onclick="editarTipoCurso(${tipo.id}, '${tipo.codigo}', '${tipo.nome}', '${tipo.descricao || ''}', ${tipo.carga_horaria_total}, ${tipo.ativo})" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="popup-item-card-menu" onclick="confirmarExclusaoTipoCurso(${tipo.id}, '${tipo.nome}')" title="Excluir" style="color: #dc3545;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    tiposContainer.innerHTML = htmlTipos;
+                }
                 
-                // Atualizar contador
+                // Atualizar contador na página principal
                 const smallText = document.querySelector('small.text-muted');
-                if (smallText && smallText.textContent.includes('tipo(s) de curso')) {
-                    smallText.innerHTML = `<i class="fas fa-info-circle me-1"></i>${data.tipos.length} tipo(s) de curso cadastrado(s) - <a href="#" onclick="abrirModalTiposCursoInterno()" class="text-primary">Clique aqui para gerenciar</a>`;
+                if (smallText && smallText.textContent.includes('curso(s) cadastrado(s)')) {
+                    smallText.innerHTML = `<i class="fas fa-info-circle me-1"></i>${data.tipos.length} curso(s) cadastrado(s) - <a href="#" onclick="abrirModalTiposCursoInterno()" class="text-primary">Clique aqui para gerenciar</a>`;
                 }
             } else {
-                console.error('Erro na resposta:', data.mensagem);
-                document.getElementById('lista-tipos-curso-modal').innerHTML = '<div class="alert alert-danger">Erro ao carregar tipos de curso: ' + data.mensagem + '</div>';
+                console.error('❌ Erro na resposta:', data.mensagem);
+                tiposContainer.innerHTML = `
+                    <div class="popup-error-state show">
+                        <div class="error-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h5>Erro ao carregar cursos</h5>
+                        <p>${data.mensagem}</p>
+                        <button type="button" class="popup-secondary-button" onclick="recarregarTiposCurso()">
+                            <i class="fas fa-redo"></i>
+                            Tentar Novamente
+                        </button>
+                    </div>
+                `;
             }
         })
         .catch(error => {
-            console.error('Erro ao recarregar tipos de curso:', error);
-            document.getElementById('lista-tipos-curso-modal').innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    <strong>Erro ao carregar tipos de curso:</strong> ${error.message || 'Erro de conexão'}
-                    <br><small class="text-muted">Verifique se o servidor está funcionando corretamente.</small>
-                </div>`;
+            console.error('❌ Erro ao recarregar cursos:', error);
+            tiposContainer.innerHTML = `
+                <div class="popup-error-state show">
+                    <div class="error-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h5>Erro de conexão</h5>
+                    <p>${error.message || 'Não foi possível conectar ao servidor'}</p>
+                    <button type="button" class="popup-secondary-button" onclick="recarregarTiposCurso()">
+                        <i class="fas fa-redo"></i>
+                        Tentar Novamente
+                    </button>
+                </div>
+            `;
         });
 }
 
-// Função para abrir modal de novo tipo de curso
+// Event listener para o formulário integrado de tipos de curso
+document.addEventListener('DOMContentLoaded', function() {
+    const formNovoTipoCursoIntegrado = document.getElementById('formNovoTipoCursoIntegrado');
+    if (formNovoTipoCursoIntegrado) {
+        formNovoTipoCursoIntegrado.addEventListener('submit', function(e) {
+            e.preventDefault();
+            salvarNovoTipoCursoIntegrado();
+        });
+    }
+});
+
+// Função para salvar novo curso (integrada)
+function salvarNovoTipoCursoIntegrado() {
+    console.log('💾 Salvando novo curso integrado...');
+    
+    const form = document.getElementById('formNovoTipoCursoIntegrado');
+    const formData = new FormData(form);
+    
+    fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php?acao=criar', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            console.log('✅ Curso criado com sucesso!');
+            
+            // Voltar para a lista
+            voltarParaListaTipos();
+            
+            // Recarregar tipos
+            recarregarTiposCurso();
+            
+            // Mostrar mensagem de sucesso
+            const tiposContainer = document.getElementById('lista-tipos-curso-modal');
+            tiposContainer.innerHTML = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Sucesso!</strong> Curso "${data.tipo.nome}" criado com sucesso!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Remover mensagem após 3 segundos
+            setTimeout(() => {
+                recarregarTiposCurso();
+            }, 3000);
+        } else {
+            console.error('❌ Erro ao criar curso:', data.mensagem);
+            alert('Erro ao criar curso: ' + data.mensagem);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro na requisição:', error);
+        alert('Erro ao salvar curso: ' + error.message);
+    });
+}
+
+// Função para confirmar exclusão de curso
+function confirmarExclusaoTipoCurso(id, nome) {
+    console.log('🗑️ Confirmando exclusão do curso:', nome, 'ID:', id);
+    
+    if (confirm(`Tem certeza que deseja excluir o curso "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+        excluirTipoCurso(id, nome);
+    }
+}
+
+// Função para excluir curso
+function excluirTipoCurso(id, nome) {
+    console.log('🗑️ Excluindo curso:', nome, 'ID:', id);
+    
+    // Mostrar loading
+    const tiposContainer = document.getElementById('lista-tipos-curso-modal');
+    tiposContainer.innerHTML = `
+        <div class="popup-loading-state show">
+            <div class="popup-loading-spinner"></div>
+            <div class="popup-loading-text">
+                <h6>Excluindo curso...</h6>
+                <p>Aguarde enquanto processamos a exclusão</p>
+            </div>
+        </div>
+    `;
+    
+    fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php?acao=excluir', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `id=${id}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            console.log('✅ Curso excluído com sucesso!');
+            
+            // Mostrar mensagem de sucesso
+            tiposContainer.innerHTML = `
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    <i class="fas fa-check-circle me-2"></i>
+                    <strong>Sucesso!</strong> Curso "${nome}" foi excluído com sucesso!
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            `;
+            
+            // Recarregar tipos após 2 segundos
+            setTimeout(() => {
+                recarregarTiposCurso();
+            }, 2000);
+        } else {
+            console.error('❌ Erro ao excluir curso:', data.mensagem);
+            tiposContainer.innerHTML = `
+                <div class="popup-error-state show">
+                    <div class="error-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h5>Erro ao excluir curso</h5>
+                    <p>${data.mensagem}</p>
+                    <button type="button" class="popup-secondary-button" onclick="recarregarTiposCurso()">
+                        <i class="fas fa-redo"></i>
+                        Voltar à Lista
+                    </button>
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro na requisição:', error);
+        tiposContainer.innerHTML = `
+            <div class="popup-error-state show">
+                <div class="error-icon">
+                    <i class="fas fa-exclamation-triangle"></i>
+                </div>
+                <h5>Erro de conexão</h5>
+                <p>Não foi possível conectar ao servidor</p>
+                <button type="button" class="popup-secondary-button" onclick="recarregarTiposCurso()">
+                    <i class="fas fa-redo"></i>
+                    Tentar Novamente
+                </button>
+            </div>
+        `;
+    });
+}
+
+// Função para abrir modal de novo tipo de curso (versão antiga - mantida para compatibilidade)
 function abrirModalNovoTipoCurso() {
     const modal = new bootstrap.Modal(document.getElementById('modalNovoTipoCurso'));
     modal.show();
@@ -3965,165 +5321,1024 @@ function salvarNovaSala() {
 // ==========================================
 
 
-// Função para abrir modal de gerenciar disciplinas usando sistema singleton
-function abrirModalDisciplinasInterno() {
-    console.log('🔧 Abrindo modal de disciplinas com sistema singleton...');
+// Função para limpar sistemas de modal antigos
+function limparModaisAntigos() {
+    console.log('🧹 Limpando modais antigos...');
     
-    // Verificar se já existe modal aberto
-    if (document.body.dataset.singletonModalOpen === '1') {
-        console.log('⚠️ Modal singleton já está aberto, apenas atualizando conteúdo');
-        return;
+    // Remover modal-root se existir
+    const modalRoot = document.getElementById('modal-root');
+    if (modalRoot) {
+        modalRoot.remove();
     }
     
-    // Usar sistema singleton para abrir modal
-    window.openModal(function() {
-        const modal = criarModalDisciplinas();
-        
-        // Carregar disciplinas após o modal estar montado
-        setTimeout(() => {
-            carregarDisciplinas();
-        }, 100);
-        
-        return modal;
+    // Remover qualquer backdrop do Bootstrap
+    const backdrops = document.querySelectorAll('.modal-backdrop');
+    backdrops.forEach(backdrop => backdrop.remove());
+    
+    // Remover classes de modal do body
+    document.body.classList.remove('modal-open');
+    // NÃO resetar os estilos aqui - deixar para gerenciarEstilosBody()
+    // document.body.style.overflow = '';
+    // document.body.style.paddingRight = '';
+    
+    // Remover qualquer overlay escuro
+    const overlays = document.querySelectorAll('.modal, .popup-overlay, .dark-overlay');
+    overlays.forEach(overlay => {
+        if (!overlay.id || !overlay.id.includes('modalGerenciar')) {
+            overlay.remove();
+        }
+    });
+    
+    // Remover qualquer elemento com background escuro
+    const darkElements = document.querySelectorAll('[style*="background-color: rgba(0, 0, 0"], [style*="background: rgba(0, 0, 0"], [style*="background-color: #000"], [style*="background: #000"]');
+    darkElements.forEach(element => {
+        if (!element.id || !element.id.includes('modalGerenciar')) {
+            element.remove();
+        }
+    });
+    
+    // Forçar remoção de qualquer backdrop
+    const allElements = document.querySelectorAll('*');
+    allElements.forEach(element => {
+        if (element.style && element.style.backgroundColor === 'rgba(0, 0, 0, 0.5)') {
+            if (!element.id || !element.id.includes('modalGerenciar')) {
+                element.remove();
+            }
+        }
     });
 }
 
-// Função para criar o HTML do modal de disciplinas
-function criarModalDisciplinas() {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
+// Função para eliminar película escura de forma agressiva
+function eliminarPeliculaEscura() {
+    console.log('🔥 Eliminando película escura de forma agressiva...');
     
-    modal.innerHTML = `
-        <div class="modal-header" style="background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%); color: white;">
-            <div class="d-flex align-items-center">
-                <div class="me-3">
-                    <i class="fas fa-graduation-cap" style="font-size: 1.8rem; color: #F7931E;"></i>
-                </div>
-                <div>
-                    <h5 class="modal-title mb-1 fw-bold">Gerenciar Disciplinas</h5>
-                    <small class="opacity-75">Configure e organize as disciplinas do curso</small>
-                </div>
-            </div>
-            <button type="button" class="modal-close text-white" onclick="window.closeModal()">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
+    // Remover todos os pseudo-elementos ::before e ::after com background escuro
+    const style = document.createElement('style');
+    style.textContent = `
+        *::before, *::after {
+            background-color: transparent !important;
+            background: transparent !important;
+        }
         
-        <div class="modal-content">
-            <!-- Barra de busca simplificada -->
-            <div class="mb-4">
-                <div class="position-relative">
-                    <input type="text" class="form-control form-control-lg border-0 shadow-sm" id="buscarDisciplinas" 
-                           placeholder="Buscar disciplinas..." onkeyup="filtrarDisciplinas()" 
-                           style="padding-left: 3rem; background-color: white;">
-                    <i class="fas fa-search position-absolute top-50 start-0 translate-middle-y ms-3 text-muted"></i>
-                </div>
-            </div>
+        #modalGerenciarDisciplinas::before,
+        #modalGerenciarDisciplinas::after {
+            display: none !important;
+            content: none !important;
+            background: none !important;
+            background-color: transparent !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+        
+        .modal-disciplinas-custom::before,
+        .modal-disciplinas-custom::after {
+            display: none !important;
+            content: none !important;
+            background: none !important;
+            background-color: transparent !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            width: 0 !important;
+            height: 0 !important;
+        }
+    `;
+    document.head.appendChild(style);
+    
+    // Forçar remoção de elementos com background escuro
+    const elementosEscuros = document.querySelectorAll('*');
+    elementosEscuros.forEach(elemento => {
+        const estilo = window.getComputedStyle(elemento, '::before');
+        if (estilo.backgroundColor === 'rgba(0, 0, 0, 0.5)' || estilo.backgroundColor === 'rgba(0, 0, 0, 0.3)') {
+            if (!elemento.id || !elemento.id.includes('modalGerenciar')) {
+                elemento.style.display = 'none';
+            }
+        }
+    });
+}
+
+// Função para monitorar e limpar backdrops continuamente
+function monitorarBackdrops() {
+    setInterval(() => {
+        const backdrops = document.querySelectorAll('.modal-backdrop');
+        backdrops.forEach(backdrop => backdrop.remove());
+        
+        // Remover elementos com background escuro
+        const darkElements = document.querySelectorAll('[style*="background-color: rgba(0, 0, 0"], [style*="background: rgba(0, 0, 0"]');
+        darkElements.forEach(element => {
+            if (!element.id || !element.id.includes('modalGerenciar')) {
+                element.remove();
+            }
+        });
+    }, 100);
+}
+
+// Variáveis para controlar o modal
+let modalDisciplinasAbrindo = false;
+let modalDisciplinasCriado = false;
+let modalDisciplinasAberto = false;
+
+// Função para abrir modal de gerenciar disciplinas (VERSÃO SIMPLIFICADA)
+function abrirModalDisciplinasInterno() {
+    console.log('🔧 [DEBUG] Abrindo modal de disciplinas...');
+    console.log('🔧 [DEBUG] Estado atual - Abrindo:', modalDisciplinasAbrindo, 'Aberto:', modalDisciplinasAberto);
+    
+    // Evitar múltiplas chamadas apenas se estiver sendo aberto
+    if (modalDisciplinasAbrindo) {
+        console.log('⚠️ [DEBUG] Modal já está sendo aberto, ignorando...');
+        return;
+    }
+    
+    modalDisciplinasAbrindo = true;
+    
+    // Limpar modais antigos
+    limparModaisAntigos();
+    
+    // Verificar se o modal já existe
+    let modal = document.getElementById('modalGerenciarDisciplinas');
+    
+    // Se o modal existe mas está fechado, remover completamente
+    if (modal && !modalDisciplinasAberto) {
+        console.log('🧹 [DEBUG] Removendo modal antigo fechado...');
+        modal.remove();
+        modal = null;
+        modalDisciplinasCriado = false;
+    }
+    
+    if (!modal) {
+        console.log('🔧 [DEBUG] Criando modal...');
+        modal = criarModalDisciplinas();
+        document.body.appendChild(modal);
+        modalDisciplinasCriado = true;
+    }
+    
+    // Abrir o modal
+    if (modal) {
+        console.log('✅ [DEBUG] Abrindo modal...');
+        
+        // Resetar completamente os estilos do modal antes de abrir
+        modal.style.cssText = '';
+        modal.className = 'modal-disciplinas-custom';
+        
+        // Aplicar estilos de abertura
+        modal.style.display = 'flex';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.classList.add('show');
+        
+        // Bloquear scroll do body usando função centralizada
+        gerenciarEstilosBody('bloquear');
+        
+        modalDisciplinasAberto = true;
+        
+        // Carregar disciplinas
+        carregarDisciplinas();
+        
+        // Modal configurado - botões já têm onclick direto no HTML
+        
+        // Configurar os botões de fechar após criar o modal
+        console.log('🔧 [DEBUG] Chamando configurarBotoesFecharModalDisciplinas()...');
+        configurarBotoesFecharModalDisciplinas();
+        console.log('✅ [DEBUG] configurarBotoesFecharModalDisciplinas() chamada com sucesso');
+    }
+    
+    modalDisciplinasAbrindo = false;
+    console.log('🔧 [DEBUG] Modal aberto - Estado final - Abrindo:', modalDisciplinasAbrindo, 'Aberto:', modalDisciplinasAberto);
+}
+
+// Função duplicada removida - usando a versão consolidada abaixo
+
+// Função para testar e configurar os botões de fechar
+function configurarBotoesFecharModalDisciplinas() {
+    console.log('🔧 [CONFIG] Configurando botões de fechar do modal de disciplinas...');
+    
+    // Aguardar um pouco para garantir que o modal foi criado
+    setTimeout(() => {
+        console.log('🔧 [CONFIG] Iniciando configuração após timeout...');
+        
+        // Configurar botão X
+        const botaoX = document.querySelector('#modalGerenciarDisciplinas .popup-modal-close');
+        console.log('🔧 [CONFIG] Botão X encontrado?', botaoX);
+        
+        if (botaoX) {
+            console.log('✅ [CONFIG] Botão X encontrado');
+            console.log('🔧 [CONFIG] Botão X onclick atual:', botaoX.onclick);
             
-            <!-- Estatística simplificada -->
-            <div class="mb-4">
-                <div class="d-flex align-items-center justify-content-center">
-                    <div class="d-flex align-items-center">
-                        <div class="flex-shrink-0">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center" style="width: 2.5rem; height: 2.5rem; background: linear-gradient(135deg, #023A8D, #1e5bb8);">
-                                <i class="fas fa-book text-white" style="font-size: 1rem;"></i>
+            // Remover todos os event listeners anteriores
+            const botaoXClone = botaoX.cloneNode(true);
+            botaoX.parentNode.replaceChild(botaoXClone, botaoX);
+            
+            // Garantir que o botão seja clicável
+            botaoXClone.style.pointerEvents = 'auto';
+            botaoXClone.style.cursor = 'pointer';
+            botaoXClone.style.zIndex = '1060';
+            
+            // Adicionar onclick direto
+            botaoXClone.onclick = function(e) {
+                console.log('🔧 [CONFIG] Botão X clicado!');
+                e.preventDefault();
+                e.stopPropagation();
+                fecharModalDisciplinas();
+                return false;
+            };
+            
+            // Adicionar também addEventListener como backup
+            botaoXClone.addEventListener('click', function(e) {
+                console.log('🔧 [CONFIG] Botão X clicado via addEventListener!');
+                e.preventDefault();
+                e.stopPropagation();
+                fecharModalDisciplinas();
+            });
+            
+            console.log('✅ [CONFIG] Botão X configurado');
+        } else {
+            console.error('❌ [CONFIG] Botão X não encontrado');
+        }
+        
+        // Configurar botão Fechar (apenas o do footer, não os de voltar)
+        const botoesFechar = document.querySelectorAll('#modalGerenciarDisciplinas .popup-secondary-button');
+        console.log('🔧 [CONFIG] Botões Fechar encontrados:', botoesFechar.length);
+        
+        // Procurar pelo botão que tem o texto "Fechar" ou "× Fechar"
+        botoesFechar.forEach((botao, index) => {
+            console.log(`🔧 [CONFIG] Botão ${index}:`, botao.textContent.trim());
+            
+            // Verificar se é o botão de fechar (não o de voltar)
+            const textoBotao = botao.textContent.trim();
+            if (textoBotao.includes('Fechar') && !textoBotao.includes('Voltar')) {
+                console.log('✅ [CONFIG] Botão Fechar encontrado (índice ' + index + ')');
+                
+                // Remover todos os event listeners anteriores
+                const botaoClone = botao.cloneNode(true);
+                botao.parentNode.replaceChild(botaoClone, botao);
+                
+                // Garantir que o botão seja clicável
+                botaoClone.style.pointerEvents = 'auto';
+                botaoClone.style.cursor = 'pointer';
+                botaoClone.style.zIndex = '1060';
+                
+                // Adicionar onclick direto
+                botaoClone.onclick = function(e) {
+                    console.log('🔧 [CONFIG] Botão Fechar clicado!');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fecharModalDisciplinas();
+                    return false;
+                };
+                
+                // Adicionar também addEventListener como backup
+                botaoClone.addEventListener('click', function(e) {
+                    console.log('🔧 [CONFIG] Botão Fechar clicado via addEventListener!');
+                    e.preventDefault();
+                    e.stopPropagation();
+                    fecharModalDisciplinas();
+                });
+                
+                console.log('✅ [CONFIG] Botão Fechar configurado');
+            }
+        });
+        
+        console.log('🔧 [CONFIG] Configuração concluída');
+    }, 200);
+}
+
+// Função para testar os botões de fechar (para debug)
+function testarBotoesFecharModalDisciplinas() {
+    console.log('🧪 [TESTE] Testando botões de fechar do modal de disciplinas...');
+    
+    // Verificar se o modal existe
+    const modal = document.getElementById('modalGerenciarDisciplinas');
+    if (!modal) {
+        console.error('❌ [TESTE] Modal não encontrado');
+        alert('Modal não encontrado!');
+        return;
+    }
+    
+    // Verificar botão X
+    const botaoX = document.querySelector('#modalGerenciarDisciplinas .popup-modal-close');
+    if (botaoX) {
+        console.log('✅ [TESTE] Botão X encontrado');
+        console.log('🔧 [TESTE] Botão X onclick:', botaoX.onclick);
+        console.log('🔧 [TESTE] Botão X pointer-events:', botaoX.style.pointerEvents);
+        console.log('🔧 [TESTE] Botão X z-index:', botaoX.style.zIndex);
+    } else {
+        console.error('❌ [TESTE] Botão X não encontrado');
+    }
+    
+    // Verificar botão Fechar
+    const botaoFechar = document.querySelector('#modalGerenciarDisciplinas .popup-secondary-button');
+    if (botaoFechar) {
+        console.log('✅ [TESTE] Botão Fechar encontrado');
+        console.log('🔧 [TESTE] Botão Fechar onclick:', botaoFechar.onclick);
+        console.log('🔧 [TESTE] Botão Fechar pointer-events:', botaoFechar.style.pointerEvents);
+        console.log('🔧 [TESTE] Botão Fechar z-index:', botaoFechar.style.zIndex);
+    } else {
+        console.error('❌ [TESTE] Botão Fechar não encontrado');
+    }
+    
+    // Testar função de fechamento
+    console.log('🔧 [TESTE] Função fecharModalDisciplinas existe?', typeof fecharModalDisciplinas);
+    
+    if (typeof fecharModalDisciplinas === 'function') {
+        console.log('✅ [TESTE] Função de fechamento está disponível');
+        // Testar fechamento
+        console.log('🧪 [TESTE] Testando fechamento do modal...');
+        fecharModalDisciplinas();
+    } else {
+        console.error('❌ [TESTE] Função de fechamento não existe!');
+    }
+}
+
+// Função para abrir formulário de nova disciplina (integrado)
+function abrirFormularioNovaDisciplina() {
+    console.log('🔧 Abrindo formulário Nova Disciplina integrado...');
+    
+    // Esconder conteúdo principal
+    const conteudoPrincipal = document.getElementById('conteudo-principal-disciplinas');
+    const formularioNovaDisciplina = document.getElementById('formulario-nova-disciplina');
+    
+    if (conteudoPrincipal && formularioNovaDisciplina) {
+        conteudoPrincipal.style.display = 'none';
+        formularioNovaDisciplina.style.display = 'block';
+        
+        // Limpar formulário
+        document.getElementById('formNovaDisciplinaIntegrado').reset();
+        document.getElementById('carga_horaria_disciplina_integrado').value = '20';
+        document.getElementById('cor_disciplina_integrado').value = '#023A8D';
+        
+        // Focar no primeiro campo
+        document.getElementById('codigo_disciplina_integrado').focus();
+    } else {
+        console.error('❌ Elementos do formulário não encontrados');
+    }
+}
+
+// Função para voltar para a lista de disciplinas
+function voltarParaListaDisciplinas() {
+    console.log('🔧 Voltando para lista de disciplinas...');
+    
+    const conteudoPrincipal = document.getElementById('conteudo-principal-disciplinas');
+    const formularioNovaDisciplina = document.getElementById('formulario-nova-disciplina');
+    
+    if (conteudoPrincipal && formularioNovaDisciplina) {
+        formularioNovaDisciplina.style.display = 'none';
+        conteudoPrincipal.style.display = 'block';
+    }
+}
+
+// Event listener para o formulário integrado de disciplinas
+document.addEventListener('DOMContentLoaded', function() {
+    const formNovaDisciplinaIntegrado = document.getElementById('formNovaDisciplinaIntegrado');
+    if (formNovaDisciplinaIntegrado) {
+        formNovaDisciplinaIntegrado.addEventListener('submit', function(e) {
+            e.preventDefault();
+            salvarNovaDisciplinaIntegrada();
+        });
+    }
+    
+    // Event listener global para fechar modal de disciplinas
+    document.addEventListener('click', function(e) {
+        // Botão X do header
+        if (e.target.closest('.popup-modal-close') && e.target.closest('#modalGerenciarDisciplinas')) {
+            console.log('🔧 [GLOBAL] Botão X clicado via event listener global');
+            e.preventDefault();
+            e.stopPropagation();
+            const modal = document.getElementById('modalGerenciarDisciplinas');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                modalDisciplinasAberto = false;
+                console.log('✅ [GLOBAL] Modal fechado via X');
+            }
+        }
+        
+        // Ícone X
+        if (e.target.classList.contains('fa-times') && e.target.closest('#modalGerenciarDisciplinas')) {
+            console.log('🔧 [GLOBAL] Ícone X clicado via event listener global');
+            e.preventDefault();
+            e.stopPropagation();
+            const modal = document.getElementById('modalGerenciarDisciplinas');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                modalDisciplinasAberto = false;
+                console.log('✅ [GLOBAL] Modal fechado via ícone X');
+            }
+        }
+        
+        // Botão "Fechar" do footer
+        if (e.target.closest('.popup-secondary-button') && e.target.closest('#modalGerenciarDisciplinas')) {
+            console.log('🔧 [GLOBAL] Botão Fechar clicado via event listener global');
+            e.preventDefault();
+            e.stopPropagation();
+            const modal = document.getElementById('modalGerenciarDisciplinas');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                modalDisciplinasAberto = false;
+                console.log('✅ [GLOBAL] Modal fechado via Fechar');
+            }
+        }
+    });
+});
+
+// Função para salvar nova disciplina (integrada)
+function salvarNovaDisciplinaIntegrada() {
+    console.log('💾 Salvando nova disciplina integrada...');
+    
+    const form = document.getElementById('formNovaDisciplinaIntegrado');
+    const formData = new FormData(form);
+    
+    // Simular salvamento (implementar API real aqui)
+    alert('Disciplina seria salva aqui! Dados: ' + JSON.stringify(Object.fromEntries(formData)));
+    
+    // Voltar para a lista
+    voltarParaListaDisciplinas();
+    
+    // Recarregar disciplinas
+    carregarDisciplinas();
+}
+
+// Função para abrir modal de nova disciplina (versão antiga - mantida para compatibilidade)
+function abrirModalNovaDisciplina() {
+    // Redirecionar para o formulário integrado
+    abrirFormularioNovaDisciplina();
+}
+
+// Função para carregar disciplinas (atualizada para o novo padrão)
+function carregarDisciplinas() {
+    console.log('🔄 Carregando disciplinas...');
+    
+    const listaDisciplinas = document.getElementById('listaDisciplinas');
+    if (!listaDisciplinas) {
+        console.error('❌ Container listaDisciplinas não encontrado');
+        return;
+    }
+    
+    // Mostrar loading
+    listaDisciplinas.innerHTML = `
+        <div class="popup-loading-state show">
+            <div class="popup-loading-spinner"></div>
+            <div class="popup-loading-text">
+                <h6>Carregando disciplinas...</h6>
+                <p>Aguarde enquanto buscamos suas disciplinas</p>
+            </div>
+        </div>
+    `;
+    
+    // Simular carregamento (implementar API real aqui)
+    setTimeout(() => {
+        // Dados de exemplo
+        const disciplinas = [
+            { id: 1, nome: 'Direção Defensiva', codigo: 'direcao_defensiva', ativa: 1 },
+            { id: 2, nome: 'Legislação de Trânsito', codigo: 'legislacao_transito', ativa: 1 },
+            { id: 3, nome: 'Primeiros Socorros', codigo: 'primeiros_socorros', ativa: 1 }
+        ];
+        
+        // Atualizar contador
+        const totalDisciplinas = document.getElementById('totalDisciplinas');
+        if (totalDisciplinas) {
+            totalDisciplinas.textContent = disciplinas.length;
+        }
+        
+        // Gerar HTML das disciplinas
+        let htmlDisciplinas = '';
+        disciplinas.forEach(disciplina => {
+            const statusClass = disciplina.ativa == 1 ? 'active' : '';
+            const statusText = disciplina.ativa == 1 ? 'ATIVA' : 'INATIVA';
+            const statusColor = disciplina.ativa == 1 ? '#28a745' : '#6c757d';
+            
+            htmlDisciplinas += `
+                <div class="popup-item-card ${statusClass}">
+                    <div class="popup-item-card-header">
+                        <div class="popup-item-card-content">
+                            <h6 class="popup-item-card-title">${disciplina.nome}</h6>
+                            <div class="popup-item-card-code" style="background: ${statusColor}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold;">
+                                ${statusText}
+                            </div>
+                            <div class="popup-item-card-description" style="margin-top: 0.5rem;">
+                                <div><strong>Código:</strong> ${disciplina.codigo}</div>
                             </div>
                         </div>
-                        <div class="flex-grow-1 ms-3">
-                            <h6 class="mb-0 fw-bold text-dark">Total de Disciplinas: <span id="totalDisciplinas" class="text-primary">0</span></h6>
+                        <div class="popup-item-card-actions">
+                            <button type="button" class="popup-item-card-menu" onclick="editarDisciplina(${disciplina.id})" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button type="button" class="popup-item-card-menu" onclick="confirmarExclusaoDisciplina(${disciplina.id}, '${disciplina.nome}')" title="Excluir" style="color: #dc3545;">
+                                <i class="fas fa-trash"></i>
+                            </button>
                         </div>
                     </div>
                 </div>
-            </div>
+            `;
+        });
+        
+        listaDisciplinas.innerHTML = htmlDisciplinas;
+    }, 1000);
+}
+
+// Função para confirmar exclusão de disciplina
+function confirmarExclusaoDisciplina(id, nome) {
+    console.log('🗑️ Confirmando exclusão da disciplina:', nome, 'ID:', id);
+    
+    if (confirm(`Tem certeza que deseja excluir a disciplina "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+        excluirDisciplina(id, nome);
+    }
+}
+
+// Função para excluir disciplina
+function excluirDisciplina(id, nome) {
+    console.log('🗑️ Excluindo disciplina:', nome, 'ID:', id);
+    
+    // Simular exclusão
+    alert(`Disciplina "${nome}" seria excluída aqui!`);
+    
+    // Recarregar lista
+    carregarDisciplinas();
+}
+
+// Função para editar disciplina
+function editarDisciplina(id) {
+    console.log('✏️ Editando disciplina ID:', id);
+    alert(`Editar disciplina ID: ${id}`);
+}
+
+// Função para salvar alterações de disciplinas
+function salvarAlteracoesDisciplinas() {
+    console.log('💾 Salvando alterações de disciplinas...');
+    alert('Alterações seriam salvas aqui!');
+}
+
+// Função de teste para o botão X
+function testarBotaoX() {
+    console.log('🔧 [TESTE] Testando botão X...');
+    const botaoX = document.querySelector('#modalGerenciarDisciplinas .popup-modal-close');
+    if (botaoX) {
+        console.log('✅ [TESTE] Botão X encontrado');
+        
+        // Garantir que o botão seja clicável
+        botaoX.style.pointerEvents = 'auto';
+        botaoX.style.cursor = 'pointer';
+        botaoX.style.zIndex = '1060';
+        botaoX.style.position = 'relative';
+        botaoX.style.backgroundColor = 'transparent';
+        botaoX.style.border = 'none';
+        
+        // Testar se a função existe
+        console.log('🔧 [TESTE] Função fecharModalDisciplinas existe?', typeof fecharModalDisciplinas);
+        
+        // Adicionar onclick direto
+        botaoX.onclick = function(e) {
+            console.log('🔧 [TESTE] Botão X clicado via onclick!');
+            e.preventDefault();
+            e.stopPropagation();
+            if (typeof fecharModalDisciplinas === 'function') {
+                fecharModalDisciplinas();
+            } else {
+                console.error('❌ [TESTE] Função fecharModalDisciplinas não existe!');
+            }
+            return false;
+        };
+        
+        console.log('✅ [TESTE] Botão X configurado');
+        
+    } else {
+        console.error('❌ [TESTE] Botão X não encontrado');
+    }
+}
+
+// Função para aplicar estilos diretamente no header
+function aplicarEstilosHeader() {
+    console.log('🔧 [ESTILOS] Aplicando estilos diretamente no header...');
+    const header = document.querySelector('#modalGerenciarDisciplinas .popup-modal-header');
+    if (header) {
+        console.log('✅ [ESTILOS] Header encontrado, aplicando padding reduzido...');
+        header.style.padding = '1.2rem 2rem';
+        header.style.minHeight = 'auto';
+        header.style.maxHeight = 'none';
+        
+        const headerContent = header.querySelector('.header-content');
+        if (headerContent) {
+            headerContent.style.alignItems = 'center';
+            headerContent.style.height = '100%';
+        }
+        
+        const headerIcon = header.querySelector('.header-icon');
+        if (headerIcon) {
+            headerIcon.style.marginRight = '1rem';
+        }
+        
+        const headerText = header.querySelector('.header-text h5');
+        if (headerText) {
+            headerText.style.marginBottom = '0.25rem';
+        }
+        
+        const headerSubtext = header.querySelector('.header-text small');
+        if (headerSubtext) {
+            headerSubtext.style.opacity = '0.75';
+        }
+        
+        console.log('✅ [ESTILOS] Estilos aplicados com sucesso!');
+        
+        // Aplicar estilos no conteúdo também
+        const content = document.querySelector('#modalGerenciarDisciplinas .popup-modal-content');
+        if (content) {
+            content.style.padding = '0.5rem 2rem 1.5rem 2rem';
+        }
+        
+        const searchContainer = document.querySelector('#modalGerenciarDisciplinas .popup-search-container');
+        if (searchContainer) {
+            searchContainer.style.marginBottom = '1rem';
+        }
+        
+        const sectionHeader = document.querySelector('#modalGerenciarDisciplinas .popup-section-header');
+        if (sectionHeader) {
+            sectionHeader.style.marginBottom = '1rem';
+        }
+        
+        console.log('✅ [ESTILOS] Estilos de conteúdo aplicados!');
+    } else {
+        console.error('❌ [ESTILOS] Header não encontrado');
+    }
+}
+
+// Função para limpar filtros de disciplinas
+function limparFiltrosDisciplinas() {
+    console.log('🧹 Limpando filtros de disciplinas...');
+    const buscarInput = document.getElementById('buscarDisciplinas');
+    if (buscarInput) {
+        buscarInput.value = '';
+        carregarDisciplinas();
+    }
+}
+
+// Função para configurar o botão X
+function configurarBotaoX() {
+    console.log('🔧 [CONFIG] Configurando botão X...');
+    const botaoX = document.querySelector('#modalGerenciarDisciplinas .popup-modal-close');
+    if (botaoX) {
+        console.log('✅ [CONFIG] Botão X encontrado');
+        
+        // Garantir que o botão seja clicável
+        botaoX.style.pointerEvents = 'auto';
+        botaoX.style.cursor = 'pointer';
+        botaoX.style.zIndex = '1060';
+        
+        // Adicionar onclick direto
+        botaoX.onclick = function(e) {
+            console.log('🔧 [CONFIG] Botão X clicado!');
+            e.preventDefault();
+            e.stopPropagation();
+            fecharModalDisciplinas();
+            return false;
+        };
+        
+        console.log('✅ [CONFIG] Botão X configurado');
+    } else {
+        console.error('❌ [CONFIG] Botão X não encontrado');
+    }
+    
+    // Configurar também o botão "Fechar" do footer
+    const botaoFechar = document.querySelector('#modalGerenciarDisciplinas .popup-secondary-button');
+    if (botaoFechar) {
+        console.log('✅ [CONFIG] Botão Fechar encontrado');
+        botaoFechar.onclick = function(e) {
+            console.log('🔧 [CONFIG] Botão Fechar clicado!');
+            e.preventDefault();
+            e.stopPropagation();
+            fecharModalDisciplinas();
+            return false;
+        };
+        console.log('✅ [CONFIG] Botão Fechar configurado');
+    } else {
+        console.error('❌ [CONFIG] Botão Fechar não encontrado');
+    }
+}
+
+// Função para testar botões de fechar
+function testarBotoesFechar() {
+    console.log('🔧 [TESTE] Testando botões de fechar...');
+    
+    // Testar botão X
+    const botaoX = document.querySelector('#modalGerenciarDisciplinas .popup-modal-close');
+    if (botaoX) {
+        console.log('✅ [TESTE] Botão X encontrado');
+        botaoX.onclick = function() {
+            console.log('🔧 [TESTE] Botão X clicado!');
+            const modal = document.getElementById('modalGerenciarDisciplinas');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                modalDisciplinasAberto = false;
+                console.log('✅ [TESTE] Modal fechado via X');
+            }
+        };
+    } else {
+        console.error('❌ [TESTE] Botão X não encontrado');
+    }
+    
+    // Testar botão Fechar
+    const botaoFechar = document.querySelector('#modalGerenciarDisciplinas .popup-secondary-button');
+    if (botaoFechar) {
+        console.log('✅ [TESTE] Botão Fechar encontrado');
+        botaoFechar.onclick = function() {
+            console.log('🔧 [TESTE] Botão Fechar clicado!');
+            const modal = document.getElementById('modalGerenciarDisciplinas');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = 'auto';
+                modalDisciplinasAberto = false;
+                console.log('✅ [TESTE] Modal fechado via Fechar');
+            }
+        };
+    } else {
+        console.error('❌ [TESTE] Botão Fechar não encontrado');
+    }
+}
+
+// Função para fechar modal corretamente
+function fecharModalCorretamente() {
+    console.log('🔧 [FECHAR] Fechando modal corretamente...');
+    
+    const modal = document.getElementById('modalGerenciarDisciplinas');
+    if (modal) {
+        console.log('✅ [FECHAR] Modal encontrado');
+        
+        // Fechar o modal
+        modal.style.display = 'none';
+        modal.classList.remove('show', 'popup-fade-in');
+        
+        // Restaurar scroll do body
+        document.body.style.overflow = 'auto';
+        document.body.style.position = 'static';
+        document.body.style.width = 'auto';
+        
+        console.log('✅ [FECHAR] Modal fechado');
+    } else {
+        console.error('❌ [FECHAR] Modal não encontrado');
+    }
+    
+    // RESETAR TODAS AS VARIÁVEIS DE CONTROLE
+    modalDisciplinasAbrindo = false;
+    modalDisciplinasCriado = false;
+    modalDisciplinasAberto = false;
+    
+    console.log('✅ [FECHAR] Variáveis resetadas - modal pode ser reaberto');
+}
+
+// Função para fechar modal diretamente
+function fecharModalDireto() {
+    console.log('🔧 [DIRETO] Fechando modal diretamente...');
+    alert('Função fecharModalDireto chamada!');
+    
+    const modal = document.getElementById('modalGerenciarDisciplinas');
+    if (modal) {
+        console.log('✅ [DIRETO] Modal encontrado, fechando...');
+        modal.style.display = 'none';
+        modal.classList.remove('show');
+        
+        // Restaurar scroll do body
+        document.body.style.overflow = 'auto';
+        document.body.style.position = 'static';
+        document.body.style.width = 'auto';
+        
+        // Resetar variáveis
+        modalDisciplinasAbrindo = false;
+        modalDisciplinasCriado = false;
+        modalDisciplinasAberto = false;
+        
+        console.log('✅ [DIRETO] Modal fechado com sucesso');
+        alert('Modal fechado com sucesso!');
+    } else {
+        console.error('❌ [DIRETO] Modal não encontrado');
+        alert('Modal não encontrado!');
+    }
+}
+
+// Função para fechar modal (FUNCIONANDO)
+function fecharModalDisciplinas() {
+    console.log('🔧 [FECHAR] Fechando modal de disciplinas...');
+    
+    const modal = document.getElementById('modalGerenciarDisciplinas');
+    if (modal) {
+        console.log('✅ [FECHAR] Modal encontrado, fechando...');
+        console.log('🔧 [FECHAR] Display atual:', modal.style.display);
+        console.log('🔧 [FECHAR] Classes atuais:', modal.className);
+        
+        // PRIMEIRO: Restaurar scroll do body ANTES de fechar o modal
+        gerenciarEstilosBody('restaurar');
+        
+        // SEGUNDO: Fechar o modal com CSS mais específico
+        modal.style.setProperty('display', 'none', 'important');
+        modal.style.setProperty('visibility', 'hidden', 'important');
+        modal.style.setProperty('opacity', '0', 'important');
+        modal.style.setProperty('pointer-events', 'none', 'important');
+        
+        // Remover todas as classes que podem manter o modal visível
+        modal.classList.remove('show', 'active', 'visible', 'open');
+        modal.className = 'modal-disciplinas-custom';
+        
+        // TERCEIRO: Resetar variáveis
+        modalDisciplinasAbrindo = false;
+        modalDisciplinasCriado = false;
+        modalDisciplinasAberto = false;
+        
+        console.log('🔧 [FECHAR] Display após fechar:', modal.style.display);
+        console.log('🔧 [FECHAR] Classes após fechar:', modal.className);
+        console.log('🔧 [FECHAR] Estado das variáveis - Abrindo:', modalDisciplinasAbrindo, 'Criado:', modalDisciplinasCriado, 'Aberto:', modalDisciplinasAberto);
+        
+        // Verificar se funcionou
+        const computedStyle = window.getComputedStyle(modal);
+        console.log('🔍 [FECHAR] Display computado:', computedStyle.display);
+        console.log('🔍 [FECHAR] Visibility computado:', computedStyle.visibility);
+        
+        // Verificar se o body foi restaurado
+        const bodyComputed = window.getComputedStyle(document.body);
+        console.log('🔍 [BODY] Overflow computado:', bodyComputed.overflow);
+        console.log('🔍 [BODY] Position computado:', bodyComputed.position);
+        
+        // QUARTO: Forçar repaint do body
+        document.body.offsetHeight; // Trigger reflow
+        
+        console.log('✅ [FECHAR] Modal fechado com sucesso');
+    } else {
+        console.error('❌ [FECHAR] Modal não encontrado');
+    }
+}
+
+// Tornar a função globalmente acessível
+window.fecharModalDisciplinas = fecharModalDisciplinas;
+
+// Log de teste para verificar se o script está carregando
+console.log('✅ [SCRIPT] Script de turmas-teoricas.php carregado!');
+console.log('✅ [SCRIPT] Função fecharModalDisciplinas disponível:', typeof window.fecharModalDisciplinas);
+
+// Função para filtrar disciplinas
+function filtrarDisciplinas() {
+    console.log('🔍 Filtrando disciplinas...');
+    // Implementar filtro aqui
+}
+
+// Função para criar o HTML do modal de disciplinas (padrão)
+function criarModalDisciplinas() {
+    const modal = document.createElement('div');
+    modal.className = 'modal-disciplinas-custom';
+    modal.id = 'modalGerenciarDisciplinas';
+    modal.style.display = 'none';
+    modal.style.position = 'fixed';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100vw';
+    modal.style.height = '100vh';
+    modal.style.backgroundColor = 'transparent';
+    modal.style.zIndex = '1055';
+    modal.style.padding = '2rem';
+    
+    modal.innerHTML = `
+        <div class="popup-modal-wrapper">
             
-            <!-- Botão Nova Disciplina -->
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <div>
-                    <h6 class="mb-1 fw-semibold text-dark">Suas Disciplinas</h6>
-                    <small class="text-muted">Gerencie e organize as disciplinas do curso</small>
+            <!-- HEADER -->
+            <div class="popup-modal-header">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="header-text">
+                        <h5>Gerenciar Disciplinas</h5>
+                        <small>Configure e organize as disciplinas do curso</small>
+                    </div>
                 </div>
-                <button type="button" class="btn btn-primary btn-lg shadow-sm" onclick="abrirModalNovaDisciplina()" 
-                        style="background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%); border: none; border-radius: 10px;">
-                    <i class="fas fa-plus me-2"></i>Nova Disciplina
+                <button type="button" class="popup-modal-close" onclick="fecharModalDisciplinas()">
+                    <i class="fas fa-times"></i>
                 </button>
             </div>
             
-                       <!-- Grid de disciplinas -->
-                       <div id="listaDisciplinas" class="disciplinas-grid">
-                           <!-- Lista de disciplinas será carregada aqui -->
-                       </div>
-            
-            <!-- Estados -->
-            <div id="carregandoDisciplinas" class="text-center py-5" style="display: none;">
-                <div class="d-flex flex-column align-items-center">
-                    <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
-                        <span class="visually-hidden">Carregando...</span>
-                    </div>
-                    <h6 class="text-primary mb-2">Carregando disciplinas...</h6>
-                    <p class="text-muted mb-0">Aguarde enquanto buscamos suas disciplinas</p>
-                </div>
-            </div>
-            
-            <div id="nenhumaDisciplinaEncontrada" class="text-center py-5" style="display: none;">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body p-5">
-                        <div class="mb-4">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto" 
-                                 style="width: 5rem; height: 5rem; background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                                <i class="fas fa-book-open text-muted" style="font-size: 2rem;"></i>
-                            </div>
-                        </div>
-                        <h5 class="text-dark mb-3">Nenhuma disciplina encontrada</h5>
-                        <p class="text-muted mb-4">Crie sua primeira disciplina ou ajuste os filtros de busca para encontrar o que procura.</p>
-                        <div class="d-flex gap-2 justify-content-center">
-                            <button type="button" class="btn btn-primary" onclick="abrirModalNovaDisciplina()">
-                                <i class="fas fa-plus me-2"></i>Criar Disciplina
-                            </button>
-                            <button type="button" class="btn btn-outline-secondary" onclick="limparFiltrosDisciplinas()">
-                                <i class="fas fa-times me-2"></i>Limpar Filtros
-                            </button>
-                        </div>
+            <!-- CONTEÚDO -->
+            <div class="popup-modal-content">
+                
+                <!-- Barra de Busca -->
+                <div class="popup-search-container">
+                    <div class="popup-search-wrapper">
+                        <input type="text" class="popup-search-input" id="buscarDisciplinas" placeholder="Buscar disciplinas..." onkeyup="filtrarDisciplinas()">
+                        <i class="fas fa-search popup-search-icon"></i>
                     </div>
                 </div>
-            </div>
-            
-            <div id="erroCarregarDisciplinas" class="text-center py-5" style="display: none;">
-                <div class="card border-0 shadow-sm">
-                    <div class="card-body p-5">
-                        <div class="mb-4">
-                            <div class="rounded-circle d-flex align-items-center justify-content-center mx-auto" 
-                                 style="width: 5rem; height: 5rem; background: linear-gradient(135deg, #ffe6e6 0%, #ffcccc 100%);">
-                                <i class="fas fa-exclamation-triangle text-danger" style="font-size: 2rem;"></i>
+                
+                <!-- Seção Otimizada - Título, Estatísticas e Botão na mesma linha -->
+                <div class="popup-section-header">
+                    <div class="popup-section-title">
+                        <h6>Suas Disciplinas</h6>
+                        <small>Gerencie e organize as disciplinas do curso</small>
+                    </div>
+                    <div class="popup-stats-item" style="margin: 0;">
+                        <div class="popup-stats-icon">
+                            <div class="icon-circle">
+                                <i class="fas fa-book"></i>
                             </div>
                         </div>
-                        <h5 class="text-danger mb-3">Erro ao carregar disciplinas</h5>
-                        <p class="text-muted mb-4">Ocorreu um erro inesperado. Verifique sua conexão e tente novamente.</p>
-                        <button type="button" class="btn btn-outline-danger" onclick="carregarDisciplinas()">
-                            <i class="fas fa-redo me-2"></i>Tentar Novamente
+                        <div class="popup-stats-text">
+                            <h6 style="margin: 0;">Total: <span class="stats-number" id="totalDisciplinas">0</span></h6>
+                        </div>
+                    </div>
+                    <button type="button" class="popup-primary-button" onclick="abrirFormularioNovaDisciplina()">
+                        <i class="fas fa-plus"></i>
+                        Nova Disciplina
+                    </button>
+                </div>
+                
+                <!-- Conteúdo Principal - Lista de Disciplinas -->
+                <div id="conteudo-principal-disciplinas">
+                    <!-- Grid de Disciplinas -->
+                    <div class="popup-items-grid" id="listaDisciplinas">
+                        <!-- Lista de disciplinas será carregada aqui -->
+                    </div>
+                </div>
+                
+                <!-- Formulário Nova Disciplina (oculto inicialmente) -->
+                <div id="formulario-nova-disciplina" style="display: none;">
+                    <div class="popup-section-header">
+                        <div class="popup-section-title">
+                            <h6>Nova Disciplina</h6>
+                            <small>Preencha os dados da nova disciplina</small>
+                        </div>
+                        <button type="button" class="popup-secondary-button" onclick="voltarParaListaDisciplinas()">
+                            <i class="fas fa-arrow-left"></i>
+                            Voltar
                         </button>
                     </div>
+                    
+                    <form id="formNovaDisciplinaIntegrado" class="mt-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="codigo_disciplina_integrado" class="form-label">Código *</label>
+                                    <input type="text" class="form-control" id="codigo_disciplina_integrado" name="codigo" required placeholder="Ex: direcao_defensiva">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nome_disciplina_integrado" class="form-label">Nome *</label>
+                                    <input type="text" class="form-control" id="nome_disciplina_integrado" name="nome" required placeholder="Ex: Direção Defensiva">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="descricao_disciplina_integrado" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricao_disciplina_integrado" name="descricao" rows="3" placeholder="Descrição detalhada da disciplina"></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="carga_horaria_disciplina_integrado" class="form-label">Carga Horária Padrão</label>
+                                    <input type="number" class="form-control" id="carga_horaria_disciplina_integrado" name="carga_horaria_padrao" min="1" value="20">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="cor_disciplina_integrado" class="form-label">Cor</label>
+                                    <input type="color" class="form-control" id="cor_disciplina_integrado" name="cor_hex" value="#023A8D">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="popup-secondary-button" onclick="voltarParaListaDisciplinas()">
+                                <i class="fas fa-times"></i>
+                                Cancelar
+                            </button>
+                            <button type="submit" class="popup-save-button">
+                                <i class="fas fa-save"></i>
+                                Salvar Disciplina
+                            </button>
+                        </div>
+                    </form>
                 </div>
+                
             </div>
-        </div>
-        
-        <div class="modal-footer">
-            <div class="d-flex justify-content-between align-items-center w-100">
-                <div class="d-flex align-items-center">
-                    <small class="text-muted me-3">
-                        <i class="fas fa-info-circle me-1"></i>
+            
+            <!-- FOOTER -->
+            <div class="popup-modal-footer">
+                <div class="popup-footer-info">
+                    <small>
+                        <i class="fas fa-info-circle"></i>
                         As alterações são salvas automaticamente
                     </small>
                 </div>
-                <div class="d-flex gap-2">
-                    <button type="button" class="btn btn-outline-secondary" onclick="window.closeModal()">
-                        <i class="fas fa-times me-1"></i>Fechar
+                <div class="popup-footer-actions">
+                    <button type="button" class="popup-secondary-button" onclick="fecharModalDisciplinas()">
+                        <i class="fas fa-times"></i>
+                        Fechar
                     </button>
-                    <button type="button" class="btn btn-primary shadow-sm" onclick="console.log('🔍 Botão Salvar Alterações clicado'); salvarAlteracoesDisciplinas();" 
-                            style="background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%); border: none; border-radius: 8px;">
-                        <i class="fas fa-save me-1"></i>Salvar Alterações
+                    <button type="button" class="popup-save-button" onclick="salvarAlteracoesDisciplinas()">
+                        <i class="fas fa-save"></i>
+                        Salvar Alterações
                     </button>
                 </div>
             </div>
+            
         </div>
     `;
     
@@ -5342,4 +7557,113 @@ window.closeModal = function() {
 <div id="modal-root"></div>
 
 <!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+<!-- JavaScript das Funções do Modal - Carregamento Garantido -->
+<script>
+// ==========================================
+// FUNÇÕES DO MODAL DE DISCIPLINAS - VERSÃO SIMPLIFICADA
+// ==========================================
+
+// Variáveis já declaradas no script principal - não redeclarar
+
+// Função fecharModalDisciplinas já existe no script principal - não duplicar
+
+// Função centralizada para gerenciar estilos do body
+function gerenciarEstilosBody(acao) {
+    console.log('🔧 [BODY] Gerenciando estilos do body:', acao);
+    
+    if (acao === 'bloquear') {
+        // Bloquear scroll do body
+        document.body.style.setProperty('overflow', 'hidden', 'important');
+        document.body.style.setProperty('position', 'fixed', 'important');
+        document.body.style.setProperty('width', '100%', 'important');
+        document.body.style.setProperty('height', '100%', 'important');
+        document.documentElement.style.setProperty('overflow', 'hidden', 'important');
+        
+        console.log('✅ [BODY] Body bloqueado');
+    } else if (acao === 'restaurar') {
+        // Restaurar scroll do body
+        document.body.style.setProperty('overflow', 'auto', 'important');
+        document.body.style.setProperty('position', 'static', 'important');
+        document.body.style.setProperty('width', 'auto', 'important');
+        document.body.style.setProperty('height', 'auto', 'important');
+        document.documentElement.style.setProperty('overflow', 'auto', 'important');
+        
+        console.log('✅ [BODY] Body restaurado');
+    }
+    
+    // Verificar se funcionou
+    const bodyComputed = window.getComputedStyle(document.body);
+    console.log('🔍 [BODY] Verificação - Overflow:', bodyComputed.overflow, 'Position:', bodyComputed.position);
+}
+
+// Função criarModalDisciplinas já existe no script principal - não duplicar
+
+// Função abrirModalDisciplinasInterno já existe no script principal - não duplicar
+
+// Tornar as funções globalmente acessíveis
+window.fecharModalDisciplinas = fecharModalDisciplinas;
+window.criarModalDisciplinas = criarModalDisciplinas;
+window.abrirModalDisciplinasInterno = abrirModalDisciplinasInterno;
+window.gerenciarEstilosBody = gerenciarEstilosBody;
+
+// Configurar event listeners para os botões do modal
+function configurarBotoesModal() {
+    console.log('🔧 [CONFIG] Configurando botões do modal...');
+    
+    // Configurar botão X
+    const botaoX = document.querySelector('#modalGerenciarDisciplinas .popup-modal-close');
+    if (botaoX) {
+        console.log('✅ [CONFIG] Botão X encontrado');
+        
+        // Remover event listeners existentes
+        botaoX.onclick = null;
+        botaoX.removeEventListener('click', fecharModalDisciplinas);
+        
+        // Adicionar novo event listener
+        botaoX.addEventListener('click', function(e) {
+            console.log('🔧 [CLICK] Botão X clicado!');
+            e.preventDefault();
+            e.stopPropagation();
+            fecharModalDisciplinas();
+        });
+        
+        console.log('✅ [CONFIG] Botão X configurado');
+    } else {
+        console.error('❌ [CONFIG] Botão X não encontrado');
+    }
+    
+    // Configurar botão Fechar
+    const botaoFechar = document.querySelector('#modalGerenciarDisciplinas .popup-secondary-button');
+    if (botaoFechar) {
+        console.log('✅ [CONFIG] Botão Fechar encontrado');
+        
+        // Remover event listeners existentes
+        botaoFechar.onclick = null;
+        botaoFechar.removeEventListener('click', fecharModalDisciplinas);
+        
+        // Adicionar novo event listener
+        botaoFechar.addEventListener('click', function(e) {
+            console.log('🔧 [CLICK] Botão Fechar clicado!');
+            e.preventDefault();
+            e.stopPropagation();
+            fecharModalDisciplinas();
+        });
+        
+        console.log('✅ [CONFIG] Botão Fechar configurado');
+    } else {
+        console.error('❌ [CONFIG] Botão Fechar não encontrado');
+    }
+}
+
+// Função abrirModalDisciplinasInterno já existe - não redefinir
+
+// Log de teste para verificar se o script está carregando
+console.log('✅ [SCRIPT] Script de turmas-teoricas.php carregado!');
+console.log('✅ [SCRIPT] Função fecharModalDisciplinas disponível:', typeof window.fecharModalDisciplinas);
+console.log('✅ [SCRIPT] Função criarModalDisciplinas disponível:', typeof window.criarModalDisciplinas);
+console.log('✅ [SCRIPT] Função abrirModalDisciplinasInterno disponível:', typeof window.abrirModalDisciplinasInterno);
+</script>
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

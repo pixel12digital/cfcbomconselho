@@ -8,6 +8,9 @@
  * @since 2024
  */
 
+// Limpar qualquer saída anterior
+ob_clean();
+
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
@@ -124,15 +127,12 @@ function handleGetRequest($turmaManager, $user) {
  * Manipular requisições POST
  */
 function handlePostRequest($turmaManager, $user) {
+    // Tentar JSON primeiro, depois form-data
     $dados = json_decode(file_get_contents('php://input'), true);
     
     if (json_last_error() !== JSON_ERROR_NONE) {
-        http_response_code(400);
-        echo json_encode([
-            'sucesso' => false,
-            'mensagem' => 'JSON inválido: ' . json_last_error_msg()
-        ], JSON_UNESCAPED_UNICODE);
-        return;
+        // Se não for JSON, usar dados do formulário
+        $dados = $_POST;
     }
     
     $acao = $dados['acao'] ?? '';
@@ -154,12 +154,16 @@ function handlePostRequest($turmaManager, $user) {
             handleAtivarTurma($turmaManager, $dados);
             break;
             
+        case 'excluir':
+            handleExcluirTurma($turmaManager, $dados);
+            break;
+            
         default:
             http_response_code(400);
             echo json_encode([
                 'sucesso' => false,
                 'mensagem' => 'Ação POST não especificada ou inválida',
-                'acoes_disponiveis' => ['criar_basica', 'agendar_aula', 'matricular_aluno', 'ativar_turma']
+                'acoes_disponiveis' => ['criar_basica', 'agendar_aula', 'matricular_aluno', 'ativar_turma', 'excluir']
             ], JSON_UNESCAPED_UNICODE);
             break;
     }
@@ -479,7 +483,7 @@ function handleAtivarTurma($turmaManager, $dados) {
     http_response_code(200);
     echo json_encode([
         'sucesso' => true,
-        'mensagem' => '🎉 Turma ativada com sucesso! Agora os alunos podem ser matriculados e as aulas podem ser realizadas.'
+        'mensagem' => '🎉 Turma ativada com sucesso! Agora está disponível para matrículas e as aulas podem ser realizadas.'
     ], JSON_UNESCAPED_UNICODE);
 }
 
@@ -542,5 +546,112 @@ function handleCancelarAula($turmaManager, $dados) {
         'sucesso' => true,
         'mensagem' => 'Aula cancelada com sucesso'
     ], JSON_UNESCAPED_UNICODE);
+}
+
+/**
+ * Excluir turma
+ */
+function handleExcluirTurma($turmaManager, $dados) {
+    try {
+        $turmaId = $dados['turma_id'] ?? null;
+        
+        if (!$turmaId) {
+            http_response_code(400);
+            echo json_encode([
+                'sucesso' => false,
+                'mensagem' => 'ID da turma é obrigatório'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+    
+    // Verificar se a turma existe
+    $turma = $turmaManager->obterTurma($turmaId);
+    if (!$turma['sucesso']) {
+        http_response_code(404);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Turma não encontrada'
+        ], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+    
+    $dadosTurma = $turma['dados'];
+    
+    // Verificar se pode ser excluída (apenas turmas criando/completas sem alunos)
+    if (!in_array($dadosTurma['status'], ['criando', 'completa'])) {
+        http_response_code(400);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Apenas turmas em criação ou completas (sem alunos) podem ser excluídas'
+        ], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+    
+    // Verificar se há alunos matriculados
+    $db = Database::getInstance();
+    $alunosMatriculados = $db->fetchAll("SELECT COUNT(*) as total FROM turma_alunos WHERE turma_id = ?", [$turmaId]);
+    $totalAlunos = $alunosMatriculados[0]['total'] ?? 0;
+    
+    if ($totalAlunos > 0) {
+        http_response_code(400);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Não é possível excluir turma com alunos matriculados'
+        ], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+    
+    try {
+        $db = Database::getInstance();
+        $db->beginTransaction();
+        
+        // Excluir aulas agendadas
+        $db->delete('turma_aulas_agendadas', 'turma_id = ?', [$turmaId]);
+        
+        // Excluir logs da turma (se a tabela existir)
+        try {
+            $db->delete('turma_logs', 'turma_id = ?', [$turmaId]);
+        } catch (Exception $e) {
+            // Se a tabela turma_logs não existir ou houver erro, apenas logar e continuar
+            error_log("Aviso: Não foi possível excluir logs da turma $turmaId: " . $e->getMessage());
+        }
+        
+        // Excluir alunos da turma (se a tabela existir)
+        try {
+            $db->delete('turma_alunos', 'turma_id = ?', [$turmaId]);
+        } catch (Exception $e) {
+            // Se a tabela turma_alunos não existir ou houver erro, apenas logar e continuar
+            error_log("Aviso: Não foi possível excluir alunos da turma $turmaId: " . $e->getMessage());
+        }
+        
+        // Excluir a turma
+        $db->delete('turmas_teoricas', 'id = ?', [$turmaId]);
+        
+        $db->commit();
+        
+        http_response_code(200);
+        echo json_encode([
+            'sucesso' => true,
+            'mensagem' => '✅ Turma excluída com sucesso!'
+        ], JSON_UNESCAPED_UNICODE);
+        
+    } catch (Exception $e) {
+        if (isset($db)) {
+            $db->rollback();
+        }
+        http_response_code(500);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Erro ao excluir turma: ' . $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+    }
+    
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Erro ao processar exclusão: ' . $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+    }
 }
 ?>

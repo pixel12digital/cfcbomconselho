@@ -529,8 +529,8 @@ class TurmaTeoricaManager {
                 
                 return [
                     'completa' => true,
-                    'mensagem' => '🎉 Turma completa! Todas as disciplinas foram agendadas. Agora você pode inserir alunos.',
-                    'proxima_etapa' => 'inserir_alunos'
+                    'mensagem' => '🎉 Turma completa! Todas as disciplinas foram agendadas. Agora você pode ativar a turma.',
+                    'proxima_etapa' => 'ativar_turma'
                 ];
             }
             
@@ -562,12 +562,12 @@ class TurmaTeoricaManager {
             require_once __DIR__ . '/../../includes/guards/AgendamentoGuards.php';
             $guards = new AgendamentoGuards();
             
-            // VALIDAÇÃO 1: Verificar se turma está completa
+            // VALIDAÇÃO 1: Verificar se turma está ativa ou completa
             $turma = $this->obterTurma($turmaId);
-            if (!$turma || $turma['status'] !== 'completa') {
+            if (!$turma || !in_array($turma['status'], ['completa', 'ativa'])) {
                 return [
                     'sucesso' => false,
-                    'mensagem' => '📋 A turma deve estar completa (todas as aulas agendadas) antes de matricular alunos.',
+                    'mensagem' => '📋 A turma deve estar ativa ou ter todas as aulas agendadas para matricular alunos.',
                     'tipo_erro' => 'turma_incompleta'
                 ];
             }
@@ -865,7 +865,7 @@ class TurmaTeoricaManager {
             if ($dadosTurma['status'] !== 'completa') {
                 return [
                     'sucesso' => false,
-                    'mensagem' => 'Turma deve estar completa antes de ser ativada'
+                    'mensagem' => 'Turma deve ter todas as disciplinas agendadas antes de ser ativada'
                 ];
             }
             
@@ -890,7 +890,7 @@ class TurmaTeoricaManager {
             
             return [
                 'sucesso' => true,
-                'mensagem' => '✅ Turma ativada com sucesso! Agora está pronta para receber alunos.'
+                'mensagem' => '✅ Turma ativada com sucesso! Agora está disponível para matrículas e aulas.'
             ];
             
         } catch (Exception $e) {
