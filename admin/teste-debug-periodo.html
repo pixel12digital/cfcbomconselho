@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔍 Debug - Período da Turma</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .teste { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .sucesso { background: #d4edda; border: 1px solid #c3e6cb; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; }
+        .correcao { background: #fff3cd; border: 1px solid #ffeaa7; }
+        .erro { background: #f8d7da; border: 1px solid #f5c6cb; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .check { color: #28a745; font-weight: bold; }
+        .cross { color: #dc3545; font-weight: bold; }
+        code { background: #f8f9fa; padding: 2px 4px; border-radius: 3px; font-family: monospace; }
+        pre { background: #f8f9fa; padding: 10px; border-radius: 5px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Debug - Período da Turma</h1>
+    
+    <div class="teste info">
+        <h3>📊 Status Atual</h3>
+        <ul>
+            <li><span class="check">✅</span> <strong>Disciplinas:</strong> Funcionando corretamente (3 campos carregados)</li>
+            <li><span class="cross">❌</span> <strong>Período da Turma:</strong> Permanece em branco</li>
+            <li><span class="cross">❌</span> <strong>Campos de Data:</strong> Não carregam (aparecem com bordas vermelhas)</li>
+        </ul>
+    </div>
+
+    <div class="teste correcao">
+        <h3>🔧 Logs de Debug Adicionados</h3>
+        <p>Adicionei logs detalhados para identificar onde está o problema:</p>
+        
+        <h4>1. Verificação de Dados do PHP</h4>
+        <pre><code>console.log('🔍 [DEBUG] Verificando dados específicos:');
+console.log('  - dados.data_inicio:', dados?.data_inicio);
+console.log('  - dados.data_fim:', dados?.data_fim);</code></pre>
+        
+        <h4>2. Verificação de Elementos DOM</h4>
+        <pre><code>console.log('🔍 [DATA] Elemento data_inicio encontrado:', !!dataInicioElement);
+console.log('🔍 [DATA] Elemento data_fim encontrado:', !!dataFimElement);</code></pre>
+        
+        <h4>3. Processo de Conversão</h4>
+        <pre><code>console.log('🔄 [DATA] Convertendo data_inicio:', dados.data_inicio);
+console.log('📅 [DATA] Data criada:', dataInicio);
+console.log('🎯 [DATA] Definindo valor do campo:', dataFormatada);</code></pre>
+    </div>
+
+    <div class="teste">
+        <h3>🧪 Teste com Logs de Debug</h3>
+        
+        <h4>Teste 1: Abrir Edição</h4>
+        <p>Clique no botão abaixo e abra o console (F12):</p>
+        <button onclick="window.open('?page=turmas-teoricas&acao=editar&step=1&turma_id=6', '_blank')">🔍 Debug Edição</button>
+        
+        <h4>Teste 2: Verificar Console</h4>
+        <p>No console (F12), procure por estas mensagens:</p>
+        
+        <h5>Dados do PHP:</h5>
+        <ul>
+            <li><code>🔍 [DEBUG] Verificando dados específicos:</code></li>
+            <li><code>- dados.data_inicio: 2025-10-18</code></li>
+            <li><code>- dados.data_fim: 2025-10-30</code></li>
+        </ul>
+        
+        <h5>Carregamento de Datas:</h5>
+        <ul>
+            <li><code>🔄 [DATA] Tentando carregar data_inicio: 2025-10-18</code></li>
+            <li><code>🔍 [DATA] Elemento data_inicio encontrado: true</code></li>
+            <li><code>🔄 [DATA] Convertendo data_inicio: 2025-10-18</code></li>
+            <li><code>📅 [DATA] Data criada: [object Date]</code></li>
+            <li><code>🎯 [DATA] Definindo valor do campo data_inicio: 18/10/2025</code></li>
+            <li><code>✅ [DATA] Data início carregada: 2025-10-18 -> 18/10/2025</code></li>
+        </ul>
+    </div>
+
+    <div class="teste">
+        <h3>🔍 Possíveis Problemas</h3>
+        
+        <h4>1. Dados não chegam do PHP</h4>
+        <p><strong>Sintoma:</strong> <code>dados.data_inicio: undefined</code></p>
+        <p><strong>Causa:</strong> Problema na passagem de dados PHP → JavaScript</p>
+        
+        <h4>2. Elementos DOM não encontrados</h4>
+        <p><strong>Sintoma:</strong> <code>Elemento data_inicio encontrado: false</code></p>
+        <p><strong>Causa:</strong> IDs dos campos incorretos ou DOM não carregado</p>
+        
+        <h4>3. Conversão de data falha</h4>
+        <p><strong>Sintoma:</strong> <code>Data criada: Invalid Date</code></p>
+        <p><strong>Causa:</strong> Formato de data incorreto</p>
+        
+        <h4>4. Campo não aceita o valor</h4>
+        <p><strong>Sintoma:</strong> <code>Valor atual do campo: (vazio)</code></p>
+        <p><strong>Causa:</strong> Campo com validação ou formato específico</p>
+    </div>
+
+    <div class="teste">
+        <h3>📋 Checklist de Debug</h3>
+        
+        <h4>No Console (F12):</h4>
+        <ul>
+            <li>[ ] <strong>Dados do PHP:</strong> data_inicio e data_fim têm valores?</li>
+            <li>[ ] <strong>Elementos DOM:</strong> data_inicio e data_fim são encontrados?</li>
+            <li>[ ] <strong>Conversão:</strong> Datas são convertidas corretamente?</li>
+            <li>[ ] <strong>Valor do campo:</strong> Campo recebe o valor formatado?</li>
+        </ul>
+        
+        <h4>Na Página:</h4>
+        <ul>
+            <li>[ ] <strong>Campos de data:</strong> Aparecem preenchidos?</li>
+            <li>[ ] <strong>Bordas:</strong> Não estão mais vermelhas?</li>
+            <li>[ ] <strong>Formato:</strong> Datas no formato DD/MM/YYYY?</li>
+        </ul>
+    </div>
+
+    <div class="teste">
+        <h3>🚀 Próximos Passos</h3>
+        <ol>
+            <li><strong>Teste a edição</strong> clicando no botão acima</li>
+            <li><strong>Abra o console</strong> (F12) imediatamente</li>
+            <li><strong>Procure pelas mensagens</strong> de debug listadas</li>
+            <li><strong>Identifique onde para</strong> o processo</li>
+            <li><strong>Me informe</strong> quais logs aparecem e quais não aparecem</li>
+        </ol>
+    </div>
+
+    <div class="teste erro">
+        <h3>⚠️ Se Não Aparecerem Logs</h3>
+        <p>Se não aparecerem as mensagens de debug:</p>
+        <ul>
+            <li>📋 <strong>Limpe o cache</strong> do navegador (Ctrl+F5)</li>
+            <li>📋 <strong>Verifique se há erros</strong> que impedem o JavaScript de executar</li>
+            <li>📋 <strong>Me envie uma captura</strong> do console</li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('🔍 Página de debug do período carregada');
+        console.log('📋 Logs de debug adicionados para identificar problema dos campos de data');
+        console.log('🎯 Teste a edição e verifique os logs no console');
+    </script>
+</body>
+</html>

@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✅ Teste Final - Disciplinas Corrigidas</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .teste { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .sucesso { background: #d4edda; border: 1px solid #c3e6cb; }
+        .erro { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; }
+        .correcao { background: #fff3cd; border: 1px solid #ffeaa7; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+        .check { color: #28a745; font-weight: bold; }
+        .cross { color: #dc3545; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>✅ Teste Final - Disciplinas Corrigidas</h1>
+    
+    <div class="teste sucesso">
+        <h3>🎉 Problemas Resolvidos</h3>
+        <ul>
+            <li><span class="check">✅</span> <strong>Disciplinas salvas:</strong> 3 disciplinas criadas para turma 6</li>
+            <li><span class="check">✅</span> <strong>Método corrigido:</strong> `obterProgressoDisciplinas()` agora busca disciplinas selecionadas</li>
+            <li><span class="check">✅</span> <strong>Event listener:</strong> Formulário intercepta submit corretamente</li>
+            <li><span class="check">✅</span> <strong>Cálculo de horas:</strong> Considera todas as disciplinas</li>
+        </ul>
+    </div>
+
+    <div class="teste correcao">
+        <h3>🔧 Correções Implementadas</h3>
+        
+        <h4>1. Event Listener do Formulário</h4>
+        <p>Adicionado interceptação do submit para chamar `criarTurmaComDisciplinas()`:</p>
+        <code>formTurmaTeorica.addEventListener('submit', function(e) { e.preventDefault(); criarTurmaComDisciplinas(); });</code>
+        
+        <h4>2. Método obterProgressoDisciplinas</h4>
+        <p>Corrigido para buscar disciplinas selecionadas em `turmas_disciplinas`:</p>
+        <code>$disciplinasSelecionadas = $this->obterDisciplinasSelecionadas($turmaId);</code>
+        
+        <h4>3. Cálculo de Horas</h4>
+        <p>Melhorado para considerar TODAS as disciplinas com logs detalhados:</p>
+        <code>const disciplinas = document.querySelectorAll('.disciplina-item');</code>
+        
+        <h4>4. Salvamento de Disciplinas</h4>
+        <p>Corrigido fluxo para salvar disciplinas antes de redirecionar:</p>
+        <code>return salvarDisciplinasSelecionadas(data.turma_id).then(() => data.turma_id);</code>
+    </div>
+
+    <div class="teste">
+        <h3>🧪 Testes para Executar</h3>
+        
+        <h4>Teste 1: Verificar Detalhes da Turma</h4>
+        <p>As disciplinas devem aparecer na seção "Progresso das Disciplinas":</p>
+        <button onclick="window.open('?page=turmas-teoricas&acao=detalhes&turma_id=6', '_blank')">🔍 Ver Detalhes Turma 6</button>
+        
+        <h4>Teste 2: Verificar Etapa 2 (Agendamento)</h4>
+        <p>O select "Disciplina" deve mostrar as 3 disciplinas criadas:</p>
+        <button onclick="window.open('?page=turmas-teoricas&acao=agendar&step=2&turma_id=6', '_blank')">🧪 Testar Etapa 2</button>
+        
+        <h4>Teste 3: Verificar Banco de Dados</h4>
+        <p>Confirmar que as disciplinas estão salvas:</p>
+        <button onclick="window.open('verificar-disciplinas-turma.php', '_blank')">📊 Verificar Banco</button>
+    </div>
+
+    <div class="teste info">
+        <h3>📋 Resultado Esperado</h3>
+        
+        <h4>Na Página de Detalhes:</h4>
+        <ul>
+            <li>✅ Seção "Progresso das Disciplinas" deve aparecer</li>
+            <li>✅ 3 disciplinas listadas: Legislação, Direção Defensiva, Primeiros Socorros</li>
+            <li>✅ Cada disciplina mostra 0/X aulas agendadas</li>
+            <li>✅ Barras de progresso em 0%</li>
+        </ul>
+        
+        <h4>Na Etapa 2 (Agendamento):</h4>
+        <ul>
+            <li>✅ Select "Disciplina" populado com as 3 disciplinas</li>
+            <li>✅ Select "Instrutor" carrega normalmente</li>
+            <li>✅ Console limpo (sem erros)</li>
+            <li>✅ Interface completa funcionando</li>
+        </ul>
+    </div>
+
+    <div class="teste">
+        <h3>🚀 Próximos Passos</h3>
+        <ol>
+            <li><strong>Teste os links acima</strong> para verificar se as correções funcionaram</li>
+            <li><strong>Verifique se as disciplinas aparecem</strong> nos detalhes e na etapa 2</li>
+            <li><strong>Teste criar uma nova turma</strong> para verificar se o fluxo completo funciona</li>
+            <li><strong>Me informe o resultado</strong> dos testes</li>
+        </ol>
+    </div>
+
+    <div class="teste">
+        <h3>📊 Disciplinas Criadas para Turma 6</h3>
+        <ul>
+            <li><strong>Legislação de Trânsito:</strong> 15h (Azul #007bff)</li>
+            <li><strong>Direção Defensiva:</strong> 10h (Verde #28a745)</li>
+            <li><strong>Primeiros Socorros:</strong> 10h (Vermelho #dc3545)</li>
+        </ul>
+        <p><strong>Total:</strong> 35h de disciplinas para curso de 45h</p>
+    </div>
+
+    <script>
+        console.log('✅ Página de teste final carregada');
+        console.log('🎯 Problemas corrigidos:');
+        console.log('  1. Disciplinas não apareciam nos detalhes');
+        console.log('  2. Disciplinas não apareciam na etapa 2');
+        console.log('  3. Total de horas não calculava corretamente');
+        console.log('  4. Event listener do formulário não funcionava');
+        console.log('📋 Teste os links acima para verificar as correções');
+    </script>
+</body>
+</html>

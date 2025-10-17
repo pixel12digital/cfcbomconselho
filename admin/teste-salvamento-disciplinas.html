@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Teste - Salvamento de Disciplinas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #023A8D;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .step h5 {
+            color: #023A8D;
+            margin-bottom: 0.5rem;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .btn-test {
+            margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="mb-4">🔧 Teste - Salvamento de Disciplinas</h1>
+        
+        <div class="error">
+            <strong>🔧 CORREÇÕES APLICADAS:</strong><br>
+            <ol>
+                <li><strong>Formato de dados:</strong> Mudado de JSON para FormData para compatibilidade com $_POST</li>
+                <li><strong>Recarregamento:</strong> Desabilitado recarregamento completo para evitar conflitos</li>
+                <li><strong>Erro removeChild:</strong> Mantida verificação de parent element</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h5>🔍 Problemas Identificados e Corrigidos</h5>
+            <ul>
+                <li><strong>API esperava $_POST mas recebia JSON:</strong> Corrigido usando FormData</li>
+                <li><strong>Recarregamento causando conflitos:</strong> Desabilitado durante edição inline</li>
+                <li><strong>Função recriarSelect:</strong> Mantida verificação de parent element</li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h5>🧪 Como Testar o Salvamento</h5>
+            <ol>
+                <li><strong>Acessar a página:</strong>
+                    <div class="code-block">
+                        http://localhost/cfc-bom-conselho/admin/?page=turmas-teoricas&acao=nova&step=1
+                    </div>
+                </li>
+                <li><strong>Abrir modal de disciplinas:</strong>
+                    <ul>
+                        <li>Clique em "Gerenciar Disciplinas"</li>
+                        <li>Verifique se não há erros no console</li>
+                    </ul>
+                </li>
+                <li><strong>Testar salvamento:</strong>
+                    <ul>
+                        <li>Clique no nome de uma disciplina</li>
+                        <li>Digite um novo nome</li>
+                        <li>Pressione Enter ou clique fora</li>
+                        <li>Verifique se aparece mensagem de sucesso</li>
+                        <li>Verifique se o valor foi atualizado no card</li>
+                    </ul>
+                </li>
+                <li><strong>Verificar no banco:</strong>
+                    <ul>
+                        <li>Recarregue a página completamente (Ctrl+F5)</li>
+                        <li>Abra o modal novamente</li>
+                        <li>Confirme que as alterações persistem</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h5>📋 Logs Esperados no Console</h5>
+            <div class="code-block">
+✏️ Iniciando edição inline: nome = [VALOR_ATUAL]<br>
+💾 Salvando campo nome: [NOVO_VALOR]<br>
+✅ Campo salvo com sucesso, exibição atualizada<br>
+✅ [ALERT] Disciplina atualizada com sucesso!
+            </div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ Se ainda não estiver salvando:</strong><br>
+            <ol>
+                <li>Abra o console (F12) e verifique se há erros</li>
+                <li>Verifique se a API está retornando sucesso</li>
+                <li>Teste a API diretamente: <code>/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar</code></li>
+                <li>Verifique se o banco de dados está acessível</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h5>🔧 Debug da API</h5>
+            <p>Para testar a API diretamente, abra o console e execute:</p>
+            <div class="code-block">
+// Testar listagem
+fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    .then(response => response.json())
+    .then(data => console.log('Lista:', data));
+
+// Testar edição (substitua ID e nome por valores reais)
+const formData = new FormData();
+formData.append('acao', 'editar');
+formData.append('id', '1');
+formData.append('nome', 'Teste API');
+
+fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+    method: 'POST',
+    body: formData
+})
+.then(response => response.json())
+.then(data => console.log('Edição:', data));
+            </div>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="?page=turmas-teoricas&acao=nova&step=1" class="btn btn-primary btn-test">
+                <i class="fas fa-graduation-cap me-2"></i>Testar Salvamento
+            </a>
+            <button onclick="window.open('?page=turmas-teoricas&acao=nova&step=1', '_blank')" class="btn btn-outline-primary btn-test">
+                <i class="fas fa-external-link-alt me-2"></i>Abrir em Nova Aba
+            </button>
+        </div>
+    </div>
+
+    <script>
+        console.log('✅ [TESTE] Script de teste de salvamento carregado!');
+        console.log('✅ [TESTE] Correções aplicadas para resolver problema de salvamento!');
+    </script>
+</body>
+</html>

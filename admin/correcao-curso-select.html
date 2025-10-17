@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Correção - Campo Curso como Select</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .fix-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .fix-item {
+            border-left: 4px solid #28a745;
+            padding: 1rem;
+            margin: 1rem 0;
+            background: #f8f9fa;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="fix-container">
+        <h1 class="mb-4">🔧 Correção - Campo Curso como Select</h1>
+        
+        <div class="success">
+            <strong>✅ CORREÇÃO APLICADA:</strong><br>
+            O campo "curso_nome" foi corrigido para "curso_tipo" e agora é um select com opções pré-cadastradas.
+        </div>
+
+        <div class="fix-item">
+            <h5><i class="fas fa-check-circle text-success me-2"></i>Problema Identificado</h5>
+            <p><strong>Problema:</strong> O campo "curso_nome" estava configurado como campo de texto livre, mas deveria ser um select com opções já cadastradas.</p>
+            <p><strong>Solução:</strong> Convertido para "curso_tipo" com opções pré-definidas.</p>
+        </div>
+
+        <div class="fix-item">
+            <h5><i class="fas fa-cog text-primary me-2"></i>Mudanças na Interface</h5>
+            <p><strong>Campo alterado:</strong> curso_nome → curso_tipo</p>
+            <p><strong>Tipo alterado:</strong> text → select</p>
+            <div class="code-block">
+// ANTES (campo de texto):
+&lt;span class="inline-edit" data-field="curso_nome" data-type="text"&gt;
+
+// DEPOIS (campo select):
+&lt;span class="inline-edit" data-field="curso_tipo" data-type="select"&gt;
+            </div>
+        </div>
+
+        <div class="fix-item">
+            <h5><i class="fas fa-list text-info me-2"></i>Opções do Select Adicionadas</h5>
+            <p><strong>Opções disponíveis:</strong></p>
+            <div class="code-block">
+'curso_tipo': [
+    { value: 'formacao_45h', text: 'Curso de Formação de Condutores - Permissão 45h' },
+    { value: 'formacao_acc_20h', text: 'Curso de Formação de Condutores - ACC 20h' },
+    { value: 'reciclagem_infrator', text: 'Curso de Reciclagem para Condutor Infrator' },
+    { value: 'atualizacao', text: 'Curso de Atualização' }
+]
+            </div>
+        </div>
+
+        <div class="fix-item">
+            <h5><i class="fas fa-shield-alt text-warning me-2"></i>Validação na API</h5>
+            <p><strong>Campo atualizado:</strong> curso_nome → curso_tipo</p>
+            <p><strong>Validação:</strong> Apenas valores válidos do ENUM são aceitos</p>
+            <div class="code-block">
+case 'curso_tipo':
+    $validTipos = ['formacao_45h', 'formacao_acc_20h', 'reciclagem_infrator', 'atualizacao'];
+    if (!in_array($value, $validTipos)) {
+        return ['valid' => false, 'message' => 'Tipo de curso inválido'];
+    }
+    break;
+            </div>
+        </div>
+
+        <div class="info">
+            <h5><i class="fas fa-info-circle text-info me-2"></i>Por que essa correção era necessária?</h5>
+            <ul>
+                <li><strong>Consistência:</strong> O banco de dados usa ENUM para curso_tipo</li>
+                <li><strong>Validação:</strong> Evita valores inválidos sendo inseridos</li>
+                <li><strong>UX:</strong> Usuário vê opções disponíveis em vez de digitar livremente</li>
+                <li><strong>Padronização:</strong> Mantém consistência com outros campos select</li>
+                <li><strong>Segurança:</strong> Previne SQL injection e dados malformados</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h5><i class="fas fa-check-circle text-success me-2"></i>Benefícios da Correção</h5>
+            <ul>
+                <li><strong>✅ Select funcional:</strong> Campo agora é um dropdown com opções</li>
+                <li><strong>✅ Validação robusta:</strong> Apenas valores válidos são aceitos</li>
+                <li><strong>✅ UX melhorada:</strong> Usuário vê opções disponíveis</li>
+                <li><strong>✅ Consistência:</strong> Alinhado com estrutura do banco</li>
+                <li><strong>✅ Sem erros:</strong> Não há mais "campo não permitido"</li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="?page=turmas-teoricas&acao=detalhes&turma_id=6" class="btn btn-success btn-lg">
+                <i class="fas fa-play me-2"></i>Testar Select de Curso
+            </a>
+            <a href="admin/correcao-campo-nao-permitido.html" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-history me-2"></i>Ver Outras Correções
+            </a>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔧 [CURSO SELECT] Campo curso agora é um select com opções!');
+        console.log('🔧 [CURSO SELECT] Opções: Formação 45h, ACC 20h, Reciclagem, Atualização');
+    </script>
+</body>
+</html>

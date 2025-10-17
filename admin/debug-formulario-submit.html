@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Debug - Formulário Submit</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .teste { background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .sucesso { background: #d4edda; border: 1px solid #c3e6cb; }
+        .erro { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .info { background: #d1ecf1; border: 1px solid #bee5eb; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 3px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Debug - Formulário Submit</h1>
+    
+    <div class="teste info">
+        <h3>📋 Problema Identificado</h3>
+        <p><strong>Turma 6 criada:</strong> ✅ "Formação de Condutores - Teste"</p>
+        <p><strong>Disciplinas salvas:</strong> ❌ Nenhuma disciplina encontrada no banco</p>
+        <p><strong>Causa:</strong> Event listener do formulário pode não estar funcionando</p>
+    </div>
+
+    <div class="teste">
+        <h3>🧪 Teste do Event Listener</h3>
+        <p>Para testar se o event listener está funcionando:</p>
+        <ol>
+            <li>Acesse: <a href="?page=turmas-teoricas&acao=nova&step=1" target="_blank">Nova Turma</a></li>
+            <li>Abra o console (F12)</li>
+            <li>Adicione algumas disciplinas</li>
+            <li>Preencha os dados obrigatórios</li>
+            <li>Clique em "Próxima Etapa: Agendamento →"</li>
+            <li><strong>Verifique no console:</strong> Deve aparecer "🎯 Formulário de turma submetido"</li>
+        </ol>
+    </div>
+
+    <div class="teste">
+        <h3>🔧 Soluções Alternativas</h3>
+        
+        <h4>Opção 1: Testar com turma existente</h4>
+        <p>Vou criar disciplinas manualmente para a turma 6:</p>
+        <button onclick="window.open('criar-disciplinas-manual.php', '_blank')">➕ Criar Disciplinas Manualmente</button>
+        
+        <h4>Opção 2: Verificar JavaScript</h4>
+        <p>Verificar se há erros no console que impedem o funcionamento:</p>
+        <button onclick="window.open('?page=turmas-teoricas&acao=nova&step=1', '_blank')">🔍 Testar Nova Turma</button>
+        
+        <h4>Opção 3: Debug do Formulário</h4>
+        <p>Verificar se o formulário tem o ID correto:</p>
+        <button onclick="window.open('debug-formulario-js.html', '_blank')">🧪 Debug JavaScript</button>
+    </div>
+
+    <div class="teste">
+        <h3>📊 Logs Esperados</h3>
+        <p>No console (F12) deve aparecer:</p>
+        <ul>
+            <li>✅ <code>🎯 Formulário de turma submetido - chamando criarTurmaComDisciplinas</code></li>
+            <li>✅ <code>🎯 Criando turma com disciplinas...</code></li>
+            <li>✅ <code>✅ Turma criada: [ID]</code></li>
+            <li>✅ <code>💾 Salvando disciplinas selecionadas: [array]</code></li>
+        </ul>
+    </div>
+
+    <script>
+        console.log('🔧 Página de debug carregada');
+        console.log('📋 Problema: Disciplinas não foram salvas para turma 6');
+        console.log('🔍 Verificar se event listener está funcionando');
+    </script>
+</body>
+</html>

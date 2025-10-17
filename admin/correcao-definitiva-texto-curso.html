@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Correção Definitiva - Texto Cortado do Curso</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .fix-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .fix-item {
+            border-left: 4px solid #dc3545;
+            padding: 1rem;
+            margin: 1rem 0;
+            background: #f8f9fa;
+        }
+        .fix-item.fixed {
+            border-left-color: #28a745;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="fix-container">
+        <h1 class="mb-4">🔧 Correção Definitiva - Texto Cortado do Curso</h1>
+        
+        <div class="error">
+            <strong>❌ PROBLEMA PERSISTENTE:</strong><br>
+            Mesmo após as correções anteriores, o texto do curso continua sendo cortado após a edição.
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ ANÁLISE DO PROBLEMA:</strong><br>
+            O problema estava sendo causado por múltiplos fatores que limitavam a exibição do texto:
+            <ul>
+                <li>Container pai com largura limitada</li>
+                <li>Display inline-block causando problemas de layout</li>
+                <li>Max-width restritiva</li>
+                <li>White-space normal permitindo quebra inadequada</li>
+            </ul>
+        </div>
+
+        <div class="fix-item fixed">
+            <h5><i class="fas fa-css3 text-primary me-2"></i>CSS Definitivo</h5>
+            <p><strong>Estilos aplicados para resolver definitivamente:</strong></p>
+            <div class="code-block">
+/* Estilo específico para o campo curso_tipo */
+.inline-edit[data-field="curso_tipo"] {
+    min-width: 400px !important;
+    max-width: none !important;
+    width: auto !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    white-space: normal !important;
+    display: block !important;
+    vertical-align: top !important;
+    line-height: 1.4 !important;
+    overflow: visible !important;
+    text-overflow: unset !important;
+}
+
+/* Forçar exibição completa do texto do curso */
+.inline-edit[data-field="curso_tipo"]:not(.editing) {
+    width: fit-content !important;
+    min-width: 400px !important;
+    max-width: none !important;
+    white-space: nowrap !important;
+    overflow: visible !important;
+}
+
+/* Container pai do curso_tipo */
+p:has(.inline-edit[data-field="curso_tipo"]) {
+    width: 100% !important;
+    max-width: none !important;
+    overflow: visible !important;
+}
+            </div>
+        </div>
+
+        <div class="fix-item fixed">
+            <h5><i class="fas fa-code text-info me-2"></i>JavaScript Definitivo</h5>
+            <p><strong>Função applyDisplayStyles com estilos robustos:</strong></p>
+            <div class="code-block">
+case 'curso_tipo':
+    element.style.color = '#666';
+    element.style.fontSize = '1rem';
+    element.style.border = 'none';
+    element.style.minWidth = '400px';
+    element.style.maxWidth = 'none';
+    element.style.width = 'fit-content';
+    element.style.wordWrap = 'break-word';
+    element.style.overflowWrap = 'break-word';
+    element.style.whiteSpace = 'nowrap';
+    element.style.display = 'block';
+    element.style.verticalAlign = 'top';
+    element.style.lineHeight = '1.4';
+    element.style.overflow = 'visible';
+    element.style.textOverflow = 'unset';
+    break;
+            </div>
+        </div>
+
+        <div class="fix-item fixed">
+            <h5><i class="fas fa-tools text-warning me-2"></i>Estratégias Aplicadas</h5>
+            <ul>
+                <li><strong>Largura dinâmica:</strong> width: fit-content para se ajustar ao conteúdo</li>
+                <li><strong>Largura mínima:</strong> 400px para garantir espaço suficiente</li>
+                <li><strong>Sem max-width:</strong> none para não limitar o crescimento</li>
+                <li><strong>White-space nowrap:</strong> Evita quebra inadequada do texto</li>
+                <li><strong>Display block:</strong> Melhor controle de layout</li>
+                <li><strong>Overflow visible:</strong> Garante que o texto seja visível</li>
+                <li><strong>Container pai:</strong> Estilos para o elemento p que contém o campo</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h5><i class="fas fa-check-circle text-success me-2"></i>Por que esta correção é definitiva?</h5>
+            <ul>
+                <li><strong>✅ Múltiplas camadas:</strong> CSS + JavaScript + Container pai</li>
+                <li><strong>✅ !important:</strong> Força aplicação dos estilos</li>
+                <li><strong>✅ fit-content:</strong> Largura se ajusta ao conteúdo</li>
+                <li><strong>✅ nowrap:</strong> Evita quebra inadequada</li>
+                <li><strong>✅ Container pai:</strong> Remove limitações do elemento pai</li>
+                <li><strong>✅ Overflow visible:</strong> Garante visibilidade total</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h5><i class="fas fa-check-circle text-success me-2"></i>Resultado Esperado</h5>
+            <p><strong>Agora o texto do curso deve ser exibido completamente:</strong></p>
+            <ul>
+                <li>✅ "Curso de Formação de Condutores - Permissão 45h" (texto completo)</li>
+                <li>✅ "Curso de Formação de Condutores - ACC 20h" (texto completo)</li>
+                <li>✅ "Curso de Reciclagem para Condutor Infrator" (texto completo)</li>
+                <li>✅ "Curso de Atualização" (texto completo)</li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="?page=turmas-teoricas&acao=detalhes&turma_id=6" class="btn btn-success btn-lg">
+                <i class="fas fa-play me-2"></i>Testar Correção Definitiva
+            </a>
+            <a href="admin/correcao-texto-cortado-curso.html" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-history me-2"></i>Ver Histórico de Correções
+            </a>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔧 [CORREÇÃO DEFINITIVA] Texto do curso agora deve aparecer completo!');
+        console.log('🔧 [CORREÇÃO DEFINITIVA] Múltiplas camadas de proteção aplicadas');
+    </script>
+</body>
+</html>

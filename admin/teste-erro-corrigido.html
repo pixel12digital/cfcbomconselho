@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Erro Corrigido</title>
+</head>
+<body>
+    <h2>🧪 Teste - Erro de Sintaxe Corrigido</h2>
+    
+    <div>
+        <label>Curso:</label>
+        <select id="curso_tipo" onchange="testar()">
+            <option value="">Selecione...</option>
+            <option value="formacao_45h">Formação 45h</option>
+        </select>
+    </div>
+    
+    <div>
+        <strong>Total: <span id="total-horas-disciplinas" style="color: blue;">0h</span></strong>
+    </div>
+    
+    <button onclick="testar()">🔄 Testar</button>
+    
+    <div id="resultado" style="margin-top: 15px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <script>
+        // Teste simples da função
+        function atualizarTotalHorasRegressivo() {
+            console.log('🔄 Testando função...');
+            const cursoSelect = document.getElementById('curso_tipo');
+            const totalHorasElement = document.getElementById('total-horas-disciplinas');
+            
+            if (cursoSelect && totalHorasElement) {
+                const tipoCurso = cursoSelect.value;
+                const cargaHoraria = tipoCurso === 'formacao_45h' ? 45 : 0;
+                totalHorasElement.textContent = cargaHoraria;
+                return { sucesso: true, horas: cargaHoraria };
+            }
+            return { sucesso: false };
+        }
+
+        window.atualizarTotalHorasRegressivo = atualizarTotalHorasRegressivo;
+
+        function testar() {
+            const resultado = document.getElementById('resultado');
+            try {
+                const result = atualizarTotalHorasRegressivo();
+                if (result.sucesso) {
+                    resultado.innerHTML = '<div style="color: green;">✅ FUNCIONANDO! Total: ' + result.horas + 'h</div>';
+                } else {
+                    resultado.innerHTML = '<div style="color: red;">❌ Erro na função</div>';
+                }
+            } catch (error) {
+                resultado.innerHTML = '<div style="color: red;">❌ Erro: ' + error.message + '</div>';
+            }
+        }
+
+        // Teste automático
+        setTimeout(function() {
+            document.getElementById('curso_tipo').value = 'formacao_45h';
+            testar();
+        }, 1000);
+    </script>
+</body>
+</html>

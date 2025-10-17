@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Correção de Warnings - Undefined Array Key</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .fix-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .fix-item {
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin: 1rem 0;
+            background: #f8f9fa;
+        }
+        .fix-item.fixed {
+            border-left-color: #28a745;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="fix-container">
+        <h1 class="mb-4">🔧 Correção de Warnings - Undefined Array Key</h1>
+        
+        <div class="warning">
+            <strong>⚠️ WARNINGS CORRIGIDOS:</strong><br>
+            Foram encontrados vários warnings de "Undefined array key" que foram corrigidos com verificações isset().
+        </div>
+
+        <div class="fix-item fixed">
+            <h5><i class="fas fa-exclamation-triangle text-warning me-2"></i>Warning: "carga_horaria" (Linha 349)</h5>
+            <p><strong>Problema:</strong> Array key "carga_horaria" não estava definida em algumas disciplinas.</p>
+            <p><strong>Solução:</strong> Adicionada verificação isset() com valor padrão.</p>
+            <div class="code-block">
+// ANTES (causava warning):
+Carga horária: <?= $disciplina['carga_horaria'] ?>h
+
+// DEPOIS (corrigido):
+Carga horária: <?= isset($disciplina['carga_horaria']) ? $disciplina['carga_horaria'] : '0' ?>h
+            </div>
+        </div>
+
+        <div class="fix-item fixed">
+            <h5><i class="fas fa-exclamation-triangle text-warning me-2"></i>Warning: "aulas_completas" e "total_aulas" (Linha 405)</h5>
+            <p><strong>Problema:</strong> Array keys de progresso não estavam definidas.</p>
+            <p><strong>Solução:</strong> Adicionadas verificações isset() com valores padrão.</p>
+            <div class="code-block">
+// ANTES (causava warning):
+<?= $disciplina['aulas_completas'] ?>/<?= $disciplina['total_aulas'] ?> aulas
+
+// DEPOIS (corrigido):
+<?= isset($disciplina['aulas_completas']) ? $disciplina['aulas_completas'] : '0' ?>/<?= isset($disciplina['total_aulas']) ? $disciplina['total_aulas'] : '0' ?> aulas
+            </div>
+        </div>
+
+        <div class="fix-item fixed">
+            <h5><i class="fas fa-exclamation-triangle text-warning me-2"></i>Warning: "percentual_completo" (Linha 410)</h5>
+            <p><strong>Problema:</strong> Array key "percentual_completo" não estava definida.</p>
+            <p><strong>Solução:</strong> Adicionada verificação isset() com valor padrão '0'.</p>
+            <div class="code-block">
+// ANTES (causava warning):
+width: <?= $disciplina['percentual_completo'] ?>%
+
+// DEPOIS (corrigido):
+width: <?= isset($disciplina['percentual_completo']) ? $disciplina['percentual_completo'] : '0' ?>%
+            </div>
+        </div>
+
+        <div class="fix-item fixed">
+            <h5><i class="fas fa-exclamation-triangle text-warning me-2"></i>Warning: "percentual_completo" e "aulas_restantes" (Linha 414)</h5>
+            <p><strong>Problema:</strong> Array keys de progresso não estavam definidas.</p>
+            <p><strong>Solução:</strong> Adicionadas verificações isset() com valores padrão.</p>
+            <div class="code-block">
+// ANTES (causava warning):
+<?= $disciplina['percentual_completo'] ?>% completo - Faltam <?= $disciplina['aulas_restantes'] ?> aulas
+
+// DEPOIS (corrigido):
+<?= isset($disciplina['percentual_completo']) ? $disciplina['percentual_completo'] : '0' ?>% completo - Faltam <?= isset($disciplina['aulas_restantes']) ? $disciplina['aulas_restantes'] : '0' ?> aulas
+            </div>
+        </div>
+
+        <div class="success">
+            <h5><i class="fas fa-check-circle text-success me-2"></i>Todos os Warnings Corrigidos</h5>
+            <ul>
+                <li><strong>✅ carga_horaria:</strong> Verificação isset() com valor padrão '0'</li>
+                <li><strong>✅ aulas_completas:</strong> Verificação isset() com valor padrão '0'</li>
+                <li><strong>✅ total_aulas:</strong> Verificação isset() com valor padrão '0'</li>
+                <li><strong>✅ percentual_completo:</strong> Verificação isset() com valor padrão '0'</li>
+                <li><strong>✅ aulas_restantes:</strong> Verificação isset() com valor padrão '0'</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <h5><i class="fas fa-info-circle text-warning me-2"></i>Por que esses warnings ocorriam?</h5>
+            <p>Os warnings ocorriam porque:</p>
+            <ul>
+                <li><strong>Dados incompletos:</strong> Algumas disciplinas podem não ter todos os campos preenchidos</li>
+                <li><strong>Estrutura de dados:</strong> O array pode ter estrutura diferente dependendo da fonte</li>
+                <li><strong>Progresso de disciplinas:</strong> Disciplinas novas podem não ter dados de progresso</li>
+                <li><strong>Falta de validação:</strong> Não havia verificação se as chaves existiam antes de usar</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h5><i class="fas fa-check-circle text-success me-2"></i>Benefícios da Correção</h5>
+            <ul>
+                <li><strong>✅ Sem warnings:</strong> Página carrega sem erros PHP</li>
+                <li><strong>✅ Valores padrão:</strong> Campos mostram '0' quando dados não existem</li>
+                <li><strong>✅ Código robusto:</strong> Tratamento defensivo de dados</li>
+                <li><strong>✅ Melhor UX:</strong> Interface mais limpa e profissional</li>
+                <li><strong>✅ Debugging:</strong> Menos ruído nos logs</li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="?page=turmas-teoricas&acao=detalhes&turma_id=6" class="btn btn-success btn-lg">
+                <i class="fas fa-eye me-2"></i>Ver Correções
+            </a>
+            <a href="admin/correcao-final-erros-fatais.html" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-history me-2"></i>Ver Outras Correções
+            </a>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔧 [WARNINGS] Todos os warnings de undefined array key foram corrigidos!');
+        console.log('🔧 [WARNINGS] Página deve carregar sem warnings PHP');
+    </script>
+</body>
+</html>

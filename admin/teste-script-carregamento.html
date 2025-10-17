@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Teste - Carregamento do Script</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .test-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .step {
+            background: #f8f9fa;
+            border-left: 4px solid #023A8D;
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 4px;
+        }
+        .step h5 {
+            color: #023A8D;
+            margin-bottom: 0.5rem;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .btn-test {
+            margin: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1 class="mb-4">🔧 Teste - Carregamento do Script</h1>
+        
+        <div class="error">
+            <strong>⚠️ PROBLEMA IDENTIFICADO:</strong><br>
+            Nenhum log aparece no console e a função <code>fecharModalDisciplinas()</code> retorna <code>undefined</code>.
+        </div>
+
+        <div class="step">
+            <h5>🔍 Diagnóstico</h5>
+            <p>O problema pode ser:</p>
+            <ol>
+                <li><strong>JavaScript não está sendo carregado</strong> - O script pode não estar sendo executado</li>
+                <li><strong>Erro antes da definição da função</strong> - Um erro anterior pode estar impedindo a execução</li>
+                <li><strong>Função não está sendo definida globalmente</strong> - A função pode não estar acessível</li>
+                <li><strong>Cache do navegador</strong> - O navegador pode estar usando uma versão antiga</li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h5>📋 Passos para Resolver</h5>
+            <ol>
+                <li><strong>Limpar cache do navegador:</strong>
+                    <ul>
+                        <li>Pressione <code>Ctrl + Shift + Delete</code></li>
+                        <li>Selecione "Imagens e arquivos em cache"</li>
+                        <li>Clique em "Limpar dados"</li>
+                    </ul>
+                </li>
+                <li><strong>Recarregar a página com cache limpo:</strong>
+                    <ul>
+                        <li>Pressione <code>Ctrl + F5</code> (recarregar forçado)</li>
+                        <li>Ou <code>Ctrl + Shift + R</code></li>
+                    </ul>
+                </li>
+                <li><strong>Verificar o console:</strong>
+                    <ul>
+                        <li>Abra o console (F12)</li>
+                        <li>Procure por mensagens de erro (em vermelho)</li>
+                        <li>Procure por: <code>✅ [SCRIPT] Script de turmas-teoricas.php carregado!</code></li>
+                    </ul>
+                </li>
+                <li><strong>Testar a função:</strong>
+                    <div class="code-block">
+                        fecharModalDisciplinas()
+                    </div>
+                </li>
+            </ol>
+        </div>
+
+        <div class="step">
+            <h5>🧪 Testes no Console</h5>
+            <p>Execute estes comandos no console para diagnosticar:</p>
+            
+            <div class="code-block">
+// 1. Verificar se há erros<br>
+console.error('Teste de erro');<br><br>
+
+// 2. Verificar se a função existe<br>
+console.log('Função fecharModalDisciplinas:', typeof fecharModalDisciplinas);<br>
+console.log('Função window.fecharModalDisciplinas:', typeof window.fecharModalDisciplinas);<br><br>
+
+// 3. Verificar se o modal existe<br>
+console.log('Modal:', document.getElementById('modalGerenciarDisciplinas'));<br><br>
+
+// 4. Verificar se os botões existem<br>
+console.log('Botão X:', document.querySelector('#modalGerenciarDisciplinas .popup-modal-close'));<br>
+console.log('Botão Fechar:', document.querySelector('#modalGerenciarDisciplinas .popup-secondary-button'));<br><br>
+
+// 5. Testar fechamento manual<br>
+const modal = document.getElementById('modalGerenciarDisciplinas');<br>
+if (modal) {<br>
+    modal.style.display = 'none';<br>
+    modal.classList.remove('show');<br>
+    console.log('✅ Modal fechado manualmente!');<br>
+} else {<br>
+    console.error('❌ Modal não encontrado!');<br>
+}
+            </div>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ IMPORTANTE:</strong><br>
+            Se após limpar o cache e recarregar a página ainda não aparecer o log <code>✅ [SCRIPT] Script de turmas-teoricas.php carregado!</code>, isso significa que há um erro JavaScript impedindo a execução do script.
+        </div>
+
+        <div class="step">
+            <h5>🔧 Correções Aplicadas</h5>
+            <ul>
+                <li>Adicionado log de teste no final do script</li>
+                <li>Adicionado log antes e depois da chamada de <code>configurarBotoesFecharModalDisciplinas()</code></li>
+                <li>Função <code>fecharModalDisciplinas</code> tornada globalmente acessível</li>
+                <li>Adicionada definição de <code>$db = Database::getInstance();</code> no arquivo <code>turmas-teoricas.php</code></li>
+            </ul>
+        </div>
+
+        <div class="step">
+            <h5>📖 Como Funciona o Sistema de Roteamento</h5>
+            <p>O sistema CFC usa um sistema de roteamento baseado em parâmetros URL:</p>
+            <ol>
+                <li><strong>Acesso via roteamento:</strong> <code>http://localhost/cfc-bom-conselho/admin/?page=turmas-teoricas</code>
+                    <ul>
+                        <li>O arquivo <code>admin/index.php</code> processa o parâmetro <code>page</code></li>
+                        <li>Carrega os dados necessários (turmas, instrutores, alunos)</li>
+                        <li>Define a variável <code>$db</code> globalmente</li>
+                        <li>Inclui o arquivo <code>pages/turmas-teoricas.php</code></li>
+                    </ul>
+                </li>
+                <li><strong>Acesso direto (NÃO RECOMENDADO):</strong> <code>http://localhost/cfc-bom-conselho/admin/pages/turmas-teoricas.php</code>
+                    <ul>
+                        <li>O arquivo é carregado diretamente sem passar pelo sistema de roteamento</li>
+                        <li>Pode não ter acesso a todas as variáveis necessárias</li>
+                        <li>Por isso foi adicionada a definição de <code>$db</code> no próprio arquivo</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ IMPORTANTE - LINK CORRETO:</strong><br>
+            O link correto é: <code>http://localhost/cfc-bom-conselho/admin/?page=turmas-teoricas</code><br>
+            NÃO use: <code>http://localhost/cfc-bom-conselho/admin/pages/turmas-teoricas.php</code>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="?page=turmas-teoricas" class="btn btn-primary btn-test">
+                <i class="fas fa-graduation-cap me-2"></i>Testar Turmas Teóricas (Roteamento Correto)
+            </a>
+            <button onclick="window.open('?page=turmas-teoricas', '_blank')" class="btn btn-outline-primary btn-test">
+                <i class="fas fa-external-link-alt me-2"></i>Abrir em Nova Aba
+            </button>
+        </div>
+    </div>
+
+    <script>
+        console.log('✅ [TESTE] Script de teste carregado com sucesso!');
+        console.log('✅ [TESTE] Se você vê esta mensagem, o JavaScript está funcionando!');
+    </script>
+</body>
+</html>

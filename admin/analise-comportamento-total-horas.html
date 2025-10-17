@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Análise - Comportamento Total de Horas</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f8f9fa; }
+        .container { max-width: 1000px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .info { color: #17a2b8; font-weight: bold; }
+        .test-result { padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .test-result.success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .test-result.error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .test-result.warning { background: #fff3cd; border: 1px solid #ffeaa7; }
+        .test-result.info { background: #d1ecf1; border: 1px solid #bee5eb; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; border: 1px solid #dee2e6; }
+        .step { background: #e9ecef; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; }
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #dee2e6; padding: 8px; text-align: left; }
+        th { background: #f8f9fa; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Análise - Comportamento Total de Horas</h1>
+        
+        <div class="test-result warning">
+            <h3>❓ Sua Pergunta:</h3>
+            <p><strong>"Qual seria o comportamento esperado ao adicionar o curso? Total de horas deveria exibir o total de horas que o curso exige e ir diminuindo a medida que são adicionadas as disciplinas?"</strong></p>
+        </div>
+
+        <div class="test-result info">
+            <h3>🔍 Análise do Sistema Atual:</h3>
+            <p>Baseado na análise do código, identifiquei <strong>dois comportamentos possíveis</strong>:</p>
+        </div>
+
+        <div class="test-result success">
+            <h3>✅ Comportamento Esperado (Baseado nas Normas):</h3>
+            
+            <h4>📋 Tipos de Curso e Cargas Horárias:</h4>
+            <table>
+                <tr>
+                    <th>Tipo de Curso</th>
+                    <th>Carga Horária Total</th>
+                    <th>Descrição</th>
+                </tr>
+                <tr>
+                    <td>Formação 45h</td>
+                    <td><strong>45 horas</strong></td>
+                    <td>Curso completo de formação de condutores</td>
+                </tr>
+                <tr>
+                    <td>Formação ACC 20h</td>
+                    <td><strong>20 horas</strong></td>
+                    <td>Autorização para Conduzir Ciclomotores</td>
+                </tr>
+                <tr>
+                    <td>Reciclagem Infrator</td>
+                    <td><strong>30 horas</strong></td>
+                    <td>Curso de reciclagem (15h + 15h)</td>
+                </tr>
+                <tr>
+                    <td>Atualização</td>
+                    <td><strong>15 horas</strong></td>
+                    <td>Curso de atualização (8h + 7h)</td>
+                </tr>
+            </table>
+
+            <h4>🎯 Fluxo Esperado:</h4>
+            <div class="step">
+                <strong>1. Seleciona "Curso de formação de condutores - Permissão 45h":</strong>
+                <p>Total de horas deveria mostrar: <strong>45h</strong></p>
+            </div>
+
+            <div class="step">
+                <strong>2. Adiciona "Legislação de Trânsito" (18h):</strong>
+                <p>Total de horas deveria mostrar: <strong>27h</strong> (45h - 18h = 27h restantes)</p>
+            </div>
+
+            <div class="step">
+                <strong>3. Adiciona "Direção Defensiva" (16h):</strong>
+                <p>Total de horas deveria mostrar: <strong>11h</strong> (27h - 16h = 11h restantes)</p>
+            </div>
+
+            <div class="step">
+                <strong>4. Adiciona mais disciplinas:</strong>
+                <p>Total continua diminuindo até chegar a <strong>0h</strong></p>
+            </div>
+        </div>
+
+        <div class="test-result error">
+            <h3>❌ Comportamento Atual (Incorreto):</h3>
+            <p>O sistema atual está mostrando:</p>
+            <ul>
+                <li><strong>Total de horas: 0h</strong> (deveria ser 45h)</li>
+                <li>Não há cálculo baseado no tipo de curso</li>
+                <li>Não diminui conforme disciplinas são adicionadas</li>
+            </ul>
+        </div>
+
+        <div class="test-result warning">
+            <h3>🔧 Implementação Necessária:</h3>
+            <p>Para corrigir, seria necessário:</p>
+            
+            <div class="step">
+                <strong>1. Criar função para calcular carga horária total do curso:</strong>
+                <div class="code">
+function obterCargaHorariaCurso(tipoCurso) {
+    const cargasHorarias = {
+        'formacao_45h': 45,
+        'formacao_acc_20h': 20,
+        'reciclagem_infrator': 30,
+        'atualizacao': 15
+    };
+    return cargasHorarias[tipoCurso] || 0;
+}
+                </div>
+            </div>
+
+            <div class="step">
+                <strong>2. Atualizar total quando curso é selecionado:</strong>
+                <div class="code">
+// Quando curso é selecionado
+const cargaTotal = obterCargaHorariaCurso(cursoSelecionado);
+totalHorasElement.textContent = cargaTotal;
+                </div>
+            </div>
+
+            <div class="step">
+                <strong>3. Diminuir total quando disciplina é adicionada:</strong>
+                <div class="code">
+// Quando disciplina é adicionada
+const horasDisciplina = parseInt(disciplina.carga_horaria_padrao);
+const totalAtual = parseInt(totalHorasElement.textContent);
+const novoTotal = totalAtual - horasDisciplina;
+totalHorasElement.textContent = novoTotal;
+                </div>
+            </div>
+        </div>
+
+        <div class="test-result success">
+            <h3>✅ Resposta à Sua Pergunta:</h3>
+            <p><strong>SIM, você está correto!</strong></p>
+            <p>O comportamento esperado deveria ser:</p>
+            <ul>
+                <li>✅ Seleciona curso → Mostra carga horária total (ex: 45h)</li>
+                <li>✅ Adiciona disciplina → Diminui o total (ex: 45h - 18h = 27h)</li>
+                <li>✅ Continua diminuindo → Até chegar a 0h</li>
+                <li>✅ Quando chega a 0h → Curso está completo</li>
+            </ul>
+        </div>
+
+        <div class="test-result info">
+            <h3>📋 Status Atual vs Esperado:</h3>
+            <table>
+                <tr>
+                    <th>Situação</th>
+                    <th>Status Atual</th>
+                    <th>Status Esperado</th>
+                </tr>
+                <tr>
+                    <td>Seleciona curso 45h</td>
+                    <td>❌ Total: 0h</td>
+                    <td>✅ Total: 45h</td>
+                </tr>
+                <tr>
+                    <td>Adiciona disciplina 18h</td>
+                    <td>❌ Total: 0h</td>
+                    <td>✅ Total: 27h (45-18)</td>
+                </tr>
+                <tr>
+                    <td>Adiciona disciplina 16h</td>
+                    <td>❌ Total: 0h</td>
+                    <td>✅ Total: 11h (27-16)</td>
+                </tr>
+                <tr>
+                    <td>Curso completo</td>
+                    <td>❌ Não detecta</td>
+                    <td>✅ Total: 0h</td>
+                </tr>
+            </table>
+        </div>
+
+        <div class="test-result warning">
+            <h3>🎯 Conclusão:</h3>
+            <p><strong>Você identificou corretamente um problema no sistema!</strong></p>
+            <p>O "Total de horas" deveria funcionar como um <strong>contador regressivo</strong> que:</p>
+            <ul>
+                <li>Inicia com a carga horária total do curso selecionado</li>
+                <li>Diminui conforme disciplinas são adicionadas</li>
+                <li>Mostra quantas horas ainda precisam ser preenchidas</li>
+                <li>Indica quando o curso está completo (0h restantes)</li>
+            </ul>
+            <p><strong>Atualmente, o sistema não está implementando essa lógica.</strong></p>
+        </div>
+    </div>
+
+    <script>
+        console.log('📊 Análise - Comportamento Total de Horas');
+        console.log('✅ Análise concluída com sucesso!');
+        console.log('📋 O usuário está correto sobre o comportamento esperado');
+    </script>
+</body>
+</html>

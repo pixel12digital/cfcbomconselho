@@ -9,8 +9,8 @@ if (!$turmaAtual) {
     return;
 }
 
-// Obter disciplinas do curso
-$disciplinasCurso = $turmaManager->obterDisciplinasCurso($turmaAtual['curso_tipo']);
+// Obter disciplinas do curso (priorizando disciplinas selecionadas pelo usuário)
+$disciplinasCurso = $turmaManager->obterDisciplinasParaAgendamento($turmaAtual['id']);
 
 // Gerar horários disponíveis (08:00 às 18:00, intervalos de 50min)
 $horariosDisponiveis = [];

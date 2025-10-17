@@ -76,31 +76,26 @@ try {
     ];
     
     foreach ($disciplinasPadrao as $disciplina) {
-        $existe = $db->findWhere('disciplinas', 'nome = ? AND cfc_id = ?', [$disciplina[0], $cfcId]);
+        $sql = "SELECT id FROM disciplinas WHERE nome = ? AND cfc_id = ?";
+        $existe = $db->fetch($sql, [$disciplina[0], $cfcId]);
         if (!$existe) {
-            $db->insert('disciplinas', [
-                'nome' => $disciplina[0],
-                'carga_horaria' => $disciplina[1],
-                'descricao' => $disciplina[2],
-                'cfc_id' => $cfcId,
-                'ativa' => true
-            ]);
+            $sql = "INSERT INTO disciplinas (nome, carga_horaria, descricao, cfc_id, ativa) VALUES (?, ?, ?, ?, ?)";
+            $db->query($sql, [$disciplina[0], $disciplina[1], $disciplina[2], $cfcId, true]);
         }
     }
     
     switch ($method) {
         case 'GET':
             if ($action === 'listar') {
-                $disciplinas = $db->findWhere('disciplinas', 'cfc_id = ? AND ativa = 1', [$cfcId], '*', 'nome ASC');
+                $sql = "SELECT * FROM disciplinas WHERE cfc_id = ? AND ativa = 1 ORDER BY nome ASC";
+                $disciplinas = $db->fetchAll($sql, [$cfcId]);
                 sendJsonResponse([
                     'success' => true,
                     'disciplinas' => $disciplinas ?: []
                 ]);
             } elseif ($action === 'obter' && isset($_GET['id'])) {
-                $disciplina = $db->findWhere('disciplinas', 'id = ? AND cfc_id = ?', [$_GET['id'], $cfcId], '*', null, 1);
-                if ($disciplina && is_array($disciplina)) {
-                    $disciplina = $disciplina[0];
-                }
+                $sql = "SELECT * FROM disciplinas WHERE id = ? AND cfc_id = ?";
+                $disciplina = $db->fetch($sql, [$_GET['id'], $cfcId]);
                 
                 if ($disciplina) {
                     sendJsonResponse([
@@ -129,25 +124,20 @@ try {
                 }
                 
                 // Verificar se já existe disciplina com mesmo nome
-                $existe = $db->findWhere('disciplinas', 'nome = ? AND cfc_id = ?', [$data['nome'], $cfcId]);
+                $sql = "SELECT id FROM disciplinas WHERE nome = ? AND cfc_id = ?";
+                $existe = $db->fetch($sql, [$data['nome'], $cfcId]);
                 if ($existe) {
                     sendJsonResponse(['success' => false, 'error' => 'Já existe uma disciplina com este nome'], 400);
                 }
                 
                 // Criar disciplina
-                $disciplinaId = $db->insert('disciplinas', [
-                    'nome' => trim($data['nome']),
-                    'carga_horaria' => (int)$data['carga_horaria'],
-                    'descricao' => $data['descricao'] ?? null,
-                    'cfc_id' => $cfcId,
-                    'ativa' => true
-                ]);
+                $sql = "INSERT INTO disciplinas (nome, carga_horaria, descricao, cfc_id, ativa) VALUES (?, ?, ?, ?, ?)";
+                $result = $db->query($sql, [trim($data['nome']), (int)$data['carga_horaria'], $data['descricao'] ?? null, $cfcId, true]);
                 
-                if ($disciplinaId) {
-                    $novaDisciplina = $db->findWhere('disciplinas', 'id = ?', [$disciplinaId], '*', null, 1);
-                    if ($novaDisciplina && is_array($novaDisciplina)) {
-                        $novaDisciplina = $novaDisciplina[0];
-                    }
+                if ($result) {
+                    $disciplinaId = $db->lastInsertId();
+                    $sql = "SELECT * FROM disciplinas WHERE id = ?";
+                    $novaDisciplina = $db->fetch($sql, [$disciplinaId]);
                     
                     sendJsonResponse([
                         'success' => true,
@@ -167,8 +157,9 @@ try {
                 $data = json_decode(file_get_contents('php://input'), true);
                 
                 // Verificar se a disciplina existe
-                $disciplina = $db->findWhere('disciplinas', 'id = ? AND cfc_id = ?', [$_GET['id'], $cfcId], '*', null, 1);
-                if (!$disciplina || !is_array($disciplina)) {
+                $sql = "SELECT * FROM disciplinas WHERE id = ? AND cfc_id = ?";
+                $disciplina = $db->fetch($sql, [$_GET['id'], $cfcId]);
+                if (!$disciplina) {
                     sendJsonResponse(['success' => false, 'error' => 'Disciplina não encontrada'], 404);
                 }
                 
@@ -182,23 +173,19 @@ try {
                 }
                 
                 // Verificar se já existe outra disciplina com mesmo nome
-                $existe = $db->findWhere('disciplinas', 'nome = ? AND cfc_id = ? AND id != ?', [$data['nome'], $cfcId, $_GET['id']]);
+                $sql = "SELECT id FROM disciplinas WHERE nome = ? AND cfc_id = ? AND id != ?";
+                $existe = $db->fetch($sql, [$data['nome'], $cfcId, $_GET['id']]);
                 if ($existe) {
                     sendJsonResponse(['success' => false, 'error' => 'Já existe uma disciplina com este nome'], 400);
                 }
                 
                 // Atualizar disciplina
-                $atualizado = $db->update('disciplinas', [
-                    'nome' => trim($data['nome']),
-                    'carga_horaria' => (int)$data['carga_horaria'],
-                    'descricao' => $data['descricao'] ?? null
-                ], 'id = ? AND cfc_id = ?', [$_GET['id'], $cfcId]);
+                $sql = "UPDATE disciplinas SET nome = ?, carga_horaria = ?, descricao = ? WHERE id = ? AND cfc_id = ?";
+                $atualizado = $db->query($sql, [trim($data['nome']), (int)$data['carga_horaria'], $data['descricao'] ?? null, $_GET['id'], $cfcId]);
                 
                 if ($atualizado) {
-                    $disciplinaAtualizada = $db->findWhere('disciplinas', 'id = ?', [$_GET['id']], '*', null, 1);
-                    if ($disciplinaAtualizada && is_array($disciplinaAtualizada)) {
-                        $disciplinaAtualizada = $disciplinaAtualizada[0];
-                    }
+                    $sql = "SELECT * FROM disciplinas WHERE id = ?";
+                    $disciplinaAtualizada = $db->fetch($sql, [$_GET['id']]);
                     
                     sendJsonResponse([
                         'success' => true,
@@ -216,21 +203,22 @@ try {
         case 'DELETE':
             if ($action === 'excluir' && isset($_GET['id'])) {
                 // Verificar se a disciplina existe
-                $disciplina = $db->findWhere('disciplinas', 'id = ? AND cfc_id = ?', [$_GET['id'], $cfcId], '*', null, 1);
-                if (!$disciplina || !is_array($disciplina)) {
+                $sql = "SELECT * FROM disciplinas WHERE id = ? AND cfc_id = ?";
+                $disciplina = $db->fetch($sql, [$_GET['id'], $cfcId]);
+                if (!$disciplina) {
                     sendJsonResponse(['success' => false, 'error' => 'Disciplina não encontrada'], 404);
                 }
                 
                 // Verificar se a disciplina está sendo usada em turmas
-                $emUso = $db->findWhere('turmas_disciplinas', 'disciplina_id = ?', [$_GET['id']], '*', null, 1);
+                $sql = "SELECT id FROM turmas_disciplinas WHERE disciplina_id = ? LIMIT 1";
+                $emUso = $db->fetch($sql, [$_GET['id']]);
                 if ($emUso) {
                     sendJsonResponse(['success' => false, 'error' => 'Não é possível excluir disciplina que está sendo usada em turmas'], 400);
                 }
                 
                 // Excluir disciplina (soft delete - marcar como inativa)
-                $excluido = $db->update('disciplinas', [
-                    'ativa' => false
-                ], 'id = ? AND cfc_id = ?', [$_GET['id'], $cfcId]);
+                $sql = "UPDATE disciplinas SET ativa = 0 WHERE id = ? AND cfc_id = ?";
+                $excluido = $db->query($sql, [$_GET['id'], $cfcId]);
                 
                 if ($excluido) {
                     sendJsonResponse([

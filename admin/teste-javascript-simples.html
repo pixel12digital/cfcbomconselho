@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste JavaScript Simples</title>
+</head>
+<body>
+    <h2>🧪 Teste JavaScript Simples</h2>
+    
+    <div>
+        <label>Curso:</label>
+        <select id="curso_tipo" onchange="testarFuncao()">
+            <option value="">Selecione...</option>
+            <option value="formacao_45h">Formação 45h</option>
+            <option value="formacao_acc_20h">Formação ACC 20h</option>
+        </select>
+    </div>
+    
+    <div>
+        <strong>Total: <span id="total-horas-disciplinas" style="color: blue;">0h</span></strong>
+    </div>
+    
+    <button onclick="testarFuncao()">🔄 Testar</button>
+    
+    <div id="resultado" style="margin-top: 15px; padding: 10px; border: 1px solid #ccc;"></div>
+
+    <script>
+        // Função simples para obter carga horária
+        function obterCargaHorariaCurso(tipoCurso) {
+            const cargasHorarias = {
+                'formacao_45h': 45,
+                'formacao_acc_20h': 20,
+                'reciclagem_infrator': 30,
+                'atualizacao': 15
+            };
+            return cargasHorarias[tipoCurso] || 0;
+        }
+
+        // Função principal
+        function atualizarTotalHorasRegressivo() {
+            console.log('🔄 Testando função...');
+            
+            const cursoSelect = document.getElementById('curso_tipo');
+            const totalHorasElement = document.getElementById('total-horas-disciplinas');
+            
+            if (!cursoSelect || !totalHorasElement) {
+                console.error('❌ Elementos não encontrados');
+                return null;
+            }
+            
+            const tipoCurso = cursoSelect.value;
+            if (!tipoCurso) {
+                totalHorasElement.textContent = '0';
+                return { horasRestantes: 0 };
+            }
+            
+            const cargaHorariaTotal = obterCargaHorariaCurso(tipoCurso);
+            const horasRestantes = Math.max(0, cargaHorariaTotal - 0); // Sem disciplinas por enquanto
+            
+            totalHorasElement.textContent = horasRestantes;
+            
+            console.log('📊 Total: ' + cargaHorariaTotal + 'h');
+            
+            return {
+                cargaHorariaTotal: cargaHorariaTotal,
+                horasRestantes: horasRestantes
+            };
+        }
+
+        // Função global
+        window.atualizarTotalHorasRegressivo = atualizarTotalHorasRegressivo;
+
+        function testarFuncao() {
+            const resultado = document.getElementById('resultado');
+            
+            try {
+                const result = atualizarTotalHorasRegressivo();
+                if (result) {
+                    resultado.innerHTML = '<div style="color: green;">✅ Funcionando! Total: ' + result.horasRestantes + 'h</div>';
+                } else {
+                    resultado.innerHTML = '<div style="color: red;">❌ Erro na função</div>';
+                }
+            } catch (error) {
+                resultado.innerHTML = '<div style="color: red;">❌ Erro: ' + error.message + '</div>';
+            }
+        }
+
+        // Teste automático
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🧪 Página carregada!');
+            console.log('🔧 Função disponível:', typeof atualizarTotalHorasRegressivo);
+            
+            // Teste automático
+            setTimeout(function() {
+                document.getElementById('curso_tipo').value = 'formacao_45h';
+                testarFuncao();
+            }, 1000);
+        });
+    </script>
+</body>
+</html>

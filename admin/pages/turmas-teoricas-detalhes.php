@@ -238,6 +238,12 @@ try {
         </a>
         <?php endif; ?>
         
+        <?php if ($turma['status'] === 'criando' || $turma['status'] === 'agendando'): ?>
+        <a href="?page=turmas-teoricas&acao=editar&step=1&turma_id=<?= $turma['id'] ?>" class="btn-primary" style="background: #F7931E;">
+            <i class="fas fa-edit me-2"></i>Editar Turma
+        </a>
+        <?php endif; ?>
+        
         <a href="?page=turmas-teoricas&acao=revisar&step=3&turma_id=<?= $turma['id'] ?>" class="btn-secondary">
             <i class="fas fa-chart-bar me-2"></i>Revisar Carga Horária
         </a>

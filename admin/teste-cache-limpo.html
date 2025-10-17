@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🧹 Teste Cache Limpo</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; }
+        .btn { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .btn:hover { background: #0056b3; }
+        .result { background: #f8f9fa; border: 1px solid #dee2e6; padding: 15px; margin: 10px 0; border-radius: 4px; font-family: monospace; white-space: pre-wrap; }
+        .warning { background: #fff3cd; border-color: #ffeaa7; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Teste Cache Limpo - Modal Disciplinas</h1>
+        
+        <div class="result warning">
+            <strong>⚠️ IMPORTANTE:</strong> Se o erro ainda persiste, pode ser cache do navegador.
+            Execute os passos abaixo para forçar a limpeza completa.
+        </div>
+        
+        <div>
+            <button class="btn" onclick="limparCache()">🧹 Limpar Cache</button>
+            <button class="btn" onclick="abrirPaginaLimpa()">🌐 Abrir Página Limpa</button>
+            <button class="btn" onclick="verificarFuncoes()">🔍 Verificar Funções</button>
+        </div>
+        
+        <div id="resultado" class="result" style="display: none;"></div>
+        
+        <h2>📋 Passos para Limpar Cache:</h2>
+        <ol>
+            <li><strong>Pressione Ctrl + Shift + Delete</strong></li>
+            <li>Selecione "Imagens e arquivos em cache"</li>
+            <li>Clique em "Limpar dados"</li>
+            <li>Feche todas as abas do site</li>
+            <li>Abra uma nova aba e acesse: <code>admin/?page=turmas-teoricas&acao=nova&step=1</code></li>
+            <li>Pressione <strong>Ctrl + F5</strong> para recarregar forçado</li>
+        </ol>
+        
+        <h2>🔧 Verificação Manual:</h2>
+        <p>No console, execute:</p>
+        <div class="result">
+// Verificar se as funções existem
+console.log('carregarDisciplinasModal:', typeof window.carregarDisciplinasModal);
+console.log('carregarDisciplinas (formulário):', typeof window.carregarDisciplinas);
+
+// Verificar se há erros
+console.log('Verificando erros...');
+        </div>
+    </div>
+
+    <script>
+        function log(mensagem) {
+            const resultado = document.getElementById('resultado');
+            resultado.style.display = 'block';
+            resultado.textContent += new Date().toLocaleTimeString() + ': ' + mensagem + '\n';
+            console.log(mensagem);
+        }
+
+        function limparCache() {
+            log('🧹 Iniciando limpeza de cache...');
+            
+            // Tentar limpar cache programaticamente
+            if ('caches' in window) {
+                caches.keys().then(names => {
+                    names.forEach(name => {
+                        caches.delete(name);
+                    });
+                    log('✅ Cache do Service Worker limpo');
+                });
+            }
+            
+            // Limpar localStorage
+            localStorage.clear();
+            log('✅ localStorage limpo');
+            
+            // Limpar sessionStorage
+            sessionStorage.clear();
+            log('✅ sessionStorage limpo');
+            
+            log('✅ Limpeza concluída. Agora feche todas as abas e abra uma nova.');
+        }
+
+        function abrirPaginaLimpa() {
+            const url = '../?page=turmas-teoricas&acao=nova&step=1&_t=' + Date.now();
+            log('🌐 Abrindo página com timestamp: ' + url);
+            window.open(url, '_blank');
+        }
+
+        function verificarFuncoes() {
+            log('🔍 Verificando funções na página atual...');
+            
+            const novaJanela = window.open('../?page=turmas-teoricas&acao=nova&step=1&_t=' + Date.now(), '_blank');
+            
+            if (novaJanela) {
+                setTimeout(() => {
+                    novaJanela.eval(`
+                        console.log('🔍 [VERIFICAÇÃO] Verificando funções...');
+                        
+                        // Verificar funções do modal
+                        console.log('carregarDisciplinasModal:', typeof window.carregarDisciplinasModal);
+                        console.log('fecharModalDisciplinas:', typeof window.fecharModalDisciplinas);
+                        console.log('abrirModalDisciplinasInterno:', typeof window.abrirModalDisciplinasInterno);
+                        
+                        // Verificar funções do formulário
+                        console.log('carregarDisciplinas (formulário):', typeof window.carregarDisciplinas);
+                        
+                        // Verificar se há erros no console
+                        console.log('🔍 [VERIFICAÇÃO] Verificação concluída');
+                    `);
+                }, 2000);
+            }
+        }
+
+        console.log('🧹 Página de teste de cache carregada');
+    </script>
+</body>
+</html>

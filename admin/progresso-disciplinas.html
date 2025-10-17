@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>✅ Progresso - Disciplinas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .progress-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .debug-section {
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+        .progress-item {
+            border-left: 4px solid #28a745;
+            padding: 1rem;
+            margin: 1rem 0;
+            background: #f8f9fa;
+        }
+        .pending-item {
+            border-left: 4px solid #ffc107;
+            padding: 1rem;
+            margin: 1rem 0;
+            background: #f8f9fa;
+        }
+    </style>
+</head>
+<body>
+    <div class="progress-container">
+        <h1 class="mb-4">✅ Progresso - Correção das Disciplinas</h1>
+        
+        <div class="success">
+            <strong>🎯 PROGRESSO ATUAL:</strong><br>
+            <ul>
+                <li><strong>Datas:</strong> ✅ Corrigidas e funcionando</li>
+                <li><strong>Modal indevido:</strong> ✅ Corrigido</li>
+                <li><strong>Disciplinas:</strong> 🔄 Em investigação</li>
+            </ul>
+        </div>
+
+        <div class="progress-item">
+            <h5><i class="fas fa-calendar-alt text-success me-2"></i>✅ Datas Corrigidas</h5>
+            <p>As datas de período agora aparecem preenchidas corretamente na página de edição.</p>
+        </div>
+
+        <div class="progress-item">
+            <h5><i class="fas fa-exclamation-triangle text-success me-2"></i>✅ Modal Indevido Corrigido</h5>
+            <p>O modal "Selecione primeiro o tipo de curso!" não aparece mais indevidamente na página de detalhes.</p>
+        </div>
+
+        <div class="pending-item">
+            <h5><i class="fas fa-graduation-cap text-warning me-2"></i>🔄 Disciplinas - Em Investigação</h5>
+            <p>As disciplinas ainda não estão sendo carregadas corretamente. Campos aparecem com borda vermelha e ícones de lixeira.</p>
+        </div>
+
+        <div class="debug-section">
+            <h5>🔍 Debug - Disciplinas</h5>
+            <p>Para investigar o problema das disciplinas, execute estes testes:</p>
+            
+            <div class="code-block">
+// 1. No console da página de edição:
+console.log('disciplinasExistentes:', disciplinasExistentes);
+console.log('disciplinasExistentes.length:', disciplinasExistentes?.length);
+
+// 2. Verificar se há disciplinas no banco:
+// Acesse: admin/teste-disciplinas-banco.php?turma_id=6
+
+// 3. Verificar se a função está sendo chamada:
+if (disciplinasExistentes && disciplinasExistentes.length > 0) {
+    carregarDisciplinasExistentes(disciplinasExistentes);
+}
+            </div>
+        </div>
+
+        <div class="info">
+            <h5><i class="fas fa-info-circle text-info me-2"></i>Possíveis Causas para Disciplinas</h5>
+            <ul>
+                <li><strong>Nenhuma disciplina salva:</strong> As disciplinas podem não ter sido salvas na tabela <code>turmas_disciplinas</code></li>
+                <li><strong>Função não executada:</strong> A função <code>carregarDisciplinasExistentes</code> pode não estar sendo chamada</li>
+                <li><strong>API não funciona:</strong> A API de disciplinas pode não estar retornando dados</li>
+                <li><strong>Timing:</strong> As disciplinas podem estar sendo carregadas após o DOM estar pronto</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h5><i class="fas fa-check-circle text-success me-2"></i>Próximos Passos</h5>
+            <ol>
+                <li><strong>Testar banco de dados:</strong> Execute o teste para verificar se há disciplinas salvas</li>
+                <li><strong>Verificar console:</strong> Execute os comandos de debug no console</li>
+                <li><strong>Se não há disciplinas salvas:</strong> As disciplinas precisam ser salvas primeiro</li>
+                <li><strong>Se há disciplinas mas não aparecem:</strong> Problema na função de carregamento</li>
+            </ol>
+        </div>
+
+        <div class="warning">
+            <h5><i class="fas fa-exclamation-triangle text-warning me-2"></i>Arquivos de Debug Criados</h5>
+            <ul>
+                <li><code>admin/debug-disciplinas-edicao.html</code> - Debug específico para disciplinas</li>
+                <li><code>admin/teste-disciplinas-banco.php</code> - Teste do banco de dados</li>
+                <li><code>admin/debug-pagina-edicao.html</code> - Debug geral da página de edição</li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="?page=turmas-teoricas&acao=editar&step=1&turma_id=6" class="btn btn-primary">
+                <i class="fas fa-edit me-2"></i>Testar Página de Edição
+            </a>
+            <button onclick="window.open('admin/teste-disciplinas-banco.php?turma_id=6', '_blank')" class="btn btn-outline-primary">
+                <i class="fas fa-database me-2"></i>Testar Banco de Dados
+            </button>
+            <a href="admin/debug-disciplinas-edicao.html" class="btn btn-outline-secondary">
+                <i class="fas fa-bug me-2"></i>Debug Disciplinas
+            </a>
+        </div>
+    </div>
+
+    <script>
+        console.log('✅ [PROGRESSO] Status atual: Datas OK, Modal OK, Disciplinas em investigação');
+        console.log('✅ [PROGRESSO] Execute os testes para identificar o problema das disciplinas');
+    </script>
+</body>
+</html>

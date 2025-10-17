@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Total de Horas Corrigido</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f8f9fa; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .info { color: #17a2b8; font-weight: bold; }
+        .test-result { padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .test-result.success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .test-result.error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .test-result.info { background: #d1ecf1; border: 1px solid #bee5eb; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste - Total de Horas Corrigido</h1>
+        
+        <div class="test-result success">
+            <h3>✅ Correções Implementadas:</h3>
+            <ul>
+                <li><strong>Função carregarTotalHorasDoBanco():</strong> Nova função que busca o total diretamente do banco</li>
+                <li><strong>Carregamento automático:</strong> Executa automaticamente 1 segundo após carregar a página</li>
+                <li><strong>Fallback inteligente:</strong> Se não há disciplinas na interface, carrega do banco</li>
+                <li><strong>Logs detalhados:</strong> Para facilitar debug e verificação</li>
+            </ul>
+        </div>
+
+        <div class="test-result info">
+            <h3>🎯 Como Funciona Agora:</h3>
+            <ol>
+                <li><strong>Página carrega</strong> → Executa <code>carregarDisciplinasDisponiveis()</code></li>
+                <li><strong>Após 1 segundo</strong> → Executa <code>carregarTotalHorasDoBanco()</code></li>
+                <li><strong>Busca disciplinas</strong> → Faz requisição para <code>/admin/api/disciplinas-clean.php</code></li>
+                <li><strong>Soma carga horária</strong> → Calcula total de todas as disciplinas</li>
+                <li><strong>Atualiza interface</strong> → Define o valor no elemento <code>#total-horas-disciplinas</code></li>
+            </ol>
+        </div>
+
+        <div class="test-result success">
+            <h3>📊 Dados Esperados:</h3>
+            <p>Baseado na verificação anterior, o total deve ser:</p>
+            <div class="code">
+Legislação de Trânsito: 18h
+Direção Defensiva: 16h  
+Primeiros Socorros: 4h
+Meio Ambiente: 4h
+Mecânica Básica: 3h
+Disciplina Teste: 20h
+────────────────────────
+TOTAL: 65h
+            </div>
+        </div>
+
+        <div class="test-result info">
+            <h3>🧪 Como Testar:</h3>
+            <ol>
+                <li><strong>Abra o sistema:</strong> <code>admin/?page=turmas-teoricas&acao=nova&step=1</code></li>
+                <li><strong>Verifique o console</strong> (F12) para logs como:</li>
+                <div class="code">
+🔄 Carregando total de horas do banco de dados...
+📊 Total de horas do banco: 65h
+✅ Total atualizado com dados do banco: 65h
+                </div>
+                <li><strong>Verifique a interface:</strong> "Total de horas: <strong>65</strong>h"</li>
+            </ol>
+        </div>
+
+        <div class="test-result success">
+            <h3>🚀 Status Esperado:</h3>
+            <p><strong>O total de horas deve agora aparecer como "65h" em vez de "0h"!</strong></p>
+            
+            <h4>Se ainda aparecer 0h:</h4>
+            <ul>
+                <li>Verifique o console do navegador para erros</li>
+                <li>Confirme se a API está respondendo</li>
+                <li>Verifique se o elemento HTML está correto</li>
+            </ul>
+        </div>
+
+        <div class="test-result info">
+            <h3>🔍 Logs de Debug:</h3>
+            <p>No console do navegador, você deve ver:</p>
+            <div class="code">
+📄 DOM carregado - segunda instância!
+🔄 Carregando disciplinas disponíveis...
+✅ Disciplinas carregadas: 6
+🔄 Carregando total de horas do banco de dados...
+📊 Total de horas do banco: 65h
+✅ Total atualizado com dados do banco: 65h
+            </div>
+        </div>
+
+        <div class="test-result success">
+            <h3>✅ Próximos Passos:</h3>
+            <p>Teste o sistema e verifique se:</p>
+            <ul>
+                <li>✅ O total aparece como "65h" em vez de "0h"</li>
+                <li>✅ Os logs aparecem no console</li>
+                <li>✅ Não há erros JavaScript</li>
+                <li>✅ O valor persiste ao recarregar a página</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔧 Teste - Total de Horas Corrigido');
+        console.log('✅ Correções implementadas com sucesso!');
+        console.log('📋 Teste o sistema real agora');
+    </script>
+</body>
+</html>

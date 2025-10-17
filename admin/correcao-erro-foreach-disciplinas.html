@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Correção - Erro forEach Disciplinas</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .fix-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .solution {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .step {
+            border-left: 4px solid #007bff;
+            padding: 1rem;
+            margin: 1rem 0;
+            background: #f8f9fa;
+        }
+        .step.completed {
+            border-left-color: #28a745;
+        }
+        .console-error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+            font-family: 'Courier New', monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="fix-container">
+        <h1 class="mb-4">🔧 Correção - Erro forEach Disciplinas</h1>
+        
+        <div class="error">
+            <strong>❌ ERRO REPORTADO:</strong><br>
+            "disciplina nao esta aparecendo"<br>
+            Console mostra: "Uncaught TypeError: disciplinas.forEach is not a function"
+        </div>
+
+        <div class="console-error">
+            <strong>🐛 Erro no Console:</strong><br>
+            Uncaught TypeError: disciplinas.forEach is not a function<br>
+            at carregarDisciplinasNoSelect (admin/?page=turmas-t...&turma_id=6:5477:17)<br>
+            at adicionarDisciplinaDetalhes (admin/?page=turmas-t...s&turma_id=6:2379:5)<br>
+            at HTMLButtonElement.onclick (admin/?page=turmas-t...turma_id=6:2133:133)
+        </div>
+
+        <div class="solution">
+            <strong>✅ SOLUÇÃO IMPLEMENTADA:</strong><br>
+            Adicionada validação robusta para garantir que `disciplinas` seja um array antes de chamar `forEach`.
+            Logs detalhados para debug e tratamento de erros melhorado.
+        </div>
+
+        <div class="step completed">
+            <h5><i class="fas fa-code text-success me-2"></i>1. Validação Array.isArray()</h5>
+            <p><strong>Problema:</strong> Código assumia que `data.disciplinas` sempre seria um array.</p>
+            <p><strong>Solução:</strong> Validação explícita com `Array.isArray()`</p>
+            <div class="code-block">
+// ANTES (sem validação)
+if (data.success && data.disciplinas) {
+    data.disciplinas.forEach(disciplina => {
+        // ...
+    });
+}
+
+// DEPOIS (com validação)
+if (data.success && data.disciplinas && Array.isArray(data.disciplinas)) {
+    data.disciplinas.forEach(disciplina => {
+        // ...
+    });
+} else {
+    console.error('❌ [API] Dados inválidos:', data);
+    console.error('❌ [API] É array?', Array.isArray(data.disciplinas));
+}
+            </div>
+        </div>
+
+        <div class="step completed">
+            <h5><i class="fas fa-code text-success me-2"></i>2. Logs Detalhados para Debug</h5>
+            <p><strong>Implementação:</strong> Logs em cada etapa do processo</p>
+            <div class="code-block">
+function carregarDisciplinasNoSelect(disciplinaId) {
+    console.log('📚 [DISCIPLINA] Carregando disciplinas para select:', disciplinaId);
+    
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-estaticas.php?action=listar')
+        .then(response => {
+            console.log('📡 [API] Resposta recebida:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 [API] Dados recebidos:', data);
+            
+            if (data.success && data.disciplinas && Array.isArray(data.disciplinas)) {
+                const select = document.querySelector(`[data-disciplina-id="${disciplinaId}"] select`);
+                if (select) {
+                    console.log('✅ [SELECT] Select encontrado, adicionando disciplinas...');
+                    
+                    data.disciplinas.forEach(disciplina => {
+                        // ...
+                    });
+                    
+                    console.log('✅ [SELECT] Disciplinas adicionadas:', data.disciplinas.length);
+                } else {
+                    console.error('❌ [SELECT] Select não encontrado para disciplina:', disciplinaId);
+                }
+            } else {
+                console.error('❌ [API] Dados inválidos:', data);
+                console.error('❌ [API] Success:', data.success);
+                console.error('❌ [API] Disciplinas:', data.disciplinas);
+                console.error('❌ [API] É array?', Array.isArray(data.disciplinas));
+            }
+        })
+        .catch(error => {
+            console.error('❌ [DISCIPLINA] Erro ao carregar disciplinas:', error);
+        });
+}
+            </div>
+        </div>
+
+        <div class="step completed">
+            <h5><i class="fas fa-code text-success me-2"></i>3. Função Principal Corrigida</h5>
+            <p><strong>Implementação:</strong> Mesma validação na função principal</p>
+            <div class="code-block">
+function carregarDisciplinasDisponiveis() {
+    console.log('📚 [DISCIPLINAS] Carregando disciplinas disponíveis...');
+    
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-estaticas.php?action=listar')
+        .then(response => {
+            console.log('📡 [API] Resposta recebida:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 [API] Dados recebidos:', data);
+            
+            if (data.success && data.disciplinas && Array.isArray(data.disciplinas)) {
+                const selects = document.querySelectorAll('.disciplina-item select');
+                console.log('🔍 [SELECTS] Encontrados selects:', selects.length);
+                
+                selects.forEach((select, index) => {
+                    console.log(`📝 [SELECT ${index}] Processando select...`);
+                    
+                    select.innerHTML = '<option value="">Selecione a disciplina...</option>';
+                    
+                    data.disciplinas.forEach(disciplina => {
+                        // ...
+                    });
+                    
+                    console.log(`✅ [SELECT ${index}] Disciplinas adicionadas:`, data.disciplinas.length);
+                });
+                
+                selecionarDisciplinasCadastradas();
+                console.log('✅ [DISCIPLINAS] Disciplinas carregadas:', data.disciplinas.length);
+            } else {
+                console.error('❌ [DISCIPLINAS] Erro ao carregar disciplinas:', data.error);
+                console.error('❌ [DISCIPLINAS] Success:', data.success);
+                console.error('❌ [DISCIPLINAS] Disciplinas:', data.disciplinas);
+                console.error('❌ [DISCIPLINAS] É array?', Array.isArray(data.disciplinas));
+            }
+        })
+        .catch(error => {
+            console.error('❌ [DISCIPLINAS] Erro na requisição:', error);
+        });
+}
+            </div>
+        </div>
+
+        <div class="step completed">
+            <h5><i class="fas fa-tools text-success me-2"></i>4. Arquivo de Teste Criado</h5>
+            <p><strong>Arquivo:</strong> <code>admin/teste-api-disciplinas-debug.html</code></p>
+            <p><strong>Funcionalidades:</strong></p>
+            <ul>
+                <li>✅ Teste direto da API</li>
+                <li>✅ Verificação de status HTTP</li>
+                <li>✅ Validação de JSON</li>
+                <li>✅ Verificação de estrutura de dados</li>
+                <li>✅ Teste de array de disciplinas</li>
+                <li>✅ Logs detalhados</li>
+            </ul>
+        </div>
+
+        <div class="solution">
+            <h5><i class="fas fa-play text-info me-2"></i>Possíveis Causas do Erro</h5>
+            <ul>
+                <li><strong>🔌 API não responde:</strong> Servidor não está funcionando</li>
+                <li><strong>📄 Resposta não é JSON:</strong> API retorna HTML de erro</li>
+                <li><strong>📊 Estrutura incorreta:</strong> Campo 'disciplinas' não é array</li>
+                <li><strong>❌ Success false:</strong> API retorna erro</li>
+                <li><strong>🔒 Permissões:</strong> Problemas de acesso ao arquivo</li>
+                <li><strong>📁 Caminho incorreto:</strong> Arquivo não encontrado</li>
+            </ul>
+        </div>
+
+        <div class="solution">
+            <h5><i class="fas fa-cogs text-primary me-2"></i>Melhorias Implementadas</h5>
+            <ul>
+                <li><strong>🛡️ Validação robusta:</strong> Verifica se é array antes de usar forEach</li>
+                <li><strong>📝 Logs detalhados:</strong> Debug completo em cada etapa</li>
+                <li><strong>🔍 Verificação de elementos:</strong> Confirma se selects existem</li>
+                <li><strong>⚠️ Tratamento de erros:</strong> Catch para todos os erros</li>
+                <li><strong>📊 Informações de debug:</strong> Logs de status e dados</li>
+                <li><strong>🧪 Arquivo de teste:</strong> Teste independente da API</li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="admin/teste-api-disciplinas-debug.html" class="btn btn-primary btn-lg">
+                <i class="fas fa-vial me-2"></i>Testar API
+            </a>
+            <a href="?page=turmas-teoricas&acao=detalhes&turma_id=6" class="btn btn-success btn-lg">
+                <i class="fas fa-play me-2"></i>Testar na Página Principal
+            </a>
+        </div>
+
+        <div class="mt-4">
+            <h5>📁 Arquivos Criados/Modificados:</h5>
+            <ul>
+                <li><code>admin/pages/turmas-teoricas-detalhes-inline.php</code> - Validações corrigidas</li>
+                <li><code>admin/teste-api-disciplinas-debug.html</code> - Arquivo de teste</li>
+                <li><code>admin/correcao-erro-foreach-disciplinas.html</code> - Esta documentação</li>
+            </ul>
+        </div>
+
+        <div class="mt-4">
+            <h5>🔍 Para Debug:</h5>
+            <ol>
+                <li>Execute o arquivo de teste para verificar a API</li>
+                <li>Verifique o console da página principal</li>
+                <li>Confirme se a API retorna dados corretos</li>
+                <li>Verifique se os selects são encontrados</li>
+                <li>Confirme se as disciplinas são arrays</li>
+                <li>Teste adicionar nova disciplina</li>
+            </ol>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔧 [CORREÇÃO FOREACH] Validações implementadas!');
+        console.log('🔧 [CORREÇÃO FOREACH] Logs detalhados adicionados');
+        console.log('🔧 [CORREÇÃO FOREACH] Arquivo de teste criado');
+    </script>
+</body>
+</html>

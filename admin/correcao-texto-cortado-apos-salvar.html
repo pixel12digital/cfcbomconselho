@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Correção - Texto Cortado Após Salvar</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 2rem;
+            background-color: #f8f9fa;
+        }
+        .fix-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+        .fix-item {
+            border-left: 4px solid #dc3545;
+            padding: 1rem;
+            margin: 1rem 0;
+            background: #f8f9fa;
+        }
+        .fix-item.fixed {
+            border-left-color: #28a745;
+        }
+        .code-block {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 1rem;
+            font-family: 'Courier New', monospace;
+            margin: 1rem 0;
+            font-size: 0.9rem;
+        }
+        .warning {
+            background: #fff3cd;
+            border: 1px solid #ffeaa7;
+            color: #856404;
+            padding: 1rem;
+            border-radius: 4px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="fix-container">
+        <h1 class="mb-4">🔧 Correção - Texto Cortado Após Salvar</h1>
+        
+        <div class="error">
+            <strong>❌ PROBLEMA IDENTIFICADO:</strong><br>
+            Após salvar a edição do campo curso, o texto ficava cortado. Quando o usuário atualizava a página, o texto voltava ao normal. Isso indicava um problema na função JavaScript que restaura o campo após salvar.
+        </div>
+
+        <div class="warning">
+            <strong>⚠️ CAUSA RAIZ:</strong><br>
+            O problema estava na função <code>getSelectDisplayValue</code> que não tinha o mapeamento para o campo <code>curso_tipo</code>. Quando o campo era restaurado após salvar, ele mostrava o valor interno (ex: "formacao_acc_20h") em vez do texto completo (ex: "Curso de Formação de Condutores - ACC 20h").
+        </div>
+
+        <div class="fix-item fixed">
+            <h5><i class="fas fa-code text-primary me-2"></i>Correção 1: Mapeamento curso_tipo</h5>
+            <p><strong>Adicionado mapeamento completo na função getSelectDisplayValue:</strong></p>
+            <div class="code-block">
+function getSelectDisplayValue(field, value) {
+    const options = {
+        'status': { /* ... */ },
+        'modalidade': { /* ... */ },
+        'curso_tipo': {
+            'formacao_45h': 'Curso de Formação de Condutores - Permissão 45h',
+            'formacao_acc_20h': 'Curso de Formação de Condutores - ACC 20h',
+            'reciclagem_infrator': 'Curso de Reciclagem para Condutor Infrator',
+            'atualizacao': 'Curso de Atualização'
+        },
+        'sala_id': { /* ... */ }
+    };
+    
+    return options[field] && options[field][value] ? options[field][value] : value;
+}
+            </div>
+        </div>
+
+        <div class="fix-item fixed">
+            <h5><i class="fas fa-sync text-info me-2"></i>Correção 2: Função restoreView melhorada</h5>
+            <p><strong>Melhorada a função restoreView com logs e timing correto:</strong></p>
+            <div class="code-block">
+function restoreView(element, value) {
+    const field = element.dataset.field;
+    const type = element.dataset.type;
+    
+    console.log(`🔄 [RESTORE] Restaurando campo ${field} com valor: ${value}`);
+    
+    // Remover classe de edição
+    element.classList.remove('editing');
+    
+    // Restaurar conteúdo baseado no tipo
+    let displayValue = value;
+    if (type === 'date' && value) {
+        displayValue = new Date(value + 'T00:00:00').toLocaleDateString('pt-BR');
+    } else if (type === 'select') {
+        displayValue = getSelectDisplayValue(field, value);
+        console.log(`🔄 [RESTORE] Campo select ${field}: ${value} → ${displayValue}`);
+    }
+    
+    // Restaurar HTML
+    element.innerHTML = displayValue + '<i class="fas fa-edit edit-icon"></i>';
+    
+    // Aplicar estilos APÓS restaurar o HTML
+    setTimeout(() => {
+        applyDisplayStyles(element, field);
+        console.log(`✅ [RESTORE] Campo ${field} restaurado com sucesso`);
+    }, 10);
+}
+            </div>
+        </div>
+
+        <div class="fix-item fixed">
+            <h5><i class="fas fa-paint-brush text-warning me-2"></i>Correção 3: Estilos robustos</h5>
+            <p><strong>Melhorados os estilos para curso_tipo com propriedades adicionais:</strong></p>
+            <div class="code-block">
+case 'curso_tipo':
+    element.style.color = '#666';
+    element.style.fontSize = '1rem';
+    element.style.border = 'none';
+    element.style.minWidth = '400px';
+    element.style.maxWidth = 'none';
+    element.style.width = 'fit-content';
+    element.style.wordWrap = 'break-word';
+    element.style.overflowWrap = 'break-word';
+    element.style.whiteSpace = 'nowrap';
+    element.style.display = 'block';
+    element.style.verticalAlign = 'top';
+    element.style.lineHeight = '1.4';
+    element.style.overflow = 'visible';
+    element.style.textOverflow = 'unset';
+    element.style.textAlign = 'left';
+    element.style.padding = '0';
+    element.style.margin = '0';
+    console.log(`🎨 [STYLES] Aplicando estilos para curso_tipo`);
+    break;
+            </div>
+        </div>
+
+        <div class="success">
+            <h5><i class="fas fa-check-circle text-success me-2"></i>Melhorias Implementadas</h5>
+            <ul>
+                <li><strong>✅ Mapeamento completo:</strong> Adicionado mapeamento curso_tipo na função getSelectDisplayValue</li>
+                <li><strong>✅ Logs detalhados:</strong> Console logs para debug e acompanhamento</li>
+                <li><strong>✅ Timing correto:</strong> setTimeout para aplicar estilos após restaurar HTML</li>
+                <li><strong>✅ Estilos robustos:</strong> Propriedades adicionais para garantir exibição correta</li>
+                <li><strong>✅ Validação:</strong> Verificação se o mapeamento existe antes de usar</li>
+            </ul>
+        </div>
+
+        <div class="success">
+            <h5><i class="fas fa-check-circle text-success me-2"></i>Resultado Esperado</h5>
+            <p><strong>Agora após salvar a edição do curso:</strong></p>
+            <ul>
+                <li>✅ O texto completo deve aparecer imediatamente</li>
+                <li>✅ Não será necessário atualizar a página</li>
+                <li>✅ O campo deve manter a formatação correta</li>
+                <li>✅ Logs no console para acompanhar o processo</li>
+            </ul>
+        </div>
+
+        <div class="warning">
+            <strong>🔍 Para Debug:</strong><br>
+            Abra o console do navegador (F12) e observe os logs quando editar o campo curso:
+            <ul>
+                <li><code>🔄 [RESTORE] Restaurando campo curso_tipo com valor: formacao_acc_20h</code></li>
+                <li><code>🔄 [RESTORE] Campo select curso_tipo: formacao_acc_20h → Curso de Formação de Condutores - ACC 20h</code></li>
+                <li><code>🎨 [STYLES] Aplicando estilos para curso_tipo</code></li>
+                <li><code>✅ [RESTORE] Campo curso_tipo restaurado com sucesso</code></li>
+            </ul>
+        </div>
+
+        <div class="text-center mt-4">
+            <a href="?page=turmas-teoricas&acao=detalhes&turma_id=6" class="btn btn-success btn-lg">
+                <i class="fas fa-play me-2"></i>Testar Correção
+            </a>
+            <a href="admin/correcao-definitiva-texto-curso.html" class="btn btn-outline-primary btn-lg">
+                <i class="fas fa-history me-2"></i>Ver Correção Anterior
+            </a>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔧 [CORREÇÃO] Texto cortado após salvar - CORRIGIDO!');
+        console.log('🔧 [CORREÇÃO] Mapeamento curso_tipo adicionado');
+        console.log('🔧 [CORREÇÃO] Função restoreView melhorada');
+    </script>
+</body>
+</html>

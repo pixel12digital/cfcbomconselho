@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Simples - Contador</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .container { max-width: 400px; margin: 0 auto; padding: 20px; border: 1px solid #ccc; }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .btn { padding: 8px 16px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .form-select { padding: 8px; border: 1px solid #ced4da; border-radius: 4px; margin: 5px; width: 100%; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🧪 Teste Simples</h2>
+        
+        <div>
+            <label>Curso:</label>
+            <select id="curso_tipo" class="form-select" onchange="testar()">
+                <option value="">Selecione...</option>
+                <option value="formacao_45h">Formação 45h</option>
+                <option value="formacao_acc_20h">Formação ACC 20h</option>
+            </select>
+        </div>
+        
+        <div>
+            <strong>Total: <span id="total-horas-disciplinas" style="color: #007bff;">0h</span></strong>
+        </div>
+        
+        <button class="btn" onclick="testar()">🔄 Testar</button>
+        
+        <div id="resultado" style="margin-top: 15px;"></div>
+    </div>
+
+    <script>
+        // Funções do sistema
+        function obterCargaHorariaCurso(tipoCurso) {
+            const cargasHorarias = {
+                'formacao_45h': 45,
+                'formacao_acc_20h': 20,
+                'reciclagem_infrator': 30,
+                'atualizacao': 15
+            };
+            return cargasHorarias[tipoCurso] || 0;
+        }
+
+        function atualizarTotalHorasRegressivo() {
+            console.log('🔄 Testando contador regressivo...');
+            
+            const cursoSelect = document.getElementById('curso_tipo');
+            const totalHorasElement = document.getElementById('total-horas-disciplinas');
+            
+            if (!cursoSelect || !totalHorasElement) {
+                console.error('❌ Elementos não encontrados');
+                return;
+            }
+            
+            const tipoCurso = cursoSelect.value;
+            if (!tipoCurso) {
+                totalHorasElement.textContent = '0h';
+                return;
+            }
+            
+            const cargaHorariaTotal = obterCargaHorariaCurso(tipoCurso);
+            totalHorasElement.textContent = `${cargaHorariaTotal}h`;
+            totalHorasElement.style.color = '#007bff';
+            
+            console.log(`✅ Curso ${tipoCurso}: ${cargaHorariaTotal}h`);
+            return cargaHorariaTotal;
+        }
+
+        function testar() {
+            const resultado = document.getElementById('resultado');
+            const total = atualizarTotalHorasRegressivo();
+            
+            if (total > 0) {
+                resultado.innerHTML = `<div class="success">✅ Funcionando! Total: ${total}h</div>`;
+            } else {
+                resultado.innerHTML = `<div class="error">❌ Não funcionou</div>`;
+            }
+        }
+
+        // Teste automático
+        setTimeout(() => {
+            document.getElementById('curso_tipo').value = 'formacao_45h';
+            testar();
+        }, 1000);
+    </script>
+</body>
+</html>

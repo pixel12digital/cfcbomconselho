@@ -142,6 +142,10 @@ function handlePostRequest($turmaManager, $user) {
             handleCriarTurmaBasica($turmaManager, $dados, $user);
             break;
             
+        case 'salvar_disciplinas':
+            handleSalvarDisciplinas($turmaManager, $dados, $user);
+            break;
+            
         case 'agendar_aula':
             handleAgendarAula($turmaManager, $dados, $user);
             break;
@@ -651,6 +655,69 @@ function handleExcluirTurma($turmaManager, $dados) {
         echo json_encode([
             'sucesso' => false,
             'mensagem' => 'Erro ao processar exclusão: ' . $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+    }
+}
+
+/**
+ * Salvar disciplinas selecionadas pelo usuário
+ */
+function handleSalvarDisciplinas($turmaManager, $dados, $user) {
+    try {
+        $turmaId = $dados['turma_id'] ?? null;
+        $disciplinas = $dados['disciplinas'] ?? [];
+        
+        if (!$turmaId) {
+            http_response_code(400);
+            echo json_encode([
+                'sucesso' => false,
+                'mensagem' => 'ID da turma é obrigatório'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        if (empty($disciplinas)) {
+            http_response_code(400);
+            echo json_encode([
+                'sucesso' => false,
+                'mensagem' => 'Nenhuma disciplina foi selecionada'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        // Validar se a turma pertence ao usuário
+        $turma = $turmaManager->obterTurma($turmaId);
+        if (!$turma['sucesso']) {
+            http_response_code(404);
+            echo json_encode([
+                'sucesso' => false,
+                'mensagem' => 'Turma não encontrada'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        // Salvar disciplinas selecionadas
+        $resultado = $turmaManager->salvarDisciplinasSelecionadas($turmaId, $disciplinas);
+        
+        if ($resultado['sucesso']) {
+            echo json_encode([
+                'sucesso' => true,
+                'mensagem' => 'Disciplinas salvas com sucesso',
+                'total' => $resultado['total']
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            http_response_code(500);
+            echo json_encode([
+                'sucesso' => false,
+                'mensagem' => $resultado['mensagem']
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        
+    } catch (Exception $e) {
+        http_response_code(500);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Erro ao salvar disciplinas: ' . $e->getMessage()
         ], JSON_UNESCAPED_UNICODE);
     }
 }

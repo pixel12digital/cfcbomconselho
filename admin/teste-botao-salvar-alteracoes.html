@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Botão Salvar Alterações</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-button { padding: 10px 20px; background: #007bff; color: white; border: none; cursor: pointer; margin: 10px; }
+        .test-button:hover { background: #0056b3; }
+        .console { background: #f8f9fa; border: 1px solid #dee2e6; padding: 10px; margin: 10px 0; height: 200px; overflow-y: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Teste do Botão "Salvar Alterações"</h1>
+    
+    <h2>Problema Identificado:</h2>
+    <p>O botão "Salvar Alterações" no modal de disciplinas não está executando nenhuma ação.</p>
+    
+    <h2>Possíveis Causas:</h2>
+    <ul>
+        <li>Função JavaScript não está sendo executada</li>
+        <li>Erro JavaScript impedindo a execução</li>
+        <li>Conflito entre múltiplas versões da função</li>
+        <li>Modal não está sendo fechado corretamente</li>
+    </ul>
+    
+    <h2>Testes:</h2>
+    
+    <button class="test-button" onclick="testarFuncaoSalvar()">
+        🧪 Testar Função salvarAlteracoesDisciplinas()
+    </button>
+    
+    <button class="test-button" onclick="testarCloseModal()">
+        🧪 Testar Função window.closeModal()
+    </button>
+    
+    <button class="test-button" onclick="verificarConsole()">
+        🔍 Verificar Console do Navegador
+    </button>
+    
+    <div class="console" id="console-output">
+        <strong>Console de Teste:</strong><br>
+        Clique nos botões acima para executar os testes...<br>
+    </div>
+    
+    <h2>Soluções Propostas:</h2>
+    <ul>
+        <li>Verificar se há erros JavaScript no console</li>
+        <li>Remover versões duplicadas da função</li>
+        <li>Implementar tratamento de erro melhorado</li>
+        <li>Adicionar feedback visual para o usuário</li>
+    </ul>
+
+    <script>
+        function log(message) {
+            const console = document.getElementById('console-output');
+            const time = new Date().toLocaleTimeString();
+            console.innerHTML += `<br>[${time}] ${message}`;
+            console.scrollTop = console.scrollHeight;
+        }
+
+        function testarFuncaoSalvar() {
+            log('🧪 Testando função salvarAlteracoesDisciplinas()...');
+            
+            try {
+                if (typeof salvarAlteracoesDisciplinas === 'function') {
+                    log('✅ Função salvarAlteracoesDisciplinas encontrada');
+                    log('🔧 Executando função...');
+                    
+                    // Simular execução
+                    salvarAlteracoesDisciplinas();
+                    log('✅ Função executada sem erros');
+                } else {
+                    log('❌ Função salvarAlteracoesDisciplinas não encontrada');
+                }
+            } catch (error) {
+                log(`❌ Erro ao executar função: ${error.message}`);
+            }
+        }
+
+        function testarCloseModal() {
+            log('🧪 Testando função window.closeModal()...');
+            
+            try {
+                if (typeof window.closeModal === 'function') {
+                    log('✅ Função window.closeModal encontrada');
+                    log('🔧 Executando função...');
+                    
+                    // Simular execução
+                    window.closeModal();
+                    log('✅ Função executada sem erros');
+                } else {
+                    log('❌ Função window.closeModal não encontrada');
+                }
+            } catch (error) {
+                log(`❌ Erro ao executar função: ${error.message}`);
+            }
+        }
+
+        function verificarConsole() {
+            log('🔍 Verificando console do navegador...');
+            log('ℹ️ Abra o DevTools (F12) e verifique a aba Console');
+            log('ℹ️ Procure por erros JavaScript ou avisos');
+            log('ℹ️ Verifique se as funções estão sendo carregadas');
+        }
+
+        // Verificar se as funções estão disponíveis
+        window.addEventListener('load', function() {
+            log('📄 Página carregada');
+            
+            if (typeof salvarAlteracoesDisciplinas === 'function') {
+                log('✅ salvarAlteracoesDisciplinas está disponível');
+            } else {
+                log('❌ salvarAlteracoesDisciplinas NÃO está disponível');
+            }
+            
+            if (typeof window.closeModal === 'function') {
+                log('✅ window.closeModal está disponível');
+            } else {
+                log('❌ window.closeModal NÃO está disponível');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste - Select Corrigido</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; background: #f8f9fa; }
+        .container { max-width: 900px; margin: 0 auto; background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .success { color: #28a745; font-weight: bold; }
+        .error { color: #dc3545; font-weight: bold; }
+        .warning { color: #ffc107; font-weight: bold; }
+        .info { color: #17a2b8; font-weight: bold; }
+        .test-result { padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .test-result.success { background: #d4edda; border: 1px solid #c3e6cb; }
+        .test-result.error { background: #f8d7da; border: 1px solid #f5c6cb; }
+        .test-result.warning { background: #fff3cd; border: 1px solid #ffeaa7; }
+        .test-result.info { background: #d1ecf1; border: 1px solid #bee5eb; }
+        .code { background: #f8f9fa; padding: 10px; border-radius: 4px; font-family: monospace; border: 1px solid #dee2e6; }
+        .step { background: #e9ecef; padding: 10px; margin: 10px 0; border-left: 4px solid #007bff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Teste - Select de Disciplinas Corrigido</h1>
+        
+        <div class="test-result warning">
+            <h3>⚠️ Problema Identificado:</h3>
+            <p>Após as alterações, o select de disciplinas mostrava "Carregando disciplinas..." e não carregava as opções</p>
+        </div>
+
+        <div class="test-result success">
+            <h3>✅ Correções Implementadas:</h3>
+            <ul>
+                <li><strong>Nova função específica:</strong> <code>carregarDisciplinasNoSelectPrincipal()</code></li>
+                <li><strong>Carregamento direto:</strong> Carrega disciplinas diretamente no select principal</li>
+                <li><strong>Função global:</strong> <code>forcarCarregamentoDisciplinas()</code> para debug</li>
+                <li><strong>Logs melhorados:</strong> Para facilitar identificação de problemas</li>
+            </ul>
+        </div>
+
+        <div class="test-result info">
+            <h3>🔧 Como Funciona Agora:</h3>
+            
+            <div class="step">
+                <strong>1. Página carrega:</strong>
+                <p>Executa <code>carregarDisciplinasDisponiveis()</code></p>
+            </div>
+
+            <div class="step">
+                <strong>2. API responde:</strong>
+                <p>Recebe lista de disciplinas do banco</p>
+            </div>
+
+            <div class="step">
+                <strong>3. Carrega no select:</strong>
+                <p>Executa <code>carregarDisciplinasNoSelectPrincipal()</code></p>
+            </div>
+
+            <div class="step">
+                <strong>4. Select populado:</strong>
+                <p>Mostra "Selecione a disciplina..." + lista de disciplinas</p>
+            </div>
+        </div>
+
+        <div class="test-result success">
+            <h3>🧪 Como Testar:</h3>
+            
+            <div class="step">
+                <strong>1. Abra o sistema:</strong>
+                <div class="code">admin/?page=turmas-teoricas&acao=nova&step=1</div>
+            </div>
+
+            <div class="step">
+                <strong>2. Verifique o select:</strong>
+                <p>Deve mostrar "Selecione a disciplina..." em vez de "Carregando disciplinas..."</p>
+            </div>
+
+            <div class="step">
+                <strong>3. Clique no select:</strong>
+                <p>Deve mostrar a lista de disciplinas:</p>
+                <ul>
+                    <li>Legislação de Trânsito</li>
+                    <li>Direção Defensiva</li>
+                    <li>Primeiros Socorros</li>
+                    <li>Meio Ambiente e Cidadania</li>
+                    <li>Mecânica Básica</li>
+                    <li>Disciplina Teste</li>
+                </ul>
+            </div>
+
+            <div class="step">
+                <strong>4. Se ainda não funcionar:</strong>
+                <div class="code">
+// No console do navegador:
+forcarCarregamentoDisciplinas()
+                </div>
+            </div>
+        </div>
+
+        <div class="test-result info">
+            <h3>📊 Logs Esperados:</h3>
+            
+            <div class="step">
+                <strong>Carregamento inicial:</strong>
+                <div class="code">
+🔄 Carregando disciplinas disponíveis...
+📡 Resposta da API recebida: 200
+📊 Dados recebidos: {sucesso: true, disciplinas: [...]}
+✅ Disciplinas carregadas: 6
+🔄 Carregando disciplinas no select principal...
+✅ 6 disciplinas carregadas no select principal
+                </div>
+            </div>
+        </div>
+
+        <div class="test-result success">
+            <h3>🎯 Resultado Esperado:</h3>
+            <p><strong>O select deve mostrar a lista de disciplinas em vez de "Carregando disciplinas..."</strong></p>
+            
+            <h4>Comportamento esperado:</h4>
+            <ul>
+                <li>✅ Select mostra "Selecione a disciplina..."</li>
+                <li>✅ Ao clicar, mostra lista de 6 disciplinas</li>
+                <li>✅ Pode selecionar qualquer disciplina</li>
+                <li>✅ Total de horas funciona corretamente (65h)</li>
+            </ul>
+        </div>
+
+        <div class="test-result info">
+            <h3>🔧 Funções de Debug:</h3>
+            <p>Para debug no console:</p>
+            <ul>
+                <li><code>forcarCarregamentoDisciplinas()</code> - Força carregamento</li>
+                <li><code>atualizarTotalHoras()</code> - Atualiza total de horas</li>
+                <li><code>verificarTotalHoras()</code> - Verifica estado do total</li>
+            </ul>
+        </div>
+
+        <div class="test-result success">
+            <h3>✅ Status Final:</h3>
+            <p><strong>O select de disciplinas deve estar funcionando normalmente agora!</strong></p>
+            <p>Se ainda houver problemas, use as funções de debug no console.</p>
+        </div>
+    </div>
+
+    <script>
+        console.log('🔧 Teste - Select Corrigido');
+        console.log('✅ Correções implementadas com sucesso!');
+        console.log('📋 Teste o sistema real agora');
+    </script>
+</body>
+</html>

@@ -766,7 +766,46 @@ class TurmaTeoricaManager {
         try {
             $this->verificarECriarTabelas();
             
-            // Buscar aulas agendadas da turma
+            // Primeiro, tentar obter disciplinas selecionadas pelo usuário
+            $disciplinasSelecionadas = $this->obterDisciplinasSelecionadas($turmaId);
+            
+            if (!empty($disciplinasSelecionadas)) {
+                // Se há disciplinas selecionadas, formatar para o progresso
+                $progresso = [];
+                foreach ($disciplinasSelecionadas as $disc) {
+                    // Buscar aulas agendadas para esta disciplina
+                    $aulasAgendadas = $this->db->fetchAll(
+                        "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND disciplina = ?",
+                        [$turmaId, $disc['disciplina_id']]
+                    );
+                    
+                    $aulasAgendadasCount = $aulasAgendadas[0]['total'] ?? 0;
+                    $aulasObrigatorias = $disc['carga_horaria_padrao'];
+                    $aulasFaltantes = max(0, $aulasObrigatorias - $aulasAgendadasCount);
+                    
+                    // Determinar status da disciplina
+                    $statusDisciplina = 'pendente';
+                    if ($aulasAgendadasCount >= $aulasObrigatorias) {
+                        $statusDisciplina = 'completa';
+                    } elseif ($aulasAgendadasCount > 0) {
+                        $statusDisciplina = 'parcial';
+                    }
+                    
+                    $progresso[] = [
+                        'disciplina' => $disc['disciplina_id'],
+                        'nome_disciplina' => $disc['nome_disciplina'],
+                        'aulas_obrigatorias' => $aulasObrigatorias,
+                        'aulas_agendadas' => $aulasAgendadasCount,
+                        'aulas_faltantes' => $aulasFaltantes,
+                        'status_disciplina' => $statusDisciplina,
+                        'cor_hex' => $disc['cor_hex'],
+                        'ordem' => $disc['ordem']
+                    ];
+                }
+                return $progresso;
+            }
+            
+            // Se não há disciplinas selecionadas, buscar aulas agendadas
             $aulas = $this->db->fetchAll(
                 "SELECT * FROM turma_aulas_agendadas WHERE turma_id = ? ORDER BY ordem_global",
                 [$turmaId]
@@ -1314,6 +1353,100 @@ class TurmaTeoricaManager {
         } catch (Exception $e) {
             // Log silencioso - não interromper o fluxo principal
             error_log("Erro ao registrar log da turma: " . $e->getMessage());
+        }
+    }
+    
+    // ==============================================
+    // MÉTODOS PARA DISCIPLINAS SELECIONADAS PELO USUÁRIO
+    // ==============================================
+    
+    /**
+     * Salvar disciplinas selecionadas pelo usuário para uma turma
+     */
+    public function salvarDisciplinasSelecionadas($turmaId, $disciplinas) {
+        try {
+            // Primeiro, remover disciplinas existentes
+            $this->db->execute("DELETE FROM turmas_disciplinas WHERE turma_id = ?", [$turmaId]);
+            
+            // Inserir novas disciplinas
+            $ordem = 1;
+            foreach ($disciplinas as $disciplina) {
+                $this->db->execute(
+                    "INSERT INTO turmas_disciplinas (turma_id, disciplina_id, nome_disciplina, carga_horaria_padrao, cor_hex, ordem) VALUES (?, ?, ?, ?, ?, ?)",
+                    [
+                        $turmaId,
+                        $disciplina['id'],
+                        $disciplina['nome'],
+                        $disciplina['carga_horaria_padrao'] ?? 10,
+                        $disciplina['cor_hex'] ?? '#007bff',
+                        $ordem++
+                    ]
+                );
+            }
+            
+            return [
+                'sucesso' => true,
+                'mensagem' => 'Disciplinas salvas com sucesso',
+                'total' => count($disciplinas)
+            ];
+            
+        } catch (Exception $e) {
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Erro ao salvar disciplinas: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Obter disciplinas selecionadas pelo usuário para uma turma
+     */
+    public function obterDisciplinasSelecionadas($turmaId) {
+        try {
+            return $this->db->fetchAll(
+                "SELECT td.*, d.nome as nome_original, d.carga_horaria_padrao as carga_original
+                 FROM turmas_disciplinas td
+                 LEFT JOIN disciplinas d ON td.disciplina_id = d.id
+                 WHERE td.turma_id = ?
+                 ORDER BY td.ordem",
+                [$turmaId]
+            );
+        } catch (Exception $e) {
+            return [];
+        }
+    }
+    
+    /**
+     * Obter disciplinas para agendamento (combinando selecionadas pelo usuário e configuração padrão)
+     */
+    public function obterDisciplinasParaAgendamento($turmaId) {
+        try {
+            // Primeiro, tentar obter disciplinas selecionadas pelo usuário
+            $disciplinasSelecionadas = $this->obterDisciplinasSelecionadas($turmaId);
+            
+            if (!empty($disciplinasSelecionadas)) {
+                // Se há disciplinas selecionadas pelo usuário, usar elas
+                return array_map(function($disc) {
+                    return [
+                        'disciplina' => $disc['disciplina_id'],
+                        'nome_disciplina' => $disc['nome_disciplina'],
+                        'aulas_obrigatorias' => $disc['carga_horaria_padrao'],
+                        'cor_hex' => $disc['cor_hex'],
+                        'ordem' => $disc['ordem']
+                    ];
+                }, $disciplinasSelecionadas);
+            }
+            
+            // Se não há disciplinas selecionadas, usar configuração padrão
+            $turma = $this->obterTurma($turmaId);
+            if ($turma['sucesso']) {
+                return $this->obterDisciplinasCurso($turma['dados']['curso_tipo']);
+            }
+            
+            return [];
+            
+        } catch (Exception $e) {
+            return [];
         }
     }
 }

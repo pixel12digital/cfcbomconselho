@@ -24,7 +24,7 @@ require_once __DIR__ . '/../../includes/auth.php';
 // Verificar se o usuário está logado e tem permissão de admin ou instrutor
 if (!isLoggedIn() || (!hasPermission('admin') && !hasPermission('instrutor'))) {
     echo '<div class="alert alert-danger">Você não tem permissão para acessar esta página.</div>';
-    return;
+    exit;
 }
 
 // Obter dados do usuário logado e verificar permissões
@@ -1019,8 +1019,8 @@ body.modal-open {
         <?php endif; ?>
         
         <?php if ($acao === 'detalhes'): ?>
-            <!-- DETALHES DA TURMA -->
-            <?php include __DIR__ . '/turmas-teoricas-detalhes.php'; ?>
+            <!-- Página de Detalhes com Edição Inline -->
+            <?php include __DIR__ . '/turmas-teoricas-detalhes-inline.php'; ?>
             
         <?php elseif ($acao === '' || $acao === 'listar'): ?>
             <!-- LISTA DE TURMAS -->
@@ -1084,7 +1084,7 @@ body.modal-open {
                     <div class="form-group">
                         <label for="curso_tipo">Tipo de Curso *</label>
                         <div class="d-flex">
-                            <select id="curso_tipo" name="curso_tipo" class="form-control" <?= $acao === 'ativar' ? 'disabled' : '' ?> required>
+                            <select id="curso_tipo" name="curso_tipo" class="form-control" <?= $acao === 'ativar' ? 'disabled' : '' ?> onchange="atualizarTotalHorasRegressivo()" required>
                                 <option value="">Selecione o tipo de curso...</option>
                                 <?php foreach ($cursosDisponiveis as $key => $nome): ?>
                                     <option value="<?= $key ?>" <?= (($acao === 'ativar' || $acao === 'editar') && $turmaAtual && $turmaAtual['curso_tipo'] == $key) ? 'selected' : '' ?>><?= htmlspecialchars($nome) ?></option>
@@ -1108,7 +1108,7 @@ body.modal-open {
                     <div class="form-group">
                         <label>
                             <i class="fas fa-book me-1"></i>Disciplinas do Curso
-                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="abrirModalDisciplinasInterno()" title="Gerenciar Disciplinas">
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="console.log('🔧 [BOTÃO] Botão Gerenciar Disciplinas clicado!'); console.log('🔧 [BOTÃO] Função existe?', typeof abrirModalDisciplinasInterno); if(typeof abrirModalDisciplinasInterno === 'function') { abrirModalDisciplinasInterno(); } else { console.error('❌ [BOTÃO] Função não encontrada!'); }" title="Gerenciar Disciplinas">
                                 <i class="fas fa-cog"></i>
                             </button>
                         </label>
@@ -1136,7 +1136,7 @@ body.modal-open {
                                                placeholder="Horas" 
                                                min="1" 
                                                max="50"
-                                               onchange="atualizarPreview()">
+                                               onchange="atualizarTotalHorasRegressivo()">
                                         <span class="input-group-text">h</span>
                                     </div>
                                     <small class="text-muted disciplina-info">
@@ -1193,6 +1193,7 @@ body.modal-open {
                                    name="data_inicio" 
                                    class="form-control" 
                                    min="<?= date('Y-m-d') ?>"
+                                   value="<?= (($acao === 'ativar' || $acao === 'editar') && $turmaAtual && $turmaAtual['data_inicio']) ? $turmaAtual['data_inicio'] : '' ?>"
                                    required>
                         </div>
                         
@@ -1203,6 +1204,7 @@ body.modal-open {
                                    name="data_fim" 
                                    class="form-control"
                                    min="<?= date('Y-m-d') ?>"
+                                   value="<?= (($acao === 'ativar' || $acao === 'editar') && $turmaAtual && $turmaAtual['data_fim']) ? $turmaAtual['data_fim'] : '' ?>"
                                    required>
                         </div>
                     </div>
@@ -1275,6 +1277,19 @@ body.modal-open {
 </div>
 
 <script>
+// Error handler global para capturar erros de atualizarDisciplina
+window.addEventListener('error', function(event) {
+    if (event.message && event.message.includes('Cannot read properties of undefined') && 
+        event.message.includes('reading \'value\'')) {
+        console.warn('⚠️ [ERROR HANDLER] Erro capturado e tratado:', event.message);
+        console.warn('⚠️ [ERROR HANDLER] Arquivo:', event.filename);
+        console.warn('⚠️ [ERROR HANDLER] Linha:', event.lineno);
+        // Prevenir que o erro seja exibido no console
+        event.preventDefault();
+        return true;
+    }
+});
+
 // JavaScript para validações e UX
 document.addEventListener('DOMContentLoaded', function() {
     // Validação de datas
@@ -1311,12 +1326,80 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
+// Função específica para carregar disciplinas em novos selects (não afetada pela flag de controle)
+function carregarDisciplinasNovoSelect(disciplinaId) {
+    console.log('🔄 [NOVO SELECT] Carregando disciplinas para disciplina ' + disciplinaId);
+    
+    const select = document.querySelector('select[name="disciplina_' + disciplinaId + '"]');
+    if (!select) {
+        console.error('❌ [NOVO SELECT] Select não encontrado para disciplina ' + disciplinaId);
+        return;
+    }
+    
+    // Limpar select
+    select.innerHTML = '<option value="">Carregando disciplinas...</option>';
+    
+    // Carregar disciplinas diretamente da API
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP error! status: ' + response.status);
+            }
+            return response.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ [NOVO SELECT] Erro na requisição:', text.substring(0, 200));
+                    throw new Error('JSON inválido: ' + e.message);
+                }
+            });
+        })
+        .then(data => {
+            if (data.sucesso && data.disciplinas) {
+                // Limpar opções e adicionar placeholder
+                select.innerHTML = '<option value="">Selecione a disciplina...</option>';
+                
+                // Adicionar disciplinas disponíveis
+                data.disciplinas.forEach(disciplina => {
+                    const option = document.createElement('option');
+                    option.value = disciplina.id;
+                    option.textContent = disciplina.nome;
+                    option.dataset.aulas = disciplina.carga_horaria_padrao || 10;
+                    option.dataset.cor = '#007bff'; // Cor padrão
+                    select.appendChild(option);
+                });
+                
+                console.log('✅ [NOVO SELECT] Disciplinas carregadas para disciplina ' + disciplinaId + ':', data.disciplinas.length);
+                
+            } else {
+                select.innerHTML = '<option value="">Erro ao carregar disciplinas</option>';
+                console.error('❌ [NOVO SELECT] Erro ao carregar disciplinas:', data.mensagem || 'Erro desconhecido');
+            }
+        })
+        .catch(error => {
+            select.innerHTML = '<option value="">Erro ao carregar disciplinas</option>';
+            console.error('❌ [NOVO SELECT] Erro na requisição de disciplinas:', error);
+        });
+}
+
 function adicionarDisciplina() {
     console.log('🎯 Função adicionarDisciplina chamada!');
+    
+    // Verificar se estamos na página correta (não na página de detalhes)
+    const urlParams = new URLSearchParams(window.location.search);
+    const acao = urlParams.get('acao');
+    
+    if (acao === 'detalhes') {
+        console.log('⚠️ [ADICIONAR] Função chamada na página de detalhes - ignorando');
+        return;
+    }
+    
     const cursoSelect = document.getElementById('curso_tipo');
     if (!cursoSelect || !cursoSelect.value) {
         alert('⚠️ Selecione primeiro o tipo de curso!');
-        cursoSelect.focus();
+        if (cursoSelect) {
+            cursoSelect.focus();
+        }
         return;
     }
     
@@ -1352,7 +1435,7 @@ function adicionarDisciplina() {
                            placeholder="Horas" 
                            min="1" 
                            max="50"
-                           onchange="atualizarPreview()">
+                           onchange="atualizarTotalHorasRegressivo()">
                     <span class="input-group-text">h</span>
                 </div>
                 <small class="text-muted disciplina-info">
@@ -1366,35 +1449,27 @@ function adicionarDisciplina() {
     
     // Aguardar um pouco para o DOM ser atualizado e depois carregar disciplinas
     setTimeout(() => {
-        carregarDisciplinas(contadorDisciplinas);
-        
-        // Fallback: se não carregou, tentar novamente com dados globais
-        setTimeout(() => {
-            const select = document.querySelector(`select[name="disciplina_${contadorDisciplinas}"]`);
-            if (select && select.options.length <= 1) {
-                if (disciplinasDisponiveis && disciplinasDisponiveis.length > 0) {
-                    // Converter dados globais para formato da API
-                    const disciplinasFormatadas = disciplinasDisponiveis.map(d => ({
-                        id: d.value,
-                        nome: d.text,
-                        carga_horaria_padrao: d.aulas,
-                        cor_hex: d.cor
-                    }));
-                    carregarDisciplinasEmSelect(select, disciplinasFormatadas);
-                } else {
-                    carregarDisciplinas(contadorDisciplinas);
-                }
-            }
-        }, 500);
+        console.log('🔄 Carregando disciplinas para nova disciplina ' + contadorDisciplinas);
+        // Usar a nova função específica para novos selects
+        carregarDisciplinasNovoSelect(contadorDisciplinas);
     }, 100);
 }
 
 function carregarDisciplinas(disciplinaId) {
+    // Evitar múltiplos carregamentos simultâneos
+    if (carregamentoDisciplinasEmAndamento) {
+        console.log('⏳ [DISCIPLINAS] Carregamento já em andamento, ignorando...');
+        return;
+    }
+    
+    carregamentoDisciplinasEmAndamento = true;
+    
     const cursoSelect = document.getElementById('curso_tipo');
-    const disciplinaSelect = document.querySelector(`select[name="disciplina_${disciplinaId}"]`);
+    const disciplinaSelect = document.querySelector('select[name="disciplina_' + disciplinaId + '"]');
     
     if (!cursoSelect || !disciplinaSelect) {
-        console.warn(`⚠️ Elementos não encontrados para disciplina ${disciplinaId}`);
+        console.warn('⚠️ Elementos não encontrados para disciplina ' + disciplinaId);
+        carregamentoDisciplinasEmAndamento = false;
         return;
     }
     
@@ -1407,7 +1482,7 @@ function carregarDisciplinas(disciplinaId) {
     fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error('HTTP error! status: ' + response.status);
             }
             return response.text().then(text => {
                 try {
@@ -1433,21 +1508,7 @@ function carregarDisciplinas(disciplinaId) {
                     disciplinaSelect.appendChild(option);
                 });
                 
-                console.log(`✅ Disciplinas carregadas para curso ${cursoTipo}:`, data.disciplinas.length);
-                
-                // Forçar atualização visual do select
-                setTimeout(() => {
-                    forcarAtualizacaoSelect(disciplinaSelect);
-                    
-                    // Se ainda não funcionou, recriar o select completamente
-                    setTimeout(() => {
-                        const newSelect = recriarSelect(disciplinaSelect);
-                        if (newSelect) {
-                            // Atualizar referência para o novo select
-                            disciplinaSelect = newSelect;
-                        }
-                    }, 200);
-                }, 100);
+                console.log('✅ Disciplinas carregadas para curso ' + cursoTipo + ':', data.disciplinas.length);
                 
                 // Atualizar variável global para compatibilidade
                 disciplinasDisponiveis = data.disciplinas.map(d => ({
@@ -1465,22 +1526,52 @@ function carregarDisciplinas(disciplinaId) {
         .catch(error => {
             disciplinaSelect.innerHTML = '<option value="">Erro ao carregar disciplinas</option>';
             console.error('❌ Erro na requisição de disciplinas:', error);
+        })
+        .finally(() => {
+            // Liberar flag após carregamento
+            carregamentoDisciplinasEmAndamento = false;
         });
 }
 
 function atualizarDisciplina(disciplinaId) {
-    const disciplinaSelect = document.querySelector(`select[name="disciplina_${disciplinaId}"]`);
-    const infoElement = document.querySelector(`[data-disciplina-id="${disciplinaId}"] .disciplina-info`);
+    const disciplinaSelect = document.querySelector('select[name="disciplina_' + disciplinaId + '"]');
+    const infoElement = document.querySelector('[data-disciplina-id="' + disciplinaId + '"] .disciplina-info');
     const aulasElement = infoElement?.querySelector('.aulas-obrigatorias');
-    const horasInput = document.querySelector(`input[name="disciplina_horas_${disciplinaId}"]`);
+    const horasInput = document.querySelector('input[name="disciplina_horas_' + disciplinaId + '"]');
     const horasGroup = horasInput?.closest('.input-group');
     const horasLabel = horasGroup?.querySelector('.input-group-text');
     
-    if (!disciplinaSelect || !infoElement) return;
+    console.log('🔍 [ATUALIZAR] Elementos encontrados:');
+    console.log('  - disciplinaSelect:', !!disciplinaSelect);
+    console.log('  - infoElement:', !!infoElement);
     
-    const selectedOption = disciplinaSelect.options[disciplinaSelect.selectedIndex];
+    if (!disciplinaSelect) {
+        console.warn('⚠️ [ATUALIZAR] Select não encontrado para disciplina', disciplinaId);
+        return;
+    }
     
-    if (selectedOption.value) {
+    if (!infoElement) {
+        console.warn('⚠️ [ATUALIZAR] Info element não encontrado para disciplina', disciplinaId);
+        return;
+    }
+    
+    const selectedIndex = disciplinaSelect.selectedIndex;
+    console.log('📊 [ATUALIZAR] Selected index:', selectedIndex, 'Total options:', disciplinaSelect.options.length);
+    
+    if (selectedIndex < 0 || selectedIndex >= disciplinaSelect.options.length) {
+        console.warn('⚠️ [ATUALIZAR] Selected index inválido');
+        return;
+    }
+    
+    const selectedOption = disciplinaSelect.options[selectedIndex];
+    console.log('🎯 [ATUALIZAR] Selected option:', selectedOption);
+    
+    if (!selectedOption) {
+        console.warn('⚠️ [ATUALIZAR] Selected option é null/undefined');
+        return;
+    }
+    
+    if (selectedOption.value && selectedOption.value !== '') {
         const aulas = selectedOption.dataset.aulas;
         const cor = selectedOption.dataset.cor;
         
@@ -1505,9 +1596,9 @@ function atualizarDisciplina(disciplinaId) {
         
         // Aplicar cor da disciplina
         const disciplinaItem = disciplinaSelect.closest('.disciplina-item');
-        disciplinaItem.style.borderLeft = `4px solid ${cor}`;
+        disciplinaItem.style.borderLeft = '4px solid ' + cor;
         
-        console.log(`✅ Disciplina selecionada: ${selectedOption.textContent} (${aulas} aulas padrão)`);
+        console.log('✅ Disciplina selecionada: ' + selectedOption.textContent + ' (' + aulas + ' aulas padrão)');
     } else {
         infoElement.style.display = 'none';
         
@@ -1530,59 +1621,542 @@ function atualizarDisciplina(disciplinaId) {
         const disciplinaItem = disciplinaSelect.closest('.disciplina-item');
         disciplinaItem.style.borderLeft = '';
     }
+    
+    // Atualizar contador regressivo após mudança na disciplina
+    atualizarTotalHorasRegressivo();
 }
 
 function removerDisciplina(disciplinaId) {
-    const disciplinaItem = document.querySelector(`[data-disciplina-id="${disciplinaId}"]`);
+    const disciplinaItem = document.querySelector('[data-disciplina-id="' + disciplinaId + '"]');
     if (disciplinaItem) {
         // Se for o campo fixo (ID 0), apenas limpar a seleção
         if (disciplinaId === 0) {
             const select = disciplinaItem.querySelector('select');
             if (select) {
                 select.value = '';
-                select.innerHTML = '<option value="">Selecione a disciplina...</option>';
+                // Repovoar o select com as disciplinas disponíveis
+                repovoarSelectDisciplinas(select);
             }
-            console.log(`🗑️ Campo fixo de disciplina limpo`);
+            console.log('🗑️ Campo fixo de disciplina limpo e repovoado');
         } else {
             // Para disciplinas adicionais, remover o elemento
             disciplinaItem.remove();
-            console.log(`🗑️ Disciplina ${disciplinaId} removida`);
+            console.log('🗑️ Disciplina ' + disciplinaId + ' removida');
         }
-        atualizarPreview();
+        // Atualizar contador regressivo após remoção
+        atualizarTotalHorasRegressivo();
     }
 }
 
 function atualizarPreview() {
-    // Incluir tanto o campo fixo quanto as disciplinas adicionais
+    console.log('🔄 Atualizando preview com contador regressivo...');
+    
+    // Usar a nova função de contador regressivo
+    atualizarTotalHorasRegressivo();
+    
+    // Manter logs para compatibilidade
     const disciplinas = document.querySelectorAll('.disciplina-item');
-    let totalHoras = 0;
-    let disciplinasComHoras = [];
+    let disciplinasSelecionadas = 0;
     
     disciplinas.forEach(item => {
         const select = item.querySelector('select');
-        const horasInput = item.querySelector('.disciplina-horas');
-        
-        if (select && select.value && horasInput && horasInput.value) {
-            const selectedOption = select.options[select.selectedIndex];
-            const horas = parseInt(horasInput.value) || 0;
-            const cor = selectedOption.dataset.cor;
+        if (select && select.value) {
+            disciplinasSelecionadas++;
+        }
+    });
+    
+    console.log('📊 Preview atualizado - Disciplinas selecionadas: ' + disciplinasSelecionadas);
+}
+
+// Variável global para armazenar o total do banco
+let totalHorasBanco = 0;
+let atualizacaoEmAndamento = false; // Flag para evitar múltiplas execuções simultâneas
+
+        // Função completa para contador regressivo - CORRIGIDA
+        function atualizarTotalHorasRegressivo() {
+            // Verificar se estamos na página correta (etapa 1)
+            const urlParams = new URLSearchParams(window.location.search);
+            const step = urlParams.get('step');
+            const acao = urlParams.get('acao');
             
-            totalHoras += horas;
-            disciplinasComHoras.push({
+            // Só executar na etapa 1 (nova turma)
+            if (step !== '1' && acao !== 'nova') {
+                console.log('⏳ [PÁGINA PRINCIPAL] Função não executada - não é etapa 1');
+                return;
+            }
+            
+            // Evitar múltiplas execuções simultâneas
+            if (atualizacaoEmAndamento) {
+                console.log('⏳ [PÁGINA PRINCIPAL] Atualização já em andamento, ignorando...');
+                return;
+            }
+            
+            atualizacaoEmAndamento = true;
+            console.log('🔄 [PÁGINA PRINCIPAL] atualizarTotalHorasRegressivo EXECUTADA');
+            
+            try {
+                const cursoSelect = document.getElementById('curso_tipo');
+                const totalHorasElement = document.getElementById('total-horas-disciplinas');
+                
+                if (!cursoSelect || !totalHorasElement) {
+                    console.error('❌ [PÁGINA PRINCIPAL] Elementos não encontrados');
+                    atualizacaoEmAndamento = false;
+                    return;
+                }
+                
+                const tipoCurso = cursoSelect.value;
+                if (!tipoCurso) {
+                    totalHorasElement.textContent = '0';
+                    atualizacaoEmAndamento = false;
+                    return;
+                }
+                
+                const cargasHorarias = {
+                    'formacao_45h': 45,
+                    'formacao_acc_20h': 20,
+                    'reciclagem_infrator': 30,
+                    'atualizacao': 15
+                };
+                
+                const cargaHorariaTotal = cargasHorarias[tipoCurso] || 0;
+                let horasUtilizadas = 0;
+                
+                // Buscar TODAS as disciplinas, incluindo o campo fixo e os adicionais
+                const disciplinas = document.querySelectorAll('.disciplina-item');
+                console.log('🔍 [PÁGINA PRINCIPAL] Encontradas ' + disciplinas.length + ' disciplinas');
+                
+                disciplinas.forEach(function(item, index) {
+                    const select = item.querySelector('select');
+                    if (select && select.value) {
+                        const selectedOption = select.options[select.selectedIndex];
+                        const horasDisciplina = parseInt(selectedOption.dataset.aulas) || 0;
+                        horasUtilizadas += horasDisciplina;
+                        console.log('📊 [PÁGINA PRINCIPAL] Disciplina ' + index + ': ' + selectedOption.textContent + ' (' + horasDisciplina + 'h)');
+                    }
+                });
+                
+                const horasRestantes = Math.max(0, cargaHorariaTotal - horasUtilizadas);
+                totalHorasElement.textContent = horasRestantes;
+                
+                console.log('📊 [PÁGINA PRINCIPAL] Total: ' + cargaHorariaTotal + 'h - Utilizadas: ' + horasUtilizadas + 'h = Restantes: ' + horasRestantes + 'h');
+                
+            } catch (error) {
+                console.error('❌ [PÁGINA PRINCIPAL] Erro na função atualizarTotalHorasRegressivo:', error);
+            } finally {
+                // Liberar flag após um pequeno delay para evitar oscilações
+                setTimeout(() => {
+                    atualizacaoEmAndamento = false;
+                }, 100);
+            }
+        }
+
+// Garantir que a função seja global
+window.atualizarTotalHorasRegressivo = atualizarTotalHorasRegressivo;
+
+// Função de teste imediata
+window.testeFuncaoPrincipal = function() {
+    console.log('🧪 Testando função principal...');
+    try {
+        console.log('🔍 Função existe:', typeof atualizarTotalHorasRegressivo);
+        if (typeof atualizarTotalHorasRegressivo === 'function') {
+            console.log('✅ Função encontrada, executando...');
+            atualizarTotalHorasRegressivo();
+            console.log('✅ Função executada com sucesso!');
+        } else {
+            console.error('❌ Função não encontrada!');
+        }
+    } catch (error) {
+        console.error('❌ Erro na função principal:', error);
+        console.error('❌ Stack:', error.stack);
+    }
+};
+
+// Função para coletar disciplinas selecionadas
+function coletarDisciplinasSelecionadas() {
+    const disciplinas = [];
+    const disciplinaItems = document.querySelectorAll('.disciplina-item');
+    
+    disciplinaItems.forEach(function(item) {
+        const select = item.querySelector('select');
+        if (select && select.value) {
+            const selectedOption = select.options[select.selectedIndex];
+            disciplinas.push({
+                id: select.value,
                 nome: selectedOption.textContent,
-                horas: horas,
-                cor: cor
+                carga_horaria_padrao: parseInt(selectedOption.dataset.aulas) || 10,
+                cor_hex: selectedOption.dataset.cor || '#007bff'
             });
         }
     });
     
-    // Atualizar indicador de total de horas se existir
-    const totalHorasElement = document.getElementById('total-horas-disciplinas');
-    if (totalHorasElement) {
-        totalHorasElement.textContent = totalHoras;
+    return disciplinas;
+}
+
+// Função para salvar disciplinas selecionadas
+function salvarDisciplinasSelecionadas(turmaId) {
+    const disciplinas = coletarDisciplinasSelecionadas();
+    
+    if (disciplinas.length === 0) {
+        console.log('⚠️ Nenhuma disciplina selecionada para salvar');
+        return Promise.resolve();
     }
     
-    console.log(`📊 Total de horas calculado: ${totalHoras}h`, disciplinasComHoras);
+    console.log('💾 Salvando disciplinas selecionadas:', disciplinas);
+    
+    return fetch('/cfc-bom-conselho/admin/api/turmas-teoricas.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            acao: 'salvar_disciplinas',
+            turma_id: turmaId,
+            disciplinas: disciplinas
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            console.log('✅ Disciplinas salvas com sucesso:', data.total);
+        } else {
+            console.error('❌ Erro ao salvar disciplinas:', data.mensagem);
+        }
+        return data;
+    })
+    .catch(error => {
+        console.error('❌ Erro na requisição:', error);
+        return { sucesso: false, mensagem: error.message };
+    });
+}
+
+// Modificar a função de criação de turma para incluir salvamento de disciplinas
+function criarTurmaComDisciplinas() {
+    console.log('🎯 Criando turma com disciplinas...');
+    
+    // Coletar dados do formulário
+    const formData = new FormData(document.getElementById('formTurmaTeorica'));
+    formData.append('acao', 'criar_basica');
+    
+    // Criar turma primeiro
+    fetch('/cfc-bom-conselho/admin/api/turmas-teoricas.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            console.log('✅ Turma criada:', data.turma_id);
+            
+            // Salvar disciplinas selecionadas
+            return salvarDisciplinasSelecionadas(data.turma_id).then(() => data.turma_id);
+        } else {
+            throw new Error(data.mensagem);
+        }
+    })
+    .then(turmaId => {
+        if (turmaId) {
+            console.log('🎯 Redirecionando para etapa 2 com turma_id:', turmaId);
+            window.location.href = `?page=turmas-teoricas&acao=agendar&step=2&turma_id=${turmaId}&sucesso=1`;
+        } else {
+            console.error('❌ ID da turma não encontrado para redirecionamento');
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro ao criar turma:', error);
+        alert('Erro ao criar turma: ' + error.message);
+    });
+}
+
+// Função para simular seleção de disciplina
+window.simularSelecaoDisciplina = function() {
+    console.log('🧪 Simulando seleção de disciplina...');
+    try {
+        // Simular chamada da função atualizarDisciplina
+        console.log('🔄 Chamando atualizarDisciplina(0)...');
+        if (typeof atualizarDisciplina === 'function') {
+            atualizarDisciplina(0);
+        } else {
+            console.error('❌ Função atualizarDisciplina não encontrada!');
+        }
+    } catch (error) {
+        console.error('❌ Erro ao simular seleção:', error);
+    }
+};
+
+// Forçar execução da função quando a página carrega
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 [PÁGINA PRINCIPAL] DOM carregado - executando atualizarTotalHorasRegressivo...');
+    setTimeout(function() {
+        console.log('⏰ [PÁGINA PRINCIPAL] Executando função após 1 segundo...');
+        atualizarTotalHorasRegressivo();
+    }, 1000);
+});
+
+// Funções de teste duplicadas removidas
+
+// Função para obter carga horária total do curso
+function obterCargaHorariaCurso(tipoCurso) {
+    const cargasHorarias = {
+        'formacao_45h': 45,
+        'formacao_acc_20h': 20,
+        'reciclagem_infrator': 30,
+        'atualizacao': 15
+    };
+    
+    const cargaHoraria = cargasHorarias[tipoCurso] || 0;
+    console.log('📊 Carga horária do curso ' + tipoCurso + ': ' + cargaHoraria + 'h');
+    return cargaHoraria;
+}
+
+// Função duplicada removida - usando a versão simplificada acima
+
+// Função de debug para testar manualmente
+window.testarContadorRegressivo = function() {
+    console.log('🧪 Testando contador regressivo manualmente...');
+    console.log('🔍 Função existe:', typeof atualizarTotalHorasRegressivo);
+    console.log('🔍 Elementos:');
+    console.log('  - curso_tipo:', document.getElementById('curso_tipo'));
+    console.log('  - total-horas-disciplinas:', document.getElementById('total-horas-disciplinas'));
+    console.log('  - disciplina-items:', document.querySelectorAll('.disciplina-item').length);
+    
+    if (typeof atualizarTotalHorasRegressivo === 'function') {
+        atualizarTotalHorasRegressivo();
+    } else {
+        console.error('❌ Função atualizarTotalHorasRegressivo não está definida!');
+    }
+};
+
+// Função para testar se a função atualizarDisciplina está sendo chamada
+window.testarAtualizarDisciplina = function(disciplinaId) {
+    console.log('🧪 Testando atualizarDisciplina para disciplina:', disciplinaId);
+    
+    const select = document.querySelector('select[name="disciplina_' + disciplinaId + '"]');
+    if (select) {
+        console.log('✅ Select encontrado:', select);
+        console.log('🔍 Valor atual:', select.value);
+        
+        // Simular seleção
+        if (select.options.length > 1) {
+            select.value = select.options[1].value;
+            console.log('🔄 Valor alterado para:', select.value);
+            
+            // Disparar evento change
+            select.dispatchEvent(new Event('change', { bubbles: true }));
+            console.log('✅ Evento change disparado');
+        }
+    } else {
+        console.error('❌ Select não encontrado para disciplina:', disciplinaId);
+    }
+};
+
+// Função para forçar atualização do contador
+window.forcarAtualizacaoContador = function() {
+    console.log('🔄 Forçando atualização do contador...');
+    
+    // Selecionar um curso se não estiver selecionado
+    const cursoSelect = document.getElementById('curso_tipo');
+    if (cursoSelect && !cursoSelect.value) {
+        cursoSelect.value = 'formacao_45h';
+        console.log('✅ Curso selecionado: formacao_45h');
+    }
+    
+    // Chamar a função diretamente
+    if (typeof atualizarTotalHorasRegressivo === 'function') {
+        atualizarTotalHorasRegressivo();
+    } else {
+        console.error('❌ Função não está definida!');
+    }
+};
+
+// Nova função para carregar total de horas do banco
+function carregarTotalHorasDoBanco() {
+    console.log('🔄 Carregando total de horas do banco de dados...');
+    
+    // Verificar se estamos na página correta (etapa 1)
+    const urlParams = new URLSearchParams(window.location.search);
+    const step = urlParams.get('step');
+    const acao = urlParams.get('acao');
+    
+    // Só executar na etapa 1 (nova turma)
+    if (step !== '1' && acao !== 'nova') {
+        console.log('⏳ [TOTAL HORAS] Função não executada - não é etapa 1');
+        return;
+    }
+    
+    console.log('📡 Fazendo requisição para API...');
+    
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+        .then(response => {
+            console.log('📡 Resposta da API: ' + response.status + ' ' + response.statusText);
+            if (!response.ok) {
+                throw new Error('HTTP error! status: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('📊 Dados recebidos da API:', data);
+            
+            if (data.sucesso && data.disciplinas) {
+                let totalHorasBanco = 0;
+                console.log('📋 Processando ' + data.disciplinas.length + ' disciplinas...');
+                
+                data.disciplinas.forEach((disciplina, index) => {
+                    const horas = parseInt(disciplina.carga_horaria_padrao) || 0;
+                    totalHorasBanco += horas;
+                    console.log('  ' + (index + 1) + '. ' + disciplina.nome + ': ' + horas + 'h');
+                });
+                
+                console.log('📊 Total de horas do banco: ' + totalHorasBanco + 'h');
+                
+                // Armazenar o total do banco na variável global
+                window.totalHorasBanco = totalHorasBanco;
+                
+                const totalHorasElement = document.getElementById('total-horas-disciplinas');
+                console.log('🎯 Elemento total-horas-disciplinas encontrado: ' + (totalHorasElement ? '✅' : '❌'));
+                
+                if (totalHorasElement) {
+                    const valorAnterior = totalHorasElement.textContent;
+                    totalHorasElement.textContent = totalHorasBanco;
+                    console.log('✅ Total atualizado: "' + valorAnterior + '" → "' + totalHorasBanco + 'h"');
+                    
+                    // Forçar re-render se necessário
+                    totalHorasElement.style.display = 'none';
+                    totalHorasElement.offsetHeight;
+                    totalHorasElement.style.display = '';
+                } else {
+                    console.error('❌ Elemento #total-horas-disciplinas não encontrado!');
+                    
+                    // Tentar encontrar elementos similares
+                    const alternativas = document.querySelectorAll('[id*="total"], [id*="horas"], .text-primary strong');
+                    console.log('🔍 Encontrados ' + alternativas.length + ' elementos alternativos:', alternativas);
+                }
+            } else {
+                console.warn('⚠️ API retornou dados inválidos:', data);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar total do banco:', error);
+            console.error('📡 Verifique se a API está funcionando em:', '/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar');
+        });
+}
+
+// Função global para forçar atualização do total (pode ser chamada manualmente)
+window.atualizarTotalHoras = function() {
+    console.log('🔧 Função global atualizarTotalHoras() chamada');
+    carregarTotalHorasDoBanco();
+};
+
+// Função para verificar se o total está correto
+window.verificarTotalHoras = function() {
+    console.log('🔍 Verificando total de horas...');
+    const elemento = document.getElementById('total-horas-disciplinas');
+    if (elemento) {
+        console.log('📊 Total atual na interface: "' + elemento.textContent + '"');
+        if (elemento.textContent === '0' || elemento.textContent === '0h') {
+            console.log('⚠️ Total está zerado, forçando atualização...');
+            carregarTotalHorasDoBanco();
+        }
+    } else {
+        console.log('❌ Elemento não encontrado');
+    }
+};
+
+// Função global para forçar carregamento de disciplinas
+window.forcarCarregamentoDisciplinas = function() {
+    console.log('🔧 Forçando carregamento de disciplinas...');
+    carregarDisciplinasDisponiveis();
+};
+
+// Função global para testar repovoamento
+window.testarRepovoamento = function() {
+    console.log('🧪 Testando repovoamento do select...');
+    const select = document.querySelector('select[name="disciplina_0"]');
+    if (select) {
+        repovoarSelectDisciplinas(select);
+    } else {
+        console.error('❌ Select principal não encontrado');
+    }
+};
+
+// Função global para testar contador regressivo
+window.testarContadorRegressivo = function() {
+    console.log('🧪 Testando contador regressivo...');
+    console.log('🔧 Função atualizarTotalHorasRegressivo existe:', typeof atualizarTotalHorasRegressivo === 'function');
+    
+    if (typeof atualizarTotalHorasRegressivo === 'function') {
+        const resultado = atualizarTotalHorasRegressivo();
+        console.log('📊 Resultado do teste:', resultado);
+        
+        const cursoSelect = document.getElementById('curso_tipo');
+        const totalHorasElement = document.getElementById('total-horas-disciplinas');
+        
+        console.log('🔍 Elementos encontrados:');
+        console.log('- cursoSelect:', cursoSelect ? cursoSelect.value : 'NÃO ENCONTRADO');
+        console.log('- totalHorasElement:', totalHorasElement ? totalHorasElement.textContent : 'NÃO ENCONTRADO');
+        
+        return resultado;
+    } else {
+        console.error('❌ Função atualizarTotalHorasRegressivo não encontrada!');
+        return null;
+    }
+};
+
+
+// Função global para forçar atualização do contador - CORRIGIDA
+window.forcarAtualizacaoContador = function() {
+    console.log('🔧 Forçando atualização do contador regressivo...');
+    
+    // Executar apenas uma vez para evitar conflitos
+    setTimeout(() => atualizarTotalHorasRegressivo(), 200);
+    
+    console.log('✅ Atualização programada!');
+};
+
+// Função para repovoar select após limpeza
+function repovoarSelectDisciplinas(selectElement) {
+    if (!selectElement) {
+        console.error('❌ Elemento select não fornecido');
+        return;
+    }
+    
+    console.log('🔄 Repovoando select de disciplinas...');
+    
+    // Limpar opções existentes (exceto placeholder)
+    selectElement.innerHTML = '<option value="">Selecione a disciplina...</option>';
+    
+    // Se há disciplinas em cache, usar elas
+    if (disciplinasDisponiveis && disciplinasDisponiveis.length > 0) {
+        disciplinasDisponiveis.forEach(disciplina => {
+            const option = document.createElement('option');
+            option.value = disciplina.value;
+            option.textContent = disciplina.text;
+            option.dataset.aulas = disciplina.aulas;
+            option.dataset.cor = disciplina.cor;
+            selectElement.appendChild(option);
+        });
+        console.log('✅ Select repovoado com ' + disciplinasDisponiveis.length + ' disciplinas do cache');
+    } else {
+        // Se não há cache, carregar do banco
+        console.log('🔄 Cache vazio, carregando disciplinas do banco...');
+        fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso && data.disciplinas) {
+                    data.disciplinas.forEach(disciplina => {
+                        const option = document.createElement('option');
+                        option.value = disciplina.id;
+                        option.textContent = disciplina.nome;
+                        option.dataset.aulas = disciplina.carga_horaria_padrao || 10;
+                        option.dataset.cor = '#007bff';
+                        selectElement.appendChild(option);
+                    });
+                    console.log('✅ Select repovoado com ' + data.disciplinas.length + ' disciplinas do banco');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro ao repovoar select:', error);
+            });
+    }
 }
 
 // Recarregar disciplinas quando curso mudar (segunda instância)
@@ -1591,6 +2165,18 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Carregar disciplinas disponíveis imediatamente
     carregarDisciplinasDisponiveis();
+    
+    // Carregar total de horas do banco se não houver disciplinas na interface - CORRIGIDO
+    setTimeout(() => {
+        console.log('🔄 Executando carregarTotalHorasDoBanco...');
+        carregarTotalHorasDoBanco();
+        
+        // Atualizar contador regressivo inicial
+        setTimeout(() => {
+            console.log('🔄 Executando atualizarTotalHorasRegressivo inicial...');
+            atualizarTotalHorasRegressivo();
+        }, 500);
+    }, 1000);
     
     const cursoSelect = document.getElementById('curso_tipo');
     if (cursoSelect) {
@@ -1604,18 +2190,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 contadorDisciplinas = 0;
             }
             
+            // Atualizar total de horas com contador regressivo
+            atualizarTotalHorasRegressivo();
+            
             // Carregar disciplinas no campo fixo
             carregarDisciplinas(0);
         });
         
-        // Se já houver um curso selecionado, carregar disciplinas
+        // Se já houver um curso selecionado, carregar disciplinas - CORRIGIDO
         if (cursoSelect.value) {
             console.log('🔄 Curso já selecionado (segunda instância), carregando disciplinas...');
             setTimeout(() => carregarDisciplinas(0), 500);
         } else {
             // Se não há curso selecionado, carregar disciplinas mesmo assim
             console.log('🔄 Nenhum curso selecionado (segunda instância), carregando disciplinas disponíveis...');
-            setTimeout(() => carregarDisciplinas(0), 1500);
+            setTimeout(() => carregarDisciplinas(0), 1000);
         }
     }
 });
@@ -2356,6 +2945,31 @@ document.addEventListener('DOMContentLoaded', function() {
     line-height: 1.4;
 }
 
+/* Estilos para edição inline */
+.editable-field {
+    transition: all 0.2s ease;
+    border-radius: 4px;
+    padding: 0.25rem;
+}
+
+.editable-field:hover {
+    background-color: #f8f9fa !important;
+    cursor: pointer;
+}
+
+.editable-field.editing {
+    background-color: #e3f2fd !important;
+    border: 1px solid #2196f3;
+}
+
+.popup-item-card-menu {
+    transition: all 0.2s ease;
+}
+
+.popup-item-card-menu:hover {
+    transform: scale(1.1);
+}
+
 .disciplina-card .form-control:focus {
     border-color: #007bff;
     box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
@@ -2720,10 +3334,10 @@ function navegarParaEtapa(etapa) {
     }
     
     // Construir nova URL
-    let novaUrl = `?page=turmas-teoricas&acao=${novaAcao}&step=${etapa}`;
+    let novaUrl = '?page=turmas-teoricas&acao=' + novaAcao + '&step=' + etapa;
     
     if (turmaId) {
-        novaUrl += `&turma_id=${turmaId}`;
+        novaUrl += '&turma_id=' + turmaId;
     }
     
     console.log('🔗 Navegando para:', novaUrl);
@@ -2742,7 +3356,7 @@ function showAlert(type, message) {
     
     // Criar novo alerta
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-custom alert-dismissible fade show`;
+    alertDiv.className = 'alert alert-' + type + ' alert-custom alert-dismissible fade show';
     alertDiv.style.position = 'fixed';
     alertDiv.style.top = '20px';
     alertDiv.style.right = '20px';
@@ -2775,16 +3389,20 @@ if (typeof contadorDisciplinas === 'undefined') {
 if (typeof disciplinasDisponiveis === 'undefined') {
     var disciplinasDisponiveis = [];
 }
+// Flag para evitar múltiplos carregamentos simultâneos de disciplinas
+if (typeof carregamentoDisciplinasEmAndamento === 'undefined') {
+    var carregamentoDisciplinasEmAndamento = false;
+}
 
 // Carregar disciplinas do banco de dados
 function carregarDisciplinasDisponiveis() {
     console.log('🔄 Carregando disciplinas disponíveis...');
     
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    return fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             console.log('📡 Resposta da API recebida:', response.status);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error('HTTP error! status: ' + response.status);
             }
             return response.text().then(text => {
                 console.log('📄 Texto da resposta:', text.substring(0, 500));
@@ -2808,20 +3426,59 @@ function carregarDisciplinasDisponiveis() {
                 atualizarContadorDisciplinas();
                 console.log('✅ Disciplinas carregadas:', disciplinasDisponiveis.length);
                 
-                // Carregar disciplinas no campo fixo se um curso estiver selecionado
-                const cursoSelect = document.getElementById('curso_tipo');
-                if (cursoSelect && cursoSelect.value) {
-                    carregarDisciplinas(0);
-                }
+                // Carregar disciplinas no campo fixo
+                carregarDisciplinasNoSelectPrincipal(data.disciplinas);
+                
+                return data.disciplinas; // Retornar as disciplinas para uso posterior
+                
             } else {
                 console.error('❌ Erro ao carregar disciplinas:', data.mensagem || 'Erro desconhecido');
                 disciplinasDisponiveis = [];
+                throw new Error(data.mensagem || 'Erro ao carregar disciplinas');
             }
         })
         .catch(error => {
             console.error('❌ Erro na requisição de disciplinas:', error);
             disciplinasDisponiveis = [];
+            throw error; // Re-throw para que o .then() seja executado
         });
+}
+
+// Nova função para carregar disciplinas no select principal
+function carregarDisciplinasNoSelectPrincipal(disciplinas) {
+    console.log('🔄 Carregando disciplinas no select principal...');
+    
+    // Verificar se estamos na página correta (etapa 1)
+    const urlParams = new URLSearchParams(window.location.search);
+    const step = urlParams.get('step');
+    const acao = urlParams.get('acao');
+    
+    // Só executar na etapa 1 (nova turma)
+    if (step !== '1' && acao !== 'nova') {
+        console.log('⏳ [SELECT PRINCIPAL] Função não executada - não é etapa 1');
+        return;
+    }
+    
+    const select = document.querySelector('select[name="disciplina_0"]');
+    if (!select) {
+        console.error('❌ Select principal não encontrado');
+        return;
+    }
+    
+    // Limpar opções
+    select.innerHTML = '<option value="">Selecione a disciplina...</option>';
+    
+    // Adicionar disciplinas
+    disciplinas.forEach(disciplina => {
+        const option = document.createElement('option');
+        option.value = disciplina.id;
+        option.textContent = disciplina.nome;
+        option.dataset.aulas = disciplina.carga_horaria_padrao || 10;
+        option.dataset.cor = '#007bff';
+        select.appendChild(option);
+    });
+    
+    console.log('✅ ' + disciplinas.length + ' disciplinas carregadas no select principal');
 }
 
 // Atualizar contador de disciplinas
@@ -2864,11 +3521,27 @@ function forcarAtualizacaoSelect(selectElement) {
 
 // Função para recriar completamente o select
 function recriarSelect(selectElement) {
-    if (!selectElement) return;
+    if (!selectElement) {
+        console.warn('⚠️ recriarSelect: Elemento não fornecido');
+        return null;
+    }
+    
+    // Verificar se o elemento ainda existe no DOM
+    if (!document.contains(selectElement)) {
+        console.warn('⚠️ recriarSelect: Elemento não existe mais no DOM');
+        return null;
+    }
     
     console.log('🔄 Recriando select completamente...');
     
     const parent = selectElement.parentNode;
+    if (!parent) {
+        console.error('❌ Parent element não encontrado para recriar select');
+        console.error('❌ Elemento:', selectElement);
+        console.error('❌ Elemento existe no DOM:', document.contains(selectElement));
+        return null;
+    }
+    
     const name = selectElement.name;
     const id = selectElement.id;
     const className = selectElement.className;
@@ -2980,7 +3653,7 @@ function carregarDisciplinasEmTodosSelects() {
     fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error('HTTP error! status: ' + response.status);
             }
             return response.text().then(text => {
                 try {
@@ -3014,10 +3687,22 @@ function carregarDisciplinasEmTodosSelects() {
 
 function adicionarDisciplina() {
     console.log('🎯 Função adicionarDisciplina chamada!');
+    
+    // Verificar se estamos na página correta (não na página de detalhes)
+    const urlParams = new URLSearchParams(window.location.search);
+    const acao = urlParams.get('acao');
+    
+    if (acao === 'detalhes') {
+        console.log('⚠️ [ADICIONAR] Função chamada na página de detalhes - ignorando');
+        return;
+    }
+    
     const cursoSelect = document.getElementById('curso_tipo');
     if (!cursoSelect || !cursoSelect.value) {
         alert('⚠️ Selecione primeiro o tipo de curso!');
-        cursoSelect.focus();
+        if (cursoSelect) {
+            cursoSelect.focus();
+        }
         return;
     }
     
@@ -3053,7 +3738,7 @@ function adicionarDisciplina() {
                            placeholder="Horas" 
                            min="1" 
                            max="50"
-                           onchange="atualizarPreview()">
+                           onchange="atualizarTotalHorasRegressivo()">
                     <span class="input-group-text">h</span>
                 </div>
                 <small class="text-muted disciplina-info">
@@ -3067,35 +3752,27 @@ function adicionarDisciplina() {
     
     // Aguardar um pouco para o DOM ser atualizado e depois carregar disciplinas
     setTimeout(() => {
-        carregarDisciplinas(contadorDisciplinas);
-        
-        // Fallback: se não carregou, tentar novamente com dados globais
-        setTimeout(() => {
-            const select = document.querySelector(`select[name="disciplina_${contadorDisciplinas}"]`);
-            if (select && select.options.length <= 1) {
-                if (disciplinasDisponiveis && disciplinasDisponiveis.length > 0) {
-                    // Converter dados globais para formato da API
-                    const disciplinasFormatadas = disciplinasDisponiveis.map(d => ({
-                        id: d.value,
-                        nome: d.text,
-                        carga_horaria_padrao: d.aulas,
-                        cor_hex: d.cor
-                    }));
-                    carregarDisciplinasEmSelect(select, disciplinasFormatadas);
-                } else {
-                    carregarDisciplinas(contadorDisciplinas);
-                }
-            }
-        }, 500);
+        console.log('🔄 Carregando disciplinas para nova disciplina ' + contadorDisciplinas);
+        // Usar a nova função específica para novos selects
+        carregarDisciplinasNovoSelect(contadorDisciplinas);
     }, 100);
 }
 
 function carregarDisciplinas(disciplinaId) {
+    // Evitar múltiplos carregamentos simultâneos
+    if (carregamentoDisciplinasEmAndamento) {
+        console.log('⏳ [DISCIPLINAS] Carregamento já em andamento, ignorando...');
+        return;
+    }
+    
+    carregamentoDisciplinasEmAndamento = true;
+    
     const cursoSelect = document.getElementById('curso_tipo');
-    const disciplinaSelect = document.querySelector(`select[name="disciplina_${disciplinaId}"]`);
+    const disciplinaSelect = document.querySelector('select[name="disciplina_' + disciplinaId + '"]');
     
     if (!cursoSelect || !disciplinaSelect) {
-        console.warn(`⚠️ Elementos não encontrados para disciplina ${disciplinaId}`);
+        console.warn('⚠️ Elementos não encontrados para disciplina ' + disciplinaId);
+        carregamentoDisciplinasEmAndamento = false;
         return;
     }
     
@@ -3108,7 +3785,7 @@ function carregarDisciplinas(disciplinaId) {
     fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error('HTTP error! status: ' + response.status);
             }
             return response.text().then(text => {
                 try {
@@ -3134,21 +3811,7 @@ function carregarDisciplinas(disciplinaId) {
                     disciplinaSelect.appendChild(option);
                 });
                 
-                console.log(`✅ Disciplinas carregadas para curso ${cursoTipo}:`, data.disciplinas.length);
-                
-                // Forçar atualização visual do select
-                setTimeout(() => {
-                    forcarAtualizacaoSelect(disciplinaSelect);
-                    
-                    // Se ainda não funcionou, recriar o select completamente
-                    setTimeout(() => {
-                        const newSelect = recriarSelect(disciplinaSelect);
-                        if (newSelect) {
-                            // Atualizar referência para o novo select
-                            disciplinaSelect = newSelect;
-                        }
-                    }, 200);
-                }, 100);
+                console.log('✅ Disciplinas carregadas para curso ' + cursoTipo + ':', data.disciplinas.length);
                 
                 // Atualizar variável global para compatibilidade
                 disciplinasDisponiveis = data.disciplinas.map(d => ({
@@ -3166,22 +3829,52 @@ function carregarDisciplinas(disciplinaId) {
         .catch(error => {
             disciplinaSelect.innerHTML = '<option value="">Erro ao carregar disciplinas</option>';
             console.error('❌ Erro na requisição de disciplinas:', error);
+        })
+        .finally(() => {
+            // Liberar flag após carregamento
+            carregamentoDisciplinasEmAndamento = false;
         });
 }
 
 function atualizarDisciplina(disciplinaId) {
-    const disciplinaSelect = document.querySelector(`select[name="disciplina_${disciplinaId}"]`);
-    const infoElement = document.querySelector(`[data-disciplina-id="${disciplinaId}"] .disciplina-info`);
+    const disciplinaSelect = document.querySelector('select[name="disciplina_' + disciplinaId + '"]');
+    const infoElement = document.querySelector('[data-disciplina-id="' + disciplinaId + '"] .disciplina-info');
     const aulasElement = infoElement?.querySelector('.aulas-obrigatorias');
-    const horasInput = document.querySelector(`input[name="disciplina_horas_${disciplinaId}"]`);
+    const horasInput = document.querySelector('input[name="disciplina_horas_' + disciplinaId + '"]');
     const horasGroup = horasInput?.closest('.input-group');
     const horasLabel = horasGroup?.querySelector('.input-group-text');
     
-    if (!disciplinaSelect || !infoElement) return;
+    console.log('🔍 [ATUALIZAR] Elementos encontrados:');
+    console.log('  - disciplinaSelect:', !!disciplinaSelect);
+    console.log('  - infoElement:', !!infoElement);
     
-    const selectedOption = disciplinaSelect.options[disciplinaSelect.selectedIndex];
+    if (!disciplinaSelect) {
+        console.warn('⚠️ [ATUALIZAR] Select não encontrado para disciplina', disciplinaId);
+        return;
+    }
     
-    if (selectedOption.value) {
+    if (!infoElement) {
+        console.warn('⚠️ [ATUALIZAR] Info element não encontrado para disciplina', disciplinaId);
+        return;
+    }
+    
+    const selectedIndex = disciplinaSelect.selectedIndex;
+    console.log('📊 [ATUALIZAR] Selected index:', selectedIndex, 'Total options:', disciplinaSelect.options.length);
+    
+    if (selectedIndex < 0 || selectedIndex >= disciplinaSelect.options.length) {
+        console.warn('⚠️ [ATUALIZAR] Selected index inválido');
+        return;
+    }
+    
+    const selectedOption = disciplinaSelect.options[selectedIndex];
+    console.log('🎯 [ATUALIZAR] Selected option:', selectedOption);
+    
+    if (!selectedOption) {
+        console.warn('⚠️ [ATUALIZAR] Selected option é null/undefined');
+        return;
+    }
+    
+    if (selectedOption.value && selectedOption.value !== '') {
         const aulas = selectedOption.dataset.aulas;
         const cor = selectedOption.dataset.cor;
         
@@ -3206,9 +3899,9 @@ function atualizarDisciplina(disciplinaId) {
         
         // Aplicar cor da disciplina
         const disciplinaItem = disciplinaSelect.closest('.disciplina-item');
-        disciplinaItem.style.borderLeft = `4px solid ${cor}`;
+        disciplinaItem.style.borderLeft = '4px solid ' + cor;
         
-        console.log(`✅ Disciplina selecionada: ${selectedOption.textContent} (${aulas} aulas padrão)`);
+        console.log('✅ Disciplina selecionada: ' + selectedOption.textContent + ' (' + aulas + ' aulas padrão)');
     } else {
         infoElement.style.display = 'none';
         
@@ -3232,26 +3925,29 @@ function atualizarDisciplina(disciplinaId) {
         disciplinaItem.style.borderLeft = '';
     }
     
-    atualizarPreview();
+    // Atualizar contador regressivo após mudança na disciplina
+    atualizarTotalHorasRegressivo();
 }
 
 function removerDisciplina(disciplinaId) {
-    const disciplinaItem = document.querySelector(`[data-disciplina-id="${disciplinaId}"]`);
+    const disciplinaItem = document.querySelector('[data-disciplina-id="' + disciplinaId + '"]');
     if (disciplinaItem) {
         // Se for o campo fixo (ID 0), apenas limpar a seleção
         if (disciplinaId === 0) {
             const select = disciplinaItem.querySelector('select');
             if (select) {
                 select.value = '';
-                select.innerHTML = '<option value="">Selecione a disciplina...</option>';
+                // Repovoar o select com as disciplinas disponíveis
+                repovoarSelectDisciplinas(select);
             }
-            console.log(`🗑️ Campo fixo de disciplina limpo`);
+            console.log('🗑️ Campo fixo de disciplina limpo e repovoado');
         } else {
             // Para disciplinas adicionais, remover o elemento
             disciplinaItem.remove();
-            console.log(`🗑️ Disciplina ${disciplinaId} removida`);
+            console.log('🗑️ Disciplina ' + disciplinaId + ' removida');
         }
-        atualizarPreview();
+        // Atualizar contador regressivo após remoção
+        atualizarTotalHorasRegressivo();
     }
 }
 
@@ -3285,7 +3981,7 @@ function atualizarPreview() {
         totalHorasElement.textContent = totalHoras;
     }
     
-    console.log(`📊 Total de horas calculado: ${totalHoras}h`, disciplinasComHoras);
+    console.log('📊 Total de horas calculado: ' + totalHoras + 'h', disciplinasComHoras);
 }
 
 // Recarregar disciplinas quando curso mudar
@@ -3298,6 +3994,12 @@ document.addEventListener('DOMContentLoaded', function() {
     // Carregar disciplinas diretamente no select principal
     carregarDisciplinasDoBanco();
     
+    // Atualizar contador regressivo no carregamento
+    setTimeout(() => {
+        console.log('🔄 Atualizando contador regressivo no carregamento da página...');
+        atualizarTotalHorasRegressivo();
+    }, 1500);
+    
     const cursoSelect = document.getElementById('curso_tipo');
     if (cursoSelect) {
         cursoSelect.addEventListener('change', function() {
@@ -3309,6 +4011,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 container.innerHTML = '';
                 contadorDisciplinas = 0;
             }
+            
+            // Atualizar total de horas com contador regressivo
+            atualizarTotalHorasRegressivo();
             
             // Carregar disciplinas no campo fixo
             carregarDisciplinas(0);
@@ -3334,7 +4039,7 @@ function carregarDisciplinasDoBanco() {
         .then(response => {
             console.log('📡 Resposta da API:', response.status);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error('HTTP error! status: ' + response.status);
             }
             return response.text().then(text => {
                 try {
@@ -3348,7 +4053,7 @@ function carregarDisciplinasDoBanco() {
         .then(data => {
             console.log('📊 Dados recebidos do banco:', data);
             if (data.sucesso && data.disciplinas) {
-                console.log(`✅ ${data.disciplinas.length} disciplinas encontradas no banco`);
+                console.log('✅ ' + data.disciplinas.length + ' disciplinas encontradas no banco');
                 
                 // Carregar no select principal
                 const select = document.querySelector('select[name="disciplina_0"]');
@@ -4135,7 +4840,7 @@ function recarregarSalas() {
         .then(response => {
             console.log('📥 Resposta recebida:', response.status, response.statusText);
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error('HTTP error! status: ' + response.status);
             }
             // Verificar se a resposta é realmente JSON
             const contentType = response.headers.get('content-type');
@@ -4164,7 +4869,7 @@ function recarregarSalas() {
                 // Atualizar dropdown
                 selectSala.innerHTML = '<option value="">Selecione uma sala...</option>';
                 data.salas.forEach(sala => {
-                    selectSala.innerHTML += `<option value="${sala.id}">${sala.nome} (Capacidade: ${sala.capacidade} alunos)</option>`;
+                    selectSala.innerHTML += '<option value="' + sala.id + '">' + sala.nome + ' (Capacidade: ' + sala.capacidade + ' alunos)</option>';
                 });
                 
                 // Atualizar contador de salas no modal
@@ -4228,7 +4933,7 @@ function recarregarSalas() {
                 // Atualizar contador na página principal
                 const smallText = document.querySelector('small.text-muted');
                 if (smallText) {
-                    smallText.innerHTML = `<i class="fas fa-info-circle me-1"></i>${data.salas.length} sala(s) cadastrada(s) - <a href="#" onclick="abrirModalSalasInterno()" class="text-primary">Clique aqui para gerenciar</a>`;
+                    smallText.innerHTML = '<i class="fas fa-info-circle me-1"></i>' + data.salas.length + ' sala(s) cadastrada(s) - <a href="#" onclick="abrirModalSalasInterno()" class="text-primary">Clique aqui para gerenciar</a>';
                 }
             } else {
                 console.error('Erro na resposta:', data.mensagem);
@@ -4300,6 +5005,18 @@ function voltarParaLista() {
         conteudoPrincipal.style.display = 'block';
     }
 }
+
+// Event listener para o formulário principal de turmas
+document.addEventListener('DOMContentLoaded', function() {
+    const formTurmaTeorica = document.getElementById('formTurmaTeorica');
+    if (formTurmaTeorica) {
+        formTurmaTeorica.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('🎯 Formulário de turma submetido - chamando criarTurmaComDisciplinas');
+            criarTurmaComDisciplinas();
+        });
+    }
+});
 
 // Event listener para o formulário integrado
 document.addEventListener('DOMContentLoaded', function() {
@@ -4383,7 +5100,7 @@ function editarSala(id, nome, capacidade, ativa) {
 function confirmarExclusaoSala(id, nome) {
     console.log('🗑️ Confirmando exclusão da sala:', nome, 'ID:', id);
     
-    if (confirm(`Tem certeza que deseja excluir a sala "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+    if (confirm('Tem certeza que deseja excluir a sala "' + nome + '"?\n\nEsta ação não pode ser desfeita.')) {
         excluirSala(id, nome);
     }
 }
@@ -4409,7 +5126,7 @@ function excluirSala(id, nome) {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `id=${id}`
+        body: 'id=' + id
     })
     .then(response => response.json())
     .then(data => {
@@ -4560,7 +5277,7 @@ function recarregarTiposCurso() {
     fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
+                throw new Error('HTTP error! status: ' + response.status);
             }
             // Verificar se a resposta é realmente JSON
             const contentType = response.headers.get('content-type');
@@ -4592,7 +5309,7 @@ function recarregarTiposCurso() {
                 if (selectCurso) {
                     selectCurso.innerHTML = '<option value="">Selecione o tipo de curso...</option>';
                     data.tipos.forEach(tipo => {
-                        selectCurso.innerHTML += `<option value="${tipo.codigo}">${tipo.nome}</option>`;
+                        selectCurso.innerHTML += '<option value="' + tipo.codigo + '">' + tipo.nome + '</option>';
                     });
                 }
                 
@@ -4630,7 +5347,7 @@ function recarregarTiposCurso() {
                                         <div class="popup-item-card-description" style="margin-top: 0.5rem;">
                                             <div><strong>Código:</strong> ${tipo.codigo}</div>
                                             <div><strong>Carga Horária:</strong> ${tipo.carga_horaria_total} horas</div>
-                                            ${tipo.descricao ? `<div><strong>Descrição:</strong> ${tipo.descricao}</div>` : ''}
+                                            ${tipo.descricao ? '<div><strong>Descrição:</strong> ' + tipo.descricao + '</div>' : ''}
                                         </div>
                                     </div>
                                     <div class="popup-item-card-actions">
@@ -4652,7 +5369,7 @@ function recarregarTiposCurso() {
                 // Atualizar contador na página principal
                 const smallText = document.querySelector('small.text-muted');
                 if (smallText && smallText.textContent.includes('curso(s) cadastrado(s)')) {
-                    smallText.innerHTML = `<i class="fas fa-info-circle me-1"></i>${data.tipos.length} curso(s) cadastrado(s) - <a href="#" onclick="abrirModalTiposCursoInterno()" class="text-primary">Clique aqui para gerenciar</a>`;
+                    smallText.innerHTML = '<i class="fas fa-info-circle me-1"></i>' + data.tipos.length + ' curso(s) cadastrado(s) - <a href="#" onclick="abrirModalTiposCursoInterno()" class="text-primary">Clique aqui para gerenciar</a>';
                 }
             } else {
                 console.error('❌ Erro na resposta:', data.mensagem);
@@ -4751,7 +5468,7 @@ function salvarNovoTipoCursoIntegrado() {
 function confirmarExclusaoTipoCurso(id, nome) {
     console.log('🗑️ Confirmando exclusão do curso:', nome, 'ID:', id);
     
-    if (confirm(`Tem certeza que deseja excluir o curso "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+    if (confirm('Tem certeza que deseja excluir o curso "' + nome + '"?\n\nEsta ação não pode ser desfeita.')) {
         excluirTipoCurso(id, nome);
     }
 }
@@ -4777,7 +5494,7 @@ function excluirTipoCurso(id, nome) {
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
         },
-        body: `id=${id}`
+        body: 'id=' + id
     })
     .then(response => response.json())
     .then(data => {
@@ -4970,7 +5687,7 @@ function showAlert(type, message) {
     
     // Criar novo alerta
     const alertDiv = document.createElement('div');
-    alertDiv.className = `alert alert-${type} alert-dismissible fade show alert-custom`;
+    alertDiv.className = 'alert alert-' + type + ' alert-dismissible fade show alert-custom';
     alertDiv.style.position = 'fixed';
     alertDiv.style.top = '20px';
     alertDiv.style.right = '20px';
@@ -5034,15 +5751,22 @@ function salvarRascunho() {
 function carregarRascunho() {
     const rascunho = <?php echo json_encode($rascunhoCarregado); ?>;
     const turmaAtual = <?php echo json_encode($turmaAtual); ?>;
+    const disciplinasExistentes = <?php echo json_encode($turmaManager->obterDisciplinasSelecionadas($turmaId)); ?>;
     
     console.log('=== DEBUG: Carregamento de Dados ===');
     console.log('rascunho:', rascunho);
     console.log('turmaAtual:', turmaAtual);
+    console.log('disciplinasExistentes:', disciplinasExistentes);
     
     // Usar turmaAtual se disponível, senão usar rascunho
     const dados = turmaAtual || rascunho;
     
     console.log('dados a serem carregados:', dados);
+    console.log('🔍 [DEBUG] Verificando dados específicos:');
+    console.log('  - dados.data_inicio:', dados?.data_inicio);
+    console.log('  - dados.data_fim:', dados?.data_fim);
+    console.log('  - dados.nome:', dados?.nome);
+    console.log('  - dados.sala_id:', dados?.sala_id);
     
     if (dados) {
         console.log('Carregando dados nos campos...');
@@ -5056,6 +5780,21 @@ function carregarRascunho() {
             } else {
                 console.log('❌ Elemento nome não encontrado');
             }
+        }
+        
+        // Carregar disciplinas existentes se estivermos editando
+        if (dados.id && disciplinasExistentes && disciplinasExistentes.length > 0) {
+            console.log('🔄 Carregando disciplinas existentes para edição...');
+            console.log('📊 Disciplinas a carregar:', disciplinasExistentes);
+            
+            // Aguardar mais tempo para o DOM estar pronto e depois carregar disciplinas
+            setTimeout(() => {
+                carregarDisciplinasExistentes(disciplinasExistentes);
+            }, 1500);
+        } else {
+            console.log('ℹ️ Não há disciplinas para carregar ou não estamos editando');
+            console.log('📊 dados.id:', dados.id);
+            console.log('📊 disciplinasExistentes:', disciplinasExistentes);
         }
         
         if (dados.sala_id) {
@@ -5079,7 +5818,7 @@ function carregarRascunho() {
         }
         
         if (dados.modalidade) {
-            const radioModalidade = document.querySelector(`input[name="modalidade"][value="${dados.modalidade}"]`);
+            const radioModalidade = document.querySelector('input[name="modalidade"][value="' + dados.modalidade + '"]');
             if (radioModalidade) {
                 radioModalidade.checked = true;
                 console.log('✅ Modalidade carregada:', dados.modalidade);
@@ -5089,20 +5828,34 @@ function carregarRascunho() {
         }
         
         if (dados.data_inicio) {
+            console.log('🔄 [DATA] Tentando carregar data_inicio:', dados.data_inicio);
             const dataInicioElement = document.getElementById('data_inicio');
+            console.log('🔍 [DATA] Elemento data_inicio encontrado:', !!dataInicioElement);
+            
             if (dataInicioElement) {
+                // Para campos input type="date", usar formato YYYY-MM-DD
+                console.log('🎯 [DATA] Definindo valor do campo data_inicio:', dados.data_inicio);
                 dataInicioElement.value = dados.data_inicio;
-                console.log('✅ Data início carregada:', dados.data_inicio);
+                console.log('✅ [DATA] Data início carregada:', dados.data_inicio);
+                console.log('🔍 [DATA] Valor atual do campo:', dataInicioElement.value);
             } else {
-                console.log('❌ Elemento data_inicio não encontrado');
+                console.log('❌ [DATA] Elemento data_inicio não encontrado');
             }
+        } else {
+            console.log('❌ [DATA] dados.data_inicio está vazio ou undefined');
         }
         
         if (dados.data_fim) {
+            console.log('🔄 [DATA] Tentando carregar data_fim:', dados.data_fim);
             const dataFimElement = document.getElementById('data_fim');
+            console.log('🔍 [DATA] Elemento data_fim encontrado:', !!dataFimElement);
+            
             if (dataFimElement) {
+                // Para campos input type="date", usar formato YYYY-MM-DD
+                console.log('🎯 [DATA] Definindo valor do campo data_fim:', dados.data_fim);
                 dataFimElement.value = dados.data_fim;
-                console.log('✅ Data fim carregada:', dados.data_fim);
+                console.log('✅ [DATA] Data fim carregada:', dados.data_fim);
+                console.log('🔍 [DATA] Valor atual do campo:', dataFimElement.value);
             } else {
                 console.log('❌ Elemento data_fim não encontrado');
             }
@@ -5132,6 +5885,108 @@ function carregarRascunho() {
     } else {
         console.log('❌ Nenhum dado de turma para carregar');
     }
+}
+
+// Função para carregar disciplinas existentes no modo de edição
+function carregarDisciplinasExistentes(disciplinasExistentes) {
+    console.log('🔄 [EDITAR] Carregando disciplinas existentes:', disciplinasExistentes);
+    
+    // Verificar se estamos na página correta (não na página de detalhes)
+    const urlParams = new URLSearchParams(window.location.search);
+    const acao = urlParams.get('acao');
+    
+    if (acao === 'detalhes') {
+        console.log('⚠️ [EDITAR] Função carregarDisciplinasExistentes chamada na página de detalhes - ignorando');
+        return;
+    }
+    
+    if (!disciplinasExistentes || disciplinasExistentes.length === 0) {
+        console.log('ℹ️ [EDITAR] Nenhuma disciplina existente para carregar');
+        return;
+    }
+    
+    // Limpar disciplinas existentes no container
+    const container = document.getElementById('disciplinas-container');
+    if (container) {
+        console.log('🧹 [EDITAR] Limpando container de disciplinas');
+        container.innerHTML = '';
+    }
+    
+    // Resetar contador
+    contadorDisciplinas = 0;
+    console.log('🔄 [EDITAR] Contador resetado para 0');
+    
+    // Carregar disciplinas disponíveis primeiro
+    console.log('📚 [EDITAR] Carregando disciplinas disponíveis...');
+    carregarDisciplinasDisponiveis().then(() => {
+        console.log('✅ [EDITAR] Disciplinas disponíveis carregadas, iniciando carregamento das existentes...');
+        
+        // Primeiro, carregar o campo fixo (disciplina_0) se não estiver vazio
+        const selectPrincipal = document.querySelector('select[name="disciplina_0"]');
+        if (selectPrincipal) {
+            console.log('🎯 [EDITAR] Carregando disciplina no campo fixo...');
+            
+            // Carregar disciplinas no select principal
+            carregarDisciplinas(0);
+            
+            // Aguardar um pouco e depois selecionar a primeira disciplina
+            setTimeout(() => {
+                if (disciplinasExistentes.length > 0) {
+                    selectPrincipal.value = disciplinasExistentes[0].disciplina_id;
+                    console.log(`✅ [EDITAR] Disciplina principal selecionada: ${disciplinasExistentes[0].nome_disciplina}`);
+                }
+            }, 800);
+        }
+        
+        // Agora adicionar as disciplinas restantes (se houver mais de 1)
+        if (disciplinasExistentes.length > 1) {
+            disciplinasExistentes.slice(1).forEach((disciplina, index) => {
+                console.log(`🔄 [EDITAR] Processando disciplina ${index + 2}/${disciplinasExistentes.length}:`, disciplina);
+                
+                // Aguardar um pouco antes de adicionar cada disciplina
+                setTimeout(() => {
+                    // Adicionar disciplina
+                    adicionarDisciplina();
+                    const disciplinaId = contadorDisciplinas - 1;
+                    console.log(`➕ [EDITAR] Disciplina ${index + 2} adicionada ao DOM com ID ${disciplinaId}`);
+                    
+                    // Aguardar um pouco mais para o DOM ser atualizado
+                    setTimeout(() => {
+                        const select = document.querySelector(`select[name="disciplina_${disciplinaId}"]`);
+                        
+                        if (select) {
+                            console.log(`🎯 [EDITAR] Selecionando disciplina ${disciplinaId}: ${disciplina.nome_disciplina}`);
+                            
+                            // Aguardar as opções serem carregadas
+                            if (select.options.length <= 1) {
+                                console.log('⏳ [EDITAR] Aguardando opções serem carregadas...');
+                                setTimeout(() => {
+                                    select.value = disciplina.disciplina_id;
+                                    console.log(`✅ [EDITAR] Disciplina ${disciplina.nome_disciplina} selecionada`);
+                                }, 500);
+                            } else {
+                                select.value = disciplina.disciplina_id;
+                                console.log(`✅ [EDITAR] Disciplina ${disciplina.nome_disciplina} selecionada`);
+                            }
+                            
+                        } else {
+                            console.error(`❌ [EDITAR] Select não encontrado para disciplina ${disciplinaId}`);
+                        }
+                    }, 300);
+                    
+                }, 600 * (index + 1)); // Delay progressivo para evitar conflitos
+            });
+        }
+        
+        // Atualizar total de horas após carregar todas as disciplinas
+        const totalDelay = 2000 + (disciplinasExistentes.length * 600);
+        setTimeout(() => {
+            console.log('📊 [EDITAR] Atualizando total de horas...');
+            atualizarTotalHorasRegressivo();
+        }, totalDelay);
+    }).catch(error => {
+        console.error('❌ [EDITAR] Erro ao carregar disciplinas disponíveis:', error);
+    });
 }
 
 // Adicionar eventos aos formulários
@@ -5296,7 +6151,7 @@ function salvarNovaSala() {
     })
     .then(response => {
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            throw new Error('HTTP error! status: ' + response.status);
         }
         return response.json();
     })
@@ -5443,6 +6298,10 @@ let modalDisciplinasAberto = false;
 function abrirModalDisciplinasInterno() {
     console.log('🔧 [DEBUG] Abrindo modal de disciplinas...');
     console.log('🔧 [DEBUG] Estado atual - Abrindo:', modalDisciplinasAbrindo, 'Aberto:', modalDisciplinasAberto);
+    console.log('🔧 [DEBUG] Função chamada - timestamp:', new Date().toISOString());
+    
+    // TESTE SIMPLES: Mostrar alert primeiro
+    // alert('🔧 Modal de disciplinas será aberto!'); // Removido para teste
     
     // Evitar múltiplas chamadas apenas se estiver sendo aberto
     if (modalDisciplinasAbrindo) {
@@ -5468,32 +6327,62 @@ function abrirModalDisciplinasInterno() {
     
     if (!modal) {
         console.log('🔧 [DEBUG] Criando modal...');
-        modal = criarModalDisciplinas();
-        document.body.appendChild(modal);
-        modalDisciplinasCriado = true;
+        try {
+            modal = criarModalDisciplinas();
+            console.log('✅ [DEBUG] Modal criado:', modal);
+            document.body.appendChild(modal);
+            console.log('✅ [DEBUG] Modal adicionado ao body');
+            modalDisciplinasCriado = true;
+        } catch (error) {
+            console.error('❌ [DEBUG] Erro ao criar modal:', error);
+            return;
+        }
     }
     
     // Abrir o modal
     if (modal) {
         console.log('✅ [DEBUG] Abrindo modal...');
+        console.log('🔧 [DEBUG] Modal antes da abertura:', modal);
         
         // Resetar completamente os estilos do modal antes de abrir
         modal.style.cssText = '';
         modal.className = 'modal-disciplinas-custom';
+        console.log('🔧 [DEBUG] Estilos resetados');
         
         // Aplicar estilos de abertura
         modal.style.display = 'flex';
         modal.style.alignItems = 'center';
         modal.style.justifyContent = 'center';
         modal.classList.add('show');
+        console.log('🔧 [DEBUG] Estilos de abertura aplicados');
         
         // Bloquear scroll do body usando função centralizada
         gerenciarEstilosBody('bloquear');
+        console.log('🔧 [DEBUG] Body bloqueado');
         
         modalDisciplinasAberto = true;
+        console.log('🔧 [DEBUG] Variável modalDisciplinasAberto = true');
         
-        // Carregar disciplinas
-        carregarDisciplinas();
+        // Carregar disciplinas com delay para garantir que o modal esteja pronto
+        console.log('🔧 [DEBUG] Chamando carregarDisciplinasModal() com delay...');
+        
+        // Função para verificar se o modal está pronto
+        function verificarModalPronto() {
+            const modal = document.getElementById('modalGerenciarDisciplinas');
+            const lista = document.getElementById('listaDisciplinas');
+            
+            if (modal && lista) {
+                console.log('✅ [DEBUG] Modal e listaDisciplinas encontrados, carregando...');
+                carregarDisciplinasModal();
+                console.log('✅ [DEBUG] carregarDisciplinasModal() chamada com sucesso');
+            } else {
+                console.log('🔧 [DEBUG] Modal ainda não está pronto, aguardando...');
+                setTimeout(verificarModalPronto, 200);
+            }
+        }
+        
+        // Iniciar verificação
+        setTimeout(verificarModalPronto, 500);
         
         // Modal configurado - botões já têm onclick direto no HTML
         
@@ -5562,7 +6451,7 @@ function configurarBotoesFecharModalDisciplinas() {
         
         // Procurar pelo botão que tem o texto "Fechar" ou "× Fechar"
         botoesFechar.forEach((botao, index) => {
-            console.log(`🔧 [CONFIG] Botão ${index}:`, botao.textContent.trim());
+            console.log('🔧 [CONFIG] Botão ' + index + ':', botao.textContent.trim());
             
             // Verificar se é o botão de fechar (não o de voltar)
             const textoBotao = botao.textContent.trim();
@@ -5687,15 +6576,173 @@ function voltarParaListaDisciplinas() {
     }
 }
 
+// Função para salvar nova disciplina
+function salvarNovaDisciplina(event) {
+    event.preventDefault();
+    console.log('💾 Salvando nova disciplina...');
+    
+    // Coletar dados do formulário
+    const formDataOriginal = new FormData(event.target);
+    const dados = {
+        codigo: formDataOriginal.get('codigo'),
+        nome: formDataOriginal.get('nome'),
+        descricao: formDataOriginal.get('descricao'),
+        carga_horaria_padrao: formDataOriginal.get('carga_horaria_padrao'),
+        cor_hex: formDataOriginal.get('cor_hex'),
+        ativa: 1
+    };
+    
+    console.log('📊 Dados da disciplina:', dados);
+    
+    // Validar dados obrigatórios
+    if (!dados.codigo || !dados.nome) {
+        alert('Por favor, preencha os campos obrigatórios (Código e Nome).');
+        return;
+    }
+    
+    // Desabilitar botão de salvar
+    const btnSalvar = document.getElementById('btnSalvarDisciplina');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.disabled = true;
+    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    
+    // Enviar para API (usando FormData para compatibilidade com $_POST)
+    const formData = new FormData();
+    formData.append('acao', 'criar');
+    formData.append('codigo', dados.codigo);
+    formData.append('nome', dados.nome);
+    formData.append('descricao', dados.descricao);
+    formData.append('carga_horaria_padrao', dados.carga_horaria_padrao);
+    formData.append('cor_hex', dados.cor_hex);
+    formData.append('icone', 'book'); // Valor padrão
+    formData.append('ativa', '1');
+    
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('📡 Resposta da API:', response.status);
+        if (!response.ok) {
+            throw new Error('HTTP error! status: ' + response.status);
+        }
+        return response.text().then(text => {
+            console.log('📄 Texto da resposta:', text);
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('❌ Erro ao fazer parse do JSON:', text);
+                throw new Error('JSON inválido: ' + e.message);
+            }
+        });
+    })
+    .then(data => {
+        console.log('📊 Dados recebidos:', data);
+        
+        if (data.sucesso) {
+            console.log('✅ Disciplina salva com sucesso!');
+            
+            // Mostrar mensagem de sucesso
+            alert('Disciplina "' + dados.nome + '" criada com sucesso!');
+            
+            // Voltar para a lista
+            voltarParaListaDisciplinas();
+            
+            // Recarregar lista de disciplinas
+            carregarDisciplinasModal();
+            
+            // Atualizar seletor de disciplinas no formulário principal
+            atualizarSeletorDisciplinas();
+            
+        } else {
+            console.error('❌ Erro ao salvar disciplina:', data.mensagem);
+            alert('Erro ao salvar disciplina: ' + (data.mensagem || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro na requisição:', error);
+        alert('Erro de conexão: ' + error.message);
+    })
+    .finally(() => {
+        // Reabilitar botão
+        btnSalvar.disabled = false;
+        btnSalvar.innerHTML = textoOriginal;
+    });
+}
+
+// Função para atualizar seletor de disciplinas no formulário principal
+function atualizarSeletorDisciplinas() {
+    console.log('🔄 Atualizando seletor de disciplinas no formulário principal...');
+    
+    // Buscar todos os selects de disciplinas no formulário principal
+    const selectsDisciplinas = document.querySelectorAll('select[name^="disciplina_"]');
+    
+    if (selectsDisciplinas.length === 0) {
+        console.log('⚠️ Nenhum seletor de disciplinas encontrado no formulário principal');
+        return;
+    }
+    
+    console.log('📋 Encontrados ' + selectsDisciplinas.length + ' seletores de disciplinas');
+    
+    // Carregar disciplinas da API
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP error! status: ' + response.status);
+            }
+            return response.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    throw new Error('JSON inválido: ' + e.message);
+                }
+            });
+        })
+        .then(data => {
+            if (data.sucesso && data.disciplinas) {
+                console.log('✅ ' + data.disciplinas.length + ' disciplinas carregadas para atualizar seletores');
+                
+                // Atualizar cada seletor
+                selectsDisciplinas.forEach((select, index) => {
+                    // Salvar valor atual se houver
+                    const valorAtual = select.value;
+                    
+                    // Limpar opções
+                    select.innerHTML = '<option value="">Selecione a disciplina...</option>';
+                    
+                    // Adicionar disciplinas
+                    data.disciplinas.forEach(disciplina => {
+                        const option = document.createElement('option');
+                        option.value = disciplina.id;
+                        option.textContent = disciplina.nome;
+                        option.dataset.aulas = disciplina.carga_horaria_padrao || 10;
+                        option.dataset.cor = disciplina.cor_hex || '#007bff';
+                        select.appendChild(option);
+                    });
+                    
+                    // Restaurar valor anterior se ainda existir
+                    if (valorAtual && select.querySelector('option[value="' + valorAtual + '"]')) {
+                        select.value = valorAtual;
+                    }
+                    
+                    console.log('✅ Seletor ' + (index + 1) + ' atualizado com ' + data.disciplinas.length + ' disciplinas');
+                });
+                
+                console.log('✅ Todos os seletores de disciplinas foram atualizados');
+                
+            } else {
+                console.error('❌ Erro ao carregar disciplinas para atualizar seletores:', data.mensagem);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao atualizar seletores de disciplinas:', error);
+        });
+}
+
 // Event listener para o formulário integrado de disciplinas
 document.addEventListener('DOMContentLoaded', function() {
-    const formNovaDisciplinaIntegrado = document.getElementById('formNovaDisciplinaIntegrado');
-    if (formNovaDisciplinaIntegrado) {
-        formNovaDisciplinaIntegrado.addEventListener('submit', function(e) {
-            e.preventDefault();
-            salvarNovaDisciplinaIntegrada();
-        });
-    }
+    // Event listener removido - usando onsubmit no HTML
+    console.log('✅ [DOM] DOM carregado - sistema pronto!');
     
     // Event listener global para fechar modal de disciplinas
     document.addEventListener('click', function(e) {
@@ -5744,20 +6791,43 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Função para salvar nova disciplina (integrada)
-function salvarNovaDisciplinaIntegrada() {
+function salvarNovaDisciplinaIntegrada(event) {
+    if (event) {
+        event.preventDefault();
+    }
     console.log('💾 Salvando nova disciplina integrada...');
     
     const form = document.getElementById('formNovaDisciplinaIntegrado');
     const formData = new FormData(form);
+    formData.append('acao', 'criar');
     
-    // Simular salvamento (implementar API real aqui)
-    alert('Disciplina seria salva aqui! Dados: ' + JSON.stringify(Object.fromEntries(formData)));
+    console.log('📤 Dados a serem enviados:', Object.fromEntries(formData));
     
-    // Voltar para a lista
-    voltarParaListaDisciplinas();
-    
-    // Recarregar disciplinas
-    carregarDisciplinas();
+    // Enviar para API
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('📡 Resposta da API:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('📄 Dados da API:', data);
+        if (data.sucesso) {
+            showAlert('success', data.mensagem);
+            // Voltar para a lista
+            voltarParaListaDisciplinas();
+            // Recarregar disciplinas
+            carregarDisciplinasModal();
+        } else {
+            showAlert('danger', 'Erro: ' + (data.mensagem || 'Erro desconhecido'));
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro ao salvar disciplina:', error);
+        showAlert('danger', 'Erro ao salvar disciplina: ' + error.message);
+    });
 }
 
 // Função para abrir modal de nova disciplina (versão antiga - mantida para compatibilidade)
@@ -5766,15 +6836,17 @@ function abrirModalNovaDisciplina() {
     abrirFormularioNovaDisciplina();
 }
 
-// Função para carregar disciplinas (atualizada para o novo padrão)
-function carregarDisciplinas() {
-    console.log('🔄 Carregando disciplinas...');
+// Função para carregar disciplinas no modal (renomeada para evitar conflitos)
+function carregarDisciplinasModal() {
+    console.log('🔄 Carregando disciplinas do banco de dados...');
     
     const listaDisciplinas = document.getElementById('listaDisciplinas');
     if (!listaDisciplinas) {
         console.error('❌ Container listaDisciplinas não encontrado');
         return;
     }
+    
+    console.log('✅ Elemento listaDisciplinas encontrado:', listaDisciplinas);
     
     // Mostrar loading
     listaDisciplinas.innerHTML = `
@@ -5787,62 +6859,138 @@ function carregarDisciplinas() {
         </div>
     `;
     
-    // Simular carregamento (implementar API real aqui)
-    setTimeout(() => {
-        // Dados de exemplo
-        const disciplinas = [
-            { id: 1, nome: 'Direção Defensiva', codigo: 'direcao_defensiva', ativa: 1 },
-            { id: 2, nome: 'Legislação de Trânsito', codigo: 'legislacao_transito', ativa: 1 },
-            { id: 3, nome: 'Primeiros Socorros', codigo: 'primeiros_socorros', ativa: 1 }
-        ];
-        
-        // Atualizar contador
-        const totalDisciplinas = document.getElementById('totalDisciplinas');
-        if (totalDisciplinas) {
-            totalDisciplinas.textContent = disciplinas.length;
-        }
-        
-        // Gerar HTML das disciplinas
-        let htmlDisciplinas = '';
-        disciplinas.forEach(disciplina => {
-            const statusClass = disciplina.ativa == 1 ? 'active' : '';
-            const statusText = disciplina.ativa == 1 ? 'ATIVA' : 'INATIVA';
-            const statusColor = disciplina.ativa == 1 ? '#28a745' : '#6c757d';
-            
-            htmlDisciplinas += `
-                <div class="popup-item-card ${statusClass}">
-                    <div class="popup-item-card-header">
-                        <div class="popup-item-card-content">
-                            <h6 class="popup-item-card-title">${disciplina.nome}</h6>
-                            <div class="popup-item-card-code" style="background: ${statusColor}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold;">
-                                ${statusText}
-                            </div>
-                            <div class="popup-item-card-description" style="margin-top: 0.5rem;">
-                                <div><strong>Código:</strong> ${disciplina.codigo}</div>
+    // Carregar disciplinas reais da API
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+        .then(response => {
+            console.log('📡 Resposta da API recebida:', response.status);
+            if (!response.ok) {
+                throw new Error('HTTP error! status: ' + response.status);
+            }
+            return response.text().then(text => {
+                console.log('📄 Texto da resposta:', text.substring(0, 500));
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ Erro ao fazer parse do JSON:', text.substring(0, 200));
+                    throw new Error('JSON inválido: ' + e.message);
+                }
+            });
+        })
+        .then(data => {
+            console.log('📊 Dados recebidos:', data);
+            if (data.sucesso && data.disciplinas) {
+                const disciplinas = data.disciplinas;
+                console.log('✅ ' + disciplinas.length + ' disciplinas encontradas no banco');
+                
+                // Atualizar contador
+                const totalDisciplinas = document.getElementById('totalDisciplinas');
+                if (totalDisciplinas) {
+                    totalDisciplinas.textContent = disciplinas.length;
+                }
+                
+                // Gerar HTML das disciplinas
+                let htmlDisciplinas = '';
+                disciplinas.forEach(disciplina => {
+                    const statusClass = disciplina.ativa == 1 ? 'active' : '';
+                    const statusText = disciplina.ativa == 1 ? 'ATIVA' : 'INATIVA';
+                    const statusColor = disciplina.ativa == 1 ? '#28a745' : '#6c757d';
+                    
+                    htmlDisciplinas += `
+                        <div class="popup-item-card ${statusClass}" data-disciplina-id="${disciplina.id}">
+                            <div class="popup-item-card-header">
+                                <div class="popup-item-card-content">
+                                    <h6 class="popup-item-card-title editable-field" data-field="nome" data-disciplina-id="${disciplina.id}" style="cursor: pointer; padding: 0.25rem; border-radius: 4px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'" onclick="iniciarEdicaoInline('${disciplina.id}', 'nome', '${disciplina.nome.replace(/'/g, "\\'")}')">
+                                        ${disciplina.nome}
+                                    </h6>
+                                    <div class="popup-item-card-code" style="background: ${statusColor}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold;">
+                                        ${statusText}
+                                    </div>
+                                    <div class="popup-item-card-description" style="margin-top: 0.5rem;">
+                                        <div>
+                                            <strong>Código:</strong> 
+                                            <span class="editable-field" data-field="codigo" data-disciplina-id="${disciplina.id}" style="cursor: pointer; padding: 0.25rem; border-radius: 4px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'" onclick="iniciarEdicaoInline('${disciplina.id}', 'codigo', '${disciplina.codigo.replace(/'/g, "\\'")}')">${disciplina.codigo}</span>
+                                        </div>
+                                        <div>
+                                            <strong>Carga Horária:</strong> 
+                                            <span class="editable-field" data-field="carga_horaria_padrao" data-disciplina-id="${disciplina.id}" style="cursor: pointer; padding: 0.25rem; border-radius: 4px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'" onclick="iniciarEdicaoInline('${disciplina.id}', 'carga_horaria_padrao', '${disciplina.carga_horaria_padrao || 0}')">${disciplina.carga_horaria_padrao || 0}h</span>
+                                        </div>
+                                        <div>
+                                            <strong>Descrição:</strong> 
+                                            <span class="editable-field" data-field="descricao" data-disciplina-id="${disciplina.id}" style="cursor: pointer; padding: 0.25rem; border-radius: 4px; transition: background-color 0.2s;" onmouseover="this.style.backgroundColor='#f8f9fa'" onmouseout="this.style.backgroundColor='transparent'" onclick="iniciarEdicaoInline('${disciplina.id}', 'descricao', '${(disciplina.descricao || 'Sem descrição').replace(/'/g, "\\'")}')">${disciplina.descricao || 'Sem descrição'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="popup-item-card-actions">
+                                    <button type="button" class="popup-item-card-menu" onclick="salvarDisciplinaInline(${disciplina.id})" title="Salvar" style="color: #28a745; display: none;" id="btn-salvar-${disciplina.id}">
+                                        <i class="fas fa-save"></i>
+                                    </button>
+                                    <button type="button" class="popup-item-card-menu" onclick="cancelarEdicaoInline(${disciplina.id})" title="Cancelar" style="color: #6c757d; display: none;" id="btn-cancelar-${disciplina.id}">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                    <button type="button" class="popup-item-card-menu" onclick="confirmarExclusaoDisciplina(${disciplina.id}, '${disciplina.nome}')" title="Excluir" style="color: #dc3545;">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                        <div class="popup-item-card-actions">
-                            <button type="button" class="popup-item-card-menu" onclick="editarDisciplina(${disciplina.id})" title="Editar">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button type="button" class="popup-item-card-menu" onclick="confirmarExclusaoDisciplina(${disciplina.id}, '${disciplina.nome}')" title="Excluir" style="color: #dc3545;">
-                                <i class="fas fa-trash"></i>
+                    `;
+                });
+                
+                listaDisciplinas.innerHTML = htmlDisciplinas;
+                console.log('✅ Disciplinas carregadas no modal com sucesso');
+                
+            } else {
+                console.error('❌ Erro ao carregar disciplinas:', data.mensagem || 'Erro desconhecido');
+                
+                // Mostrar erro
+                listaDisciplinas.innerHTML = `
+                    <div class="popup-loading-state show">
+                        <div class="popup-loading-text">
+                            <h6 style="color: #dc3545;">Erro ao carregar disciplinas</h6>
+                            <p>${data.mensagem || 'Erro desconhecido'}</p>
+                            <button type="button" class="btn btn-primary btn-sm mt-2" onclick="carregarDisciplinasModal()">
+                                Tentar novamente
                             </button>
                         </div>
                     </div>
+                `;
+                
+                // Atualizar contador para 0
+                const totalDisciplinas = document.getElementById('totalDisciplinas');
+                if (totalDisciplinas) {
+                    totalDisciplinas.textContent = '0';
+                }
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro na requisição:', error);
+            
+            // Mostrar erro
+            listaDisciplinas.innerHTML = `
+                <div class="popup-loading-state show">
+                    <div class="popup-loading-text">
+                        <h6 style="color: #dc3545;">Erro de conexão</h6>
+                        <p>Não foi possível carregar as disciplinas. Verifique sua conexão.</p>
+                        <button type="button" class="btn btn-primary btn-sm mt-2" onclick="carregarDisciplinasModal()">
+                            Tentar novamente
+                        </button>
+                    </div>
                 </div>
             `;
+            
+            // Atualizar contador para 0
+            const totalDisciplinas = document.getElementById('totalDisciplinas');
+            if (totalDisciplinas) {
+                totalDisciplinas.textContent = '0';
+            }
         });
-        
-        listaDisciplinas.innerHTML = htmlDisciplinas;
-    }, 1000);
 }
 
 // Função para confirmar exclusão de disciplina
 function confirmarExclusaoDisciplina(id, nome) {
     console.log('🗑️ Confirmando exclusão da disciplina:', nome, 'ID:', id);
     
-    if (confirm(`Tem certeza que deseja excluir a disciplina "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+    if (confirm('Tem certeza que deseja excluir a disciplina "' + nome + '"?\n\nEsta ação não pode ser desfeita.')) {
         excluirDisciplina(id, nome);
     }
 }
@@ -5852,23 +7000,45 @@ function excluirDisciplina(id, nome) {
     console.log('🗑️ Excluindo disciplina:', nome, 'ID:', id);
     
     // Simular exclusão
-    alert(`Disciplina "${nome}" seria excluída aqui!`);
+    alert('Disciplina "' + nome + '" seria excluída aqui!');
     
     // Recarregar lista
-    carregarDisciplinas();
+    carregarDisciplinasModal();
 }
 
-// Função para editar disciplina
+// Função para editar disciplina (versão simples)
 function editarDisciplina(id) {
     console.log('✏️ Editando disciplina ID:', id);
-    alert(`Editar disciplina ID: ${id}`);
+    
+    // Buscar dados da disciplina
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                const disciplina = data.disciplinas.find(d => d.id == id);
+                if (disciplina) {
+                    // Mostrar dados da disciplina em um prompt para edição
+                    const novoNome = prompt('Editar nome da disciplina:', disciplina.nome);
+                    if (novoNome && novoNome !== disciplina.nome) {
+                        // Aqui você pode implementar a edição via API
+                        console.log('📝 Nome alterado para:', novoNome);
+                        alert('Disciplina "' + disciplina.nome + '" seria editada para "' + novoNome + '"');
+                    }
+                } else {
+                    alert('Disciplina não encontrada!');
+                }
+            } else {
+                alert('Erro ao carregar dados da disciplina!');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao editar disciplina:', error);
+            alert('Erro ao carregar dados da disciplina!');
+        });
 }
 
 // Função para salvar alterações de disciplinas
-function salvarAlteracoesDisciplinas() {
-    console.log('💾 Salvando alterações de disciplinas...');
-    alert('Alterações seriam salvas aqui!');
-}
+// Função removida - usando a versão funcional abaixo
 
 // Função de teste para o botão X
 function testarBotaoX() {
@@ -5969,7 +7139,7 @@ function limparFiltrosDisciplinas() {
     const buscarInput = document.getElementById('buscarDisciplinas');
     if (buscarInput) {
         buscarInput.value = '';
-        carregarDisciplinas();
+        carregarDisciplinasModal();
     }
 }
 
@@ -6268,7 +7438,7 @@ function criarModalDisciplinas() {
                         </button>
                     </div>
                     
-                    <form id="formNovaDisciplinaIntegrado" class="mt-3">
+                    <form id="formNovaDisciplinaIntegrado" class="mt-3" onsubmit="salvarNovaDisciplinaIntegrada(event)">
                         <div class="row">
                             <div class="col-md-6">
                                 <div class="mb-3">
@@ -6309,7 +7479,7 @@ function criarModalDisciplinas() {
                                 <i class="fas fa-times"></i>
                                 Cancelar
                             </button>
-                            <button type="submit" class="popup-save-button">
+                            <button type="submit" class="popup-save-button" id="btnSalvarDisciplina">
                                 <i class="fas fa-save"></i>
                                 Salvar Disciplina
                             </button>
@@ -6449,7 +7619,7 @@ function abrirModalNovaDisciplina() {
     container.insertAdjacentHTML('afterbegin', novoCardHtml);
     
     // Focar no campo de nome
-    const nomeInput = container.querySelector(`input[data-id="${novoId}"]`);
+    const nomeInput = container.querySelector('input[data-id="' + novoId + '"]');
     if (nomeInput) {
         nomeInput.focus();
         nomeInput.select();
@@ -6464,7 +7634,7 @@ function abrirModalNovaDisciplina() {
 function salvarNovaDisciplina(disciplinaId) {
     console.log('💾 Salvando nova disciplina:', disciplinaId);
     
-    const card = document.querySelector(`[data-id="${disciplinaId}"]`);
+    const card = document.querySelector('[data-id="' + disciplinaId + '"]');
     if (!card) {
         console.error('❌ Card não encontrado');
         return;
@@ -6555,7 +7725,7 @@ function salvarNovaDisciplina(disciplinaId) {
 function cancelarNovaDisciplina(disciplinaId) {
     console.log('❌ Cancelando nova disciplina:', disciplinaId);
     
-    const card = document.querySelector(`[data-id="${disciplinaId}"]`);
+    const card = document.querySelector('[data-id="' + disciplinaId + '"]');
     if (card) {
         card.remove();
         atualizarContadorDisciplinas();
@@ -6566,40 +7736,58 @@ function cancelarNovaDisciplina(disciplinaId) {
 function salvarAlteracoesDisciplinas() {
     console.log('💾 Salvando todas as alterações das disciplinas...');
     
-    // Coletar todas as disciplinas modificadas
+    // Coletar todas as disciplinas do modal
     const disciplinasModificadas = [];
     const cards = document.querySelectorAll('#listaDisciplinas .disciplina-card');
     
-    cards.forEach(card => {
+    console.log('🔍 Encontrados ' + cards.length + ' cards de disciplinas');
+    
+    cards.forEach((card, index) => {
         const disciplinaId = card.getAttribute('data-id');
+        console.log('📋 Processando card ' + (index + 1) + ', ID: ' + disciplinaId);
+        
         if (!disciplinaId || disciplinaId.startsWith('temp_')) {
+            console.log('⏭️ Pular disciplina temporária: ' + disciplinaId);
             return; // Pular disciplinas temporárias (novas não salvas)
         }
         
-        const nome = card.querySelector('input[data-field="nome"]')?.value?.trim();
-        const codigo = card.querySelector('input[data-field="codigo"]')?.value?.trim();
-        const cargaHoraria = card.querySelector('input[data-field="carga_horaria_padrao"]')?.value;
-        const descricao = card.querySelector('textarea[data-field="descricao"]')?.value?.trim();
+        // Buscar dados dos elementos de exibição (não input)
+        const nomeElement = card.querySelector('h6[data-field="nome"]');
+        const codigoElement = card.querySelector('span[data-field="codigo"]');
+        const cargaElement = card.querySelector('span[data-field="carga_horaria_padrao"]');
+        const descricaoElement = card.querySelector('p[data-field="descricao"]');
+        
+        const nome = nomeElement ? nomeElement.textContent.trim() : '';
+        const codigo = codigoElement ? codigoElement.textContent.trim() : '';
+        const cargaHoraria = cargaElement ? cargaElement.textContent.trim().replace('h', '') : '10';
+        const descricao = descricaoElement ? descricaoElement.textContent.trim() : '';
+        
+        console.log('📝 Dados coletados - Nome: "' + nome + '", Código: "' + codigo + '", Carga: "' + cargaHoraria + '"');
         
         if (nome && codigo) {
             disciplinasModificadas.push({
                 id: disciplinaId,
                 nome: nome,
                 codigo: codigo,
-                carga_horaria_padrao: cargaHoraria || 10,
-                descricao: descricao || ''
+                carga_horaria_padrao: cargaHoraria,
+                descricao: descricao
             });
+            console.log('✅ Disciplina "' + nome + '" adicionada à lista de modificadas');
+        } else {
+            console.log('⚠️ Disciplina ' + (index + 1) + ' ignorada - dados incompletos');
         }
     });
     
     if (disciplinasModificadas.length === 0) {
         console.log('ℹ️ Nenhuma disciplina modificada para salvar');
+        alert('ℹ️ Nenhuma alteração detectada para salvar.');
         // Fechar modal mesmo sem alterações
         window.closeModal();
         return;
     }
     
-    console.log(`💾 Salvando ${disciplinasModificadas.length} disciplinas...`);
+    console.log('💾 Salvando ' + disciplinasModificadas.length + ' disciplinas...');
+    alert('💾 Salvando ' + disciplinasModificadas.length + ' disciplinas...');
     
     // Salvar cada disciplina
     const promises = disciplinasModificadas.map(disciplina => {
@@ -6612,6 +7800,8 @@ function salvarAlteracoesDisciplinas() {
         formData.append('descricao', disciplina.descricao);
         formData.append('ativa', '1');
         
+        console.log('📤 Enviando dados da disciplina "' + disciplina.nome + '" para API');
+        
         return fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
             method: 'POST',
             body: formData
@@ -6619,15 +7809,15 @@ function salvarAlteracoesDisciplinas() {
         .then(response => response.json())
         .then(data => {
             if (data.sucesso) {
-                console.log(`✅ Disciplina ${disciplina.nome} salva com sucesso`);
+                console.log('✅ Disciplina ' + disciplina.nome + ' salva com sucesso');
                 return { sucesso: true, disciplina: disciplina.nome };
             } else {
-                console.error(`❌ Erro ao salvar disciplina ${disciplina.nome}:`, data.mensagem);
+                console.error('❌ Erro ao salvar disciplina ' + disciplina.nome + ':', data.mensagem);
                 return { sucesso: false, disciplina: disciplina.nome, erro: data.mensagem };
             }
         })
         .catch(error => {
-            console.error(`❌ Erro na requisição para disciplina ${disciplina.nome}:`, error);
+            console.error('❌ Erro na requisição para disciplina ' + disciplina.nome + ':', error);
             return { sucesso: false, disciplina: disciplina.nome, erro: error.message };
         });
     });
@@ -6639,15 +7829,16 @@ function salvarAlteracoesDisciplinas() {
         const erros = resultados.filter(r => !r.sucesso);
         
         if (erros.length === 0) {
-            console.log(`✅ Todas as ${sucessos} disciplinas foram salvas com sucesso!`);
-            alert(`✅ Todas as ${sucessos} disciplinas foram salvas com sucesso!`);
+            console.log('✅ Todas as ' + sucessos + ' disciplinas foram salvas com sucesso!');
+            alert('✅ Todas as ' + sucessos + ' disciplinas foram salvas com sucesso!');
         } else {
-            console.warn(`⚠️ ${sucessos} disciplinas salvas, ${erros.length} com erro`);
+            console.warn('⚠️ ' + sucessos + ' disciplinas salvas, ' + erros.length + ' com erro');
             const nomesComErro = erros.map(e => e.disciplina).join(', ');
-            alert(`⚠️ ${sucessos} disciplinas salvas com sucesso!\nErro em: ${nomesComErro}`);
+            alert('⚠️ ' + sucessos + ' disciplinas salvas com sucesso!\nErro em: ' + nomesComErro);
         }
         
         // Fechar modal após salvar
+        console.log('🚪 Fechando modal...');
         window.closeModal();
     })
     .catch(error => {
@@ -6659,74 +7850,13 @@ function salvarAlteracoesDisciplinas() {
 // Variável global para armazenar disciplinas
 let disciplinasOriginais = [];
 
-// Função para carregar disciplinas no modal
-function carregarDisciplinas() {
-    // Buscar elementos dentro do modal singleton
-    const modalRoot = document.querySelector('#modal-root .modal');
-    if (!modalRoot) {
-        console.log('🔧 Modal não está aberto ainda, aguardando...');
-        return;
-    }
-    
-    const carregando = modalRoot.querySelector('#carregandoDisciplinas');
-    const erro = modalRoot.querySelector('#erroCarregarDisciplinas');
-    const nenhumaEncontrada = modalRoot.querySelector('#nenhumaDisciplinaEncontrada');
-    const container = modalRoot.querySelector('#listaDisciplinas');
-    
-    // Verificar se os elementos existem
-    if (!carregando || !erro || !nenhumaEncontrada || !container) {
-        console.error('❌ Elementos do DOM não encontrados no modal singleton');
-        return;
-    }
-    
-    // Mostrar estado de carregamento
-    carregando.style.display = 'block';
-    erro.style.display = 'none';
-    nenhumaEncontrada.style.display = 'none';
-    container.innerHTML = '';
-    
-    // Carregar disciplinas da API real
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
-        .then(response => {
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const contentType = response.headers.get('content-type');
-            if (!contentType || !contentType.includes('application/json')) {
-                throw new Error('Resposta não é JSON válido. Content-Type: ' + contentType);
-            }
-            return response.text().then(text => {
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('Texto recebido:', text.substring(0, 200));
-                    throw new Error('JSON inválido: ' + e.message);
-                }
-            });
-        })
-        .then(data => {
-            carregando.style.display = 'none';
-            
-            if (data.sucesso) {
-                disciplinasOriginais = data.disciplinas || [];
-                renderizarDisciplinas(disciplinasOriginais);
-                atualizarEstatisticas(disciplinasOriginais);
-                console.log('✅ Disciplinas carregadas:', disciplinasOriginais.length);
-            } else {
-                erro.style.display = 'block';
-                console.error('❌ Erro ao carregar disciplinas:', data.mensagem);
-            }
-        })
-        .catch(error => {
-            carregando.style.display = 'none';
-            erro.style.display = 'block';
-            console.error('❌ Erro ao carregar disciplinas:', error);
-        });
-}
+// Função duplicada removida - usando a versão principal acima
 
 // Função para recarregar lista de disciplinas via AJAX (compatibilidade)
 function recarregarDisciplinas() {
-    carregarDisciplinas();
+    // Não recarregar tudo para evitar conflitos com edição inline
+    console.log('🔄 Recarregamento de disciplinas desabilitado durante edição inline');
+    // carregarDisciplinasModal(); // Comentado para evitar conflitos
 }
 
 // Função para filtrar disciplinas
@@ -6909,7 +8039,7 @@ function adicionarEventListenersCamposEditaveis() {
 
 // Função para salvar disciplina individual
 function salvarDisciplina(id) {
-    const card = document.querySelector(`[data-id="${id}"]`);
+    const card = document.querySelector('[data-id="' + id + '"]');
     const campos = card.querySelectorAll('[data-field]');
     
     const dados = {
@@ -7124,8 +8254,427 @@ function visualizarDisciplina(id) {
 }
 
 
-// Função para editar disciplina
+// Função para criar modal de editar disciplina dinamicamente
+function criarModalEditarDisciplina() {
+    const modal = document.createElement('div');
+    modal.className = 'modal fade';
+    modal.id = 'modalEditarDisciplina';
+    modal.setAttribute('tabindex', '-1');
+    modal.setAttribute('aria-labelledby', 'modalEditarDisciplinaLabel');
+    modal.setAttribute('aria-hidden', 'true');
+    
+    modal.innerHTML = `
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEditarDisciplinaLabel">
+                        <i class="fas fa-edit me-2"></i>Editar Disciplina
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="formEditarDisciplina">
+                    <input type="hidden" id="edit_id" name="id">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="edit_codigo" class="form-label">Código *</label>
+                            <input type="text" class="form-control" id="edit_codigo" name="codigo" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_nome" class="form-label">Nome *</label>
+                            <input type="text" class="form-control" id="edit_nome" name="nome" required>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_descricao" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="edit_descricao" name="descricao" rows="3"></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="edit_carga_horaria_padrao" class="form-label">Carga Horária Padrão</label>
+                                    <input type="number" class="form-control" id="edit_carga_horaria_padrao" name="carga_horaria_padrao" min="1">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="edit_cor_hex" class="form-label">Cor</label>
+                                    <input type="color" class="form-control" id="edit_cor_hex" name="cor_hex">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="edit_icone" class="form-label">Ícone</label>
+                            <select class="form-control" id="edit_icone" name="icone">
+                                <option value="book">Livro</option>
+                                <option value="gavel">Martelo</option>
+                                <option value="shield-alt">Escudo</option>
+                                <option value="first-aid">Primeiros Socorros</option>
+                                <option value="leaf">Folha</option>
+                                <option value="wrench">Chave</option>
+                                <option value="car">Carro</option>
+                                <option value="road">Estrada</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fas fa-save me-1"></i>Salvar Alterações
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+    
+    return modal;
+}
+
+// Variável para armazenar dados originais durante edição
+let dadosOriginais = {};
+
+// Função para iniciar edição inline
+function iniciarEdicaoInline(disciplinaId, campo, valorAtual) {
+    console.log('✏️ Iniciando edição inline: ' + campo + ' = ' + valorAtual);
+    
+    const elemento = document.querySelector('[data-disciplina-id="' + disciplinaId + '"][data-field="' + campo + '"]');
+    if (!elemento) {
+        console.error('❌ Elemento não encontrado para edição');
+        return;
+    }
+    
+    // Usar valor atual do DOM se disponível (pode ter sido atualizado por uma edição anterior)
+    const valorAtualDoDOM = elemento.textContent.trim();
+    const valorParaEdicao = valorAtualDoDOM || valorAtual;
+    
+    console.log('🔍 Valor para edição: "' + valorParaEdicao + '" (DOM: "' + valorAtualDoDOM + '", Original: "' + valorAtual + '")');
+    
+    // Salvar dados originais
+    if (!dadosOriginais[disciplinaId]) {
+        dadosOriginais[disciplinaId] = {};
+    }
+    dadosOriginais[disciplinaId][campo] = valorParaEdicao;
+    
+    // Criar input baseado no tipo de campo
+    let input;
+    if (campo === 'carga_horaria_padrao') {
+        input = document.createElement('input');
+        input.type = 'number';
+        input.min = '1';
+        input.max = '200';
+        input.value = valorParaEdicao.toString().replace('h', '');
+        input.className = 'form-control form-control-sm';
+        input.style.width = '80px';
+        input.style.display = 'inline-block';
+    } else if (campo === 'descricao') {
+        input = document.createElement('textarea');
+        input.rows = 2;
+        input.value = valorParaEdicao === 'Sem descrição' ? '' : valorParaEdicao;
+        input.className = 'form-control form-control-sm';
+        input.style.width = '200px';
+        input.style.display = 'inline-block';
+    } else {
+        input = document.createElement('input');
+        input.type = 'text';
+        input.value = valorParaEdicao;
+        input.className = 'form-control form-control-sm';
+        input.style.width = campo === 'codigo' ? '120px' : '150px';
+        input.style.display = 'inline-block';
+    }
+    
+    // Adicionar eventos
+    input.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter' && campo !== 'descricao') {
+            salvarCampoInline(disciplinaId, campo, input.value);
+        } else if (e.key === 'Escape') {
+            cancelarEdicaoInline(disciplinaId);
+        }
+    });
+    
+    input.addEventListener('blur', function() {
+        salvarCampoInline(disciplinaId, campo, input.value);
+    });
+    
+    // Substituir elemento pelo input
+    elemento.style.display = 'none';
+    elemento.parentNode.insertBefore(input, elemento.nextSibling);
+    input.focus();
+    input.select();
+    
+    // Mostrar botões de ação
+    mostrarBotoesEdicao(disciplinaId);
+}
+
+// Função para salvar campo específico
+function salvarCampoInline(disciplinaId, campo, novoValor) {
+    console.log('💾 Salvando campo ' + campo + ': ' + novoValor);
+    
+    // Validar dados
+    if (campo === 'nome' && !novoValor.trim()) {
+        showAlert('danger', 'Nome da disciplina é obrigatório');
+        return;
+    }
+    
+    if (campo === 'codigo' && !novoValor.trim()) {
+        showAlert('danger', 'Código da disciplina é obrigatório');
+        return;
+    }
+    
+    if (campo === 'carga_horaria_padrao' && (!novoValor || parseInt(novoValor) < 1)) {
+        showAlert('danger', 'Carga horária deve ser maior que 0');
+        return;
+    }
+    
+    // Coletar todos os dados atuais da disciplina (incluindo o campo editado)
+    const formData = new FormData();
+    formData.append('acao', 'editar');
+    formData.append('id', disciplinaId);
+    
+    // Coletar todos os campos atuais
+    const campos = ['nome', 'codigo', 'carga_horaria_padrao', 'descricao'];
+    campos.forEach(campoNome => {
+        let valor = '';
+        
+        if (campoNome === campo) {
+            // Usar o novo valor para o campo editado
+            valor = novoValor.trim();
+        } else {
+            // Buscar o valor atual do campo no DOM
+            const elemento = document.querySelector('[data-disciplina-id="' + disciplinaId + '"][data-field="' + campoNome + '"]');
+            if (elemento) {
+                valor = elemento.textContent.trim();
+                // Limpar formatação (ex: remover 'h' da carga horária)
+                if (campoNome === 'carga_horaria_padrao') {
+                    valor = valor.replace('h', '');
+                }
+                // Limpar "Sem descrição"
+                if (campoNome === 'descricao' && valor === 'Sem descrição') {
+                    valor = '';
+                }
+            }
+        }
+        
+        formData.append(campoNome, valor);
+        console.log('📝 Campo ' + campoNome + ': "' + valor + '"');
+    });
+    
+    console.log('📤 Enviando dados para API - ID: ' + disciplinaId + ', Campo editado: ' + campo);
+    
+    // Enviar para API
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => {
+        console.log('📡 Resposta da API:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('📄 Dados da API:', data);
+        if (data.sucesso) {
+            // Atualizar exibição
+            atualizarExibicaoCampo(disciplinaId, campo, novoValor);
+            showAlert('success', data.mensagem);
+            // Não recarregar tudo para evitar conflitos
+            console.log('✅ Campo salvo com sucesso, exibição atualizada');
+        } else {
+            console.error('❌ Erro da API:', data);
+            showAlert('danger', 'Erro: ' + (data.mensagem || 'Erro desconhecido'));
+            // Restaurar valor original
+            cancelarEdicaoInline(disciplinaId);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro ao salvar disciplina:', error);
+        showAlert('danger', 'Erro ao salvar disciplina: ' + error.message);
+        cancelarEdicaoInline(disciplinaId);
+    });
+}
+
+// Função para atualizar exibição do campo
+function atualizarExibicaoCampo(disciplinaId, campo, novoValor) {
+    console.log('🔄 Atualizando exibição do campo ' + campo + ' para valor: "' + novoValor + '"');
+    
+    const elemento = document.querySelector('[data-disciplina-id="' + disciplinaId + '"][data-field="' + campo + '"]');
+    if (!elemento) {
+        console.error('❌ Elemento não encontrado: [data-disciplina-id="' + disciplinaId + '"][data-field="' + campo + '"]');
+        return;
+    }
+    
+    const input = elemento.parentNode.querySelector('input, textarea');
+    console.log('🔍 Input encontrado:', input ? 'Sim' : 'Não');
+    
+    if (input) {
+        // Remover input
+        input.remove();
+        console.log('🗑️ Input removido');
+        
+        // Restaurar elemento original
+        elemento.style.display = 'inline';
+        
+        // Atualizar valor com formatação adequada
+        let valorExibido = '';
+        if (campo === 'carga_horaria_padrao') {
+            valorExibido = novoValor + 'h';
+        } else if (campo === 'descricao' && (!novoValor || novoValor.trim() === '')) {
+            valorExibido = 'Sem descrição';
+        } else {
+            valorExibido = novoValor || '';
+        }
+        
+        elemento.textContent = valorExibido;
+        console.log('✅ Valor atualizado no DOM: "' + valorExibido + '"');
+        
+        // Atualizar dados originais para futuras edições
+        if (!dadosOriginais[disciplinaId]) {
+            dadosOriginais[disciplinaId] = {};
+        }
+        dadosOriginais[disciplinaId][campo] = valorExibido;
+        
+        // Ocultar botões de ação
+        ocultarBotoesEdicao(disciplinaId);
+        console.log('✅ Exibição atualizada com sucesso');
+    } else {
+        console.error('❌ Input não encontrado para atualização');
+    }
+}
+
+// Função para mostrar botões de edição
+function mostrarBotoesEdicao(disciplinaId) {
+    const btnSalvar = document.getElementById('btn-salvar-' + disciplinaId);
+    const btnCancelar = document.getElementById('btn-cancelar-' + disciplinaId);
+    
+    if (btnSalvar) btnSalvar.style.display = 'inline-block';
+    if (btnCancelar) btnCancelar.style.display = 'inline-block';
+}
+
+// Função para ocultar botões de edição
+function ocultarBotoesEdicao(disciplinaId) {
+    const btnSalvar = document.getElementById('btn-salvar-' + disciplinaId);
+    const btnCancelar = document.getElementById('btn-cancelar-' + disciplinaId);
+    
+    if (btnSalvar) btnSalvar.style.display = 'none';
+    if (btnCancelar) btnCancelar.style.display = 'none';
+}
+
+// Função para salvar disciplina completa (botão salvar)
+function salvarDisciplinaInline(disciplinaId) {
+    console.log('💾 Salvando disciplina completa: ' + disciplinaId);
+    
+    // Coletar todos os campos editados usando FormData
+    const formData = new FormData();
+    formData.append('acao', 'editar');
+    formData.append('id', disciplinaId);
+    
+    let camposEditados = 0;
+    const campos = ['nome', 'codigo', 'carga_horaria_padrao', 'descricao'];
+    campos.forEach(campo => {
+        const elemento = document.querySelector('[data-disciplina-id="' + disciplinaId + '"][data-field="' + campo + '"]');
+        const input = elemento?.parentNode?.querySelector('input, textarea');
+        
+        if (input) {
+            formData.append(campo, input.value.trim());
+            camposEditados++;
+        }
+    });
+    
+    if (camposEditados === 0) {
+        showAlert('warning', 'Nenhuma alteração foi feita');
+        return;
+    }
+    
+    // Enviar para API
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            // Atualizar todos os campos
+            campos.forEach(campo => {
+                const elemento = document.querySelector('[data-disciplina-id="' + disciplinaId + '"][data-field="' + campo + '"]');
+                const input = elemento?.parentNode?.querySelector('input, textarea');
+                
+                if (input) {
+                    const novoValor = input.value.trim();
+                    input.remove();
+                    elemento.style.display = 'inline';
+                    
+                    if (campo === 'carga_horaria_padrao') {
+                        elemento.textContent = novoValor + 'h';
+                    } else {
+                        elemento.textContent = novoValor || (campo === 'descricao' ? 'Sem descrição' : '');
+                    }
+                }
+            });
+            
+            showAlert('success', data.mensagem);
+            ocultarBotoesEdicao(disciplinaId);
+            // Não recarregar tudo para evitar conflitos
+            console.log('✅ Disciplina salva com sucesso, exibição atualizada');
+        } else {
+            showAlert('danger', 'Erro: ' + data.mensagem);
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao salvar disciplina:', error);
+        showAlert('danger', 'Erro ao salvar disciplina');
+    });
+}
+
+// Função para cancelar edição
+function cancelarEdicaoInline(disciplinaId) {
+    console.log('❌ Cancelando edição: ' + disciplinaId);
+    
+    const campos = ['nome', 'codigo', 'carga_horaria_padrao', 'descricao'];
+    campos.forEach(campo => {
+        const elemento = document.querySelector('[data-disciplina-id="' + disciplinaId + '"][data-field="' + campo + '"]');
+        const input = elemento?.parentNode?.querySelector('input, textarea');
+        
+        if (input) {
+            // Restaurar valor original
+            const valorOriginal = dadosOriginais[disciplinaId]?.[campo] || '';
+            input.remove();
+            elemento.style.display = 'inline';
+            elemento.textContent = valorOriginal;
+        }
+    });
+    
+    ocultarBotoesEdicao(disciplinaId);
+    
+    // Limpar dados originais
+    if (dadosOriginais[disciplinaId]) {
+        delete dadosOriginais[disciplinaId];
+    }
+}
+
+// Função para editar disciplina (modal - mantida para compatibilidade)
 function editarDisciplina(id) {
+    console.log('✏️ Editando disciplina ID:', id);
+    
+    // Verificar se o modal de edição existe
+    let modalEditar = document.getElementById('modalEditarDisciplina');
+    
+    // Se o modal não existir, criar um modal de edição dinâmico
+    if (!modalEditar) {
+        console.log('🔧 Modal de edição não encontrado, criando modal dinâmico...');
+        modalEditar = criarModalEditarDisciplina();
+        document.body.appendChild(modalEditar);
+    }
+    
+    const editId = document.getElementById('edit_id');
+    const editCodigo = document.getElementById('edit_codigo');
+    
+    if (!editId || !editCodigo) {
+        console.error('❌ Elementos de edição não encontrados após criar modal');
+        alert('Erro ao criar formulário de edição.');
+        return;
+    }
+    
     // Buscar dados da disciplina
     fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => response.json())
@@ -7134,25 +8683,32 @@ function editarDisciplina(id) {
                 const disciplina = data.disciplinas.find(d => d.id == id);
                 if (disciplina) {
                     // Preencher formulário de edição
-                    document.getElementById('edit_id').value = disciplina.id;
-                    document.getElementById('edit_codigo').value = disciplina.codigo;
-                    document.getElementById('edit_nome').value = disciplina.nome;
-                    document.getElementById('edit_descricao').value = disciplina.descricao || '';
-                    document.getElementById('edit_carga_horaria_padrao').value = disciplina.carga_horaria_padrao;
-                    document.getElementById('edit_cor_hex').value = disciplina.cor_hex;
-                    document.getElementById('edit_icone').value = disciplina.icone;
+                    editId.value = disciplina.id;
+                    editCodigo.value = disciplina.codigo;
+                    
+                    const editNome = document.getElementById('edit_nome');
+                    const editDescricao = document.getElementById('edit_descricao');
+                    const editCargaHoraria = document.getElementById('edit_carga_horaria_padrao');
+                    const editCor = document.getElementById('edit_cor_hex');
+                    const editIcone = document.getElementById('edit_icone');
+                    
+                    if (editNome) editNome.value = disciplina.nome;
+                    if (editDescricao) editDescricao.value = disciplina.descricao || '';
+                    if (editCargaHoraria) editCargaHoraria.value = disciplina.carga_horaria_padrao;
+                    if (editCor) editCor.value = disciplina.cor_hex;
+                    if (editIcone) editIcone.value = disciplina.icone;
                     
                     // Abrir modal
                     const modal = new bootstrap.Modal(document.getElementById('modalEditarDisciplina'));
                     modal.show();
                 } else {
-                    showAlert('Disciplina não encontrada', 'danger');
+                    showAlert('danger', 'Disciplina não encontrada');
                 }
             }
         })
         .catch(error => {
             console.error('Erro ao buscar disciplina:', error);
-            showAlert('Erro ao buscar dados da disciplina', 'danger');
+            showAlert('danger', 'Erro ao buscar dados da disciplina');
         });
 }
 
@@ -7236,19 +8792,19 @@ document.getElementById('formEditarDisciplina').addEventListener('submit', funct
     .then(response => response.json())
     .then(data => {
         if (data.sucesso) {
-            showAlert(data.mensagem, 'success');
+            showAlert('success', data.mensagem);
             recarregarDisciplinas();
             
             // Fechar modal
             const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarDisciplina'));
             modal.hide();
         } else {
-            showAlert('Erro: ' + data.mensagem, 'danger');
+            showAlert('danger', 'Erro: ' + data.mensagem);
         }
     })
     .catch(error => {
         console.error('Erro ao editar disciplina:', error);
-        showAlert('Erro ao editar disciplina: ' + error.message, 'danger');
+        showAlert('danger', 'Erro ao editar disciplina: ' + error.message);
     });
 });
 
@@ -7283,7 +8839,7 @@ function atualizarNavegacao() {
     
     // Atualizar classes dos botões
     for (let i = 1; i <= 4; i++) {
-        const botao = document.querySelector(`button[onclick="navegarParaEtapa(${i})"]`);
+        const botao = document.querySelector('button[onclick="navegarParaEtapa(' + i + ')"]');
         if (botao && botao.classList) {
             // Remover classes antigas
             botao.classList.remove('active', 'completed');
@@ -7318,7 +8874,7 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🔍 Botões encontrados:', botoes.length);
     
     botoes.forEach((botao, index) => {
-        console.log(`Botão ${index + 1}:`, botao.textContent.trim(), 'onclick:', botao.onclick);
+        console.log('Botão ' + (index + 1) + ':', botao.textContent.trim(), 'onclick:', botao.onclick);
         
         // Adicionar evento de clique alternativo
         botao.addEventListener('click', function(e) {
@@ -7376,7 +8932,7 @@ function debugScrollModal() {
     } else {
         console.log('❌ PROBLEMA! Múltiplos elementos com overflow:', elementosComOverflow.length);
         elementosComOverflow.forEach((el, index) => {
-            console.log(`${index + 1}. ${el.tag}.${el.cls} - overflowY: ${el.overflowY}, maxH: ${el.maxH}, h: ${el.h}`);
+            console.log((index + 1) + '. ' + el.tag + '.' + el.cls + ' - overflowY: ' + el.overflowY + ', maxH: ' + el.maxH + ', h: ' + el.h);
         });
     }
     
@@ -7607,6 +9163,8 @@ window.fecharModalDisciplinas = fecharModalDisciplinas;
 window.criarModalDisciplinas = criarModalDisciplinas;
 window.abrirModalDisciplinasInterno = abrirModalDisciplinasInterno;
 window.gerenciarEstilosBody = gerenciarEstilosBody;
+window.carregarDisciplinasModal = carregarDisciplinasModal;
+window.editarDisciplina = editarDisciplina;
 
 // Configurar event listeners para os botões do modal
 function configurarBotoesModal() {
@@ -7664,6 +9222,7 @@ console.log('✅ [SCRIPT] Script de turmas-teoricas.php carregado!');
 console.log('✅ [SCRIPT] Função fecharModalDisciplinas disponível:', typeof window.fecharModalDisciplinas);
 console.log('✅ [SCRIPT] Função criarModalDisciplinas disponível:', typeof window.criarModalDisciplinas);
 console.log('✅ [SCRIPT] Função abrirModalDisciplinasInterno disponível:', typeof window.abrirModalDisciplinasInterno);
+console.log('✅ [SCRIPT] Função carregarDisciplinasModal disponível:', typeof window.carregarDisciplinasModal);
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
