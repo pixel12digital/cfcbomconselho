@@ -94,8 +94,20 @@ try {
 // Obter disciplinas selecionadas
 $disciplinasSelecionadas = $turmaManager->obterDisciplinasSelecionadas($turmaId);
 
+// Debug: Verificar disciplinas obtidas
+echo "<!-- DEBUG: Total de disciplinas obtidas: " . count($disciplinasSelecionadas) . " -->";
+echo "<!-- DEBUG: Turma ID: " . $turmaId . " -->";
+echo "<!-- DEBUG: Curso tipo: " . ($turma['curso_tipo'] ?? 'N/A') . " -->";
+foreach ($disciplinasSelecionadas as $index => $disciplina) {
+    echo "<!-- DEBUG: Disciplina $index: " . var_export($disciplina, true) . " -->";
+    echo "<!-- DEBUG: Disciplina $index ID: " . var_export($disciplina['disciplina_id'] ?? 'N/A', true) . " -->";
+    echo "<!-- DEBUG: Disciplina $index Nome: " . var_export($disciplina['nome_disciplina'] ?? 'N/A', true) . " -->";
+}
+
 // Obter estatísticas de aulas para cada disciplina
 $estatisticasDisciplinas = [];
+$historicoAgendamentos = [];
+
 foreach ($disciplinasSelecionadas as $disciplina) {
     $disciplinaId = $disciplina['disciplina_id'];
     
@@ -111,6 +123,20 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         [$turmaId, $disciplinaId]
     );
     
+    // Buscar histórico completo de agendamentos para esta disciplina
+    $agendamentosDisciplina = $db->fetchAll(
+        "SELECT 
+            taa.*,
+            i.nome as instrutor_nome,
+            s.nome as sala_nome
+         FROM turma_aulas_agendadas taa
+         LEFT JOIN instrutores i ON taa.instrutor_id = i.id
+         LEFT JOIN salas s ON taa.sala_id = s.id
+         WHERE taa.turma_id = ? AND taa.disciplina = ?
+         ORDER BY taa.data_aula, taa.hora_inicio",
+        [$turmaId, $disciplinaId]
+    );
+    
     $totalAgendadas = $aulasAgendadas['total'] ?? 0;
     $totalRealizadas = $aulasRealizadas['total'] ?? 0;
     $totalObrigatorias = $disciplina['carga_horaria_padrao'] ?? 0;
@@ -122,6 +148,8 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         'faltantes' => $totalFaltantes,
         'obrigatorias' => $totalObrigatorias
     ];
+    
+    $historicoAgendamentos[$disciplinaId] = $agendamentosDisciplina;
 }
 
 ?>
@@ -1098,6 +1126,277 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 }
 
 /* ==========================================
+   ESTILOS PARA SANFONA DE DISCIPLINAS
+   ========================================== */
+
+/* Card de disciplina com sanfona */
+.disciplina-accordion {
+    transition: all 0.3s ease;
+    border-left: 4px solid #023A8D;
+}
+
+.disciplina-accordion:hover {
+    box-shadow: 0 4px 16px rgba(2, 58, 141, 0.15);
+    transform: translateY(-2px);
+}
+
+/* Cabeçalho clicável */
+.disciplina-header-clickable {
+    cursor: pointer;
+    transition: all 0.3s ease;
+    padding: 20px;
+    border-radius: 8px;
+}
+
+.disciplina-header-clickable:hover {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+}
+
+.disciplina-header-clickable:active {
+    background: linear-gradient(135deg, #e9ecef, #dee2e6);
+}
+
+/* Chevron animado */
+.disciplina-chevron {
+    transition: transform 0.3s ease;
+    color: #023A8D;
+}
+
+.disciplina-accordion.expanded .disciplina-chevron {
+    transform: rotate(180deg);
+}
+
+/* Conteúdo da sanfona */
+.disciplina-detalhes-content {
+    border-top: 1px solid #dee2e6;
+    background: #f8f9fa;
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        max-height: 0;
+    }
+    to {
+        opacity: 1;
+        max-height: 1000px;
+    }
+}
+
+/* Loading spinner */
+.disciplina-loading {
+    padding: 20px;
+    text-align: center;
+}
+
+.spinner-border {
+    width: 2rem;
+    height: 2rem;
+    border-width: 0.2em;
+}
+
+/* Tabela de aulas */
+.aulas-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.aulas-table th {
+    background: linear-gradient(135deg, #023A8D, #1a4ba8);
+    color: white;
+    padding: 12px 8px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    text-align: center;
+    border: none;
+}
+
+.aulas-table td {
+    padding: 12px 8px;
+    border-bottom: 1px solid #e9ecef;
+    font-size: 0.9rem;
+    text-align: center;
+    vertical-align: middle;
+}
+
+.aulas-table tbody tr:hover {
+    background: #f8f9fa;
+}
+
+.aulas-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+/* Status badges na tabela */
+.status-badge-table {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-realizada {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.status-agendada {
+    background: #cce5ff;
+    color: #004085;
+    border: 1px solid #74c0fc;
+}
+
+.status-cancelada {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+/* Informações do instrutor */
+.instrutor-info {
+    text-align: left;
+    font-size: 0.85rem;
+}
+
+.instrutor-nome {
+    font-weight: 600;
+    color: #023A8D;
+    margin-bottom: 2px;
+}
+
+.instrutor-contato {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+/* Estatísticas da disciplina */
+.disciplina-stats-summary {
+    background: white;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.stat-card-mini {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 15px;
+    text-align: center;
+    border-left: 4px solid #023A8D;
+    transition: all 0.3s ease;
+}
+
+.stat-card-mini:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.stat-number-mini {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #023A8D;
+    margin-bottom: 5px;
+}
+
+.stat-label-mini {
+    font-size: 0.8rem;
+    color: #6c757d;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Progress bar */
+.progress-container {
+    margin-top: 15px;
+}
+
+.progress-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 5px;
+    font-size: 0.9rem;
+    font-weight: 600;
+}
+
+.progress-bar-custom {
+    height: 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #023A8D, #1a4ba8);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+/* Responsividade para tabela */
+@media (max-width: 768px) {
+    .aulas-table {
+        font-size: 0.8rem;
+    }
+    
+    .aulas-table th,
+    .aulas-table td {
+        padding: 8px 4px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 10px;
+    }
+    
+    .stat-card-mini {
+        padding: 10px;
+    }
+    
+    .stat-number-mini {
+        font-size: 1.2rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .aulas-table {
+        font-size: 0.75rem;
+    }
+    
+    .aulas-table th,
+    .aulas-table td {
+        padding: 6px 2px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .instrutor-info {
+        font-size: 0.8rem;
+    }
+}
+
+/* ==========================================
    RESPONSIVIDADE
    ========================================== */
 @media (max-width: 768px) {
@@ -1116,6 +1415,74 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         width: 100%;
     }
 }
+
+/* Estilos para o histórico de agendamentos */
+.historico-agendamentos {
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-top: 10px;
+}
+
+.historico-agendamentos h6 {
+    color: #023A8D;
+    font-weight: 600;
+    border-bottom: 2px solid #023A8D;
+    padding-bottom: 8px;
+    margin-bottom: 20px;
+}
+
+.historico-agendamentos .table {
+    background: white;
+    border-radius: 8px;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.historico-agendamentos .table thead th {
+    background: #023A8D;
+    color: white;
+    border: none;
+    font-weight: 600;
+    text-align: center;
+    padding: 12px 8px;
+}
+
+.historico-agendamentos .table tbody td {
+    text-align: center;
+    vertical-align: middle;
+    padding: 12px 8px;
+    border-color: #e9ecef;
+}
+
+.historico-agendamentos .table tbody tr:hover {
+    background-color: #f8f9fa;
+}
+
+.historico-agendamentos .badge {
+    font-size: 0.75rem;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+}
+
+/* Responsividade da tabela */
+@media (max-width: 768px) {
+    .historico-agendamentos .table-responsive {
+        font-size: 0.875rem;
+    }
+    
+    .historico-agendamentos .table thead th,
+    .historico-agendamentos .table tbody td {
+        padding: 8px 4px;
+    }
+    
+    .historico-agendamentos .badge {
+        font-size: 0.7rem;
+        padding: 4px 8px;
+    }
+}
+
 </style>
 
 <!-- Cabeçalho -->
@@ -1233,44 +1600,185 @@ foreach ($disciplinasSelecionadas as $disciplina) {
             </h5>
             
             <?php foreach ($disciplinasSelecionadas as $index => $disciplina): ?>
-                <div class="disciplina-cadastrada-card" data-disciplina-id="<?= $index ?>" data-disciplina-cadastrada="<?= isset($disciplina['disciplina_id']) ? $disciplina['disciplina_id'] : '0' ?>">
-                    <div class="disciplina-info-display">
-                        <div class="disciplina-nome-display">
-                            <h6><?= htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['nome_original'] ?? 'Disciplina não especificada') ?></h6>
+                <?php 
+                $disciplinaId = $disciplina['disciplina_id'];
+                
+                // Debug: Verificar o valor da disciplinaId
+                echo "<!-- DEBUG: disciplinaId = " . var_export($disciplinaId, true) . " -->";
+                echo "<!-- DEBUG: disciplinaId type = " . gettype($disciplinaId) . " -->";
+                echo "<!-- DEBUG: disciplinaId empty = " . var_export(empty($disciplinaId), true) . " -->";
+                echo "<!-- DEBUG: disciplinaId == 0 = " . var_export($disciplinaId == 0, true) . " -->";
+                echo "<!-- DEBUG: disciplinaId === 0 = " . var_export($disciplinaId === 0, true) . " -->";
+                
+                // Pular apenas disciplinas com ID realmente inválido (0, null, vazio)
+                if (empty($disciplinaId) || $disciplinaId == 0 || $disciplinaId == '0' || $disciplinaId == null) {
+                    echo "<!-- Disciplina com ID inválido ignorada: " . var_export($disciplinaId, true) . " -->";
+                    continue;
+                }
+                
+                // Debug: Confirmar que a disciplina será processada
+                echo "<!-- DEBUG: Processando disciplina ID: " . $disciplinaId . " -->";
+                echo "<!-- DEBUG: (int)disciplinaId = " . (int)$disciplinaId . " -->";
+                
+                $stats = $estatisticasDisciplinas[$disciplinaId] ?? ['agendadas' => 0, 'realizadas' => 0, 'faltantes' => 0, 'obrigatorias' => 0];
+                ?>
+                <div class="disciplina-cadastrada-card disciplina-accordion" data-disciplina-id="<?= $disciplinaId ?>" data-turma-id="<?= $turmaId ?>">
+                    <!-- Cabeçalho da Disciplina (Sempre Visível) -->
+                    <div class="disciplina-header-clickable" onclick="console.log('🖱️ [ONCLICK] ===== CLIQUE DETECTADO ====='); console.log('🖱️ [ONCLICK] Disciplina clicada:', '<?= htmlspecialchars($disciplinaId) ?>'); console.log('🖱️ [ONCLICK] Chamando toggleSimples...'); toggleSimples('<?= htmlspecialchars($disciplinaId) ?>'); console.log('🖱️ [ONCLICK] ===== FIM DO CLIQUE =====');">
+                        <div class="disciplina-info-display">
+                            <div class="disciplina-nome-display">
+                                <h6>
+                                    <i class="fas fa-graduation-cap me-2" style="color: #023A8D;"></i>
+                                    <?= htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['nome_original'] ?? 'Disciplina não especificada') ?>
+                                    <i class="fas fa-chevron-down disciplina-chevron ms-2" style="transition: transform 0.3s ease;"></i>
+                                </h6>
+                                
+                                <!-- Estatísticas de Aulas -->
+                                <div class="aulas-stats-container">
+                                    <div class="stat-item">
+                                        <span class="stat-label">Agendadas:</span>
+                                        <span class="stat-value stat-agendadas"><?= $stats['agendadas'] ?></span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Realizadas:</span>
+                                        <span class="stat-value stat-realizadas"><?= $stats['realizadas'] ?></span>
+                                    </div>
+                                    <div class="stat-item">
+                                        <span class="stat-label">Faltantes:</span>
+                                        <span class="stat-value stat-faltantes"><?= $stats['faltantes'] ?></span>
+                                    </div>
+                                </div>
+                            </div>
                             
-                            <!-- Estatísticas de Aulas -->
+                            <div class="disciplina-detalhes-display">
+                                <div class="detalhe-item">
+                                    <span class="detalhe-label">Carga Horária:</span>
+                                    <span class="detalhe-valor"><?= isset($disciplina['carga_horaria_padrao']) ? $disciplina['carga_horaria_padrao'] : '1' ?> horas</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Conteúdo Detalhado (Sanfona) -->
+                    <div class="disciplina-detalhes-content" id="detalhes-disciplina-<?= $disciplinaId ?>" style="display: none;">
+                        <div class="disciplina-detalhes-data" id="data-disciplina-<?= $disciplinaId ?>">
                             <?php 
-                            $disciplinaId = $disciplina['disciplina_id'];
-                            $stats = $estatisticasDisciplinas[$disciplinaId] ?? ['agendadas' => 0, 'realizadas' => 0, 'faltantes' => 0, 'obrigatorias' => 0];
+                            $agendamentos = $historicoAgendamentos[$disciplinaId] ?? [];
                             ?>
-                            <div class="aulas-stats-container">
-                                <div class="stat-item">
-                                    <span class="stat-label">Agendadas:</span>
-                                    <span class="stat-value stat-agendadas"><?= $stats['agendadas'] ?></span>
+                            
+                            <!-- Seção: Histórico de Agendamentos -->
+                            <?php if (!empty($agendamentos)): ?>
+                                <div class="historico-agendamentos">
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-calendar-alt me-2" style="color: #023A8D;"></i>
+                                        Histórico de Agendamentos - <?= htmlspecialchars($disciplina['nome_disciplina']) ?>
+                                    </h6>
+                                    
+                                    <div class="table-responsive">
+                                        <table class="table table-striped table-hover">
+                                            <thead class="table-primary">
+                                                <tr>
+                                                    <th>Aula</th>
+                                                    <th>Data</th>
+                                                    <th>Horário</th>
+                                                    <th>Instrutor</th>
+                                                    <th>Sala</th>
+                                                    <th>Duração</th>
+                                                    <th>Status</th>
+                                                    <th width="100">Ações</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                <?php foreach ($agendamentos as $agendamento): ?>
+                                                    <tr>
+                                                        <td>
+                                                            <strong><?= htmlspecialchars($agendamento['nome_aula']) ?></strong>
+                                                        </td>
+                                                        <td>
+                                                            <?= date('d/m/Y', strtotime($agendamento['data_aula'])) ?>
+                                                        </td>
+                                                        <td>
+                                                            <?= date('H:i', strtotime($agendamento['hora_inicio'])) ?> - 
+                                                            <?= date('H:i', strtotime($agendamento['hora_fim'])) ?>
+                                                        </td>
+                                                        <td>
+                                                            <?= htmlspecialchars($agendamento['instrutor_nome'] ?? 'Não informado') ?>
+                                                        </td>
+                                                        <td>
+                                                            <?= htmlspecialchars($agendamento['sala_nome'] ?? 'Não informada') ?>
+                                                        </td>
+                                                        <td>
+                                                            <?= $agendamento['duracao_minutos'] ?> min
+                                                        </td>
+                                                        <td>
+                                                            <?php
+                                                            $statusClass = '';
+                                                            $statusText = '';
+                                                            switch ($agendamento['status']) {
+                                                                case 'agendada':
+                                                                    $statusClass = 'badge bg-warning';
+                                                                    $statusText = 'Agendada';
+                                                                    break;
+                                                                case 'realizada':
+                                                                    $statusClass = 'badge bg-success';
+                                                                    $statusText = 'Realizada';
+                                                                    break;
+                                                                case 'cancelada':
+                                                                    $statusClass = 'badge bg-danger';
+                                                                    $statusText = 'Cancelada';
+                                                                    break;
+                                                                case 'reagendada':
+                                                                    $statusClass = 'badge bg-info';
+                                                                    $statusText = 'Reagendada';
+                                                                    break;
+                                                                default:
+                                                                    $statusClass = 'badge bg-secondary';
+                                                                    $statusText = ucfirst($agendamento['status']);
+                                                            }
+                                                            ?>
+                                                            <span class="<?= $statusClass ?>"><?= $statusText ?></span>
+                                                        </td>
+                                                        <td>
+                                                            <div class="btn-group" role="group">
+                                                                <?php if ($agendamento['status'] === 'agendada'): ?>
+                                                                    <button type="button" 
+                                                                            class="btn btn-sm btn-outline-primary" 
+                                                                            onclick="editarAgendamento(<?= $agendamento['id'] ?>, '<?= htmlspecialchars($agendamento['nome_aula']) ?>', '<?= $agendamento['data_aula'] ?>', '<?= $agendamento['hora_inicio'] ?>', '<?= $agendamento['hora_fim'] ?>', '<?= $agendamento['instrutor_id'] ?>', '<?= $agendamento['sala_id'] ?? '' ?>', '<?= $agendamento['duracao_minutos'] ?>', '<?= htmlspecialchars($agendamento['observacoes'] ?? '') ?>')"
+                                                                            title="Editar agendamento">
+                                                                        <i class="fas fa-edit"></i>
+                                                                    </button>
+                                                                    <button type="button" 
+                                                                            class="btn btn-sm btn-outline-danger" 
+                                                                            onclick="cancelarAgendamento(<?= $agendamento['id'] ?>, '<?= htmlspecialchars($agendamento['nome_aula']) ?>')"
+                                                                            title="Cancelar agendamento">
+                                                                        <i class="fas fa-times"></i>
+                                                                    </button>
+                                                                <?php else: ?>
+                                                                    <span class="text-muted small">Não editável</span>
+                                                                <?php endif; ?>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                <?php endforeach; ?>
+                                            </tbody>
+                                        </table>
+                                    </div>
                                 </div>
-                                <div class="stat-item">
-                                    <span class="stat-label">Realizadas:</span>
-                                    <span class="stat-value stat-realizadas"><?= $stats['realizadas'] ?></span>
+                            <?php else: ?>
+                                <div class="historico-agendamentos">
+                                    <h6 class="mb-3">
+                                        <i class="fas fa-calendar-alt me-2" style="color: #023A8D;"></i>
+                                        Histórico de Agendamentos - <?= htmlspecialchars($disciplina['nome_disciplina']) ?>
+                                    </h6>
+                                    
+                                    <div class="text-center py-4">
+                                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                        <h6 class="text-muted">Nenhum agendamento encontrado</h6>
+                                        <p class="text-muted small">Não há aulas agendadas para esta disciplina ainda.</p>
+                                    </div>
                                 </div>
-                                <div class="stat-item">
-                                    <span class="stat-label">Faltantes:</span>
-                                    <span class="stat-value stat-faltantes"><?= $stats['faltantes'] ?></span>
-                                </div>
-                            </div>
+                            <?php endif; ?>
                         </div>
-                        
-                        <div class="disciplina-detalhes-display">
-                            <div class="detalhe-item">
-                                <span class="detalhe-label">Carga Horária:</span>
-                                <span class="detalhe-valor"><?= isset($disciplina['carga_horaria_padrao']) ? $disciplina['carga_horaria_padrao'] : '1' ?> horas</span>
-                            </div>
-                            <div class="detalhe-item">
-                                <span class="detalhe-label">Aulas Padrão:</span>
-                                <span class="detalhe-valor"><?= isset($disciplina['carga_horaria_padrao']) ? $disciplina['carga_horaria_padrao'] : '1' ?> aulas</span>
-                            </div>
-                        </div>
-                        
-                        <!-- Disciplinas são automáticas baseadas no tipo de curso - não editáveis -->
                     </div>
                 </div>
             <?php endforeach; ?>
@@ -1375,8 +1883,8 @@ function carregarDisciplinasDisponiveis() {
                     if (Array.isArray(data.disciplinas)) {
                         console.log('✅ [API] Disciplinas é um array válido com', data.disciplinas.length, 'itens');
                         
-                        // Carregar em todos os selects existentes (incluindo o de nova disciplina e formulários de edição)
-                        const selects = document.querySelectorAll('.disciplina-item select, #nova_disciplina_select, .disciplina-edit-form select');
+                        // Carregar em todos os selects existentes (formulários de edição)
+                        const selects = document.querySelectorAll('.disciplina-item select, .disciplina-edit-form select');
                         console.log('🔍 [SELECTS] Encontrados selects:', selects.length);
                         
                         selects.forEach((select, index) => {
@@ -1403,7 +1911,8 @@ function carregarDisciplinasDisponiveis() {
                         });
                         
                         // Selecionar disciplinas já cadastradas
-                        selecionarDisciplinasCadastradas();
+                        // TEMPORARIAMENTE DESABILITADO PARA TESTE
+                        // selecionarDisciplinasCadastradas();
                         
                         console.log('✅ [DISCIPLINAS] Disciplinas carregadas com sucesso:', data.disciplinas.length);
                         return data.disciplinas;
@@ -1444,6 +1953,12 @@ function selecionarDisciplinasCadastradas() {
             console.log(`🔍 [ITEM ${index}] Select encontrado:`, !!select);
             console.log(`🔍 [ITEM ${index}] Opções no select:`, select ? select.options.length : 0);
             
+            // Pular itens com ID inválido
+            if (!disciplinaIdCadastrada || disciplinaIdCadastrada === '0' || disciplinaIdCadastrada === 'null') {
+                console.log(`⚠️ [ITEM ${index}] ID inválido ignorado:`, disciplinaIdCadastrada);
+                return;
+            }
+            
             if (select && disciplinaIdCadastrada && disciplinaIdCadastrada !== '0') {
                 // Verificar se a opção existe
                 const optionExists = Array.from(select.options).some(option => option.value === disciplinaIdCadastrada);
@@ -1456,8 +1971,11 @@ function selecionarDisciplinasCadastradas() {
                     
                     // Atualizar display da disciplina - usar o índice correto do data-disciplina-id
                     const disciplinaId = item.getAttribute('data-disciplina-id');
-                    if (disciplinaId) {
-                        atualizarDisciplinaDetalhes(parseInt(disciplinaId));
+                    if (disciplinaId && disciplinaId !== '0' && disciplinaId !== 'null' && disciplinaId !== 'undefined') {
+                        const disciplinaIdInt = parseInt(disciplinaId);
+                        if (!isNaN(disciplinaIdInt) && disciplinaIdInt > 0) {
+                            atualizarDisciplinaDetalhes(disciplinaIdInt);
+                        }
                     }
                 } else {
                     console.warn(`⚠️ [ITEM ${index}] Opção não encontrada para disciplina:`, disciplinaIdCadastrada);
@@ -1473,7 +1991,15 @@ function selecionarDisciplinasCadastradas() {
 
 // Atualizar disciplina (igual ao cadastro)
 function atualizarDisciplinaDetalhes(disciplinaId) {
-    console.log('🔄 [DISCIPLINA] Atualizando disciplina:', disciplinaId);
+    console.log('🔄 [DISCIPLINA] Atualizando disciplina:', disciplinaId, 'tipo:', typeof disciplinaId);
+    
+    // Garantir que disciplinaId é um número válido
+    disciplinaId = parseInt(disciplinaId);
+    if (isNaN(disciplinaId) || disciplinaId <= 0) {
+        console.error('❌ [DISCIPLINA] ID da disciplina inválido:', disciplinaId, 'tipo:', typeof disciplinaId);
+        console.error('❌ [DISCIPLINA] Stack trace:', new Error().stack);
+        return;
+    }
     
     const disciplinaSelect = document.querySelector(`[data-disciplina-id="${disciplinaId}"] select`);
     if (!disciplinaSelect) return;
@@ -1685,7 +2211,7 @@ function carregarDisciplinasSimples() {
                     select.innerHTML = '<option value="">Selecione a disciplina...</option>';
                     
                     data.disciplinas.forEach(disciplina => {
-                        if (disciplina && disciplina.id && disciplina.nome) {
+                        if (disciplina && disciplina.id && disciplina.nome && disciplina.id !== '0' && disciplina.id !== 0) {
                             const option = document.createElement('option');
                             option.value = disciplina.id;
                             option.textContent = disciplina.nome;
@@ -1737,7 +2263,7 @@ function forcarCarregamentoDisciplinas() {
                     
                     // Adicionar TODAS as disciplinas
                     data.disciplinas.forEach((disciplina, discIndex) => {
-                        if (disciplina && disciplina.id && disciplina.nome) {
+                        if (disciplina && disciplina.id && disciplina.nome && disciplina.id !== '0' && disciplina.id !== 0) {
                             const option = document.createElement('option');
                             option.value = disciplina.id;
                             option.textContent = disciplina.nome;
@@ -1795,7 +2321,13 @@ function carregarDisciplinasNoSelect(disciplinaId) {
                         
                         let select;
                         if (disciplinaId === 'nova') {
-                            select = document.getElementById('nova_disciplina_select');
+                            // Elemento não existe nesta página - pular
+                            console.log('ℹ️ [SELECT] Elemento nova_disciplina_select não existe nesta página');
+                            return Promise.resolve([]);
+                        } else if (disciplinaId === '0' || disciplinaId === 0 || disciplinaId === 'null' || disciplinaId === 'undefined') {
+                            // ID inválido - pular
+                            console.log('ℹ️ [SELECT] ID de disciplina inválido ignorado:', disciplinaId);
+                            return Promise.resolve([]);
                         } else {
                             // Buscar o select de forma mais robusta com múltiplos fallbacks
                             console.log('🔍 [SELECT] Buscando select para disciplina:', disciplinaId);
@@ -1851,7 +2383,7 @@ function carregarDisciplinasNoSelect(disciplinaId) {
                             
                             // Adicionar disciplinas uma por uma - mesma estrutura do cadastro
                             data.disciplinas.forEach((disciplina, index) => {
-                                if (disciplina && disciplina.id && disciplina.nome) {
+                                if (disciplina && disciplina.id && disciplina.nome && disciplina.id !== '0' && disciplina.id !== 0) {
                                     const option = document.createElement('option');
                                     option.value = disciplina.id;
                                     option.textContent = disciplina.nome;
@@ -1894,20 +2426,26 @@ function carregarDisciplinasNoSelect(disciplinaId) {
 
 // Atualizar contador de disciplinas
 function atualizarContadorDisciplinasDetalhes() {
-    const disciplinas = document.querySelectorAll('.disciplina-item select, .disciplina-card');
+    const disciplinas = document.querySelectorAll('.disciplina-item select, .disciplina-card, .disciplina-accordion');
     let disciplinasSelecionadas = 0;
     
     disciplinas.forEach(element => {
-        if (element.classList.contains('disciplina-card')) {
+        if (element.classList.contains('disciplina-card') || element.classList.contains('disciplina-accordion')) {
             // Para cards, verificar se tem disciplina cadastrada
-            const disciplinaId = element.getAttribute('data-disciplina-cadastrada');
-            if (disciplinaId && disciplinaId !== '0') {
-                disciplinasSelecionadas++;
+            const disciplinaId = element.getAttribute('data-disciplina-cadastrada') || element.getAttribute('data-disciplina-id');
+            if (disciplinaId && disciplinaId !== '0' && disciplinaId !== 'null' && disciplinaId !== 'undefined') {
+                const disciplinaIdInt = parseInt(disciplinaId);
+                if (!isNaN(disciplinaIdInt) && disciplinaIdInt > 0) {
+                    disciplinasSelecionadas++;
+                }
             }
         } else {
             // Para selects, verificar se tem valor selecionado
-            if (element.value) {
-                disciplinasSelecionadas++;
+            if (element.value && element.value !== '0' && element.value !== 'null' && element.value !== 'undefined') {
+                const valueInt = parseInt(element.value);
+                if (!isNaN(valueInt) && valueInt > 0) {
+                    disciplinasSelecionadas++;
+                }
             }
         }
     });
@@ -1971,6 +2509,393 @@ function toggleEditDisciplina(disciplinaId) {
 // Funções de adição de disciplinas removidas - disciplinas são automáticas baseadas no tipo de curso
 
 // ==========================================
+// SISTEMA DE RELATÓRIO DETALHADO DE DISCIPLINAS
+// ==========================================
+
+// Função de teste simples
+function testeSimples(disciplinaId) {
+    console.log('🧪 [TESTE] Função testeSimples chamada com:', disciplinaId);
+    alert('Teste funcionando! ID: ' + disciplinaId);
+}
+
+// Função SIMPLES para alternar sanfona
+function toggleSimples(disciplinaId) {
+    console.log('🔄 [SIMPLES] ===== INÍCIO DA FUNÇÃO =====');
+    console.log('🔄 [SIMPLES] Alternando disciplina:', disciplinaId);
+    console.log('🔄 [SIMPLES] Tipo do ID:', typeof disciplinaId);
+    
+    // Verificar se o ID é válido
+    if (!disciplinaId) {
+        console.error('❌ [SIMPLES] ID da disciplina é vazio ou nulo');
+        return;
+    }
+    
+    console.log('🔍 [SIMPLES] Buscando elementos...');
+    const disciplinaCard = document.querySelector(`[data-disciplina-id="${disciplinaId}"]`);
+    const detalhesContent = document.getElementById(`detalhes-disciplina-${disciplinaId}`);
+    
+    console.log('🔍 [SIMPLES] Card encontrado:', !!disciplinaCard);
+    console.log('🔍 [SIMPLES] Conteúdo encontrado:', !!detalhesContent);
+    
+    if (!disciplinaCard) {
+        console.error('❌ [SIMPLES] Card da disciplina não encontrado para ID:', disciplinaId);
+        console.error('❌ [SIMPLES] Tentando buscar todos os cards...');
+        const todosCards = document.querySelectorAll('[data-disciplina-id]');
+        console.log('❌ [SIMPLES] Total de cards encontrados:', todosCards.length);
+        todosCards.forEach((card, index) => {
+            console.log(`❌ [SIMPLES] Card ${index + 1}: data-disciplina-id="${card.getAttribute('data-disciplina-id')}"`);
+        });
+        return;
+    }
+    
+    if (!detalhesContent) {
+        console.error('❌ [SIMPLES] Conteúdo da sanfona não encontrado para ID:', disciplinaId);
+        return;
+    }
+    
+    console.log('✅ [SIMPLES] Elementos encontrados, verificando estado...');
+    const isExpanded = disciplinaCard.classList.contains('expanded');
+    console.log('🔍 [SIMPLES] Sanfona expandida:', isExpanded);
+    
+    if (isExpanded) {
+        // Fechar
+        console.log('🔽 [SIMPLES] Fechando sanfona...');
+        disciplinaCard.classList.remove('expanded');
+        detalhesContent.style.display = 'none';
+        console.log('✅ [SIMPLES] Sanfona fechada');
+    } else {
+        // Abrir
+        console.log('🔼 [SIMPLES] Abrindo sanfona...');
+        disciplinaCard.classList.add('expanded');
+        detalhesContent.style.display = 'block';
+        
+        // Mostrar conteúdo simples
+        const dataElement = document.getElementById(`data-disciplina-${disciplinaId}`);
+        console.log('🔍 [SIMPLES] Elemento de dados encontrado:', !!dataElement);
+        
+        if (dataElement) {
+            console.log('✅ [SIMPLES] Dados já carregados via PHP para disciplina:', disciplinaId);
+        } else {
+            console.error('❌ [SIMPLES] Elemento de dados não encontrado');
+        }
+        
+        console.log('✅ [SIMPLES] Sanfona aberta');
+    }
+    
+    console.log('🔄 [SIMPLES] ===== FIM DA FUNÇÃO =====');
+}
+
+/**
+ * Alternar exibição dos detalhes da disciplina (sanfona)
+ * @param {number} disciplinaId - ID da disciplina
+ */
+function toggleDisciplinaDetalhes(disciplinaId) {
+    console.log('🔄 [SANFONA] Alternando disciplina:', disciplinaId, 'tipo:', typeof disciplinaId);
+    console.log('🔄 [SANFONA] Função chamada com sucesso!');
+    
+    // Garantir que disciplinaId é válido (aceita tanto números quanto strings)
+    const disciplinaIdInt = parseInt(disciplinaId);
+    const isNumericId = !isNaN(disciplinaIdInt) && disciplinaIdInt > 0;
+    const isStringId = typeof disciplinaId === 'string' && disciplinaId.trim().length > 0 && disciplinaId !== '0';
+    
+    if (!isNumericId && !isStringId) {
+        console.error('❌ [SANFONA] ID da disciplina inválido:', disciplinaId, 'tipo:', typeof disciplinaId);
+        console.error('❌ [SANFONA] Stack trace:', new Error().stack);
+        return;
+    }
+    
+    const disciplinaCard = document.querySelector(`[data-disciplina-id="${disciplinaId}"]`);
+    const detalhesContent = document.getElementById(`detalhes-disciplina-${disciplinaId}`);
+    
+    if (!disciplinaCard || !detalhesContent) {
+        console.error('❌ [SANFONA] Elementos não encontrados para disciplina:', disciplinaId);
+        console.error('❌ [SANFONA] Card encontrado:', !!disciplinaCard);
+        console.error('❌ [SANFONA] Conteúdo encontrado:', !!detalhesContent);
+        return;
+    }
+    
+    const chevron = disciplinaCard.querySelector('.disciplina-chevron');
+    
+    const isExpanded = disciplinaCard.classList.contains('expanded');
+    
+    if (isExpanded) {
+        // Fechar sanfona
+        disciplinaCard.classList.remove('expanded');
+        detalhesContent.style.display = 'none';
+        console.log('✅ [SANFONA] Sanfona fechada para disciplina:', disciplinaId);
+    } else {
+        // Abrir sanfona
+        disciplinaCard.classList.add('expanded');
+        detalhesContent.style.display = 'block';
+        
+        // Dados já estão carregados via PHP, não precisa carregar via AJAX
+        console.log('✅ [SANFONA] Dados já carregados via PHP para disciplina:', disciplinaId);
+        
+        console.log('✅ [SANFONA] Sanfona aberta para disciplina:', disciplinaId);
+    }
+}
+
+/**
+ * Carregar detalhes completos da disciplina
+ * @param {number} disciplinaId - ID da disciplina
+ */
+function carregarDetalhesDisciplina(disciplinaId) {
+    console.log('📊 [DETALHES] Carregando detalhes da disciplina:', disciplinaId, 'tipo:', typeof disciplinaId);
+    console.log('📊 [DETALHES] Função carregarDetalhesDisciplina chamada!');
+    
+    // Garantir que disciplinaId é válido (aceita tanto números quanto strings)
+    const disciplinaIdInt = parseInt(disciplinaId);
+    const isNumericId = !isNaN(disciplinaIdInt) && disciplinaIdInt > 0;
+    const isStringId = typeof disciplinaId === 'string' && disciplinaId.trim().length > 0 && disciplinaId !== '0';
+    
+    if (!isNumericId && !isStringId) {
+        console.error('❌ [DETALHES] ID da disciplina inválido:', disciplinaId, 'tipo:', typeof disciplinaId);
+        console.error('❌ [DETALHES] Stack trace:', new Error().stack);
+        return;
+    }
+    
+    const disciplinaCard = document.querySelector(`[data-disciplina-id="${disciplinaId}"]`);
+    if (!disciplinaCard) {
+        console.error('❌ [DETALHES] Card da disciplina não encontrado:', disciplinaId);
+        return;
+    }
+    
+    const turmaId = disciplinaCard.getAttribute('data-turma-id');
+    const loadingElement = document.getElementById(`loading-disciplina-${disciplinaId}`);
+    const dataElement = document.getElementById(`data-disciplina-${disciplinaId}`);
+    
+    if (!turmaId) {
+        console.error('❌ [DETALHES] ID da turma não encontrado');
+        return;
+    }
+    
+    // Mostrar loading
+    if (loadingElement) loadingElement.style.display = 'block';
+    if (dataElement) dataElement.style.display = 'none';
+    
+    // Buscar dados da API
+    const apiUrl = `/cfc-bom-conselho/admin/api/relatorio-disciplinas.php?acao=aulas_disciplina&turma_id=${turmaId}&disciplina_id=${disciplinaId}`;
+    console.log('🌐 [API] Fazendo requisição para:', apiUrl);
+    console.log('🌐 [API] Parâmetros:', { turmaId, disciplinaId, tipoDisciplinaId: typeof disciplinaId });
+    
+    fetch(apiUrl)
+        .then(response => {
+            console.log('📡 [API] Resposta recebida:', response.status, response.statusText);
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.text().then(text => {
+                console.log('📄 [API] Resposta bruta:', text);
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('❌ [API] Erro ao fazer parse do JSON:', e);
+                    console.error('❌ [API] Texto recebido:', text);
+                    throw new Error('Resposta da API não é JSON válido');
+                }
+            });
+        })
+        .then(data => {
+            console.log('📊 [API] Dados parseados:', data);
+            
+            if (data.success) {
+                console.log('✅ [API] Sucesso! Renderizando detalhes...');
+                renderizarDetalhesDisciplina(disciplinaId, data);
+            } else {
+                console.error('❌ [API] API retornou erro:', data.message);
+                mostrarErroDetalhes(disciplinaId, data.message || 'Erro desconhecido');
+            }
+        })
+        .catch(error => {
+            console.error('❌ [API] Erro na requisição:', error);
+            console.error('❌ [API] Stack trace:', error.stack);
+            mostrarErroDetalhes(disciplinaId, error.message);
+        })
+        .finally(() => {
+            console.log('🏁 [API] Finalizando carregamento...');
+            // Esconder loading
+            if (loadingElement) loadingElement.style.display = 'none';
+            if (dataElement) dataElement.style.display = 'block';
+        });
+}
+
+/**
+ * Renderizar detalhes da disciplina na interface
+ * @param {number} disciplinaId - ID da disciplina
+ * @param {Object} data - Dados da disciplina
+ */
+function renderizarDetalhesDisciplina(disciplinaId, data) {
+    console.log('🎨 [RENDER] Renderizando detalhes para disciplina:', disciplinaId, 'tipo:', typeof disciplinaId);
+    
+    // Garantir que disciplinaId é válido (aceita tanto números quanto strings)
+    const disciplinaIdInt = parseInt(disciplinaId);
+    const isNumericId = !isNaN(disciplinaIdInt) && disciplinaIdInt > 0;
+    const isStringId = typeof disciplinaId === 'string' && disciplinaId.trim().length > 0 && disciplinaId !== '0';
+    
+    if (!isNumericId && !isStringId) {
+        console.error('❌ [RENDER] ID da disciplina inválido:', disciplinaId, 'tipo:', typeof disciplinaId);
+        console.error('❌ [RENDER] Stack trace:', new Error().stack);
+        return;
+    }
+    
+    const dataElement = document.getElementById(`data-disciplina-${disciplinaId}`);
+    if (!dataElement) {
+        console.error('❌ [RENDER] Elemento de dados não encontrado para disciplina:', disciplinaId);
+        return;
+    }
+    
+    const { disciplina, aulas, estatisticas } = data;
+    
+    // Criar HTML dos detalhes
+    let html = `
+        <div class="disciplina-stats-summary">
+            <h6 style="color: #023A8D; margin-bottom: 15px;">
+                <i class="fas fa-chart-bar me-2"></i>Estatísticas da Disciplina
+            </h6>
+            
+            <div class="stats-grid">
+                <div class="stat-card-mini">
+                    <div class="stat-number-mini">${estatisticas.total_aulas}</div>
+                    <div class="stat-label-mini">Total de Aulas</div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="stat-number-mini">${estatisticas.aulas_realizadas}</div>
+                    <div class="stat-label-mini">Realizadas</div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="stat-number-mini">${estatisticas.aulas_agendadas}</div>
+                    <div class="stat-label-mini">Agendadas</div>
+                </div>
+                <div class="stat-card-mini">
+                    <div class="stat-number-mini">${estatisticas.total_horas}h</div>
+                    <div class="stat-label-mini">Horas Totais</div>
+                </div>
+            </div>
+            
+            <div class="progress-container">
+                <div class="progress-label">
+                    <span>Progresso da Disciplina</span>
+                    <span>${estatisticas.total_horas}h / ${estatisticas.carga_obrigatoria}h</span>
+                </div>
+                <div class="progress-bar-custom">
+                    <div class="progress-fill" style="width: ${Math.min(100, (estatisticas.total_horas / estatisticas.carga_obrigatoria) * 100)}%"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Adicionar tabela de aulas se houver aulas
+    if (aulas && aulas.length > 0) {
+        html += `
+            <div style="background: white; border-radius: 8px; padding: 20px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                <h6 style="color: #023A8D; margin-bottom: 15px;">
+                    <i class="fas fa-calendar-alt me-2"></i>Aulas Agendadas (${aulas.length})
+                </h6>
+                
+                <div style="overflow-x: auto;">
+                    <table class="aulas-table">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Dia</th>
+                                <th>Horário</th>
+                                <th>Duração</th>
+                                <th>Status</th>
+                                <th>Sala</th>
+                                <th>Instrutor</th>
+                                <th>Observações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+        `;
+        
+        aulas.forEach(aula => {
+            html += `
+                <tr>
+                    <td style="font-weight: 600;">${aula.data_formatada}</td>
+                    <td style="color: #6c757d;">${aula.dia_semana}</td>
+                    <td>
+                        <strong>${aula.hora_inicio}</strong><br>
+                        <small style="color: #6c757d;">até ${aula.hora_fim}</small>
+                    </td>
+                    <td style="font-weight: 600; color: #023A8D;">${aula.duracao_horas}h</td>
+                    <td>
+                        <span class="status-badge-table status-${aula.status}">${aula.status_formatado}</span>
+                    </td>
+                    <td style="font-weight: 500;">${aula.sala_nome}</td>
+                    <td class="instrutor-info">
+                        <div class="instrutor-nome">${aula.instrutor_nome}</div>
+                        ${aula.instrutor_telefone ? `<div class="instrutor-contato">📞 ${aula.instrutor_telefone}</div>` : ''}
+                        ${aula.instrutor_email ? `<div class="instrutor-contato">✉️ ${aula.instrutor_email}</div>` : ''}
+                    </td>
+                    <td style="font-style: italic; color: #6c757d; max-width: 200px; word-wrap: break-word;">
+                        ${aula.observacoes || '-'}
+                    </td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+    } else {
+        html += `
+            <div style="background: white; border-radius: 8px; padding: 40px; text-align: center; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+                <i class="fas fa-calendar-times" style="font-size: 3rem; color: #6c757d; margin-bottom: 15px;"></i>
+                <h6 style="color: #6c757d; margin-bottom: 10px;">Nenhuma aula agendada</h6>
+                <p style="color: #6c757d; margin: 0;">Esta disciplina ainda não possui aulas agendadas.</p>
+            </div>
+        `;
+    }
+    
+    // Inserir HTML
+    dataElement.innerHTML = html;
+    
+    console.log('✅ [RENDER] Detalhes renderizados com sucesso');
+}
+
+/**
+ * Mostrar erro ao carregar detalhes
+ * @param {number} disciplinaId - ID da disciplina
+ * @param {string} errorMessage - Mensagem de erro
+ */
+function mostrarErroDetalhes(disciplinaId, errorMessage) {
+    console.error('❌ [ERRO] Mostrando erro para disciplina:', disciplinaId, 'tipo:', typeof disciplinaId, errorMessage);
+    
+    // Garantir que disciplinaId é válido (aceita tanto números quanto strings)
+    const disciplinaIdInt = parseInt(disciplinaId);
+    const isNumericId = !isNaN(disciplinaIdInt) && disciplinaIdInt > 0;
+    const isStringId = typeof disciplinaId === 'string' && disciplinaId.trim().length > 0 && disciplinaId !== '0';
+    
+    if (!isNumericId && !isStringId) {
+        console.error('❌ [ERRO] ID da disciplina inválido:', disciplinaId, 'tipo:', typeof disciplinaId);
+        console.error('❌ [ERRO] Stack trace:', new Error().stack);
+        return;
+    }
+    
+    const dataElement = document.getElementById(`data-disciplina-${disciplinaId}`);
+    if (!dataElement) {
+        console.error('❌ [ERRO] Elemento de dados não encontrado para disciplina:', disciplinaId);
+        return;
+    }
+    
+    dataElement.innerHTML = `
+        <div style="background: white; border-radius: 8px; padding: 40px; text-align: center; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);">
+            <i class="fas fa-exclamation-triangle" style="font-size: 3rem; color: #dc3545; margin-bottom: 15px;"></i>
+            <h6 style="color: #dc3545; margin-bottom: 10px;">Erro ao carregar detalhes</h6>
+            <p style="color: #6c757d; margin: 0;">${errorMessage}</p>
+            <button onclick="carregarDetalhesDisciplina('${disciplinaId}')" 
+                    style="margin-top: 15px; padding: 8px 16px; background: #023A8D; color: white; border: none; border-radius: 6px; cursor: pointer;">
+                <i class="fas fa-redo me-2"></i>Tentar Novamente
+            </button>
+        </div>
+    `;
+}
+
+// ==========================================
 // SISTEMA DE EDIÇÃO INLINE
 // ==========================================
 
@@ -2021,7 +2946,8 @@ function testarSistemaDisciplinas() {
     console.log('🔍 [TESTE] Função forcarCarregamentoDisciplinas:', typeof forcarCarregamentoDisciplinas);
     
     // Executar teste completo após 2 segundos
-    setTimeout(testarDisciplinasCompletas, 2000);
+    // TEMPORARIAMENTE DESABILITADO PARA TESTE
+    // setTimeout(testarDisciplinasCompletas, 2000);
     
     // Testar se há selects na página
     const selects = document.querySelectorAll('select');
@@ -2050,31 +2976,57 @@ function testarSistemaDisciplinas() {
 // Inicializar sistema
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 [SISTEMA] Inicializando página de detalhes da turma...');
+    console.log('🚀 [SISTEMA] DOM carregado completamente!');
+    
+    // Debug imediato - verificar elementos
+    console.log('🔍 [SISTEMA] Verificando elementos de disciplina...');
+    const disciplinaCards = document.querySelectorAll('.disciplina-accordion');
+    console.log('🔍 [SISTEMA] Cards encontrados:', disciplinaCards.length);
+    
+    disciplinaCards.forEach((card, index) => {
+        const disciplinaId = card.getAttribute('data-disciplina-id');
+        const turmaId = card.getAttribute('data-turma-id');
+        console.log(`📋 [SISTEMA] Card ${index + 1}: disciplinaId="${disciplinaId}", turmaId="${turmaId}"`);
+        
+        // Verificar onclick
+        const clickableElement = card.querySelector('.disciplina-header-clickable');
+        if (clickableElement) {
+            console.log(`✅ [SISTEMA] Card ${index + 1}: Elemento clicável encontrado`);
+            console.log(`🔗 [SISTEMA] Card ${index + 1}: onclick="${clickableElement.getAttribute('onclick')}"`);
+        } else {
+            console.error(`❌ [SISTEMA] Card ${index + 1}: Elemento clicável NÃO encontrado`);
+        }
+    });
     
     // Executar teste
-    setTimeout(testarSistemaDisciplinas, 1000);
+    // TEMPORARIAMENTE DESABILITADO PARA TESTE
+    // setTimeout(testarSistemaDisciplinas, 1000);
     
     // Carregar disciplinas usando método simples que sempre funciona
     console.log('🚀 [INIT] Usando método simples para carregar disciplinas...');
-    carregarDisciplinasSimples();
+    // TEMPORARIAMENTE DESABILITADO PARA TESTE
+    // carregarDisciplinasSimples();
     
-    // Carregar disciplinas no select de nova disciplina
+    // Verificar se há selects de disciplina na página atual
+    // TEMPORARIAMENTE DESABILITADO PARA TESTE
+    /*
     setTimeout(() => {
-        const novaDisciplinaSelect = document.getElementById('nova_disciplina_select');
-        console.log('🔍 [NOVA] Verificando select de nova disciplina:', novaDisciplinaSelect);
+        const disciplinaSelects = document.querySelectorAll('.disciplina-item select, .disciplina-edit-form select');
+        console.log('🔍 [SELECTS] Verificando selects de disciplina encontrados:', disciplinaSelects.length);
         
-        if (novaDisciplinaSelect) {
-            console.log('📊 [NOVA] Opções atuais:', novaDisciplinaSelect.options.length);
-            if (novaDisciplinaSelect.options.length <= 1) {
-                console.log('🔄 [NOVA] Carregando disciplinas no select de nova disciplina');
-                carregarDisciplinasNoSelect('nova');
-            } else {
-                console.log('✅ [NOVA] Disciplinas já carregadas');
-            }
+        if (disciplinaSelects.length > 0) {
+            console.log('📊 [SELECTS] Carregando disciplinas nos selects existentes');
+            disciplinaSelects.forEach((select, index) => {
+                if (select.options.length <= 1) {
+                    console.log(`🔄 [SELECT ${index}] Carregando disciplinas`);
+                    carregarDisciplinasSimples();
+                }
+            });
         } else {
-            console.error('❌ [NOVA] Select de nova disciplina não encontrado');
+            console.log('ℹ️ [SELECTS] Nenhum select de disciplina encontrado na página atual');
         }
     }, 1000);
+    */
     
     // Configurar elementos editáveis
     const editElements = document.querySelectorAll('.inline-edit');
@@ -2103,11 +3055,11 @@ document.addEventListener('DOMContentLoaded', function() {
     // Atualizar contador inicial
     atualizarContadorDisciplinasDetalhes();
     
-    // Adicionar eventos para TODOS os selects da página
-    const todosSelects = document.querySelectorAll('select');
-    console.log('🔍 [EVENTS] Adicionando eventos para', todosSelects.length, 'selects');
+    // Adicionar eventos apenas para selects de disciplina (se existirem)
+    const disciplinaSelects = document.querySelectorAll('.disciplina-item select, .disciplina-edit-form select');
+    console.log('🔍 [EVENTS] Adicionando eventos para', disciplinaSelects.length, 'selects de disciplina');
     
-    todosSelects.forEach((select, index) => {
+    disciplinaSelects.forEach((select, index) => {
         console.log(`🔍 [EVENTS] Configurando select ${index + 1}:`, select.name || select.id);
         
         // Evento de clique
@@ -2138,23 +3090,92 @@ document.addEventListener('DOMContentLoaded', function() {
     
     console.log('✅ [SISTEMA] Página inicializada com sucesso');
     
-    // Verificação periódica para garantir que todos os selects têm todas as disciplinas
-    setInterval(() => {
-        const selects = document.querySelectorAll('select');
-        let precisaRecarregar = false;
+    // Debug: Verificar se os elementos de sanfona foram criados
+    setTimeout(() => {
+        const disciplinaCards = document.querySelectorAll('.disciplina-accordion');
+        console.log('🔍 [DEBUG] Cards de disciplina encontrados:', disciplinaCards.length);
         
-        selects.forEach(select => {
-            if (select.options.length <= 2) {
-                console.log('⚠️ [PERIODIC] Select com poucas opções detectado:', select.name || select.id);
-                precisaRecarregar = true;
-            }
+        // Monitorar mudanças nos elementos
+        const observer = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    mutation.removedNodes.forEach((node) => {
+                        if (node.nodeType === Node.ELEMENT_NODE && 
+                            (node.classList.contains('disciplina-accordion') || 
+                             node.querySelector('.disciplina-accordion'))) {
+                            console.error('🚨 [MONITOR] Elemento de disciplina REMOVIDO:', node);
+                            console.error('🚨 [MONITOR] Stack trace:', new Error().stack);
+                        }
+                    });
+                }
+            });
         });
         
-        if (precisaRecarregar) {
-            console.log('🔄 [PERIODIC] Recarregando disciplinas...');
-            carregarDisciplinasSimples();
+        // Observar mudanças no container de disciplinas
+        const disciplinasContainer = document.querySelector('.disciplinas-cadastradas-section');
+        if (disciplinasContainer) {
+            observer.observe(disciplinasContainer, { 
+                childList: true, 
+                subtree: true 
+            });
+            console.log('👁️ [MONITOR] Observador de mutações ativado');
         }
-    }, 5000); // Verificar a cada 5 segundos
+        
+        disciplinaCards.forEach((card, index) => {
+            const disciplinaId = card.getAttribute('data-disciplina-id');
+            
+            console.log(`🔍 [DEBUG] Card ${index + 1}: disciplinaId = "${disciplinaId}" (tipo: ${typeof disciplinaId})`);
+            
+            // Pular apenas IDs realmente inválidos (null, undefined, string vazia, '0')
+            if (!disciplinaId || disciplinaId === '0' || disciplinaId === 'null' || disciplinaId === 'undefined' || disciplinaId.trim() === '') {
+                console.log(`⚠️ [DEBUG] Card ${index + 1}: ID realmente inválido ignorado (${disciplinaId})`);
+                // Remover elemento com ID inválido
+                card.remove();
+                return;
+            }
+            
+            // Verificar se o ID é válido (aceita tanto números quanto strings não vazias)
+            const disciplinaIdInt = parseInt(disciplinaId);
+            const isNumericId = !isNaN(disciplinaIdInt) && disciplinaIdInt > 0;
+            const isStringId = typeof disciplinaId === 'string' && disciplinaId.trim().length > 0 && disciplinaId !== '0';
+            
+            if (!isNumericId && !isStringId) {
+                console.log(`⚠️ [DEBUG] Card ${index + 1}: ID não é válido (${disciplinaId})`);
+                card.remove();
+                return;
+            }
+            
+            const detalhesContent = document.getElementById(`detalhes-disciplina-${disciplinaId}`);
+            console.log(`✅ [DEBUG] Card ${index + 1}: VÁLIDO`, {
+                disciplinaId: disciplinaId,
+                disciplinaIdInt: disciplinaIdInt,
+                temConteudo: !!detalhesContent,
+                temChevron: !!card.querySelector('.disciplina-chevron')
+            });
+        });
+    }, 2000);
+    
+    // Verificação periódica apenas para selects de disciplina (se existirem)
+    // TEMPORARIAMENTE DESABILITADO PARA TESTE
+    /*
+    if (disciplinaSelects.length > 0) {
+        setInterval(() => {
+            let precisaRecarregar = false;
+            
+            disciplinaSelects.forEach(select => {
+                if (select.options.length <= 2) {
+                    console.log('⚠️ [PERIODIC] Select de disciplina com poucas opções detectado:', select.name || select.id);
+                    precisaRecarregar = true;
+                }
+            });
+            
+            if (precisaRecarregar) {
+                console.log('🔄 [PERIODIC] Recarregando disciplinas...');
+                carregarDisciplinasSimples();
+            }
+        }, 5000); // Verificar a cada 5 segundos
+    }
+    */
 });
 
 /**
@@ -2851,5 +3872,568 @@ function removeDisciplina(disciplinaId) {
         });
     }
 }
+
+// ===== SISTEMA DE EDIÇÃO DE AGENDAMENTOS =====
+
+// Modal de edição de agendamento
+function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instrutorId, salaId, duracao, observacoes) {
+    // Criar modal dinamicamente se não existir
+    let modal = document.getElementById('modalEditarAgendamento');
+    if (!modal) {
+        modal = criarModalEdicao();
+        document.body.appendChild(modal);
+    }
+    
+    // Buscar dados completos do agendamento
+    fetch(`api/agendamento-detalhes.php?id=${id}`)
+        .then(response => {
+            console.log('🔧 [DEBUG] Resposta agendamento-detalhes:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const agendamento = data.agendamento;
+                
+                // Preencher campos do modal com dados reais
+                document.getElementById('editAgendamentoId').value = agendamento.id;
+                document.getElementById('editNomeAula').value = agendamento.nome_aula;
+                document.getElementById('editDataAula').value = agendamento.data_aula;
+                document.getElementById('editHoraInicio').value = agendamento.hora_inicio;
+                document.getElementById('editHoraFim').value = agendamento.hora_fim;
+                document.getElementById('editDuracao').value = agendamento.duracao_minutos;
+                document.getElementById('editObservacoes').value = agendamento.observacoes || '';
+                
+                console.log('✅ [DEBUG] Dados do agendamento carregados:', agendamento);
+                
+                // Carregar selects com os valores corretos
+                carregarDadosSelects(agendamento.instrutor_id, agendamento.sala_id);
+            } else {
+                console.error('❌ [DEBUG] Erro ao carregar dados do agendamento:', data.message);
+                // Tentar API de fallback
+                return fetch(`api/agendamento-detalhes-fallback.php?id=${id}`);
+            }
+        })
+        .then(response => {
+            if (response) {
+                return response.json();
+            }
+        })
+        .then(data => {
+            if (data && data.success) {
+                const agendamento = data.agendamento;
+                
+                // Preencher campos do modal com dados de fallback
+                document.getElementById('editAgendamentoId').value = agendamento.id;
+                document.getElementById('editNomeAula').value = agendamento.nome_aula;
+                document.getElementById('editDataAula').value = agendamento.data_aula;
+                document.getElementById('editHoraInicio').value = agendamento.hora_inicio;
+                document.getElementById('editHoraFim').value = agendamento.hora_fim;
+                document.getElementById('editDuracao').value = agendamento.duracao_minutos;
+                document.getElementById('editObservacoes').value = agendamento.observacoes || '';
+                
+                console.log('✅ [DEBUG] Dados de fallback carregados:', agendamento);
+                
+                // Carregar selects com os valores corretos
+                carregarDadosSelects(agendamento.instrutor_id, agendamento.sala_id);
+            } else {
+                // Usar dados passados como parâmetro como último fallback
+                document.getElementById('editAgendamentoId').value = id;
+                document.getElementById('editNomeAula').value = nomeAula;
+                document.getElementById('editDataAula').value = dataAula;
+                document.getElementById('editHoraInicio').value = horaInicio;
+                document.getElementById('editHoraFim').value = horaFim;
+                document.getElementById('editDuracao').value = duracao;
+                document.getElementById('editObservacoes').value = observacoes || '';
+                
+                console.log('⚠️ [DEBUG] Usando dados passados como parâmetro');
+                carregarDadosSelects(instrutorId, salaId);
+            }
+        })
+        .catch(error => {
+            console.error('❌ [DEBUG] Erro ao buscar dados do agendamento:', error);
+            // Usar dados passados como parâmetro como último fallback
+            document.getElementById('editAgendamentoId').value = id;
+            document.getElementById('editNomeAula').value = nomeAula;
+            document.getElementById('editDataAula').value = dataAula;
+            document.getElementById('editHoraInicio').value = horaInicio;
+            document.getElementById('editHoraFim').value = horaFim;
+            document.getElementById('editDuracao').value = duracao;
+            document.getElementById('editObservacoes').value = observacoes || '';
+            
+            console.log('⚠️ [DEBUG] Usando dados passados como parâmetro (catch)');
+            carregarDadosSelects(instrutorId, salaId);
+        });
+    
+    // Mostrar modal seguindo o padrão do sistema
+    modal.classList.add('show');
+    modal.style.display = 'flex';
+    
+    // Adicionar animação de fade-in
+    setTimeout(() => {
+        modal.classList.add('popup-fade-in');
+    }, 10);
+}
+
+// Cancelar agendamento
+function cancelarAgendamento(id, nomeAula) {
+    if (confirm(`Tem certeza que deseja cancelar o agendamento "${nomeAula}"?`)) {
+        fetch('api/agendamento.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                acao: 'cancelar',
+                aula_id: id
+            })
+        })
+        .then(response => response.text())
+        .then(text => {
+            try {
+                const data = JSON.parse(text);
+                if (data.success) {
+                    showFeedback('Agendamento cancelado com sucesso!', 'success');
+                    // Recarregar página após 1 segundo
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showFeedback('Erro ao cancelar agendamento: ' + data.message, 'error');
+                }
+            } catch (e) {
+                console.error('❌ [AGENDAMENTO] Resposta não é JSON válido:', text);
+                showFeedback('Erro: Resposta inválida do servidor', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('❌ [AGENDAMENTO] Erro:', error);
+            showFeedback('Erro ao cancelar agendamento: ' + error.message, 'error');
+        });
+    }
+}
+
+// Salvar edição de agendamento
+function salvarEdicaoAgendamento() {
+    const form = document.getElementById('formEditarAgendamento');
+    const formData = new FormData(form);
+    
+    // Validar campos obrigatórios
+    const camposObrigatorios = ['nome_aula', 'data_aula', 'hora_inicio', 'hora_fim', 'instrutor_id'];
+    for (let campo of camposObrigatorios) {
+        if (!formData.get(campo)) {
+            showFeedback(`Campo obrigatório: ${campo.replace('_', ' ')}`, 'error');
+            return;
+        }
+    }
+    
+    // Validar data não pode ser no passado
+    const dataAula = new Date(formData.get('data_aula'));
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    if (dataAula < hoje) {
+        showFeedback('A data da aula não pode ser no passado', 'error');
+        return;
+    }
+    
+    // Validar horários
+    const horaInicio = formData.get('hora_inicio');
+    const horaFim = formData.get('hora_fim');
+    
+    if (horaFim <= horaInicio) {
+        showFeedback('A hora de fim deve ser posterior à hora de início', 'error');
+        return;
+    }
+    
+    // Converter FormData para objeto
+    const data = {};
+    for (let [key, value] of formData.entries()) {
+        data[key] = value;
+    }
+    
+    // Garantir que observações seja incluído
+    const observacoes = document.getElementById('editObservacoes');
+    if (observacoes) {
+        data.observacoes = observacoes.value;
+    }
+    
+    data.acao = 'editar';
+    data.aula_id = document.getElementById('editAgendamentoId').value;
+    
+    // Debug: mostrar dados que serão enviados
+    console.log('🔧 [DEBUG] Dados a serem enviados:', data);
+    
+    // Mostrar loading no botão
+    const btnSalvar = document.querySelector('#modalEditarAgendamento .popup-save-button');
+    let restaurarBtn = null;
+    if (btnSalvar) {
+        restaurarBtn = mostrarLoading(btnSalvar);
+    }
+    
+    fetch('api/turma-agendamento.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.text())
+    .then(text => {
+        if (restaurarBtn) restaurarBtn(); // Restaurar botão
+        try {
+            const data = JSON.parse(text);
+            if (data.success) {
+                showFeedback('Agendamento editado com sucesso!', 'success');
+                // Fechar modal
+                fecharModalEdicao();
+                // Recarregar página após 1 segundo
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
+            } else {
+                showFeedback('Erro ao editar agendamento: ' + data.message, 'error');
+            }
+        } catch (e) {
+            console.error('❌ [AGENDAMENTO] Resposta não é JSON válido:', text);
+            showFeedback('Erro: Resposta inválida do servidor', 'error');
+        }
+    })
+    .catch(error => {
+        if (restaurarBtn) restaurarBtn(); // Restaurar botão em caso de erro
+        console.error('❌ [AGENDAMENTO] Erro:', error);
+        showFeedback('Erro ao editar agendamento: ' + error.message, 'error');
+    });
+}
+
+// Criar modal de edição dinamicamente seguindo o padrão do sistema
+function criarModalEdicao() {
+    const modal = document.createElement('div');
+    modal.id = 'modalEditarAgendamento';
+    modal.className = 'popup-modal';
+    modal.innerHTML = `
+        <div class="popup-modal-wrapper">
+            <div class="popup-modal-header">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="fas fa-edit"></i>
+                    </div>
+                    <div class="header-text">
+                        <h5>Editar Agendamento</h5>
+                        <small>Modifique os detalhes do agendamento selecionado</small>
+                    </div>
+                </div>
+                <button type="button" class="popup-modal-close" onclick="fecharModalEdicao()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="popup-modal-content">
+                <form id="formEditarAgendamento">
+                    <input type="hidden" id="editAgendamentoId" name="aula_id">
+                    
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label for="editNomeAula" class="form-label fw-semibold">
+                                Nome da Aula <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" class="form-control" id="editNomeAula" name="nome_aula" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editDataAula" class="form-label fw-semibold">
+                                Data da Aula <span class="text-danger">*</span>
+                            </label>
+                            <input type="date" class="form-control" id="editDataAula" name="data_aula" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-4">
+                            <label for="editHoraInicio" class="form-label fw-semibold">
+                                Hora Início <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control" id="editHoraInicio" name="hora_inicio" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editHoraFim" class="form-label fw-semibold">
+                                Hora Fim <span class="text-danger">*</span>
+                            </label>
+                            <input type="time" class="form-control" id="editHoraFim" name="hora_fim" required>
+                        </div>
+                        <div class="col-md-4">
+                            <label for="editDuracao" class="form-label fw-semibold">
+                                Duração (min) <span class="text-danger">*</span>
+                            </label>
+                            <input type="number" class="form-control" id="editDuracao" name="duracao" min="30" max="120" required>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3 mt-3">
+                        <div class="col-md-6">
+                            <label for="editInstrutor" class="form-label fw-semibold">
+                                Instrutor <span class="text-danger">*</span>
+                            </label>
+                            <select class="form-select" id="editInstrutor" name="instrutor_id" required>
+                                <option value="">Selecione um instrutor</option>
+                                <!-- Será preenchido via AJAX -->
+                            </select>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="editSala" class="form-label fw-semibold">Sala</label>
+                            <select class="form-select" id="editSala" name="sala_id">
+                                <option value="">Selecione uma sala</option>
+                                <!-- Será preenchido via AJAX -->
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <label for="editObservacoes" class="form-label fw-semibold">Observações</label>
+                        <textarea class="form-control" id="editObservacoes" name="observacoes" rows="3" placeholder="Digite observações adicionais sobre o agendamento..."></textarea>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="popup-modal-footer">
+                <div class="popup-footer-info">
+                    <small>
+                        <i class="fas fa-info-circle"></i>
+                        Campos marcados com * são obrigatórios
+                    </small>
+                </div>
+                <div class="popup-footer-actions">
+                    <button type="button" class="popup-secondary-button" onclick="fecharModalEdicao()">
+                        <i class="fas fa-times"></i>
+                        Cancelar
+                    </button>
+                    <button type="button" class="popup-save-button" onclick="salvarEdicaoAgendamento()">
+                        <i class="fas fa-save"></i>
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    return modal;
+}
+
+// Função para fechar o modal de edição
+function fecharModalEdicao() {
+    const modal = document.getElementById('modalEditarAgendamento');
+    if (modal) {
+        modal.classList.remove('show');
+        setTimeout(() => {
+            modal.remove();
+        }, 300);
+    }
+}
+
+// Função para carregar dados dos selects
+function carregarDadosSelects(instrutorId = null, salaId = null) {
+    console.log('🔧 [DEBUG] Carregando dados dos selects...');
+    
+    // Carregar instrutores
+    fetch('api/instrutores-real.php')
+        .then(response => {
+            console.log('🔧 [DEBUG] Resposta instrutores:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('🔧 [DEBUG] Dados instrutores:', data);
+            if (data.success) {
+                const selectInstrutor = document.getElementById('editInstrutor');
+                if (selectInstrutor) {
+                    selectInstrutor.innerHTML = '<option value="">Selecione um instrutor</option>';
+                    data.instrutores.forEach(instrutor => {
+                        const option = document.createElement('option');
+                        option.value = instrutor.id;
+                        option.textContent = instrutor.nome;
+                        selectInstrutor.appendChild(option);
+                    });
+                    
+                    // Definir valor selecionado se fornecido
+                    if (instrutorId) {
+                        selectInstrutor.value = instrutorId;
+                        console.log('✅ [DEBUG] Instrutor selecionado:', instrutorId);
+                    }
+                    
+                    console.log('✅ [DEBUG] Instrutores carregados:', data.instrutores.length);
+                } else {
+                    console.log('❌ [DEBUG] Select instrutor não encontrado');
+                }
+            } else {
+                console.log('❌ [DEBUG] Erro ao carregar instrutores:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('❌ [DEBUG] Erro ao carregar instrutores:', error);
+        });
+    
+    // Carregar salas
+    fetch('api/salas-real.php')
+        .then(response => {
+            console.log('🔧 [DEBUG] Resposta salas:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('🔧 [DEBUG] Dados salas:', data);
+            if (data.success) {
+                const selectSala = document.getElementById('editSala');
+                if (selectSala) {
+                    selectSala.innerHTML = '<option value="">Selecione uma sala</option>';
+                    data.salas.forEach(sala => {
+                        const option = document.createElement('option');
+                        option.value = sala.id;
+                        option.textContent = sala.nome;
+                        selectSala.appendChild(option);
+                    });
+                    
+                    // Definir valor selecionado se fornecido
+                    if (salaId) {
+                        selectSala.value = salaId;
+                        console.log('✅ [DEBUG] Sala selecionada:', salaId);
+                    }
+                    
+                    console.log('✅ [DEBUG] Salas carregadas:', data.salas.length);
+                } else {
+                    console.log('❌ [DEBUG] Select sala não encontrado');
+                }
+            } else {
+                console.log('❌ [DEBUG] Erro ao carregar salas:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('❌ [DEBUG] Erro ao carregar salas:', error);
+        });
+}
+
+// Validação automática de horários
+function validarHorarios() {
+    const horaInicio = document.getElementById('editHoraInicio');
+    const horaFim = document.getElementById('editHoraFim');
+    const duracao = document.getElementById('editDuracao');
+    
+    if (horaInicio && horaFim && duracao) {
+        // Calcular duração baseada nos horários
+        horaInicio.addEventListener('change', calcularDuracao);
+        horaFim.addEventListener('change', calcularDuracao);
+        duracao.addEventListener('change', calcularHoraFim);
+    }
+}
+
+function calcularDuracao() {
+    const horaInicio = document.getElementById('editHoraInicio').value;
+    const horaFim = document.getElementById('editHoraFim').value;
+    const duracao = document.getElementById('editDuracao');
+    
+    if (horaInicio && horaFim) {
+        const inicio = new Date('2000-01-01 ' + horaInicio);
+        const fim = new Date('2000-01-01 ' + horaFim);
+        
+        if (fim > inicio) {
+            const diffMs = fim - inicio;
+            const diffMin = Math.round(diffMs / (1000 * 60));
+            duracao.value = diffMin;
+        }
+    }
+}
+
+function calcularHoraFim() {
+    const horaInicio = document.getElementById('editHoraInicio').value;
+    const duracao = parseInt(document.getElementById('editDuracao').value);
+    const horaFim = document.getElementById('editHoraFim');
+    
+    if (horaInicio && duracao) {
+        const inicio = new Date('2000-01-01 ' + horaInicio);
+        const fim = new Date(inicio.getTime() + (duracao * 60000));
+        horaFim.value = fim.toTimeString().substr(0, 5);
+    }
+}
+
+// Melhorar feedback visual
+function mostrarLoading(button) {
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Processando...';
+    button.disabled = true;
+    
+    return function() {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    };
+}
+
+// Carregar dados para os selects quando o modal for aberto
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 [DEBUG] Iniciando carregamento de dados...');
+    
+    // Carregar instrutores
+    console.log('🔧 [DEBUG] Carregando instrutores...');
+    fetch('api/instrutores-real.php')
+        .then(response => {
+            console.log('🔧 [DEBUG] Resposta instrutores:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('🔧 [DEBUG] Dados instrutores:', data);
+            if (data.success) {
+                const selectInstrutor = document.getElementById('editInstrutor');
+                if (selectInstrutor) {
+                    selectInstrutor.innerHTML = '<option value="">Selecione um instrutor</option>';
+                    data.instrutores.forEach(instrutor => {
+                        const option = document.createElement('option');
+                        option.value = instrutor.id;
+                        option.textContent = instrutor.nome;
+                        selectInstrutor.appendChild(option);
+                    });
+                    console.log('✅ [DEBUG] Instrutores carregados:', data.instrutores.length);
+                } else {
+                    console.log('❌ [DEBUG] Select instrutor não encontrado');
+                }
+            } else {
+                console.log('❌ [DEBUG] Erro ao carregar instrutores:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('❌ [DEBUG] Erro ao carregar instrutores:', error);
+        });
+    
+    // Carregar salas
+    console.log('🔧 [DEBUG] Carregando salas...');
+    fetch('api/salas-real.php')
+        .then(response => {
+            console.log('🔧 [DEBUG] Resposta salas:', response.status);
+            return response.json();
+        })
+        .then(data => {
+            console.log('🔧 [DEBUG] Dados salas:', data);
+            if (data.success) {
+                const selectSala = document.getElementById('editSala');
+                if (selectSala) {
+                    selectSala.innerHTML = '<option value="">Selecione uma sala</option>';
+                    data.salas.forEach(sala => {
+                        const option = document.createElement('option');
+                        option.value = sala.id;
+                        option.textContent = sala.nome;
+                        selectSala.appendChild(option);
+                    });
+                    console.log('✅ [DEBUG] Salas carregadas:', data.salas.length);
+                } else {
+                    console.log('❌ [DEBUG] Select sala não encontrado');
+                }
+            } else {
+                console.log('❌ [DEBUG] Erro ao carregar salas:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('❌ [DEBUG] Erro ao carregar salas:', error);
+        });
+    
+    // Configurar validações
+    validarHorarios();
+});
 </script>
+
+<!-- CSS do Popup Padrão do Sistema -->
+<link href="assets/css/popup-reference.css" rel="stylesheet">
+
 <!-- Cache fix: no-reload-<?= time() ?> -->

@@ -1413,8 +1413,8 @@ class TurmaTeoricaManager {
                 return [];
             }
             
-            // Retornar as disciplinas configuradas para este tipo de curso
-            return $this->db->fetchAll(
+            // Obter todas as disciplinas configuradas para este tipo de curso
+            $disciplinas = $this->db->fetchAll(
                 "SELECT 
                     disciplina as disciplina_id,
                     nome_disciplina,
@@ -1426,6 +1426,24 @@ class TurmaTeoricaManager {
                  ORDER BY ordem",
                 [$turma['curso_tipo']]
             );
+            
+            // Debug: Log das disciplinas encontradas
+            error_log("DEBUG: Disciplinas encontradas para curso_tipo '{$turma['curso_tipo']}': " . json_encode($disciplinas));
+            
+            // Filtrar disciplinas com ID válido (não nulo, não vazio, não zero)
+            $disciplinasValidas = array_filter($disciplinas, function($disciplina) {
+                $id = $disciplina['disciplina_id'];
+                $isValid = !empty($id) && $id !== 0 && $id !== '0' && $id !== null;
+                if (!$isValid) {
+                    error_log("DEBUG: Disciplina filtrada (ID inválido): " . json_encode($disciplina));
+                }
+                return $isValid;
+            });
+            
+            $resultado = array_values($disciplinasValidas);
+            error_log("DEBUG: Disciplinas válidas retornadas: " . json_encode($resultado));
+            
+            return $resultado;
         } catch (Exception $e) {
             return [];
         }
