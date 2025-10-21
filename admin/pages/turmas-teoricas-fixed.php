@@ -462,13 +462,6 @@ if (isset($_GET['sucesso'])) {
                     <h4>⚙️ Configurações Adicionais</h4>
                     
                     <div class="form-group">
-                        <label for="max_alunos">Máximo de Alunos</label>
-                        <input type="number" id="max_alunos" name="max_alunos" class="form-control" 
-                               min="1" max="50" value="<?= $turmaAtual['max_alunos'] ?? $rascunhoCarregado['max_alunos'] ?? 30 ?>">
-                        <small class="text-muted">Número máximo de alunos que podem ser matriculados nesta turma</small>
-                    </div>
-                    
-                    <div class="form-group">
                         <label for="observacoes">Observações</label>
                         <textarea id="observacoes" name="observacoes" class="form-control" rows="3" 
                                   placeholder="Observações adicionais sobre a turma..."><?= htmlspecialchars($turmaAtual['observacoes'] ?? $rascunhoCarregado['observacoes'] ?? '') ?></textarea>

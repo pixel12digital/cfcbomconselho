@@ -194,6 +194,68 @@ try {
         $stmt = $pdo->prepare("UPDATE tipos_curso SET codigo = ?, nome = ?, descricao = ?, carga_horaria_total = ?, ativo = ? WHERE id = ? AND cfc_id = ?");
         $stmt->execute([$codigo, $nome, $descricao, $carga_horaria_total, $ativo, $id, 1]);
         
+        // Processar disciplinas selecionadas
+        if (isset($_POST['disciplinas'])) {
+            $disciplinasJson = $_POST['disciplinas'];
+            $disciplinasSelecionadas = json_decode($disciplinasJson, true);
+            
+            if (is_array($disciplinasSelecionadas)) {
+                // Primeiro, remover todas as disciplinas configuradas para este curso
+                try {
+                    $stmt = $pdo->prepare("DELETE FROM disciplinas_configuracao WHERE curso_tipo = ?");
+                    $stmt->execute([$codigo]);
+                } catch (PDOException $e) {
+                    // Se a tabela não existir, criar ela
+                    $pdo->exec("
+                        CREATE TABLE IF NOT EXISTS disciplinas_configuracao (
+                            id INT AUTO_INCREMENT PRIMARY KEY,
+                            curso_tipo VARCHAR(50) NOT NULL,
+                            disciplina VARCHAR(50) NOT NULL,
+                            nome_disciplina VARCHAR(100) NOT NULL,
+                            aulas_obrigatorias INT NOT NULL,
+                            ordem INT NOT NULL DEFAULT 1,
+                            cor_hex VARCHAR(7) DEFAULT '#007bff',
+                            icone VARCHAR(50) DEFAULT 'book',
+                            ativa BOOLEAN DEFAULT TRUE,
+                            criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                            
+                            UNIQUE KEY unique_curso_disciplina (curso_tipo, disciplina),
+                            INDEX idx_curso_ordem (curso_tipo, ordem)
+                        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                    ");
+                }
+                
+                // Mapear IDs das disciplinas para códigos
+                $mapeamentoDisciplinas = [
+                    1 => ['codigo' => 'legislacao_transito', 'nome' => 'Legislação de Trânsito', 'aulas' => 18],
+                    2 => ['codigo' => 'direcao_defensiva', 'nome' => 'Direção Defensiva', 'aulas' => 16],
+                    3 => ['codigo' => 'primeiros_socorros', 'nome' => 'Primeiros Socorros', 'aulas' => 4],
+                    4 => ['codigo' => 'meio_ambiente_cidadania', 'nome' => 'Meio Ambiente e Cidadania', 'aulas' => 4],
+                    5 => ['codigo' => 'mecanica_basica', 'nome' => 'Mecânica Básica', 'aulas' => 3]
+                ];
+                
+                // Inserir disciplinas selecionadas
+                $ordem = 1;
+                foreach ($disciplinasSelecionadas as $disciplinaId) {
+                    if (isset($mapeamentoDisciplinas[$disciplinaId])) {
+                        $disc = $mapeamentoDisciplinas[$disciplinaId];
+                        $stmt = $pdo->prepare("
+                            INSERT INTO disciplinas_configuracao 
+                            (curso_tipo, disciplina, nome_disciplina, aulas_obrigatorias, ordem, ativa) 
+                            VALUES (?, ?, ?, ?, ?, 1)
+                        ");
+                        $stmt->execute([
+                            $codigo, 
+                            $disc['codigo'], 
+                            $disc['nome'], 
+                            $disc['aulas'], 
+                            $ordem++
+                        ]);
+                    }
+                }
+            }
+        }
+        
         echo json_encode([
             'sucesso' => true,
             'mensagem' => 'Tipo de curso atualizado com sucesso!'

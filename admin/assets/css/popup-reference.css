@@ -46,6 +46,7 @@
     max-width: 95vw;
     width: 95vw;
     max-height: calc(100vh - 4rem);
+    height: calc(100vh - 4rem);
 }
 
 /* ==========================================
@@ -115,11 +116,26 @@
 
 .popup-modal-content {
     overflow-y: auto;
+    overflow-x: hidden;
     overscroll-behavior: contain;
     scrollbar-gutter: stable;
     padding: 1.5rem 2rem;
     flex: 1;
     background: white;
+    min-height: 0;
+}
+
+/* Garantir que o grid do modal funcione com scroll */
+.popup-modal-wrapper {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+}
+
+.popup-modal-wrapper .popup-modal-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
 }
 
 /* ==========================================

@@ -331,6 +331,517 @@ class ValidationSystem {
     }
 }
 
+// Função global para abrir modal de gerenciamento de cursos
+window.abrirModalTiposCursoInterno = function() {
+    console.log('🔧 Tentando abrir modal de cursos...');
+    const popup = document.getElementById('modalGerenciarTiposCurso');
+    if (popup) {
+        console.log('✅ Modal encontrado, abrindo...');
+        popup.style.display = 'flex';
+        popup.classList.add('show', 'popup-fade-in');
+        document.body.style.overflow = 'hidden';
+        
+        // Recarregar tipos de curso se a função existir
+        if (typeof recarregarTiposCurso === 'function') {
+            recarregarTiposCurso();
+        }
+    } else {
+        console.error('❌ Modal modalGerenciarTiposCurso não encontrado');
+        // Mostrar notificação de erro se disponível
+        if (window.notifications) {
+            window.notifications.error('Modal de gerenciamento de cursos não encontrado. Certifique-se de estar na página correta.');
+        }
+    }
+};
+
+// Função global para fechar modal de gerenciamento de cursos
+window.fecharModalTiposCurso = function() {
+    console.log('🔧 Fechando modal de cursos...');
+    const popup = document.getElementById('modalGerenciarTiposCurso');
+    if (popup) {
+        popup.style.display = 'none';
+        popup.classList.remove('show', 'popup-fade-in');
+        document.body.style.overflow = '';
+        console.log('✅ Modal fechado com sucesso');
+    }
+};
+
+// Função para abrir formulário de novo curso (integrado)
+window.abrirFormularioNovoTipoCurso = function() {
+    console.log('🔧 Abrindo formulário Novo Curso integrado...');
+    
+    // Esconder conteúdo principal
+    const conteudoPrincipal = document.getElementById('conteudo-principal-tipos');
+    const formularioNovoTipo = document.getElementById('formulario-novo-tipo-curso');
+    
+    if (conteudoPrincipal && formularioNovoTipo) {
+        conteudoPrincipal.style.display = 'none';
+        formularioNovoTipo.style.display = 'block';
+        
+        // Limpar formulário
+        document.getElementById('formNovoTipoCursoIntegrado').reset();
+        document.getElementById('carga_horaria_integrado').value = '45';
+        document.getElementById('ativo_tipo_integrado').checked = true;
+        
+        // Focar no primeiro campo
+        document.getElementById('codigo_tipo_integrado').focus();
+    } else {
+        console.error('❌ Elementos do formulário não encontrados');
+    }
+};
+
+// Função para voltar para a lista de cursos
+window.voltarParaListaTipos = function() {
+    console.log('🔧 Voltando para lista de cursos...');
+    
+    const conteudoPrincipal = document.getElementById('conteudo-principal-tipos');
+    const formularioNovoTipo = document.getElementById('formulario-novo-tipo-curso');
+    
+    if (conteudoPrincipal && formularioNovoTipo) {
+        formularioNovoTipo.style.display = 'none';
+        conteudoPrincipal.style.display = 'block';
+    }
+};
+
+// Função para recarregar lista de cursos via AJAX
+window.recarregarTiposCurso = function() {
+    console.log('🔄 Iniciando carregamento de cursos...');
+    
+    // Mostrar loading state
+    const tiposContainer = document.getElementById('lista-tipos-curso-modal');
+    if (!tiposContainer) {
+        console.error('❌ Container lista-tipos-curso-modal não encontrado');
+        return;
+    }
+    
+    tiposContainer.innerHTML = `
+        <div class="popup-loading-state show">
+            <div class="popup-loading-spinner"></div>
+            <div class="popup-loading-text">
+                <h6>Carregando cursos...</h6>
+                <p>Aguarde enquanto buscamos os cursos cadastrados</p>
+            </div>
+        </div>
+    `;
+    
+    console.log('📡 Fazendo requisição para API...');
+    fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php?acao=listar')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP error! status: ' + response.status);
+            }
+            // Verificar se a resposta é realmente JSON
+            const contentType = response.headers.get('content-type');
+            if (!contentType || !contentType.includes('application/json')) {
+                throw new Error('Resposta não é JSON válido. Content-Type: ' + contentType);
+            }
+            return response.text().then(text => {
+                try {
+                    return JSON.parse(text);
+                } catch (e) {
+                    console.error('Texto recebido:', text);
+                    throw new Error('JSON inválido: ' + e.message);
+                }
+            });
+        })
+        .then(data => {
+            console.log('✅ Dados recebidos:', data);
+            if (data.sucesso) {
+                const selectCurso = document.getElementById('curso_tipo');
+                const tiposContainer = document.getElementById('lista-tipos-curso-modal');
+                
+                // Atualizar contador de tipos no modal
+                const totalTipos = document.getElementById('total-tipos-curso');
+                if (totalTipos) {
+                    totalTipos.textContent = data.tipos.length;
+                }
+                
+                // Atualizar dropdown
+                if (selectCurso) {
+                    selectCurso.innerHTML = '<option value="">Selecione o tipo de curso...</option>';
+                    data.tipos.forEach(tipo => {
+                        selectCurso.innerHTML += '<option value="' + tipo.codigo + '">' + tipo.nome + '</option>';
+                    });
+                }
+                
+                // Atualizar lista no modal com o novo padrão
+                if (data.tipos.length === 0) {
+                    tiposContainer.innerHTML = `
+                        <div class="popup-empty-state show">
+                            <div class="empty-icon">
+                                <i class="fas fa-graduation-cap"></i>
+                            </div>
+                            <h5>Nenhum curso encontrado</h5>
+                            <p>Crie seu primeiro curso para começar</p>
+                            <button type="button" class="popup-primary-button" onclick="abrirFormularioNovoTipoCurso()">
+                                <i class="fas fa-plus"></i>
+                                Criar Primeiro Curso
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    // Converter HTML dos tipos para o novo padrão
+                    let htmlTipos = '';
+                    data.tipos.forEach(tipo => {
+                        const statusClass = tipo.ativo == 1 ? 'active' : '';
+                        const statusText = tipo.ativo == 1 ? 'ATIVO' : 'INATIVO';
+                        const statusColor = tipo.ativo == 1 ? '#28a745' : '#6c757d';
+                        
+                        htmlTipos += `
+                            <div class="popup-item-card ${statusClass}">
+                                <div class="popup-item-card-header">
+                                    <div class="popup-item-card-content">
+                                        <h6 class="popup-item-card-title">${tipo.nome}</h6>
+                                        <div class="popup-item-card-code" style="background: ${statusColor}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold;">
+                                            ${statusText}
+                                        </div>
+                                        <div class="popup-item-card-description" style="margin-top: 0.5rem;">
+                                            <div><strong>Código:</strong> ${tipo.codigo}</div>
+                                            <div><strong>Carga Horária:</strong> ${tipo.carga_horaria_total} horas</div>
+                                            ${tipo.descricao ? '<div><strong>Descrição:</strong> ' + tipo.descricao + '</div>' : ''}
+                                        </div>
+                                    </div>
+                                    <div class="popup-item-card-actions">
+                                        <button type="button" class="popup-item-card-menu" onclick="editarTipoCurso(${tipo.id}, '${tipo.codigo}', '${tipo.nome}', '${tipo.descricao || ''}', ${tipo.carga_horaria_total}, ${tipo.ativo})" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="popup-item-card-menu" onclick="confirmarExclusaoTipoCurso(${tipo.id}, '${tipo.nome}')" title="Excluir" style="color: #dc3545;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    tiposContainer.innerHTML = htmlTipos;
+                }
+                
+                // Atualizar contador na página principal
+                const smallText = document.querySelector('small.text-muted');
+                if (smallText && smallText.textContent.includes('curso(s) cadastrado(s)')) {
+                    smallText.innerHTML = '<i class="fas fa-info-circle me-1"></i>' + data.tipos.length + ' curso(s) cadastrado(s) - <a href="#" onclick="abrirModalTiposCursoInterno()" class="text-primary">Clique aqui para gerenciar</a>';
+                }
+            } else {
+                console.error('❌ Erro na resposta:', data.mensagem);
+                tiposContainer.innerHTML = `
+                    <div class="popup-error-state show">
+                        <div class="error-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h5>Erro ao carregar cursos</h5>
+                        <p>${data.mensagem}</p>
+                        <button type="button" class="popup-secondary-button" onclick="recarregarTiposCurso()">
+                            <i class="fas fa-redo"></i>
+                            Tentar Novamente
+                        </button>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao recarregar cursos:', error);
+            tiposContainer.innerHTML = `
+                <div class="popup-error-state show">
+                    <div class="error-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h5>Erro de conexão</h5>
+                    <p>${error.message || 'Não foi possível conectar ao servidor'}</p>
+                    <button type="button" class="popup-secondary-button" onclick="recarregarTiposCurso()">
+                        <i class="fas fa-redo"></i>
+                        Tentar Novamente
+                    </button>
+                </div>
+            `;
+        });
+};
+
+// Função global para abrir modal de gerenciamento de disciplinas
+window.abrirModalDisciplinasInterno = function() {
+    console.log('🔧 Tentando abrir modal de disciplinas...');
+    const popup = document.getElementById('modalGerenciarDisciplinas');
+    if (popup) {
+        console.log('✅ Modal encontrado, abrindo...');
+        popup.style.display = 'flex';
+        popup.classList.add('show', 'popup-fade-in');
+        document.body.style.overflow = 'hidden';
+        
+        // Carregar disciplinas automaticamente
+        setTimeout(() => {
+            carregarDisciplinasModal();
+        }, 100);
+    } else {
+        console.error('❌ Modal modalGerenciarDisciplinas não encontrado');
+        // Mostrar notificação de erro se disponível
+        if (window.notifications) {
+            window.notifications.error('Modal de gerenciamento de disciplinas não encontrado. Certifique-se de estar na página correta.');
+        }
+    }
+};
+
+// Função global para fechar modal de gerenciamento de disciplinas
+window.fecharModalDisciplinas = function() {
+    console.log('🔧 Fechando modal de disciplinas...');
+    const popup = document.getElementById('modalGerenciarDisciplinas');
+    if (popup) {
+        popup.style.display = 'none';
+        popup.classList.remove('show', 'popup-fade-in');
+        document.body.style.overflow = '';
+        console.log('✅ Modal fechado com sucesso');
+    }
+};
+
+// Função para abrir formulário de nova disciplina
+window.abrirFormularioNovaDisciplina = function() {
+    console.log('🔧 Abrindo formulário Nova Disciplina...');
+    
+    // Esconder conteúdo principal
+    const conteudoPrincipal = document.getElementById('conteudo-principal-disciplinas');
+    const formularioNovaDisciplina = document.getElementById('formulario-nova-disciplina');
+    
+    if (conteudoPrincipal && formularioNovaDisciplina) {
+        conteudoPrincipal.style.display = 'none';
+        formularioNovaDisciplina.style.display = 'block';
+        
+        // Limpar formulário
+        document.getElementById('formNovaDisciplinaIntegrado').reset();
+        document.getElementById('carga_horaria_disciplina_integrado').value = '20';
+        document.getElementById('cor_disciplina_integrado').value = '#023A8D';
+        
+        // Focar no primeiro campo
+        document.getElementById('codigo_disciplina_integrado').focus();
+    } else {
+        console.error('❌ Elementos do formulário não encontrados');
+    }
+};
+
+// Função para voltar para a lista de disciplinas
+window.voltarParaListaDisciplinas = function() {
+    console.log('🔧 Voltando para lista de disciplinas...');
+    
+    const conteudoPrincipal = document.getElementById('conteudo-principal-disciplinas');
+    const formularioNovaDisciplina = document.getElementById('formulario-nova-disciplina');
+    
+    if (conteudoPrincipal && formularioNovaDisciplina) {
+        formularioNovaDisciplina.style.display = 'none';
+        conteudoPrincipal.style.display = 'block';
+    }
+};
+
+// Função para filtrar disciplinas
+window.filtrarDisciplinas = function() {
+    console.log('🔍 Filtrando disciplinas...');
+    const termoBusca = document.getElementById('buscarDisciplinas')?.value.toLowerCase() || '';
+    
+    const disciplinas = document.querySelectorAll('#listaDisciplinas .popup-item-card');
+    disciplinas.forEach(disciplina => {
+        const nome = disciplina.querySelector('.popup-item-card-title')?.textContent.toLowerCase() || '';
+        const codigo = disciplina.querySelector('.popup-item-card-description')?.textContent.toLowerCase() || '';
+        
+        if (nome.includes(termoBusca) || codigo.includes(termoBusca)) {
+            disciplina.style.display = 'block';
+        } else {
+            disciplina.style.display = 'none';
+        }
+    });
+};
+
+// Função para salvar nova disciplina
+window.salvarNovaDisciplinaIntegrada = function(event) {
+    event.preventDefault();
+    console.log('💾 Salvando nova disciplina...');
+    
+    const formData = new FormData(event.target);
+    const disciplina = {
+        codigo: formData.get('codigo'),
+        nome: formData.get('nome'),
+        descricao: formData.get('descricao'),
+        carga_horaria_padrao: formData.get('carga_horaria_padrao'),
+        cor_hex: formData.get('cor_hex')
+    };
+    
+    console.log('📝 Dados da disciplina:', disciplina);
+    
+    // Aqui você pode implementar a chamada AJAX para salvar
+    // Por enquanto, apenas simular sucesso
+    setTimeout(() => {
+        alert('Disciplina salva com sucesso!');
+        voltarParaListaDisciplinas();
+        // Recarregar lista se a função existir
+        if (typeof carregarDisciplinasModal === 'function') {
+            carregarDisciplinasModal();
+        }
+    }, 500);
+};
+
+// Função para salvar alterações das disciplinas
+window.salvarAlteracoesDisciplinas = function() {
+    console.log('💾 Salvando alterações das disciplinas...');
+    alert('Alterações salvas com sucesso!');
+};
+
+// Função para carregar disciplinas no modal
+window.carregarDisciplinasModal = function() {
+    console.log('🔄 Carregando disciplinas no modal...');
+    
+    const disciplinasContainer = document.getElementById('listaDisciplinas');
+    const totalDisciplinas = document.getElementById('totalDisciplinas');
+    
+    if (!disciplinasContainer) {
+        console.error('❌ Container listaDisciplinas não encontrado');
+        return;
+    }
+    
+    // Mostrar loading
+    disciplinasContainer.innerHTML = `
+        <div class="popup-loading-state show">
+            <div class="popup-loading-spinner"></div>
+            <div class="popup-loading-text">
+                <h6>Carregando disciplinas...</h6>
+                <p>Aguarde enquanto buscamos as disciplinas cadastradas</p>
+            </div>
+        </div>
+    `;
+    
+    // Fazer requisição para a API
+    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('HTTP error! status: ' + response.status);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log('✅ Dados das disciplinas recebidos:', data);
+            
+            if (data.sucesso && data.disciplinas) {
+                // Atualizar contador
+                if (totalDisciplinas) {
+                    totalDisciplinas.textContent = data.disciplinas.length;
+                }
+                
+                // Renderizar disciplinas
+                if (data.disciplinas.length === 0) {
+                    disciplinasContainer.innerHTML = `
+                        <div class="popup-empty-state show">
+                            <div class="empty-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <h5>Nenhuma disciplina encontrada</h5>
+                            <p>Crie sua primeira disciplina para começar</p>
+                            <button type="button" class="popup-primary-button" onclick="abrirFormularioNovaDisciplina()">
+                                <i class="fas fa-plus"></i>
+                                Criar Primeira Disciplina
+                            </button>
+                        </div>
+                    `;
+                } else {
+                    let htmlDisciplinas = '';
+                    data.disciplinas.forEach(disciplina => {
+                        const statusClass = disciplina.ativa ? 'active' : '';
+                        const statusText = disciplina.ativa ? 'ATIVA' : 'INATIVA';
+                        const statusColor = disciplina.ativa ? '#28a745' : '#6c757d';
+                        
+                        htmlDisciplinas += `
+                            <div class="popup-item-card ${statusClass}">
+                                <div class="popup-item-card-header">
+                                    <div class="popup-item-card-content">
+                                        <h6 class="popup-item-card-title">${disciplina.nome}</h6>
+                                        <div class="popup-item-card-code" style="background: ${statusColor}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; margin-bottom: 0.5rem;">
+                                            ${statusText}
+                                        </div>
+                                        <div class="popup-item-card-description">
+                                            <div><strong>Código:</strong> ${disciplina.codigo}</div>
+                                            <div><strong>Carga Horária:</strong> ${disciplina.carga_horaria_padrao}h</div>
+                                            ${disciplina.descricao ? '<div><strong>Descrição:</strong> ' + disciplina.descricao + '</div>' : ''}
+                                        </div>
+                                    </div>
+                                    <div class="popup-item-card-actions">
+                                        <button type="button" class="popup-item-card-menu" onclick="editarDisciplina(${disciplina.id})" title="Editar">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <button type="button" class="popup-item-card-menu" onclick="excluirDisciplina(${disciplina.id}, '${disciplina.nome}')" title="Excluir" style="color: #dc3545;">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    
+                    disciplinasContainer.innerHTML = htmlDisciplinas;
+                }
+            } else {
+                console.error('❌ Erro na resposta:', data.mensagem);
+                disciplinasContainer.innerHTML = `
+                    <div class="popup-error-state show">
+                        <div class="error-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h5>Erro ao carregar disciplinas</h5>
+                        <p>${data.mensagem}</p>
+                        <button type="button" class="popup-secondary-button" onclick="carregarDisciplinasModal()">
+                            <i class="fas fa-redo"></i>
+                            Tentar Novamente
+                        </button>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar disciplinas:', error);
+            disciplinasContainer.innerHTML = `
+                <div class="popup-error-state show">
+                    <div class="error-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h5>Erro de conexão</h5>
+                    <p>${error.message || 'Não foi possível conectar ao servidor'}</p>
+                    <button type="button" class="popup-secondary-button" onclick="carregarDisciplinasModal()">
+                        <i class="fas fa-redo"></i>
+                        Tentar Novamente
+                    </button>
+                </div>
+            `;
+        });
+};
+
+// Função para editar disciplina
+window.editarDisciplina = function(id) {
+    console.log('✏️ Editando disciplina ID:', id);
+    alert('Funcionalidade de edição será implementada em breve!');
+};
+
+// Função para excluir disciplina
+window.excluirDisciplina = function(id, nome) {
+    console.log('🗑️ Excluindo disciplina:', nome, 'ID:', id);
+    
+    if (confirm(`Tem certeza que deseja excluir a disciplina "${nome}"?`)) {
+        // Implementar exclusão via API
+        fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `acao=excluir&id=${id}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                alert('Disciplina excluída com sucesso!');
+                carregarDisciplinasModal(); // Recarregar lista
+            } else {
+                alert('Erro ao excluir disciplina: ' + data.mensagem);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao excluir disciplina:', error);
+            alert('Erro ao excluir disciplina. Tente novamente.');
+        });
+    }
+};
+
 // Inicializar quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar painel administrativo

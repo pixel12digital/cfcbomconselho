@@ -408,8 +408,8 @@ class TurmaTeoricaManager {
             }
             
             // Verificar se turma existe e está no status correto
-            $turma = $this->obterTurma($dados['turma_id']);
-            if (!$turma || !in_array($turma['status'], ['criando', 'agendando'])) {
+            $resultadoTurma = $this->obterTurma($dados['turma_id']);
+            if (!$resultadoTurma['sucesso'] || !isset($resultadoTurma['dados']['status']) || !in_array($resultadoTurma['dados']['status'], ['criando', 'agendando'])) {
                 return [
                     'sucesso' => false,
                     'mensagem' => '❌ Turma não encontrada ou não está disponível para agendamento.',
@@ -418,7 +418,7 @@ class TurmaTeoricaManager {
             }
             
             // Verificar conflitos de horário
-            $conflitos = $this->verificarConflitosHorario($dados, $turma);
+            $conflitos = $this->verificarConflitosHorario($dados, $resultadoTurma['dados']);
             if (!$conflitos['disponivel']) {
                 return [
                     'sucesso' => false,
@@ -447,7 +447,7 @@ class TurmaTeoricaManager {
                     'disciplina' => $dados['disciplina'],
                     'nome_aula' => $this->gerarNomeAula($dados['disciplina'], $ordemDisciplina + $i),
                     'instrutor_id' => $dados['instrutor_id'],
-                    'sala_id' => $turma['sala_id'],
+                    'sala_id' => $resultadoTurma['dados']['sala_id'],
                     'data_aula' => $dados['data_aula'],
                     'hora_inicio' => $horaInicio,
                     'hora_fim' => $horaFim,
@@ -461,7 +461,7 @@ class TurmaTeoricaManager {
             }
             
             // Atualizar status da turma para 'agendando' se for a primeira aula
-            if ($turma['status'] === 'criando') {
+            if ($resultadoTurma['dados']['status'] === 'criando') {
                 $this->db->update('turmas_teoricas', 
                     ['status' => 'agendando'], 
                     'id = ?', 
@@ -563,8 +563,8 @@ class TurmaTeoricaManager {
             $guards = new AgendamentoGuards();
             
             // VALIDAÇÃO 1: Verificar se turma está ativa ou completa
-            $turma = $this->obterTurma($turmaId);
-            if (!$turma || !in_array($turma['status'], ['completa', 'ativa'])) {
+            $resultadoTurma = $this->obterTurma($turmaId);
+            if (!$resultadoTurma['sucesso'] || !isset($resultadoTurma['dados']['status']) || !in_array($resultadoTurma['dados']['status'], ['completa', 'ativa'])) {
                 return [
                     'sucesso' => false,
                     'mensagem' => '📋 A turma deve estar ativa ou ter todas as aulas agendadas para matricular alunos.',
@@ -584,10 +584,10 @@ class TurmaTeoricaManager {
             }
             
             // VALIDAÇÃO 3: Verificar vagas disponíveis
-            if ($turma['alunos_matriculados'] >= $turma['max_alunos']) {
+            if ($resultadoTurma['dados']['alunos_matriculados'] >= $resultadoTurma['dados']['max_alunos']) {
                 return [
                     'sucesso' => false,
-                    'mensagem' => "📚 Turma lotada! Não há vagas disponíveis (máximo: {$turma['max_alunos']} alunos).",
+                    'mensagem' => "📚 Turma lotada! Não há vagas disponíveis (máximo: {$resultadoTurma['dados']['max_alunos']} alunos).",
                     'tipo_erro' => 'turma_lotada'
                 ];
             }
@@ -627,7 +627,7 @@ class TurmaTeoricaManager {
             return [
                 'sucesso' => true,
                 'mensagem' => '✅ Aluno matriculado com sucesso na turma!',
-                'vagas_restantes' => $turma['max_alunos'] - $turma['alunos_matriculados'] - 1
+                'vagas_restantes' => $resultadoTurma['dados']['max_alunos'] - $resultadoTurma['dados']['alunos_matriculados'] - 1
             ];
             
         } catch (Exception $e) {
@@ -1403,13 +1403,28 @@ class TurmaTeoricaManager {
      */
     public function obterDisciplinasSelecionadas($turmaId) {
         try {
-            return $this->db->fetchAll(
-                "SELECT td.*, d.nome as nome_original, d.carga_horaria_padrao as carga_original
-                 FROM turmas_disciplinas td
-                 LEFT JOIN disciplinas d ON td.disciplina_id = d.id
-                 WHERE td.turma_id = ?
-                 ORDER BY td.ordem",
+            // Obter o tipo de curso da turma
+            $turma = $this->db->fetch(
+                "SELECT curso_tipo FROM turmas_teoricas WHERE id = ?",
                 [$turmaId]
+            );
+            
+            if (!$turma) {
+                return [];
+            }
+            
+            // Retornar as disciplinas configuradas para este tipo de curso
+            return $this->db->fetchAll(
+                "SELECT 
+                    disciplina as disciplina_id,
+                    nome_disciplina,
+                    aulas_obrigatorias as carga_horaria_padrao,
+                    ordem,
+                    cor_hex
+                 FROM disciplinas_configuracao 
+                 WHERE curso_tipo = ? AND ativa = 1
+                 ORDER BY ordem",
+                [$turma['curso_tipo']]
             );
         } catch (Exception $e) {
             return [];
@@ -1447,6 +1462,116 @@ class TurmaTeoricaManager {
             
         } catch (Exception $e) {
             return [];
+        }
+    }
+    
+    /**
+     * Carregar disciplinas automaticamente baseadas no tipo de curso selecionado
+     * Este método substitui a seleção manual de disciplinas
+     */
+    public function carregarDisciplinasAutomaticas($cursoTipo) {
+        try {
+            $this->verificarECriarTabelas();
+            
+            // Buscar disciplinas configuradas para este tipo de curso
+            $disciplinas = $this->db->fetchAll(
+                "SELECT 
+                    disciplina,
+                    nome_disciplina,
+                    aulas_obrigatorias,
+                    ordem,
+                    cor_hex,
+                    icone
+                 FROM disciplinas_configuracao 
+                 WHERE curso_tipo = ? AND ativa = 1
+                 ORDER BY ordem",
+                [$cursoTipo]
+            );
+            
+            return [
+                'sucesso' => true,
+                'disciplinas' => $disciplinas,
+                'total' => count($disciplinas)
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Erro ao carregar disciplinas automáticas: " . $e->getMessage());
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Erro ao carregar disciplinas: ' . $e->getMessage(),
+                'disciplinas' => []
+            ];
+        }
+    }
+    
+    /**
+     * Salvar disciplinas automaticamente para uma turma baseadas no curso
+     * Remove a necessidade de seleção manual
+     */
+    public function salvarDisciplinasAutomaticas($turmaId, $cursoTipo) {
+        try {
+            $this->verificarECriarTabelas();
+            
+            // Obter disciplinas configuradas para o curso
+            $disciplinasConfiguracao = $this->carregarDisciplinasAutomaticas($cursoTipo);
+            
+            if (!$disciplinasConfiguracao['sucesso'] || empty($disciplinasConfiguracao['disciplinas'])) {
+                return [
+                    'sucesso' => false,
+                    'mensagem' => 'Nenhuma disciplina configurada para este tipo de curso'
+                ];
+            }
+            
+            // Limpar disciplinas existentes da turma (se houver)
+            $this->db->query("DELETE FROM turma_disciplinas WHERE turma_id = ?", [$turmaId]);
+            
+            // Inserir disciplinas automaticamente
+            $disciplinas = [];
+            foreach ($disciplinasConfiguracao['disciplinas'] as $disciplina) {
+                $disciplinas[] = [
+                    'turma_id' => $turmaId,
+                    'disciplina_id' => $disciplina['disciplina'],
+                    'nome_disciplina' => $disciplina['nome_disciplina'],
+                    'carga_horaria_padrao' => $disciplina['aulas_obrigatorias'],
+                    'carga_horaria_personalizada' => $disciplina['aulas_obrigatorias'],
+                    'ordem' => $disciplina['ordem'],
+                    'cor_hex' => $disciplina['cor_hex'],
+                    'icone' => $disciplina['icone']
+                ];
+            }
+            
+            // Inserir todas as disciplinas
+            foreach ($disciplinas as $disciplina) {
+                $this->db->query(
+                    "INSERT INTO turma_disciplinas 
+                     (turma_id, disciplina_id, nome_disciplina, carga_horaria_padrao, 
+                      carga_horaria_personalizada, ordem, cor_hex, icone, criado_em) 
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())",
+                    [
+                        $disciplina['turma_id'],
+                        $disciplina['disciplina_id'],
+                        $disciplina['nome_disciplina'],
+                        $disciplina['carga_horaria_padrao'],
+                        $disciplina['carga_horaria_personalizada'],
+                        $disciplina['ordem'],
+                        $disciplina['cor_hex'],
+                        $disciplina['icone']
+                    ]
+                );
+            }
+            
+            return [
+                'sucesso' => true,
+                'mensagem' => 'Disciplinas carregadas automaticamente com sucesso',
+                'total' => count($disciplinas)
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Erro ao salvar disciplinas automáticas: " . $e->getMessage());
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Erro ao salvar disciplinas: ' . $e->getMessage()
+            ];
         }
     }
 }

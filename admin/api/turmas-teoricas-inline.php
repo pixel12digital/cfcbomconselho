@@ -178,49 +178,15 @@ function addDisciplinaToTurma($turmaId, $disciplinaId, $cargaHoraria) {
         return ['success' => false, 'message' => 'Disciplina e carga horária são obrigatórios'];
     }
     
-    // Verificar se a disciplina já está na turma
-    $existing = $db->fetch(
-        "SELECT id FROM turmas_disciplinas WHERE turma_id = ? AND disciplina_id = ?",
-        [$turmaId, $disciplinaId]
-    );
-    
-    if ($existing) {
-        return ['success' => false, 'message' => 'Disciplina já está cadastrada nesta turma'];
-    }
-    
-    // Obter próxima ordem
-    $nextOrder = $db->fetch(
-        "SELECT COALESCE(MAX(ordem), 0) + 1 as next_order FROM turmas_disciplinas WHERE turma_id = ?",
-        [$turmaId]
-    );
-    
-    // Inserir disciplina
-    $sql = "INSERT INTO turmas_disciplinas (turma_id, disciplina_id, carga_horaria, ordem, created_at) VALUES (?, ?, ?, ?, NOW())";
-    $result = $db->query($sql, [$turmaId, $disciplinaId, $cargaHoraria, $nextOrder['next_order']]);
-    
-    if ($result) {
-        return ['success' => true, 'message' => 'Disciplina adicionada com sucesso'];
-    } else {
-        return ['success' => false, 'message' => 'Erro ao adicionar disciplina'];
-    }
+    // No sistema atual, as disciplinas são definidas automaticamente pelo tipo de curso
+    // Não é necessário adicionar disciplinas manualmente
+    return ['success' => false, 'message' => 'As disciplinas são definidas automaticamente pelo tipo de curso selecionado. Para alterar as disciplinas, altere o tipo de curso da turma.'];
 }
 
 function removeDisciplinaFromTurma($turmaId, $disciplinaId) {
-    global $db;
-    
-    if (!$disciplinaId) {
-        return ['success' => false, 'message' => 'ID da disciplina é obrigatório'];
-    }
-    
-    // Remover disciplina
-    $sql = "DELETE FROM turmas_disciplinas WHERE turma_id = ? AND disciplina_id = ?";
-    $result = $db->query($sql, [$turmaId, $disciplinaId]);
-    
-    if ($result) {
-        return ['success' => true, 'message' => 'Disciplina removida com sucesso'];
-    } else {
-        return ['success' => false, 'message' => 'Erro ao remover disciplina'];
-    }
+    // No sistema atual, as disciplinas são definidas automaticamente pelo tipo de curso
+    // Não é possível remover disciplinas individualmente
+    return ['success' => false, 'message' => 'As disciplinas são definidas automaticamente pelo tipo de curso selecionado. Para alterar as disciplinas, altere o tipo de curso da turma.'];
 }
 
 function updateDisciplinaInTurma($turmaId, $disciplinaIdAtual, $disciplinaIdNova, $cargaHoraria) {
@@ -230,8 +196,8 @@ function updateDisciplinaInTurma($turmaId, $disciplinaIdAtual, $disciplinaIdNova
         return ['success' => false, 'message' => 'Parâmetros obrigatórios não fornecidos'];
     }
     
-    // Verificar se a nova disciplina existe
-    $sql = "SELECT id FROM disciplinas WHERE id = ?";
+    // Verificar se a nova disciplina existe e obter seus dados
+    $sql = "SELECT id, nome, cor_hex FROM disciplinas WHERE id = ?";
     $disciplina = $db->fetch($sql, [$disciplinaIdNova]);
     
     if (!$disciplina) {
@@ -240,9 +206,9 @@ function updateDisciplinaInTurma($turmaId, $disciplinaIdAtual, $disciplinaIdNova
     
     // Atualizar disciplina na turma
     $sql = "UPDATE turmas_disciplinas 
-            SET disciplina_id = ?, carga_horaria = ? 
+            SET disciplina_id = ?, nome_disciplina = ?, carga_horaria_padrao = ?, cor_hex = ? 
             WHERE turma_id = ? AND disciplina_id = ?";
-    $result = $db->query($sql, [$disciplinaIdNova, $cargaHoraria, $turmaId, $disciplinaIdAtual]);
+    $result = $db->query($sql, [$disciplinaIdNova, $disciplina['nome'], $cargaHoraria, $disciplina['cor_hex'], $turmaId, $disciplinaIdAtual]);
     
     if ($result) {
         return ['success' => true, 'message' => 'Disciplina atualizada com sucesso'];

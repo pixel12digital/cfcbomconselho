@@ -51,12 +51,22 @@ $salasDisponiveis = $turmaManager->obterSalasDisponiveis($user['cfc_id'] ?? 1);
 // Buscar instrutores
 try {
     $instrutores = $db->fetchAll("
-        SELECT i.id, u.nome, i.categoria_habilitacao 
-        FROM instrutores i 
-        LEFT JOIN usuarios u ON i.usuario_id = u.id 
-        WHERE i.ativo = 1 AND i.cfc_id = ? 
-        ORDER BY u.nome
-    ", [$user['cfc_id'] ?? 1]);
+        SELECT i.*, 
+               COALESCE(u.nome, i.nome) as nome,
+               COALESCE(u.email, i.email) as email,
+               COALESCE(u.telefone, i.telefone) as telefone,
+               CASE 
+                   WHEN i.categorias_json IS NOT NULL AND i.categorias_json != '' AND i.categorias_json != '[]' THEN 
+                       REPLACE(REPLACE(REPLACE(i.categorias_json, '[', ''), ']', ''), '\"', '')
+                   WHEN i.categoria_habilitacao IS NOT NULL AND i.categoria_habilitacao != '' THEN 
+                       i.categoria_habilitacao
+                   ELSE 'Sem categoria'
+               END as categoria_habilitacao
+        FROM instrutores i
+        LEFT JOIN usuarios u ON i.usuario_id = u.id
+        WHERE i.ativo = 1
+        ORDER BY COALESCE(u.nome, i.nome)
+    ");
 } catch (Exception $e) {
     $instrutores = [];
 }
@@ -340,6 +350,11 @@ if (isset($_GET['sucesso'])) {
 /* Otimizações específicas para o modal de disciplinas */
 #modalGerenciarDisciplinas {
     z-index: 1055;
+}
+
+/* Correção do z-index para o modal Editar Sala aparecer na frente do modal Gerenciar Salas */
+#modalEditarSala {
+    z-index: 1060 !important;
 }
 
 #modalGerenciarDisciplinas .popup-modal-wrapper {
@@ -645,6 +660,8 @@ body.modal-open {
 #modalGerenciarDisciplinas::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* CSS removido - agora usando sistema popup customizado */
 
 /* Responsividade para mobile */
 @media (max-width: 767.98px) {
@@ -1104,60 +1121,34 @@ body.modal-open {
                         </small>
                     </div>
                     
-                    <!-- Seção de Disciplinas -->
+                    <!-- Seção de Disciplinas Automáticas -->
                     <div class="form-group">
                         <label>
                             <i class="fas fa-book me-1"></i>Disciplinas do Curso
-                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="console.log('🔧 [BOTÃO] Botão Gerenciar Disciplinas clicado!'); console.log('🔧 [BOTÃO] Função existe?', typeof abrirModalDisciplinasInterno); if(typeof abrirModalDisciplinasInterno === 'function') { abrirModalDisciplinasInterno(); } else { console.error('❌ [BOTÃO] Função não encontrada!'); }" title="Gerenciar Disciplinas">
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-2" onclick="abrirModalDisciplinasInterno()" title="Configurar Disciplinas dos Cursos">
                                 <i class="fas fa-cog"></i>
                             </button>
                         </label>
                         <div class="mb-2">
-                            <!-- Campo fixo de disciplina -->
-                            <div class="disciplina-item border rounded p-3 mb-3" data-disciplina-id="0">
-                                <div class="d-flex align-items-center gap-3 disciplina-row-layout">
-                                    <div class="flex-grow-1 disciplina-field-container">
-                                        <select class="form-select" name="disciplina_0" id="disciplina_principal" onchange="atualizarDisciplina(0)">
-                                            <option value="">Selecione a disciplina...</option>
-                                        </select>
-                                    </div>
-                                    <div class="flex-shrink-0">
-                                        <button type="button" class="btn btn-outline-danger btn-sm disciplina-delete-btn" onclick="removerDisciplina(0)" title="Remover disciplina" style="display: none;">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
+                            <!-- Container para disciplinas automáticas -->
+                            <div id="disciplinas-automaticas-container">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle me-2"></i>
+                                    <strong>Disciplinas Automáticas:</strong> As disciplinas serão carregadas automaticamente quando você selecionar o tipo de curso.
                                 </div>
-                                
-                                <!-- Campos ocultos para informações adicionais -->
-                                <div style="display: none;">
-                                    <div class="input-group">
-                                        <input type="number" class="form-control disciplina-horas" 
-                                               name="disciplina_horas_0" 
-                                               placeholder="Horas" 
-                                               min="1" 
-                                               max="50"
-                                               onchange="atualizarTotalHorasRegressivo()">
-                                        <span class="input-group-text">h</span>
-                                    </div>
-                                    <small class="text-muted disciplina-info">
-                                        <span class="aulas-obrigatorias"></span> aulas (padrão)
-                                    </small>
+                                <div id="disciplinas-lista" class="mt-3">
+                                    <!-- Disciplinas serão carregadas automaticamente aqui -->
                                 </div>
                             </div>
                             
-                            <!-- Container para disciplinas adicionais -->
-                            <div id="disciplinas-container">
-                                <!-- Disciplinas adicionais serão carregadas aqui -->
-                            </div>
-                            
-                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="adicionarDisciplina()" style="font-size: 0.8rem;">
-                                <i class="fas fa-plus me-1"></i>Adicionar Disciplina
+                            <!-- Botão para recarregar disciplinas (opcional) -->
+                            <button type="button" class="btn btn-outline-secondary btn-sm mt-2" onclick="recarregarDisciplinasAutomaticas()" style="display: none;" id="btn-recarregar-disciplinas">
+                                <i class="fas fa-sync me-1"></i>Recarregar Disciplinas
                             </button>
                         </div>
                         <small class="text-muted">
                             <i class="fas fa-info-circle me-1"></i>
-                            <span id="contador-disciplinas">0</span> disciplina(s) cadastrada(s) - 
-                            <a href="#" onclick="abrirModalDisciplinasInterno()" class="text-primary">Clique aqui para gerenciar</a>
+                            <span id="contador-disciplinas">0</span> disciplina(s) configurada(s) automaticamente
                         </small>
                         <div class="mt-2">
                             <small class="text-primary">
@@ -1214,17 +1205,6 @@ body.modal-open {
                     <h4>⚙️ Configurações Adicionais</h4>
                     
                     <div class="form-group">
-                        <label for="max_alunos">Máximo de Alunos</label>
-                        <input type="number" 
-                               id="max_alunos" 
-                               name="max_alunos" 
-                               class="form-control" 
-                               value="30" 
-                               min="5" 
-                               max="50">
-                    </div>
-                    
-                    <div class="form-group">
                         <label for="observacoes">Observações</label>
                         <textarea id="observacoes" 
                                   name="observacoes" 
@@ -1263,10 +1243,6 @@ body.modal-open {
         <?php elseif ($step === '2' || $acao === 'agendar'): ?>
             <!-- STEP 2: AGENDAMENTO DE AULAS -->
             <?php include __DIR__ . '/turmas-teoricas-step2.php'; ?>
-            
-        <?php elseif ($step === '3' || $acao === 'revisar'): ?>
-            <!-- STEP 3: REVISÃO E CONTROLE DE CARGA HORÁRIA -->
-            <?php include __DIR__ . '/turmas-teoricas-step3.php'; ?>
             
         <?php elseif ($step === '4' || $acao === 'alunos'): ?>
             <!-- STEP 4: INSERÇÃO DE ALUNOS -->
@@ -1388,12 +1364,20 @@ function adicionarDisciplina() {
     // Verificar se estamos na página correta (não na página de detalhes)
     const urlParams = new URLSearchParams(window.location.search);
     const acao = urlParams.get('acao');
+    const step = urlParams.get('step');
     
     if (acao === 'detalhes') {
         console.log('⚠️ [ADICIONAR] Função chamada na página de detalhes - ignorando');
         return;
     }
     
+    // Se estamos na página de agendamento (step=2), não executar esta função
+    if (step === '2' || acao === 'agendar') {
+        console.log('✅ [ADICIONAR] Página de agendamento detectada - função adicionarDisciplina não deve ser executada aqui');
+        return;
+    }
+    
+    // Validação apenas para página de criação de turma (step=1)
     const cursoSelect = document.getElementById('curso_tipo');
     if (!cursoSelect || !cursoSelect.value) {
         alert('⚠️ Selecione primeiro o tipo de curso!');
@@ -1829,9 +1813,9 @@ function salvarDisciplinasSelecionadas(turmaId) {
     });
 }
 
-// Modificar a função de criação de turma para incluir salvamento de disciplinas
+// Modificar a função de criação de turma para incluir salvamento automático de disciplinas
 function criarTurmaComDisciplinas() {
-    console.log('🎯 Criando turma com disciplinas...');
+    console.log('🎯 Criando turma com disciplinas automáticas...');
     
     // Coletar dados do formulário
     const formData = new FormData(document.getElementById('formTurmaTeorica'));
@@ -1847,8 +1831,16 @@ function criarTurmaComDisciplinas() {
         if (data.sucesso) {
             console.log('✅ Turma criada:', data.turma_id);
             
-            // Salvar disciplinas selecionadas
-            return salvarDisciplinasSelecionadas(data.turma_id).then(() => data.turma_id);
+            // Obter tipo de curso selecionado
+            const cursoTipo = document.getElementById('curso_tipo').value;
+            
+            if (cursoTipo) {
+                // Salvar disciplinas automaticamente baseadas no curso
+                return salvarDisciplinasAutomaticas(data.turma_id, cursoTipo).then(() => data.turma_id);
+            } else {
+                console.warn('⚠️ Nenhum tipo de curso selecionado, prosseguindo sem disciplinas');
+                return data.turma_id;
+            }
         } else {
             throw new Error(data.mensagem);
         }
@@ -1864,6 +1856,35 @@ function criarTurmaComDisciplinas() {
     .catch(error => {
         console.error('❌ Erro ao criar turma:', error);
         alert('Erro ao criar turma: ' + error.message);
+    });
+}
+
+// Função para salvar disciplinas automaticamente
+function salvarDisciplinasAutomaticas(turmaId, cursoTipo) {
+    console.log('💾 Salvando disciplinas automaticamente para turma:', turmaId, 'curso:', cursoTipo);
+    
+    const formData = new FormData();
+    formData.append('acao', 'salvar_disciplinas_automaticas');
+    formData.append('turma_id', turmaId);
+    formData.append('curso_tipo', cursoTipo);
+    
+    return fetch('/cfc-bom-conselho/admin/api/disciplinas-automaticas.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            console.log('✅ Disciplinas salvas automaticamente:', data.total, 'disciplinas');
+            return data;
+        } else {
+            console.error('❌ Erro ao salvar disciplinas:', data.mensagem);
+            throw new Error(data.mensagem);
+        }
+    })
+    .catch(error => {
+        console.error('❌ Erro na requisição de disciplinas:', error);
+        throw error;
     });
 }
 
@@ -2183,11 +2204,11 @@ document.addEventListener('DOMContentLoaded', function() {
         cursoSelect.addEventListener('change', function() {
             console.log('🎯 Curso selecionado (segunda instância):', this.value);
             
-            // Limpar disciplinas existentes quando curso mudar
-            const container = document.getElementById('disciplinas-container');
-            if (container) {
-                container.innerHTML = '';
-                contadorDisciplinas = 0;
+            // Carregar disciplinas automaticamente quando curso mudar
+            if (this.value) {
+                carregarDisciplinasAutomaticas(this.value);
+            } else {
+                limparDisciplinasAutomaticas();
             }
             
             // Atualizar total de horas com contador regressivo
@@ -3323,9 +3344,6 @@ function navegarParaEtapa(etapa) {
         case 2:
             novaAcao = 'agendar';
             break;
-        case 3:
-            novaAcao = 'revisar';
-            break;
         case 4:
             novaAcao = 'alunos';
             break;
@@ -3691,12 +3709,20 @@ function adicionarDisciplina() {
     // Verificar se estamos na página correta (não na página de detalhes)
     const urlParams = new URLSearchParams(window.location.search);
     const acao = urlParams.get('acao');
+    const step = urlParams.get('step');
     
     if (acao === 'detalhes') {
         console.log('⚠️ [ADICIONAR] Função chamada na página de detalhes - ignorando');
         return;
     }
     
+    // Se estamos na página de agendamento (step=2), não executar esta função
+    if (step === '2' || acao === 'agendar') {
+        console.log('✅ [ADICIONAR] Página de agendamento detectada - função adicionarDisciplina não deve ser executada aqui');
+        return;
+    }
+    
+    // Validação apenas para página de criação de turma (step=1)
     const cursoSelect = document.getElementById('curso_tipo');
     if (!cursoSelect || !cursoSelect.value) {
         alert('⚠️ Selecione primeiro o tipo de curso!');
@@ -3994,6 +4020,15 @@ document.addEventListener('DOMContentLoaded', function() {
     // Carregar disciplinas diretamente no select principal
     carregarDisciplinasDoBanco();
     
+    // Carregar disciplinas automáticas se houver curso selecionado
+    setTimeout(() => {
+        const cursoSelect = document.getElementById('curso_tipo');
+        if (cursoSelect && cursoSelect.value) {
+            console.log('🔄 Carregando disciplinas automáticas para curso pré-selecionado:', cursoSelect.value);
+            carregarDisciplinasAutomaticas(cursoSelect.value);
+        }
+    }, 1000);
+    
     // Atualizar contador regressivo no carregamento
     setTimeout(() => {
         console.log('🔄 Atualizando contador regressivo no carregamento da página...');
@@ -4005,11 +4040,11 @@ document.addEventListener('DOMContentLoaded', function() {
         cursoSelect.addEventListener('change', function() {
             console.log('🎯 Curso selecionado:', this.value);
             
-            // Limpar disciplinas existentes quando curso mudar
-            const container = document.getElementById('disciplinas-container');
-            if (container) {
-                container.innerHTML = '';
-                contadorDisciplinas = 0;
+            // Carregar disciplinas automaticamente quando curso mudar
+            if (this.value) {
+                carregarDisciplinasAutomaticas(this.value);
+            } else {
+                limparDisciplinasAutomaticas();
             }
             
             // Atualizar total de horas com contador regressivo
@@ -4239,47 +4274,75 @@ function carregarDisciplinasDoBanco() {
     </div>
 </div>
 
-<!-- Modal Editar Sala -->
-<div class="modal fade" id="modalEditarSala" tabindex="-1" aria-labelledby="modalEditarSalaLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEditarSalaLabel">
-                    <i class="fas fa-edit me-2"></i>Editar Sala
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <form id="formEditarSala">
-                <div class="modal-body">
-                    <input type="hidden" id="editar_sala_id" name="id">
-                    
-                    <div class="mb-3">
-                        <label for="editar_nome" class="form-label">Nome da Sala</label>
-                        <input type="text" class="form-control" id="editar_nome" name="nome" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="editar_capacidade" class="form-label">Capacidade</label>
-                        <input type="number" class="form-control" id="editar_capacidade" name="capacidade" min="1" max="100" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="editar_ativa" name="ativa" value="1">
-                            <label class="form-check-label" for="editar_ativa">
-                                Sala ativa
-                            </label>
-                        </div>
-                    </div>
+<!-- Modal Editar Sala - Layout Padrão -->
+<div class="popup-modal" id="modalEditarSala" style="display: none; z-index: 1060 !important;">
+    <div class="popup-modal-wrapper" style="max-width: 500px; width: 90vw;">
+        
+        <!-- HEADER -->
+        <div class="popup-modal-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <i class="fas fa-edit"></i>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i>Salvar Alterações
-                    </button>
+                <div class="header-text">
+                    <h5>Editar Sala</h5>
+                    <small>Modifique os dados da sala de aula</small>
+                </div>
+            </div>
+            <button type="button" class="popup-modal-close" onclick="fecharModalEditarSala()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- CONTEÚDO -->
+        <div class="popup-modal-content">
+            <form id="formEditarSala">
+                <input type="hidden" id="editar_sala_id" name="id">
+                
+                <div class="mb-3">
+                    <label for="editar_nome" class="form-label">Nome da Sala *</label>
+                    <input type="text" class="form-control" id="editar_nome" name="nome" required 
+                           placeholder="Ex: Sala 1, Laboratório, Auditório">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="editar_capacidade" class="form-label">Capacidade *</label>
+                    <input type="number" class="form-control" id="editar_capacidade" name="capacidade" 
+                           min="1" max="100" required>
+                    <div class="form-text">Número máximo de alunos que a sala comporta</div>
+                </div>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="editar_ativa" name="ativa" value="1">
+                        <label class="form-check-label" for="editar_ativa">
+                            Sala ativa (disponível para uso)
+                        </label>
+                    </div>
                 </div>
             </form>
         </div>
+        
+        <!-- FOOTER -->
+        <div class="popup-modal-footer">
+            <div class="popup-footer-info">
+                <small>
+                    <i class="fas fa-info-circle"></i>
+                    As alterações serão salvas imediatamente
+                </small>
+            </div>
+            <div class="popup-footer-actions">
+                <button type="button" class="popup-secondary-button" onclick="fecharModalEditarSala()">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="popup-save-button" onclick="salvarEdicaoSala()">
+                    <i class="fas fa-save"></i>
+                    Salvar Alterações
+                </button>
+            </div>
+        </div>
+        
     </div>
 </div>
 
@@ -4459,58 +4522,233 @@ function carregarDisciplinasDoBanco() {
     </div>
 </div>
 
-<!-- Modal Editar Tipo de Curso -->
-<div class="modal fade" id="modalEditarTipoCurso" tabindex="-1" aria-labelledby="modalEditarTipoCursoLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEditarTipoCursoLabel">
-                    <i class="fas fa-edit me-2"></i>Editar Tipo de Curso
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modal Editar Tipo de Curso - Padrão Popup -->
+<div class="popup-modal" id="modalEditarTipoCurso" style="display: none;">
+    <div class="popup-modal-wrapper">
+        
+        <!-- HEADER -->
+        <div class="popup-modal-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <div class="header-text">
+                    <h5>Editar Tipo de Curso</h5>
+                    <small>Modifique as informações do curso selecionado</small>
+                </div>
             </div>
+            <button type="button" class="popup-modal-close" onclick="fecharModalEditarTipoCurso()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- CONTEÚDO -->
+        <div class="popup-modal-content">
             <form id="formEditarTipoCurso">
-                <div class="modal-body">
-                    <input type="hidden" id="editar_tipo_curso_id" name="id">
-                    
-                    <div class="mb-3">
-                        <label for="editar_codigo" class="form-label">Código do Curso</label>
-                        <input type="text" class="form-control" id="editar_codigo" name="codigo" required>
-                        <small class="text-muted">Ex: formacao_45h, reciclagem_infrator</small>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="editar_nome_tipo" class="form-label">Nome do Curso</label>
-                        <input type="text" class="form-control" id="editar_nome_tipo" name="nome" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="editar_descricao_tipo" class="form-label">Descrição</label>
-                        <textarea class="form-control" id="editar_descricao_tipo" name="descricao" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="editar_carga_horaria" class="form-label">Carga Horária Total</label>
-                        <input type="number" class="form-control" id="editar_carga_horaria" name="carga_horaria_total" min="1" max="200" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="editar_ativo_tipo" name="ativo" value="1">
-                            <label class="form-check-label" for="editar_ativo_tipo">
-                                Tipo de curso ativo
-                            </label>
+                <input type="hidden" id="editar_tipo_curso_id" name="id">
+                
+                <div class="mb-3">
+                    <label for="editar_codigo" class="form-label">Código do Curso</label>
+                    <input type="text" class="form-control" id="editar_codigo" name="codigo" required>
+                    <small class="text-muted">Ex: formacao_45h, reciclagem_infrator</small>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="editar_nome_tipo" class="form-label">Nome do Curso</label>
+                    <input type="text" class="form-control" id="editar_nome_tipo" name="nome" required>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="editar_descricao_tipo" class="form-label">Descrição</label>
+                    <textarea class="form-control" id="editar_descricao_tipo" name="descricao" rows="3"></textarea>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="editar_carga_horaria" class="form-label">Carga Horária Total</label>
+                    <input type="number" class="form-control" id="editar_carga_horaria" name="carga_horaria_total" min="1" max="200" required onchange="atualizarAuditoriaCargaHoraria()">
+                    <div id="auditoria-carga-horaria" class="mt-2" style="display: none;">
+                        <div class="alert alert-info mb-2">
+                            <i class="fas fa-calculator me-2"></i>
+                            <strong>Auditoria de Carga Horária:</strong>
+                            <div class="mt-1">
+                                <span id="carga-total-curso">0h</span> (Total do Curso) - 
+                                <span id="carga-disciplinas-selecionadas">0h</span> (Disciplinas Selecionadas) = 
+                                <span id="carga-restante" class="fw-bold">0h</span> (Restante)
+                            </div>
+                        </div>
+                        <div id="alerta-carga-horaria" class="alert alert-warning" style="display: none;">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Atenção:</strong> A soma das disciplinas selecionadas não corresponde à carga horária total do curso!
+                        </div>
+                        <div id="sucesso-carga-horaria" class="alert alert-success" style="display: none;">
+                            <i class="fas fa-check-circle me-2"></i>
+                            <strong>Perfeito!</strong> A carga horária está correta e balanceada.
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i>Salvar Alterações
-                    </button>
+                
+                <div class="mb-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="editar_ativo_tipo" name="ativo" value="1">
+                        <label class="form-check-label" for="editar_ativo_tipo">
+                            Tipo de curso ativo
+                        </label>
+                    </div>
                 </div>
+                
+                <div class="mb-3">
+                    <label class="form-label">Disciplinas do Curso</label>
+                    <div class="border rounded p-3" style="max-height: 200px; overflow-y: auto; background-color: #f8f9fa;">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input disciplina-checkbox" type="checkbox" value="1" id="disciplina_1" name="disciplinas[]" data-carga-horaria="18" checked onchange="atualizarAuditoriaCargaHoraria()">
+                            <label class="form-check-label" for="disciplina_1">
+                                <strong>Legislação de Trânsito</strong>
+                                <small class="text-muted ms-2">(18h)</small>
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input disciplina-checkbox" type="checkbox" value="2" id="disciplina_2" name="disciplinas[]" data-carga-horaria="16" checked onchange="atualizarAuditoriaCargaHoraria()">
+                            <label class="form-check-label" for="disciplina_2">
+                                <strong>Direção Defensiva</strong>
+                                <small class="text-muted ms-2">(16h)</small>
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input disciplina-checkbox" type="checkbox" value="3" id="disciplina_3" name="disciplinas[]" data-carga-horaria="4" checked onchange="atualizarAuditoriaCargaHoraria()">
+                            <label class="form-check-label" for="disciplina_3">
+                                <strong>Primeiros Socorros</strong>
+                                <small class="text-muted ms-2">(4h)</small>
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input disciplina-checkbox" type="checkbox" value="4" id="disciplina_4" name="disciplinas[]" data-carga-horaria="4" checked onchange="atualizarAuditoriaCargaHoraria()">
+                            <label class="form-check-label" for="disciplina_4">
+                                <strong>Meio Ambiente e Cidadania</strong>
+                                <small class="text-muted ms-2">(4h)</small>
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input disciplina-checkbox" type="checkbox" value="5" id="disciplina_5" name="disciplinas[]" data-carga-horaria="3" onchange="atualizarAuditoriaCargaHoraria()">
+                            <label class="form-check-label" for="disciplina_5">
+                                <strong>Mecânica Básica</strong>
+                                <small class="text-muted ms-2">(3h)</small>
+                            </label>
+                        </div>
+                    </div>
+                    <small class="text-muted">Clique nas disciplinas que fazem parte deste curso.</small>
+                </div>
+                
+                <style>
+                /* Estilos para os checkboxes de disciplinas */
+                .disciplina-checkbox {
+                    transform: scale(1.3);
+                    margin-right: 10px;
+                }
+                
+                .form-check-label {
+                    cursor: pointer;
+                    padding-left: 5px;
+                    transition: all 0.2s ease;
+                }
+                
+                .form-check-label:hover {
+                    background-color: rgba(2, 58, 141, 0.05);
+                    border-radius: 4px;
+                    padding: 4px 8px;
+                    margin: -4px -8px;
+                }
+                
+                #disciplinas-container .form-check {
+                    border-bottom: 1px solid #e9ecef;
+                    padding: 10px 0;
+                    margin-bottom: 0;
+                    transition: all 0.2s ease;
+                }
+                
+                #disciplinas-container .form-check:last-child {
+                    border-bottom: none;
+                }
+                
+                #disciplinas-container .form-check:hover {
+                    background-color: rgba(2, 58, 141, 0.02);
+                    border-radius: 6px;
+                    margin: 0 -12px;
+                    padding: 10px 12px;
+                }
+                
+                .form-check-input:checked {
+                    background-color: #023A8D;
+                    border-color: #023A8D;
+                }
+                
+                /* Estilos para auditoria de carga horária */
+                #auditoria-carga-horaria {
+                    transition: all 0.3s ease;
+                }
+                
+                #auditoria-carga-horaria .alert {
+                    border: none;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                }
+                
+                #auditoria-carga-horaria .alert-info {
+                    background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+                    border-left: 4px solid #023A8D;
+                }
+                
+                #auditoria-carga-horaria .alert-warning {
+                    background: linear-gradient(135deg, #fff3e0 0%, #fce4ec 100%);
+                    border-left: 4px solid #ff9800;
+                }
+                
+                #auditoria-carga-horaria .alert-success {
+                    background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
+                    border-left: 4px solid #4caf50;
+                }
+                
+                #carga-restante {
+                    font-size: 1.1em;
+                    padding: 2px 6px;
+                    border-radius: 4px;
+                    background: rgba(255,255,255,0.7);
+                }
+                
+                #carga-restante.text-success {
+                    background: rgba(76, 175, 80, 0.1);
+                }
+                
+                #carga-restante.text-warning {
+                    background: rgba(255, 152, 0, 0.1);
+                }
+                
+                #carga-restante.text-danger {
+                    background: rgba(244, 67, 54, 0.1);
+                }
+                </style>
             </form>
         </div>
+        
+        <!-- FOOTER -->
+        <div class="popup-modal-footer">
+            <div class="popup-footer-info">
+                <small>
+                    <i class="fas fa-info-circle"></i>
+                    As alterações são salvas automaticamente
+                </small>
+            </div>
+            <div class="popup-footer-actions">
+                <button type="button" class="popup-secondary-button" onclick="fecharModalEditarTipoCurso()">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="button" class="popup-save-button" onclick="salvarEdicaoTipoCurso()">
+                    <i class="fas fa-save"></i>
+                    Salvar Alterações
+                </button>
+            </div>
+        </div>
+        
     </div>
 </div>
 
@@ -4780,6 +5018,8 @@ document.addEventListener('keydown', function(e) {
         const modalSalas = document.getElementById('modalGerenciarSalas');
         const modalTipos = document.getElementById('modalGerenciarTiposCurso');
         const modalDisciplinas = document.getElementById('modalGerenciarDisciplinas');
+        const modalEditarTipo = document.getElementById('modalEditarTipoCurso');
+        const modalEditarSala = document.getElementById('modalEditarSala');
         
         if (modalSalas && modalSalas.classList.contains('show')) {
             fecharModalSalas();
@@ -4787,6 +5027,10 @@ document.addEventListener('keydown', function(e) {
             fecharModalTiposCurso();
         } else if (modalDisciplinas && modalDisciplinas.classList.contains('show')) {
             fecharModalDisciplinas();
+        } else if (modalEditarTipo && modalEditarTipo.classList.contains('show')) {
+            fecharModalEditarTipoCurso();
+        } else if (modalEditarSala && modalEditarSala.classList.contains('show')) {
+            fecharModalEditarSala();
         } else {
             // Se nenhum modal específico estiver aberto, limpar tudo
             limparModaisAntigos();
@@ -4800,6 +5044,7 @@ document.addEventListener('click', function(e) {
         const modalSalas = document.getElementById('modalGerenciarSalas');
         const modalTipos = document.getElementById('modalGerenciarTiposCurso');
         const modalDisciplinas = document.getElementById('modalGerenciarDisciplinas');
+        const modalEditarTipo = document.getElementById('modalEditarTipoCurso');
         
         if (modalSalas && modalSalas.classList.contains('show')) {
             fecharModalSalas();
@@ -4807,6 +5052,8 @@ document.addEventListener('click', function(e) {
             fecharModalTiposCurso();
         } else if (modalDisciplinas && modalDisciplinas.classList.contains('show')) {
             fecharModalDisciplinas();
+        } else if (modalEditarTipo && modalEditarTipo.classList.contains('show')) {
+            fecharModalEditarTipoCurso();
         } else {
             // Se nenhum modal específico estiver aberto, limpar tudo
             limparModaisAntigos();
@@ -5092,8 +5339,58 @@ function editarSala(id, nome, capacidade, ativa) {
     document.getElementById('editar_capacidade').value = capacidade;
     document.getElementById('editar_ativa').checked = ativa == 1;
     
-    const modal = new bootstrap.Modal(document.getElementById('modalEditarSala'));
-    modal.show();
+    // Abrir modal popup
+    const modal = document.getElementById('modalEditarSala');
+    modal.style.display = 'flex';
+    modal.classList.add('show', 'popup-fade-in');
+    document.body.style.overflow = 'hidden';
+}
+
+// Função para fechar modal de editar sala
+function fecharModalEditarSala() {
+    const modal = document.getElementById('modalEditarSala');
+    if (modal) {
+        modal.classList.remove('show');
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Função para salvar edição de sala
+function salvarEdicaoSala() {
+    const formData = new FormData(document.getElementById('formEditarSala'));
+    formData.append('acao', 'editar');
+    
+    fetch('/cfc-bom-conselho/admin/api/salas-clean.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text().then(text => {
+        try {
+            return JSON.parse(text);
+        } catch (e) {
+            console.error('Texto recebido:', text);
+            throw new Error('JSON inválido: ' + e.message);
+        }
+    }))
+    .then(data => {
+        if (data.sucesso) {
+            // Fechar modal
+            fecharModalEditarSala();
+            
+            // Recarregar lista de salas
+            recarregarSalas();
+            
+            // Mostrar mensagem de sucesso
+            showAlert('success', data.mensagem);
+        } else {
+            showAlert('danger', data.mensagem);
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao editar sala:', error);
+        showAlert('danger', 'Erro ao editar sala: ' + error.message);
+    });
 }
 
 // Função para confirmar exclusão de sala
@@ -5549,14 +5846,9 @@ function excluirTipoCurso(id, nome) {
     });
 }
 
-// Função para abrir modal de novo tipo de curso (versão antiga - mantida para compatibilidade)
-function abrirModalNovoTipoCurso() {
-    const modal = new bootstrap.Modal(document.getElementById('modalNovoTipoCurso'));
-    modal.show();
-}
-
-// Função para editar tipo de curso
+// Função para editar tipo de curso - VERSÃO SIMPLIFICADA
 function editarTipoCurso(id, codigo, nome, descricao, carga_horaria_total, ativo) {
+    // Preencher campos do formulário
     document.getElementById('editar_tipo_curso_id').value = id;
     document.getElementById('editar_codigo').value = codigo;
     document.getElementById('editar_nome_tipo').value = nome;
@@ -5564,8 +5856,257 @@ function editarTipoCurso(id, codigo, nome, descricao, carga_horaria_total, ativo
     document.getElementById('editar_carga_horaria').value = carga_horaria_total;
     document.getElementById('editar_ativo_tipo').checked = ativo == 1;
     
-    const modal = new bootstrap.Modal(document.getElementById('modalEditarTipoCurso'));
-    modal.show();
+    // Carregar disciplinas salvas do banco
+    carregarDisciplinasSalvas(codigo);
+    
+    // Atualizar auditoria de carga horária após carregar os dados
+    setTimeout(() => {
+        atualizarAuditoriaCargaHoraria();
+    }, 100);
+    
+    // Abrir modal
+    const popup = document.getElementById('modalEditarTipoCurso');
+    if (popup) {
+        popup.style.display = 'flex';
+        popup.classList.add('show', 'popup-fade-in');
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+// Função para carregar disciplinas salvas do banco
+function carregarDisciplinasSalvas(codigoCurso) {
+    // Primeiro, desmarcar todas as disciplinas
+    document.querySelectorAll('.disciplina-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    // Buscar disciplinas salvas no banco
+    fetch(`./api/disciplinas-curso.php?acao=buscar&codigo=${encodeURIComponent(codigoCurso)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso && data.disciplinas_selecionadas) {
+                // Marcar disciplinas salvas
+                data.disciplinas_selecionadas.forEach(disciplinaId => {
+                    const checkbox = document.getElementById(`disciplina_${disciplinaId}`);
+                    if (checkbox) {
+                        checkbox.checked = true;
+                    }
+                });
+                console.log('✅ Disciplinas carregadas do banco:', data.disciplinas_selecionadas);
+                
+                // Atualizar auditoria após carregar disciplinas
+                atualizarAuditoriaCargaHoraria();
+            } else {
+                // Se não houver disciplinas salvas, usar configuração padrão
+                configurarDisciplinasPorCurso(codigoCurso);
+                console.log('⚠️ Usando configuração padrão para curso:', codigoCurso);
+                
+                // Atualizar auditoria após configurar disciplinas padrão
+                atualizarAuditoriaCargaHoraria();
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar disciplinas:', error);
+            // Em caso de erro, usar configuração padrão
+            configurarDisciplinasPorCurso(codigoCurso);
+            
+            // Atualizar auditoria após configurar disciplinas padrão
+            atualizarAuditoriaCargaHoraria();
+        });
+}
+
+// Função simples para configurar disciplinas
+function configurarDisciplinasPorCurso(codigoCurso) {
+    // Desmarcar todas as disciplinas primeiro
+    document.querySelectorAll('.disciplina-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    
+    // Mapear códigos de curso para disciplinas
+    const disciplinasPorCurso = {
+        'formacao_45h': [1, 2, 3, 4, 5], // Todas as disciplinas
+        'formacao_acc_20h': [1, 2, 3, 4], // Sem mecânica básica
+        'reciclagem_infrator': [1, 2], // Apenas legislação e direção defensiva
+        'atualizacao': [1] // Apenas legislação
+    };
+    
+    const disciplinasSelecionadas = disciplinasPorCurso[codigoCurso] || [];
+    
+    // Marcar disciplinas selecionadas
+    disciplinasSelecionadas.forEach(disciplinaId => {
+        const checkbox = document.getElementById(`disciplina_${disciplinaId}`);
+        if (checkbox) {
+            checkbox.checked = true;
+        }
+    });
+    
+    // Atualizar auditoria após configurar disciplinas
+    atualizarAuditoriaCargaHoraria();
+}
+
+// Função para fechar modal de edição de tipo de curso
+function fecharModalEditarTipoCurso() {
+    const popup = document.getElementById('modalEditarTipoCurso');
+    if (popup) {
+        popup.classList.remove('show');
+        popup.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+// Função para atualizar auditoria de carga horária
+function atualizarAuditoriaCargaHoraria() {
+    console.log('🔄 Atualizando auditoria de carga horária...');
+    
+    // Obter carga horária total do curso
+    const cargaHorariaTotal = parseInt(document.getElementById('editar_carga_horaria').value) || 0;
+    
+    // Calcular carga horária das disciplinas selecionadas
+    const disciplinasSelecionadas = document.querySelectorAll('.disciplina-checkbox:checked');
+    let cargaHorariaDisciplinas = 0;
+    
+    disciplinasSelecionadas.forEach(checkbox => {
+        const cargaHoraria = parseInt(checkbox.getAttribute('data-carga-horaria')) || 0;
+        cargaHorariaDisciplinas += cargaHoraria;
+    });
+    
+    // Calcular carga horária restante
+    const cargaHorariaRestante = cargaHorariaTotal - cargaHorariaDisciplinas;
+    
+    // Atualizar elementos da interface
+    const auditoriaDiv = document.getElementById('auditoria-carga-horaria');
+    const cargaTotalElement = document.getElementById('carga-total-curso');
+    const cargaDisciplinasElement = document.getElementById('carga-disciplinas-selecionadas');
+    const cargaRestanteElement = document.getElementById('carga-restante');
+    const alertaElement = document.getElementById('alerta-carga-horaria');
+    const sucessoElement = document.getElementById('sucesso-carga-horaria');
+    
+    if (cargaHorariaTotal > 0) {
+        // Mostrar seção de auditoria
+        auditoriaDiv.style.display = 'block';
+        
+        // Atualizar valores
+        cargaTotalElement.textContent = cargaHorariaTotal + 'h';
+        cargaDisciplinasElement.textContent = cargaHorariaDisciplinas + 'h';
+        cargaRestanteElement.textContent = cargaHorariaRestante + 'h';
+        
+        // Verificar se está balanceado
+        if (cargaHorariaRestante === 0) {
+            // Perfeito - carga horária balanceada
+            alertaElement.style.display = 'none';
+            sucessoElement.style.display = 'block';
+            cargaRestanteElement.className = 'fw-bold text-success';
+        } else if (cargaHorariaRestante > 0) {
+            // Sobra carga horária
+            alertaElement.style.display = 'block';
+            sucessoElement.style.display = 'none';
+            cargaRestanteElement.className = 'fw-bold text-warning';
+            alertaElement.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i><strong>Atenção:</strong> Ainda restam ' + cargaHorariaRestante + 'h não atribuídas às disciplinas!';
+        } else {
+            // Excede carga horária
+            alertaElement.style.display = 'block';
+            sucessoElement.style.display = 'none';
+            cargaRestanteElement.className = 'fw-bold text-danger';
+            alertaElement.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i><strong>Atenção:</strong> As disciplinas selecionadas excedem a carga horária total em ' + Math.abs(cargaHorariaRestante) + 'h!';
+        }
+    } else {
+        // Ocultar seção de auditoria se não há carga horária definida
+        auditoriaDiv.style.display = 'none';
+    }
+    
+    console.log('📊 Auditoria atualizada:', {
+        total: cargaHorariaTotal,
+        disciplinas: cargaHorariaDisciplinas,
+        restante: cargaHorariaRestante
+    });
+}
+
+// Função de teste para auditoria de carga horária
+window.testarAuditoriaCargaHoraria = function() {
+    console.log('🧪 Testando auditoria de carga horária...');
+    
+    // Simular dados de teste
+    const cargaHorariaInput = document.getElementById('editar_carga_horaria');
+    if (cargaHorariaInput) {
+        cargaHorariaInput.value = '45';
+        console.log('✅ Carga horária definida para 45h');
+        
+        // Simular seleção de disciplinas
+        const disciplinas = document.querySelectorAll('.disciplina-checkbox');
+        disciplinas.forEach((checkbox, index) => {
+            if (index < 4) { // Selecionar as primeiras 4 disciplinas
+                checkbox.checked = true;
+            } else {
+                checkbox.checked = false;
+            }
+        });
+        console.log('✅ Disciplinas configuradas para teste');
+        
+        // Executar auditoria
+        atualizarAuditoriaCargaHoraria();
+        console.log('✅ Auditoria executada');
+    } else {
+        console.error('❌ Modal de editar tipo de curso não está aberto');
+    }
+};
+
+// Função para salvar edição de tipo de curso
+function salvarEdicaoTipoCurso() {
+    // Verificar auditoria de carga horária antes de salvar
+    const cargaHorariaTotal = parseInt(document.getElementById('editar_carga_horaria').value) || 0;
+    const disciplinasSelecionadas = document.querySelectorAll('.disciplina-checkbox:checked');
+    let cargaHorariaDisciplinas = 0;
+    
+    disciplinasSelecionadas.forEach(checkbox => {
+        const cargaHoraria = parseInt(checkbox.getAttribute('data-carga-horaria')) || 0;
+        cargaHorariaDisciplinas += cargaHoraria;
+    });
+    
+    const cargaHorariaRestante = cargaHorariaTotal - cargaHorariaDisciplinas;
+    
+    // Avisar se há inconsistência na carga horária
+    if (cargaHorariaTotal > 0 && cargaHorariaRestante !== 0) {
+        const mensagem = cargaHorariaRestante > 0 
+            ? `Ainda restam ${cargaHorariaRestante}h não atribuídas às disciplinas. Deseja continuar mesmo assim?`
+            : `As disciplinas selecionadas excedem a carga horária total em ${Math.abs(cargaHorariaRestante)}h. Deseja continuar mesmo assim?`;
+            
+        if (!confirm(mensagem)) {
+            return; // Cancelar salvamento
+        }
+    }
+    
+    const form = document.getElementById('formEditarTipoCurso');
+    const formData = new FormData(form);
+    formData.append('acao', 'editar');
+    
+    // Adicionar disciplinas selecionadas (checkboxes marcados)
+    const disciplinasIds = Array.from(disciplinasSelecionadas)
+        .map(checkbox => checkbox.value);
+    formData.append('disciplinas', JSON.stringify(disciplinasIds));
+    
+    fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            // Fechar modal
+            fecharModalEditarTipoCurso();
+            
+            // Recarregar lista de tipos de curso
+            recarregarTiposCurso();
+            
+            // Mostrar feedback de sucesso
+            showAlert('success', data.mensagem);
+        } else {
+            showAlert('danger', data.mensagem);
+        }
+    })
+    .catch(error => {
+        console.error('Erro ao editar tipo de curso:', error);
+        showAlert('danger', 'Erro ao editar tipo de curso: ' + error.message);
+    });
 }
 
 // Função para excluir tipo de curso
@@ -6006,48 +6547,7 @@ document.addEventListener('DOMContentLoaded', function() {
             elemento.addEventListener('change', salvarRascunho);
         }
     });
-    // Formulário de edição de sala
-    const formEditarSala = document.getElementById('formEditarSala');
-    if (formEditarSala) {
-        formEditarSala.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const formData = new FormData(this);
-            formData.append('acao', 'editar');
-            
-            fetch('/cfc-bom-conselho/admin/api/salas-clean.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.text().then(text => {
-                try {
-                    return JSON.parse(text);
-                } catch (e) {
-                    console.error('Texto recebido:', text);
-                    throw new Error('JSON inválido: ' + e.message);
-                }
-            }))
-            .then(data => {
-                if (data.sucesso) {
-                    // Fechar modal
-                    const modal = bootstrap.Modal.getInstance(document.getElementById('modalEditarSala'));
-                    modal.hide();
-                    
-                    // Recarregar lista de salas
-                    recarregarSalas();
-                    
-                    // Mostrar mensagem de sucesso
-                    showAlert('success', data.mensagem);
-                } else {
-                    showAlert('danger', data.mensagem);
-                }
-            })
-            .catch(error => {
-                console.error('Erro ao editar sala:', error);
-                showAlert('danger', 'Erro ao editar sala: ' + error.message);
-            });
-        });
-    }
+    // Formulário de edição de sala - agora usa sistema popup customizado
     
     // Formulário de edição de tipo de curso
     const formEditarTipoCurso = document.getElementById('formEditarTipoCurso');
@@ -9223,6 +9723,216 @@ console.log('✅ [SCRIPT] Função fecharModalDisciplinas disponível:', typeof 
 console.log('✅ [SCRIPT] Função criarModalDisciplinas disponível:', typeof window.criarModalDisciplinas);
 console.log('✅ [SCRIPT] Função abrirModalDisciplinasInterno disponível:', typeof window.abrirModalDisciplinasInterno);
 console.log('✅ [SCRIPT] Função carregarDisciplinasModal disponível:', typeof window.carregarDisciplinasModal);
+
+// ==========================================
+// FUNÇÕES PARA CARREGAMENTO AUTOMÁTICO DE DISCIPLINAS
+// ==========================================
+
+/**
+ * Carregar disciplinas automaticamente baseadas no tipo de curso selecionado
+ */
+function carregarDisciplinasAutomaticas(cursoTipo) {
+    console.log('🔄 Carregando disciplinas automaticamente para curso:', cursoTipo);
+    
+    // Mostrar loading
+    const disciplinasLista = document.getElementById('disciplinas-lista');
+    if (disciplinasLista) {
+        disciplinasLista.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-spinner fa-spin me-2"></i>
+                Carregando disciplinas...
+            </div>
+        `;
+    }
+    
+    // Fazer requisição para a API
+    fetch(`/cfc-bom-conselho/admin/api/disciplinas-automaticas.php?acao=carregar_disciplinas&curso_tipo=${encodeURIComponent(cursoTipo)}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                console.log('✅ Disciplinas carregadas automaticamente:', data.disciplinas);
+                
+                // Verificar se há disciplinas ou se é uma mensagem amigável
+                if (data.sem_disciplinas) {
+                    console.log('ℹ️ Curso sem disciplinas configuradas:', data.mensagem);
+                    mostrarMensagemAmigavel(data.mensagem);
+                } else {
+                    exibirDisciplinasAutomaticas(data.disciplinas);
+                    atualizarContadorDisciplinasAutomaticas(data.total);
+                    atualizarTotalHorasAutomaticas(data.disciplinas);
+                    
+                    // Esconder alerta de info e mostrar botão de recarregar
+                    const alertInfo = document.querySelector('#disciplinas-automaticas-container .alert-info');
+                    if (alertInfo) {
+                        alertInfo.style.display = 'none';
+                    }
+                    const btnRecarregar = document.getElementById('btn-recarregar-disciplinas');
+                    if (btnRecarregar) {
+                        btnRecarregar.style.display = 'inline-block';
+                    }
+                }
+            } else {
+                console.error('❌ Erro ao carregar disciplinas:', data.mensagem);
+                mostrarErroDisciplinas(data.mensagem);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro na requisição:', error);
+            mostrarErroDisciplinas('Erro de conexão ao carregar disciplinas');
+        });
+}
+
+/**
+ * Exibir disciplinas carregadas automaticamente
+ */
+function exibirDisciplinasAutomaticas(disciplinas) {
+    const disciplinasLista = document.getElementById('disciplinas-lista');
+    if (!disciplinasLista) return;
+    
+    if (disciplinas.length === 0) {
+        disciplinasLista.innerHTML = `
+            <div class="alert alert-warning">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                Nenhuma disciplina configurada para este tipo de curso.
+            </div>
+        `;
+        return;
+    }
+    
+    let html = '<div class="row">';
+    
+    disciplinas.forEach((disciplina, index) => {
+        html += `
+            <div class="col-md-6 mb-3">
+                <div class="card disciplina-card-automatica" style="border-left: 4px solid ${disciplina.cor}">
+                    <div class="card-body p-3">
+                        <div class="d-flex align-items-center">
+                            <div class="flex-grow-1">
+                                <h6 class="card-title mb-1" style="color: ${disciplina.cor}">
+                                    <i class="fas fa-${disciplina.icone} me-2"></i>
+                                    ${disciplina.text}
+                                </h6>
+                                <small class="text-muted">
+                                    <i class="fas fa-clock me-1"></i>
+                                    ${disciplina.aulas} aulas obrigatórias
+                                </small>
+                            </div>
+                            <div class="flex-shrink-0">
+                                <span class="badge" style="background-color: ${disciplina.cor}">
+                                    ${disciplina.aulas}h
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    disciplinasLista.innerHTML = html;
+}
+
+/**
+ * Limpar disciplinas automáticas
+ */
+function limparDisciplinasAutomaticas() {
+    console.log('🧹 Limpando disciplinas automáticas');
+    
+    const disciplinasLista = document.getElementById('disciplinas-lista');
+    if (disciplinasLista) {
+        disciplinasLista.innerHTML = '';
+    }
+    
+    atualizarContadorDisciplinasAutomaticas(0);
+    atualizarTotalHorasAutomaticas([]);
+    
+    // Mostrar alerta de info novamente
+    const alertInfo = document.querySelector('#disciplinas-automaticas-container .alert-info');
+    if (alertInfo) {
+        alertInfo.style.display = 'block';
+    }
+    const btnRecarregar = document.getElementById('btn-recarregar-disciplinas');
+    if (btnRecarregar) {
+        btnRecarregar.style.display = 'none';
+    }
+}
+
+/**
+ * Recarregar disciplinas automáticas
+ */
+function recarregarDisciplinasAutomaticas() {
+    const cursoSelect = document.getElementById('curso_tipo');
+    if (cursoSelect && cursoSelect.value) {
+        carregarDisciplinasAutomaticas(cursoSelect.value);
+    }
+}
+
+/**
+ * Atualizar contador de disciplinas automáticas
+ */
+function atualizarContadorDisciplinasAutomaticas(total) {
+    const contador = document.getElementById('contador-disciplinas');
+    if (contador) {
+        contador.textContent = total;
+    }
+}
+
+/**
+ * Atualizar total de horas automáticas
+ */
+function atualizarTotalHorasAutomaticas(disciplinas) {
+    const totalHoras = disciplinas.reduce((total, disciplina) => total + parseInt(disciplina.aulas), 0);
+    const totalHorasElement = document.getElementById('total-horas-disciplinas');
+    if (totalHorasElement) {
+        totalHorasElement.textContent = totalHoras;
+    }
+}
+
+/**
+ * Mostrar erro ao carregar disciplinas
+ */
+function mostrarErroDisciplinas(mensagem) {
+    const disciplinasLista = document.getElementById('disciplinas-lista');
+    if (disciplinasLista) {
+        disciplinasLista.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <strong>Erro:</strong> ${mensagem}
+            </div>
+        `;
+    }
+}
+
+/**
+ * Mostrar mensagem amigável quando não há disciplinas
+ */
+function mostrarMensagemAmigavel(mensagem) {
+    const disciplinasLista = document.getElementById('disciplinas-lista');
+    if (disciplinasLista) {
+        disciplinasLista.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle me-2"></i>
+                <strong>Informação:</strong> ${mensagem}
+            </div>
+        `;
+    }
+    
+    // Atualizar contadores para zero
+    atualizarContadorDisciplinasAutomaticas(0);
+    atualizarTotalHorasAutomaticas([]);
+    
+    // Mostrar botão de recarregar
+    const btnRecarregar = document.getElementById('btn-recarregar-disciplinas');
+    if (btnRecarregar) {
+        btnRecarregar.style.display = 'inline-block';
+    }
+}
+
+// Tornar funções globalmente acessíveis
+window.carregarDisciplinasAutomaticas = carregarDisciplinasAutomaticas;
+window.limparDisciplinasAutomaticas = limparDisciplinasAutomaticas;
+window.recarregarDisciplinasAutomaticas = recarregarDisciplinasAutomaticas;
 </script>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>

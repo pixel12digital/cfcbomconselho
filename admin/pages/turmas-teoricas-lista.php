@@ -193,10 +193,6 @@ $stats = [
                            class="btn-warning" style="padding: 8px 16px; font-size: 0.9rem; margin-right: 10px;">
                             📅 Continuar Agendamento
                         </a>
-                        <a href="?page=turmas-teoricas&acao=revisar&step=3&turma_id=<?= $turma['id'] ?>" 
-                           class="btn-secondary" style="padding: 8px 16px; font-size: 0.9rem;">
-                            ⏱️ Revisar Carga Horária
-                        </a>
                     <?php elseif ($turma['status'] === 'completa'): ?>
                         <a href="?page=turmas-teoricas&acao=alunos&step=4&turma_id=<?= $turma['id'] ?>" 
                            class="btn-primary" style="padding: 8px 16px; font-size: 0.9rem; margin-right: 10px;">

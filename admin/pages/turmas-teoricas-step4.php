@@ -88,7 +88,7 @@ $elegiveisAprovados = array_filter($alunosElegiveis, fn($a) => $a['status_elegib
 $elegiveisComPendencias = array_filter($alunosElegiveis, fn($a) => $a['status_elegibilidade'] === 'pendente');
 
 // Calcular estatísticas
-$maxAlunos = $turmaAtual['max_alunos'] ?? 10;
+$maxAlunos = 30; // Valor padrão fixo já que o campo foi removido
 $alunosMatriculados = $turmaAtual['alunos_matriculados'] ?? 0;
 $vagasDisponiveis = $maxAlunos - $alunosMatriculados;
 $percentualOcupacao = $maxAlunos > 0 ? round(($alunosMatriculados / $maxAlunos) * 100, 1) : 0;
@@ -320,8 +320,8 @@ $percentualOcupacao = $maxAlunos > 0 ? round(($alunosMatriculados / $maxAlunos) 
 
 <!-- Navegação -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #ddd;">
-    <a href="?page=turmas-teoricas&acao=revisar&step=3&turma_id=<?= $turmaAtual['id'] ?>" class="btn-secondary">
-        ← Voltar à Revisão
+    <a href="?page=turmas-teoricas&acao=agendar&step=2&turma_id=<?= $turmaAtual['id'] ?>" class="btn-secondary">
+        ← Voltar ao Agendamento
     </a>
     
     <div>

@@ -314,17 +314,6 @@ if (isset($_GET['sucesso'])) {
                                     <h4>⚙️ Configurações Adicionais</h4>
                                     
                                     <div class="form-group">
-                                        <label for="max_alunos">Máximo de Alunos</label>
-                                        <input type="number" 
-                                               id="max_alunos" 
-                                               name="max_alunos" 
-                                               class="form-control" 
-                                               value="30" 
-                                               min="5" 
-                                               max="50">
-                                    </div>
-                                    
-                                    <div class="form-group">
                                         <label for="observacoes">Observações</label>
                                         <textarea id="observacoes" 
                                                   name="observacoes" 

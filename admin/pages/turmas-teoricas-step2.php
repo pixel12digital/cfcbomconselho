@@ -257,7 +257,7 @@ for ($hora = 8; $hora <= 17; $hora++) {
                                     </div>
                                 </div>
                                 <div style="font-size: 1.2rem;">
-                                    <?= $disc['status_disciplina'] === 'completa' ? '✅' : ($disc['status_disciplina'] === 'parcial' ? '⚠️' : '❌') ?>
+                                    <?= $disc['status_disciplina'] === 'completa' ? '✅' : ($disc['status_disciplina'] === 'parcial' ? '⚠️' : '') ?>
                                 </div>
                             </div>
                         <?php endforeach; ?>
@@ -322,8 +322,8 @@ for ($hora = 8; $hora <= 17; $hora++) {
     
     <div>
         <?php if ($percentual >= 100): ?>
-            <a href="?page=turmas-teoricas&acao=revisar&step=3&turma_id=<?= $turmaAtual['id'] ?>" class="btn-primary">
-                Próxima Etapa: Revisar Carga Horária →
+            <a href="?page=turmas-teoricas&acao=alunos&step=4&turma_id=<?= $turmaAtual['id'] ?>" class="btn-primary">
+                Próxima Etapa: Matricular Alunos →
             </a>
         <?php else: ?>
             <div style="color: #666; font-size: 0.9rem;">

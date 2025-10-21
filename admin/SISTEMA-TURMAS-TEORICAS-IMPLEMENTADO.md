@@ -196,7 +196,6 @@ POST /admin/api/turmas-teoricas.php
 - ✅ `admin/pages/turmas-teoricas.php` - Página principal com wizard
 - ✅ `admin/pages/turmas-teoricas-lista.php` - Listagem de turmas
 - ✅ `admin/pages/turmas-teoricas-step2.php` - Agendamento de aulas
-- ✅ `admin/pages/turmas-teoricas-step3.php` - Controle de carga horária
 - ✅ `admin/pages/turmas-teoricas-step4.php` - Inserção de alunos
 
 ### **Scripts Auxiliares:**

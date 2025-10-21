@@ -388,6 +388,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <!-- CSS para Modais Responsivos -->
     <link href="assets/css/modals-responsive.css?v=<?php echo time(); ?>" rel="stylesheet">
     
+    <!-- CSS para Modais Popup -->
+    <link href="assets/css/popup-reference.css?v=<?php echo time(); ?>" rel="stylesheet">
+    
     <!-- CSS para Sistema de Modal Singleton -->
     <style>
         /* Modal Root - Sistema Singleton */
@@ -567,6 +570,450 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             overflow: visible !important;
             max-height: none !important;
             height: auto !important;
+        }
+        
+        /* Estilos para Modais Popup Globais */
+        .popup-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1055;
+            padding: 2rem;
+        }
+        
+        .popup-modal-wrapper {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 1200px;
+            width: 100%;
+            max-height: 90vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .popup-modal-header {
+            background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%);
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 12px 12px 0 0;
+        }
+        
+        .header-content {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .header-icon {
+            width: 48px;
+            height: 48px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+        
+        .header-text h5 {
+            margin: 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        .header-text small {
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+        
+        .popup-modal-close {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .popup-modal-close:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+        
+        .popup-modal-content {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        
+        .popup-search-container {
+            margin-bottom: 1.5rem;
+        }
+        
+        .popup-search-wrapper {
+            position: relative;
+        }
+        
+        .popup-search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 3rem;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: all 0.2s ease;
+        }
+        
+        .popup-search-input:focus {
+            outline: none;
+            border-color: #023A8D;
+            box-shadow: 0 0 0 3px rgba(2, 58, 141, 0.1);
+        }
+        
+        .popup-search-icon {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6c757d;
+            font-size: 1rem;
+        }
+        
+        .popup-section-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1.5rem;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+        
+        .popup-section-title h6 {
+            margin: 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .popup-section-title small {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .popup-stats-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: #f8f9fa;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+        }
+        
+        .popup-stats-icon .icon-circle {
+            width: 40px;
+            height: 40px;
+            background: #023A8D;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1rem;
+        }
+        
+        .popup-stats-text h6 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .popup-primary-button {
+            background: #023A8D;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .popup-primary-button:hover {
+            background: #1e5bb8;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(2, 58, 141, 0.3);
+        }
+        
+        .popup-secondary-button {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .popup-secondary-button:hover {
+            background: #5a6268;
+            transform: translateY(-1px);
+        }
+        
+        .popup-save-button {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .popup-save-button:hover {
+            background: #218838;
+            transform: translateY(-1px);
+        }
+        
+        .popup-items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .popup-item-card {
+            background: white;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            padding: 1.5rem;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+        
+        .popup-item-card:hover {
+            border-color: #023A8D;
+            box-shadow: 0 8px 25px rgba(2, 58, 141, 0.15);
+            transform: translateY(-2px);
+        }
+        
+        .popup-item-card.active {
+            border-left: 4px solid #28a745;
+        }
+        
+        .popup-item-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+        
+        .popup-item-card-title {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .popup-item-card-description {
+            color: #6c757d;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        
+        .popup-item-card-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .popup-item-card-menu {
+            background: none;
+            border: none;
+            padding: 0.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            color: #6c757d;
+        }
+        
+        .popup-item-card-menu:hover {
+            background: #f8f9fa;
+            color: #023A8D;
+        }
+        
+        .popup-modal-footer {
+            background: #f8f9fa;
+            padding: 1.5rem 2rem;
+            border-top: 1px solid #e9ecef;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-radius: 0 0 12px 12px;
+        }
+        
+        .popup-footer-info {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .popup-footer-actions {
+            display: flex;
+            gap: 1rem;
+        }
+        
+        .popup-loading-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+        
+        .popup-loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e9ecef;
+            border-top: 4px solid #023A8D;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .popup-loading-text h6 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+        
+        .popup-loading-text p {
+            margin: 0;
+            font-size: 0.9rem;
+        }
+        
+        /* Estados de erro e vazio */
+        .popup-empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+        
+        .popup-empty-state .empty-icon {
+            width: 80px;
+            height: 80px;
+            background: #f8f9fa;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            color: #023A8D;
+        }
+        
+        .popup-empty-state h5 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .popup-empty-state p {
+            margin: 0 0 1.5rem 0;
+            font-size: 1rem;
+            color: #6c757d;
+        }
+        
+        .popup-error-state {
+            text-align: center;
+            padding: 3rem;
+            color: #6c757d;
+        }
+        
+        .popup-error-state .error-icon {
+            width: 80px;
+            height: 80px;
+            background: #f8d7da;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 1.5rem;
+            font-size: 2rem;
+            color: #dc3545;
+        }
+        
+        .popup-error-state h5 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #dc3545;
+        }
+        
+        .popup-error-state p {
+            margin: 0 0 1.5rem 0;
+            font-size: 1rem;
+            color: #6c757d;
+        }
+        
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .popup-modal {
+                padding: 1rem;
+            }
+            
+            .popup-modal-wrapper {
+                max-height: 95vh;
+            }
+            
+            .popup-modal-header {
+                padding: 1rem 1.5rem;
+            }
+            
+            .popup-modal-content {
+                padding: 1.5rem;
+            }
+            
+            .popup-modal-footer {
+                padding: 1rem 1.5rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .popup-section-header {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .popup-items-grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
     
@@ -964,7 +1411,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <i class="fas fa-layer-group"></i>
                             <span>Categorias de Habilitação</span>
                         </a>
-                        <a href="index.php?page=configuracoes-salas" class="nav-sublink <?php echo $page === 'configuracoes-salas' ? 'active' : ''; ?>">
+                        <a href="#" onclick="abrirModalSalasInterno()" class="nav-sublink">
                             <i class="fas fa-door-open"></i>
                             <span>Salas de Aula</span>
                         </a>
@@ -1187,7 +1634,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <i class="fas fa-layer-group"></i>
                                     <span>Categorias de Habilitação</span>
                                 </a>
-                                <a href="index.php?page=configuracoes-salas" class="mobile-nav-sublink <?php echo $page === 'configuracoes-salas' ? 'active' : ''; ?>">
+                                <a href="#" onclick="abrirModalSalasInterno()" class="mobile-nav-sublink">
                                     <i class="fas fa-door-open"></i>
                                     <span>Salas de Aula</span>
                                 </a>
@@ -1820,6 +2267,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     
     <script src="assets/js/components.js"></script>
     
+    <!-- Debug das funções dos modais -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔍 Verificando funções dos modais...');
+            console.log('abrirModalTiposCursoInterno:', typeof window.abrirModalTiposCursoInterno);
+            console.log('abrirModalDisciplinasInterno:', typeof window.abrirModalDisciplinasInterno);
+            console.log('fecharModalTiposCurso:', typeof window.fecharModalTiposCurso);
+            console.log('fecharModalDisciplinas:', typeof window.fecharModalDisciplinas);
+            
+            // Verificar se os modais existem
+            const modalCursos = document.getElementById('modalGerenciarTiposCurso');
+            const modalDisciplinas = document.getElementById('modalGerenciarDisciplinas');
+            console.log('Modal Cursos encontrado:', !!modalCursos);
+            console.log('Modal Disciplinas encontrado:', !!modalDisciplinas);
+            
+            // Teste simples - adicionar listeners de debug
+            setTimeout(() => {
+                console.log('🧪 Testando abertura dos modais...');
+                
+                // Teste manual das funções
+                if (typeof window.abrirModalTiposCursoInterno === 'function') {
+                    console.log('✅ Função abrirModalTiposCursoInterno está disponível');
+                } else {
+                    console.error('❌ Função abrirModalTiposCursoInterno NÃO está disponível');
+                }
+                
+                if (typeof window.abrirModalDisciplinasInterno === 'function') {
+                    console.log('✅ Função abrirModalDisciplinasInterno está disponível');
+                } else {
+                    console.error('❌ Função abrirModalDisciplinasInterno NÃO está disponível');
+                }
+            }, 1000);
+        });
+    </script>
+    
     <!-- PWA Registration -->
     <script src="../pwa/pwa-register.js"></script>
     
@@ -1991,5 +2473,619 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     
     <!-- Modal Root para modais singleton -->
     <div id="modal-root"></div>
+    
+    <!-- Modal Gerenciar Disciplinas - Global -->
+    <div class="popup-modal" id="modalGerenciarDisciplinas" style="display: none;">
+        <div class="popup-modal-wrapper">
+            
+            <!-- HEADER -->
+            <div class="popup-modal-header">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="fas fa-book"></i>
+                    </div>
+                    <div class="header-text">
+                        <h5>Gerenciar Disciplinas</h5>
+                        <small>Configure e organize as disciplinas do curso</small>
+                    </div>
+                </div>
+                <button type="button" class="popup-modal-close" onclick="fecharModalDisciplinas()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- CONTEÚDO -->
+            <div class="popup-modal-content">
+                
+                <!-- Barra de Busca -->
+                <div class="popup-search-container">
+                    <div class="popup-search-wrapper">
+                        <input type="text" class="popup-search-input" id="buscarDisciplinas" placeholder="Buscar disciplinas..." onkeyup="filtrarDisciplinas()">
+                        <i class="fas fa-search popup-search-icon"></i>
+                    </div>
+                </div>
+                
+                <!-- Seção Otimizada - Título, Estatísticas e Botão na mesma linha -->
+                <div class="popup-section-header">
+                    <div class="popup-section-title">
+                        <h6>Suas Disciplinas</h6>
+                        <small>Gerencie e organize as disciplinas do curso</small>
+                    </div>
+                    <div class="popup-stats-item" style="margin: 0;">
+                        <div class="popup-stats-icon">
+                            <div class="icon-circle">
+                                <i class="fas fa-book"></i>
+                            </div>
+                        </div>
+                        <div class="popup-stats-text">
+                            <h6 style="margin: 0;">Total: <span class="stats-number" id="totalDisciplinas">0</span></h6>
+                        </div>
+                    </div>
+                    <button type="button" class="popup-primary-button" onclick="abrirFormularioNovaDisciplina()">
+                        <i class="fas fa-plus"></i>
+                        Nova Disciplina
+                    </button>
+                </div>
+                
+                <!-- Conteúdo Principal - Lista de Disciplinas -->
+                <div id="conteudo-principal-disciplinas">
+                    <!-- Grid de Disciplinas -->
+                    <div class="popup-items-grid" id="listaDisciplinas">
+                        <!-- Lista de disciplinas será carregada aqui -->
+                        <div class="popup-loading-state show">
+                            <div class="popup-loading-spinner"></div>
+                            <div class="popup-loading-text">
+                                <h6>Carregando disciplinas...</h6>
+                                <p>Aguarde enquanto buscamos as disciplinas cadastradas</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Formulário Nova Disciplina (oculto inicialmente) -->
+                <div id="formulario-nova-disciplina" style="display: none;">
+                    <div class="popup-section-header">
+                        <div class="popup-section-title">
+                            <h6>Nova Disciplina</h6>
+                            <small>Preencha os dados da nova disciplina</small>
+                        </div>
+                        <button type="button" class="popup-secondary-button" onclick="voltarParaListaDisciplinas()">
+                            <i class="fas fa-arrow-left"></i>
+                            Voltar
+                        </button>
+                    </div>
+                    
+                    <form id="formNovaDisciplinaIntegrado" class="mt-3" onsubmit="salvarNovaDisciplinaIntegrada(event)">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="codigo_disciplina_integrado" class="form-label">Código *</label>
+                                    <input type="text" class="form-control" id="codigo_disciplina_integrado" name="codigo" required placeholder="Ex: direcao_defensiva">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nome_disciplina_integrado" class="form-label">Nome *</label>
+                                    <input type="text" class="form-control" id="nome_disciplina_integrado" name="nome" required placeholder="Ex: Direção Defensiva">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="descricao_disciplina_integrado" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricao_disciplina_integrado" name="descricao" rows="3" placeholder="Descrição detalhada da disciplina"></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="carga_horaria_disciplina_integrado" class="form-label">Carga Horária Padrão</label>
+                                    <input type="number" class="form-control" id="carga_horaria_disciplina_integrado" name="carga_horaria_padrao" min="1" value="20">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="cor_disciplina_integrado" class="form-label">Cor</label>
+                                    <input type="color" class="form-control" id="cor_disciplina_integrado" name="cor_hex" value="#023A8D">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="popup-secondary-button" onclick="voltarParaListaDisciplinas()">
+                                <i class="fas fa-times"></i>
+                                Cancelar
+                            </button>
+                            <button type="submit" class="popup-save-button" id="btnSalvarDisciplina">
+                                <i class="fas fa-save"></i>
+                                Salvar Disciplina
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+            </div>
+            
+            <!-- FOOTER -->
+            <div class="popup-modal-footer">
+                <div class="popup-footer-info">
+                    <small>
+                        <i class="fas fa-info-circle"></i>
+                        As alterações são salvas automaticamente
+                    </small>
+                </div>
+                <div class="popup-footer-actions">
+                    <button type="button" class="popup-secondary-button" onclick="fecharModalDisciplinas()">
+                        <i class="fas fa-times"></i>
+                        Fechar
+                    </button>
+                    <button type="button" class="popup-save-button" onclick="salvarAlteracoesDisciplinas()">
+                        <i class="fas fa-save"></i>
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+    
+    <!-- Modal Gerenciar Tipos de Curso - Global -->
+    <div class="popup-modal" id="modalGerenciarTiposCurso" style="display: none;">
+        <div class="popup-modal-wrapper">
+            
+            <!-- HEADER -->
+            <div class="popup-modal-header">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="fas fa-graduation-cap"></i>
+                    </div>
+                    <div class="header-text">
+                        <h5>Gerenciar Cursos</h5>
+                        <small>Configure e organize os cursos disponíveis</small>
+                    </div>
+                </div>
+                <button type="button" class="popup-modal-close" onclick="fecharModalTiposCurso()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- CONTEÚDO -->
+            <div class="popup-modal-content">
+                
+                <!-- Seção Otimizada - Título, Estatísticas e Botão na mesma linha -->
+                <div class="popup-section-header">
+                    <div class="popup-section-title">
+                        <h6>Cursos Cadastrados</h6>
+                        <small>Gerencie e organize os cursos do CFC</small>
+                    </div>
+                    <div class="popup-stats-item" style="margin: 0;">
+                        <div class="popup-stats-icon">
+                            <div class="icon-circle">
+                                <i class="fas fa-graduation-cap"></i>
+                            </div>
+                        </div>
+                        <div class="popup-stats-text">
+                            <h6 style="margin: 0;">Total: <span class="stats-number" id="total-tipos-curso">0</span></h6>
+                        </div>
+                    </div>
+                    <button type="button" class="popup-primary-button" onclick="abrirFormularioNovoTipoCurso()">
+                        <i class="fas fa-plus"></i>
+                        Novo Curso
+                    </button>
+                </div>
+                
+                <!-- Conteúdo Principal - Lista de Tipos de Curso -->
+                <div id="conteudo-principal-tipos">
+                    <!-- Grid de Tipos de Curso -->
+                    <div class="popup-items-grid" id="lista-tipos-curso-modal">
+                        <!-- Lista de tipos de curso será carregada via AJAX -->
+                        <div class="popup-loading-state show">
+                            <div class="popup-loading-spinner"></div>
+                            <div class="popup-loading-text">
+                                <h6>Carregando cursos...</h6>
+                                <p>Aguarde enquanto buscamos os cursos cadastrados</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Formulário Novo Tipo de Curso (oculto inicialmente) -->
+                <div id="formulario-novo-tipo-curso" style="display: none;">
+                    <div class="popup-section-header">
+                    <div class="popup-section-title">
+                        <h6>Novo Curso</h6>
+                        <small>Preencha os dados do novo curso</small>
+                    </div>
+                        <button type="button" class="popup-secondary-button" onclick="voltarParaListaTipos()">
+                            <i class="fas fa-arrow-left"></i>
+                            Voltar
+                        </button>
+                    </div>
+                    
+                    <form id="formNovoTipoCursoIntegrado" class="mt-3">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="codigo_tipo_integrado" class="form-label">Código do Curso *</label>
+                                    <input type="text" class="form-control" id="codigo_tipo_integrado" name="codigo" required placeholder="Ex: formacao_45h, reciclagem_infrator">
+                                    <small class="text-muted">Use apenas letras, números e underscore</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="nome_tipo_integrado" class="form-label">Nome do Curso *</label>
+                                    <input type="text" class="form-control" id="nome_tipo_integrado" name="nome" required placeholder="Ex: Formação de Condutores">
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="descricao_tipo_integrado" class="form-label">Descrição</label>
+                            <textarea class="form-control" id="descricao_tipo_integrado" name="descricao" rows="3" placeholder="Descrição detalhada do curso"></textarea>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <label for="carga_horaria_integrado" class="form-label">Carga Horária Total *</label>
+                                    <input type="number" class="form-control" id="carga_horaria_integrado" name="carga_horaria_total" min="1" max="200" value="45" required>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <div class="form-check mt-4">
+                                        <input class="form-check-input" type="checkbox" id="ativo_tipo_integrado" name="ativo" value="1" checked>
+                                        <label class="form-check-label" for="ativo_tipo_integrado">
+                                            Tipo de curso ativo
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="d-flex gap-2 justify-content-end">
+                            <button type="button" class="popup-secondary-button" onclick="voltarParaListaTipos()">
+                                <i class="fas fa-times"></i>
+                                Cancelar
+                            </button>
+                            <button type="submit" class="popup-save-button">
+                                <i class="fas fa-save"></i>
+                                Salvar Curso
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+            </div>
+            
+            <!-- FOOTER -->
+            <div class="popup-modal-footer">
+                <div class="popup-footer-info">
+                    <small>
+                        <i class="fas fa-info-circle"></i>
+                        As alterações são salvas automaticamente
+                    </small>
+                </div>
+                <div class="popup-footer-actions">
+                    <button type="button" class="popup-secondary-button" onclick="fecharModalTiposCurso()">
+                        <i class="fas fa-times"></i>
+                        Fechar
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Modal Gerenciar Salas - Global -->
+    <div class="popup-modal" id="modalGerenciarSalas" style="display: none;">
+        <div class="popup-modal-wrapper">
+            
+            <!-- HEADER -->
+            <div class="popup-modal-header">
+                <div class="header-content">
+                    <div class="header-icon">
+                        <i class="fas fa-door-open"></i>
+                    </div>
+                    <div class="header-text">
+                        <h5>Gerenciar Salas</h5>
+                        <small>Configure e organize as salas de aula disponíveis</small>
+                    </div>
+                </div>
+                <button type="button" class="popup-modal-close" onclick="fecharModalSalas()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <!-- CONTEÚDO -->
+            <div class="popup-modal-content">
+                
+                <!-- Seção Otimizada - Título, Estatísticas e Botão na mesma linha -->
+                <div class="popup-section-header">
+                    <div class="popup-section-title">
+                        <h6>Salas Cadastradas</h6>
+                        <small>Gerencie e organize as salas de aula do CFC</small>
+                    </div>
+                    <div class="popup-stats-item" style="margin: 0;">
+                        <div class="popup-stats-icon">
+                            <div class="icon-circle">
+                                <i class="fas fa-door-open"></i>
+                            </div>
+                        </div>
+                        <div class="popup-stats-text">
+                            <h6 style="margin: 0;">Total: <span class="stats-number" id="total-salas">0</span></h6>
+                        </div>
+                    </div>
+                    <button type="button" class="popup-primary-button" onclick="abrirModalNovaSalaInterno()">
+                        <i class="fas fa-plus"></i>
+                        Nova Sala
+                    </button>
+                </div>
+                
+                <!-- Container das salas -->
+                <div id="lista-salas-modal">
+                    <!-- As salas serão carregadas aqui via AJAX -->
+                </div>
+                
+            </div>
+            
+            <!-- FOOTER -->
+            <div class="popup-modal-footer">
+                <div class="popup-footer-info">
+                    <small>
+                        <i class="fas fa-info-circle"></i>
+                        As alterações são salvas automaticamente
+                    </small>
+                </div>
+                <div class="popup-footer-actions">
+                    <button type="button" class="popup-secondary-button" onclick="fecharModalSalas()">
+                        <i class="fas fa-times"></i>
+                        Fechar
+                    </button>
+                </div>
+            </div>
+            
+        </div>
+    </div>
+
+    <!-- Scripts Globais -->
+    <script>
+    // Função global para recarregar lista de salas via AJAX
+    function recarregarSalas() {
+        console.log('🔄 Iniciando carregamento de salas...');
+        
+        // Mostrar loading state
+        const salasContainer = document.getElementById('lista-salas-modal');
+        if (!salasContainer) {
+            console.error('❌ Container de salas não encontrado');
+            return;
+        }
+        
+        // Mostrar loading
+        salasContainer.innerHTML = `
+            <div class="popup-loading-state show">
+                <div class="popup-loading-spinner"></div>
+                <div class="popup-loading-text">
+                    <h6>Carregando salas...</h6>
+                    <p>Aguarde enquanto buscamos as salas cadastradas</p>
+                </div>
+            </div>
+        `;
+        
+        // Fazer requisição AJAX
+        fetch('/cfc-bom-conselho/admin/api/salas-clean.php?action=listar')
+        .then(response => response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                console.error('Erro ao parsear JSON:', text);
+                throw new Error('Resposta inválida do servidor');
+            }
+        }))
+        .then(data => {
+            console.log('📊 Dados recebidos:', data);
+            
+            if (data.sucesso && data.salas) {
+                // Atualizar contador
+                const totalElement = document.getElementById('total-salas');
+                if (totalElement) {
+                    totalElement.textContent = data.salas.length;
+                }
+                
+                // Renderizar salas
+                renderizarSalas(data.salas);
+            } else {
+                // Mostrar estado de erro
+                salasContainer.innerHTML = `
+                    <div class="popup-error-state show">
+                        <div class="popup-error-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <h5>Erro ao carregar salas</h5>
+                        <p>${data.mensagem || 'Não foi possível carregar as salas cadastradas'}</p>
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar salas:', error);
+            
+            // Mostrar estado de erro
+            salasContainer.innerHTML = `
+                <div class="popup-error-state show">
+                    <div class="popup-error-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
+                    <h5>Erro de conexão</h5>
+                    <p>Não foi possível conectar com o servidor</p>
+                </div>
+            `;
+        });
+    }
+    
+    // Função para renderizar as salas
+    function renderizarSalas(salas) {
+        const salasContainer = document.getElementById('lista-salas-modal');
+        if (!salasContainer) return;
+        
+        if (salas.length === 0) {
+            salasContainer.innerHTML = `
+                <div class="popup-empty-state show">
+                    <div class="popup-empty-icon">
+                        <i class="fas fa-door-open"></i>
+                    </div>
+                    <h5>Nenhuma sala cadastrada</h5>
+                    <p>Comece criando sua primeira sala de aula</p>
+                </div>
+            `;
+            return;
+        }
+        
+        // Renderizar grid de salas
+        salasContainer.innerHTML = `
+            <div class="popup-items-grid">
+                ${salas.map(sala => `
+                    <div class="popup-item-card">
+                        <div class="popup-item-card-header">
+                            <div class="popup-item-card-content">
+                                <h6 class="popup-item-card-title">${sala.nome}</h6>
+                                <div class="popup-item-card-code" style="background: ${sala.ativa == 1 ? '#28a745' : '#dc3545'}; color: white; padding: 0.25rem 0.5rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold;">
+                                    ${sala.ativa == 1 ? 'ATIVA' : 'INATIVA'}
+                                </div>
+                                <div class="popup-item-card-description" style="margin-top: 0.5rem;">
+                                    <i class="fas fa-users" style="color: #6c757d; margin-right: 0.5rem;"></i>
+                                    Capacidade: ${sala.capacidade} alunos
+                                </div>
+                            </div>
+                            <div class="popup-item-card-actions">
+                                <button type="button" class="popup-item-card-menu" onclick="editarSala(${sala.id}, '${sala.nome}', ${sala.capacidade}, ${sala.ativa})" title="Editar">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="popup-item-card-menu" onclick="confirmarExclusaoSala(${sala.id}, '${sala.nome}')" title="Excluir" style="color: #dc3545;">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+    }
+    
+    // Função global para editar sala
+    function editarSala(id, nome, capacidade, ativa) {
+        // Verificar se existe modal de edição na página atual
+        const modalEditar = document.getElementById('modalEditarSala');
+        if (modalEditar) {
+            // Preencher dados do modal
+            document.getElementById('editar_sala_id').value = id;
+            document.getElementById('editar_nome').value = nome;
+            document.getElementById('editar_capacidade').value = capacidade;
+            document.getElementById('editar_ativa').checked = ativa == 1;
+            
+            // Abrir modal
+            modalEditar.style.display = 'flex';
+            modalEditar.classList.add('show', 'popup-fade-in');
+            document.body.style.overflow = 'hidden';
+        } else {
+            // Se não tiver modal de edição, redirecionar para página de configurações
+            window.location.href = `?page=configuracoes-salas&editar=${id}`;
+        }
+    }
+    
+    // Função global para confirmar exclusão de sala
+    function confirmarExclusaoSala(id, nome) {
+        if (confirm(`Tem certeza que deseja excluir a sala "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+            excluirSala(id, nome);
+        }
+    }
+    
+    // Função global para excluir sala
+    function excluirSala(id, nome) {
+        const formData = new FormData();
+        formData.append('acao', 'excluir');
+        formData.append('id', id);
+        
+        fetch('/cfc-bom-conselho/admin/api/salas-clean.php', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.text().then(text => {
+            try {
+                return JSON.parse(text);
+            } catch (e) {
+                throw new Error('Resposta inválida do servidor');
+            }
+        }))
+        .then(data => {
+            if (data.sucesso) {
+                // Recarregar lista de salas
+                recarregarSalas();
+                
+                // Mostrar mensagem de sucesso
+                alert('Sala excluída com sucesso!');
+            } else {
+                alert('Erro ao excluir sala: ' + data.mensagem);
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao excluir sala:', error);
+            alert('Erro ao excluir sala: ' + error.message);
+        });
+    }
+    
+    // Função global para fechar modal de salas
+    function fecharModalSalas() {
+        const modal = document.getElementById('modalGerenciarSalas');
+        if (modal) {
+            modal.classList.remove('show');
+            modal.style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+    }
+    
+    // Função global para abrir modal de nova sala
+    function abrirModalNovaSalaInterno() {
+        // Verificar se existe modal de nova sala na página atual
+        const modalNovaSala = document.getElementById('modalNovaSala');
+        if (modalNovaSala) {
+            // Limpar formulário
+            document.getElementById('formNovaSala').reset();
+            document.getElementById('nome').value = '';
+            document.getElementById('capacidade').value = '30';
+            document.getElementById('ativa').checked = true;
+            
+            // Abrir modal
+            modalNovaSala.style.display = 'flex';
+            modalNovaSala.classList.add('show', 'popup-fade-in');
+            document.body.style.overflow = 'hidden';
+        } else {
+            // Se não tiver modal de nova sala, redirecionar para página de configurações
+            window.location.href = '?page=configuracoes-salas';
+        }
+    }
+    
+    // Função global para abrir modal de gerenciamento de salas
+    function abrirModalSalasInterno() {
+        console.log('🔧 Tentando abrir modal de salas...');
+        
+        // Primeiro, tentar encontrar o modal na página atual
+        const modal = document.getElementById('modalGerenciarSalas');
+        if (modal) {
+            console.log('✅ Modal encontrado na página atual, abrindo...');
+            modal.style.display = 'flex';
+            modal.classList.add('show', 'popup-fade-in');
+            document.body.style.overflow = 'hidden';
+            
+            // Recarregar as salas
+            recarregarSalas();
+            return;
+        }
+        
+        // Se não encontrar o modal, redirecionar para a página de configurações
+        console.log('⚠️ Modal não encontrado, redirecionando para página de configurações...');
+        window.location.href = '?page=configuracoes-salas';
+    }
+    </script>
 </body>
 </html>

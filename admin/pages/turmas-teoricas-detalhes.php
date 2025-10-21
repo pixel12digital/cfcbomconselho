@@ -244,9 +244,6 @@ try {
         </a>
         <?php endif; ?>
         
-        <a href="?page=turmas-teoricas&acao=revisar&step=3&turma_id=<?= $turma['id'] ?>" class="btn-secondary">
-            <i class="fas fa-chart-bar me-2"></i>Revisar Carga Horária
-        </a>
         
         <button onclick="window.print()" class="btn-secondary">
             <i class="fas fa-print me-2"></i>Imprimir Detalhes
