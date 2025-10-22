@@ -313,6 +313,59 @@ if (isset($_GET['editar'])) {
         .equipamentos-list i {
             color: #28a745;
         }
+        
+        /* Estilos para edição inline */
+        .sala-edit-mode {
+            background-color: #f8f9fa;
+            border-radius: 0.375rem;
+            padding: 1rem;
+            margin: -0.5rem;
+        }
+        
+        .sala-edit-mode .form-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+        
+        .sala-edit-mode .form-control-sm {
+            font-size: 0.875rem;
+        }
+        
+        .sala-edit-mode .form-check-sm {
+            font-size: 0.8rem;
+        }
+        
+        .sala-edit-mode .form-check-label {
+            font-size: 0.8rem;
+        }
+        
+        .sala-card.editing {
+            border: 2px solid #007bff;
+            box-shadow: 0 0.5rem 1rem rgba(0, 123, 255, 0.15);
+        }
+        
+        .sala-card.editing .card-header {
+            background-color: #e3f2fd;
+        }
+        
+        .loading-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+        }
+        
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -352,9 +405,20 @@ if (isset($_GET['editar'])) {
         <div class="col-md-6 col-lg-4 mb-3">
             <div class="card sala-card h-100">
                 <div class="card-header d-flex justify-content-between align-items-center">
-                    <h6 class="mb-0">
+                    <!-- Modo Visualização - Nome -->
+                    <h6 class="mb-0 sala-nome-display" id="nome-display-<?php echo $sala['id']; ?>">
                         <i class="fas fa-door-open me-2"></i><?php echo htmlspecialchars($sala['nome']); ?>
                     </h6>
+                    
+                    <!-- Modo Edição - Nome -->
+                    <div class="sala-nome-edit" id="nome-edit-<?php echo $sala['id']; ?>" style="display: none;">
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text"><i class="fas fa-door-open"></i></span>
+                            <input type="text" class="form-control" id="nome-edit-input-<?php echo $sala['id']; ?>" 
+                                   value="<?php echo htmlspecialchars($sala['nome']); ?>" placeholder="Nome da sala">
+                        </div>
+                    </div>
+                    
                     <div>
                         <?php if ($sala['ativa']): ?>
                         <span class="badge bg-success">Ativa</span>
@@ -364,32 +428,118 @@ if (isset($_GET['editar'])) {
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="mb-2">
-                        <strong><i class="fas fa-users me-1"></i>Capacidade:</strong> 
-                        <?php echo $sala['capacidade']; ?> alunos
-                    </div>
-                    
-                    <?php if (!empty($equipamentos)): ?>
-                    <div class="mb-2">
-                        <strong><i class="fas fa-tools me-1"></i>Equipamentos:</strong>
-                        <div class="equipamentos-list mt-1">
-                            <?php foreach ($equipamentos as $equipamento => $disponivel): ?>
-                            <?php if ($disponivel === true || $disponivel === 'true'): ?>
-                            <div><i class="fas fa-check-circle me-1"></i><?php echo ucfirst(str_replace('_', ' ', $equipamento)); ?></div>
-                            <?php endif; ?>
-                            <?php endforeach; ?>
+                    <!-- Modo Visualização -->
+                    <div class="sala-view-mode" id="view-mode-<?php echo $sala['id']; ?>">
+                        <div class="mb-2">
+                            <strong><i class="fas fa-users me-1"></i>Capacidade:</strong> 
+                            <span class="capacidade-display"><?php echo $sala['capacidade']; ?></span> alunos
+                        </div>
+                        
+                        <?php if (!empty($equipamentos)): ?>
+                        <div class="mb-2">
+                            <strong><i class="fas fa-tools me-1"></i>Equipamentos:</strong>
+                            <div class="equipamentos-list mt-1 equipamentos-display">
+                                <?php foreach ($equipamentos as $equipamento => $disponivel): ?>
+                                <?php if ($disponivel === true || $disponivel === 'true'): ?>
+                                <div><i class="fas fa-check-circle me-1"></i><?php echo ucfirst(str_replace('_', ' ', $equipamento)); ?></div>
+                                <?php endif; ?>
+                                <?php endforeach; ?>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <div class="mb-2">
+                            <strong><i class="fas fa-chalkboard-teacher me-1"></i>Turmas Ativas:</strong> 
+                            <?php echo $sala['turmas_ativas']; ?>
                         </div>
                     </div>
-                    <?php endif; ?>
-                    
-                    <div class="mb-2">
-                        <strong><i class="fas fa-chalkboard-teacher me-1"></i>Turmas Ativas:</strong> 
-                        <?php echo $sala['turmas_ativas']; ?>
+
+                    <!-- Modo Edição -->
+                    <div class="sala-edit-mode" id="edit-mode-<?php echo $sala['id']; ?>" style="display: none;">
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-users me-1"></i>Capacidade:</label>
+                            <input type="number" class="form-control form-control-sm" id="capacidade-edit-<?php echo $sala['id']; ?>" 
+                                   value="<?php echo $sala['capacidade']; ?>" min="1" max="100">
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label class="form-label"><i class="fas fa-tools me-1"></i>Equipamentos:</label>
+                            <div class="row">
+                                <div class="col-6">
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input" type="checkbox" name="equipamentos[projetor]" 
+                                               id="projetor-edit-<?php echo $sala['id']; ?>" 
+                                               <?php echo isset($equipamentos['projetor']) && $equipamentos['projetor'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="projetor-edit-<?php echo $sala['id']; ?>">
+                                            <i class="fas fa-tv me-1"></i>Projetor
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input" type="checkbox" name="equipamentos[quadro]" 
+                                               id="quadro-edit-<?php echo $sala['id']; ?>" 
+                                               <?php echo isset($equipamentos['quadro']) && $equipamentos['quadro'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="quadro-edit-<?php echo $sala['id']; ?>">
+                                            <i class="fas fa-chalkboard me-1"></i>Quadro
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input" type="checkbox" name="equipamentos[ar_condicionado]" 
+                                               id="ar-edit-<?php echo $sala['id']; ?>" 
+                                               <?php echo isset($equipamentos['ar_condicionado']) && $equipamentos['ar_condicionado'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="ar-edit-<?php echo $sala['id']; ?>">
+                                            <i class="fas fa-snowflake me-1"></i>Ar Condicionado
+                                        </label>
+                                    </div>
+                                </div>
+                                <div class="col-6">
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input" type="checkbox" name="equipamentos[computadores]" 
+                                               id="computadores-edit-<?php echo $sala['id']; ?>" 
+                                               <?php echo isset($equipamentos['computadores']) && $equipamentos['computadores'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="computadores-edit-<?php echo $sala['id']; ?>">
+                                            <i class="fas fa-desktop me-1"></i>Computadores
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input" type="checkbox" name="equipamentos[internet]" 
+                                               id="internet-edit-<?php echo $sala['id']; ?>" 
+                                               <?php echo isset($equipamentos['internet']) && $equipamentos['internet'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="internet-edit-<?php echo $sala['id']; ?>">
+                                            <i class="fas fa-wifi me-1"></i>Internet
+                                        </label>
+                                    </div>
+                                    <div class="form-check form-check-sm">
+                                        <input class="form-check-input" type="checkbox" name="equipamentos[som]" 
+                                               id="som-edit-<?php echo $sala['id']; ?>" 
+                                               <?php echo isset($equipamentos['som']) && $equipamentos['som'] ? 'checked' : ''; ?>>
+                                        <label class="form-check-label" for="som-edit-<?php echo $sala['id']; ?>">
+                                            <i class="fas fa-volume-up me-1"></i>Sistema de Som
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="ativa-edit-<?php echo $sala['id']; ?>" 
+                                       <?php echo $sala['ativa'] ? 'checked' : ''; ?>>
+                                <label class="form-check-label" for="ativa-edit-<?php echo $sala['id']; ?>">
+                                    <i class="fas fa-check-circle me-1"></i>Sala ativa
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-2">
+                            <strong><i class="fas fa-chalkboard-teacher me-1"></i>Turmas Ativas:</strong> 
+                            <?php echo $sala['turmas_ativas']; ?>
+                        </div>
                     </div>
                 </div>
                 <div class="card-footer">
-                    <div class="btn-group w-100" role="group">
-                        <button class="btn btn-outline-primary btn-sm" onclick="editarSala(<?php echo $sala['id']; ?>)">
+                    <!-- Botões Modo Visualização -->
+                    <div class="btn-group w-100 sala-view-buttons" id="view-buttons-<?php echo $sala['id']; ?>">
+                        <button class="btn btn-outline-primary btn-sm" onclick="editarSalaInline(<?php echo $sala['id']; ?>)">
                             <i class="fas fa-edit me-1"></i>Editar
                         </button>
                         <?php if ($sala['turmas_ativas'] == 0): ?>
@@ -401,6 +551,16 @@ if (isset($_GET['editar'])) {
                             <i class="fas fa-lock me-1"></i>Em Uso
                         </button>
                         <?php endif; ?>
+                    </div>
+                    
+                    <!-- Botões Modo Edição -->
+                    <div class="btn-group w-100 sala-edit-buttons" id="edit-buttons-<?php echo $sala['id']; ?>" style="display: none;">
+                        <button class="btn btn-success btn-sm" onclick="salvarSalaInline(<?php echo $sala['id']; ?>)">
+                            <i class="fas fa-save me-1"></i>Salvar
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="cancelarEdicaoInline(<?php echo $sala['id']; ?>)">
+                            <i class="fas fa-times me-1"></i>Cancelar
+                        </button>
                     </div>
                 </div>
             </div>
@@ -546,7 +706,180 @@ if (isset($_GET['editar'])) {
 // Dados da sala para edição
 const salaEdicao = <?php echo json_encode($salaEdicao); ?>;
 
-// Função para editar sala
+// Função para editar sala inline
+function editarSalaInline(id) {
+    // Mostrar modo de edição
+    document.getElementById('view-mode-' + id).style.display = 'none';
+    document.getElementById('edit-mode-' + id).style.display = 'block';
+    document.getElementById('view-buttons-' + id).style.display = 'none';
+    document.getElementById('edit-buttons-' + id).style.display = 'flex';
+    
+    // Mostrar edição do nome no header
+    document.getElementById('nome-display-' + id).style.display = 'none';
+    document.getElementById('nome-edit-' + id).style.display = 'block';
+    
+    // Adicionar classe de edição ao card
+    const card = document.querySelector(`[id*="${id}"]`).closest('.sala-card');
+    card.classList.add('editing');
+}
+
+// Função para cancelar edição inline
+function cancelarEdicaoInline(id) {
+    // Voltar ao modo de visualização
+    document.getElementById('view-mode-' + id).style.display = 'block';
+    document.getElementById('edit-mode-' + id).style.display = 'none';
+    document.getElementById('view-buttons-' + id).style.display = 'flex';
+    document.getElementById('edit-buttons-' + id).style.display = 'none';
+    
+    // Voltar nome no header
+    document.getElementById('nome-display-' + id).style.display = 'block';
+    document.getElementById('nome-edit-' + id).style.display = 'none';
+    
+    // Remover classe de edição do card
+    const card = document.querySelector(`[id*="${id}"]`).closest('.sala-card');
+    card.classList.remove('editing');
+}
+
+// Função para salvar sala inline
+function salvarSalaInline(id) {
+    const card = document.querySelector(`[id*="${id}"]`).closest('.sala-card');
+    
+    // Adicionar overlay de loading
+    const loadingOverlay = document.createElement('div');
+    loadingOverlay.className = 'loading-overlay';
+    loadingOverlay.innerHTML = '<div class="spinner-border spinner-border-sm text-primary" role="status"><span class="visually-hidden">Carregando...</span></div>';
+    card.style.position = 'relative';
+    card.appendChild(loadingOverlay);
+    
+    // Coletar dados do formulário
+    const nome = document.getElementById('nome-edit-input-' + id).value.trim();
+    const capacidade = document.getElementById('capacidade-edit-' + id).value;
+    const ativa = document.getElementById('ativa-edit-' + id).checked;
+    
+    // Coletar equipamentos
+    const equipamentos = {};
+    const equipamentosCheckboxes = document.querySelectorAll(`#edit-mode-${id} input[name^="equipamentos"]`);
+    equipamentosCheckboxes.forEach(checkbox => {
+        const name = checkbox.name.match(/\[(.*?)\]/)[1];
+        equipamentos[name] = checkbox.checked;
+    });
+    
+    // Validar dados
+    if (!nome) {
+        alert('Nome da sala é obrigatório');
+        card.removeChild(loadingOverlay);
+        return;
+    }
+    
+    if (!capacidade || capacidade <= 0) {
+        alert('Capacidade deve ser maior que zero');
+        card.removeChild(loadingOverlay);
+        return;
+    }
+    
+    // Preparar dados para envio
+    const formData = new FormData();
+    formData.append('acao', 'editar');
+    formData.append('id', id);
+    formData.append('nome', nome);
+    formData.append('capacidade', capacidade);
+    formData.append('ativa', ativa ? '1' : '0');
+    formData.append('equipamentos', JSON.stringify(equipamentos));
+    
+    // Enviar requisição AJAX
+    fetch(window.location.href, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.text())
+    .then(data => {
+        // Remover overlay de loading
+        card.removeChild(loadingOverlay);
+        
+        // Verificar se houve erro na resposta
+        if (data.includes('alert-danger') || data.includes('Erro')) {
+            alert('Erro ao salvar sala. Verifique os dados e tente novamente.');
+            return;
+        }
+        
+        // Atualizar dados na visualização
+        atualizarVisualizacaoSala(id, nome, capacidade, ativa, equipamentos);
+        
+        // Voltar ao modo de visualização
+        cancelarEdicaoInline(id);
+        
+        // Mostrar mensagem de sucesso
+        mostrarMensagem('Sala atualizada com sucesso!', 'success');
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        card.removeChild(loadingOverlay);
+        alert('Erro ao salvar sala. Tente novamente.');
+    });
+}
+
+// Função para atualizar a visualização da sala
+function atualizarVisualizacaoSala(id, nome, capacidade, ativa, equipamentos) {
+    // Atualizar nome no header
+    const nomeDisplay = document.querySelector(`#nome-display-${id}`);
+    if (nomeDisplay) {
+        nomeDisplay.innerHTML = `<i class="fas fa-door-open me-2"></i>${nome}`;
+    }
+    
+    // Atualizar capacidade
+    const capacidadeDisplay = document.querySelector(`#view-mode-${id} .capacidade-display`);
+    if (capacidadeDisplay) {
+        capacidadeDisplay.textContent = capacidade;
+    }
+    
+    // Atualizar status ativa/inativa no header
+    const cardHeader = document.querySelector(`#view-mode-${id}`).closest('.sala-card').querySelector('.card-header');
+    const badge = cardHeader.querySelector('.badge');
+    if (badge) {
+        if (ativa) {
+            badge.className = 'badge bg-success';
+            badge.textContent = 'Ativa';
+        } else {
+            badge.className = 'badge bg-secondary';
+            badge.textContent = 'Inativa';
+        }
+    }
+    
+    // Atualizar equipamentos
+    const equipamentosDisplay = document.querySelector(`#view-mode-${id} .equipamentos-display`);
+    if (equipamentosDisplay) {
+        let equipamentosHtml = '';
+        Object.keys(equipamentos).forEach(equipamento => {
+            if (equipamentos[equipamento]) {
+                equipamentosHtml += `<div><i class="fas fa-check-circle me-1"></i>${equipamento.charAt(0).toUpperCase() + equipamento.slice(1).replace('_', ' ')}</div>`;
+            }
+        });
+        equipamentosDisplay.innerHTML = equipamentosHtml;
+    }
+}
+
+// Função para mostrar mensagem de feedback
+function mostrarMensagem(mensagem, tipo) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${tipo} alert-dismissible fade show`;
+    alertDiv.innerHTML = `
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    const container = document.querySelector('.container-fluid');
+    const header = container.querySelector('.d-flex.justify-content-between');
+    header.insertAdjacentElement('afterend', alertDiv);
+    
+    // Remover mensagem após 5 segundos
+    setTimeout(() => {
+        if (alertDiv.parentNode) {
+            alertDiv.remove();
+        }
+    }, 5000);
+}
+
+// Função para editar sala (modal - mantida para compatibilidade)
 function editarSala(id) {
     const sala = salaEdicao;
     if (sala && sala.id == id) {

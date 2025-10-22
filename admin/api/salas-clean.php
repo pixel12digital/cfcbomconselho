@@ -109,7 +109,7 @@ function gerarHtmlSalas($salas) {
 
 // Processar requisição
 try {
-    $acao = $_GET['acao'] ?? $_POST['acao'] ?? 'listar';
+    $acao = $_GET['acao'] ?? $_GET['action'] ?? $_POST['acao'] ?? $_POST['action'] ?? 'listar';
     
     if ($acao === 'listar') {
         $pdo = conectarBanco();

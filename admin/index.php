@@ -1411,7 +1411,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <i class="fas fa-layer-group"></i>
                             <span>Categorias de Habilitação</span>
                         </a>
-                        <a href="#" onclick="abrirModalSalasInterno()" class="nav-sublink">
+                        <a href="index.php?page=configuracoes-salas" class="nav-sublink <?php echo $page === 'configuracoes-salas' ? 'active' : ''; ?>">
                             <i class="fas fa-door-open"></i>
                             <span>Salas de Aula</span>
                         </a>
@@ -1634,7 +1634,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <i class="fas fa-layer-group"></i>
                                     <span>Categorias de Habilitação</span>
                                 </a>
-                                <a href="#" onclick="abrirModalSalasInterno()" class="mobile-nav-sublink">
+                                <a href="index.php?page=configuracoes-salas" class="mobile-nav-sublink <?php echo $page === 'configuracoes-salas' ? 'active' : ''; ?>">
                                     <i class="fas fa-door-open"></i>
                                     <span>Salas de Aula</span>
                                 </a>
@@ -2158,6 +2158,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     
     <!-- JavaScript -->
     <script>
+        // Função global para detectar o path base automaticamente
+        function getBasePath() {
+            return window.location.pathname.includes('/cfc-bom-conselho/') ? '/cfc-bom-conselho' : '';
+        }
+        
         // Sistema de navegação responsiva
         document.addEventListener('DOMContentLoaded', function() {
             // Toggle sidebar em dispositivos móveis
@@ -2873,7 +2878,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
         `;
         
         // Fazer requisição AJAX
-        fetch('/cfc-bom-conselho/admin/api/salas-clean.php?action=listar')
+        fetch(getBasePath() + '/admin/api/salas-clean.php?action=listar')
         .then(response => response.text().then(text => {
             try {
                 return JSON.parse(text);
@@ -3006,7 +3011,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
         formData.append('acao', 'excluir');
         formData.append('id', id);
         
-        fetch('/cfc-bom-conselho/admin/api/salas-clean.php', {
+        fetch(getBasePath() + '/admin/api/salas-clean.php', {
             method: 'POST',
             body: formData
         })

@@ -1253,6 +1253,11 @@ body.modal-open {
 </div>
 
 <script>
+// Função global para detectar o path base automaticamente
+function getBasePath() {
+    return window.location.pathname.includes('/cfc-bom-conselho/') ? '/cfc-bom-conselho' : '';
+}
+
 // Error handler global para capturar erros de atualizarDisciplina
 window.addEventListener('error', function(event) {
     if (event.message && event.message.includes('Cannot read properties of undefined') && 
@@ -5083,7 +5088,7 @@ function recarregarSalas() {
     `;
     
     console.log('📡 Fazendo requisição para API...');
-    fetch('/cfc-bom-conselho/admin/api/salas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/salas-clean.php?acao=listar')
         .then(response => {
             console.log('📥 Resposta recebida:', response.status, response.statusText);
             if (!response.ok) {
@@ -5292,7 +5297,7 @@ function salvarNovaSalaIntegrada() {
     });
     formData.set('equipamentos', JSON.stringify(equipamentos));
     
-    fetch('/cfc-bom-conselho/admin/api/salas-clean.php?acao=criar', {
+        fetch(getBasePath() + '/admin/api/salas-clean.php?acao=criar', {
         method: 'POST',
         body: formData
     })
@@ -5361,7 +5366,7 @@ function salvarEdicaoSala() {
     const formData = new FormData(document.getElementById('formEditarSala'));
     formData.append('acao', 'editar');
     
-    fetch('/cfc-bom-conselho/admin/api/salas-clean.php', {
+        fetch(getBasePath() + '/admin/api/salas-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -5418,7 +5423,7 @@ function excluirSala(id, nome) {
         </div>
     `;
     
-    fetch('/cfc-bom-conselho/admin/api/salas-clean.php?acao=excluir', {
+    fetch(getBasePath() + '/admin/api/salas-clean.php?acao=excluir', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -6177,7 +6182,7 @@ function confirmarExclusao() {
     formData.append('acao', 'excluir');
     formData.append('id', id);
     
-    fetch('/cfc-bom-conselho/admin/api/salas-clean.php', {
+        fetch(getBasePath() + '/admin/api/salas-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -6645,7 +6650,7 @@ function salvarNovaSala() {
     const formData = new FormData(form);
     formData.append('acao', 'criar');
     
-    fetch('/cfc-bom-conselho/admin/api/salas-clean.php', {
+        fetch(getBasePath() + '/admin/api/salas-clean.php', {
         method: 'POST',
         body: formData
     })
