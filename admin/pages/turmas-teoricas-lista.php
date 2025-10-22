@@ -261,6 +261,11 @@ $stats = [
 </style>
 
 <script>
+// Função global para detectar o path base automaticamente
+function getBasePath() {
+    return window.location.pathname.includes('/cfc-bom-conselho/') ? '/cfc-bom-conselho' : '';
+}
+
 // Função para excluir turma
 function excluirTurma(turmaId, nomeTurma) {
     if (confirm(`Tem certeza que deseja excluir a turma "${nomeTurma}"?\n\nEsta ação não pode ser desfeita.`)) {
@@ -269,7 +274,7 @@ function excluirTurma(turmaId, nomeTurma) {
         formData.append('acao', 'excluir');
         formData.append('turma_id', turmaId);
         
-        fetch('/cfc-bom-conselho/admin/api/turmas-teoricas.php', {
+        fetch(getBasePath() + '/admin/api/turmas-teoricas.php', {
             method: 'POST',
             body: formData
         })

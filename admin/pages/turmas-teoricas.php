@@ -1321,7 +1321,7 @@ function carregarDisciplinasNovoSelect(disciplinaId) {
     select.innerHTML = '<option value="">Carregando disciplinas...</option>';
     
     // Carregar disciplinas diretamente da API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
                 throw new Error('HTTP error! status: ' + response.status);
@@ -1468,7 +1468,7 @@ function carregarDisciplinas(disciplinaId) {
     disciplinaSelect.innerHTML = '<option value="">Carregando disciplinas...</option>';
     
     // Carregar disciplinas diretamente da API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
                 throw new Error('HTTP error! status: ' + response.status);
@@ -1792,7 +1792,7 @@ function salvarDisciplinasSelecionadas(turmaId) {
     
     console.log('💾 Salvando disciplinas selecionadas:', disciplinas);
     
-    return fetch('/cfc-bom-conselho/admin/api/turmas-teoricas.php', {
+    return fetch(getBasePath() + '/admin/api/turmas-teoricas.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -1827,7 +1827,7 @@ function criarTurmaComDisciplinas() {
     formData.append('acao', 'criar_basica');
     
     // Criar turma primeiro
-    fetch('/cfc-bom-conselho/admin/api/turmas-teoricas.php', {
+    fetch(getBasePath() + '/admin/api/turmas-teoricas.php', {
         method: 'POST',
         body: formData
     })
@@ -1873,7 +1873,7 @@ function salvarDisciplinasAutomaticas(turmaId, cursoTipo) {
     formData.append('turma_id', turmaId);
     formData.append('curso_tipo', cursoTipo);
     
-    return fetch('/cfc-bom-conselho/admin/api/disciplinas-automaticas.php', {
+    return fetch(getBasePath() + '/admin/api/disciplinas-automaticas.php', {
         method: 'POST',
         body: formData
     })
@@ -2011,7 +2011,7 @@ function carregarTotalHorasDoBanco() {
     
     console.log('📡 Fazendo requisição para API...');
     
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             console.log('📡 Resposta da API: ' + response.status + ' ' + response.statusText);
             if (!response.ok) {
@@ -2062,7 +2062,7 @@ function carregarTotalHorasDoBanco() {
         })
         .catch(error => {
             console.error('❌ Erro ao carregar total do banco:', error);
-            console.error('📡 Verifique se a API está funcionando em:', '/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar');
+            console.error('📡 Verifique se a API está funcionando em:', getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar');
         });
 }
 
@@ -2164,7 +2164,7 @@ function repovoarSelectDisciplinas(selectElement) {
     } else {
         // Se não há cache, carregar do banco
         console.log('🔄 Cache vazio, carregando disciplinas do banco...');
-        fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+        fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
             .then(response => response.json())
             .then(data => {
                 if (data.sucesso && data.disciplinas) {
@@ -3421,7 +3421,7 @@ if (typeof carregamentoDisciplinasEmAndamento === 'undefined') {
 function carregarDisciplinasDisponiveis() {
     console.log('🔄 Carregando disciplinas disponíveis...');
     
-    return fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    return fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             console.log('📡 Resposta da API recebida:', response.status);
             if (!response.ok) {
@@ -3673,7 +3673,7 @@ function carregarDisciplinasEmSelect(selectElement, disciplinas) {
 function carregarDisciplinasEmTodosSelects() {
     
     // Buscar todas as disciplinas da API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
                 throw new Error('HTTP error! status: ' + response.status);
@@ -3813,7 +3813,7 @@ function carregarDisciplinas(disciplinaId) {
     disciplinaSelect.innerHTML = '<option value="">Carregando disciplinas...</option>';
     
     // Carregar disciplinas diretamente da API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
                 throw new Error('HTTP error! status: ' + response.status);
@@ -4075,7 +4075,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function carregarDisciplinasDoBanco() {
     console.log('🔄 Carregando disciplinas diretamente do banco...');
     
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             console.log('📡 Resposta da API:', response.status);
             if (!response.ok) {
@@ -5576,7 +5576,7 @@ function recarregarTiposCurso() {
     `;
     
     console.log('📡 Fazendo requisição para API...');
-    fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/tipos-curso-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
                 throw new Error('HTTP error! status: ' + response.status);
@@ -5726,7 +5726,7 @@ function salvarNovoTipoCursoIntegrado() {
     const form = document.getElementById('formNovoTipoCursoIntegrado');
     const formData = new FormData(form);
     
-    fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php?acao=criar', {
+    fetch(getBasePath() + '/admin/api/tipos-curso-clean.php?acao=criar', {
         method: 'POST',
         body: formData
     })
@@ -5791,7 +5791,7 @@ function excluirTipoCurso(id, nome) {
         </div>
     `;
     
-    fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php?acao=excluir', {
+    fetch(getBasePath() + '/admin/api/tipos-curso-clean.php?acao=excluir', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
@@ -6089,7 +6089,7 @@ function salvarEdicaoTipoCurso() {
         .map(checkbox => checkbox.value);
     formData.append('disciplinas', JSON.stringify(disciplinasIds));
     
-    fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php', {
+    fetch(getBasePath() + '/admin/api/tipos-curso-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -6131,7 +6131,7 @@ function confirmarExclusaoTipoCurso() {
     formData.append('acao', 'excluir');
     formData.append('id', id);
     
-    fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php', {
+    fetch(getBasePath() + '/admin/api/tipos-curso-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -6563,7 +6563,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(this);
             formData.append('acao', 'editar');
             
-            fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php', {
+            fetch(getBasePath() + '/admin/api/tipos-curso-clean.php', {
                 method: 'POST',
                 body: formData
             })
@@ -6606,7 +6606,7 @@ document.addEventListener('DOMContentLoaded', function() {
             const formData = new FormData(this);
             formData.append('acao', 'criar');
             
-            fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php', {
+            fetch(getBasePath() + '/admin/api/tipos-curso-clean.php', {
                 method: 'POST',
                 body: formData
             })
@@ -7122,7 +7122,7 @@ function salvarNovaDisciplina(event) {
     formData.append('icone', 'book'); // Valor padrão
     formData.append('ativa', '1');
     
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -7190,7 +7190,7 @@ function atualizarSeletorDisciplinas() {
     console.log('📋 Encontrados ' + selectsDisciplinas.length + ' seletores de disciplinas');
     
     // Carregar disciplinas da API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
                 throw new Error('HTTP error! status: ' + response.status);
@@ -7309,7 +7309,7 @@ function salvarNovaDisciplinaIntegrada(event) {
     console.log('📤 Dados a serem enviados:', Object.fromEntries(formData));
     
     // Enviar para API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -7365,7 +7365,7 @@ function carregarDisciplinasModal() {
     `;
     
     // Carregar disciplinas reais da API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             console.log('📡 Resposta da API recebida:', response.status);
             if (!response.ok) {
@@ -7516,7 +7516,7 @@ function editarDisciplina(id) {
     console.log('✏️ Editando disciplina ID:', id);
     
     // Buscar dados da disciplina
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => response.json())
         .then(data => {
             if (data.sucesso) {
@@ -8175,7 +8175,7 @@ function salvarNovaDisciplina(disciplinaId) {
     formData.append('cor_hex', '#28a745');
     
     // Enviar para API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -8307,7 +8307,7 @@ function salvarAlteracoesDisciplinas() {
         
         console.log('📤 Enviando dados da disciplina "' + disciplina.nome + '" para API');
         
-        return fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+        return fetch(getBasePath() + '/admin/api/disciplinas-clean.php', {
             method: 'POST',
             body: formData
         })
@@ -8969,7 +8969,7 @@ function salvarCampoInline(disciplinaId, campo, novoValor) {
     console.log('📤 Enviando dados para API - ID: ' + disciplinaId + ', Campo editado: ' + campo);
     
     // Enviar para API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -9092,7 +9092,7 @@ function salvarDisciplinaInline(disciplinaId) {
     }
     
     // Enviar para API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -9181,7 +9181,7 @@ function editarDisciplina(id) {
     }
     
     // Buscar dados da disciplina
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => response.json())
         .then(data => {
             if (data.sucesso) {
@@ -9220,7 +9220,7 @@ function editarDisciplina(id) {
 // Função para excluir disciplina
 function excluirDisciplina(id) {
     // Buscar dados da disciplina para exibir no modal de confirmação
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => response.json())
         .then(data => {
             if (data.sucesso) {
@@ -9259,7 +9259,7 @@ function confirmarExclusaoDisciplina(id) {
     formData.append('acao', 'excluir');
     formData.append('id', id);
     
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -9290,7 +9290,7 @@ document.getElementById('formEditarDisciplina').addEventListener('submit', funct
     const formData = new FormData(this);
     formData.append('acao', 'editar');
     
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php', {
         method: 'POST',
         body: formData
     })
@@ -9373,6 +9373,41 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 DOM carregado - inicializando navegação...');
     atualizarNavegacao();
     carregarDisciplinasDisponiveis();
+    
+    // Verificar se há parâmetro de edição de curso
+    const urlParams = new URLSearchParams(window.location.search);
+    const editarCursoId = urlParams.get('editar_curso');
+    
+    if (editarCursoId) {
+        console.log('🎯 Parâmetro editar_curso detectado:', editarCursoId);
+        // Aguardar um pouco para garantir que tudo esteja carregado
+        setTimeout(() => {
+            // Buscar dados do curso via API
+            fetch(getBasePath() + '/admin/api/tipos-curso-clean.php?acao=listar')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.sucesso && data.dados) {
+                        const curso = data.dados.find(c => c.id == editarCursoId);
+                        if (curso) {
+                            console.log('📝 Abrindo modal de edição para curso:', curso.nome);
+                            editarTipoCurso(
+                                curso.id,
+                                curso.codigo,
+                                curso.nome,
+                                curso.descricao,
+                                curso.carga_horaria_total,
+                                curso.ativo
+                            );
+                        } else {
+                            console.error('❌ Curso não encontrado:', editarCursoId);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Erro ao buscar dados do curso:', error);
+                });
+        }, 500);
+    }
     
     // Debug: verificar se os botões existem
     const botoes = document.querySelectorAll('.wizard-step-btn');
@@ -9751,7 +9786,7 @@ function carregarDisciplinasAutomaticas(cursoTipo) {
     }
     
     // Fazer requisição para a API
-    fetch(`/cfc-bom-conselho/admin/api/disciplinas-automaticas.php?acao=carregar_disciplinas&curso_tipo=${encodeURIComponent(cursoTipo)}`)
+    fetch(`${getBasePath()}/admin/api/disciplinas-automaticas.php?acao=carregar_disciplinas&curso_tipo=${encodeURIComponent(cursoTipo)}`)
         .then(response => response.json())
         .then(data => {
             if (data.sucesso) {

@@ -3,6 +3,11 @@
  * Baseado no design do e-condutor para mesma experiência
  */
 
+// Função global para detectar o path base automaticamente
+function getBasePath() {
+    return window.location.pathname.includes('/cfc-bom-conselho/') ? '/cfc-bom-conselho' : '';
+}
+
 // Classe principal do painel administrativo
 class AdminPanel {
     constructor() {
@@ -425,7 +430,7 @@ window.recarregarTiposCurso = function() {
     `;
     
     console.log('📡 Fazendo requisição para API...');
-    fetch('/cfc-bom-conselho/admin/api/tipos-curso-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/tipos-curso-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
                 throw new Error('HTTP error! status: ' + response.status);
@@ -705,7 +710,7 @@ window.carregarDisciplinasModal = function() {
     `;
     
     // Fazer requisição para a API
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php?acao=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
         .then(response => {
             if (!response.ok) {
                 throw new Error('HTTP error! status: ' + response.status);
@@ -819,7 +824,7 @@ window.excluirDisciplina = function(id, nome) {
     
     if (confirm(`Tem certeza que deseja excluir a disciplina "${nome}"?`)) {
         // Implementar exclusão via API
-        fetch('/cfc-bom-conselho/admin/api/disciplinas-clean.php', {
+        fetch(getBasePath() + '/admin/api/disciplinas-clean.php', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
@@ -862,6 +867,100 @@ document.addEventListener('DOMContentLoaded', function() {
         // NotificationSystem.success('Painel administrativo carregado com sucesso!', 3000); // REMOVIDO - definido em components.js
     }, 1000);
 });
+
+// Função para editar tipo de curso - Compatível com admin.js
+function editarTipoCurso(id, codigo, nome, descricao, carga_horaria_total, ativo) {
+    console.log('📝 Editando tipo de curso:', { id, codigo, nome, descricao, carga_horaria_total, ativo });
+    
+    // Verificar se o modal de edição existe
+    const modalEditar = document.getElementById('modalEditarTipoCurso');
+    if (!modalEditar) {
+        console.log('⚠️ Modal de edição não encontrado. Redirecionando para página de configurações...');
+        // Redirecionar para a página de turmas teóricas com parâmetro de edição
+        window.location.href = `?page=turmas-teoricas&editar_curso=${id}`;
+        return;
+    }
+    
+    // Preencher campos do formulário se existirem
+    const campos = {
+        'editar_tipo_curso_id': id,
+        'editar_codigo': codigo,
+        'editar_nome_tipo': nome,
+        'editar_descricao_tipo': descricao,
+        'editar_carga_horaria': carga_horaria_total,
+        'editar_ativo_tipo': ativo == 1
+    };
+    
+    Object.entries(campos).forEach(([campoId, valor]) => {
+        const elemento = document.getElementById(campoId);
+        if (elemento) {
+            if (elemento.type === 'checkbox') {
+                elemento.checked = valor;
+            } else {
+                elemento.value = valor;
+            }
+        } else {
+            console.warn(`⚠️ Campo ${campoId} não encontrado`);
+        }
+    });
+    
+    // Carregar disciplinas salvas se a função existir
+    if (typeof carregarDisciplinasSalvas === 'function') {
+        carregarDisciplinasSalvas(codigo);
+    }
+    
+    // Atualizar auditoria de carga horária se a função existir
+    if (typeof atualizarAuditoriaCargaHoraria === 'function') {
+        setTimeout(() => {
+            atualizarAuditoriaCargaHoraria();
+        }, 100);
+    }
+    
+    // Abrir modal
+    const popup = document.getElementById('modalEditarTipoCurso');
+    if (popup) {
+        popup.style.display = 'flex';
+        popup.classList.add('show', 'popup-fade-in');
+        document.body.style.overflow = 'hidden';
+        console.log('✅ Modal de edição aberto');
+    } else {
+        console.error('❌ Não foi possível abrir o modal de edição');
+    }
+}
+
+// Função para confirmar exclusão de tipo de curso
+function confirmarExclusaoTipoCurso(id, nome) {
+    if (confirm(`Tem certeza que deseja excluir o tipo de curso "${nome}"?\n\nEsta ação não pode ser desfeita.`)) {
+        console.log('🗑️ Excluindo tipo de curso:', nome, 'ID:', id);
+        
+        // Implementar exclusão via API
+        fetch(getBasePath() + '/admin/api/tipos-curso-clean.php?acao=excluir', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `id=${id}`
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                console.log('✅ Tipo de curso excluído com sucesso');
+                alert('Tipo de curso excluído com sucesso!');
+                // Recarregar a lista de tipos
+                if (typeof recarregarCursos === 'function') {
+                    recarregarCursos();
+                }
+            } else {
+                console.error('❌ Erro ao excluir tipo de curso:', data.mensagem);
+                alert('Erro ao excluir tipo de curso: ' + data.mensagem);
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro na requisição:', error);
+            alert('Erro ao excluir tipo de curso: ' + error.message);
+        });
+    }
+}
 
 // Exportar para uso em módulos (se necessário)
 if (typeof module !== 'undefined' && module.exports) {
