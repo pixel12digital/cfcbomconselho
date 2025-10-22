@@ -32,7 +32,31 @@ $tiposCurso = [
     'reciclagem_infrator' => 'Curso de Reciclagem para Condutor Infrator',
     'atualizacao' => 'Curso de Atualização'
 ];
+Deployment start
+Repository https://github.com/pixel12digital/cfcbomconselho.git
+Checking project directory is empty
+Project directory is git repository
+On branch master
+Your branch is up to date with 'origin/master'.
 
+nothing to commit, working tree clean
+Looking for composer.lock file
+composer.lock file was not found
+Looking for composer.json file
+composer.json file was not found
+Deployment endDeployment start
+Repository https://github.com/pixel12digital/cfcbomconselho.git
+Checking project directory is empty
+Project directory is git repository
+On branch master
+Your branch is up to date with 'origin/master'.
+
+nothing to commit, working tree clean
+Looking for composer.lock file
+composer.lock file was not found
+Looking for composer.json file
+composer.json file was not found
+Deployment end
 // Obter salas cadastradas usando o mesmo método da página de criação
 $salasCadastradas = $turmaManager->obterSalasDisponiveis($user['cfc_id'] ?? 1);
 
