@@ -815,7 +815,51 @@ window.carregarDisciplinasModal = function() {
 // Função para editar disciplina
 window.editarDisciplina = function(id) {
     console.log('✏️ Editando disciplina ID:', id);
-    alert('Funcionalidade de edição será implementada em breve!');
+    
+    // Verificar se o modal de edição existe
+    const modalEditar = document.getElementById('modalEditarDisciplina');
+    if (!modalEditar) {
+        console.log('⚠️ Modal de edição de disciplina não encontrado. Redirecionando para página de configurações...');
+        // Redirecionar para a página de turmas teóricas com parâmetro de edição
+        window.location.href = `?page=turmas-teoricas&editar_disciplina=${id}`;
+        return;
+    }
+    
+    // Buscar dados da disciplina
+    fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso && data.disciplinas) {
+                const disciplina = data.disciplinas.find(d => d.id == id);
+                if (disciplina) {
+                    // Preencher campos do formulário
+                    document.getElementById('edit_id').value = disciplina.id;
+                    document.getElementById('edit_codigo').value = disciplina.codigo || '';
+                    document.getElementById('edit_nome').value = disciplina.nome || '';
+                    document.getElementById('edit_descricao').value = disciplina.descricao || '';
+                    document.getElementById('edit_carga_horaria_padrao').value = disciplina.carga_horaria_padrao || '';
+                    document.getElementById('edit_cor_hex').value = disciplina.cor_hex || '#007bff';
+                    document.getElementById('edit_icone').value = disciplina.icone || 'book';
+                    
+                    // Abrir modal usando template padrão
+                    modalEditar.style.display = 'flex';
+                    modalEditar.classList.add('show', 'popup-fade-in');
+                    document.body.style.overflow = 'hidden';
+                    
+                    console.log('✅ Modal de edição de disciplina aberto');
+                } else {
+                    console.error('❌ Disciplina não encontrada:', id);
+                    alert('Disciplina não encontrada!');
+                }
+            } else {
+                console.error('❌ Erro ao carregar dados das disciplinas:', data.mensagem);
+                alert('Erro ao carregar dados das disciplinas!');
+            }
+        })
+        .catch(error => {
+            console.error('❌ Erro ao editar disciplina:', error);
+            alert('Erro ao carregar dados da disciplina!');
+        });
 };
 
 // Função para excluir disciplina
@@ -961,6 +1005,53 @@ function confirmarExclusaoTipoCurso(id, nome) {
         });
     }
 }
+
+// Função para fechar modal de edição de disciplina
+function fecharModalEditarDisciplina() {
+    const modal = document.getElementById('modalEditarDisciplina');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.remove('show', 'popup-fade-in');
+        document.body.style.overflow = 'auto';
+        console.log('✅ Modal de edição de disciplina fechado');
+    }
+}
+
+// Event listener para o formulário de edição de disciplina
+document.addEventListener('DOMContentLoaded', function() {
+    const formEditarDisciplina = document.getElementById('formEditarDisciplina');
+    if (formEditarDisciplina) {
+        formEditarDisciplina.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            
+            fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=editar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.sucesso) {
+                    console.log('✅ Disciplina atualizada com sucesso');
+                    alert('Disciplina atualizada com sucesso!');
+                    fecharModalEditarDisciplina();
+                    // Recarregar a lista de disciplinas se a função existir
+                    if (typeof recarregarDisciplinas === 'function') {
+                        recarregarDisciplinas();
+                    }
+                } else {
+                    console.error('❌ Erro ao atualizar disciplina:', data.mensagem);
+                    alert('Erro ao atualizar disciplina: ' + data.mensagem);
+                }
+            })
+            .catch(error => {
+                console.error('❌ Erro na requisição:', error);
+                alert('Erro ao atualizar disciplina: ' + error.message);
+            });
+        });
+    }
+});
 
 // Exportar para uso em módulos (se necessário)
 if (typeof module !== 'undefined' && module.exports) {

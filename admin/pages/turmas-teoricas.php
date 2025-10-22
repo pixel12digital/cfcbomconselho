@@ -298,6 +298,24 @@ if (isset($_GET['sucesso'])) {
     margin-bottom: 0.5rem;
 }
 
+/* Garantir que o modal de edição de disciplinas apareça na frente */
+#modalEditarDisciplina {
+    z-index: 9999 !important;
+}
+
+#modalEditarDisciplina .modal-dialog {
+    z-index: 10000 !important;
+}
+
+#modalEditarDisciplina .modal-content {
+    z-index: 10001 !important;
+}
+
+/* Garantir que o backdrop também tenha z-index alto */
+.modal-backdrop {
+    z-index: 9998 !important;
+}
+
 #modalGerenciarSalas #formulario-nova-sala .form-check-label {
     font-size: 0.85rem;
 }
@@ -4898,70 +4916,104 @@ function carregarDisciplinasDoBanco() {
 
 
 
-<!-- Modal Editar Disciplina -->
-<div class="modal fade" id="modalEditarDisciplina" tabindex="-1" aria-labelledby="modalEditarDisciplinaLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalEditarDisciplinaLabel">
-                    <i class="fas fa-edit me-2"></i>Editar Disciplina
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- Modal Editar Disciplina - Template Padrão -->
+<div class="popup-modal" id="modalEditarDisciplina" style="display: none; z-index: 9999 !important;">
+    <div class="popup-modal-wrapper" style="max-width: 600px; width: 90vw;">
+        
+        <!-- HEADER -->
+        <div class="popup-modal-header">
+            <div class="header-content">
+                <div class="header-icon">
+                    <i class="fas fa-edit"></i>
+                </div>
+                <div class="header-text">
+                    <h5>Editar Disciplina</h5>
+                    <small>Modifique os dados da disciplina</small>
+                </div>
             </div>
+            <button type="button" class="popup-modal-close" onclick="fecharModalEditarDisciplina()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <!-- CONTEÚDO -->
+        <div class="popup-modal-content">
             <form id="formEditarDisciplina">
                 <input type="hidden" id="edit_id" name="id">
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="edit_codigo" class="form-label">Código *</label>
-                        <input type="text" class="form-control" id="edit_codigo" name="codigo" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="edit_nome" class="form-label">Nome *</label>
-                        <input type="text" class="form-control" id="edit_nome" name="nome" required>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label for="edit_descricao" class="form-label">Descrição</label>
-                        <textarea class="form-control" id="edit_descricao" name="descricao" rows="3"></textarea>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="edit_carga_horaria_padrao" class="form-label">Carga Horária Padrão</label>
-                                <input type="number" class="form-control" id="edit_carga_horaria_padrao" name="carga_horaria_padrao" min="1">
-                            </div>
+                
+                <div class="mb-3">
+                    <label for="edit_codigo" class="form-label">Código *</label>
+                    <input type="text" class="form-control" id="edit_codigo" name="codigo" required 
+                           placeholder="Ex: direcao_defensiva, legislacao_transito">
+                    <div class="form-text">Use apenas letras, números e underscore</div>
+                </div>
+                
+                <div class="mb-3">
+                    <label for="edit_nome" class="form-label">Nome *</label>
+                    <input type="text" class="form-control" id="edit_nome" name="nome" required 
+                           placeholder="Ex: Direção Defensiva">
+                </div>
+                
+                <div class="mb-3">
+                    <label for="edit_descricao" class="form-label">Descrição</label>
+                    <textarea class="form-control" id="edit_descricao" name="descricao" rows="3" 
+                              placeholder="Descrição detalhada da disciplina"></textarea>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="edit_carga_horaria_padrao" class="form-label">Carga Horária Padrão</label>
+                            <input type="number" class="form-control" id="edit_carga_horaria_padrao" 
+                                   name="carga_horaria_padrao" min="1" max="200">
+                            <div class="form-text">Horas padrão para esta disciplina</div>
                         </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="edit_cor_hex" class="form-label">Cor</label>
-                                <input type="color" class="form-control" id="edit_cor_hex" name="cor_hex">
-                            </div>
-                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="edit_icone" class="form-label">Ícone</label>
-                        <select class="form-control" id="edit_icone" name="icone">
-                            <option value="book">Livro</option>
-                            <option value="gavel">Martelo</option>
-                            <option value="shield-alt">Escudo</option>
-                            <option value="first-aid">Primeiros Socorros</option>
-                            <option value="leaf">Folha</option>
-                            <option value="wrench">Chave</option>
-                            <option value="car">Carro</option>
-                            <option value="road">Estrada</option>
-                        </select>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="edit_cor_hex" class="form-label">Cor</label>
+                            <input type="color" class="form-control" id="edit_cor_hex" name="cor_hex" 
+                                   style="height: 38px;">
+                            <div class="form-text">Cor de identificação da disciplina</div>
+                        </div>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save me-1"></i>Atualizar Disciplina
-                    </button>
+                
+                <div class="mb-3">
+                    <label for="edit_icone" class="form-label">Ícone</label>
+                    <select class="form-control" id="edit_icone" name="icone">
+                        <option value="book">📚 Livro</option>
+                        <option value="gavel">⚖️ Martelo</option>
+                        <option value="shield-alt">🛡️ Escudo</option>
+                        <option value="first-aid">🚑 Primeiros Socorros</option>
+                        <option value="leaf">🍃 Folha</option>
+                        <option value="wrench">🔧 Chave</option>
+                        <option value="car">🚗 Carro</option>
+                        <option value="road">🛣️ Estrada</option>
+                    </select>
+                    <div class="form-text">Ícone de identificação da disciplina</div>
                 </div>
             </form>
+        </div>
+        
+        <!-- FOOTER -->
+        <div class="popup-modal-footer">
+            <div class="popup-footer-info">
+                <small>
+                    <i class="fas fa-info-circle"></i>
+                    As alterações são salvas automaticamente
+                </small>
+            </div>
+            <div class="popup-footer-actions">
+                <button type="button" class="popup-secondary-button" onclick="fecharModalEditarDisciplina()">
+                    <i class="fas fa-times"></i>
+                    Cancelar
+                </button>
+                <button type="submit" form="formEditarDisciplina" class="popup-save-button">
+                    <i class="fas fa-save"></i>
+                    Salvar Alterações
+                </button>
+            </div>
         </div>
     </div>
 </div>
@@ -9377,6 +9429,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Verificar se há parâmetro de edição de curso
     const urlParams = new URLSearchParams(window.location.search);
     const editarCursoId = urlParams.get('editar_curso');
+    const editarDisciplinaId = urlParams.get('editar_disciplina');
     
     if (editarCursoId) {
         console.log('🎯 Parâmetro editar_curso detectado:', editarCursoId);
@@ -9405,6 +9458,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(error => {
                     console.error('❌ Erro ao buscar dados do curso:', error);
+                });
+        }, 500);
+    }
+    
+    if (editarDisciplinaId) {
+        console.log('🎯 Parâmetro editar_disciplina detectado:', editarDisciplinaId);
+        // Aguardar um pouco para garantir que tudo esteja carregado
+        setTimeout(() => {
+            // Buscar dados da disciplina via API
+            fetch(getBasePath() + '/admin/api/disciplinas-clean.php?acao=listar')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.sucesso && data.disciplinas) {
+                        const disciplina = data.disciplinas.find(d => d.id == editarDisciplinaId);
+                        if (disciplina) {
+                            console.log('📝 Abrindo modal de edição para disciplina:', disciplina.nome);
+                            editarDisciplina(disciplina.id);
+                        } else {
+                            console.error('❌ Disciplina não encontrada:', editarDisciplinaId);
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('❌ Erro ao buscar dados da disciplina:', error);
                 });
         }, 500);
     }
