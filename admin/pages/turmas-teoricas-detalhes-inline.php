@@ -32,31 +32,7 @@ $tiposCurso = [
     'reciclagem_infrator' => 'Curso de Reciclagem para Condutor Infrator',
     'atualizacao' => 'Curso de Atualização'
 ];
-Deployment start
-Repository https://github.com/pixel12digital/cfcbomconselho.git
-Checking project directory is empty
-Project directory is git repository
-On branch master
-Your branch is up to date with 'origin/master'.
 
-nothing to commit, working tree clean
-Looking for composer.lock file
-composer.lock file was not found
-Looking for composer.json file
-composer.json file was not found
-Deployment endDeployment start
-Repository https://github.com/pixel12digital/cfcbomconselho.git
-Checking project directory is empty
-Project directory is git repository
-On branch master
-Your branch is up to date with 'origin/master'.
-
-nothing to commit, working tree clean
-Looking for composer.lock file
-composer.lock file was not found
-Looking for composer.json file
-composer.json file was not found
-Deployment end
 // Obter salas cadastradas usando o mesmo método da página de criação
 $salasCadastradas = $turmaManager->obterSalasDisponiveis($user['cfc_id'] ?? 1);
 
@@ -117,6 +93,27 @@ try {
 
 // Obter disciplinas selecionadas
 $disciplinasSelecionadas = $turmaManager->obterDisciplinasSelecionadas($turmaId);
+
+// Obter alunos matriculados na turma
+try {
+    $alunosMatriculados = $db->fetchAll("
+        SELECT 
+            tm.*,
+            a.nome,
+            a.cpf,
+            a.categoria_cnh,
+            a.telefone,
+            a.email,
+            c.nome as cfc_nome
+        FROM turma_matriculas tm
+        JOIN alunos a ON tm.aluno_id = a.id
+        JOIN cfcs c ON a.cfc_id = c.id
+        WHERE tm.turma_id = ? 
+        ORDER BY tm.data_matricula DESC, a.nome
+    ", [$turmaId]);
+} catch (Exception $e) {
+    $alunosMatriculados = [];
+}
 
 // Debug: Verificar disciplinas obtidas
 echo "<!-- DEBUG: Total de disciplinas obtidas: " . count($disciplinasSelecionadas) . " -->";
@@ -1507,6 +1504,114 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     }
 }
 
+/* ==========================================
+   ESTILOS PARA TABELA DE ALUNOS MATRICULADOS
+   ========================================== */
+.alunos-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.alunos-table th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    border-right: 1px solid #dee2e6;
+}
+
+.alunos-table td {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+    transition: background-color 0.2s;
+}
+
+.alunos-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+.aluno-avatar {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-matriculado {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-cursando {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.status-transferido {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-concluido {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+}
+
+.action-btn {
+    border: none;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.8rem;
+    transition: all 0.2s;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-view {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-edit {
+    background: #ffc107;
+    color: #212529;
+}
+
+.btn-delete {
+    background: #dc3545;
+    color: white;
+}
+
 </style>
 
 <!-- Cabeçalho -->
@@ -1519,9 +1624,15 @@ foreach ($disciplinasSelecionadas as $disciplina) {
             Informações completas sobre a turma teórica - Clique nos campos para editar
         </p>
     </div>
-    <a href="?page=turmas-teoricas" class="btn-secondary">
-        ← Voltar para Lista
-    </a>
+    <div style="display: flex; gap: 10px;">
+        <button onclick="abrirModalInserirAlunos()" class="btn-primary" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 500; transition: all 0.3s;">
+            <i class="fas fa-user-plus"></i>
+            Inserir Alunos
+        </button>
+        <a href="?page=turmas-teoricas" class="btn-secondary">
+            ← Voltar para Lista
+        </a>
+    </div>
 </div>
 
 <!-- Informações Básicas -->
@@ -1606,6 +1717,155 @@ foreach ($disciplinasSelecionadas as $disciplina) {
             </span>
         </p>
     </div>
+    <?php endif; ?>
+</div>
+
+<!-- Alunos Matriculados -->
+<div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h4 style="color: #023A8D; margin: 0;">
+            <i class="fas fa-users me-2"></i>Alunos Matriculados
+        </h4>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span style="background: #e3f2fd; color: #1976d2; padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 500;">
+                <i class="fas fa-user-check me-1"></i>
+                <?= count($alunosMatriculados) ?> aluno(s)
+            </span>
+            <button onclick="abrirModalInserirAlunos()" class="btn-primary" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500; transition: all 0.3s; font-size: 0.9rem;">
+                <i class="fas fa-user-plus"></i>
+                Matricular Aluno
+            </button>
+        </div>
+    </div>
+    
+    <?php if (!empty($alunosMatriculados)): ?>
+        <div style="overflow-x: auto;">
+            <table class="alunos-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Categoria</th>
+                        <th>CFC</th>
+                        <th style="text-align: center;">Status</th>
+                        <th>Data Matrícula</th>
+                        <th style="text-align: center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($alunosMatriculados as $aluno): ?>
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div class="aluno-avatar">
+                                        <?= strtoupper(substr($aluno['nome'], 0, 2)) ?>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 2px;"><?= htmlspecialchars($aluno['nome']) ?></div>
+                                        <?php if (!empty($aluno['email'])): ?>
+                                            <div style="font-size: 0.8rem; color: #6c757d;">
+                                                <i class="fas fa-envelope me-1"></i><?= htmlspecialchars($aluno['email']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($aluno['telefone'])): ?>
+                                            <div style="font-size: 0.8rem; color: #6c757d;">
+                                                <i class="fas fa-phone me-1"></i><?= htmlspecialchars($aluno['telefone']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="font-family: monospace; font-size: 0.9rem;">
+                                <?= htmlspecialchars($aluno['cpf']) ?>
+                            </td>
+                            <td>
+                                <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
+                                    <?= htmlspecialchars($aluno['categoria_cnh']) ?>
+                                </span>
+                            </td>
+                            <td>
+                                <span style="color: #495057; font-size: 0.9rem;">
+                                    <?= htmlspecialchars($aluno['cfc_nome']) ?>
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <?php
+                                $statusClass = '';
+                                $statusIcon = '';
+                                $statusText = '';
+                                
+                                switch ($aluno['status']) {
+                                    case 'matriculado':
+                                        $statusClass = 'status-matriculado';
+                                        $statusIcon = 'fas fa-user-check';
+                                        $statusText = 'Matriculado';
+                                        break;
+                                    case 'cursando':
+                                        $statusClass = 'status-cursando';
+                                        $statusIcon = 'fas fa-graduation-cap';
+                                        $statusText = 'Cursando';
+                                        break;
+                                    case 'evadido':
+                                        $statusClass = 'status-matriculado';
+                                        $statusIcon = 'fas fa-user-check';
+                                        $statusText = 'Matriculado';
+                                        break;
+                                    case 'transferido':
+                                        $statusClass = 'status-transferido';
+                                        $statusIcon = 'fas fa-exchange-alt';
+                                        $statusText = 'Transferido';
+                                        break;
+                                    case 'concluido':
+                                        $statusClass = 'status-concluido';
+                                        $statusIcon = 'fas fa-check-circle';
+                                        $statusText = 'Concluído';
+                                        break;
+                                    default:
+                                        $statusClass = 'status-badge';
+                                        $statusIcon = 'fas fa-question-circle';
+                                        $statusText = ucfirst($aluno['status']);
+                                }
+                                ?>
+                                <span class="status-badge <?= $statusClass ?>">
+                                    <i class="<?= $statusIcon ?>"></i>
+                                    <?= $statusText ?>
+                                </span>
+                            </td>
+                            <td style="font-size: 0.9rem; color: #6c757d;">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                <?= date('d/m/Y', strtotime($aluno['data_matricula'])) ?>
+                                <div style="font-size: 0.8rem; color: #adb5bd;">
+                                    <?= date('H:i', strtotime($aluno['data_matricula'])) ?>
+                                </div>
+                            </td>
+                            <td style="text-align: center;">
+                                <div class="action-buttons">
+                                    <button onclick="visualizarAluno(<?= $aluno['aluno_id'] ?>)" class="action-btn btn-view" title="Visualizar">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                    <button onclick="editarMatricula(<?= $aluno['id'] ?>)" class="action-btn btn-edit" title="Editar">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button onclick="removerMatricula(<?= $aluno['id'] ?>, '<?= htmlspecialchars($aluno['nome']) ?>')" class="action-btn btn-delete" title="Remover">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php else: ?>
+        <div style="text-align: center; padding: 40px 20px; color: #6c757d;">
+            <i class="fas fa-users" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
+            <h5 style="margin-bottom: 10px; color: #495057;">Nenhum aluno matriculado</h5>
+            <p style="margin-bottom: 20px;">Esta turma ainda não possui alunos matriculados.</p>
+            <button onclick="abrirModalInserirAlunos()" class="btn-primary" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; transition: all 0.3s;">
+                <i class="fas fa-user-plus"></i>
+                Matricular Primeiro Aluno
+            </button>
+        </div>
     <?php endif; ?>
 </div>
 
@@ -4481,9 +4741,483 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configurar validações
     validarHorarios();
 });
+
+// Função para abrir modal de inserir alunos
+function abrirModalInserirAlunos() {
+    const turmaId = <?= $turmaId ?>;
+    
+    // Mostrar modal
+    document.getElementById('modalInserirAlunos').style.display = 'flex';
+    
+    // Carregar alunos aptos
+    carregarAlunosAptos(turmaId);
+}
+
+// Função para fechar modal
+function fecharModalInserirAlunos() {
+    document.getElementById('modalInserirAlunos').style.display = 'none';
+}
+
+// Função para carregar alunos aptos
+function carregarAlunosAptos(turmaId) {
+    const container = document.getElementById('listaAlunosAptos');
+    const loading = document.getElementById('loadingAlunos');
+    
+    // Mostrar loading
+    loading.style.display = 'block';
+    container.innerHTML = '';
+    
+    // Fazer requisição para buscar alunos aptos
+    fetch('api/alunos-aptos-turma.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin', // Incluir cookies de sessão
+        body: JSON.stringify({
+            turma_id: turmaId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        loading.style.display = 'none';
+        
+        if (data.sucesso) {
+            exibirAlunosAptos(data.alunos, turmaId);
+        } else {
+            container.innerHTML = `
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    ${data.mensagem || 'Erro ao carregar alunos aptos'}
+                </div>
+            `;
+        }
+    })
+    .catch(error => {
+        loading.style.display = 'none';
+        container.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-circle"></i>
+                Erro ao carregar alunos: ${error.message}
+            </div>
+        `;
+    });
+}
+
+// Função para exibir alunos aptos
+function exibirAlunosAptos(alunos, turmaId) {
+    const container = document.getElementById('listaAlunosAptos');
+    
+    if (alunos.length === 0) {
+        container.innerHTML = `
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                Nenhum aluno encontrado com exames médico e psicotécnico aprovados.
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="alunos-grid">
+            ${alunos.map(aluno => `
+                <div class="aluno-card" data-aluno-id="${aluno.id}">
+                    <div class="aluno-info">
+                        <h4>${aluno.nome}</h4>
+                        <p><strong>CPF:</strong> ${aluno.cpf}</p>
+                        <p><strong>Categoria:</strong> ${aluno.categoria_cnh}</p>
+                        <p><strong>CFC:</strong> ${aluno.cfc_nome}</p>
+                    </div>
+                    <div class="exames-status">
+                        <div class="exame-status apto">
+                            <i class="fas fa-user-md"></i>
+                            <span>Médico: Apto</span>
+                        </div>
+                        <div class="exame-status apto">
+                            <i class="fas fa-brain"></i>
+                            <span>Psicotécnico: Apto</span>
+                        </div>
+                    </div>
+                    <div class="aluno-actions">
+                        <button class="btn btn-success btn-sm" onclick="matricularAluno(${aluno.id}, ${turmaId})">
+                            <i class="fas fa-user-plus"></i>
+                            Matricular
+                        </button>
+                    </div>
+                </div>
+            `).join('')}
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// Função para matricular aluno
+function matricularAluno(alunoId, turmaId) {
+    if (!confirm('Deseja realmente matricular este aluno na turma?')) {
+        return;
+    }
+    
+    const button = event.target;
+    const originalText = button.innerHTML;
+    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Matriculando...';
+    button.disabled = true;
+    
+    fetch('api/matricular-aluno-turma.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        credentials: 'same-origin', // Incluir cookies de sessão
+        body: JSON.stringify({
+            aluno_id: alunoId,
+            turma_id: turmaId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            // Remover aluno da lista
+            const alunoCard = document.querySelector(`[data-aluno-id="${alunoId}"]`);
+            if (alunoCard) {
+                alunoCard.remove();
+            }
+            
+            // Mostrar mensagem de sucesso
+            mostrarMensagem('success', data.mensagem);
+            
+            // Atualizar contador de alunos na página principal
+            atualizarContadorAlunos();
+            
+        } else {
+            mostrarMensagem('error', data.mensagem);
+        }
+    })
+    .catch(error => {
+        mostrarMensagem('error', 'Erro ao matricular aluno: ' + error.message);
+    })
+    .finally(() => {
+        button.innerHTML = originalText;
+        button.disabled = false;
+    });
+}
+
+// Função para mostrar mensagens
+function mostrarMensagem(tipo, mensagem) {
+    const alertClass = tipo === 'success' ? 'alert-success' : 'alert-danger';
+    const icon = tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+    
+    const mensagemDiv = document.createElement('div');
+    mensagemDiv.className = `alert ${alertClass} alert-dismissible fade show`;
+    mensagemDiv.innerHTML = `
+        <i class="fas ${icon}"></i>
+        ${mensagem}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    
+    // Inserir no topo do modal
+    const modalBody = document.querySelector('#modalInserirAlunos .modal-body');
+    modalBody.insertBefore(mensagemDiv, modalBody.firstChild);
+    
+    // Remover após 5 segundos
+    setTimeout(() => {
+        if (mensagemDiv.parentNode) {
+            mensagemDiv.remove();
+        }
+    }, 5000);
+}
+
+// Função para atualizar contador de alunos na página principal
+function atualizarContadorAlunos() {
+    // Recarregar a página para atualizar os dados
+    setTimeout(() => {
+        window.location.reload();
+    }, 2000);
+}
+
+// Funções para ações dos alunos matriculados
+function visualizarAluno(alunoId) {
+    // Redirecionar para página de detalhes do aluno
+    window.open(`?page=alunos&acao=detalhes&id=${alunoId}`, '_blank');
+}
+
+function editarMatricula(matriculaId) {
+    // Implementar modal de edição de matrícula
+    mostrarMensagem('Funcionalidade de edição de matrícula será implementada em breve.', 'info');
+}
+
+function removerMatricula(matriculaId, nomeAluno) {
+    if (confirm(`Tem certeza que deseja remover a matrícula de ${nomeAluno} desta turma?`)) {
+        // Implementar remoção de matrícula
+        mostrarMensagem('Funcionalidade de remoção de matrícula será implementada em breve.', 'warning');
+    }
+}
 </script>
 
-<!-- CSS do Popup Padrão do Sistema -->
-<link href="assets/css/popup-reference.css" rel="stylesheet">
+<!-- Modal para Inserir Alunos -->
+<div id="modalInserirAlunos" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 800px; max-height: 90vh;">
+        <div class="modal-header">
+            <h3>
+                <i class="fas fa-user-plus"></i>
+                Matricular Alunos na Turma
+            </h3>
+            <button type="button" class="btn-close" onclick="fecharModalInserirAlunos()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Critério de Seleção:</strong> Apenas alunos com exames médico e psicotécnico aprovados serão exibidos.
+            </div>
+            
+            <div id="loadingAlunos" style="display: none; text-align: center; padding: 20px;">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p>Carregando alunos aptos...</p>
+            </div>
+            
+            <div id="listaAlunosAptos">
+                <!-- Lista de alunos será carregada aqui -->
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="fecharModalInserirAlunos()">
+                <i class="fas fa-times"></i>
+                Fechar
+            </button>
+        </div>
+    </div>
+</div>
 
-<!-- Cache fix: no-reload-<?= time() ?> -->
+<style>
+/* Estilos para o modal de inserir alunos */
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #e5e7eb;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: #f8f9fa;
+}
+
+.modal-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 18px;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 5px;
+    border-radius: 4px;
+    transition: all 0.3s;
+}
+
+.btn-close:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.modal-body {
+    padding: 20px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.modal-footer {
+    padding: 20px;
+    border-top: 1px solid #e5e7eb;
+    background: #f8f9fa;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+/* Grid de alunos */
+.alunos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 20px;
+}
+
+.aluno-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 15px;
+    background: white;
+    transition: all 0.3s;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.aluno-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+}
+
+.aluno-info h4 {
+    margin: 0 0 10px 0;
+    color: #333;
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.aluno-info p {
+    margin: 5px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.exames-status {
+    margin: 15px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.exame-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.exame-status.apto {
+    background: #d4edda;
+    color: #155724;
+}
+
+.exame-status.inapto {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.aluno-actions {
+    margin-top: 15px;
+    text-align: right;
+}
+
+.btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.3s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.btn-success {
+    background: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background: #218838;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #5a6268;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        margin: 10px;
+    }
+    
+    .alunos-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 15px;
+    }
+}
+
+/* Alertas */
+.alert {
+    padding: 12px 16px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.alert-info {
+    background: #d1ecf1;
+    color: #0c5460;
+    border: 1px solid #bee5eb;
+}
+
+.alert-warning {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+.alert-danger {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.alert-success {
+    background: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+</style>
