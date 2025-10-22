@@ -2,11 +2,18 @@
 // API completamente limpa para tipos de curso
 // Sem dependências que possam gerar HTML
 
-// Configurações diretas do banco (copiadas do config.php)
-define('DB_HOST', 'auth-db803.hstgr.io');
-define('DB_NAME', 'u502697186_cfcbomconselho');
-define('DB_USER', 'u502697186_cfcbomconselho');
-define('DB_PASS', 'Los@ngo#081081');
+// Incluir configurações do sistema
+if (!file_exists(__DIR__ . '/../../includes/config.php')) {
+    http_response_code(500);
+    echo json_encode([
+        'sucesso' => false,
+        'mensagem' => 'Arquivo de configuração não encontrado',
+        'debug' => ['arquivo' => __DIR__ . '/../../includes/config.php']
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+require_once __DIR__ . '/../../includes/config.php';
 
 // Headers primeiro
 header('Content-Type: application/json; charset=utf-8');
@@ -16,7 +23,7 @@ header('Cache-Control: no-cache, must-revalidate');
 ini_set('display_errors', 0);
 error_reporting(0);
 
-// Função para conectar ao banco diretamente
+// Função para conectar ao banco usando configurações do sistema
 function conectarBanco() {
     try {
         $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
@@ -27,6 +34,7 @@ function conectarBanco() {
         ]);
         return $pdo;
     } catch (PDOException $e) {
+        error_log("Erro de conexão com banco: " . $e->getMessage());
         return null;
     }
 }
