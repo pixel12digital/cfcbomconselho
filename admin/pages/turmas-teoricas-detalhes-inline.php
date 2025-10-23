@@ -13,6 +13,58 @@ if (!$turmaId) {
     return;
 }
 
+// Processar remoção de aluno da turma
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['acao'] === 'remover_aluno') {
+    $alunoId = isset($_POST['aluno_id']) ? (int)$_POST['aluno_id'] : 0;
+
+    if ($alunoId) {
+        $resultado = $turmaManager->removerAluno($turmaId, $alunoId);
+        
+        // Detectar se é requisição AJAX (múltiplas formas)
+        $isAjax = (
+            !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
+        ) || (
+            !empty($_SERVER['HTTP_ACCEPT']) && 
+            strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false
+        ) || (
+            isset($_POST['ajax']) && $_POST['ajax'] === 'true'
+        );
+        
+        if ($isAjax) {
+            // Limpar qualquer output anterior
+            if (ob_get_level()) {
+                ob_clean();
+            }
+            echo json_encode($resultado);
+            exit;
+        } else {
+            // Se não for AJAX, mostrar mensagem na página
+            if ($resultado['sucesso']) {
+                echo '<div class="alert alert-success">' . $resultado['mensagem'] . '</div>';
+            } else {
+                echo '<div class="alert alert-danger">' . $resultado['mensagem'] . '</div>';
+            }
+            return;
+        }
+    } else {
+        $resultado = ['sucesso' => false, 'mensagem' => '❌ ID do aluno inválido.'];
+        
+        $isAjax = (
+            !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+            strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
+        );
+        
+        if ($isAjax) {
+            if (ob_get_level()) {
+                ob_clean();
+            }
+            echo json_encode($resultado);
+            exit;
+        }
+    }
+}
+
 // Obter dados da turma
 $resultadoTurma = $turmaManager->obterTurma($turmaId);
 if (!$resultadoTurma['sucesso']) {
@@ -98,18 +150,18 @@ $disciplinasSelecionadas = $turmaManager->obterDisciplinasSelecionadas($turmaId)
 try {
     $alunosMatriculados = $db->fetchAll("
         SELECT 
-            tm.*,
+            ta.*,
             a.nome,
             a.cpf,
             a.categoria_cnh,
             a.telefone,
             a.email,
             c.nome as cfc_nome
-        FROM turma_matriculas tm
-        JOIN alunos a ON tm.aluno_id = a.id
+        FROM turma_alunos ta
+        JOIN alunos a ON ta.aluno_id = a.id
         JOIN cfcs c ON a.cfc_id = c.id
-        WHERE tm.turma_id = ? 
-        ORDER BY tm.data_matricula DESC, a.nome
+        WHERE ta.turma_id = ? 
+        ORDER BY ta.data_matricula DESC, a.nome
     ", [$turmaId]);
 } catch (Exception $e) {
     $alunosMatriculados = [];
@@ -1840,13 +1892,7 @@ foreach ($disciplinasSelecionadas as $disciplina) {
                             </td>
                             <td style="text-align: center;">
                                 <div class="action-buttons">
-                                    <button onclick="visualizarAluno(<?= $aluno['aluno_id'] ?>)" class="action-btn btn-view" title="Visualizar">
-                                        <i class="fas fa-eye"></i>
-                                    </button>
-                                    <button onclick="editarMatricula(<?= $aluno['id'] ?>)" class="action-btn btn-edit" title="Editar">
-                                        <i class="fas fa-edit"></i>
-                                    </button>
-                                    <button onclick="removerMatricula(<?= $aluno['id'] ?>, '<?= htmlspecialchars($aluno['nome']) ?>')" class="action-btn btn-delete" title="Remover">
+                                    <button onclick="removerMatricula(<?= $aluno['id'] ?>, '<?= htmlspecialchars($aluno['nome']) ?>')" class="action-btn btn-delete" title="Remover da Turma">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -2116,6 +2162,44 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         <div class="stat-content">
             <div class="stat-number"><?= $totalAlunos ?></div>
             <div class="stat-label">Alunos Matriculados</div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Inserir Alunos -->
+<div id="modalInserirAlunos" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 800px; max-height: 90vh;">
+        <div class="modal-header">
+            <h3>
+                <i class="fas fa-user-plus"></i>
+                Matricular Alunos na Turma
+            </h3>
+            <button type="button" class="btn-close" onclick="fecharModalInserirAlunos()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                <strong>Critério de Seleção:</strong> Apenas alunos com exames médico e psicotécnico aprovados serão exibidos.
+            </div>
+            
+            <div id="loadingAlunos" style="display: none; text-align: center; padding: 20px;">
+                <i class="fas fa-spinner fa-spin fa-2x"></i>
+                <p>Carregando alunos aptos...</p>
+            </div>
+            
+            <div id="listaAlunosAptos">
+                <!-- Lista de alunos será carregada aqui -->
+            </div>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="fecharModalInserirAlunos()">
+                <i class="fas fa-times"></i>
+                Fechar
+            </button>
         </div>
     </div>
 </div>
@@ -4746,8 +4830,16 @@ document.addEventListener('DOMContentLoaded', function() {
 function abrirModalInserirAlunos() {
     const turmaId = <?= $turmaId ?>;
     
+    // Verificar se o modal existe antes de tentar acessá-lo
+    const modal = document.getElementById('modalInserirAlunos');
+    if (!modal) {
+        console.error('Modal modalInserirAlunos não encontrado');
+        mostrarMensagem('Erro: Modal não encontrado', 'error');
+        return;
+    }
+    
     // Mostrar modal
-    document.getElementById('modalInserirAlunos').style.display = 'flex';
+    modal.style.display = 'flex';
     
     // Carregar alunos aptos
     carregarAlunosAptos(turmaId);
@@ -4755,7 +4847,10 @@ function abrirModalInserirAlunos() {
 
 // Função para fechar modal
 function fecharModalInserirAlunos() {
-    document.getElementById('modalInserirAlunos').style.display = 'none';
+    const modal = document.getElementById('modalInserirAlunos');
+    if (modal) {
+        modal.style.display = 'none';
+    }
 }
 
 // Função para carregar alunos aptos
@@ -4768,7 +4863,7 @@ function carregarAlunosAptos(turmaId) {
     container.innerHTML = '';
     
     // Fazer requisição para buscar alunos aptos
-    fetch('api/alunos-aptos-turma.php', {
+    fetch('api/alunos-aptos-turma-simples.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -4778,41 +4873,62 @@ function carregarAlunosAptos(turmaId) {
             turma_id: turmaId
         })
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('Resposta da API:', response.status, response.statusText);
+        return response.json();
+    })
     .then(data => {
         loading.style.display = 'none';
+        console.log('Dados recebidos:', data);
         
         if (data.sucesso) {
-            exibirAlunosAptos(data.alunos, turmaId);
+            exibirAlunosAptos(data.alunos, turmaId, data.debug_info);
         } else {
             container.innerHTML = `
                 <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle"></i>
                     ${data.mensagem || 'Erro ao carregar alunos aptos'}
+                    ${data.debug ? '<br><small>Debug: ' + JSON.stringify(data.debug) + '</small>' : ''}
                 </div>
             `;
         }
     })
     .catch(error => {
         loading.style.display = 'none';
+        console.error('Erro na requisição:', error);
         container.innerHTML = `
             <div class="alert alert-danger">
                 <i class="fas fa-exclamation-circle"></i>
                 Erro ao carregar alunos: ${error.message}
+                <br><small>Verifique o console para mais detalhes</small>
             </div>
         `;
     });
 }
 
 // Função para exibir alunos aptos
-function exibirAlunosAptos(alunos, turmaId) {
+function exibirAlunosAptos(alunos, turmaId, debugInfo = null) {
     const container = document.getElementById('listaAlunosAptos');
     
     if (alunos.length === 0) {
+        let debugHtml = '';
+        if (debugInfo) {
+            debugHtml = `
+                <div class="alert alert-warning mt-2">
+                    <i class="fas fa-bug"></i>
+                    <strong>Debug Info:</strong><br>
+                    CFC da Turma: ${debugInfo.turma_cfc_id}<br>
+                    CFC da Sessão: ${debugInfo.session_cfc_id}<br>
+                    CFCs coincidem: ${debugInfo.cfc_ids_match ? 'Sim' : 'Não'}<br>
+                </div>
+            `;
+        }
+        
         container.innerHTML = `
             <div class="alert alert-info">
                 <i class="fas fa-info-circle"></i>
                 Nenhum aluno encontrado com exames médico e psicotécnico aprovados.
+                ${debugHtml}
             </div>
         `;
         return;
@@ -4903,9 +5019,13 @@ function matricularAluno(alunoId, turmaId) {
 }
 
 // Função para mostrar mensagens
-function mostrarMensagem(tipo, mensagem) {
-    const alertClass = tipo === 'success' ? 'alert-success' : 'alert-danger';
-    const icon = tipo === 'success' ? 'fa-check-circle' : 'fa-exclamation-circle';
+function mostrarMensagem(mensagem, tipo) {
+    const alertClass = tipo === 'success' ? 'alert-success' : 
+                     tipo === 'error' ? 'alert-danger' : 
+                     tipo === 'info' ? 'alert-info' : 'alert-warning';
+    const icon = tipo === 'success' ? 'fa-check-circle' : 
+                tipo === 'error' ? 'fa-exclamation-circle' : 
+                tipo === 'info' ? 'fa-info-circle' : 'fa-exclamation-triangle';
     
     const mensagemDiv = document.createElement('div');
     mensagemDiv.className = `alert ${alertClass} alert-dismissible fade show`;
@@ -4915,9 +5035,9 @@ function mostrarMensagem(tipo, mensagem) {
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     `;
     
-    // Inserir no topo do modal
-    const modalBody = document.querySelector('#modalInserirAlunos .modal-body');
-    modalBody.insertBefore(mensagemDiv, modalBody.firstChild);
+    // Inserir no topo da página principal
+    const mainContent = document.querySelector('.main-content') || document.querySelector('.container-fluid') || document.body;
+    mainContent.insertBefore(mensagemDiv, mainContent.firstChild);
     
     // Remover após 5 segundos
     setTimeout(() => {
@@ -4947,50 +5067,55 @@ function editarMatricula(matriculaId) {
 }
 
 function removerMatricula(matriculaId, nomeAluno) {
-    if (confirm(`Tem certeza que deseja remover a matrícula de ${nomeAluno} desta turma?`)) {
-        // Implementar remoção de matrícula
-        mostrarMensagem('Funcionalidade de remoção de matrícula será implementada em breve.', 'warning');
+    if (confirm(`Tem certeza que deseja remover a matrícula de ${nomeAluno} desta turma?\n\nEsta ação irá desvincular completamente o aluno da turma e ele ficará disponível para matrícula em outras turmas.`)) {
+        // Mostrar indicador de carregamento
+        mostrarMensagem('Removendo aluno da turma...', 'info');
+        
+        // Criar dados para enviar
+        const formData = new FormData();
+        formData.append('acao', 'remover_aluno');
+        formData.append('aluno_id', matriculaId);
+        formData.append('ajax', 'true');
+        
+        // Fazer requisição AJAX
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.sucesso) {
+                // Mostrar mensagem de sucesso
+                mostrarMensagem(data.mensagem, 'success');
+                
+                // Remover a linha da tabela
+                const linha = document.querySelector(`button[onclick*="${matriculaId}"]`).closest('tr');
+                if (linha) {
+                    linha.remove();
+                }
+                
+                // Atualizar contador de alunos se existir
+                const contadorAlunos = document.querySelector('.btn-primary');
+                if (contadorAlunos) {
+                    const textoAtual = contadorAlunos.textContent;
+                    const numeroAtual = parseInt(textoAtual.match(/\d+/)[0]);
+                    contadorAlunos.textContent = textoAtual.replace(/\d+/, numeroAtual - 1);
+                }
+            } else {
+                // Mostrar mensagem de erro
+                mostrarMensagem(data.mensagem, 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            mostrarMensagem('Erro ao remover aluno. Tente novamente.', 'error');
+        });
     }
 }
 </script>
-
-<!-- Modal para Inserir Alunos -->
-<div id="modalInserirAlunos" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 800px; max-height: 90vh;">
-        <div class="modal-header">
-            <h3>
-                <i class="fas fa-user-plus"></i>
-                Matricular Alunos na Turma
-            </h3>
-            <button type="button" class="btn-close" onclick="fecharModalInserirAlunos()">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        
-        <div class="modal-body">
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle"></i>
-                <strong>Critério de Seleção:</strong> Apenas alunos com exames médico e psicotécnico aprovados serão exibidos.
-            </div>
-            
-            <div id="loadingAlunos" style="display: none; text-align: center; padding: 20px;">
-                <i class="fas fa-spinner fa-spin fa-2x"></i>
-                <p>Carregando alunos aptos...</p>
-            </div>
-            
-            <div id="listaAlunosAptos">
-                <!-- Lista de alunos será carregada aqui -->
-            </div>
-        </div>
-        
-        <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" onclick="fecharModalInserirAlunos()">
-                <i class="fas fa-times"></i>
-                Fechar
-            </button>
-        </div>
-    </div>
-</div>
 
 <style>
 /* Estilos para o modal de inserir alunos */

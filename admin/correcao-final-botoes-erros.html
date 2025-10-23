@@ -146,10 +146,10 @@ if ($action === 'update_field') {
             <p><strong>Atualizado para usar API ultra-simplificada:</strong></p>
             <div class="code-block">
 // ANTES (com erro 500)
-fetch('/cfc-bom-conselho/admin/api/disciplinas-debug.php?action=listar')
+fetch(getBasePath() + '/admin/api/disciplinas-debug.php?action=listar')
 
 // DEPOIS (API ultra-simplificada)
-fetch('/cfc-bom-conselho/admin/api/disciplinas-simples.php?action=listar')
+fetch(getBasePath() + '/admin/api/disciplinas-simples.php?action=listar')
             </div>
         </div>
 

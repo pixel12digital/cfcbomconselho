@@ -116,10 +116,10 @@ $disciplinas = [
             <p><strong>Atualização nas funções:</strong></p>
             <div class="code-block">
 // ANTES (com erro 500)
-fetch('/cfc-bom-conselho/admin/api/disciplinas-simples.php?action=listar')
+fetch(getBasePath() + '/admin/api/disciplinas-simples.php?action=listar')
 
 // DEPOIS (API estática)
-fetch('/cfc-bom-conselho/admin/api/disciplinas-estaticas.php?action=listar')
+fetch(getBasePath() + '/admin/api/disciplinas-estaticas.php?action=listar')
             </div>
             <p><strong>Funções atualizadas:</strong></p>
             <ul>

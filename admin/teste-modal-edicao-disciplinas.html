@@ -180,7 +180,7 @@
             resultado.style.display = 'block';
             resultado.innerHTML = '<div class="info">🔄 Testando API estática...</div>';
             
-            fetch('/cfc-bom-conselho/admin/api/disciplinas-estaticas.php?action=listar')
+            fetch(getBasePath() + '/admin/api/disciplinas-estaticas.php?action=listar')
                 .then(response => {
                     resultado.innerHTML += `<div class="info">📡 Status: ${response.status}</div>`;
                     return response.json();

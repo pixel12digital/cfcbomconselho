@@ -57,9 +57,9 @@
         <div class="mt-4">
             <h5>URLs de Teste:</h5>
             <ul>
-                <li><strong>API Estática:</strong> <code>/cfc-bom-conselho/admin/api/disciplinas-estaticas.php?action=listar</code></li>
-                <li><strong>API Simples:</strong> <code>/cfc-bom-conselho/admin/api/disciplinas-simples.php?action=listar</code></li>
-                <li><strong>API Original:</strong> <code>/cfc-bom-conselho/admin/api/disciplinas.php?action=listar</code></li>
+                <li><strong>API Estática:</strong> <code>getBasePath() + '/admin/api/disciplinas-estaticas.php?action=listar'</code></li>
+                <li><strong>API Simples:</strong> <code>getBasePath() + '/admin/api/disciplinas-simples.php?action=listar'</code></li>
+                <li><strong>API Original:</strong> <code>getBasePath() + '/admin/api/disciplinas.php?action=listar'</code></li>
             </ul>
         </div>
         
@@ -82,7 +82,7 @@
             resultado.innerHTML = '<div class="info">🔄 Testando API estática de disciplinas...</div>';
             
             // Testar API estática
-            fetch('/cfc-bom-conselho/admin/api/disciplinas-estaticas.php?action=listar')
+            fetch(getBasePath() + '/admin/api/disciplinas-estaticas.php?action=listar')
                 .then(response => {
                     resultado.innerHTML += `<div class="info">📡 API Estática - Status: ${response.status}</div>`;
                     return response.text();

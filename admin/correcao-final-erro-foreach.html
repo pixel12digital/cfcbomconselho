@@ -167,7 +167,7 @@ if (data && typeof data === 'object' && data.success === true && data.disciplina
 function carregarDisciplinasNoSelect(disciplinaId) {
     console.log('📚 [DISCIPLINA] Carregando disciplinas para select:', disciplinaId);
     
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-estaticas.php?action=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-estaticas.php?action=listar')
         .then(response => {
             console.log('📡 [API] Resposta recebida:', response.status);
             if (!response.ok) {

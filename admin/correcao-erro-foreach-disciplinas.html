@@ -120,7 +120,7 @@ if (data.success && data.disciplinas && Array.isArray(data.disciplinas)) {
 function carregarDisciplinasNoSelect(disciplinaId) {
     console.log('📚 [DISCIPLINA] Carregando disciplinas para select:', disciplinaId);
     
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-estaticas.php?action=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-estaticas.php?action=listar')
         .then(response => {
             console.log('📡 [API] Resposta recebida:', response.status);
             return response.json();
@@ -162,7 +162,7 @@ function carregarDisciplinasNoSelect(disciplinaId) {
 function carregarDisciplinasDisponiveis() {
     console.log('📚 [DISCIPLINAS] Carregando disciplinas disponíveis...');
     
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-estaticas.php?action=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-estaticas.php?action=listar')
         .then(response => {
             console.log('📡 [API] Resposta recebida:', response.status);
             return response.json();

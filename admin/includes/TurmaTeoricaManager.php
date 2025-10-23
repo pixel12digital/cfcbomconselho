@@ -1592,5 +1592,66 @@ class TurmaTeoricaManager {
             ];
         }
     }
+    
+    /**
+     * Remover aluno da turma
+     * @param int $turmaId ID da turma
+     * @param int $alunoId ID do aluno
+     * @return array Resultado da operação
+     */
+    public function removerAluno($turmaId, $alunoId) {
+        try {
+            $this->db->beginTransaction();
+            
+            // Verificar se a matrícula existe
+            $matricula = $this->db->fetch(
+                "SELECT * FROM turma_alunos WHERE turma_id = ? AND aluno_id = ?",
+                [$turmaId, $alunoId]
+            );
+            
+            if (!$matricula) {
+                return [
+                    'sucesso' => false,
+                    'mensagem' => '❌ Aluno não encontrado nesta turma.'
+                ];
+            }
+            
+            // Remover todas as presenças do aluno nas aulas desta turma
+            $this->db->execute(
+                "DELETE FROM turma_presencas WHERE turma_id = ? AND aluno_id = ?",
+                [$turmaId, $alunoId]
+            );
+            
+            // Remover a matrícula
+            $this->db->execute(
+                "DELETE FROM turma_alunos WHERE turma_id = ? AND aluno_id = ?",
+                [$turmaId, $alunoId]
+            );
+            
+            // Log da remoção
+            $this->registrarLog(
+                $turmaId, 
+                'aluno_removido', 
+                "Aluno ID {$alunoId} removido da turma", 
+                null, 
+                ['aluno_id' => $alunoId], 
+                $_SESSION['user_id'] ?? 1
+            );
+            
+            $this->db->commit();
+            
+            return [
+                'sucesso' => true,
+                'mensagem' => '✅ Aluno removido da turma com sucesso!'
+            ];
+            
+        } catch (Exception $e) {
+            $this->db->rollback();
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Erro ao remover aluno: ' . $e->getMessage()
+            ];
+        }
+    }
 }
 ?>

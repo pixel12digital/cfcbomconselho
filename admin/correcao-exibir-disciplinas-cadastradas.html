@@ -144,7 +144,7 @@
             <p><strong>Implementação:</strong> Função JavaScript para carregar disciplinas em todos os selects</p>
             <div class="code-block">
 function carregarDisciplinasDisponiveis() {
-    fetch('/cfc-bom-conselho/admin/api/disciplinas-estaticas.php?action=listar')
+    fetch(getBasePath() + '/admin/api/disciplinas-estaticas.php?action=listar')
         .then(response => response.json())
         .then(data => {
             if (data.success && data.disciplinas) {
