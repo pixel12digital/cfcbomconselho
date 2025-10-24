@@ -978,7 +978,7 @@
                     <div class="link-item">
                         <h3 class="link-title">Conta Pilotar</h3>
                         <p class="link-description">Página de login para acesso à conta digital no site Pilotar.app.</p>
-                        <a href="https://conta.pilotar.app/#/login" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <a href="https://share.google/jthYBKLXUXa548F8u" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">
@@ -988,9 +988,9 @@
                     </div>
                     
                     <div class="link-item">
-                        <h3 class="link-title">Sistema de Habilitação</h3>
+                        <h3 class="link-title">Onboarding</h3>
                         <p class="link-description">Sistema oficial do DETRAN para processos de habilitação e renovação.</p>
-                        <a href="https://www.detran.pe.gov.br/servicos/habilitacao" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                        <a href="https://admin.certfy.tech/Login.aspx?ReturnUrl=%2f" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
                     <div class="link-item">
@@ -1006,8 +1006,8 @@
                     </div>
                     
                     <div class="link-item">
-                        <h3 class="link-title">Agendamento Online</h3>
-                        <p class="link-description">Sistema de agendamento online para exames e serviços do DETRAN.</p>
+                        <h3 class="link-title">Exame Teórico</h3>
+                        <p class="link-description">Acompanhe o seu CFC de qualquer lugar.<br><br></p>
                         <a href="https://exame-teorico.superprati.co/gestor/login" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
