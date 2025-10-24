@@ -33,13 +33,13 @@ class AgendamentoController {
                 return $validacao;
             }
             
-            // Verificar disponibilidade
+            // Verificar disponibilidade (incluindo carga horária para aulas teóricas)
             $disponibilidade = $this->verificarDisponibilidade($dados);
             if (!$disponibilidade['disponivel']) {
                 return [
                     'sucesso' => false,
-                    'mensagem' => 'Conflito de horário detectado: ' . $disponibilidade['motivo'],
-                    'tipo' => 'erro'
+                    'mensagem' => $disponibilidade['motivo'],
+                    'tipo' => $disponibilidade['tipo'] ?? 'erro'
                 ];
             }
             
@@ -400,10 +400,11 @@ class AgendamentoController {
             $conflitoInstrutor = $stmtInstrutor->fetch(PDO::FETCH_ASSOC);
             
             if ($conflitoInstrutor['total'] > 0) {
+                $nomeInstrutor = $this->obterNomeInstrutor($instrutorId);
                 return [
                     'disponivel' => false,
-                    'motivo' => 'Instrutor já possui aula agendada neste horário',
-                    'tipo' => 'instrutor'
+                    'motivo' => "👨‍🏫 INSTRUTOR INDISPONÍVEL: O instrutor {$nomeInstrutor} já possui aula agendada no horário {$horaInicio} às {$horaFim}. Escolha outro horário ou instrutor.",
+                    'tipo' => 'conflito_instrutor'
                 ];
             }
             
@@ -433,10 +434,11 @@ class AgendamentoController {
                 $conflitoVeiculo = $stmtVeiculo->fetch(PDO::FETCH_ASSOC);
                 
                 if ($conflitoVeiculo['total'] > 0) {
+                    $nomeVeiculo = $this->obterNomeVeiculo($veiculoId);
                     return [
                         'disponivel' => false,
-                        'motivo' => 'Veículo já possui aula agendada neste horário',
-                        'tipo' => 'veiculo'
+                        'motivo' => "🚗 VEÍCULO INDISPONÍVEL: O veículo {$nomeVeiculo} já possui aula agendada no horário {$horaInicio} às {$horaFim}. Escolha outro horário ou veículo.",
+                        'tipo' => 'conflito_veiculo'
                     ];
                 }
             }
@@ -902,6 +904,45 @@ class AgendamentoController {
             
         } catch (Exception $e) {
             error_log("Erro ao registrar log: " . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Obter nome do instrutor
+     * @param int $instrutorId ID do instrutor
+     * @return string Nome do instrutor
+     */
+    private function obterNomeInstrutor($instrutorId) {
+        try {
+            $resultado = $this->db->fetch("
+                SELECT COALESCE(u.nome, i.nome, 'Instrutor ID ' . ?) as nome
+                FROM instrutores i 
+                LEFT JOIN usuarios u ON i.usuario_id = u.id 
+                WHERE i.id = ?
+            ", [$instrutorId, $instrutorId]);
+            
+            return $resultado['nome'] ?? "Instrutor ID {$instrutorId}";
+        } catch (Exception $e) {
+            return "Instrutor ID {$instrutorId}";
+        }
+    }
+    
+    /**
+     * Obter nome do veículo
+     * @param int $veiculoId ID do veículo
+     * @return string Nome do veículo
+     */
+    private function obterNomeVeiculo($veiculoId) {
+        try {
+            $resultado = $this->db->fetch("
+                SELECT COALESCE(CONCAT(marca, ' ', modelo, ' - ', placa), 'Veículo ID ' . ?) as nome
+                FROM veiculos 
+                WHERE id = ?
+            ", [$veiculoId, $veiculoId]);
+            
+            return $resultado['nome'] ?? "Veículo ID {$veiculoId}";
+        } catch (Exception $e) {
+            return "Veículo ID {$veiculoId}";
         }
     }
     

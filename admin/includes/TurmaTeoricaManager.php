@@ -1166,6 +1166,12 @@ class TurmaTeoricaManager {
             $conflitos = [];
             $qtdAulas = (int)$dados['quantidade_aulas'];
             
+            // 1. Verificar se não excede a carga horária da disciplina
+            $validacaoCargaHoraria = $this->verificarCargaHorariaDisciplina($dados['turma_id'], $dados['disciplina'], $qtdAulas);
+            if (!$validacaoCargaHoraria['disponivel']) {
+                return $validacaoCargaHoraria;
+            }
+            
             for ($i = 0; $i < $qtdAulas; $i++) {
                 $horaInicio = $this->calcularHorarioAula($dados['hora_inicio'], $i);
                 $horaFim = $this->calcularHorarioFim($horaInicio);
@@ -1185,7 +1191,8 @@ class TurmaTeoricaManager {
                 ", [$dados['instrutor_id'], $dados['data_aula'], $horaInicio, $horaInicio, $horaFim, $horaFim, $horaInicio, $horaFim]);
                 
                 if ($conflitoInstrutor['conflitos'] > 0) {
-                    $conflitos[] = "Instrutor já tem aula agendada das {$horaInicio} às {$horaFim}";
+                    $nomeInstrutor = $this->obterNomeInstrutor($dados['instrutor_id']);
+                    $conflitos[] = "👨‍🏫 INSTRUTOR INDISPONÍVEL: O instrutor {$nomeInstrutor} já possui aula agendada no horário {$horaInicio} às {$horaFim}. Escolha outro horário ou instrutor.";
                 }
                 
                 // Verificar conflito de sala
@@ -1203,15 +1210,17 @@ class TurmaTeoricaManager {
                 ", [$turma['sala_id'], $dados['data_aula'], $horaInicio, $horaInicio, $horaFim, $horaFim, $horaInicio, $horaFim]);
                 
                 if ($conflitoSala['conflitos'] > 0) {
-                    $conflitos[] = "Sala já está ocupada das {$horaInicio} às {$horaFim}";
+                    $nomeSala = $this->obterNomeSala($turma['sala_id']);
+                    $conflitos[] = "🏢 SALA INDISPONÍVEL: A sala {$nomeSala} já está ocupada no horário {$horaInicio} às {$horaFim}. Escolha outro horário ou sala.";
                 }
             }
             
             if (!empty($conflitos)) {
                 return [
                     'disponivel' => false,
-                    'mensagem' => '❌ Conflito de horário detectado: ' . implode(', ', $conflitos),
-                    'detalhes' => $conflitos
+                    'mensagem' => '❌ Conflito de horário detectado: ' . implode(' | ', $conflitos),
+                    'detalhes' => $conflitos,
+                    'tipo_erro' => 'conflito_horario'
                 ];
             }
             
@@ -1220,11 +1229,136 @@ class TurmaTeoricaManager {
         } catch (Exception $e) {
             return [
                 'disponivel' => false,
-                'mensagem' => 'Erro ao verificar conflitos: ' . $e->getMessage()
+                'mensagem' => 'Erro ao verificar conflitos: ' . $e->getMessage(),
+                'tipo_erro' => 'erro_sistema'
             ];
         }
     }
     
+    /**
+     * Verificar se não excede a carga horária da disciplina
+     * @param int $turmaId ID da turma
+     * @param string $disciplina Disciplina
+     * @param int $qtdAulasNovas Quantidade de aulas a agendar
+     * @return array Resultado da validação
+     */
+    private function verificarCargaHorariaDisciplina($turmaId, $disciplina, $qtdAulasNovas) {
+        try {
+            // Obter carga horária máxima da disciplina para esta turma
+            $cargaMaxima = $this->db->fetch("
+                SELECT dc.aulas_obrigatorias, tt.curso_tipo
+                FROM disciplinas_configuracao dc
+                INNER JOIN turmas_teoricas tt ON tt.id = ?
+                WHERE dc.curso_tipo = tt.curso_tipo 
+                AND dc.disciplina = ?
+                AND dc.ativa = 1
+            ", [$turmaId, $disciplina]);
+            
+            if (!$cargaMaxima) {
+                return [
+                    'disponivel' => false,
+                    'mensagem' => "❌ CARGA HORÁRIA INVÁLIDA: Disciplina '{$disciplina}' não encontrada na configuração do curso.",
+                    'tipo_erro' => 'disciplina_nao_encontrada'
+                ];
+            }
+            
+            $cargaMaximaAulas = (int)$cargaMaxima['aulas_obrigatorias'];
+            
+            // Contar aulas já agendadas para esta disciplina nesta turma
+            $aulasAgendadas = $this->db->fetch("
+                SELECT COUNT(*) as total
+                FROM turma_aulas_agendadas 
+                WHERE turma_id = ? 
+                AND disciplina = ? 
+                AND status IN ('agendada', 'realizada')
+            ", [$turmaId, $disciplina]);
+            
+            $totalAgendadas = (int)$aulasAgendadas['total'];
+            $totalAposAgendamento = $totalAgendadas + $qtdAulasNovas;
+            
+            if ($totalAposAgendamento > $cargaMaximaAulas) {
+                $nomeDisciplina = $this->obterNomeDisciplina($disciplina);
+                return [
+                    'disponivel' => false,
+                    'mensagem' => "❌ CARGA HORÁRIA EXCEDIDA: A disciplina '{$nomeDisciplina}' possui carga horária máxima de {$cargaMaximaAulas} aulas. Já foram agendadas {$totalAgendadas} aulas e você está tentando agendar mais {$qtdAulasNovas} aulas. Máximo permitido: {$cargaMaximaAulas} aulas.",
+                    'tipo_erro' => 'carga_horaria_excedida',
+                    'detalhes' => [
+                        'disciplina' => $nomeDisciplina,
+                        'carga_maxima' => $cargaMaximaAulas,
+                        'aulas_agendadas' => $totalAgendadas,
+                        'aulas_tentando_agendar' => $qtdAulasNovas,
+                        'total_apos_agendamento' => $totalAposAgendamento
+                    ]
+                ];
+            }
+            
+            return ['disponivel' => true];
+            
+        } catch (Exception $e) {
+            return [
+                'disponivel' => false,
+                'mensagem' => 'Erro ao verificar carga horária: ' . $e->getMessage(),
+                'tipo_erro' => 'erro_sistema'
+            ];
+        }
+    }
+    
+    /**
+     * Obter nome do instrutor
+     * @param int $instrutorId ID do instrutor
+     * @return string Nome do instrutor
+     */
+    private function obterNomeInstrutor($instrutorId) {
+        try {
+            $resultado = $this->db->fetch("
+                SELECT COALESCE(u.nome, i.nome, 'Instrutor ID ' . ?) as nome
+                FROM instrutores i 
+                LEFT JOIN usuarios u ON i.usuario_id = u.id 
+                WHERE i.id = ?
+            ", [$instrutorId, $instrutorId]);
+            
+            return $resultado['nome'] ?? "Instrutor ID {$instrutorId}";
+        } catch (Exception $e) {
+            return "Instrutor ID {$instrutorId}";
+        }
+    }
+    
+    /**
+     * Obter nome da sala
+     * @param int $salaId ID da sala
+     * @return string Nome da sala
+     */
+    private function obterNomeSala($salaId) {
+        try {
+            $resultado = $this->db->fetch("
+                SELECT COALESCE(nome, 'Sala ID ' . ?) as nome
+                FROM salas 
+                WHERE id = ?
+            ", [$salaId, $salaId]);
+            
+            return $resultado['nome'] ?? "Sala ID {$salaId}";
+        } catch (Exception $e) {
+            return "Sala ID {$salaId}";
+        }
+    }
+    
+    /**
+     * Obter nome da disciplina
+     * @param string $disciplina Código da disciplina
+     * @return string Nome da disciplina
+     */
+    private function obterNomeDisciplina($disciplina) {
+        $nomes = [
+            'legislacao_transito' => 'Legislação de Trânsito',
+            'primeiros_socorros' => 'Primeiros Socorros',
+            'direcao_defensiva' => 'Direção Defensiva',
+            'meio_ambiente_cidadania' => 'Meio Ambiente e Cidadania',
+            'mecanica_basica' => 'Mecânica Básica'
+        ];
+        
+        return $nomes[$disciplina] ?? ucfirst(str_replace('_', ' ', $disciplina));
+    }
+
     private function calcularCargaHorariaCurso($cursoTipo) {
         try {
             $resultado = $this->db->fetch(

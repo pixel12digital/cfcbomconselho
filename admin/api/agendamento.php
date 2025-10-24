@@ -234,6 +234,14 @@ function criarAula($data) {
             returnJsonError('Disciplina é obrigatória para aulas teóricas', 400);
         }
         
+        // Verificar carga horária da disciplina para aulas teóricas
+        if ($tipo_aula === 'teorica' && $disciplina) {
+            $validacaoCargaHoraria = verificarCargaHorariaDisciplinaIndividual($db, $aluno_id, $disciplina, 1);
+            if (!$validacaoCargaHoraria['disponivel']) {
+                returnJsonError($validacaoCargaHoraria['mensagem'], 409);
+            }
+        }
+        
         // Validar veículo para aulas práticas
         if ($tipo_aula !== 'teorica' && !$veiculo_id) {
             returnJsonError('Veículo é obrigatório para aulas práticas', 400);
@@ -760,6 +768,126 @@ function editarAula($aula_id, $data) {
         error_log("Erro ao editar aula: " . $e->getMessage());
         returnJsonError('Erro ao editar aula: ' . $e->getMessage(), 500);
     }
+}
+
+/**
+ * Verificar carga horária da disciplina para aulas individuais
+ * @param Database $db Instância do banco de dados
+ * @param int $alunoId ID do aluno
+ * @param string $disciplina Disciplina
+ * @param int $qtdAulasNovas Quantidade de aulas a agendar
+ * @return array Resultado da validação
+ */
+function verificarCargaHorariaDisciplinaIndividual($db, $alunoId, $disciplina, $qtdAulasNovas) {
+    try {
+        // Obter informações do aluno e curso
+        $aluno = $db->fetch("
+            SELECT a.*, c.id as cfc_id, c.tipo_curso
+            FROM alunos a 
+            JOIN cfcs c ON a.cfc_id = c.id 
+            WHERE a.id = ?
+        ", [$alunoId]);
+        
+        if (!$aluno) {
+            return [
+                'disponivel' => false,
+                'mensagem' => '❌ CARGA HORÁRIA INVÁLIDA: Aluno não encontrado.',
+                'tipo_erro' => 'aluno_nao_encontrado'
+            ];
+        }
+        
+        // Mapear tipo de curso do CFC para tipo de curso das disciplinas
+        $cursoTipo = mapearTipoCurso($aluno['tipo_curso']);
+        
+        // Obter carga horária máxima da disciplina
+        $cargaMaxima = $db->fetch("
+            SELECT aulas_obrigatorias
+            FROM disciplinas_configuracao 
+            WHERE curso_tipo = ? 
+            AND disciplina = ?
+            AND ativa = 1
+        ", [$cursoTipo, $disciplina]);
+        
+        if (!$cargaMaxima) {
+            return [
+                'disponivel' => false,
+                'mensagem' => "❌ CARGA HORÁRIA INVÁLIDA: Disciplina '{$disciplina}' não encontrada na configuração do curso.",
+                'tipo_erro' => 'disciplina_nao_encontrada'
+            ];
+        }
+        
+        $cargaMaximaAulas = (int)$cargaMaxima['aulas_obrigatorias'];
+        
+        // Contar aulas já agendadas para esta disciplina por este aluno
+        $aulasAgendadas = $db->fetch("
+            SELECT COUNT(*) as total
+            FROM aulas 
+            WHERE aluno_id = ? 
+            AND disciplina = ? 
+            AND status IN ('agendada', 'realizada')
+        ", [$alunoId, $disciplina]);
+        
+        $totalAgendadas = (int)$aulasAgendadas['total'];
+        $totalAposAgendamento = $totalAgendadas + $qtdAulasNovas;
+        
+        if ($totalAposAgendamento > $cargaMaximaAulas) {
+            $nomeDisciplina = obterNomeDisciplina($disciplina);
+            return [
+                'disponivel' => false,
+                'mensagem' => "❌ CARGA HORÁRIA EXCEDIDA: A disciplina '{$nomeDisciplina}' possui carga horária máxima de {$cargaMaximaAulas} aulas. O aluno já possui {$totalAgendadas} aulas agendadas e você está tentando agendar mais {$qtdAulasNovas} aulas. Máximo permitido: {$cargaMaximaAulas} aulas.",
+                'tipo_erro' => 'carga_horaria_excedida',
+                'detalhes' => [
+                    'disciplina' => $nomeDisciplina,
+                    'carga_maxima' => $cargaMaximaAulas,
+                    'aulas_agendadas' => $totalAgendadas,
+                    'aulas_tentando_agendar' => $qtdAulasNovas,
+                    'total_apos_agendamento' => $totalAposAgendamento
+                ]
+            ];
+        }
+        
+        return ['disponivel' => true];
+        
+    } catch (Exception $e) {
+        return [
+            'disponivel' => false,
+            'mensagem' => 'Erro ao verificar carga horária: ' . $e->getMessage(),
+            'tipo_erro' => 'erro_sistema'
+        ];
+    }
+}
+
+/**
+ * Mapear tipo de curso do CFC para tipo de curso das disciplinas
+ * @param string $tipoCursoCfc Tipo de curso do CFC
+ * @return string Tipo de curso para disciplinas
+ */
+function mapearTipoCurso($tipoCursoCfc) {
+    $mapeamento = [
+        'formacao_completa' => 'formacao_45h',
+        'formacao_acc' => 'formacao_acc_20h',
+        'reciclagem' => 'reciclagem_infrator',
+        'atualizacao' => 'atualizacao'
+    ];
+    
+    return $mapeamento[$tipoCursoCfc] ?? 'formacao_45h';
+}
+
+/**
+ * Obter nome da disciplina
+ * @param string $disciplina Código da disciplina
+ * @return string Nome da disciplina
+ */
+function obterNomeDisciplina($disciplina) {
+    $nomes = [
+        'legislacao_transito' => 'Legislação de Trânsito',
+        'primeiros_socorros' => 'Primeiros Socorros',
+        'direcao_defensiva' => 'Direção Defensiva',
+        'meio_ambiente_cidadania' => 'Meio Ambiente e Cidadania',
+        'mecanica_basica' => 'Mecânica Básica'
+    ];
+    
+    return $nomes[$disciplina] ?? ucfirst(str_replace('_', ' ', $disciplina));
 }
 
 ?>
