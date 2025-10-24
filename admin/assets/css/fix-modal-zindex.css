@@ -5,7 +5,8 @@
    ===================================================== */
 
 /* CORREÇÃO RADICAL: Esconder completamente os ícones de edição quando QUALQUER modal estiver aberto */
-body.modal-open i.fas.fa-edit:not([id*="modal"]):not([class*="modal"]),
+/* REMOVIDO: Esta regra estava escondendo os ícones mesmo sem modal aberto */
+/* body.modal-open i.fas.fa-edit:not([id*="modal"]):not([class*="modal"]),
 body.modal-open .edit-icon:not([id*="modal"]):not([class*="modal"]),
 body.modal-open .fa-edit:not([id*="modal"]):not([class*="modal"]),
 body.modal-open i.fas.fa-pencil:not([id*="modal"]):not([class*="modal"]),
@@ -19,7 +20,7 @@ body.modal-open .fa-pencil-alt:not([id*="modal"]):not([class*="modal"]) {
     position: absolute !important;
     left: -9999px !important;
     top: -9999px !important;
-}
+} */
 
 /* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para TODOS os elementos da página quando modal estiver aberto */
 body.modal-open *:not([id*="modal"]):not([class*="modal"]):not([class*="popup"]) {
@@ -87,14 +88,15 @@ body.modal-open [class*="icon"]:not([id*="modal"]):not([class*="modal"]) {
 }
 
 /* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para ícones específicos */
-body.modal-open i.fas:not([id*="modal"]):not([class*="modal"]),
+/* REMOVIDO: Esta regra estava afetando todos os ícones FontAwesome */
+/* body.modal-open i.fas:not([id*="modal"]):not([class*="modal"]),
 body.modal-open i.far:not([id*="modal"]):not([class*="modal"]),
 body.modal-open i.fab:not([id*="modal"]):not([class*="modal"]),
 body.modal-open i.fal:not([id*="modal"]):not([class*="modal"]),
 body.modal-open i.fad:not([id*="modal"]):not([class*="modal"]) {
     z-index: 1 !important;
     position: relative !important;
-}
+} */
 
 /* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para pseudo-elementos */
 body.modal-open *::before:not([id*="modal"]):not([class*="modal"]),

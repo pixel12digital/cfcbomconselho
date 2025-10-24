@@ -993,17 +993,6 @@
                         <a href="https://admin.certfy.tech/Login.aspx?ReturnUrl=%2f" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                     
-                    <div class="link-item">
-                        <h3 class="link-title">Consulta de Processos</h3>
-                        <p class="link-description">Consulta de processos de habilitação e renovação no DETRAN-PE.</p>
-                        <a href="https://www.detran.pe.gov.br/consulta-processos" target="_blank" class="link-button">Clique Aqui para Acessar</a>
-                    </div>
-                    
-                    <div class="link-item">
-                        <h3 class="link-title">Portal do CFC</h3>
-                        <p class="link-description">Portal oficial para Centros de Formação de Condutores.</p>
-                        <a href="https://www.detran.pe.gov.br/portal-cfc" target="_blank" class="link-button">Clique Aqui para Acessar</a>
-                    </div>
                     
                     <div class="link-item">
                         <h3 class="link-title">Exame Teórico</h3>
@@ -1015,6 +1004,12 @@
                         <h3 class="link-title">New Driver</h3>
                         <p class="link-description">Página inicial do aplicativo New Driver, relacionada a serviços de condução ou educação para motoristas.</p>
                         <a href="https://newdriver.com.br/" target="_blank" class="link-button">Clique Aqui para Acessar</a>
+                    </div>
+                    
+                    <div class="link-item">
+                        <h3 class="link-title">Certfy Desk</h3>
+                        <p class="link-description">Sistema de gestão e certificação digital para processos administrativos e documentação do CFC.</p>
+                        <a href="https://app.certfy.tech/desk/login/" target="_blank" class="link-button">Clique Aqui para Acessar</a>
                     </div>
                 </div>
             </div>

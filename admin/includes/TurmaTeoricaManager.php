@@ -773,9 +773,9 @@ class TurmaTeoricaManager {
                 // Se há disciplinas selecionadas, formatar para o progresso
                 $progresso = [];
                 foreach ($disciplinasSelecionadas as $disc) {
-                    // Buscar aulas agendadas para esta disciplina
+                    // Buscar aulas agendadas para esta disciplina (excluindo canceladas)
                     $aulasAgendadas = $this->db->fetchAll(
-                        "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND disciplina = ?",
+                        "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND disciplina = ? AND status != 'cancelada'",
                         [$turmaId, $disc['disciplina_id']]
                     );
                     

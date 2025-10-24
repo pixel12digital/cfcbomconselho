@@ -184,9 +184,9 @@ $historicoAgendamentos = [];
 foreach ($disciplinasSelecionadas as $disciplina) {
     $disciplinaId = $disciplina['disciplina_id'];
     
-    // Buscar aulas agendadas para esta disciplina
+    // Buscar aulas agendadas para esta disciplina (excluindo canceladas)
     $aulasAgendadas = $db->fetch(
-        "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND disciplina = ?",
+        "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND disciplina = ? AND status != 'cancelada'",
         [$turmaId, $disciplinaId]
     );
     
@@ -435,6 +435,132 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     border: 1px solid #ffcc02;
 }
 
+/* Estilos para botões de ação na tabela */
+.btn-group .btn {
+    min-width: 32px !important;
+    min-height: 32px !important;
+    padding: 6px 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    border-width: 1px !important;
+    font-size: 12px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1) !important;
+    transition: all 0.2s ease !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+/* Sobrescrever qualquer CSS conflitante para ícones */
+.btn-group .btn i,
+.btn-group .btn i.fas,
+.btn-group .btn i.fa-edit,
+.btn-group .btn i.fa-times {
+    font-family: "Font Awesome 6 Free" !important;
+    font-weight: 900 !important;
+    font-style: normal !important;
+    font-variant: normal !important;
+    text-rendering: auto !important;
+    line-height: 1 !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 11 !important;
+}
+
+/* Tamanhos específicos para ícones */
+.btn-group .btn i.fa-edit {
+    font-size: 14px !important;
+}
+
+.btn-group .btn i.fa-times {
+    font-size: 12px !important;
+}
+
+.btn-group .btn:hover {
+    transform: scale(1.05) !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+/* Estilos específicos para garantir visibilidade dos ícones */
+.btn-group .btn-outline-primary {
+    color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    background-color: #ffffff !important;
+    border-width: 2px !important;
+    font-weight: bold !important;
+    min-width: 32px !important;
+    min-height: 32px !important;
+    padding: 6px 8px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+.btn-group .btn-outline-primary:hover {
+    color: #ffffff !important;
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+}
+
+.btn-group .btn-outline-primary i,
+.btn-group .btn-outline-primary i.fas,
+.btn-group .btn-outline-primary i.fa-edit {
+    color: #0d6efd !important;
+    font-size: 14px !important;
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    font-weight: 900 !important;
+    font-family: "Font Awesome 6 Free" !important;
+    line-height: 1 !important;
+    text-rendering: auto !important;
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+    position: relative !important;
+    z-index: 11 !important;
+}
+
+.btn-group .btn-outline-primary:hover i,
+.btn-group .btn-outline-primary:hover i.fas,
+.btn-group .btn-outline-primary:hover i.fa-edit {
+    color: #ffffff !important;
+}
+
+.btn-group .btn-outline-danger {
+    color: #dc3545 !important;
+    border-color: #dc3545 !important;
+    background-color: #fff5f5 !important;
+    border-width: 1px !important;
+}
+
+.btn-group .btn-outline-danger:hover {
+    color: #fff !important;
+    background-color: #dc3545 !important;
+    border-color: #dc3545 !important;
+}
+
+.btn-group .btn-outline-danger i {
+    color: #dc3545 !important;
+    font-size: 12px !important;
+    display: inline-block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.btn-group .btn-outline-danger:hover i {
+    color: #fff !important;
+}
+
 /* Responsividade para estatísticas */
 @media (max-width: 768px) {
     .aulas-stats-container {
@@ -450,6 +576,12 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     .stat-value {
         padding: 1px 4px;
         min-width: 18px;
+    }
+    
+    .btn-group .btn {
+        min-width: 28px !important;
+        min-height: 28px !important;
+        padding: 4px 6px !important;
     }
 }
 
@@ -2074,8 +2206,10 @@ foreach ($disciplinasSelecionadas as $disciplina) {
                                                                     <button type="button" 
                                                                             class="btn btn-sm btn-outline-primary" 
                                                                             onclick="editarAgendamento(<?= $agendamento['id'] ?>, '<?= htmlspecialchars($agendamento['nome_aula']) ?>', '<?= $agendamento['data_aula'] ?>', '<?= $agendamento['hora_inicio'] ?>', '<?= $agendamento['hora_fim'] ?>', '<?= $agendamento['instrutor_id'] ?>', '<?= $agendamento['sala_id'] ?? '' ?>', '<?= $agendamento['duracao_minutos'] ?>', '<?= htmlspecialchars($agendamento['observacoes'] ?? '') ?>')"
-                                                                            title="Editar agendamento">
-                                                                        <i class="fas fa-edit"></i>
+                                                                            title="Editar agendamento"
+                                                                            aria-label="Editar agendamento"
+                                                                            style="min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-width: 2px; font-weight: 500; background: white; border-color: #0d6efd; color: #0d6efd;">
+                                                                        <span style="font-size: 14px; font-weight: bold; color: #0d6efd;">✏</span>
                                                                     </button>
                                                                     <button type="button" 
                                                                             class="btn btn-sm btn-outline-danger" 
@@ -2206,6 +2340,36 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 
 
 <script>
+// ==========================================
+// VERIFICAÇÃO E FALLBACK PARA ÍCONES
+// ==========================================
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se FontAwesome está carregado
+    const testIcon = document.createElement('i');
+    testIcon.className = 'fas fa-edit';
+    testIcon.style.position = 'absolute';
+    testIcon.style.left = '-9999px';
+    document.body.appendChild(testIcon);
+    
+    const computedStyle = window.getComputedStyle(testIcon);
+    const fontFamily = computedStyle.getPropertyValue('font-family');
+    
+    // Se FontAwesome não estiver carregado, mostrar fallback
+    if (!fontFamily.includes('Font Awesome')) {
+        console.log('FontAwesome não detectado, usando fallback Unicode');
+        const editButtons = document.querySelectorAll('.btn-outline-primary i.fa-edit');
+        editButtons.forEach(function(icon) {
+            const fallback = icon.nextElementSibling;
+            if (fallback && fallback.tagName === 'SPAN') {
+                icon.style.display = 'none';
+                fallback.style.display = 'inline';
+            }
+        });
+    }
+    
+    document.body.removeChild(testIcon);
+});
+
 /**
  * ==========================================
  * SISTEMA DE DISCIPLINAS - PÁGINA DE DETALHES
@@ -5367,4 +5531,89 @@ function removerMatricula(matriculaId, nomeAluno) {
     color: #155724;
     border: 1px solid #c3e6cb;
 }
+
+/* Melhorar visibilidade dos botões de ação */
+.btn-group .btn-outline-primary {
+    border-width: 2px !important;
+    font-weight: 500 !important;
+    min-width: 32px !important;
+    height: 32px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    transition: all 0.2s ease !important;
+    background: white !important;
+    border-color: #0d6efd !important;
+    color: #0d6efd !important;
+}
+
+.btn-group .btn-outline-primary:hover {
+    background-color: #0d6efd !important;
+    border-color: #0d6efd !important;
+    color: white !important;
+    transform: scale(1.05) !important;
+}
+
+.btn-group .btn-outline-primary:hover span {
+    color: white !important;
+}
+
+/* Melhorar contraste do botão de cancelar */
+.btn-group .btn-outline-danger {
+    border-width: 2px;
+    font-weight: 500;
+    min-width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-group .btn-outline-danger:hover {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+    transform: scale(1.05);
+}
+
+/* Adicionar tooltip melhorado */
+.btn-group .btn[title] {
+    position: relative;
+}
+
+.btn-group .btn[title]:hover::after {
+    content: attr(title);
+    position: absolute;
+    bottom: -35px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    white-space: nowrap;
+    z-index: 1000;
+    pointer-events: none;
+}
 </style>
+
+<!-- Script simples para garantir visibilidade do ícone -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🔧 [DEBUG] Página carregada, verificando botões de edição...');
+    
+    // Garantir que todos os botões de edição tenham ícone visível
+    const editButtons = document.querySelectorAll('.btn-outline-primary');
+    console.log('🔧 [DEBUG] Encontrados', editButtons.length, 'botões de edição');
+    
+    editButtons.forEach((button, index) => {
+        const span = button.querySelector('span');
+        if (span) {
+            console.log('✅ [DEBUG] Botão', index + 1, 'tem ícone:', span.textContent);
+        } else {
+            console.log('❌ [DEBUG] Botão', index + 1, 'NÃO tem ícone');
+        }
+    });
+});
+</script>

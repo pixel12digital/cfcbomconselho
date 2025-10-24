@@ -22,10 +22,10 @@ $turma = $resultadoTurma['dados'];
 // Obter progresso das disciplinas
 $progressoDisciplinas = $turmaManager->obterProgressoDisciplinas($turmaId);
 
-// Obter aulas agendadas
+// Obter aulas agendadas (excluindo canceladas)
 try {
     $aulasAgendadas = $db->fetchAll(
-        "SELECT * FROM turma_aulas_agendadas WHERE turma_id = ? ORDER BY data_aula, hora_inicio",
+        "SELECT * FROM turma_aulas_agendadas WHERE turma_id = ? AND status != 'cancelada' ORDER BY data_aula, hora_inicio",
         [$turmaId]
     );
 } catch (Exception $e) {
