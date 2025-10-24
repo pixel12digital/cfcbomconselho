@@ -4778,8 +4778,8 @@ require_once 'includes/config.php';
                         <li><a href="#servicos">Serviços</a></li>
                         <li><a href="trabalhe-conosco.php">Trabalhe Conosco</a></li>
                         <li><a href="links-uteis.php">Links Úteis</a></li>
-                        <li><a href="login.php?type=aluno">Portal do Aluno</a></li>
-                        <li><a href="login.php?type=admin">Portal do CFC</a></li>
+                        <li><a href="login.php?type=aluno" target="_blank">Portal do Aluno</a></li>
+                        <li><a href="login.php?type=admin" target="_blank">Portal do CFC</a></li>
                     </ul>
                 </div>
                 
