@@ -4801,6 +4801,42 @@ function carregarDisciplinasDoBanco() {
                     position: relative !important;
                 }
                 
+                /* CORREÇÃO ULTRA ESPECÍFICA: Forçar z-index baixo para ícones de edição específicos */
+                body.modal-open i.fas.fa-edit,
+                body.modal-open i.fas.fa-edit::before,
+                body.modal-open i.fas.fa-edit::after,
+                body.modal-open .edit-icon,
+                body.modal-open .edit-icon::before,
+                body.modal-open .edit-icon::after,
+                body.modal-open .fa-edit,
+                body.modal-open .fa-edit::before,
+                body.modal-open .fa-edit::after {
+                    z-index: 1 !important;
+                    position: relative !important;
+                }
+                
+                /* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos com classe específica */
+                body.modal-open [class*="edit"],
+                body.modal-open [class*="action"],
+                body.modal-open [class*="btn"]:not(#modalGerenciarDisciplinas *),
+                body.modal-open [class*="icon"]:not(#modalGerenciarDisciplinas *) {
+                    z-index: 1 !important;
+                    position: relative !important;
+                }
+                
+                /* CORREÇÃO RADICAL: Esconder completamente os ícones de edição quando modal estiver aberto */
+                body.modal-open i.fas.fa-edit:not(#modalGerenciarDisciplinas *),
+                body.modal-open .edit-icon:not(#modalGerenciarDisciplinas *),
+                body.modal-open .fa-edit:not(#modalGerenciarDisciplinas *) {
+                    display: none !important;
+                    visibility: hidden !important;
+                    opacity: 0 !important;
+                    z-index: -1 !important;
+                    position: absolute !important;
+                    left: -9999px !important;
+                    top: -9999px !important;
+                }
+                
                 /* Garantir que elementos específicos da página fiquem atrás do modal */
                 body.modal-open .container,
                 body.modal-open .row,
