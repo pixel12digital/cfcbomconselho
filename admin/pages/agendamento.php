@@ -2192,7 +2192,8 @@ async function consultarDisponibilidade() {
 async function consultarDisponibilidadeInstrutor(data, instrutorId, tipo, duracao) {
     const horariosDisponiveis = [
         '08:00', '08:50', '09:40', '10:30', '11:20', '12:10',
-        '14:00', '14:50', '15:40', '16:30', '17:20', '18:10'
+        '14:00', '14:50', '15:40', '16:30', '17:20', '18:10',
+        '19:00', '19:50', '20:40', '21:00', '21:10'
     ];
     
     const resultados = [];

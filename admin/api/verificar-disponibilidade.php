@@ -367,7 +367,8 @@ function sugerirHorariosAlternativos($db, $instrutor_id, $data_aula, $duracao, $
     $horarios_sugeridos = [];
     $horarios_disponiveis = [
         '08:00', '08:50', '09:40', '10:30', '11:20', '12:10',
-        '14:00', '14:50', '15:40', '16:30', '17:20', '18:10'
+        '14:00', '14:50', '15:40', '16:30', '17:20', '18:10',
+        '19:00', '19:50', '20:40', '21:00', '21:10'
     ];
     
     foreach ($horarios_disponiveis as $horario) {

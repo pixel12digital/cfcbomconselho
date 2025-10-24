@@ -12,14 +12,17 @@ if (!$turmaAtual) {
 // Obter disciplinas do curso (priorizando disciplinas selecionadas pelo usuário)
 $disciplinasCurso = $turmaManager->obterDisciplinasParaAgendamento($turmaAtual['id']);
 
-// Gerar horários disponíveis (08:00 às 18:00, intervalos de 50min)
+// Gerar horários disponíveis (08:00 às 21:10, intervalos de 50min)
 $horariosDisponiveis = [];
-for ($hora = 8; $hora <= 17; $hora++) {
+for ($hora = 8; $hora <= 20; $hora++) {
     $horariosDisponiveis[] = sprintf('%02d:00', $hora);
-    if ($hora < 17) {
+    if ($hora < 20) {
         $horariosDisponiveis[] = sprintf('%02d:50', $hora);
     }
 }
+// Adicionar horários finais que não ultrapassem 22:00
+$horariosDisponiveis[] = '21:00';
+$horariosDisponiveis[] = '21:10';
 ?>
 
 <style>
