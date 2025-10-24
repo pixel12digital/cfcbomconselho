@@ -2416,7 +2416,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 /* Modal responsivo com largura otimizada */
 #modalGerenciarDisciplinas {
-    z-index: 1055;
+    z-index: 99999 !important;
 }
 
 #modalGerenciarDisciplinas .modal-dialog {
@@ -2426,6 +2426,8 @@ document.addEventListener('DOMContentLoaded', function() {
     margin: 0 auto;
     display: flex;
     flex-direction: column;
+    z-index: 99999 !important;
+    position: relative !important;
 }
 
 #modalGerenciarDisciplinas .modal-content {
@@ -2434,6 +2436,8 @@ document.addEventListener('DOMContentLoaded', function() {
     flex-direction: column;
     border-radius: 15px;
     overflow: hidden;
+    z-index: 99999 !important;
+    position: relative !important;
 }
 
 #modalGerenciarDisciplinas .modal-header {
@@ -2533,8 +2537,9 @@ document.addEventListener('DOMContentLoaded', function() {
     left: 0 !important;
     width: 100vw !important;
     height: 100vh !important;
-    background-color: rgba(0, 0, 0, 0.5) !important;
-    z-index: 1054 !important;
+    background-color: rgba(0, 0, 0, 0.7) !important;
+    backdrop-filter: blur(3px) !important;
+    z-index: 99998 !important;
     display: none !important;
 }
 
@@ -4748,6 +4753,35 @@ function carregarDisciplinasDoBanco() {
                 #carga-restante.text-danger {
                     background: rgba(244, 67, 54, 0.1);
                 }
+                
+                /* CORREÇÃO DO PROBLEMA DE Z-INDEX DO MODAL */
+                /* Garantir que quando o modal estiver aberto, elementos da página subjacente não fiquem visíveis */
+                body.modal-open {
+                    overflow: hidden !important;
+                }
+                
+                /* Forçar z-index baixo para elementos editáveis quando modal estiver aberto */
+                body.modal-open .editable-field,
+                body.modal-open [data-field],
+                body.modal-open .fa-edit,
+                body.modal-open .fa-pencil,
+                body.modal-open .fa-pencil-alt,
+                body.modal-open .btn-edit,
+                body.modal-open .edit-icon {
+                    z-index: 1 !important;
+                    position: relative !important;
+                }
+                
+                /* Garantir que o modal e seus elementos tenham z-index máximo */
+                #modalGerenciarDisciplinas,
+                #modalGerenciarDisciplinas * {
+                    z-index: 99999 !important;
+                }
+                
+                #modalGerenciarDisciplinas .modal-backdrop,
+                #modalGerenciarDisciplinas::before {
+                    z-index: 99998 !important;
+                }
                 </style>
             </form>
         </div>
@@ -6917,6 +6951,10 @@ function abrirModalDisciplinasInterno() {
         gerenciarEstilosBody('bloquear');
         console.log('🔧 [DEBUG] Body bloqueado');
         
+        // Adicionar classe modal-open ao body para corrigir z-index
+        document.body.classList.add('modal-open');
+        console.log('🔧 [DEBUG] Classe modal-open adicionada ao body');
+        
         modalDisciplinasAberto = true;
         console.log('🔧 [DEBUG] Variável modalDisciplinasAberto = true');
         
@@ -7855,6 +7893,9 @@ function fecharModalDisciplinas() {
         
         // PRIMEIRO: Restaurar scroll do body ANTES de fechar o modal
         gerenciarEstilosBody('restaurar');
+        
+        // Remover classe modal-open do body para restaurar z-index normal
+        document.body.classList.remove('modal-open');
         
         // SEGUNDO: Fechar o modal com CSS mais específico
         modal.style.setProperty('display', 'none', 'important');
