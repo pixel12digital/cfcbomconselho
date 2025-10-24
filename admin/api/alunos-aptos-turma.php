@@ -8,7 +8,7 @@
 error_log("API alunos-aptos-turma: Acessada em " . date('Y-m-d H:i:s'));
 
 // Configurações de cabeçalho
-header('Content-Type: application/json; charset=utf-8');
+header('Content-Type: application/json; charset=utf-8');P
 header('Cache-Control: no-cache, no-store, must-revalidate');
 header('Pragma: no-cache');
 header('Expires: 0');

@@ -2229,16 +2229,24 @@ function getBasePath() {
     // Detectar automaticamente o caminho base baseado na URL atual
     const currentPath = window.location.pathname;
     
+    console.log('🔧 [DEBUG] getBasePath - currentPath:', currentPath);
+    
     if (currentPath.includes('/cfc-bom-conselho/')) {
+        console.log('🔧 [DEBUG] getBasePath - retornando /cfc-bom-conselho');
         return '/cfc-bom-conselho';
     } else if (currentPath.includes('/admin/')) {
+        console.log('🔧 [DEBUG] getBasePath - retornando string vazia');
         return '';
     } else {
         // Fallback: tentar detectar baseado no host
         const host = window.location.host;
+        console.log('🔧 [DEBUG] getBasePath - host:', host);
+        
         if (host.includes('localhost') || host.includes('127.0.0.1')) {
+            console.log('🔧 [DEBUG] getBasePath - retornando string vazia (localhost)');
             return '';
         } else {
+            console.log('🔧 [DEBUG] getBasePath - retornando /cfc-bom-conselho (produção)');
             return '/cfc-bom-conselho';
         }
     }
@@ -4370,29 +4378,43 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
 
 // Cancelar agendamento
 function cancelarAgendamento(id, nomeAula) {
+    console.log('🔧 [DEBUG] Iniciando cancelamento:', { id, nomeAula });
+    
     if (confirm(`Tem certeza que deseja cancelar o agendamento "${nomeAula}"?`)) {
-        fetch('api/agendamento.php', {
-            method: 'POST',
+        const url = getBasePath() + '/admin/api/turmas-teoricas.php';
+        const data = {
+            acao: 'cancelar_aula',
+            aula_id: id
+        };
+        
+        console.log('🔧 [DEBUG] URL:', url);
+        console.log('🔧 [DEBUG] Dados:', data);
+        
+        fetch(url, {
+            method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({
-                acao: 'cancelar',
-                aula_id: id
-            })
+            body: JSON.stringify(data)
         })
-        .then(response => response.text())
+        .then(response => {
+            console.log('🔧 [DEBUG] Status da resposta:', response.status);
+            console.log('🔧 [DEBUG] Headers da resposta:', response.headers);
+            return response.text();
+        })
         .then(text => {
+            console.log('🔧 [DEBUG] Resposta bruta:', text);
             try {
                 const data = JSON.parse(text);
-                if (data.success) {
+                console.log('🔧 [DEBUG] Dados parseados:', data);
+                if (data.sucesso) {
                     showFeedback('Agendamento cancelado com sucesso!', 'success');
                     // Recarregar página após 1 segundo
                     setTimeout(() => {
                         window.location.reload();
                     }, 1000);
                 } else {
-                    showFeedback('Erro ao cancelar agendamento: ' + data.message, 'error');
+                    showFeedback('Erro ao cancelar agendamento: ' + (data.mensagem || data.message || 'Erro desconhecido'), 'error');
                 }
             } catch (e) {
                 console.error('❌ [AGENDAMENTO] Resposta não é JSON válido:', text);
@@ -4451,7 +4473,7 @@ function salvarEdicaoAgendamento() {
         data.observacoes = observacoes.value;
     }
     
-    data.acao = 'editar';
+    data.acao = 'editar_aula';
     data.aula_id = document.getElementById('editAgendamentoId').value;
     
     // Debug: mostrar dados que serão enviados
@@ -4464,8 +4486,8 @@ function salvarEdicaoAgendamento() {
         restaurarBtn = mostrarLoading(btnSalvar);
     }
     
-    fetch('api/turma-agendamento.php', {
-        method: 'POST',
+    fetch(getBasePath() + '/admin/api/turmas-teoricas.php', {
+        method: 'PUT',
         headers: {
             'Content-Type': 'application/json',
         },

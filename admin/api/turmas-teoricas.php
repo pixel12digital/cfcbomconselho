@@ -167,7 +167,7 @@ function handlePostRequest($turmaManager, $user) {
             echo json_encode([
                 'sucesso' => false,
                 'mensagem' => 'Ação POST não especificada ou inválida',
-                'acoes_disponiveis' => ['criar_basica', 'agendar_aula', 'matricular_aluno', 'ativar_turma', 'excluir']
+                'acoes_disponiveis' => ['criar_basica', 'agendar_aula', 'matricular_aluno', 'ativar_turma', 'excluir', 'cancelar_aula', 'editar_aula']
             ], JSON_UNESCAPED_UNICODE);
             break;
     }
@@ -199,11 +199,16 @@ function handlePutRequest($turmaManager, $user) {
             handleCancelarAula($turmaManager, $dados);
             break;
             
+        case 'editar_aula':
+            handleEditarAula($turmaManager, $dados);
+            break;
+            
         default:
             http_response_code(400);
             echo json_encode([
                 'sucesso' => false,
-                'mensagem' => 'Ação PUT não especificada ou inválida'
+                'mensagem' => 'Ação PUT não especificada ou inválida',
+                'acoes_disponiveis' => ['atualizar_status', 'cancelar_aula', 'editar_aula']
             ], JSON_UNESCAPED_UNICODE);
             break;
     }
@@ -527,8 +532,65 @@ function handleAtualizarStatus($turmaManager, $dados) {
 }
 
 function handleCancelarAula($turmaManager, $dados) {
+    error_log("🔧 [DEBUG] handleCancelarAula chamada com dados: " . print_r($dados, true));
+    
     $aulaId = $dados['aula_id'] ?? null;
     $motivo = $dados['motivo'] ?? '';
+    
+    error_log("🔧 [DEBUG] aulaId: $aulaId, motivo: $motivo");
+    
+    if (!$aulaId) {
+        error_log("❌ [DEBUG] ID da aula não fornecido");
+        http_response_code(400);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'ID da aula é obrigatório'
+        ], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+    
+    try {
+        $db = Database::getInstance();
+        error_log("🔧 [DEBUG] Tentando atualizar aula ID: $aulaId");
+        
+        $result = $db->update('turma_aulas_agendadas', [
+            'status' => 'cancelada',
+            'observacoes' => $motivo
+        ], 'id = ?', [$aulaId]);
+        
+        error_log("🔧 [DEBUG] Resultado da atualização: " . ($result ? 'sucesso' : 'falha'));
+        error_log("🔧 [DEBUG] Tipo do resultado: " . gettype($result));
+        error_log("🔧 [DEBUG] Valor do resultado: " . var_export($result, true));
+        
+        // Verificar se a atualização foi bem-sucedida
+        if ($result && $result->rowCount() > 0) {
+            error_log("🔧 [DEBUG] Atualização bem-sucedida, linhas afetadas: " . $result->rowCount());
+            http_response_code(200);
+            echo json_encode([
+                'sucesso' => true,
+                'mensagem' => 'Aula cancelada com sucesso'
+            ], JSON_UNESCAPED_UNICODE);
+        } else {
+            error_log("❌ [DEBUG] Atualização falhou ou nenhuma linha foi afetada");
+            http_response_code(400);
+            echo json_encode([
+                'sucesso' => false,
+                'mensagem' => 'Aula não encontrada ou não foi possível cancelar'
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        
+    } catch (Exception $e) {
+        error_log("❌ [DEBUG] Erro ao cancelar aula: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Erro ao cancelar aula: ' . $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+    }
+}
+
+function handleEditarAula($turmaManager, $dados) {
+    $aulaId = $dados['aula_id'] ?? null;
     
     if (!$aulaId) {
         http_response_code(400);
@@ -541,14 +603,18 @@ function handleCancelarAula($turmaManager, $dados) {
     
     $db = Database::getInstance();
     $db->update('turma_aulas_agendadas', [
-        'status' => 'cancelada',
-        'observacoes' => $motivo
+        'nome_aula' => $dados['nome_aula'] ?? '',
+        'data_aula' => $dados['data_aula'] ?? '',
+        'hora_inicio' => $dados['hora_inicio'] ?? '',
+        'hora_fim' => $dados['hora_fim'] ?? '',
+        'instrutor_id' => $dados['instrutor_id'] ?? null,
+        'observacoes' => $dados['observacoes'] ?? ''
     ], 'id = ?', [$aulaId]);
     
     http_response_code(200);
     echo json_encode([
         'sucesso' => true,
-        'mensagem' => 'Aula cancelada com sucesso'
+        'mensagem' => 'Aula editada com sucesso'
     ], JSON_UNESCAPED_UNICODE);
 }
 
