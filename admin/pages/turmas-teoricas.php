@@ -4874,6 +4874,12 @@ function carregarDisciplinasDoBanco() {
             </form>
         </div>
         
+        <!-- CSS específico para corrigir z-index dos modais -->
+        <link rel="stylesheet" href="assets/css/fix-modal-zindex.css">
+        
+        <!-- Script específico para corrigir ícones de edição sobre modais -->
+        <script src="assets/js/fix-modal-icons.js"></script>
+        
         <!-- FOOTER -->
         <div class="popup-modal-footer">
             <div class="popup-footer-info">

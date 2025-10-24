@@ -1,0 +1,154 @@
+/* =====================================================
+   CORREÇÃO ESPECÍFICA PARA Z-INDEX DOS MODAIS
+   Arquivo específico para corrigir problemas de z-index
+   quando modais são abertos na página de detalhes da turma
+   ===================================================== */
+
+/* CORREÇÃO RADICAL: Esconder completamente os ícones de edição quando QUALQUER modal estiver aberto */
+body.modal-open i.fas.fa-edit:not([id*="modal"]):not([class*="modal"]),
+body.modal-open .edit-icon:not([id*="modal"]):not([class*="modal"]),
+body.modal-open .fa-edit:not([id*="modal"]):not([class*="modal"]),
+body.modal-open i.fas.fa-pencil:not([id*="modal"]):not([class*="modal"]),
+body.modal-open i.fas.fa-pencil-alt:not([id*="modal"]):not([class*="modal"]),
+body.modal-open .fa-pencil:not([id*="modal"]):not([class*="modal"]),
+body.modal-open .fa-pencil-alt:not([id*="modal"]):not([class*="modal"]) {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    z-index: -1 !important;
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para TODOS os elementos da página quando modal estiver aberto */
+body.modal-open *:not([id*="modal"]):not([class*="modal"]):not([class*="popup"]) {
+    z-index: 1 !important;
+    position: relative !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Garantir que modais tenham z-index máximo */
+body.modal-open [id*="modal"],
+body.modal-open [class*="modal"],
+body.modal-open [class*="popup"] {
+    z-index: 99999 !important;
+    position: fixed !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Garantir que backdrops tenham z-index alto */
+body.modal-open [class*="backdrop"],
+body.modal-open [class*="overlay"] {
+    z-index: 99998 !important;
+    position: fixed !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos específicos da página */
+body.modal-open .container,
+body.modal-open .row,
+body.modal-open .col,
+body.modal-open .card,
+body.modal-open .card-body,
+body.modal-open .card-header,
+body.modal-open .card-footer,
+body.modal-open .table,
+body.modal-open .table-responsive,
+body.modal-open .btn:not([id*="modal"]):not([class*="modal"]),
+body.modal-open .form-control,
+body.modal-open .form-select,
+body.modal-open .form-group,
+body.modal-open .form-label,
+body.modal-open .alert,
+body.modal-open .badge,
+body.modal-open .dropdown,
+body.modal-open .dropdown-menu,
+body.modal-open .dropdown-item,
+body.modal-open .nav,
+body.modal-open .nav-item,
+body.modal-open .nav-link,
+body.modal-open .navbar,
+body.modal-open .navbar-brand,
+body.modal-open .navbar-nav,
+body.modal-open .navbar-toggler,
+body.modal-open .sidebar,
+body.modal-open .main-content,
+body.modal-open .content-wrapper {
+    z-index: 1 !important;
+    position: relative !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos editáveis */
+body.modal-open .editable-field,
+body.modal-open [data-field],
+body.modal-open [class*="edit"],
+body.modal-open [class*="action"],
+body.modal-open [class*="icon"]:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+    position: relative !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para ícones específicos */
+body.modal-open i.fas:not([id*="modal"]):not([class*="modal"]),
+body.modal-open i.far:not([id*="modal"]):not([class*="modal"]),
+body.modal-open i.fab:not([id*="modal"]):not([class*="modal"]),
+body.modal-open i.fal:not([id*="modal"]):not([class*="modal"]),
+body.modal-open i.fad:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+    position: relative !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para pseudo-elementos */
+body.modal-open *::before:not([id*="modal"]):not([class*="modal"]),
+body.modal-open *::after:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+    position: relative !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos com posicionamento absoluto */
+body.modal-open [style*="position: absolute"]:not([id*="modal"]):not([class*="modal"]),
+body.modal-open [style*="position: fixed"]:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos com z-index alto */
+body.modal-open [style*="z-index"]:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos com z-index alto via CSS */
+body.modal-open [class*="z-"]:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos com z-index alto via atributo */
+body.modal-open [data-z-index]:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos com z-index alto via atributo style */
+body.modal-open [style*="z-index:"]:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos com z-index alto via atributo style com valor específico */
+body.modal-open [style*="z-index: 999"]:not([id*="modal"]):not([class*="modal"]),
+body.modal-open [style*="z-index: 1000"]:not([id*="modal"]):not([class*="modal"]),
+body.modal-open [style*="z-index: 10000"]:not([id*="modal"]):not([class*="modal"]),
+body.modal-open [style*="z-index: 99999"]:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos com z-index alto via atributo style com valor específico */
+body.modal-open [style*="z-index: 999"]:not([id*="modal"]):not([class*="modal"]),
+body.modal-open [style*="z-index: 1000"]:not([id*="modal"]):not([class*="modal"]),
+body.modal-open [style*="z-index: 10000"]:not([id*="modal"]):not([class*="modal"]),
+body.modal-open [style*="z-index: 99999"]:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+}
+
+/* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para elementos com z-index alto via atributo style com valor específico */
+body.modal-open [style*="z-index: 999"]:not([id*="modal"]):not([class*="modal"]),
+body.modal-open [style*="z-index: 1000"]:not([id*="modal"]):not([class*="modal"]),
+body.modal-open [style*="z-index: 10000"]:not([id*="modal"]):not([class*="modal"]),
+body.modal-open [style*="z-index: 99999"]:not([id*="modal"]):not([class*="modal"]) {
+    z-index: 1 !important;
+}
