@@ -4767,7 +4767,19 @@ function carregarDisciplinasDoBanco() {
                 body.modal-open .fa-pencil,
                 body.modal-open .fa-pencil-alt,
                 body.modal-open .btn-edit,
-                body.modal-open .edit-icon {
+                body.modal-open .edit-icon,
+                body.modal-open .popup-item-card-menu,
+                body.modal-open .popup-item-card-actions,
+                body.modal-open .action-icon-btn,
+                body.modal-open .action-buttons-compact,
+                body.modal-open .btn-action,
+                body.modal-open .btn-sm,
+                body.modal-open .btn-outline-secondary,
+                body.modal-open .btn-outline-primary,
+                body.modal-open .btn-outline-warning,
+                body.modal-open .btn-outline-danger,
+                body.modal-open .btn-outline-success,
+                body.modal-open .btn-outline-info {
                     z-index: 1 !important;
                     position: relative !important;
                 }
@@ -4781,6 +4793,46 @@ function carregarDisciplinasDoBanco() {
                 #modalGerenciarDisciplinas .modal-backdrop,
                 #modalGerenciarDisciplinas::before {
                     z-index: 99998 !important;
+                }
+                
+                /* CORREÇÃO ESPECÍFICA: Forçar z-index baixo para TODOS os elementos da página quando modal estiver aberto */
+                body.modal-open *:not(#modalGerenciarDisciplinas):not(#modalGerenciarDisciplinas *) {
+                    z-index: 1 !important;
+                    position: relative !important;
+                }
+                
+                /* Garantir que elementos específicos da página fiquem atrás do modal */
+                body.modal-open .container,
+                body.modal-open .row,
+                body.modal-open .col,
+                body.modal-open .card,
+                body.modal-open .card-body,
+                body.modal-open .card-header,
+                body.modal-open .card-footer,
+                body.modal-open .table,
+                body.modal-open .table-responsive,
+                body.modal-open .btn,
+                body.modal-open .form-control,
+                body.modal-open .form-select,
+                body.modal-open .form-group,
+                body.modal-open .form-label,
+                body.modal-open .alert,
+                body.modal-open .badge,
+                body.modal-open .dropdown,
+                body.modal-open .dropdown-menu,
+                body.modal-open .dropdown-item,
+                body.modal-open .nav,
+                body.modal-open .nav-item,
+                body.modal-open .nav-link,
+                body.modal-open .navbar,
+                body.modal-open .navbar-brand,
+                body.modal-open .navbar-nav,
+                body.modal-open .navbar-toggler,
+                body.modal-open .sidebar,
+                body.modal-open .main-content,
+                body.modal-open .content-wrapper {
+                    z-index: 1 !important;
+                    position: relative !important;
                 }
                 </style>
             </form>
