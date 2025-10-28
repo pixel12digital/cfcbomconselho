@@ -424,7 +424,7 @@ class TurmaTeoricaManager {
                     'sucesso' => false,
                     'mensagem' => $conflitos['mensagem'],
                     'tipo_erro' => 'conflito_horario',
-                    'detalhes' => $conflitos['detalhes']
+                    'detalhes' => $conflitos['detalhes'] ?? null
                 ];
             }
             
@@ -1244,20 +1244,51 @@ class TurmaTeoricaManager {
      */
     private function verificarCargaHorariaDisciplina($turmaId, $disciplina, $qtdAulasNovas) {
         try {
-            // Obter carga horária máxima da disciplina para esta turma
-            $cargaMaxima = $this->db->fetch("
-                SELECT dc.aulas_obrigatorias, tt.curso_tipo
-                FROM disciplinas_configuracao dc
-                INNER JOIN turmas_teoricas tt ON tt.id = ?
-                WHERE dc.curso_tipo = tt.curso_tipo 
-                AND dc.disciplina = ?
-                AND dc.ativa = 1
-            ", [$turmaId, $disciplina]);
+            // Primeiro, buscar o curso_tipo da turma
+            $turma = $this->db->fetch("SELECT curso_tipo FROM turmas_teoricas WHERE id = ?", [$turmaId]);
             
-            if (!$cargaMaxima) {
+            if (!$turma) {
                 return [
                     'disponivel' => false,
-                    'mensagem' => "❌ CARGA HORÁRIA INVÁLIDA: Disciplina '{$disciplina}' não encontrada na configuração do curso.",
+                    'mensagem' => "❌ TURMA NÃO ENCONTRADA: A turma com ID {$turmaId} não foi encontrada no sistema.",
+                    'tipo_erro' => 'turma_nao_encontrada'
+                ];
+            }
+            
+            $cursoTipo = $turma['curso_tipo'];
+            
+            error_log("DEBUG verificarCargaHoraria: turma_id={$turmaId}, curso_tipo={$cursoTipo}, disciplina={$disciplina}");
+            
+            // Agora buscar a carga horária máxima da disciplina para este curso
+            $cargaMaxima = $this->db->fetch("
+                SELECT dc.aulas_obrigatorias
+                FROM disciplinas_configuracao dc
+                WHERE dc.curso_tipo = ?
+                    AND dc.disciplina = ?
+                    AND dc.ativa = 1
+            ", [$cursoTipo, $disciplina]);
+            
+            error_log("DEBUG verificarCargaHoraria: resultado=" . json_encode($cargaMaxima));
+            
+            if (!$cargaMaxima) {
+                // Tentar buscar informações adicionais para debug
+                $configExiste = $this->db->fetch("
+                    SELECT COUNT(*) as total FROM disciplinas_configuracao 
+                    WHERE curso_tipo = ?
+                ", [$cursoTipo]);
+                
+                error_log("DEBUG: Total de disciplinas configuradas para curso '{$cursoTipo}': " . ($configExiste['total'] ?? 0));
+                
+                $disciplinasExistentes = $this->db->fetchAll("
+                    SELECT disciplina, nome_disciplina FROM disciplinas_configuracao 
+                    WHERE curso_tipo = ? AND ativa = 1
+                ", [$cursoTipo]);
+                
+                error_log("DEBUG: Disciplinas existentes para curso '{$cursoTipo}': " . json_encode($disciplinasExistentes));
+                
+                return [
+                    'disponivel' => false,
+                    'mensagem' => "❌ CARGA HORÁRIA INVÁLIDA: Disciplina '{$disciplina}' não encontrada na configuração do curso '{$cursoTipo}'. Verifique se a disciplina está cadastrada para este tipo de curso.",
                     'tipo_erro' => 'disciplina_nao_encontrada'
                 ];
             }

@@ -4662,16 +4662,15 @@ function salvarEdicaoAgendamento() {
         if (restaurarBtn) restaurarBtn(); // Restaurar botão
         try {
             const data = JSON.parse(text);
-            if (data.success) {
-                showFeedback('Agendamento editado com sucesso!', 'success');
+            if (data.sucesso || data.success) {
+                showFeedback(data.mensagem || 'Agendamento editado com sucesso!', 'success');
                 // Fechar modal
                 fecharModalEdicao();
-                // Recarregar página após 1 segundo
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1000);
+                // Não recarregar página - os dados já foram salvos
+                // Apenas atualizar a lista de aulas se houver uma função específica para isso
+                // Se necessário, adicionar atualização dinâmica aqui
             } else {
-                showFeedback('Erro ao editar agendamento: ' + data.message, 'error');
+                showFeedback('Erro ao editar agendamento: ' + (data.mensagem || data.message || data.error || 'Erro desconhecido'), 'error');
             }
         } catch (e) {
             console.error('❌ [AGENDAMENTO] Resposta não é JSON válido:', text);
@@ -4681,7 +4680,7 @@ function salvarEdicaoAgendamento() {
     .catch(error => {
         if (restaurarBtn) restaurarBtn(); // Restaurar botão em caso de erro
         console.error('❌ [AGENDAMENTO] Erro:', error);
-        showFeedback('Erro ao editar agendamento: ' + error.message, 'error');
+        showFeedback('Erro ao editar agendamento: ' + (error?.message || 'Erro desconhecido'), 'error');
     });
 }
 

@@ -6620,9 +6620,16 @@ function carregarDisciplinasExistentes(disciplinasExistentes) {
     // Verificar se estamos na página correta (não na página de detalhes)
     const urlParams = new URLSearchParams(window.location.search);
     const acao = urlParams.get('acao');
+    const step = urlParams.get('step');
     
     if (acao === 'detalhes') {
         console.log('⚠️ [EDITAR] Função carregarDisciplinasExistentes chamada na página de detalhes - ignorando');
+        return;
+    }
+
+    // Não executar na página de agendamento (step=2)
+    if (step === '2' || acao === 'agendar') {
+        console.log('⚠️ [EDITAR] Página de agendamento detectada (step=2). Ignorando carregarDisciplinasExistentes.');
         return;
     }
     
