@@ -590,6 +590,8 @@ function handleCancelarAula($turmaManager, $dados) {
 }
 
 function handleEditarAula($turmaManager, $dados) {
+    error_log("🔧 [DEBUG] handleEditarAula chamada com dados: " . print_r($dados, true));
+    
     $aulaId = $dados['aula_id'] ?? null;
     
     if (!$aulaId) {
@@ -602,19 +604,121 @@ function handleEditarAula($turmaManager, $dados) {
     }
     
     $db = Database::getInstance();
-    $db->update('turma_aulas_agendadas', [
-        'nome_aula' => $dados['nome_aula'] ?? '',
-        'data_aula' => $dados['data_aula'] ?? '',
-        'hora_inicio' => $dados['hora_inicio'] ?? '',
-        'hora_fim' => $dados['hora_fim'] ?? '',
-        'instrutor_id' => $dados['instrutor_id'] ?? null,
-        'observacoes' => $dados['observacoes'] ?? ''
-    ], 'id = ?', [$aulaId]);
+    
+    // Buscar a aula atual
+    $aulaExistente = $db->fetch("SELECT * FROM turma_aulas_agendadas WHERE id = ?", [$aulaId]);
+    error_log("🔧 [DEBUG] Aula existente: " . print_r($aulaExistente, true));
+    
+    if (!$aulaExistente) {
+        http_response_code(404);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Aula não encontrada'
+        ], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+    
+    // Verificar se pode ser editada (apenas aulas agendadas)
+    if ($aulaExistente['status'] !== 'agendada') {
+        http_response_code(400);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Apenas aulas agendadas podem ser editadas'
+        ], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+    
+    // Dados a atualizar
+    $novaDataAula = $dados['data_aula'] ?? $aulaExistente['data_aula'];
+    $novaHoraInicio = $dados['hora_inicio'] ?? $aulaExistente['hora_inicio'];
+    $novaHoraFim = $dados['hora_fim'] ?? $aulaExistente['hora_fim'];
+
+    // Se a hora fim não vier do formulário, calcular automaticamente (50 minutos após o início)
+    if (empty($novaHoraFim) && !empty($novaHoraInicio)) {
+        $tsInicio = strtotime($novaHoraInicio);
+        if ($tsInicio !== false) {
+            $novaHoraFim = date('H:i', $tsInicio + (50 * 60));
+        }
+    }
+    $novoInstrutorId = $dados['instrutor_id'] ?? $aulaExistente['instrutor_id'];
+    
+    // Verificar conflitos de horário se houver mudança
+    if ($novaDataAula != $aulaExistente['data_aula'] || 
+        $novaHoraInicio != $aulaExistente['hora_inicio'] || 
+        $novoInstrutorId != $aulaExistente['instrutor_id']) {
+        
+        // Verificar conflito de instrutor
+        $conflitoInstrutor = $db->fetch("
+            SELECT id FROM turma_aulas_agendadas 
+            WHERE instrutor_id = ? 
+            AND data_aula = ? 
+            AND id != ?
+            AND status != 'cancelada'
+            AND (
+                (hora_inicio <= ? AND hora_fim > ?) OR
+                (hora_inicio < ? AND hora_fim >= ?) OR
+                (hora_inicio >= ? AND hora_fim <= ?)
+            )
+        ", [$novoInstrutorId, $novaDataAula, $aulaId, $novaHoraInicio, $novaHoraInicio, $novaHoraFim, $novaHoraFim, $novaHoraInicio, $novaHoraFim]);
+        
+        if ($conflitoInstrutor) {
+            http_response_code(400);
+            echo json_encode([
+                'sucesso' => false,
+                'mensagem' => '❌ CONFLITO DE HORÁRIO: O instrutor selecionado já possui aula agendada no horário informado.'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        // Verificar conflito de sala
+        $turma = $db->fetch("SELECT sala_id FROM turmas_teoricas WHERE id = ?", [$aulaExistente['turma_id']]);
+        if ($turma && $turma['sala_id']) {
+            $conflitoSala = $db->fetch("
+                SELECT taa.id FROM turma_aulas_agendadas taa
+                INNER JOIN turmas_teoricas tt ON tt.id = taa.turma_id
+                WHERE tt.sala_id = ? 
+                AND taa.data_aula = ? 
+                AND taa.id != ?
+                AND taa.status != 'cancelada'
+                AND (
+                    (taa.hora_inicio <= ? AND taa.hora_fim > ?) OR
+                    (taa.hora_inicio < ? AND taa.hora_fim >= ?) OR
+                    (taa.hora_inicio >= ? AND taa.hora_fim <= ?)
+                )
+            ", [$turma['sala_id'], $novaDataAula, $aulaId, $novaHoraInicio, $novaHoraInicio, $novaHoraFim, $novaHoraFim, $novaHoraInicio, $novaHoraFim]);
+            
+            if ($conflitoSala) {
+                http_response_code(400);
+                echo json_encode([
+                    'sucesso' => false,
+                    'mensagem' => '❌ CONFLITO DE HORÁRIO: A sala já está ocupada no horário informado.'
+                ], JSON_UNESCAPED_UNICODE);
+                return;
+            }
+        }
+    }
+    
+    // Preparar dados para update
+    $dadosUpdate = [
+        'nome_aula' => $dados['nome_aula'] ?? $aulaExistente['nome_aula'],
+        'data_aula' => $novaDataAula,
+        'hora_inicio' => $novaHoraInicio,
+        'hora_fim' => $novaHoraFim,
+        'instrutor_id' => $novoInstrutorId,
+        'observacoes' => $dados['observacoes'] ?? $aulaExistente['observacoes']
+    ];
+    
+    error_log("🔧 [DEBUG] Dados para update: " . print_r($dadosUpdate, true));
+    
+    // Atualizar a aula
+    $result = $db->update('turma_aulas_agendadas', $dadosUpdate, 'id = ?', [$aulaId]);
+    
+    error_log("🔧 [DEBUG] Resultado do update: " . ($result ? 'sucesso' : 'falha'));
     
     http_response_code(200);
     echo json_encode([
         'sucesso' => true,
-        'mensagem' => 'Aula editada com sucesso'
+        'mensagem' => '✅ Aula editada com sucesso!'
     ], JSON_UNESCAPED_UNICODE);
 }
 

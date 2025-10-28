@@ -4464,10 +4464,24 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                 document.getElementById('editAgendamentoId').value = agendamento.id;
                 document.getElementById('editNomeAula').value = agendamento.nome_aula;
                 document.getElementById('editDataAula').value = agendamento.data_aula;
-                document.getElementById('editHoraInicio').value = agendamento.hora_inicio;
-                document.getElementById('editHoraFim').value = agendamento.hora_fim;
-                document.getElementById('editDuracao').value = agendamento.duracao_minutos;
+                document.getElementById('editDuracao').value = agendamento.duracao_minutos || 50;
+                document.getElementById('editDuracaoDisplay').textContent = (agendamento.duracao_minutos || 50) + ' min';
                 document.getElementById('editObservacoes').value = agendamento.observacoes || '';
+                
+                // Carregar horários disponíveis no select incluindo o horário do agendamento
+                carregarHorariosDisponiveis(agendamento.hora_inicio).then((horarioAjustado) => {
+                    const selectHoraInicio = document.getElementById('editHoraInicio');
+                    if (selectHoraInicio) {
+                        // Usar o horário ajustado se disponível, senão normalizar o original
+                        const horaInicio = horarioAjustado || (agendamento.hora_inicio.length === 8 ? agendamento.hora_inicio.substring(0, 5) : agendamento.hora_inicio);
+                        if (horaInicio) {
+                            selectHoraInicio.value = horaInicio;
+                            // Calcular hora de fim automaticamente
+                            calcularHoraFimAuto();
+                            anexarAutoCalculoHoraFim();
+                        }
+                    }
+                });
                 
                 console.log('✅ [DEBUG] Dados do agendamento carregados:', agendamento);
                 
@@ -4492,10 +4506,23 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                 document.getElementById('editAgendamentoId').value = agendamento.id;
                 document.getElementById('editNomeAula').value = agendamento.nome_aula;
                 document.getElementById('editDataAula').value = agendamento.data_aula;
-                document.getElementById('editHoraInicio').value = agendamento.hora_inicio;
-                document.getElementById('editHoraFim').value = agendamento.hora_fim;
                 document.getElementById('editDuracao').value = agendamento.duracao_minutos;
+                document.getElementById('editDuracaoDisplay').textContent = agendamento.duracao_minutos + ' min';
                 document.getElementById('editObservacoes').value = agendamento.observacoes || '';
+                
+                // Carregar horários disponíveis incluindo o horário do agendamento
+                carregarHorariosDisponiveis(agendamento.hora_inicio).then((horarioAjustado) => {
+                    const selectHoraInicio = document.getElementById('editHoraInicio');
+                    if (selectHoraInicio) {
+                        // Usar o horário ajustado se disponível, senão normalizar o original
+                        const horaInicio = horarioAjustado || (agendamento.hora_inicio.length === 8 ? agendamento.hora_inicio.substring(0, 5) : agendamento.hora_inicio);
+                        if (horaInicio) {
+                            selectHoraInicio.value = horaInicio;
+                            calcularHoraFimAuto();
+                            anexarAutoCalculoHoraFim();
+                        }
+                    }
+                });
                 
                 console.log('✅ [DEBUG] Dados de fallback carregados:', agendamento);
                 
@@ -4506,10 +4533,23 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                 document.getElementById('editAgendamentoId').value = id;
                 document.getElementById('editNomeAula').value = nomeAula;
                 document.getElementById('editDataAula').value = dataAula;
-                document.getElementById('editHoraInicio').value = horaInicio;
-                document.getElementById('editHoraFim').value = horaFim;
                 document.getElementById('editDuracao').value = duracao;
+                document.getElementById('editDuracaoDisplay').textContent = duracao + ' min';
                 document.getElementById('editObservacoes').value = observacoes || '';
+                
+                // Carregar horários disponíveis incluindo o horário passado
+                carregarHorariosDisponiveis(horaInicio).then((horarioAjustado) => {
+                    const selectHoraInicio = document.getElementById('editHoraInicio');
+                    if (selectHoraInicio) {
+                        // Usar o horário ajustado se disponível, senão normalizar o original
+                        const horaInicioParaUsar = horarioAjustado || (horaInicio.length === 8 ? horaInicio.substring(0, 5) : horaInicio);
+                        if (horaInicioParaUsar) {
+                            selectHoraInicio.value = horaInicioParaUsar;
+                            calcularHoraFimAuto();
+                            anexarAutoCalculoHoraFim();
+                        }
+                    }
+                });
                 
                 console.log('⚠️ [DEBUG] Usando dados passados como parâmetro');
                 carregarDadosSelects(instrutorId, salaId);
@@ -4521,10 +4561,19 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
             document.getElementById('editAgendamentoId').value = id;
             document.getElementById('editNomeAula').value = nomeAula;
             document.getElementById('editDataAula').value = dataAula;
-            document.getElementById('editHoraInicio').value = horaInicio;
-            document.getElementById('editHoraFim').value = horaFim;
             document.getElementById('editDuracao').value = duracao;
+            document.getElementById('editDuracaoDisplay').textContent = duracao + ' min';
             document.getElementById('editObservacoes').value = observacoes || '';
+            
+            // Carregar horários disponíveis incluindo o horário passado
+            carregarHorariosDisponiveis(horaInicio).then(() => {
+                const selectHoraInicio = document.getElementById('editHoraInicio');
+                if (selectHoraInicio && horaInicio) {
+                    selectHoraInicio.value = horaInicio;
+                    calcularHoraFimAuto();
+                    anexarAutoCalculoHoraFim();
+                }
+            });
             
             console.log('⚠️ [DEBUG] Usando dados passados como parâmetro (catch)');
             carregarDadosSelects(instrutorId, salaId);
@@ -4597,8 +4646,13 @@ function salvarEdicaoAgendamento() {
     const form = document.getElementById('formEditarAgendamento');
     const formData = new FormData(form);
     
-    // Validar campos obrigatórios
-    const camposObrigatorios = ['nome_aula', 'data_aula', 'hora_inicio', 'hora_fim', 'instrutor_id'];
+    // Garantir cálculo automático da hora fim antes de coletar dados
+    if (typeof calcularHoraFimAuto === 'function') {
+        calcularHoraFimAuto();
+    }
+
+    // Validar campos obrigatórios (hora_fim é calculada automaticamente)
+    const camposObrigatorios = ['nome_aula', 'data_aula', 'hora_inicio', 'instrutor_id'];
     for (let campo of camposObrigatorios) {
         if (!formData.get(campo)) {
             showFeedback(`Campo obrigatório: ${campo.replace('_', ' ')}`, 'error');
@@ -4620,7 +4674,7 @@ function salvarEdicaoAgendamento() {
     const horaInicio = formData.get('hora_inicio');
     const horaFim = formData.get('hora_fim');
     
-    if (horaFim <= horaInicio) {
+    if (horaInicio && horaFim && horaFim <= horaInicio) {
         showFeedback('A hora de fim deve ser posterior à hora de início', 'error');
         return;
     }
@@ -4666,9 +4720,10 @@ function salvarEdicaoAgendamento() {
                 showFeedback(data.mensagem || 'Agendamento editado com sucesso!', 'success');
                 // Fechar modal
                 fecharModalEdicao();
-                // Não recarregar página - os dados já foram salvos
-                // Apenas atualizar a lista de aulas se houver uma função específica para isso
-                // Se necessário, adicionar atualização dinâmica aqui
+                // Recarregar a página para mostrar os dados atualizados do banco
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1500);
             } else {
                 showFeedback('Erro ao editar agendamento: ' + (data.mensagem || data.message || data.error || 'Erro desconhecido'), 'error');
             }
@@ -4730,19 +4785,30 @@ function criarModalEdicao() {
                             <label for="editHoraInicio" class="form-label fw-semibold">
                                 Hora Início <span class="text-danger">*</span>
                             </label>
-                            <input type="time" class="form-control" id="editHoraInicio" name="hora_inicio" required>
+                            <select class="form-select" id="editHoraInicio" name="hora_inicio" required>
+                                <option value="">Selecione o horário...</option>
+                            </select>
                         </div>
                         <div class="col-md-4">
                             <label for="editHoraFim" class="form-label fw-semibold">
-                                Hora Fim <span class="text-danger">*</span>
+                                Hora Fim
                             </label>
-                            <input type="time" class="form-control" id="editHoraFim" name="hora_fim" required>
+                            <div class="form-control-plaintext bg-light border rounded p-2">
+                                <i class="fas fa-clock me-2 text-primary"></i>
+                                <strong id="editHoraFimDisplay">--:--</strong>
+                                <small class="text-muted ms-2">(calculada automaticamente)</small>
+                            </div>
+                            <input type="hidden" id="editHoraFim" name="hora_fim">
                         </div>
                         <div class="col-md-4">
-                            <label for="editDuracao" class="form-label fw-semibold">
-                                Duração (min) <span class="text-danger">*</span>
+                            <label for="editDuracaoDisplay" class="form-label fw-semibold">
+                                Duração (min)
                             </label>
-                            <input type="number" class="form-control" id="editDuracao" name="duracao" min="30" max="120" required>
+                            <div class="form-control-plaintext bg-light border rounded p-2">
+                                <i class="fas fa-hourglass-half me-2 text-primary"></i>
+                                <strong id="editDuracaoDisplay">50 min</strong>
+                            </div>
+                            <input type="hidden" id="editDuracao" name="duracao" value="50">
                         </div>
                     </div>
                     
@@ -4886,48 +4952,165 @@ function carregarDadosSelects(instrutorId = null, salaId = null) {
         });
 }
 
-// Validação automática de horários
-function validarHorarios() {
-    const horaInicio = document.getElementById('editHoraInicio');
-    const horaFim = document.getElementById('editHoraFim');
-    const duracao = document.getElementById('editDuracao');
-    
-    if (horaInicio && horaFim && duracao) {
-        // Calcular duração baseada nos horários
-        horaInicio.addEventListener('change', calcularDuracao);
-        horaFim.addEventListener('change', calcularDuracao);
-        duracao.addEventListener('change', calcularHoraFim);
-    }
+// Carregar horários disponíveis
+function carregarHorariosDisponiveis(horarioCustomizado = null) {
+    return new Promise((resolve, reject) => {
+        const horarios = [
+            '07:00', '07:50', '08:40', '09:30', '10:20', '11:10',
+            '13:00', '13:50', '14:40', '15:30', '16:20', '17:10', '18:00',
+            '18:50', '19:40', '20:30', '21:10'
+        ];
+        
+        // Normalizar horário customizado para formato HH:MM (remover segundos se houver)
+        let horarioCustomizadoNormalizado = null;
+        if (horarioCustomizado) {
+            // Se o horário tem segundos (HH:MM:SS), converter para HH:MM
+            if (horarioCustomizado.length === 8 && horarioCustomizado.includes(':')) {
+                horarioCustomizadoNormalizado = horarioCustomizado.substring(0, 5);
+            } else {
+                horarioCustomizadoNormalizado = horarioCustomizado;
+            }
+        }
+        
+        // Função para verificar se um horário respeita o intervalo de 50 minutos
+        function respeitaIntervalo50Minutos(horario) {
+            const [hora, minuto] = horario.split(':').map(Number);
+            // Os horários devem ter minutos em 0 ou 50, OU serem específicos que não quebrem o padrão
+            // Vamos definir os horários válidos que respeitam 50min de intervalo
+            const horariosValidos = [
+                '07:00', '07:50', '08:40', '09:30', '10:20', '11:10',
+                '13:00', '13:50', '14:40', '15:30', '16:20', '17:10', '18:00',
+                '18:50', '19:40', '20:30', '21:10'
+            ];
+            return horariosValidos.includes(horario);
+        }
+        
+        // Se houver um horário customizado, verificar se respeita o padrão antes de adicionar
+        if (horarioCustomizadoNormalizado && !horarios.includes(horarioCustomizadoNormalizado)) {
+            // Só adicionar se respeitar o intervalo de 50 minutos
+            if (respeitaIntervalo50Minutos(horarioCustomizadoNormalizado)) {
+                horarios.push(horarioCustomizadoNormalizado);
+                horarios.sort(); // Ordenar para manter ordem crescente
+            } else {
+                console.warn('⚠️ Horário customizado não respeita padrão de 50min:', horarioCustomizadoNormalizado);
+                // Encontrar o horário válido mais próximo
+                const [horaIni, minutoIni] = horarioCustomizadoNormalizado.split(':').map(Number);
+                const minutosIni = horaIni * 60 + minutoIni;
+                
+                let menorDiferenca = Infinity;
+                let horarioMaisProximo = null;
+                
+                horarios.forEach(h => {
+                    const [hH, mM] = h.split(':').map(Number);
+                    const minutos = hH * 60 + mM;
+                    const diferenca = Math.abs(minutos - minutosIni);
+                    
+                    if (diferenca < menorDiferenca) {
+                        menorDiferenca = diferenca;
+                        horarioMaisProximo = h;
+                    }
+                });
+                
+                if (horarioMaisProximo) {
+                    console.log('✅ Ajustando horário de', horarioCustomizadoNormalizado, 'para', horarioMaisProximo);
+                    horarioCustomizadoNormalizado = horarioMaisProximo;
+                }
+            }
+        }
+        
+        const selectHoraInicio = document.getElementById('editHoraInicio');
+        if (selectHoraInicio) {
+            // Limpar opções existentes
+            selectHoraInicio.innerHTML = '<option value="">Selecione o horário...</option>';
+            
+            // Adicionar horários
+            horarios.forEach(horario => {
+                const option = document.createElement('option');
+                option.value = horario;
+                option.textContent = horario;
+                selectHoraInicio.appendChild(option);
+            });
+            
+            // Adicionar listener para calcular hora de fim automaticamente
+            selectHoraInicio.addEventListener('change', calcularHoraFimAuto);
+            
+            // Retornar o horário customizado ajustado (se houver)
+            resolve(horarioCustomizadoNormalizado || null);
+        } else {
+            reject('Select hora_inicio não encontrado');
+        }
+    });
 }
 
-function calcularDuracao() {
-    const horaInicio = document.getElementById('editHoraInicio').value;
-    const horaFim = document.getElementById('editHoraFim').value;
-    const duracao = document.getElementById('editDuracao');
+// Calcular hora de fim automaticamente (hora início + duração)
+function calcularHoraFimAuto() {
+    const selectHoraInicio = document.getElementById('editHoraInicio');
+    const inputHoraFim = document.getElementById('editHoraFim');
+    const displayHoraFim = document.getElementById('editHoraFimDisplay');
+    const editDuracao = document.getElementById('editDuracao');
     
-    if (horaInicio && horaFim) {
-        const inicio = new Date('2000-01-01 ' + horaInicio);
-        const fim = new Date('2000-01-01 ' + horaFim);
+    if (selectHoraInicio && inputHoraFim && displayHoraFim) {
+        const horaInicio = selectHoraInicio.value;
         
-        if (fim > inicio) {
-            const diffMs = fim - inicio;
-            const diffMin = Math.round(diffMs / (1000 * 60));
-            duracao.value = diffMin;
+        if (horaInicio) {
+            // Obter duração do campo ou usar 50 como padrão
+            const duracaoMinutos = editDuracao && editDuracao.value ? parseInt(editDuracao.value) : 50;
+            
+            // Calcular hora de fim (hora início + duração)
+            const [horas, minutos] = horaInicio.split(':');
+            const dataInicio = new Date();
+            dataInicio.setHours(parseInt(horas), parseInt(minutos), 0, 0);
+            
+            const dataFim = new Date(dataInicio.getTime() + duracaoMinutos * 60000);
+            const horaFim = dataFim.toTimeString().slice(0, 5); // Formato HH:MM
+            
+            // Atualizar input hidden e display
+            inputHoraFim.value = horaFim;
+            displayHoraFim.textContent = horaFim;
+            
+            console.log('✅ [HORÁRIO] Hora fim calculada:', horaFim, '- Duração:', duracaoMinutos, 'minutos');
+        } else {
+            inputHoraFim.value = '';
+            displayHoraFim.textContent = '--:--';
         }
     }
 }
 
-function calcularHoraFim() {
-    const horaInicio = document.getElementById('editHoraInicio').value;
-    const duracao = parseInt(document.getElementById('editDuracao').value);
-    const horaFim = document.getElementById('editHoraFim');
+// Anexar listeners para calcular a hora de fim automaticamente
+function anexarAutoCalculoHoraFim() {
+    const campoInicio = document.getElementById('editHoraInicio');
+    if (!campoInicio) return;
     
-    if (horaInicio && duracao) {
-        const inicio = new Date('2000-01-01 ' + horaInicio);
-        const fim = new Date(inicio.getTime() + (duracao * 60000));
-        horaFim.value = fim.toTimeString().substr(0, 5);
+    const handler = () => {
+        console.log('🔄 [HORÁRIO] Evento disparado, calculando hora fim...');
+        calcularHoraFimAuto();
+    };
+    
+    // Remover listeners antigos
+    campoInicio.removeEventListener('change', handler);
+    campoInicio.removeEventListener('blur', handler);
+    campoInicio.removeEventListener('input', handler);
+    
+    // Adicionar novos listeners
+    campoInicio.addEventListener('change', handler);
+    campoInicio.addEventListener('blur', handler);
+    campoInicio.addEventListener('input', handler);
+    
+    console.log('✅ [HORÁRIO] Listeners anexados para cálculo automático');
+}
+
+// Validação automática de horários
+function validarHorarios() {
+    const horaInicio = document.getElementById('editHoraInicio');
+    const inputHoraFim = document.getElementById('editHoraFim');
+    
+    if (horaInicio && inputHoraFim) {
+        // Calcular hora de fim automaticamente quando hora início mudar
+        horaInicio.addEventListener('change', calcularHoraFimAuto);
     }
 }
+
+// Funções antigas removidas - usando calcularHoraFimAuto() agora
 
 // Melhorar feedback visual
 function mostrarLoading(button) {
