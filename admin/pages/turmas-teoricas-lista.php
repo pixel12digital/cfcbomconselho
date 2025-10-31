@@ -184,12 +184,12 @@ $stats = [
                 <!-- Ações -->
                 <div style="margin-top: 20px; text-align: right;">
                     <?php if ($turma['status'] === 'criando'): ?>
-                        <a href="?page=turmas-teoricas&acao=agendar&step=2&turma_id=<?= $turma['id'] ?>" 
+                        <a href="?page=turmas-teoricas&acao=detalhes&turma_id=<?= $turma['id'] ?>" 
                            class="btn-warning" style="padding: 8px 16px; font-size: 0.9rem;">
                             📅 Continuar Agendamento
                         </a>
                     <?php elseif ($turma['status'] === 'agendando'): ?>
-                        <a href="?page=turmas-teoricas&acao=agendar&step=2&turma_id=<?= $turma['id'] ?>" 
+                        <a href="?page=turmas-teoricas&acao=detalhes&turma_id=<?= $turma['id'] ?>" 
                            class="btn-warning" style="padding: 8px 16px; font-size: 0.9rem; margin-right: 10px;">
                             📅 Continuar Agendamento
                         </a>

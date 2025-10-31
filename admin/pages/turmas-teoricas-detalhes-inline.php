@@ -343,6 +343,24 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 
 <style>
 /* ==========================================
+   ESTILOS PARA CARDS DE ESTATÍSTICAS
+   ========================================== */
+.disciplina-stats-card {
+    position: relative;
+    cursor: pointer !important;
+}
+
+.disciplina-stats-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15) !important;
+}
+
+.disciplina-stats-card:active {
+    transform: translateY(-2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+}
+
+/* ==========================================
    ESTILOS PARA EDIÇÃO INLINE
    ========================================== */
 .inline-edit {
@@ -2016,6 +2034,143 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         </p>
     </div>
     <?php endif; ?>
+</div>
+
+<!-- Progresso Geral e Estatísticas por Disciplina -->
+<?php
+// Calcular progresso geral
+$totalAulasObrigatorias = 0;
+$totalAulasAgendadas = 0;
+$totalAulasRealizadas = 0;
+
+foreach ($estatisticasDisciplinas as $stats) {
+    $totalAulasObrigatorias += $stats['obrigatorias'];
+    $totalAulasAgendadas += $stats['agendadas'];
+    $totalAulasRealizadas += $stats['realizadas'];
+}
+
+$percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $totalAulasObrigatorias) * 100, 1) : 0;
+$corProgresso = $percentualGeral >= 100 ? '#28a745' : ($percentualGeral >= 75 ? '#ffc107' : '#dc3545');
+?>
+
+<div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h4 style="color: #023A8D; margin-bottom: 20px;">
+        <i class="fas fa-chart-line me-2"></i>Progresso das Disciplinas
+    </h4>
+    
+    <!-- Progresso Geral -->
+    <div id="progresso-geral-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 25px; margin-bottom: 25px; color: white;">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
+            <div>
+                <h2 id="percentual-geral" style="margin: 0; font-size: 3rem; font-weight: bold;"><?= $percentualGeral ?>%</h2>
+                <p id="total-aulas-texto" style="margin: 5px 0 0 0; opacity: 0.9; font-size: 1.1rem;">
+                    <?= $totalAulasAgendadas ?> de <?= $totalAulasObrigatorias ?> aulas agendadas
+                </p>
+            </div>
+            <div style="text-align: right;">
+                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
+                    <div style="background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 8px;">
+                        <div id="total-realizadas" style="font-size: 1.5rem; font-weight: bold;"><?= $totalAulasRealizadas ?></div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">Realizadas</div>
+                    </div>
+                    <div style="background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 8px;">
+                        <div id="total-faltantes" style="font-size: 1.5rem; font-weight: bold;"><?= ($totalAulasObrigatorias - $totalAulasAgendadas) ?></div>
+                        <div style="font-size: 0.9rem; opacity: 0.9;">Faltantes</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="background: rgba(255,255,255,0.2); height: 10px; border-radius: 5px; margin-top: 20px; overflow: hidden;">
+            <div id="barra-progresso-geral" style="background: white; height: 100%; width: <?= $percentualGeral ?>%; transition: width 0.3s ease; border-radius: 5px;"></div>
+        </div>
+    </div>
+    
+    <!-- Cards de Disciplinas -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
+        <?php foreach ($disciplinasSelecionadas as $disciplina): 
+            $disciplinaId = $disciplina['disciplina_id'];
+            $stats = $estatisticasDisciplinas[$disciplinaId] ?? ['agendadas' => 0, 'realizadas' => 0, 'faltantes' => 0, 'obrigatorias' => 0];
+            
+            $percentualDisciplina = $stats['obrigatorias'] > 0 ? round(($stats['agendadas'] / $stats['obrigatorias']) * 100, 1) : 0;
+            
+            // Definir cor baseada no progresso
+            if ($percentualDisciplina >= 100) {
+                $corCard = '#28a745';
+                $bgCard = '#d4edda';
+                $icon = '<i class="fas fa-check-circle"></i>';
+                $status = 'Completo';
+            } elseif ($percentualDisciplina >= 75) {
+                $corCard = '#ffc107';
+                $bgCard = '#fff3cd';
+                $icon = '<i class="fas fa-exclamation-triangle"></i>';
+                $status = 'Quase completo';
+            } elseif ($stats['agendadas'] > 0) {
+                $corCard = '#ffc107';
+                $bgCard = '#fff3cd';
+                $icon = '<i class="fas fa-clock"></i>';
+                $status = 'Em progresso';
+            } else {
+                $corCard = '#dc3545';
+                $bgCard = '#f8d7da';
+                $icon = '<i class="fas fa-times-circle"></i>';
+                $status = 'Não iniciado';
+            }
+            
+            $nomeDisciplina = htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['nome_original'] ?? 'Disciplina');
+        ?>
+        <div class="disciplina-stats-card" 
+             id="stats-card-<?= $disciplinaId ?>"
+             data-disciplina-id="<?= $disciplinaId ?>"
+             style="background: <?= $bgCard ?>; border-left: 4px solid <?= $corCard ?>; border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); user-select: none;"
+             onclick="event.stopPropagation(); scrollParaDisciplina('<?= $disciplinaId ?>'); return false;"
+             onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'; this.style.borderLeft='5px solid <?= $corCard ?>';"
+             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'; this.style.borderLeft='4px solid <?= $corCard ?>';"
+             title="Clique para ver detalhes da disciplina <?= htmlspecialchars($nomeDisciplina) ?>">
+            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
+                <div style="flex: 1;">
+                    <h6 style="color: #023A8D; margin: 0 0 8px 0; font-weight: 600; font-size: 1rem;">
+                        <?= $nomeDisciplina ?>
+                    </h6>
+                    <div class="stat-status" style="color: <?= $corCard ?>; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
+                        <?= $icon ?>
+                        <span style="font-weight: 500;"><?= $status ?></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+                    <span style="font-size: 0.9rem; color: #666;">Progresso:</span>
+                    <span class="stat-percentual-valor" style="font-weight: bold; color: <?= $corCard ?>; font-size: 1.1rem;">
+                        <?= $percentualDisciplina ?>%
+                    </span>
+                </div>
+                <div style="background: rgba(0,0,0,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
+                    <div class="stat-progresso-barra" style="background: <?= $corCard ?>; height: 100%; width: <?= min($percentualDisciplina, 100) ?>%; transition: width 0.3s ease;"></div>
+                </div>
+            </div>
+            
+            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.85rem;">
+                <div style="text-align: center; padding: 8px; background: white; border-radius: 6px;">
+                    <div class="stat-agendadas-valor" style="font-weight: bold; color: #023A8D; font-size: 1.2rem;"><?= $stats['agendadas'] ?></div>
+                    <div style="color: #666; font-size: 0.75rem;">Agendadas</div>
+                </div>
+                <div style="text-align: center; padding: 8px; background: white; border-radius: 6px;">
+                    <div class="stat-realizadas-valor" style="font-weight: bold; color: #28a745; font-size: 1.2rem;"><?= $stats['realizadas'] ?></div>
+                    <div style="color: #666; font-size: 0.75rem;">Realizadas</div>
+                </div>
+                <div style="text-align: center; padding: 8px; background: white; border-radius: 6px;">
+                    <div class="stat-faltantes-valor" style="font-weight: bold; color: #dc3545; font-size: 1.2rem;"><?= $stats['faltantes'] ?></div>
+                    <div style="color: #666; font-size: 0.75rem;">Faltantes</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1); text-align: center; font-size: 0.85rem; color: #666;">
+                <span class="stat-resumo"><?= $stats['agendadas'] ?>/<?= $stats['obrigatorias'] ?> aulas (faltam <?= $stats['faltantes'] ?>)</span>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
 </div>
 
 <!-- Alunos Matriculados -->
@@ -4933,6 +5088,11 @@ function cancelarAgendamento(id, nomeAula) {
                         }, 300);
                     }
                     
+                    // Atualizar estatísticas após cancelamento
+                    setTimeout(() => {
+                        atualizarEstatisticasTurma();
+                    }, 400);
+                    
                     showFeedback('✅ Agendamento cancelado com sucesso!', 'success');
                 } else {
                     showFeedback('❌ Erro ao cancelar agendamento: ' + (data.mensagem || data.message || 'Erro desconhecido'), 'error');
@@ -6594,8 +6754,17 @@ function enviarAgendamentoModal() {
                 if (disciplinaId) {
                     console.log('🔄 [DEBUG] Recarregando agendamentos da disciplina após agendamento bem-sucedido');
                     recarregarAgendamentosDisciplina(disciplinaId);
+                    
+                    // Atualizar estatísticas após um pequeno delay para garantir que o recarregamento terminou
+                    setTimeout(() => {
+                        atualizarEstatisticasTurma();
+                    }, 800);
                 } else {
                     console.warn('⚠️ [DEBUG] Disciplina ID não disponível, não é possível recarregar agendamentos');
+                    // Mesmo sem disciplinaId, atualizar estatísticas gerais
+                    setTimeout(() => {
+                        atualizarEstatisticasTurma();
+                    }, 500);
                 }
                 
                 // Fechar modal e resetar botão
@@ -6838,6 +7007,11 @@ function recarregarAgendamentosDisciplina(disciplinaId) {
                 console.log('✅ [DEBUG] Total de agendamentos encontrados:', data.agendamentos.length);
                 // Recriar toda a seção de histórico
                 atualizarSecaoHistorico(disciplinaId, data.agendamentos);
+                
+                // Atualizar estatísticas após atualizar histórico (para garantir sincronização)
+                setTimeout(() => {
+                    atualizarEstatisticasTurma();
+                }, 300);
             } else {
                 console.error('❌ [DEBUG] Erro ao carregar agendamentos:', data);
             }
@@ -6846,6 +7020,321 @@ function recarregarAgendamentosDisciplina(disciplinaId) {
             console.error('❌ [DEBUG] Erro ao buscar agendamentos:', error);
         });
 }
+
+// Função para fazer scroll até uma disciplina específica e expandir
+function scrollParaDisciplina(disciplinaId) {
+    console.log('📍 [DEBUG] Navegando para disciplina:', disciplinaId);
+    
+    if (!disciplinaId) {
+        console.error('❌ [DEBUG] ID da disciplina não fornecido');
+        return;
+    }
+    
+    // Primeiro, encontrar o card da disciplina na seção "Disciplinas da Turma" (não o card de estatísticas)
+    // O card da disciplina tem a classe "disciplina-cadastrada-card" e também tem data-disciplina-id
+    let disciplinaCard = document.querySelector(`.disciplina-cadastrada-card[data-disciplina-id="${disciplinaId}"]`);
+    
+    // Se não encontrou, tentar busca alternativa (pode estar em uma estrutura diferente)
+    if (!disciplinaCard) {
+        console.warn('⚠️ [DEBUG] Card da disciplina não encontrado com seletor padrão, tentando alternativas...');
+        
+        // Tentar buscar pelo ID do container de detalhes
+        const detalhesContent = document.getElementById(`detalhes-disciplina-${disciplinaId}`);
+        if (detalhesContent) {
+            disciplinaCard = detalhesContent.closest('.disciplina-cadastrada-card');
+        }
+        
+        // Se ainda não encontrou, buscar por qualquer elemento com data-disciplina-id que não seja o card de estatísticas
+        if (!disciplinaCard) {
+            const todosCards = document.querySelectorAll(`[data-disciplina-id="${disciplinaId}"]`);
+            for (let card of todosCards) {
+                // Se não é o card de estatísticas (stats-card), usar este
+                if (!card.id || !card.id.startsWith('stats-card-')) {
+                    disciplinaCard = card;
+                    console.log('✅ [DEBUG] Card encontrado via busca alternativa');
+                    break;
+                }
+            }
+        }
+    }
+    
+    if (!disciplinaCard) {
+        console.error('❌ [DEBUG] Disciplina não encontrada após todas as tentativas:', disciplinaId);
+        // Mostrar mensagem amigável ao usuário
+        alert('Disciplina não encontrada na página. Por favor, recarregue a página.');
+        return;
+    }
+    
+    console.log('✅ [DEBUG] Card da disciplina encontrado:', disciplinaCard);
+    fazerScrollParaCard(disciplinaCard, disciplinaId);
+}
+
+// Função auxiliar para fazer scroll até um card específico
+function fazerScrollParaCard(card, disciplinaId) {
+    // Calcular posição com offset para melhor visualização
+    const cardPosition = card.getBoundingClientRect().top + window.pageYOffset;
+    const offsetPosition = cardPosition - 100; // 100px do topo para melhor visualização
+    
+    // Scroll suave até o card da disciplina
+    window.scrollTo({
+        top: offsetPosition,
+        behavior: 'smooth'
+    });
+    
+    // Aguardar um pouco e expandir a disciplina
+    setTimeout(() => {
+        // Verificar se já está expandida
+        const detalhesContent = document.getElementById(`detalhes-disciplina-${disciplinaId}`);
+        if (detalhesContent) {
+            if (detalhesContent.style.display === 'none' || getComputedStyle(detalhesContent).display === 'none') {
+                // Expandir se estiver fechada
+                console.log('📂 [DEBUG] Expandindo disciplina:', disciplinaId);
+                toggleSimples(disciplinaId);
+            }
+        }
+        
+        // Adicionar destaque visual temporário no card da disciplina
+        const originalTransition = card.style.transition;
+        const originalBoxShadow = card.style.boxShadow;
+        const originalBorder = card.style.border;
+        
+        card.style.transition = 'all 0.3s ease';
+        card.style.boxShadow = '0 4px 20px rgba(2, 58, 141, 0.4)';
+        card.style.border = '3px solid #023A8D';
+        card.style.borderRadius = '12px';
+        
+        setTimeout(() => {
+            card.style.boxShadow = originalBoxShadow || '';
+            card.style.border = originalBorder || '';
+            card.style.transition = originalTransition || '';
+            card.style.borderRadius = '';
+        }, 2500);
+        
+        // Também adicionar destaque breve no card de estatísticas correspondente (feedback visual)
+        const statsCard = document.getElementById(`stats-card-${disciplinaId}`);
+        if (statsCard) {
+            const originalStatsTransition = statsCard.style.transition;
+            const originalStatsBoxShadow = statsCard.style.boxShadow;
+            const originalStatsTransform = statsCard.style.transform;
+            
+            statsCard.style.transition = 'all 0.3s ease';
+            statsCard.style.boxShadow = '0 4px 12px rgba(2, 58, 141, 0.4)';
+            statsCard.style.transform = 'scale(1.03)';
+            
+            setTimeout(() => {
+                statsCard.style.boxShadow = originalStatsBoxShadow || '';
+                statsCard.style.transform = originalStatsTransform || '';
+                statsCard.style.transition = originalStatsTransition || '';
+            }, 1000);
+        }
+    }, 400);
+}
+
+// Função para encontrar e fazer scroll até a primeira disciplina incompleta
+function scrollParaPrimeiraDisciplinaIncompleta() {
+    // Procurar por cards de estatísticas que indicam disciplina incompleta (não verde)
+    const cardsStats = document.querySelectorAll('.disciplina-stats-card');
+    
+    for (let card of cardsStats) {
+        // Verificar se o card não está completo (verde)
+        const style = window.getComputedStyle(card);
+        const bgColor = style.backgroundColor;
+        
+        // Se não for verde (#d4edda), é uma disciplina incompleta
+        if (!bgColor.includes('rgb(212, 237, 218)')) {
+            // Extrair disciplina ID do onclick
+            const onclick = card.getAttribute('onclick');
+            const match = onclick?.match(/scrollParaDisciplina\('([^']+)'\)/);
+            if (match && match[1]) {
+                const disciplinaId = match[1];
+                console.log('🎯 Encontrada primeira disciplina incompleta:', disciplinaId);
+                
+                // Aguardar um pouco para garantir que a página carregou
+                setTimeout(() => {
+                    scrollParaDisciplina(disciplinaId);
+                }, 500);
+                return;
+            }
+        }
+    }
+    
+    // Se não encontrou disciplina incompleta, scroll até a primeira disciplina
+    if (cardsStats.length > 0) {
+        const primeiroCard = cardsStats[0];
+        const onclick = primeiroCard.getAttribute('onclick');
+        const match = onclick?.match(/scrollParaDisciplina\('([^']+)'\)/);
+        if (match && match[1]) {
+            setTimeout(() => {
+                scrollParaDisciplina(match[1]);
+            }, 500);
+        }
+    }
+}
+
+// Função para atualizar estatísticas da turma dinamicamente
+function atualizarEstatisticasTurma() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const turmaId = urlParams.get('turma_id') || <?= $turmaId ?>;
+    
+    console.log('📊 [DEBUG] Atualizando estatísticas da turma:', turmaId);
+    
+    fetch(getBasePath() + '/admin/api/estatisticas-turma.php?turma_id=' + turmaId)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                console.log('✅ [DEBUG] Estatísticas recebidas:', data);
+                
+                // Atualizar progresso geral
+                atualizarProgressoGeral(data.estatisticas_gerais);
+                
+                // Atualizar cada disciplina
+                if (data.disciplinas) {
+                    Object.keys(data.disciplinas).forEach(disciplinaId => {
+                        atualizarCardDisciplina(disciplinaId, data.disciplinas[disciplinaId]);
+                    });
+                }
+            } else {
+                console.error('❌ [DEBUG] Erro ao buscar estatísticas:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('❌ [DEBUG] Erro ao atualizar estatísticas:', error);
+        });
+}
+
+// Função para atualizar o card de progresso geral
+function atualizarProgressoGeral(stats) {
+    // Atualizar percentual
+    const percentualEl = document.getElementById('percentual-geral');
+    if (percentualEl) {
+        percentualEl.textContent = stats.percentual_geral + '%';
+    }
+    
+    // Atualizar texto de total de aulas
+    const totalAulasTexto = document.getElementById('total-aulas-texto');
+    if (totalAulasTexto) {
+        totalAulasTexto.textContent = `${stats.total_aulas_agendadas} de ${stats.total_aulas_obrigatorias} aulas agendadas`;
+    }
+    
+    // Atualizar total realizadas
+    const totalRealizadas = document.getElementById('total-realizadas');
+    if (totalRealizadas) {
+        totalRealizadas.textContent = stats.total_aulas_realizadas;
+    }
+    
+    // Atualizar total faltantes
+    const totalFaltantes = document.getElementById('total-faltantes');
+    if (totalFaltantes) {
+        totalFaltantes.textContent = stats.total_faltantes;
+    }
+    
+    // Atualizar barra de progresso
+    const barraProgresso = document.getElementById('barra-progresso-geral');
+    if (barraProgresso) {
+        barraProgresso.style.width = stats.percentual_geral + '%';
+    }
+}
+
+// Função para atualizar card de uma disciplina específica
+function atualizarCardDisciplina(disciplinaId, stats) {
+    const card = document.getElementById('stats-card-' + disciplinaId);
+    if (!card) {
+        console.warn('⚠️ [DEBUG] Card não encontrado para disciplina:', disciplinaId);
+        return;
+    }
+    
+    console.log('📊 [DEBUG] Atualizando card da disciplina:', disciplinaId, stats);
+    
+    // Calcular percentual
+    const percentual = stats.percentual || 0;
+    
+    // Atualizar valores dentro do card
+    const agendadasEl = card.querySelector('.stat-agendadas-valor');
+    const realizadasEl = card.querySelector('.stat-realizadas-valor');
+    const faltantesEl = card.querySelector('.stat-faltantes-valor');
+    const percentualEl = card.querySelector('.stat-percentual-valor');
+    const barraProgresso = card.querySelector('.stat-progresso-barra');
+    const resumoEl = card.querySelector('.stat-resumo');
+    
+    if (agendadasEl) agendadasEl.textContent = stats.agendadas;
+    if (realizadasEl) realizadasEl.textContent = stats.realizadas;
+    if (faltantesEl) faltantesEl.textContent = stats.faltantes;
+    if (percentualEl) {
+        percentualEl.textContent = percentual + '%';
+        // Atualizar cor baseada no novo percentual
+        atualizarCoresCardDisciplina(card, percentual, stats);
+    }
+    if (barraProgresso) {
+        barraProgresso.style.width = Math.min(percentual, 100) + '%';
+    }
+    if (resumoEl) {
+        resumoEl.textContent = `${stats.agendadas}/${stats.obrigatorias} aulas (faltam ${stats.faltantes})`;
+    }
+}
+
+// Função para atualizar cores do card baseado no progresso
+function atualizarCoresCardDisciplina(card, percentual, stats) {
+    let corCard, bgCard, icon, status;
+    
+    if (percentual >= 100) {
+        corCard = '#28a745';
+        bgCard = '#d4edda';
+        icon = 'fa-check-circle';
+        status = 'Completo';
+    } else if (percentual >= 75) {
+        corCard = '#ffc107';
+        bgCard = '#fff3cd';
+        icon = 'fa-exclamation-triangle';
+        status = 'Quase completo';
+    } else if (stats.agendadas > 0) {
+        corCard = '#ffc107';
+        bgCard = '#fff3cd';
+        icon = 'fa-clock';
+        status = 'Em progresso';
+    } else {
+        corCard = '#dc3545';
+        bgCard = '#f8d7da';
+        icon = 'fa-times-circle';
+        status = 'Não iniciado';
+    }
+    
+    // Atualizar estilos do card
+    card.style.background = bgCard;
+    card.style.borderLeftColor = corCard;
+    
+    // Atualizar ícone e status
+    const statusDiv = card.querySelector('.stat-status');
+    if (statusDiv) {
+        statusDiv.innerHTML = `<i class="fas ${icon}"></i> <span style="font-weight: 500;">${status}</span>`;
+        statusDiv.style.color = corCard;
+    }
+    
+    // Atualizar cor do percentual
+    const percentualEl = card.querySelector('.stat-percentual-valor');
+    if (percentualEl) {
+        percentualEl.style.color = corCard;
+    }
+    
+    // Atualizar cor da barra de progresso
+    const barraProgresso = card.querySelector('.stat-progresso-barra');
+    if (barraProgresso) {
+        barraProgresso.style.background = corCard;
+    }
+}
+
+// Verificar se veio do redirecionamento de "Continuar Agendamento"
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const sucesso = urlParams.get('sucesso');
+    
+    // Se veio com sucesso=1 (criação de turma), fazer scroll até disciplinas
+    if (sucesso === '1') {
+        console.log('✅ Detectado redirecionamento de criação/agendamento, fazendo scroll automático...');
+        setTimeout(() => {
+            scrollParaPrimeiraDisciplinaIncompleta();
+        }, 1000);
+    }
+});
 
 // Atualizar seção completa do histórico
 function atualizarSecaoHistorico(disciplinaId, agendamentos) {

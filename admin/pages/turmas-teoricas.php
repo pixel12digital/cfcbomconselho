@@ -131,8 +131,8 @@ if ($acao === 'criar_basica' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         $resultado = $turmaManager->finalizarTurma($rascunho['turma_id'], $dadosTurma);
         
         if ($resultado['sucesso']) {
-            // Usar JavaScript para redirecionamento ao invés de header
-            $redirectUrl = '?page=turmas-teoricas&acao=agendar&step=2&turma_id=' . $resultado['turma_id'] . '&sucesso=1';
+            // Redirecionar para detalhes ao invés de step2
+            $redirectUrl = '?page=turmas-teoricas&acao=detalhes&turma_id=' . $resultado['turma_id'] . '&sucesso=1';
             echo "<script>window.location.href = '$redirectUrl';</script>";
             exit;
         } else {
@@ -1871,7 +1871,7 @@ function criarTurmaComDisciplinas() {
     .then(turmaId => {
         if (turmaId) {
             console.log('🎯 Redirecionando para etapa 2 com turma_id:', turmaId);
-            window.location.href = `?page=turmas-teoricas&acao=agendar&step=2&turma_id=${turmaId}&sucesso=1`;
+            window.location.href = `?page=turmas-teoricas&acao=detalhes&turma_id=${turmaId}&sucesso=1`;
         } else {
             console.error('❌ ID da turma não encontrado para redirecionamento');
         }
