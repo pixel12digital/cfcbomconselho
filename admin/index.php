@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'financeiro-faturas' && i
     try {
         // Validar dados obrigatórios
         $aluno_id = $_POST['aluno_id'] ?? null;
-        $valor = $_POST['valor'] ?? null;
+        $valor = $_POST['valor_total'] ?? null; // Corrigido para valor_total
         $data_vencimento = $_POST['data_vencimento'] ?? null;
         $descricao = $_POST['descricao'] ?? null;
         
@@ -105,79 +105,124 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'financeiro-faturas' && i
         $parcelamento = isset($_POST['parcelamento']) && $_POST['parcelamento'] === 'on';
         
         if ($parcelamento) {
-            // Processar parcelamento
-            $valor_total = floatval($valor);
-            $entrada = floatval($_POST['entrada'] ?? 0);
-            $num_parcelas = intval($_POST['num_parcelas'] ?? 1);
-            $intervalo_dias = intval($_POST['intervalo_parcelas'] ?? 30);
-            
-            // Validar parcelamento
-            if ($entrada > $valor_total) {
-                throw new Exception('O valor da entrada não pode ser maior que o valor total.');
+            // Verificar se parcelas foram editadas manualmente
+            $parcelas_editadas = null;
+            if (isset($_POST['parcelas_editadas']) && !empty($_POST['parcelas_editadas'])) {
+                $parcelas_editadas = json_decode($_POST['parcelas_editadas'], true);
             }
             
-            if ($num_parcelas < 1) {
-                throw new Exception('Número de parcelas deve ser maior que zero.');
-            }
-            
-            // Calcular valor das parcelas
-            $valor_restante = $valor_total - $entrada;
-            $valor_parcela = $valor_restante / $num_parcelas;
-            
-            // Data base para cálculo
-            $data_base = new DateTime($data_vencimento);
-            $faturas_criadas = [];
-            
-            // Criar entrada se houver
-            if ($entrada > 0) {
-                $dados_entrada = [
-                    'aluno_id' => $aluno_id,
-                    'valor' => $entrada,
-                    'data_vencimento' => $data_base->format('Y-m-d'),
-                    'descricao' => $descricao . ' - Entrada',
-                    'observacoes' => $_POST['observacoes'] ?? null,
-                    'status' => $_POST['status'] ?? 'aberta',
-                    'criado_em' => date('Y-m-d H:i:s'),
-                    'criado_por' => $user['id']
-                ];
+            // Se houver parcelas editadas, usar elas diretamente
+            if ($parcelas_editadas && is_array($parcelas_editadas) && count($parcelas_editadas) > 0) {
+                $faturas_criadas = [];
                 
-                $fatura_id = $db->insert('financeiro_faturas', $dados_entrada);
-                if ($fatura_id) {
-                    $faturas_criadas[] = $fatura_id;
+                foreach ($parcelas_editadas as $parcela) {
+                    $dados_parcela = [
+                        'aluno_id' => $aluno_id,
+                        'valor' => floatval($parcela['valor']),
+                        'data_vencimento' => $parcela['vencimento'],
+                        'descricao' => isset($parcela['tipo']) && $parcela['tipo'] === 'entrada' 
+                            ? $descricao . ' - Entrada'
+                            : $descricao . " - {$parcela['numero']}ª parcela",
+                        'observacoes' => $_POST['observacoes'] ?? null,
+                        'status' => $_POST['status'] ?? 'aberta',
+                        'forma_pagamento' => $_POST['forma_pagamento'] ?? 'boleto',
+                        'criado_em' => date('Y-m-d H:i:s'),
+                        'criado_por' => $user['id']
+                    ];
+                    
+                    $fatura_id = $db->insert('financeiro_faturas', $dados_parcela);
+                    if ($fatura_id) {
+                        $faturas_criadas[] = $fatura_id;
+                    }
                 }
-            }
-            
-            // Criar parcelas
-            for ($i = 1; $i <= $num_parcelas; $i++) {
-                $data_parcela = clone $data_base;
-                $data_parcela->add(new DateInterval('P' . ($i * $intervalo_dias) . 'D'));
                 
-                $dados_parcela = [
-                    'aluno_id' => $aluno_id,
-                    'valor' => $valor_parcela,
-                    'data_vencimento' => $data_parcela->format('Y-m-d'),
-                    'descricao' => $descricao . " - {$i}ª parcela de {$num_parcelas}",
-                    'observacoes' => $_POST['observacoes'] ?? null,
-                    'status' => $_POST['status'] ?? 'aberta',
-                    'criado_em' => date('Y-m-d H:i:s'),
-                    'criado_por' => $user['id']
-                ];
-                
-                $fatura_id = $db->insert('financeiro_faturas', $dados_parcela);
-                if ($fatura_id) {
-                    $faturas_criadas[] = $fatura_id;
+                if (count($faturas_criadas) > 0) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Fatura parcelada criada com sucesso! ' . count($faturas_criadas) . ' faturas geradas.',
+                        'faturas_criadas' => $faturas_criadas,
+                        'parcelamento' => true
+                    ]);
+                } else {
+                    throw new Exception('Erro ao criar faturas parceladas.');
                 }
-            }
-            
-            if (count($faturas_criadas) > 0) {
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'Fatura parcelada criada com sucesso! ' . count($faturas_criadas) . ' faturas geradas.',
-                    'faturas_criadas' => $faturas_criadas,
-                    'parcelamento' => true
-                ]);
             } else {
-                throw new Exception('Erro ao criar faturas parceladas.');
+                // Processar parcelamento automático (cálculo original)
+                $valor_total = floatval($valor);
+                $entrada = floatval($_POST['entrada'] ?? 0);
+                $num_parcelas = intval($_POST['num_parcelas'] ?? 1);
+                $intervalo_dias = intval($_POST['intervalo_parcelas'] ?? 30);
+                
+                // Validar parcelamento
+                if ($entrada > $valor_total) {
+                    throw new Exception('O valor da entrada não pode ser maior que o valor total.');
+                }
+                
+                if ($num_parcelas < 1) {
+                    throw new Exception('Número de parcelas deve ser maior que zero.');
+                }
+                
+                // Calcular valor das parcelas
+                $valor_restante = $valor_total - $entrada;
+                $valor_parcela = $valor_restante / $num_parcelas;
+                
+                // Data base para cálculo
+                $data_base = new DateTime($data_vencimento);
+                $faturas_criadas = [];
+                
+                // Criar entrada se houver
+                if ($entrada > 0) {
+                    $dados_entrada = [
+                        'aluno_id' => $aluno_id,
+                        'valor' => $entrada,
+                        'data_vencimento' => $data_base->format('Y-m-d'),
+                        'descricao' => $descricao . ' - Entrada',
+                        'observacoes' => $_POST['observacoes'] ?? null,
+                        'status' => $_POST['status'] ?? 'aberta',
+                        'forma_pagamento' => $_POST['forma_pagamento'] ?? 'boleto',
+                        'criado_em' => date('Y-m-d H:i:s'),
+                        'criado_por' => $user['id']
+                    ];
+                    
+                    $fatura_id = $db->insert('financeiro_faturas', $dados_entrada);
+                    if ($fatura_id) {
+                        $faturas_criadas[] = $fatura_id;
+                    }
+                }
+                
+                // Criar parcelas
+                for ($i = 1; $i <= $num_parcelas; $i++) {
+                    $data_parcela = clone $data_base;
+                    $data_parcela->add(new DateInterval('P' . ($i * $intervalo_dias) . 'D'));
+                    
+                    $dados_parcela = [
+                        'aluno_id' => $aluno_id,
+                        'valor' => $valor_parcela,
+                        'data_vencimento' => $data_parcela->format('Y-m-d'),
+                        'descricao' => $descricao . " - {$i}ª parcela de {$num_parcelas}",
+                        'observacoes' => $_POST['observacoes'] ?? null,
+                        'status' => $_POST['status'] ?? 'aberta',
+                        'forma_pagamento' => $_POST['forma_pagamento'] ?? 'boleto',
+                        'criado_em' => date('Y-m-d H:i:s'),
+                        'criado_por' => $user['id']
+                    ];
+                    
+                    $fatura_id = $db->insert('financeiro_faturas', $dados_parcela);
+                    if ($fatura_id) {
+                        $faturas_criadas[] = $fatura_id;
+                    }
+                }
+                
+                if (count($faturas_criadas) > 0) {
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Fatura parcelada criada com sucesso! ' . count($faturas_criadas) . ' faturas geradas.',
+                        'faturas_criadas' => $faturas_criadas,
+                        'parcelamento' => true
+                    ]);
+                } else {
+                    throw new Exception('Erro ao criar faturas parceladas.');
+                }
             }
             
         } else {
@@ -189,6 +234,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'financeiro-faturas' && i
                 'descricao' => $descricao,
                 'observacoes' => $_POST['observacoes'] ?? null,
                 'status' => $_POST['status'] ?? 'aberta',
+                'forma_pagamento' => $_POST['forma_pagamento'] ?? 'boleto',
                 'criado_em' => date('Y-m-d H:i:s'),
                 'criado_por' => $user['id']
             ];

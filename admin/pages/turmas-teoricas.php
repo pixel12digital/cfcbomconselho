@@ -77,7 +77,23 @@ $step = $_GET['step'] ?? $_POST['step'] ?? '1';
 $turmaId = $_GET['turma_id'] ?? $_POST['turma_id'] ?? null;
 
 // Verificar se é requisição AJAX
-$isAjax = isset($_GET['ajax']) || isset($_POST['acao']) && strpos($_POST['acao'], 'ajax') !== false;
+$isAjax = isset($_GET['ajax']) && $_GET['ajax'] == '1';
+
+// Se for AJAX e for para carregar calendário, retornar apenas o conteúdo necessário
+if ($isAjax && $acao === 'detalhes' && isset($_GET['semana_calendario'])) {
+    // Iniciar buffer de output
+    ob_start();
+    
+    // Incluir apenas o arquivo de detalhes inline que gerará o calendário
+    include __DIR__ . '/turmas-teoricas-detalhes-inline.php';
+    
+    // Capturar output
+    $html = ob_get_clean();
+    
+    // Retornar HTML completo - JavaScript vai extrair apenas o #tab-calendario
+    echo $html;
+    exit;
+}
 
 // Processar salvamento automático (rascunho)
 if ($acao === 'salvar_rascunho' && $_SERVER['REQUEST_METHOD'] === 'POST') {

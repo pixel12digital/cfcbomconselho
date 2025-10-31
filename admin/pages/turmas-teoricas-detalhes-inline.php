@@ -2700,18 +2700,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 [$turmaId, $dataInicioSemana, $dataFimSemana]
             );
             
-            // Debug: verificar se encontrou aulas
-            if (empty($todasAulasCalendario)) {
-                // Tentar buscar sem filtro de status para debug
-                $todasAulasDebug = $db->fetchAll(
-                    "SELECT COUNT(*) as total, 
-                            SUM(CASE WHEN status = 'cancelada' THEN 1 ELSE 0 END) as canceladas,
-                            SUM(CASE WHEN status IS NULL OR status != 'cancelada' THEN 1 ELSE 0 END) as ativas
-                     FROM turma_aulas_agendadas 
-                     WHERE turma_id = ?",
-                    [$turmaId]
-                );
-            }
+            // Debug removido - não necessário para produção
         } catch (Exception $e) {
             error_log("Erro ao buscar aulas para calendário: " . $e->getMessage());
             $todasAulasCalendario = [];
@@ -3053,49 +3042,12 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 }
             }
             
-            if ($totalAulas == 0): 
-                // Verificar se há aulas no banco para esta turma
-                try {
-                    $checkAulas = $db->fetch(
-                        "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ?",
-                        [$turmaId]
-                    );
-                    $totalNoBanco = $checkAulas['total'] ?? 0;
-                } catch (Exception $e) {
-                    $totalNoBanco = '?';
-                }
             ?>
-            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                <strong style="color: #856404;">ℹ️ Aviso:</strong>
-                <span style="color: #856404;">Nenhuma aula agendada encontrada para esta turma.</span>
-                <br><small style="color: #856404;">
-                    Total no banco: <?= $totalNoBanco ?> | 
-                    Exibidas: <?= $totalAulas ?> | 
-                    Datas organizadas: <?= count($aulasPorData ?? []) ?>
-                    <?php if (isset($todasAulasDebug) && !empty($todasAulasDebug)): ?>
-                        <br>Debug DB: Total=<?= $todasAulasDebug[0]['total'] ?? 0 ?>, Canceladas=<?= $todasAulasDebug[0]['canceladas'] ?? 0 ?>, Ativas=<?= $todasAulasDebug[0]['ativas'] ?? 0 ?>
-                    <?php endif; ?>
-                </small>
+            <div style="background: #d1ecf1; border-left: 3px solid #17a2b8; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px;">
+                <strong style="color: #0c5460; font-size: 0.95rem;">
+                    ✅ <span id="total-aulas-semana"><?= $totalAulas ?></span> aulas nesta semana
+                </strong>
             </div>
-            <?php else: ?>
-            <div style="background: #d1ecf1; border: 1px solid #17a2b8; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
-                <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 15px;">
-                    <div>
-                        <strong style="color: #0c5460;">✅ <?= $totalAulas ?> aulas nesta semana</strong>
-                        <?php if ($totalGeral > 0): ?>
-                            <small style="color: #6c757d;"> (Total no período: <?= $totalGeral ?>)</small>
-                        <?php endif; ?>
-                        <br><small style="color: #0c5460;">
-                            Semana: <?= $semanaDisplay['inicio'] ? $semanaDisplay['inicio']->format('d/m/Y') : 'N/A' ?> | 
-                            <?php if ($totalAulas > 0): ?>
-                                Horários: <?= sprintf('%02d:%02d', floor($horaMinima/60), $horaMinima%60) ?> - <?= sprintf('%02d:%02d', floor($horaMaxima/60), $horaMaxima%60) ?> |
-                            <?php endif; ?>
-                            Período da semana: <?= $dataInicioSemana ?> até <?= $dataFimSemana ?>
-                        </small>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
             
             <!-- Legenda -->
             <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; gap: 20px; flex-wrap: wrap;">
@@ -4411,8 +4363,72 @@ function mudarSemana(direcao) {
             }
         });
         
-        // Atualizar conteúdo do calendário via AJAX para evitar recarregar página
-        atualizarCalendarioSemana(novoIndice);
+        // Usar AJAX para carregar apenas o calendário sem recarregar a página
+        const url = new URL(window.location);
+        url.searchParams.set('semana_calendario', novoIndice);
+        url.searchParams.set('ajax', '1');
+        url.searchParams.set('acao', 'detalhes');
+        
+        // Mostrar indicador de carregamento
+        const calendarioContainer = document.querySelector('.timeline-calendar');
+        let loader = document.getElementById('calendario-loader');
+        if (!loader && calendarioContainer) {
+            loader = document.createElement('div');
+            loader.id = 'calendario-loader';
+            calendarioContainer.style.position = 'relative';
+            calendarioContainer.appendChild(loader);
+            
+            // Adicionar CSS para o spinner se não existir
+            if (!document.querySelector('#spinner-style')) {
+                const style = document.createElement('style');
+                style.id = 'spinner-style';
+                style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+                document.head.appendChild(style);
+            }
+        }
+        
+        if (loader) {
+            loader.innerHTML = '<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000;"><div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #023A8D; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #023A8D; font-weight: 600;">Carregando...</p></div></div>';
+        }
+        
+        // Fazer requisição AJAX
+        fetch(url.toString(), {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => response.text())
+        .then(html => {
+            // Remover loader
+            if (loader) {
+                loader.remove();
+            }
+            
+            // Usar uma div temporária para criar um DOM válido
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = html;
+            
+            // Buscar o conteúdo da tab-calendario
+            const novoCalendario = tempDiv.querySelector('#tab-calendario');
+            
+            if (novoCalendario) {
+                const calendarioAtual = document.querySelector('#tab-calendario');
+                if (calendarioAtual) {
+                    // Substituir todo o conteúdo interno
+                    calendarioAtual.innerHTML = novoCalendario.innerHTML;
+                }
+            } else {
+                // Fallback: recarregar a página
+                window.location.href = url.toString().replace('&ajax=1', '');
+            }
+        })
+        .catch(error => {
+            // Em caso de erro, recarregar a página
+            if (loader) {
+                loader.remove();
+            }
+            window.location.href = url.toString().replace('&ajax=1', '');
+        });
     }
     
     // Atualizar estado dos botões
@@ -4421,6 +4437,24 @@ function mudarSemana(direcao) {
 }
 
 function atualizarCalendarioSemana(novoIndice) {
+    // Mostrar indicador de carregamento
+    const calendarioContainer = document.querySelector('.timeline-calendar');
+    if (calendarioContainer) {
+        const loader = document.createElement('div');
+        loader.id = 'calendario-loader';
+        loader.innerHTML = '<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000;"><div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #023A8D; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #023A8D; font-weight: 600;">Carregando...</p></div></div>';
+        calendarioContainer.style.position = 'relative';
+        calendarioContainer.appendChild(loader);
+        
+        // Adicionar animação CSS se não existir
+        if (!document.querySelector('#spinner-style')) {
+            const style = document.createElement('style');
+            style.id = 'spinner-style';
+            style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+            document.head.appendChild(style);
+        }
+    }
+    
     // Recarregar a página com o novo índice para buscar apenas aulas da semana selecionada
     const url = new URL(window.location);
     url.searchParams.set('semana_calendario', novoIndice);
@@ -4952,10 +4986,32 @@ window.togglePeriodo = function(periodoNome) {
     setTimeout(() => {
         ajustarPosicaoAulas();
         ajustarAlturaTimeline();
+        atualizarContadorAulasSemana(); // Atualizar contador após mudanças
     }, 100);
     
     console.log('Ação concluída para período:', periodo);
 };
+
+// Função para atualizar o contador de aulas da semana dinamicamente
+function atualizarContadorAulasSemana() {
+    const contadorElement = document.getElementById('total-aulas-semana');
+    if (!contadorElement) return;
+    
+    // Contar todas as aulas visíveis no calendário
+    const aulasVisiveis = document.querySelectorAll('.timeline-slot.aula');
+    const total = aulasVisiveis.length;
+    
+    contadorElement.textContent = total;
+    
+    console.log('📊 Contador de aulas atualizado:', total);
+}
+
+// Inicializar contador quando a página carregar
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        atualizarContadorAulasSemana();
+    }, 500); // Aguardar um pouco para garantir que todos os elementos foram renderizados
+});
 </script>
 
 <!-- JavaScript para Sistema de Abas -->
