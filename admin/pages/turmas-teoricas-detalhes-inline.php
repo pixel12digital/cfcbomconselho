@@ -731,15 +731,17 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 
 .disciplina-cadastrada-card {
     background: #f8f9fa;
-    border: 1px solid #dee2e6;
-    border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 15px;
+    border: none;
+    border-left: 4px solid #023A8D;
+    border-radius: 0;
+    padding: 15px;
+    margin-bottom: 10px;
     transition: all 0.3s ease;
 }
 
 .disciplina-cadastrada-card:hover {
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    background: #e9ecef;
+    border-left-width: 5px;
 }
 
 .disciplina-info-display {
@@ -1931,7 +1933,7 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 </style>
 
 <!-- Cabeçalho -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
     <div>
         <h3 style="margin: 0; color: #023A8D;">
             <i class="fas fa-info-circle me-2"></i>Detalhes da Turma
@@ -1951,8 +1953,176 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     </div>
 </div>
 
+<!-- Sistema de Abas -->
+<style>
+.tabs-container {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    margin-bottom: 20px;
+    overflow: hidden;
+}
+
+.tabs-header {
+    display: flex;
+    background: #f8f9fa;
+    border-bottom: 2px solid #e9ecef;
+    overflow-x: auto;
+}
+
+.tab-button {
+    padding: 14px 24px;
+    background: transparent;
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #6c757d;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+}
+
+.tab-button:hover {
+    background: #e9ecef;
+    color: #023A8D;
+}
+
+.tab-button.active {
+    color: #023A8D;
+    background: white;
+    border-bottom-color: #023A8D;
+}
+
+.tab-button i {
+    font-size: 1rem;
+}
+
+.tab-content {
+    display: none;
+    padding: 0;
+    animation: fadeIn 0.3s ease;
+    background: transparent;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@media (max-width: 768px) {
+    .tabs-header {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    
+    .tab-button {
+        padding: 12px 16px;
+        font-size: 0.85rem;
+    }
+}
+</style>
+
+<script>
+// Definir showTab no escopo global ANTES dos botões para evitar erros
+window.showTab = function(tabName) {
+    // Esconder todos os conteúdos de abas
+    const tabContents = document.querySelectorAll('.tab-content');
+    tabContents.forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // Remover classe active de todos os botões
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        button.classList.remove('active');
+    });
+    
+    // Se for a aba Calendário, garantir que está na primeira semana
+    if (tabName === 'calendario') {
+        const url = new URL(window.location);
+        const semanaAtual = url.searchParams.get('semana_calendario');
+        // Se não há parâmetro ou é inválido, forçar primeira semana (0)
+        if (!semanaAtual || parseInt(semanaAtual) < 0) {
+            url.searchParams.set('semana_calendario', '0');
+            window.history.replaceState({}, '', url);
+            // Se realmente não havia parâmetro, recarregar para garantir primeira semana
+            if (!semanaAtual) {
+                window.location.href = url.toString();
+                return;
+            }
+        }
+    }
+    
+    // Mostrar a aba selecionada
+    const selectedTab = document.getElementById('tab-' + tabName);
+    if (selectedTab) {
+        selectedTab.classList.add('active');
+    }
+    
+    // Ativar o botão correspondente
+    const buttons = document.querySelectorAll('.tab-button');
+    buttons.forEach(button => {
+        if (button.onclick && button.onclick.toString().includes("'" + tabName + "'")) {
+            button.classList.add('active');
+        } else {
+            // Método alternativo: verificar pelo texto do botão
+            const buttonText = button.textContent.toLowerCase().trim();
+            if (buttonText.includes(tabName.toLowerCase())) {
+                button.classList.add('active');
+            }
+        }
+    });
+    
+    // Salvar aba ativa no localStorage
+    localStorage.setItem('turmaDetalhesAbaAtiva', tabName);
+    localStorage.setItem('turma-tab-active', tabName);
+};
+</script>
+
+<div class="tabs-container">
+    <div class="tabs-header">
+        <button class="tab-button active" onclick="showTab('resumo')">
+            <i class="fas fa-home"></i>
+            <span>Resumo</span>
+        </button>
+        <button class="tab-button" onclick="showTab('disciplinas')">
+            <i class="fas fa-book"></i>
+            <span>Disciplinas</span>
+        </button>
+        <button class="tab-button" onclick="showTab('alunos')">
+            <i class="fas fa-users"></i>
+            <span>Alunos</span>
+        </button>
+        <button class="tab-button" onclick="showTab('calendario')">
+            <i class="fas fa-calendar-alt"></i>
+            <span>Calendário</span>
+        </button>
+        <button class="tab-button" onclick="showTab('estatisticas')">
+            <i class="fas fa-chart-bar"></i>
+            <span>Estatísticas</span>
+        </button>
+    </div>
+
+    <!-- Aba Resumo -->
+    <div id="tab-resumo" class="tab-content active">
 <!-- Informações Básicas -->
-<div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+<div style="padding: 20px; margin-bottom: 20px;">
     <h4 style="color: #023A8D; margin-bottom: 20px;">
         <i class="fas fa-graduation-cap me-2"></i>Informações Básicas
     </h4>
@@ -2036,288 +2206,46 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     <?php endif; ?>
 </div>
 
-<!-- Progresso Geral e Estatísticas por Disciplina -->
+        <!-- Resumo Rápido -->
 <?php
-// Calcular progresso geral
+        // Calcular totais para resumo
 $totalAulasObrigatorias = 0;
 $totalAulasAgendadas = 0;
-$totalAulasRealizadas = 0;
-
 foreach ($estatisticasDisciplinas as $stats) {
     $totalAulasObrigatorias += $stats['obrigatorias'];
     $totalAulasAgendadas += $stats['agendadas'];
-    $totalAulasRealizadas += $stats['realizadas'];
 }
-
 $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $totalAulasObrigatorias) * 100, 1) : 0;
-$corProgresso = $percentualGeral >= 100 ? '#28a745' : ($percentualGeral >= 75 ? '#ffc107' : '#dc3545');
-?>
-
-<div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-    <h4 style="color: #023A8D; margin-bottom: 20px;">
-        <i class="fas fa-chart-line me-2"></i>Progresso das Disciplinas
-    </h4>
-    
-    <!-- Progresso Geral -->
-    <div id="progresso-geral-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 12px; padding: 25px; margin-bottom: 25px; color: white;">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 20px;">
-            <div>
-                <h2 id="percentual-geral" style="margin: 0; font-size: 3rem; font-weight: bold;"><?= $percentualGeral ?>%</h2>
-                <p id="total-aulas-texto" style="margin: 5px 0 0 0; opacity: 0.9; font-size: 1.1rem;">
-                    <?= $totalAulasAgendadas ?> de <?= $totalAulasObrigatorias ?> aulas agendadas
-                </p>
-            </div>
-            <div style="text-align: right;">
-                <div style="display: flex; gap: 15px; flex-wrap: wrap;">
-                    <div style="background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 8px;">
-                        <div id="total-realizadas" style="font-size: 1.5rem; font-weight: bold;"><?= $totalAulasRealizadas ?></div>
-                        <div style="font-size: 0.9rem; opacity: 0.9;">Realizadas</div>
-                    </div>
-                    <div style="background: rgba(255,255,255,0.2); padding: 10px 15px; border-radius: 8px;">
-                        <div id="total-faltantes" style="font-size: 1.5rem; font-weight: bold;"><?= ($totalAulasObrigatorias - $totalAulasAgendadas) ?></div>
-                        <div style="font-size: 0.9rem; opacity: 0.9;">Faltantes</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div style="background: rgba(255,255,255,0.2); height: 10px; border-radius: 5px; margin-top: 20px; overflow: hidden;">
-            <div id="barra-progresso-geral" style="background: white; height: 100%; width: <?= $percentualGeral ?>%; transition: width 0.3s ease; border-radius: 5px;"></div>
-        </div>
-    </div>
-    
-    <!-- Cards de Disciplinas -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px;">
-        <?php foreach ($disciplinasSelecionadas as $disciplina): 
-            $disciplinaId = $disciplina['disciplina_id'];
-            $stats = $estatisticasDisciplinas[$disciplinaId] ?? ['agendadas' => 0, 'realizadas' => 0, 'faltantes' => 0, 'obrigatorias' => 0];
-            
-            $percentualDisciplina = $stats['obrigatorias'] > 0 ? round(($stats['agendadas'] / $stats['obrigatorias']) * 100, 1) : 0;
-            
-            // Definir cor baseada no progresso
-            if ($percentualDisciplina >= 100) {
-                $corCard = '#28a745';
-                $bgCard = '#d4edda';
-                $icon = '<i class="fas fa-check-circle"></i>';
-                $status = 'Completo';
-            } elseif ($percentualDisciplina >= 75) {
-                $corCard = '#ffc107';
-                $bgCard = '#fff3cd';
-                $icon = '<i class="fas fa-exclamation-triangle"></i>';
-                $status = 'Quase completo';
-            } elseif ($stats['agendadas'] > 0) {
-                $corCard = '#ffc107';
-                $bgCard = '#fff3cd';
-                $icon = '<i class="fas fa-clock"></i>';
-                $status = 'Em progresso';
-            } else {
-                $corCard = '#dc3545';
-                $bgCard = '#f8d7da';
-                $icon = '<i class="fas fa-times-circle"></i>';
-                $status = 'Não iniciado';
-            }
-            
-            $nomeDisciplina = htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['nome_original'] ?? 'Disciplina');
         ?>
-        <div class="disciplina-stats-card" 
-             id="stats-card-<?= $disciplinaId ?>"
-             data-disciplina-id="<?= $disciplinaId ?>"
-             style="background: <?= $bgCard ?>; border-left: 4px solid <?= $corCard ?>; border-radius: 8px; padding: 20px; cursor: pointer; transition: all 0.3s; box-shadow: 0 2px 4px rgba(0,0,0,0.1); user-select: none;"
-             onclick="event.stopPropagation(); scrollParaDisciplina('<?= $disciplinaId ?>'); return false;"
-             onmouseover="this.style.transform='translateY(-5px)'; this.style.boxShadow='0 4px 8px rgba(0,0,0,0.15)'; this.style.borderLeft='5px solid <?= $corCard ?>';"
-             onmouseout="this.style.transform='translateY(0)'; this.style.boxShadow='0 2px 4px rgba(0,0,0,0.1)'; this.style.borderLeft='4px solid <?= $corCard ?>';"
-             title="Clique para ver detalhes da disciplina <?= htmlspecialchars($nomeDisciplina) ?>">
-            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
-                <div style="flex: 1;">
-                    <h6 style="color: #023A8D; margin: 0 0 8px 0; font-weight: 600; font-size: 1rem;">
-                        <?= $nomeDisciplina ?>
-                    </h6>
-                    <div class="stat-status" style="color: <?= $corCard ?>; font-size: 0.85rem; display: flex; align-items: center; gap: 5px;">
-                        <?= $icon ?>
-                        <span style="font-weight: 500;"><?= $status ?></span>
+        <div style="background: #f8f9fa; padding: 20px; margin-top: 20px;">
+            <h5 style="color: #023A8D; margin-bottom: 15px; display: flex; align-items: center;">
+                <i class="fas fa-info-circle me-2"></i>Resumo da Turma
+            </h5>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
+                <div style="text-align: center;">
+                    <div style="font-size: 1.8rem; font-weight: bold; color: #023A8D; margin-bottom: 5px;"><?= $totalAulasAgendadas ?>/<?= $totalAulasObrigatorias ?></div>
+                    <div style="font-size: 0.85rem; color: #666;">Aulas Agendadas</div>
+            </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 1.8rem; font-weight: bold; color: <?= $percentualGeral >= 100 ? '#28a745' : ($percentualGeral >= 75 ? '#ffc107' : '#dc3545') ?>; margin-bottom: 5px;"><?= $percentualGeral ?>%</div>
+                    <div style="font-size: 0.85rem; color: #666;">Progresso Geral</div>
                     </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 1.8rem; font-weight: bold; color: #6f42c1; margin-bottom: 5px;"><?= $totalAlunos ?></div>
+                    <div style="font-size: 0.85rem; color: #666;">Alunos Matriculados</div>
+                    </div>
+                <div style="text-align: center;">
+                    <div style="font-size: 1.8rem; font-weight: bold; color: #F7931E; margin-bottom: 5px;"><?= count($disciplinasSelecionadas) ?></div>
+                    <div style="font-size: 0.85rem; color: #666;">Disciplinas</div>
                 </div>
             </div>
-            
-            <div style="margin-bottom: 15px;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
-                    <span style="font-size: 0.9rem; color: #666;">Progresso:</span>
-                    <span class="stat-percentual-valor" style="font-weight: bold; color: <?= $corCard ?>; font-size: 1.1rem;">
-                        <?= $percentualDisciplina ?>%
-                    </span>
-                </div>
-                <div style="background: rgba(0,0,0,0.1); height: 8px; border-radius: 4px; overflow: hidden;">
-                    <div class="stat-progresso-barra" style="background: <?= $corCard ?>; height: 100%; width: <?= min($percentualDisciplina, 100) ?>%; transition: width 0.3s ease;"></div>
-                </div>
-            </div>
-            
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; font-size: 0.85rem;">
-                <div style="text-align: center; padding: 8px; background: white; border-radius: 6px;">
-                    <div class="stat-agendadas-valor" style="font-weight: bold; color: #023A8D; font-size: 1.2rem;"><?= $stats['agendadas'] ?></div>
-                    <div style="color: #666; font-size: 0.75rem;">Agendadas</div>
-                </div>
-                <div style="text-align: center; padding: 8px; background: white; border-radius: 6px;">
-                    <div class="stat-realizadas-valor" style="font-weight: bold; color: #28a745; font-size: 1.2rem;"><?= $stats['realizadas'] ?></div>
-                    <div style="color: #666; font-size: 0.75rem;">Realizadas</div>
-                </div>
-                <div style="text-align: center; padding: 8px; background: white; border-radius: 6px;">
-                    <div class="stat-faltantes-valor" style="font-weight: bold; color: #dc3545; font-size: 1.2rem;"><?= $stats['faltantes'] ?></div>
-                    <div style="color: #666; font-size: 0.75rem;">Faltantes</div>
-                </div>
-            </div>
-            
-            <div style="margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(0,0,0,0.1); text-align: center; font-size: 0.85rem; color: #666;">
-                <span class="stat-resumo"><?= $stats['agendadas'] ?>/<?= $stats['obrigatorias'] ?> aulas (faltam <?= $stats['faltantes'] ?>)</span>
-            </div>
-        </div>
-        <?php endforeach; ?>
-    </div>
-</div>
-
-<!-- Alunos Matriculados -->
-<div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-        <h4 style="color: #023A8D; margin: 0;">
-            <i class="fas fa-users me-2"></i>Alunos Matriculados
-        </h4>
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <span style="background: #e3f2fd; color: #1976d2; padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 500;">
-                <i class="fas fa-user-check me-1"></i>
-                <?= count($alunosMatriculados) ?> aluno(s)
-            </span>
-            <button onclick="abrirModalInserirAlunos()" class="btn-primary" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500; transition: all 0.3s; font-size: 0.9rem;">
-                <i class="fas fa-user-plus"></i>
-                Matricular Aluno
-            </button>
         </div>
     </div>
     
-    <?php if (!empty($alunosMatriculados)): ?>
-        <div style="overflow-x: auto;">
-            <table class="alunos-table">
-                <thead>
-                    <tr>
-                        <th>Nome</th>
-                        <th>CPF</th>
-                        <th>Categoria</th>
-                        <th>CFC</th>
-                        <th style="text-align: center;">Status</th>
-                        <th>Data Matrícula</th>
-                        <th style="text-align: center;">Ações</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($alunosMatriculados as $aluno): ?>
-                        <tr>
-                            <td>
-                                <div style="display: flex; align-items: center; gap: 8px;">
-                                    <div class="aluno-avatar">
-                                        <?= strtoupper(substr($aluno['nome'], 0, 2)) ?>
-                                    </div>
-                                    <div>
-                                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 2px;"><?= htmlspecialchars($aluno['nome']) ?></div>
-                                        <?php if (!empty($aluno['email'])): ?>
-                                            <div style="font-size: 0.8rem; color: #6c757d;">
-                                                <i class="fas fa-envelope me-1"></i><?= htmlspecialchars($aluno['email']) ?>
-                                            </div>
-                                        <?php endif; ?>
-                                        <?php if (!empty($aluno['telefone'])): ?>
-                                            <div style="font-size: 0.8rem; color: #6c757d;">
-                                                <i class="fas fa-phone me-1"></i><?= htmlspecialchars($aluno['telefone']) ?>
-                                            </div>
-                                        <?php endif; ?>
-                                    </div>
-                                </div>
-                            </td>
-                            <td style="font-family: monospace; font-size: 0.9rem;">
-                                <?= htmlspecialchars($aluno['cpf']) ?>
-                            </td>
-                            <td>
-                                <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
-                                    <?= htmlspecialchars($aluno['categoria_cnh']) ?>
-                                </span>
-                            </td>
-                            <td>
-                                <span style="color: #495057; font-size: 0.9rem;">
-                                    <?= htmlspecialchars($aluno['cfc_nome']) ?>
-                                </span>
-                            </td>
-                            <td style="text-align: center;">
-                                <?php
-                                $statusClass = '';
-                                $statusIcon = '';
-                                $statusText = '';
-                                
-                                switch ($aluno['status']) {
-                                    case 'matriculado':
-                                        $statusClass = 'status-matriculado';
-                                        $statusIcon = 'fas fa-user-check';
-                                        $statusText = 'Matriculado';
-                                        break;
-                                    case 'cursando':
-                                        $statusClass = 'status-cursando';
-                                        $statusIcon = 'fas fa-graduation-cap';
-                                        $statusText = 'Cursando';
-                                        break;
-                                    case 'evadido':
-                                        $statusClass = 'status-matriculado';
-                                        $statusIcon = 'fas fa-user-check';
-                                        $statusText = 'Matriculado';
-                                        break;
-                                    case 'transferido':
-                                        $statusClass = 'status-transferido';
-                                        $statusIcon = 'fas fa-exchange-alt';
-                                        $statusText = 'Transferido';
-                                        break;
-                                    case 'concluido':
-                                        $statusClass = 'status-concluido';
-                                        $statusIcon = 'fas fa-check-circle';
-                                        $statusText = 'Concluído';
-                                        break;
-                                    default:
-                                        $statusClass = 'status-badge';
-                                        $statusIcon = 'fas fa-question-circle';
-                                        $statusText = ucfirst($aluno['status']);
-                                }
-                                ?>
-                                <span class="status-badge <?= $statusClass ?>">
-                                    <i class="<?= $statusIcon ?>"></i>
-                                    <?= $statusText ?>
-                                </span>
-                            </td>
-                            <td style="font-size: 0.9rem; color: #6c757d;">
-                                <i class="fas fa-calendar-alt me-1"></i>
-                                <?= date('d/m/Y', strtotime($aluno['data_matricula'])) ?>
-                                <div style="font-size: 0.8rem; color: #adb5bd;">
-                                    <?= date('H:i', strtotime($aluno['data_matricula'])) ?>
-                                </div>
-                            </td>
-                            <td style="text-align: center;">
-                                <div class="action-buttons">
-                                    <button onclick="removerMatricula(<?= $aluno['id'] ?>, '<?= htmlspecialchars($aluno['nome']) ?>')" class="action-btn btn-delete" title="Remover da Turma">
-                                        <i class="fas fa-trash"></i>
-                                    </button>
-                                </div>
-                            </td>
-                        </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    <?php else: ?>
-        <div style="text-align: center; padding: 40px 20px; color: #6c757d;">
-            <i class="fas fa-users" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
-            <h5 style="margin-bottom: 10px; color: #495057;">Nenhum aluno matriculado</h5>
-            <p style="margin-bottom: 20px;">Esta turma ainda não possui alunos matriculados.</p>
-            <button onclick="abrirModalInserirAlunos()" class="btn-primary" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; transition: all 0.3s;">
-                <i class="fas fa-user-plus"></i>
-                Matricular Primeiro Aluno
-            </button>
-        </div>
-    <?php endif; ?>
-</div>
-
+    <!-- Aba Disciplinas -->
+    <div id="tab-disciplinas" class="tab-content">
 <!-- Disciplinas -->
-<div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+<div style="padding: 20px;">
     <h4 style="color: #023A8D; margin-bottom: 20px;">
         <i class="fas fa-graduation-cap me-2"></i>Disciplinas da Turma
     </h4>
@@ -2544,8 +2472,1556 @@ $corProgresso = $percentualGeral >= 100 ? '#28a745' : ($percentualGeral >= 75 ? 
     
 </div>
 
-<!-- Estatísticas da Turma -->
-<div class="estatisticas-container">
+    </div>
+
+    <!-- Aba Alunos -->
+    <div id="tab-alunos" class="tab-content">
+        <!-- Alunos Matriculados -->
+        <div style="padding: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+        <h4 style="color: #023A8D; margin: 0;">
+            <i class="fas fa-users me-2"></i>Alunos Matriculados
+        </h4>
+        <div style="display: flex; gap: 10px; align-items: center;">
+            <span style="background: #e3f2fd; color: #1976d2; padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 500;">
+                <i class="fas fa-user-check me-1"></i>
+                <?= count($alunosMatriculados) ?> aluno(s)
+            </span>
+            <button onclick="abrirModalInserirAlunos()" class="btn-primary" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500; transition: all 0.3s; font-size: 0.9rem;">
+                <i class="fas fa-user-plus"></i>
+                Matricular Aluno
+            </button>
+        </div>
+    </div>
+    
+    <?php if (!empty($alunosMatriculados)): ?>
+        <div style="overflow-x: auto;">
+            <table class="alunos-table">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Categoria</th>
+                        <th>CFC</th>
+                        <th style="text-align: center;">Status</th>
+                        <th>Data Matrícula</th>
+                        <th style="text-align: center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($alunosMatriculados as $aluno): ?>
+                        <tr>
+                            <td>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <div class="aluno-avatar">
+                                        <?= strtoupper(substr($aluno['nome'], 0, 2)) ?>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 2px;"><?= htmlspecialchars($aluno['nome']) ?></div>
+                                        <?php if (!empty($aluno['email'])): ?>
+                                            <div style="font-size: 0.8rem; color: #6c757d;">
+                                                <i class="fas fa-envelope me-1"></i><?= htmlspecialchars($aluno['email']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                        <?php if (!empty($aluno['telefone'])): ?>
+                                            <div style="font-size: 0.8rem; color: #6c757d;">
+                                                <i class="fas fa-phone me-1"></i><?= htmlspecialchars($aluno['telefone']) ?>
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="font-family: monospace; font-size: 0.9rem;">
+                                <?= htmlspecialchars($aluno['cpf']) ?>
+                            </td>
+                            <td>
+                                <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
+                                    <?= htmlspecialchars($aluno['categoria_cnh']) ?>
+                                </span>
+                            </td>
+                            <td>
+                                <span style="color: #495057; font-size: 0.9rem;">
+                                    <?= htmlspecialchars($aluno['cfc_nome']) ?>
+                                </span>
+                            </td>
+                            <td style="text-align: center;">
+                                <?php
+                                $statusClass = '';
+                                $statusIcon = '';
+                                $statusText = '';
+                                
+                                switch ($aluno['status']) {
+                                    case 'matriculado':
+                                        $statusClass = 'status-matriculado';
+                                        $statusIcon = 'fas fa-user-check';
+                                        $statusText = 'Matriculado';
+                                        break;
+                                    case 'cursando':
+                                        $statusClass = 'status-cursando';
+                                        $statusIcon = 'fas fa-graduation-cap';
+                                        $statusText = 'Cursando';
+                                        break;
+                                    case 'evadido':
+                                        $statusClass = 'status-matriculado';
+                                        $statusIcon = 'fas fa-user-check';
+                                        $statusText = 'Matriculado';
+                                        break;
+                                    case 'transferido':
+                                        $statusClass = 'status-transferido';
+                                        $statusIcon = 'fas fa-exchange-alt';
+                                        $statusText = 'Transferido';
+                                        break;
+                                    case 'concluido':
+                                        $statusClass = 'status-concluido';
+                                        $statusIcon = 'fas fa-check-circle';
+                                        $statusText = 'Concluído';
+                                        break;
+                                    default:
+                                        $statusClass = 'status-badge';
+                                        $statusIcon = 'fas fa-question-circle';
+                                        $statusText = ucfirst($aluno['status']);
+                                }
+                                ?>
+                                <span class="status-badge <?= $statusClass ?>">
+                                    <i class="<?= $statusIcon ?>"></i>
+                                    <?= $statusText ?>
+                                </span>
+                            </td>
+                            <td style="font-size: 0.9rem; color: #6c757d;">
+                                <i class="fas fa-calendar-alt me-1"></i>
+                                <?= date('d/m/Y', strtotime($aluno['data_matricula'])) ?>
+                                <div style="font-size: 0.8rem; color: #adb5bd;">
+                                    <?= date('H:i', strtotime($aluno['data_matricula'])) ?>
+                                </div>
+                            </td>
+                            <td style="text-align: center;">
+                                <div class="action-buttons">
+                                    <button onclick="removerMatricula(<?= $aluno['id'] ?>, '<?= htmlspecialchars($aluno['nome']) ?>')" class="action-btn btn-delete" title="Remover da Turma">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    <?php else: ?>
+        <div style="text-align: center; padding: 40px 20px; color: #6c757d;">
+            <i class="fas fa-users" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
+            <h5 style="margin-bottom: 10px; color: #495057;">Nenhum aluno matriculado</h5>
+            <p style="margin-bottom: 20px;">Esta turma ainda não possui alunos matriculados.</p>
+            <button onclick="abrirModalInserirAlunos()" class="btn-primary" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; transition: all 0.3s;">
+                <i class="fas fa-user-plus"></i>
+                Matricular Primeiro Aluno
+            </button>
+        </div>
+    <?php endif; ?>
+</div>
+    </div>
+
+    <!-- Aba Calendário -->
+    <div id="tab-calendario" class="tab-content">
+        <?php
+        // Calcular período da turma PRIMEIRO (antes de buscar aulas)
+        $dataInicio = new DateTime($turma['data_inicio']);
+        $dataFim = new DateTime($turma['data_fim']);
+        
+        // Obter primeiro domingo do período
+        $primeiroDomingo = clone $dataInicio;
+        $diaSemanaAtual = (int)$primeiroDomingo->format('w');
+        if ($diaSemanaAtual > 0) {
+            $primeiroDomingo->modify('-' . $diaSemanaAtual . ' days');
+        }
+        if ($primeiroDomingo < $dataInicio) {
+            $primeiroDomingo = clone $dataInicio;
+            $diaSemanaAtual = (int)$primeiroDomingo->format('w');
+            if ($diaSemanaAtual != 0) {
+                $diasParaProximoDomingo = 7 - $diaSemanaAtual;
+                $primeiroDomingo->modify('+' . $diasParaProximoDomingo . ' days');
+            }
+            if ($primeiroDomingo > $dataFim) {
+                $primeiroDomingo = clone $dataInicio;
+            }
+        }
+        
+        // Calcular semanas disponíveis
+        $todasSemanasTmp = [];
+        $semanaAtual = clone $primeiroDomingo;
+        while ($semanaAtual <= $dataFim) {
+            $semana = [];
+            for ($dia = 0; $dia < 7; $dia++) {
+                $diaSemana = clone $semanaAtual;
+                $diaSemana->modify("+$dia days");
+                if ($diaSemana <= $dataFim && $diaSemana >= $dataInicio) {
+                    $semana[] = $diaSemana->format('Y-m-d');
+                } else {
+                    $semana[] = null;
+                }
+            }
+            $todasSemanasTmp[] = [
+                'dias' => $semana,
+                'inicio' => $semana[0] ? new DateTime($semana[0]) : null,
+                'indice' => count($todasSemanasTmp)
+            ];
+            $semanaAtual->modify('+7 days');
+        }
+        
+        // Semana selecionada
+        $semanaSelecionada = isset($_GET['semana_calendario']) && $_GET['semana_calendario'] !== '' ? (int)$_GET['semana_calendario'] : 0;
+        if ($semanaSelecionada < 0 || $semanaSelecionada >= count($todasSemanasTmp)) {
+            $semanaSelecionada = 0;
+        }
+        
+        $semanaDisplay = $todasSemanasTmp[$semanaSelecionada] ?? $todasSemanasTmp[0];
+        
+        // Calcular datas da semana selecionada para filtrar
+        $datasSemanaSelecionada = array_filter($semanaDisplay['dias'], function($d) { return $d !== null; });
+        $dataInicioSemana = min($datasSemanaSelecionada);
+        $dataFimSemana = max($datasSemanaSelecionada);
+        
+        // Buscar apenas aulas da semana selecionada
+        try {
+            $todasAulasCalendario = $db->fetchAll(
+                "SELECT 
+                    taa.*,
+                    taa.disciplina as disciplina_id,
+                    COALESCE(u.nome, i.nome, 'Não informado') as instrutor_nome,
+                    COALESCE(s.nome, 'Não informada') as sala_nome
+                 FROM turma_aulas_agendadas taa
+                 LEFT JOIN instrutores i ON taa.instrutor_id = i.id
+                 LEFT JOIN usuarios u ON i.usuario_id = u.id
+                 LEFT JOIN salas s ON taa.sala_id = s.id
+                 WHERE taa.turma_id = ? 
+                 AND (taa.status IS NULL OR taa.status != 'cancelada')
+                 AND taa.data_aula >= ?
+                 AND taa.data_aula <= ?
+                 ORDER BY taa.data_aula ASC, taa.hora_inicio ASC",
+                [$turmaId, $dataInicioSemana, $dataFimSemana]
+            );
+            
+            // Debug: verificar se encontrou aulas
+            if (empty($todasAulasCalendario)) {
+                // Tentar buscar sem filtro de status para debug
+                $todasAulasDebug = $db->fetchAll(
+                    "SELECT COUNT(*) as total, 
+                            SUM(CASE WHEN status = 'cancelada' THEN 1 ELSE 0 END) as canceladas,
+                            SUM(CASE WHEN status IS NULL OR status != 'cancelada' THEN 1 ELSE 0 END) as ativas
+                     FROM turma_aulas_agendadas 
+                     WHERE turma_id = ?",
+                    [$turmaId]
+                );
+            }
+        } catch (Exception $e) {
+            error_log("Erro ao buscar aulas para calendário: " . $e->getMessage());
+            $todasAulasCalendario = [];
+        }
+        
+        // Adicionar nome da disciplina baseado nas disciplinas selecionadas
+        $disciplinasMap = [];
+        foreach ($disciplinasSelecionadas as $disc) {
+            $disciplinasMap[$disc['disciplina_id']] = $disc['nome_disciplina'] ?? $disc['nome_original'] ?? 'Disciplina';
+        }
+        
+        foreach ($todasAulasCalendario as &$aula) {
+            $aula['nome_disciplina'] = $disciplinasMap[$aula['disciplina_id']] ?? 'Disciplina';
+        }
+        
+        // Organizar aulas por data e disciplina
+        $aulasPorData = [];
+        $ultimaAulaPorDisciplina = [];
+        
+        foreach ($todasAulasCalendario as $aula) {
+            $data = $aula['data_aula'];
+            
+            // Verificar se data está vazia ou nula
+            if (empty($data)) {
+                error_log("Aula sem data encontrada: ID " . ($aula['id'] ?? 'N/A'));
+                continue;
+            }
+            
+            // Normalizar formato de data (pode ser Y-m-d ou Y/m/d)
+            if (strpos($data, '/') !== false) {
+                $dataParts = explode('/', $data);
+                if (count($dataParts) == 3) {
+                    // Assumir formato d/m/Y ou Y/m/d baseado no tamanho do primeiro segmento
+                    if (strlen($dataParts[2]) == 4) {
+                        // Formato d/m/Y ou Y/m/d
+                        if (strlen($dataParts[0]) == 4) {
+                            // Y/m/d
+                            $data = $dataParts[0] . '-' . str_pad($dataParts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($dataParts[2], 2, '0', STR_PAD_LEFT);
+                        } else {
+                            // d/m/Y
+                            $data = $dataParts[2] . '-' . str_pad($dataParts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($dataParts[0], 2, '0', STR_PAD_LEFT);
+                        }
+                    } else {
+                        // Formato desconhecido, tentar converter como d/m/Y
+                        $data = $dataParts[2] . '-' . str_pad($dataParts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($dataParts[0], 2, '0', STR_PAD_LEFT);
+                    }
+                }
+            } else {
+                // Já está em formato Y-m-d, garantir que está correto
+                $dataParts = explode('-', $data);
+                if (count($dataParts) == 3) {
+                    $data = $dataParts[0] . '-' . str_pad($dataParts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($dataParts[2], 2, '0', STR_PAD_LEFT);
+                }
+            }
+            
+            $disciplinaId = $aula['disciplina_id'] ?? null;
+            
+            if ($disciplinaId === null) {
+                error_log("Aula sem disciplina_id: ID " . ($aula['id'] ?? 'N/A'));
+                continue;
+            }
+            
+            if (!isset($aulasPorData[$data])) {
+                $aulasPorData[$data] = [];
+            }
+            if (!isset($aulasPorData[$data][$disciplinaId])) {
+                $aulasPorData[$data][$disciplinaId] = [];
+            }
+            $aulasPorData[$data][$disciplinaId][] = $aula;
+            
+            // Identificar última aula por disciplina (para destacar)
+            if (!isset($ultimaAulaPorDisciplina[$disciplinaId]) || 
+                strtotime($aula['data_aula'] . ' ' . $aula['hora_fim']) > strtotime($ultimaAulaPorDisciplina[$disciplinaId]['data_aula'] . ' ' . $ultimaAulaPorDisciplina[$disciplinaId]['hora_fim'])) {
+                $ultimaAulaPorDisciplina[$disciplinaId] = $aula;
+            }
+        }
+        
+        // Definir cores por disciplina
+        $coresDisciplinas = [
+            'legislacao_transito' => '#FFC107',
+            'direcao_defensiva' => '#28a745',
+            'primeiros_socorros' => '#dc3545',
+            'meio_ambiente_cidadania' => '#17a2b8',
+            'mecanica_basica' => '#6f42c1'
+        ];
+        
+        // Calcular horários dinamicamente baseado nas aulas agendadas
+        // Encontrar a menor hora e maior hora das aulas para criar timeline
+        $horaMinima = null;
+        $horaMaxima = null;
+        
+        foreach ($todasAulasCalendario as $aula) {
+            // Normalizar formato de hora (pode ser HH:MM ou HH:MM:SS)
+            $horaInicioStr = $aula['hora_inicio'];
+            $horaFimStr = $aula['hora_fim'];
+            
+            if (strlen($horaInicioStr) == 8) {
+                $horaInicioStr = substr($horaInicioStr, 0, 5);
+            }
+            if (strlen($horaFimStr) == 8) {
+                $horaFimStr = substr($horaFimStr, 0, 5);
+            }
+            
+            // Converter para minutos
+            list($horaInicio, $minInicio) = explode(':', $horaInicioStr);
+            list($horaFim, $minFim) = explode(':', $horaFimStr);
+            
+            $horaMinMinutos = (int)$horaInicio * 60 + (int)$minInicio;
+            $horaMaxMinutos = (int)$horaFim * 60 + (int)$minFim;
+            
+            if ($horaMinima === null || $horaMinMinutos < $horaMinima) {
+                $horaMinima = $horaMinMinutos;
+            }
+            if ($horaMaxima === null || $horaMaxMinutos > $horaMaxima) {
+                $horaMaxima = $horaMaxMinutos;
+            }
+        }
+        
+        // Sempre mostrar timeline completa (Manhã, Tarde, Noite) para facilitar agendamento
+        // Independente de ter aulas, mostrar todo o período útil
+        if ($horaMinima === null || count($todasAulasCalendario) == 0) {
+            // Sem aulas: timeline completa mas compacta
+            $horaMinima = 6 * 60; // Sempre começar às 06:00 (Manhã)
+            $horaMaxima = 23 * 60; // Sempre terminar às 23:00 (Noite)
+        } else {
+            // Com aulas: sempre mostrar timeline completa, mas ajustar range se necessário
+            // Sempre incluir todos os períodos (Manhã, Tarde, Noite)
+            $horaMinima = 6 * 60; // Sempre começar às 06:00 para mostrar Manhã
+            $horaMaxima = 23 * 60; // Sempre terminar às 23:00 para mostrar Noite completa
+            
+            // Mas garantir que se há aulas fora deste range, expandir
+            foreach ($todasAulasCalendario as $aula) {
+                $horaInicioStr = $aula['hora_inicio'];
+                $horaFimStr = $aula['hora_fim'];
+                
+                if (strlen($horaInicioStr) == 8) {
+                    $horaInicioStr = substr($horaInicioStr, 0, 5);
+                }
+                if (strlen($horaFimStr) == 8) {
+                    $horaFimStr = substr($horaFimStr, 0, 5);
+                }
+                
+                list($horaInicio, $minInicio) = explode(':', $horaInicioStr);
+                list($horaFim, $minFim) = explode(':', $horaFimStr);
+                
+                $horaMinMinutos = (int)$horaInicio * 60 + (int)$minInicio;
+                $horaMaxMinutos = (int)$horaFim * 60 + (int)$minFim;
+                
+                // Não reduzir $horaMinima abaixo de 6:00 nem aumentar $horaMaxima acima de 23:00
+                // Mas garantir que todas as aulas estejam visíveis
+                if ($horaMinMinutos < 6 * 60) {
+                    $horaMinima = min(6 * 60, $horaMinMinutos - 30);
+                }
+                if ($horaMaxMinutos > 23 * 60) {
+                    $horaMaxima = max(23 * 60, $horaMaxMinutos + 30);
+                }
+            }
+        }
+        
+        // Definir períodos (Manhã, Tarde, Noite)
+        $periodos = [
+            'Manhã' => ['inicio' => 6 * 60, 'fim' => 12 * 60, 'colapsado' => false],
+            'Tarde' => ['inicio' => 12 * 60, 'fim' => 18 * 60, 'colapsado' => false],
+            'Noite' => ['inicio' => 18 * 60, 'fim' => 23 * 60, 'colapsado' => false]
+        ];
+        
+        // SIMPLIFICADO: NUNCA colapsar períodos automaticamente
+        // Isso estava causando problemas de renderização
+        // Períodos sempre expandidos por padrão - usuário pode colapsar manualmente se quiser
+        foreach ($periodos as $nomePeriodo => &$periodo) {
+            $periodo['colapsado'] = false;
+        }
+        
+        // Gerar timeline com intervalos de 30 minutos (mais granular que 50min fixo)
+        $horariosTimeline = [];
+        $horaAtual = $horaMinima;
+        while ($horaAtual <= $horaMaxima) {
+            $horas = floor($horaAtual / 60);
+            $minutos = $horaAtual % 60;
+            $horariosTimeline[] = sprintf('%02d:%02d', $horas, $minutos);
+            $horaAtual += 30; // Intervalos de 30 minutos
+        }
+        
+        // Manter array de horários para compatibilidade (será usado apenas como referência)
+        $horarios = $horariosTimeline;
+        
+        // Usar as semanas já calculadas acima
+        $todasSemanas = $todasSemanasTmp;
+        
+        // JavaScript para armazenar semanas disponíveis
+        $semanasJson = json_encode(array_map(function($s) {
+            return [
+                'dias' => $s['dias'],
+                'inicio' => $s['inicio'] ? $s['inicio']->format('Y-m-d') : null,
+                'indice' => $s['indice']
+            ];
+        }, $todasSemanas));
+        ?>
+        
+        <div style="padding: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
+                <h4 style="color: #023A8D; margin: 0; display: flex; align-items: center;">
+                    <i class="fas fa-calendar-alt me-2"></i>Calendário de Agendamentos
+                </h4>
+                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                    <!-- Navegação de Semana -->
+                    <div style="display: flex; align-items: center; gap: 8px; background: #f8f9fa; padding: 6px 12px; border-radius: 6px;">
+                        <button id="btn-semana-anterior" onclick="mudarSemana(-1)" style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 6px 10px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='white'">
+                            <i class="fas fa-chevron-left"></i>
+                        </button>
+                        <span id="info-semana-atual" style="font-size: 0.9rem; font-weight: 600; color: #023A8D; min-width: 220px; text-align: center;">
+                            <?php 
+                            $semanaDisplay = $todasSemanas[$semanaSelecionada] ?? $todasSemanas[0];
+                            $totalSemanas = count($todasSemanas);
+                            if ($semanaDisplay['inicio']):
+                                // Semana vai de domingo (dias[0]) a sábado (dias[6])
+                                $inicioSemana = $semanaDisplay['inicio'];
+                                $fimSemana = clone $inicioSemana;
+                                $fimSemana->modify('+6 days'); // Domingo + 6 dias = Sábado
+                                echo 'Semana ' . ($semanaSelecionada + 1) . ' de ' . $totalSemanas . '<br>';
+                                echo '<small style="font-size: 0.8rem; opacity: 0.9;">' . $inicioSemana->format('d/m') . ' - ' . $fimSemana->format('d/m/Y') . '</small>';
+                            else:
+                                echo 'Carregando...';
+                            endif;
+                            ?>
+                        </span>
+                        <button id="btn-semana-proxima" onclick="mudarSemana(1)" style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 6px 10px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='white'">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
+                    </div>
+                    <select id="filtro-disciplina-calendario" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem;" onchange="filtrarCalendario()">
+                        <option value="">Todas as disciplinas</option>
+                        <?php foreach ($disciplinasSelecionadas as $disc): ?>
+                            <option value="<?= $disc['disciplina_id'] ?>"><?= htmlspecialchars($disc['nome_disciplina'] ?? $disc['nome_original'] ?? 'Disciplina') ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+            
+            <input type="hidden" id="semana-atual-indice" value="<?= $semanaSelecionada ?>">
+            <input type="hidden" id="semanas-disponiveis" value='<?= htmlspecialchars($semanasJson) ?>'>
+            
+            <!-- Dados para JavaScript (todas as aulas para atualização dinâmica) -->
+            <script type="application/json" id="dados-calendario">
+            <?= json_encode([
+                'aulasPorData' => $aulasPorData,
+                'ultimaAulaPorDisciplina' => array_map(function($a) {
+                    return ['id' => $a['id'], 'disciplina_id' => $a['disciplina_id']];
+                }, $ultimaAulaPorDisciplina),
+                'coresDisciplinas' => $coresDisciplinas,
+                'disciplinasMap' => $disciplinasMap,
+                'horarios' => $horarios,
+                'horaMinima' => $horaMinima,
+                'horaMaxima' => $horaMaxima
+            ], JSON_UNESCAPED_UNICODE | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
+            </script>
+            
+            <!-- Debug Info (Temporário) -->
+            <?php 
+            $totalAulas = count($todasAulasCalendario ?? []);
+            
+            // Buscar total de aulas no período completo (para estatísticas)
+            try {
+                $totalAulasPeriodo = $db->fetch(
+                    "SELECT COUNT(*) as total FROM turma_aulas_agendadas 
+                     WHERE turma_id = ? 
+                     AND (status IS NULL OR status != 'cancelada')
+                     AND data_aula >= ? AND data_aula <= ?",
+                    [$turmaId, $turma['data_inicio'], $turma['data_fim']]
+                );
+                $totalGeral = $totalAulasPeriodo['total'] ?? 0;
+            } catch (Exception $e) {
+                $totalGeral = $totalAulas;
+            }
+            
+            // Coletar informações de debug sobre as datas
+            $debugDatas = [];
+            $debugDatasDisponiveis = array_keys($aulasPorData ?? []);
+            foreach ($semanaDisplay['dias'] as $idx => $data) {
+                if ($data) {
+                    $aulasDia = 0;
+                    // Buscar aulas deste dia (tentar formatos diferentes)
+                    $formatosData = [$data];
+                    if (strpos($data, '-') !== false) {
+                        $parts = explode('-', $data);
+                        $formatosData[] = $parts[2] . '/' . $parts[1] . '/' . $parts[0]; // d/m/Y
+                        $formatosData[] = $parts[0] . '/' . $parts[1] . '/' . $parts[2]; // Y/m/d
+                    }
+                    
+                    foreach ($formatosData as $dataBusca) {
+                        if (isset($aulasPorData[$dataBusca])) {
+                            foreach ($aulasPorData[$dataBusca] as $discId => $aulas) {
+                                $aulasDia += count($aulas);
+                            }
+                        }
+                    }
+                    
+                    // Se ainda não encontrou, buscar em todas as datas e comparar
+                    if ($aulasDia == 0 && !empty($aulasPorData)) {
+                        foreach ($aulasPorData as $dataKey => $disciplinas) {
+                            // Normalizar ambas as datas para comparação
+                            $dataNormalizada = $data;
+                            $dataKeyNormalizada = $dataKey;
+                            
+                            // Normalizar data da semana
+                            if (strpos($dataNormalizada, '-') !== false) {
+                                $parts = explode('-', $dataNormalizada);
+                                $dataNormalizada = $parts[0] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[2], 2, '0', STR_PAD_LEFT);
+                            }
+                            
+                            // Normalizar data key
+                            if (strpos($dataKey, '/') !== false) {
+                                $parts = explode('/', $dataKey);
+                                if (count($parts) == 3) {
+                                    if (strlen($parts[2]) == 4) {
+                                        if (strlen($parts[0]) == 4) {
+                                            $dataKeyNormalizada = $parts[0] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[2], 2, '0', STR_PAD_LEFT);
+                                        } else {
+                                            $dataKeyNormalizada = $parts[2] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[0], 2, '0', STR_PAD_LEFT);
+                                        }
+                                    }
+                                }
+                            } else {
+                                $parts = explode('-', $dataKey);
+                                if (count($parts) == 3) {
+                                    $dataKeyNormalizada = $parts[0] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[2], 2, '0', STR_PAD_LEFT);
+                                }
+                            }
+                            
+                            if ($dataNormalizada == $dataKeyNormalizada) {
+                                foreach ($disciplinas as $discId => $aulas) {
+                                    $aulasDia += count($aulas);
+                                }
+                            }
+                        }
+                    }
+                    
+                    $debugDatas[] = "$data: $aulasDia aulas";
+                }
+            }
+            
+            if ($totalAulas == 0): 
+                // Verificar se há aulas no banco para esta turma
+                try {
+                    $checkAulas = $db->fetch(
+                        "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ?",
+                        [$turmaId]
+                    );
+                    $totalNoBanco = $checkAulas['total'] ?? 0;
+                } catch (Exception $e) {
+                    $totalNoBanco = '?';
+                }
+            ?>
+            <div style="background: #fff3cd; border: 1px solid #ffc107; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                <strong style="color: #856404;">ℹ️ Aviso:</strong>
+                <span style="color: #856404;">Nenhuma aula agendada encontrada para esta turma.</span>
+                <br><small style="color: #856404;">
+                    Total no banco: <?= $totalNoBanco ?> | 
+                    Exibidas: <?= $totalAulas ?> | 
+                    Datas organizadas: <?= count($aulasPorData ?? []) ?>
+                    <?php if (isset($todasAulasDebug) && !empty($todasAulasDebug)): ?>
+                        <br>Debug DB: Total=<?= $todasAulasDebug[0]['total'] ?? 0 ?>, Canceladas=<?= $todasAulasDebug[0]['canceladas'] ?? 0 ?>, Ativas=<?= $todasAulasDebug[0]['ativas'] ?? 0 ?>
+                    <?php endif; ?>
+                </small>
+            </div>
+            <?php else: ?>
+            <div style="background: #d1ecf1; border: 1px solid #17a2b8; padding: 15px; border-radius: 6px; margin-bottom: 20px;">
+                <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <strong style="color: #0c5460;">✅ <?= $totalAulas ?> aulas nesta semana</strong>
+                        <?php if ($totalGeral > 0): ?>
+                            <small style="color: #6c757d;"> (Total no período: <?= $totalGeral ?>)</small>
+                        <?php endif; ?>
+                        <br><small style="color: #0c5460;">
+                            Semana: <?= $semanaDisplay['inicio'] ? $semanaDisplay['inicio']->format('d/m/Y') : 'N/A' ?> | 
+                            <?php if ($totalAulas > 0): ?>
+                                Horários: <?= sprintf('%02d:%02d', floor($horaMinima/60), $horaMinima%60) ?> - <?= sprintf('%02d:%02d', floor($horaMaxima/60), $horaMaxima%60) ?> |
+                            <?php endif; ?>
+                            Período da semana: <?= $dataInicioSemana ?> até <?= $dataFimSemana ?>
+                        </small>
+                    </div>
+                    <details style="flex: 1; min-width: 300px;">
+                        <summary style="cursor: pointer; color: #0c5460; font-weight: 600;">🔍 Ver detalhes de debug</summary>
+                        <div style="background: white; padding: 10px; margin-top: 10px; border-radius: 4px; font-size: 0.85rem; max-height: 200px; overflow-y: auto;">
+                            <strong>Aulas por dia da semana:</strong><br>
+                            <?php if (empty($debugDatas)): ?>
+                                Nenhuma aula encontrada para os dias desta semana.
+                            <?php else: ?>
+                                <?php foreach ($debugDatas as $info): ?>
+                                    • <?= $info ?><br>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                            <br>
+                            <strong>Datas disponíveis em aulasPorData (<?= count($debugDatasDisponiveis) ?>):</strong><br>
+                            <?php if (empty($debugDatasDisponiveis)): ?>
+                                Nenhuma data organizada.
+                            <?php else: ?>
+                                <?php foreach (array_slice($debugDatasDisponiveis, 0, 20) as $dataKey): ?>
+                                    • <?= $dataKey ?><br>
+                                <?php endforeach; ?>
+                                <?php if (count($debugDatasDisponiveis) > 20): ?>
+                                    ... e mais <?= count($debugDatasDisponiveis) - 20 ?> datas
+                                <?php endif; ?>
+                            <?php endif; ?>
+                            <br>
+                            <strong>Primeiras 3 aulas desta semana:</strong><br>
+                            <?php if (empty($todasAulasCalendario)): ?>
+                                Nenhuma aula nesta semana.
+                            <?php else: ?>
+                                <?php foreach (array_slice($todasAulasCalendario ?? [], 0, 3) as $aula): ?>
+                                    • ID <?= $aula['id'] ?? 'N/A' ?>: <?= $aula['data_aula'] ?? 'N/A' ?> às <?= substr($aula['hora_inicio'] ?? 'N/A', 0, 5) ?> - <?= $aula['nome_aula'] ?? 'N/A' ?><br>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                            <br>
+                            <strong>Filtro aplicado:</strong><br>
+                            • Semana selecionada: <?= $semanaSelecionada + 1 ?> de <?= count($todasSemanas) ?><br>
+                            • Datas da semana: <?= $dataInicioSemana ?> até <?= $dataFimSemana ?><br>
+                            • Aulas encontradas para este período: <?= $totalAulas ?>
+                        </div>
+                    </details>
+                </div>
+            </div>
+            <?php endif; ?>
+            
+            <!-- Legenda -->
+            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 20px; background: #e9ecef; border: 2px dashed #adb5bd; border-radius: 4px;"></div>
+                    <span style="font-size: 0.85rem;">Disponível</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 20px; background: #023A8D; border-radius: 4px;"></div>
+                    <span style="font-size: 0.85rem;">Aula agendada</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div style="width: 20px; height: 20px; background: #28a745; border: 2px solid #fff; box-shadow: 0 0 0 2px #28a745; border-radius: 4px;"></div>
+                    <span style="font-size: 0.85rem;">Última aula (por disciplina)</span>
+                </div>
+            </div>
+            
+            <!-- Calendário Estilo Timeline (Google Calendar) -->
+            <style>
+            .timeline-calendar {
+                position: relative;
+                background: white;
+                border-radius: 8px;
+                overflow: hidden;
+            }
+            
+            .timeline-header {
+                display: grid;
+                grid-template-columns: 80px repeat(7, 1fr);
+                background: #023A8D;
+                color: white;
+                border-bottom: 2px solid #0056b3;
+            }
+            
+            .timeline-time-column {
+                background: #f8f9fa;
+                border-right: 2px solid #dee2e6;
+                position: sticky;
+                left: 0;
+                z-index: 10;
+            }
+            
+            .timeline-day-header {
+                padding: 12px;
+                text-align: center;
+                font-weight: 600;
+                font-size: 0.9rem;
+            }
+            
+            .timeline-day-header .dia-nome {
+                display: block;
+                font-size: 0.95rem;
+                margin-bottom: 4px;
+            }
+            
+            .timeline-day-header .dia-data {
+                display: block;
+                font-size: 0.75rem;
+                opacity: 0.9;
+            }
+            
+            .timeline-body {
+                display: grid;
+                grid-template-columns: 80px repeat(7, 1fr);
+                position: relative;
+                align-items: start; /* Garantir alinhamento no topo */
+            }
+            
+            .timeline-hours {
+                position: sticky;
+                left: 0;
+                z-index: 5;
+                background: #f8f9fa;
+                border-right: 2px solid #dee2e6;
+                display: flex;
+                flex-direction: column;
+            }
+            
+            /* Container para linhas horizontais na coluna de horários */
+            .timeline-hours::after {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                /* Linhas horizontais: finas a cada 30 min, espessas nas horas inteiras */
+                background-image: 
+                    /* Linhas finas a cada 30 minutos (meio-horas) */
+                    repeating-linear-gradient(
+                        to bottom,
+                        transparent,
+                        transparent 59px,
+                        #e9ecef 59px,
+                        #e9ecef 60px
+                    ),
+                    /* Linhas espessas nas horas inteiras (sobrepõe as finas) */
+                    repeating-linear-gradient(
+                        to bottom,
+                        transparent,
+                        transparent 119px,
+                        #dee2e6 119px,
+                        #dee2e6 120px
+                    );
+                pointer-events: none;
+                z-index: 1;
+            }
+            
+            
+            .timeline-day-column {
+                position: relative;
+                /* Remover flex-direction para permitir posicionamento absoluto dos slots */
+            }
+            
+            .timeline-hour-marker {
+                position: relative;
+                /* Removido border-bottom - linhas agora vêm do background da coluna */
+                height: 60px; /* Altura fixa de 30 minutos = 60px (2px por minuto) */
+                display: flex;
+                align-items: flex-start;
+                box-sizing: border-box;
+                z-index: 2; /* Acima das linhas do background */
+            }
+            
+            .timeline-hour-marker.hora-inteira {
+                /* Linha mais espessa vem do ::before da coluna */
+            }
+            
+            .timeline-hour-label {
+                position: absolute;
+                top: -8px;
+                left: 8px;
+                font-size: 0.75rem;
+                color: #6c757d;
+                font-weight: 600;
+                background: #f8f9fa;
+                padding: 0 4px;
+            }
+            
+            .timeline-period-label {
+                position: absolute;
+                top: 4px;
+                right: 8px;
+                font-size: 0.65rem;
+                color: #adb5bd;
+                text-transform: uppercase;
+                font-weight: 500;
+            }
+            
+            .timeline-day-column {
+                position: relative;
+                border-right: 1px solid #e9ecef;
+                min-height: 100%;
+                /* Linhas horizontais para formar grade - serão criadas via pseudo-elementos */
+                background-image: repeating-linear-gradient(
+                    to bottom,
+                    transparent,
+                    transparent 59px,
+                    #e9ecef 59px,
+                    #e9ecef 60px
+                );
+            }
+            
+            /* Linhas mais espessas nas horas inteiras */
+            .timeline-day-column::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                bottom: 0;
+                background-image: repeating-linear-gradient(
+                    to bottom,
+                    transparent,
+                    transparent 119px,
+                    #dee2e6 119px,
+                    #dee2e6 120px
+                );
+                pointer-events: none;
+                z-index: 1;
+            }
+            
+            .timeline-day-column:last-child {
+                border-right: none;
+            }
+            
+            .timeline-slot {
+                position: absolute;
+                left: 2px;
+                right: 2px;
+                cursor: pointer;
+                transition: all 0.2s;
+                border-radius: 4px;
+                padding: 4px 8px;
+                font-size: 0.75rem;
+                z-index: 10; /* Acima das linhas da grade */
+                box-sizing: border-box;
+            }
+            
+            .timeline-slot.vazio {
+                background: rgba(248, 249, 250, 0.5);
+                border: 1px dashed rgba(173, 181, 189, 0.4);
+                transition: all 0.2s ease;
+            }
+            
+            .timeline-slot.vazio:hover {
+                background: rgba(2, 58, 141, 0.08);
+                border-color: rgba(2, 58, 141, 0.5);
+                border-style: solid;
+                border-width: 1px;
+                box-shadow: inset 0 0 0 1px rgba(2, 58, 141, 0.1);
+            }
+            
+            .timeline-slot.vazio::before {
+                content: '+';
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                color: #adb5bd;
+                font-size: 1.2rem;
+                font-weight: bold;
+                opacity: 0;
+                transition: opacity 0.2s ease;
+            }
+            
+            .timeline-slot.vazio:hover::before {
+                opacity: 0.5;
+            }
+            
+            .timeline-slot.aula {
+                color: white;
+                font-weight: 600;
+                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+                overflow: visible;
+                text-overflow: ellipsis;
+                white-space: normal;
+                word-wrap: break-word;
+                display: block;
+                min-height: 40px;
+            }
+            
+            .timeline-slot.aula.ultima {
+                border: 2px solid white;
+                box-shadow: 0 0 0 2px currentColor, 0 2px 8px rgba(0,0,0,0.15);
+            }
+            
+            .timeline-slot.aula:hover {
+                transform: translateY(-1px);
+                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+            }
+            
+            .timeline-periodo-colapsado {
+                height: 40px !important;
+                overflow: hidden;
+                position: relative;
+            }
+            
+            .timeline-periodo-colapsado::after {
+                content: '...';
+                position: absolute;
+                bottom: 5px;
+                left: 50%;
+                transform: translateX(-50%);
+                color: #6c757d;
+                font-size: 0.8rem;
+                background: white;
+                padding: 0 10px;
+            }
+            
+            .timeline-toggle-periodo {
+                position: sticky;
+                left: 0;
+                z-index: 15;
+                background: #f8f9fa;
+                border-bottom: 2px solid #dee2e6;
+                padding: 8px 12px;
+                cursor: pointer;
+                transition: background 0.2s;
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: #023A8D;
+                display: flex;
+                align-items: center;
+                justify-content: space-between;
+            }
+            
+            .timeline-toggle-periodo:hover {
+                background: #e9ecef;
+            }
+            
+            .timeline-toggle-periodo .periodo-info {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            
+            .timeline-toggle-periodo .periodo-badge {
+                background: #023A8D;
+                color: white;
+                padding: 2px 8px;
+                border-radius: 12px;
+                font-size: 0.7rem;
+            }
+            </style>
+            
+            <div style="overflow-x: auto;" id="calendario-container">
+                <div class="timeline-calendar" id="timeline-calendario">
+                    <?php
+                    $semanaDisplay = $todasSemanas[$semanaSelecionada] ?? $todasSemanas[0];
+                    $diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+                    
+                    // Calcular altura total da timeline (baseado em minutos)
+                    // IMPORTANTE: Verificar TODAS as aulas para encontrar o range real
+                    // E garantir que usamos SEMPRE o mesmo range para coluna de horários e posicionamento das aulas
+                    $horaMinimaReal = $horaMinima; // Começar com o mínimo definido (6:00 ou menor das aulas)
+                    $horaMaximaReal = $horaMaxima; // Começar com o máximo definido (23:00 ou maior das aulas)
+                    
+                    foreach ($todasAulasCalendario as $aula) {
+                        // Normalizar hora início
+                        $horaInicioStr = $aula['hora_inicio'];
+                        $horaFimStr = $aula['hora_fim'];
+                        if (strlen($horaInicioStr) == 8) {
+                            $horaInicioStr = substr($horaInicioStr, 0, 5);
+                        }
+                        if (strlen($horaFimStr) == 8) {
+                            $horaFimStr = substr($horaFimStr, 0, 5);
+                        }
+                        
+                        list($horaInicio, $minInicio) = explode(':', $horaInicioStr);
+                        list($horaFim, $minFim) = explode(':', $horaFimStr);
+                        
+                        $horaInicioMinutos = (int)$horaInicio * 60 + (int)$minInicio;
+                        $horaFimMinutos = (int)$horaFim * 60 + (int)$minFim;
+                        
+                        // Atualizar range real
+                        if ($horaInicioMinutos < $horaMinimaReal) {
+                            $horaMinimaReal = max(6 * 60, $horaInicioMinutos - 30); // Não ir antes de 6:00
+                        }
+                        if ($horaFimMinutos > $horaMaximaReal) {
+                            $horaMaximaReal = $horaFimMinutos + 30; // Adicionar margem
+                        }
+                    }
+                    
+                    // Garantir que sempre mostre até 23:00 mínimo, mas expandir se necessário
+                    $horaMaximaFinal = max(23 * 60, $horaMaximaReal);
+                    $horaMinimaFinal = min($horaMinima, $horaMinimaReal); // Usar o menor entre o padrão e o real
+                    
+                    // CRÍTICO: Atualizar as variáveis GLOBAIS para serem usadas em TODOS os cálculos
+                    // Isso garante que coluna de horários e posicionamento das aulas usem o mesmo range
+                    $horaMinimaUsar = $horaMinimaFinal;
+                    $horaMaximaUsar = $horaMaximaFinal;
+                    
+                    // SOBRESCREVER $horaMinima e $horaMaxima para garantir consistência
+                    $horaMinima = $horaMinimaFinal;
+                    $horaMaxima = $horaMaximaFinal;
+                    
+                    $alturaTotalMinutos = $horaMaximaFinal - $horaMinimaFinal;
+                    $alturaTotalPx = $alturaTotalMinutos * 2; // 2px por minuto
+                    
+                    // Debug detalhado
+                    echo "<!-- DEBUG Timeline: horaMinima=$horaMinimaFinal (" . sprintf('%02d:%02d', floor($horaMinimaFinal/60), $horaMinimaFinal%60) . "), horaMaxima=$horaMaximaFinal (" . sprintf('%02d:%02d', floor($horaMaximaFinal/60), $horaMaximaFinal%60) . "), alturaTotal=$alturaTotalPx px, totalAulas=" . count($todasAulasCalendario) . " -->";
+                    ?>
+                    
+                    <!-- Cabeçalho -->
+                    <div class="timeline-header">
+                        <div class="timeline-time-column" style="padding: 12px; text-align: center; font-weight: 600;">
+                            Horário
+                        </div>
+                        <?php foreach ($semanaDisplay['dias'] as $idx => $data): ?>
+                            <div class="timeline-day-header" data-dia-semana="<?= $idx ?>">
+                                <?php if ($data): 
+                                    $diaFormatado = new DateTime($data);
+                                ?>
+                                    <span class="dia-nome"><?= $diasSemana[$idx] ?></span>
+                                    <span class="dia-data data-display"><?= $diaFormatado->format('d/m') ?></span>
+                                <?php else: ?>
+                                    <span class="dia-nome" style="opacity: 0.5;"><?= $diasSemana[$idx] ?></span>
+                                    <span class="dia-data data-display">-</span>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                    
+                    <!-- Corpo da Timeline -->
+                    <div class="timeline-body" style="min-height: <?= $alturaTotalPx ?>px;">
+                        <!-- Coluna de Horários -->
+                        <div class="timeline-hours" id="timeline-hours-column">
+                            <?php
+                            // Renderizar períodos com possibilidade de colapsar
+                            $periodoRenderizado = '';
+                            // Usar $horaMinima e $horaMaxima que já foram atualizados acima
+                            $horaAtual = $horaMinima;
+                            
+                            while ($horaAtual <= $horaMaxima):
+                                $horas = floor($horaAtual / 60);
+                                $minutos = $horaAtual % 60;
+                                $horaTexto = sprintf('%02d:%02d', $horas, $minutos);
+                                $ehHoraInteira = ($minutos == 0);
+                                
+                                // Determinar período
+                                $periodo = '';
+                                if ($horas < 12) {
+                                    $periodo = 'Manhã';
+                                } elseif ($horas < 18) {
+                                    $periodo = 'Tarde';
+                                } else {
+                                    $periodo = 'Noite';
+                                }
+                                
+                                // Verificar se é início de um novo período
+                                $ehInicioPeriodo = ($periodo != $periodoRenderizado && $ehHoraInteira);
+                                
+                                // REMOVIDO COMPLETAMENTE: Lógica de colapso automático
+                                // Todos os períodos são sempre renderizados completamente
+                                // Isso estava causando problemas de renderização das aulas
+                                // Períodos sempre expandidos por padrão
+                                
+                                // Renderizar marcador de hora normal
+                                // Cada slot de 30 minutos = 60px (2px por minuto)
+                                $altura = 60;
+                            ?>
+                            <div class="timeline-hour-marker <?= $ehHoraInteira ? 'hora-inteira' : '' ?>" 
+                                 style="height: <?= $altura ?>px; flex-shrink: 0;"
+                                 data-hora-minutos="<?= $horaAtual ?>"
+                                 data-hora-texto="<?= $horaTexto ?>"
+                                 data-periodo="<?= strtolower($periodo) ?>">
+                                <?php if ($ehHoraInteira): ?>
+                                    <span class="timeline-hour-label"><?= $horaTexto ?></span>
+                                    <?php if ($ehInicioPeriodo): ?>
+                                        <span class="timeline-period-label"><?= $periodo ?></span>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
+                            <?php
+                                if ($ehInicioPeriodo) {
+                                    $periodoRenderizado = $periodo;
+                                }
+                                $horaAtual += 30;
+                            endwhile;
+                            ?>
+                        </div>
+                        
+                        <!-- Colunas dos Dias -->
+                        <?php foreach ($semanaDisplay['dias'] as $diaIdx => $data): ?>
+                            <div class="timeline-day-column" data-dia-semana="<?= $diaIdx ?>" data-data="<?= $data ?>" style="position: relative; min-height: <?= $alturaTotalPx ?>px;" id="dia-col-<?= $diaIdx ?>">
+                                <?php if ($data): 
+                                    // Normalizar formato de data para busca (garantir Y-m-d)
+                                    $dataBusca = $data;
+                                    
+                                    // Buscar aulas deste dia - tentar todas as variações de data
+                                    $aulasDoDia = [];
+                                    
+                                    // Normalizar data da semana para comparação (garantir formato Y-m-d)
+                                    $dataNormalizadaBusca = $dataBusca;
+                                    if (strpos($dataNormalizadaBusca, '-') !== false) {
+                                        $parts = explode('-', $dataNormalizadaBusca);
+                                        if (count($parts) == 3) {
+                                            $dataNormalizadaBusca = $parts[0] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[2], 2, '0', STR_PAD_LEFT);
+                                        }
+                                    } else {
+                                        // Se não está em formato Y-m-d, converter
+                                        $dt = DateTime::createFromFormat('d/m/Y', $dataBusca);
+                                        if ($dt) {
+                                            $dataNormalizadaBusca = $dt->format('Y-m-d');
+                                        }
+                                    }
+                                    
+                                    // MÉTODO ALTERNATIVO: Buscar diretamente de $todasAulasCalendario se aulasPorData falhar
+                                    $aulasEncontradasPorData = false;
+                                    
+                                    // Função auxiliar para normalizar qualquer formato de data
+                                    $normalizarData = function($data) {
+                                        if (empty($data)) return null;
+                                        
+                                        // Se já está em formato Y-m-d normalizado
+                                        if (preg_match('/^\d{4}-\d{2}-\d{2}$/', $data)) {
+                                            return $data;
+                                        }
+                                        
+                                        // Se está em formato Y-m-d não normalizado
+                                        if (preg_match('/^\d{4}-\d{1,2}-\d{1,2}$/', $data)) {
+                                            $parts = explode('-', $data);
+                                            return $parts[0] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[2], 2, '0', STR_PAD_LEFT);
+                                        }
+                                        
+                                        // Se está em formato com /
+                                        if (strpos($data, '/') !== false) {
+                                            $parts = explode('/', $data);
+                                            if (count($parts) == 3) {
+                                                // Determinar formato: Y/m/d ou d/m/Y
+                                                if (strlen($parts[2]) == 4) {
+                                                    // Formato d/m/Y
+                                                    return $parts[2] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[0], 2, '0', STR_PAD_LEFT);
+                                                } elseif (strlen($parts[0]) == 4) {
+                                                    // Formato Y/m/d
+                                                    return $parts[0] . '-' . str_pad($parts[1], 2, '0', STR_PAD_LEFT) . '-' . str_pad($parts[2], 2, '0', STR_PAD_LEFT);
+                                                }
+                                            }
+                                        }
+                                        
+                                        return null;
+                                    };
+                                    
+                                    // Buscar em todas as chaves de aulasPorData
+                                    foreach ($aulasPorData as $dataKey => $disciplinas) {
+                                        $dataKeyNormalizada = $normalizarData($dataKey);
+                                        
+                                        if ($dataKeyNormalizada && $dataKeyNormalizada == $dataNormalizadaBusca) {
+                                            $aulasEncontradasPorData = true;
+                                            foreach ($disciplinas as $discId => $aulas) {
+                                                foreach ($aulas as $aula) {
+                                                    // Verificar se a aula realmente pertence a este dia
+                                                    $aulaDataNormalizada = $normalizarData($aula['data_aula'] ?? '');
+                                                    if ($aulaDataNormalizada && $aulaDataNormalizada == $dataNormalizadaBusca) {
+                                                        $aulasDoDia[] = $aula;
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    // SE não encontrou em aulasPorData, buscar diretamente de $todasAulasCalendario
+                                    if (!$aulasEncontradasPorData && !empty($todasAulasCalendario)) {
+                                        foreach ($todasAulasCalendario as $aula) {
+                                            $aulaDataNormalizada = $normalizarData($aula['data_aula'] ?? '');
+                                            if ($aulaDataNormalizada && $aulaDataNormalizada == $dataNormalizadaBusca) {
+                                                $aulasDoDia[] = $aula;
+                                            }
+                                        }
+                                    }
+                                    
+                                    // Debug detalhado - sempre exibir para diagnóstico
+                                    $debugDia = "<!-- Debug Dia $dataBusca (normalizada: $dataNormalizadaBusca): " . count($aulasDoDia) . " aulas encontradas. ";
+                                    if (count($aulasDoDia) > 0) {
+                                        $debugDia .= "Primeira: ID " . ($aulasDoDia[0]['id'] ?? 'N/A') . " às " . ($aulasDoDia[0]['hora_inicio'] ?? 'N/A') . " - " . ($aulasDoDia[0]['nome_aula'] ?? 'N/A');
+                                        $debugDia .= " | Data da primeira: " . ($aulasDoDia[0]['data_aula'] ?? 'N/A');
+                                        // Verificar cálculos de posição
+                                        if (!empty($aulasDoDia[0]['hora_inicio'])) {
+                                            $horaInicioTeste = $aulasDoDia[0]['hora_inicio'];
+                                            if (strlen($horaInicioTeste) == 8) {
+                                                $horaInicioTeste = substr($horaInicioTeste, 0, 5);
+                                            }
+                                            $parts = explode(':', $horaInicioTeste);
+                                            $inicioMinutos = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
+                                            $topCalculado = ($inicioMinutos - $horaMinima) * 2;
+                                            $debugDia .= " | Calculo top: ($inicioMinutos - $horaMinima) * 2 = $topCalculado px";
+                                        }
+                                    } else {
+                                        $debugDia .= " NENHUMA AULA ENCONTRADA! Verificando aulasPorData...";
+                                        $debugDia .= " Chaves disponíveis (" . count($aulasPorData ?? []) . "): " . implode(', ', array_slice(array_keys($aulasPorData ?? []), 0, 10));
+                                        // Tentar buscar diretamente
+                                        $debugDia .= " | Buscando diretamente em todasAulasCalendario...";
+                                        $encontradasDiretas = 0;
+                                        foreach ($todasAulasCalendario as $aulaTeste) {
+                                            $aulaDataTeste = $normalizarData($aulaTeste['data_aula'] ?? '');
+                                            if ($aulaDataTeste && $aulaDataTeste == $dataNormalizadaBusca) {
+                                                $encontradasDiretas++;
+                                            }
+                                        }
+                                        $debugDia .= " Encontradas diretamente: $encontradasDiretas";
+                                    }
+                                    $debugDia .= " -->";
+                                    // Sempre exibir debug
+                                    echo $debugDia;
+                                    
+                                    // Ordenar aulas por horário
+                                    usort($aulasDoDia, function($a, $b) {
+                                        return strcmp($a['hora_inicio'], $b['hora_inicio']);
+                                    });
+                                    
+                                    // Calcular posições das aulas e slots vazios
+                                    $eventos = [];
+                                    foreach ($aulasDoDia as $aula) {
+                                        // Converter hora_inicio e hora_fim para minutos (formato pode ser HH:MM ou HH:MM:SS)
+                                        $horaInicioStr = $aula['hora_inicio'];
+                                        $horaFimStr = $aula['hora_fim'];
+                                        
+                                        // Normalizar formato (remover segundos se presente)
+                                        if (strlen($horaInicioStr) == 8) {
+                                            $horaInicioStr = substr($horaInicioStr, 0, 5);
+                                        }
+                                        if (strlen($horaFimStr) == 8) {
+                                            $horaFimStr = substr($horaFimStr, 0, 5);
+                                        }
+                                        
+                                        // Converter para minutos desde meia-noite
+                                        // Garantir que explode funciona mesmo se houver segundos
+                                        $horaInicioParts = explode(':', $horaInicioStr);
+                                        $horaFimParts = explode(':', $horaFimStr);
+                                        
+                                        $horaInicio = (int)($horaInicioParts[0] ?? 0);
+                                        $minInicio = (int)($horaInicioParts[1] ?? 0);
+                                        $horaFim = (int)($horaFimParts[0] ?? 0);
+                                        $minFim = (int)($horaFimParts[1] ?? 0);
+                                        
+                                        $inicioMinutos = $horaInicio * 60 + $minInicio;
+                                        $fimMinutos = $horaFim * 60 + $minFim;
+                                        
+                                        // Validar horários
+                                        if ($inicioMinutos < 0 || $inicioMinutos > 1440 || $fimMinutos < 0 || $fimMinutos > 1440) {
+                                            error_log("Horário inválido para aula ID {$aula['id']}: $horaInicioStr - $horaFimStr");
+                                            continue;
+                                        }
+                                        
+                                        $eventos[] = [
+                                            'tipo' => 'aula',
+                                            'inicio' => $inicioMinutos,
+                                            'fim' => $fimMinutos,
+                                            'aula' => $aula
+                                        ];
+                                    }
+                                    
+                                    // Ordenar eventos por início
+                                    usort($eventos, function($a, $b) {
+                                        return $a['inicio'] - $b['inicio'];
+                                    });
+                                    
+                                    // Renderizar aulas e slots vazios
+                                    // Usar $horaMinima que já foi atualizado acima para garantir consistência
+                                    $ultimoFim = $horaMinima;
+                                    
+                                    // Se não há eventos, criar slots vazios por período (mais organizados)
+                                    if (empty($eventos)) {
+                                        // Criar slots vazios para cada período (manhã, tarde, noite)
+                                        foreach ($periodos as $nomePeriodo => $periodoInfo) {
+                                            // Garantir que $periodoInfo é um array
+                                            if (!is_array($periodoInfo)) {
+                                                continue;
+                                            }
+                                            $periodoInicio = isset($periodoInfo['inicio']) ? $periodoInfo['inicio'] : 0;
+                                            $periodoFim = isset($periodoInfo['fim']) ? $periodoInfo['fim'] : 0;
+                                            
+                                            // Ajustar para o range visível
+                                            if ($periodoInicio < $horaMinima) $periodoInicio = $horaMinima;
+                                            if ($periodoFim > $horaMaxima) $periodoFim = $horaMaxima;
+                                            if ($periodoInicio >= $periodoFim) continue;
+                                            
+                                            $top = ($periodoInicio - $horaMinima) * 2;
+                                            $altura = ($periodoFim - $periodoInicio) * 2;
+                                            $horaSlot = sprintf('%02d:%02d', floor($periodoInicio / 60), $periodoInicio % 60);
+                                            
+                                            // REMOVIDO: displayStyle baseado em colapso - períodos sempre visíveis inicialmente
+                                            // O JavaScript controlará o colapso visualmente se o usuário clicar
+                                    ?>
+                                    <div class="timeline-slot vazio periodo-slot" 
+                                         data-periodo="<?= strtolower($nomePeriodo) ?>"
+                                         data-periodo-inicio="<?= $periodoInicio ?>"
+                                         data-periodo-fim="<?= $periodoFim ?>"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; <?= $displayStyle ?>"
+                                         onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
+                                         data-data="<?= $data ?>"
+                                         data-hora-inicio="<?= $horaSlot ?>"
+                                         title="Clique para agendar aula em <?= $nomePeriodo ?>">
+                                        <?php if ($altura > 60 && (!isset($periodoInfo['colapsado']) || !$periodoInfo['colapsado'])): ?>
+                                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; padding: 10px; pointer-events: none;">
+                                            <span style="color: #adb5bd; font-size: 0.7rem; text-align: center;"><?= $nomePeriodo ?> - Clique para agendar</span>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php
+                                        }
+                                    } else {
+                                        // Renderizar cada evento
+                                        foreach ($eventos as $evento) {
+                                            // Determinar período desta aula
+                                            $periodoAula = '';
+                                            if ($evento['inicio'] < 12 * 60) {
+                                                $periodoAula = 'manhã';
+                                            } elseif ($evento['inicio'] < 18 * 60) {
+                                                $periodoAula = 'tarde';
+                                            } else {
+                                                $periodoAula = 'noite';
+                                            }
+                                            $periodoAulaInfo = isset($periodos[ucfirst($periodoAula)]) && is_array($periodos[ucfirst($periodoAula)]) ? $periodos[ucfirst($periodoAula)] : null;
+                                            // CRÍTICO: Períodos com aulas NUNCA devem ser escondidos, mesmo que marcados como colapsados
+                                            // Se há aulas no período, ele não pode estar colapsado
+                                            $periodoColapsado = false; // Sempre false para períodos com aulas
+                                            
+                                            // Slot vazio antes da aula (se houver)
+                                            if ($evento['inicio'] > $ultimoFim && $evento['inicio'] - $ultimoFim >= 30) {
+                                            $slotInicio = $ultimoFim;
+                                            $slotFim = $evento['inicio'];
+                                            $top = ($slotInicio - $horaMinima) * 2;
+                                            $altura = ($slotFim - $slotInicio) * 2;
+                                            $horaSlot = sprintf('%02d:%02d', floor($slotInicio / 60), $slotInicio % 60);
+                                            
+                                            // Determinar período do slot vazio
+                                            $periodoSlot = '';
+                                            if ($slotInicio < 12 * 60) {
+                                                $periodoSlot = 'manhã';
+                                            } elseif ($slotInicio < 18 * 60) {
+                                                $periodoSlot = 'tarde';
+                                            } else {
+                                                $periodoSlot = 'noite';
+                                            }
+                                            // REMOVIDO: Verificação de colapso para slots vazios
+                                            // Slots sempre visíveis
+                                    ?>
+                                    <div class="timeline-slot vazio" 
+                                         data-periodo="<?= $periodoSlot ?>"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px;"
+                                         onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
+                                         data-data="<?= $data ?>"
+                                         data-hora-inicio="<?= $horaSlot ?>"
+                                         title="Clique para agendar aula a partir de <?= $horaSlot ?>">
+                                    </div>
+                                    <?php
+                                        }
+                                        
+                                        // Aula
+                                        $aula = $evento['aula'];
+                                        $ehUltima = isset($ultimaAulaPorDisciplina[$aula['disciplina_id']]) && 
+                                                   $ultimaAulaPorDisciplina[$aula['disciplina_id']]['id'] == $aula['id'];
+                                        $corDisciplina = $coresDisciplinas[$aula['disciplina_id']] ?? '#023A8D';
+                                        $nomeDisciplina = $disciplinasMap[$aula['disciplina_id']] ?? 'Disciplina';
+                                        
+                                        // Calcular posição e altura (2px por minuto)
+                                        // CRÍTICO: Usar $horaMinima que já foi atualizado acima para garantir alinhamento
+                                        // Calcular top baseado no início do evento
+                                        $top = ($evento['inicio'] - $horaMinima) * 2;
+                                        
+                                        // Calcular altura baseado na duração (2px por minuto)
+                                        $duracaoMinutos = $evento['fim'] - $evento['inicio'];
+                                        $altura = max(40, $duracaoMinutos * 2); // Mínimo de 40px para visibilidade
+                                        
+                                        // Validar que top não seja negativo (aula antes do início da timeline)
+                                        if ($top < 0) {
+                                            echo "<!-- AVISO: Aula antes de horaMinima! top={$top}px, inicio={$evento['inicio']}min (" . sprintf('%02d:%02d', floor($evento['inicio']/60), $evento['inicio']%60) . "), horaMinima={$horaMinima}min (" . sprintf('%02d:%02d', floor($horaMinima/60), $horaMinima%60) . "). Ajustando para 0. -->";
+                                            $top = 0;
+                                        }
+                                        
+                                        // Garantir que a altura não ultrapasse o limite da timeline
+                                        $maxTop = ($horaMaxima - $horaMinima) * 2;
+                                        if ($top + $altura > $maxTop) {
+                                            $altura = max(40, $maxTop - $top);
+                                        }
+                                        
+                                        // Debug da posição para diagnóstico
+                                        echo "<!-- AULA ID {$aula['id']}: top={$top}px, altura={$altura}px, inicio={$evento['inicio']}min (" . sprintf('%02d:%02d', floor($evento['inicio']/60), $evento['inicio']%60) . "), fim={$evento['fim']}min (" . sprintf('%02d:%02d', floor($evento['fim']/60), $evento['fim']%60) . "), duracao={$duracaoMinutos}min, horaMinima={$horaMinima}min (" . sprintf('%02d:%02d', floor($horaMinima/60), $horaMinima%60) . ") -->";
+                                        
+                                        $horaInicioStr = $aula['hora_inicio'];
+                                        $horaFimStr = $aula['hora_fim'];
+                                        if (strlen($horaInicioStr) == 8) {
+                                            $horaInicioStr = substr($horaInicioStr, 0, 5);
+                                        }
+                                        if (strlen($horaFimStr) == 8) {
+                                            $horaFimStr = substr($horaFimStr, 0, 5);
+                                        }
+                                    ?>
+                                    <div class="timeline-slot aula <?= $ehUltima ? 'ultima' : '' ?>"
+                                         data-periodo="<?= $periodoAula ?>"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; background: <?= $corDisciplina ?>; position: absolute; left: 2px; right: 2px; z-index: 10; border: 1px solid rgba(255,255,255,0.3); overflow: hidden; box-sizing: border-box; display: block !important;"
+                                         onclick="verDetalhesAula(<?= $aula['id'] ?>)"
+                                         data-aula-id="<?= $aula['id'] ?>"
+                                         data-disciplina-id="<?= $aula['disciplina_id'] ?>"
+                                         data-inicio-minutos="<?= $evento['inicio'] ?>"
+                                         data-fim-minutos="<?= $evento['fim'] ?>"
+                                         title="<?= htmlspecialchars($nomeDisciplina) ?> - <?= htmlspecialchars($aula['nome_aula']) ?> (<?= $horaInicioStr ?> - <?= $horaFimStr ?>)">
+                                        <div style="font-weight: 600; margin-bottom: 2px; font-size: 0.8rem;">
+                                            <?= htmlspecialchars($nomeDisciplina) ?>
+                                        </div>
+                                        <div style="opacity: 0.95; font-size: 0.7rem;">
+                                            <?= htmlspecialchars($aula['nome_aula']) ?>
+                                        </div>
+                                        <div style="font-size: 0.65rem; opacity: 0.9; margin-top: 2px;">
+                                            <?= $horaInicioStr ?> - <?= $horaFimStr ?>
+                                        </div>
+                                        <?php if ($ehUltima): ?>
+                                            <div style="font-size: 0.6rem; margin-top: 2px; opacity: 0.95;">
+                                                <i class="fas fa-flag"></i> Última
+                                            </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    <?php
+                                            $ultimoFim = $evento['fim'];
+                                        }
+                                    }
+                                    
+                                    // Slot vazio final (se houver espaço significativo após última aula)
+                                    // Só criar se houver pelo menos 1 hora de espaço
+                                    if ($ultimoFim < $horaMaxima && $horaMaxima - $ultimoFim >= 60) {
+                                        $top = ($ultimoFim - $horaMinima) * 2;
+                                        $altura = ($horaMaxima - $ultimoFim) * 2;
+                                        $horaSlot = sprintf('%02d:%02d', floor($ultimoFim / 60), $ultimoFim % 60);
+                                        
+                                        // Determinar período do slot final
+                                        $periodoSlotFinal = '';
+                                        if ($ultimoFim < 12 * 60) {
+                                            $periodoSlotFinal = 'manhã';
+                                        } elseif ($ultimoFim < 18 * 60) {
+                                            $periodoSlotFinal = 'tarde';
+                                        } else {
+                                            $periodoSlotFinal = 'noite';
+                                        }
+                                        // REMOVIDO: Verificação de colapso para slot final
+                                    ?>
+                                    <div class="timeline-slot vazio" 
+                                         data-periodo="<?= $periodoSlotFinal ?>"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px;"
+                                         onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
+                                         data-data="<?= $data ?>"
+                                         data-hora-inicio="<?= $horaSlot ?>"
+                                         title="Clique para agendar aula a partir de <?= $horaSlot ?>">
+                                    </div>
+                                    <?php
+                                    }
+                                    
+                                    // Adicionar slots vazios clicáveis para horários comuns apenas em períodos expandidos
+                                    // Horários comuns por período
+                                    $horariosComuns = [
+                                        'manhã' => [7 * 60, 8 * 60, 9 * 60, 10 * 60, 11 * 60],
+                                        'tarde' => [13 * 60, 14 * 60, 15 * 60, 16 * 60, 17 * 60],
+                                        'noite' => [18 * 60, 19 * 60, 20 * 60, 21 * 60]
+                                    ];
+                                    
+                                    foreach ($horariosComuns as $nomePeriodo => $horas) {
+                                        // Criar slots sempre, independente de colapso
+                                        // O colapso é apenas visual e controlado pelo JavaScript
+                                        
+                                        foreach ($horas as $horaMin) {
+                                            if ($horaMin < $horaMinima || $horaMin >= $horaMaxima) {
+                                                continue;
+                                            }
+                                            
+                                            // Verificar se já há aula neste horário
+                                            $jaTemAula = false;
+                                            foreach ($eventos as $evento) {
+                                                if ($evento['inicio'] <= $horaMin && $evento['fim'] > $horaMin) {
+                                                    $jaTemAula = true;
+                                                    break;
+                                                }
+                                                if (abs($evento['inicio'] - $horaMin) < 30) {
+                                                    $jaTemAula = true;
+                                                    break;
+                                                }
+                                            }
+                                            
+                                            // Verificar se está em intervalo vazio
+                                            $jaCoberto = false;
+                                            if (!empty($eventos)) {
+                                                foreach ($eventos as $idx => $evento) {
+                                                    if ($idx == 0 && $horaMin < $evento['inicio']) {
+                                                        $jaCoberto = true;
+                                                        break;
+                                                    }
+                                                    if ($idx > 0 && $horaMin > $eventos[$idx - 1]['fim'] && $horaMin < $evento['inicio']) {
+                                                        $jaCoberto = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!$jaCoberto && $horaMin > end($eventos)['fim']) {
+                                                    $jaCoberto = true;
+                                                }
+                                            }
+                                            
+                                            if (!$jaTemAula && !$jaCoberto) {
+                                                $top = ($horaMin - $horaMinima) * 2;
+                                                $altura = 60;
+                                                $horaSlot = sprintf('%02d:%02d', floor($horaMin / 60), $horaMin % 60);
+                                                ?>
+                                                <div class="timeline-slot vazio" 
+                                                     style="top: <?= $top ?>px; height: <?= $altura ?>px; min-height: 60px; position: relative;"
+                                                     onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
+                                                     data-data="<?= $data ?>"
+                                                     data-hora-inicio="<?= $horaSlot ?>"
+                                                     data-periodo="<?= $nomePeriodo ?>"
+                                                     title="Clique para agendar aula às <?= $horaSlot ?>">
+                                                </div>
+                                                <?php
+                                            }
+                                        }
+                                    }
+                                    ?>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Aba Estatísticas -->
+    <div id="tab-estatisticas" class="tab-content">
+        <!-- Estatísticas Gerais da Turma -->
+        <div class="estatisticas-container" style="margin-bottom: 25px;">
     <div class="stat-card stat-card-blue">
         <div class="stat-icon">
             <i class="fas fa-calendar-alt"></i>
@@ -2562,7 +4038,7 @@ $corProgresso = $percentualGeral >= 100 ? '#28a745' : ($percentualGeral >= 75 ? 
         </div>
         <div class="stat-content">
             <div class="stat-number"><?= $totalHoras ?>h</div>
-            <div class="stat-label">Carga Horária Restante</div>
+                    <div class="stat-label">Carga Horária Total</div>
         </div>
     </div>
     
@@ -2586,6 +4062,662 @@ $corProgresso = $percentualGeral >= 100 ? '#28a745' : ($percentualGeral >= 75 ? 
         </div>
     </div>
 </div>
+
+        <!-- Progresso das Disciplinas -->
+        <?php
+        // Calcular progresso geral
+        $totalAulasObrigatorias = 0;
+        $totalAulasAgendadas = 0;
+        $totalAulasRealizadas = 0;
+
+        foreach ($estatisticasDisciplinas as $stats) {
+            $totalAulasObrigatorias += $stats['obrigatorias'];
+            $totalAulasAgendadas += $stats['agendadas'];
+            $totalAulasRealizadas += $stats['realizadas'];
+        }
+
+        $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $totalAulasObrigatorias) * 100, 1) : 0;
+        $corProgresso = $percentualGeral >= 100 ? '#28a745' : ($percentualGeral >= 75 ? '#ffc107' : '#dc3545');
+        ?>
+
+        <div style="padding: 20px;">
+            <h4 style="color: #023A8D; margin-bottom: 15px; display: flex; align-items: center;">
+                <i class="fas fa-chart-line me-2"></i>Progresso das Disciplinas
+            </h4>
+            
+            <!-- Progresso Geral -->
+            <div id="progresso-geral-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 15px; margin-bottom: 20px; color: white;">
+                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <div style="display: flex; align-items: baseline; gap: 12px;">
+                            <span id="percentual-geral" style="font-size: 2.5rem; font-weight: bold; line-height: 1;"><?= $percentualGeral ?>%</span>
+                            <span id="total-aulas-texto" style="opacity: 0.95; font-size: 1rem; line-height: 1.2;">
+                                <?= $totalAulasAgendadas ?> de <?= $totalAulasObrigatorias ?> aulas agendadas
+                            </span>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
+                        <div style="background: rgba(255,255,255,0.25); padding: 8px 15px; border-radius: 6px;">
+                            <div id="total-realizadas" style="font-size: 1.3rem; font-weight: bold; line-height: 1.2;"><?= $totalAulasRealizadas ?></div>
+                            <div style="font-size: 0.8rem; opacity: 0.95;">Realizadas</div>
+                        </div>
+                        <div style="background: rgba(255,255,255,0.25); padding: 8px 15px; border-radius: 6px;">
+                            <div id="total-faltantes" style="font-size: 1.3rem; font-weight: bold; line-height: 1.2;"><?= ($totalAulasObrigatorias - $totalAulasAgendadas) ?></div>
+                            <div style="font-size: 0.8rem; opacity: 0.95;">Faltantes</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="background: rgba(255,255,255,0.25); height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
+                    <div id="barra-progresso-geral" style="background: white; height: 100%; width: <?= $percentualGeral ?>%; transition: width 0.3s ease; border-radius: 4px;"></div>
+                </div>
+            </div>
+            
+            <!-- Lista de Progresso por Disciplina (Otimizada) -->
+            <div style="display: flex; flex-direction: column; gap: 10px;">
+                <?php foreach ($disciplinasSelecionadas as $disciplina): 
+                    $disciplinaId = $disciplina['disciplina_id'];
+                    $stats = $estatisticasDisciplinas[$disciplinaId] ?? ['agendadas' => 0, 'realizadas' => 0, 'faltantes' => 0, 'obrigatorias' => 0];
+                    
+                    $percentualDisciplina = $stats['obrigatorias'] > 0 ? round(($stats['agendadas'] / $stats['obrigatorias']) * 100, 1) : 0;
+                    
+                    // Definir cor baseada no progresso
+                    if ($percentualDisciplina >= 100) {
+                        $corBarra = '#28a745';
+                        $statusIcon = '✓';
+                    } elseif ($percentualDisciplina >= 75) {
+                        $corBarra = '#ffc107';
+                        $statusIcon = '⚠';
+                    } elseif ($stats['agendadas'] > 0) {
+                        $corBarra = '#17a2b8';
+                        $statusIcon = '…';
+                    } else {
+                        $corBarra = '#dc3545';
+                        $statusIcon = '○';
+                    }
+                    
+                    $nomeDisciplina = htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['nome_original'] ?? 'Disciplina');
+                ?>
+                <div style="background: #f8f9fa; padding: 12px; border-left: 4px solid <?= $corBarra ?>; margin-bottom: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <div style="flex: 1; min-width: 0;">
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span style="font-size: 1.2rem; color: <?= $corBarra ?>; font-weight: bold;"><?= $statusIcon ?></span>
+                                <span style="font-weight: 600; color: #023A8D; font-size: 0.95rem;"><?= $nomeDisciplina ?></span>
+                            </div>
+                        </div>
+                        <div style="display: flex; gap: 15px; align-items: center; font-size: 0.85rem;">
+                            <span style="color: #023A8D; font-weight: 600;"><?= $stats['agendadas'] ?>/<?= $stats['obrigatorias'] ?></span>
+                            <span style="color: <?= $corBarra ?>; font-weight: bold; font-size: 1rem;"><?= $percentualDisciplina ?>%</span>
+                        </div>
+                    </div>
+                    <div style="background: #e9ecef; height: 6px; overflow: hidden;">
+                        <div style="background: <?= $corBarra ?>; height: 100%; width: <?= min($percentualDisciplina, 100) ?>%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.75rem; color: #666;">
+                        <span>Agendadas: <strong style="color: #023A8D;"><?= $stats['agendadas'] ?></strong></span>
+                        <span>Realizadas: <strong style="color: #28a745;"><?= $stats['realizadas'] ?></strong></span>
+                        <span>Faltantes: <strong style="color: #dc3545;"><?= $stats['faltantes'] ?></strong></span>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- JavaScript para Calendário -->
+<script>
+function filtrarCalendario() {
+    const filtro = document.getElementById('filtro-disciplina-calendario').value;
+    const aulas = document.querySelectorAll('.timeline-slot.aula');
+    const slots = document.querySelectorAll('.timeline-slot.vazio');
+    
+    // Se não há filtro, mostrar tudo
+    if (!filtro) {
+        aulas.forEach(aula => aula.style.display = '');
+        slots.forEach(slot => slot.style.display = '');
+        return;
+    }
+    
+    // Filtrar aulas
+    aulas.forEach(aula => {
+        const disciplinaId = aula.getAttribute('data-disciplina-id');
+        if (disciplinaId === filtro) {
+            aula.style.display = '';
+        } else {
+            aula.style.display = 'none';
+        }
+    });
+    
+    // Para slots vazios, manter sempre visíveis para poder agendar
+}
+
+function agendarNoSlot(data, hora) {
+    // Converter data para formato do modal (Y-m-d)
+    const dataFormatada = data;
+    
+    // Buscar disciplina que precisa de mais aulas (priorizar a que tem mais faltantes)
+    const disciplinas = <?= json_encode(array_map(function($d) use ($estatisticasDisciplinas) {
+        $id = $d['disciplina_id'];
+        $stats = $estatisticasDisciplinas[$id] ?? [];
+        return [
+            'id' => $id,
+            'nome' => $d['nome_disciplina'] ?? $d['nome_original'] ?? 'Disciplina',
+            'faltantes' => $stats['faltantes'] ?? 0
+        ];
+    }, $disciplinasSelecionadas)) ?>;
+    
+    // Ordenar por faltantes (maior primeiro) e pegar a primeira
+    disciplinas.sort((a, b) => b.faltantes - a.faltantes);
+    const disciplinaSelecionada = disciplinas[0];
+    
+    if (disciplinaSelecionada && disciplinaSelecionada.faltantes > 0) {
+        // Abrir modal de agendamento com dados pré-preenchidos
+        abrirModalAgendarAula(
+            disciplinaSelecionada.id,
+            disciplinaSelecionada.nome,
+            '<?= $turma['data_inicio'] ?>',
+            '<?= $turma['data_fim'] ?>'
+        );
+        
+        // Aguardar o modal abrir e preencher campos
+        setTimeout(() => {
+            const dataInput = document.querySelector('#modalAgendarAula input[name="data_aula"], #modalAgendarAula input[id*="data"]');
+            const horaInput = document.querySelector('#modalAgendarAula input[name="hora_inicio"], #modalAgendarAula input[id*="hora"]');
+            
+            if (dataInput) {
+                dataInput.value = dataFormatada;
+                dataInput.dispatchEvent(new Event('change'));
+            }
+            if (horaInput) {
+                horaInput.value = hora;
+                horaInput.dispatchEvent(new Event('change'));
+            }
+        }, 300);
+    } else {
+        alert('Todas as disciplinas já têm todas as aulas agendadas!');
+    }
+}
+
+function verDetalhesAula(aulaId) {
+    // Buscar detalhes da aula e mostrar em um tooltip ou modal pequeno
+    // Por enquanto, apenas um alert simples
+    // TODO: Implementar modal de detalhes mais completo
+    const aulaElement = document.querySelector(`[data-aula-id="${aulaId}"]`);
+    if (aulaElement) {
+        alert('Clique na aba "Disciplinas" para ver e editar detalhes completos da aula.');
+    }
+}
+
+function mudarSemana(direcao) {
+    const semanasJson = document.getElementById('semanas-disponiveis').value;
+    const semanas = JSON.parse(semanasJson);
+    const indiceAtual = parseInt(document.getElementById('semana-atual-indice').value);
+    const novoIndice = indiceAtual + direcao;
+    
+    if (novoIndice < 0 || novoIndice >= semanas.length) {
+        return; // Não permitir ir além dos limites
+    }
+    
+    // Atualizar índice
+    document.getElementById('semana-atual-indice').value = novoIndice;
+    
+    // Atualizar cabeçalho da semana
+    const semana = semanas[novoIndice];
+    if (semana.inicio) {
+        const inicio = new Date(semana.inicio + 'T00:00:00');
+        const fim = new Date(semana.inicio + 'T00:00:00');
+        fim.setDate(fim.getDate() + 6); // Domingo + 6 dias = Sábado
+        
+        const formatarData = (data) => {
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            return dia + '/' + mes;
+        };
+        
+        const formatarDataCompleta = (data) => {
+            const dia = String(data.getDate()).padStart(2, '0');
+            const mes = String(data.getMonth() + 1).padStart(2, '0');
+            const ano = data.getFullYear();
+            return dia + '/' + mes + '/' + ano;
+        };
+        
+        const totalSemanas = semanas.length;
+        const semanaNumero = novoIndice + 1;
+        document.getElementById('info-semana-atual').innerHTML = 
+            'Semana ' + semanaNumero + ' de ' + totalSemanas + '<br>' +
+            '<small style="font-size: 0.8rem; opacity: 0.9;">' + formatarData(inicio) + ' - ' + formatarDataCompleta(fim) + '</small>';
+        
+        // Atualizar datas nos cabeçalhos das colunas
+        const diasSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+        semana.dias.forEach((data, idx) => {
+            const th = document.querySelector(`th[data-dia-semana="${idx}"]`);
+            if (th && data) {
+                const dataObj = new Date(data + 'T00:00:00');
+                const small = th.querySelector('.data-display');
+                if (small) {
+                    small.textContent = formatarData(dataObj);
+                }
+            } else if (th) {
+                const small = th.querySelector('.data-display');
+                if (small) {
+                    small.textContent = '-';
+                }
+            }
+        });
+        
+        // Atualizar conteúdo do calendário via AJAX para evitar recarregar página
+        atualizarCalendarioSemana(novoIndice);
+    }
+    
+    // Atualizar estado dos botões
+    document.getElementById('btn-semana-anterior').disabled = novoIndice === 0;
+    document.getElementById('btn-semana-proxima').disabled = novoIndice === semanas.length - 1;
+}
+
+function atualizarCalendarioSemana(novoIndice) {
+    // Recarregar a página com o novo índice para buscar apenas aulas da semana selecionada
+    const url = new URL(window.location);
+    url.searchParams.set('semana_calendario', novoIndice);
+    window.location.href = url.toString();
+    return;
+    
+    // Código abaixo não será executado (recarrega a página)
+    /*
+    const semanasJson = document.getElementById('semanas-disponiveis').value;
+    const semanas = JSON.parse(semanasJson);
+    const semana = semanas[novoIndice];
+    
+    if (!semana) return;
+    
+    // Obter dados das aulas já carregados (passados do PHP via script JSON)
+    const dadosScript = document.getElementById('dados-calendario');
+    if (!dadosScript) {
+        console.error('Dados do calendário não encontrados');
+        return;
+    }
+    
+    const dados = JSON.parse(dadosScript.textContent);
+    const aulasPorData = dados.aulasPorData || {};
+    const ultimaAulaPorDisciplina = dados.ultimaAulaPorDisciplina || {};
+    const coresDisciplinas = dados.coresDisciplinas || {};
+    const disciplinasMap = dados.disciplinasMap || {};
+    const horarios = dados.horarios || [];
+    */
+    
+    // Atualizar cabeçalhos das colunas
+    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    semana.dias.forEach((data, idx) => {
+        const th = document.querySelector(`th[data-dia-semana="${idx}"]`);
+        if (th) {
+            if (data) {
+                const dataObj = new Date(data + 'T00:00:00');
+                const formatarData = (d) => {
+                    const dia = String(d.getDate()).padStart(2, '0');
+                    const mes = String(d.getMonth() + 1).padStart(2, '0');
+                    return dia + '/' + mes;
+                };
+                th.style.background = '#023A8D';
+                th.style.color = 'white';
+                const small = th.querySelector('.data-display');
+                if (small) small.textContent = formatarData(dataObj);
+            } else {
+                th.style.background = '#e9ecef';
+                th.style.color = '#6c757d';
+                const small = th.querySelector('.data-display');
+                if (small) small.textContent = '-';
+            }
+        }
+    });
+    
+    // Atualizar corpo da tabela
+    const tbody = document.querySelector('#tab-calendario tbody');
+    if (!tbody) return;
+    
+    // Limpar e reconstruir
+    tbody.innerHTML = '';
+    
+    let periodoAtual = '';
+    horarios.forEach(hora => {
+        const horaObj = new Date('2000-01-01T' + hora + ':00');
+        const periodo = horaObj.getHours() < 12 ? 'Manhã' : (horaObj.getHours() < 18 ? 'Tarde' : 'Noite');
+        const mostrarPeriodo = periodo !== periodoAtual;
+        periodoAtual = periodo;
+        
+        const horaFimObj = new Date(horaObj);
+        horaFimObj.setMinutes(horaFimObj.getMinutes() + 50);
+        const horaFim = String(horaFimObj.getHours()).padStart(2, '0') + ':' + String(horaFimObj.getMinutes()).padStart(2, '0');
+        
+        const tr = document.createElement('tr');
+        
+        // Coluna de horário
+        const tdHorario = document.createElement('td');
+        tdHorario.style.cssText = 'background: #f8f9fa; padding: 8px; text-align: center; font-weight: 600; font-size: 0.85rem; position: sticky; left: 0; z-index: 5; border-right: 2px solid #dee2e6;';
+        if (mostrarPeriodo) {
+            tdHorario.innerHTML = `<div style="font-size: 0.7rem; color: #6c757d; margin-bottom: 4px;">${periodo}</div><div>${hora} - ${horaFim}</div>`;
+        } else {
+            tdHorario.innerHTML = `<div>${hora} - ${horaFim}</div>`;
+        }
+        tr.appendChild(tdHorario);
+        
+        // Colunas dos dias
+        semana.dias.forEach((data, diaIdx) => {
+            const td = document.createElement('td');
+            td.style.cssText = 'padding: 4px; vertical-align: top;';
+            
+            if (!data) {
+                tr.appendChild(td);
+                return;
+            }
+            
+            let temAula = false;
+            let aulasNoSlot = [];
+            
+            if (aulasPorData[data]) {
+                Object.keys(aulasPorData[data]).forEach(discId => {
+                    aulasPorData[data][discId].forEach(aula => {
+                        // Comparar apenas horários (usar base de referência para comparar tempo)
+                        const horaSlotMin = hora.split(':').map(Number);
+                        const horaSlotMinutos = horaSlotMin[0] * 60 + horaSlotMin[1];
+                        
+                        const aulaInicioMin = aula.hora_inicio.split(':').map(Number);
+                        const aulaInicioMinutos = aulaInicioMin[0] * 60 + aulaInicioMin[1];
+                        
+                        const aulaFimMin = aula.hora_fim.split(':').map(Number);
+                        const aulaFimMinutos = aulaFimMin[0] * 60 + aulaFimMin[1];
+                        
+                        const horaSlotFimMinutos = horaSlotMinutos + 50;
+                        
+                        // Verificar sobreposição: slot conflita se começa durante a aula ou a aula começa durante o slot
+                        if ((horaSlotMinutos >= aulaInicioMinutos && horaSlotMinutos < aulaFimMinutos) ||
+                            (horaSlotMinutos < aulaInicioMinutos && horaSlotFimMinutos > aulaInicioMinutos)) {
+                            temAula = true;
+                            aulasNoSlot.push(aula);
+                        }
+                    });
+                });
+            }
+            
+            if (temAula && aulasNoSlot.length > 0) {
+                const aula = aulasNoSlot[0];
+                const ehUltima = ultimaAulaPorDisciplina[aula.disciplina_id]?.id === aula.id;
+                const corDisciplina = coresDisciplinas[aula.disciplina_id] || '#023A8D';
+                const nomeDisciplina = disciplinasMap[aula.disciplina_id] || 'Disciplina';
+                
+                const divAula = document.createElement('div');
+                divAula.className = 'calendario-aula';
+                divAula.setAttribute('data-aula-id', aula.id);
+                divAula.setAttribute('data-disciplina-id', aula.disciplina_id);
+                divAula.style.cssText = `background: ${corDisciplina}; color: white; padding: 6px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; ${ehUltima ? 'border: 2px solid #fff; box-shadow: 0 0 0 2px ' + corDisciplina + ';' : ''}`;
+                divAula.onclick = () => verDetalhesAula(aula.id);
+                divAula.title = nomeDisciplina + ' - ' + aula.nome_aula;
+                
+                divAula.innerHTML = `
+                    <div style="font-weight: 600; margin-bottom: 2px;">${nomeDisciplina.substring(0, 15)}</div>
+                    <div style="opacity: 0.9; font-size: 0.7rem;">${aula.nome_aula.substring(0, 20)}</div>
+                    ${ehUltima ? '<div style="font-size: 0.65rem; margin-top: 2px; opacity: 0.95;"><i class="fas fa-flag"></i> Última</div>' : ''}
+                `;
+                
+                td.appendChild(divAula);
+            } else {
+                const divSlot = document.createElement('div');
+                divSlot.className = 'calendario-slot-vazio';
+                divSlot.setAttribute('data-data', data);
+                divSlot.setAttribute('data-hora', hora);
+                divSlot.style.cssText = 'background: #f8f9fa; border: 2px dashed #dee2e6; border-radius: 4px; padding: 20px 8px; text-align: center; cursor: pointer; transition: all 0.2s; min-height: 60px; display: flex; align-items: center; justify-content: center;';
+                divSlot.onmouseover = function() {
+                    this.style.background = '#e9ecef';
+                    this.style.borderColor = '#023A8D';
+                };
+                divSlot.onmouseout = function() {
+                    this.style.background = '#f8f9fa';
+                    this.style.borderColor = '#dee2e6';
+                };
+                divSlot.onclick = () => agendarNoSlot(data, hora);
+                divSlot.title = 'Clique para agendar aula neste horário';
+                divSlot.innerHTML = '<span style="color: #adb5bd; font-size: 0.7rem;">Disponível</span>';
+                
+                td.appendChild(divSlot);
+            }
+            
+            tr.appendChild(td);
+        });
+        
+        tbody.appendChild(tr);
+    });
+}
+
+// Inicializar ao carregar
+document.addEventListener('DOMContentLoaded', function() {
+    // Garantir que a primeira aba mostrada seja a primeira semana do calendário
+    const url = new URL(window.location);
+    const semanaCalendario = url.searchParams.get('semana_calendario');
+    
+    // Se estiver na aba Calendário e não houver parâmetro ou for inválido, garantir primeira semana
+    const abaAtiva = localStorage.getItem('turmaDetalhesAbaAtiva') || 'resumo';
+    if (abaAtiva === 'calendario' && (!semanaCalendario || parseInt(semanaCalendario) < 0)) {
+        url.searchParams.set('semana_calendario', '0');
+        window.history.replaceState({}, '', url);
+    }
+    
+    const semanasJsonElement = document.getElementById('semanas-disponiveis');
+    if (!semanasJsonElement) return;
+    
+    const semanasJson = semanasJsonElement.value;
+    if (!semanasJson) return;
+    
+    const semanas = JSON.parse(semanasJson);
+    const indiceAtual = parseInt(document.getElementById('semana-atual-indice').value) || 0;
+    
+    // Atualizar estado dos botões
+    const btnAnterior = document.getElementById('btn-semana-anterior');
+    const btnProximo = document.getElementById('btn-semana-proxima');
+    
+    if (btnAnterior) {
+        btnAnterior.disabled = indiceAtual === 0;
+        if (indiceAtual === 0) {
+            btnAnterior.style.opacity = '0.5';
+            btnAnterior.style.cursor = 'not-allowed';
+        } else {
+            btnAnterior.style.opacity = '1';
+            btnAnterior.style.cursor = 'pointer';
+        }
+    }
+    if (btnProximo) {
+        btnProximo.disabled = indiceAtual === semanas.length - 1;
+        if (indiceAtual === semanas.length - 1) {
+            btnProximo.style.opacity = '0.5';
+            btnProximo.style.cursor = 'not-allowed';
+        } else {
+            btnProximo.style.opacity = '1';
+            btnProximo.style.cursor = 'pointer';
+        }
+    }
+});
+
+// Função para expandir/colapsar períodos
+window.togglePeriodo = function(periodoNome) {
+    const periodo = periodoNome.toLowerCase();
+    console.log('togglePeriodo chamado para:', periodo);
+    
+    // Buscar o toggle - pode estar em qualquer lugar
+    const toggleDivs = document.querySelectorAll(`.timeline-toggle-periodo[data-periodo="${periodo}"]`);
+    const toggleDiv = toggleDivs[0];
+    const icon = document.getElementById('icon-' + periodo);
+    
+    if (!toggleDiv) {
+        console.warn('Toggle não encontrado para período:', periodo);
+        console.log('Toggles disponíveis:', document.querySelectorAll('.timeline-toggle-periodo'));
+        return;
+    }
+    
+    // Verificar estado atual pelo ícone - se está apontando para direita (0deg ou vazio), está colapsado
+    const iconTransform = icon ? icon.style.transform : '';
+    const estaColapsado = !iconTransform || iconTransform === '' || iconTransform === 'rotate(0deg)' || iconTransform === 'none';
+    
+    console.log('Toggle período:', periodo, 'Estado atual (colapsado):', estaColapsado);
+    
+    // Atualizar ícone
+    if (icon) {
+        icon.style.transform = estaColapsado ? 'rotate(90deg)' : 'rotate(0deg)';
+    }
+    
+    // Encontrar todos os elementos do período usando o atributo data-periodo
+    // IMPORTANTE: Buscar em todas as colunas (horas e dias) e também nos toggles de período
+    const markers = document.querySelectorAll(`.timeline-hour-marker[data-periodo="${periodo}"]`);
+    const slotsVazios = document.querySelectorAll(`.timeline-slot[data-periodo="${periodo}"], .periodo-slot[data-periodo="${periodo}"]`);
+    const aulas = document.querySelectorAll(`.timeline-slot.aula[data-periodo="${periodo}"]`);
+    const periodoColapsadoDiv = document.querySelectorAll(`.timeline-periodo-colapsado[data-periodo="${periodo}"]`);
+    
+    console.log('Elementos encontrados:', {
+        markers: markers.length,
+        slotsVazios: slotsVazios.length,
+        aulas: aulas.length,
+        periodoColapsado: periodoColapsadoDiv.length
+    });
+    
+    // Combinar todos os elementos do período
+    const todosElementos = [...markers, ...slotsVazios, ...aulas];
+    
+    if (estaColapsado) {
+        // Expandir: mostrar todos os elementos do período
+        console.log('Expandindo período:', periodo);
+        todosElementos.forEach(el => {
+            if (el.style) {
+                el.style.display = '';
+                el.style.visibility = 'visible';
+            }
+        });
+        // Esconder div de período colapsado
+        periodoColapsadoDiv.forEach(el => {
+            if (el.style) {
+                el.style.display = 'none';
+            }
+        });
+    } else {
+        // Colapsar: esconder todos os elementos do período
+        console.log('Colapsando período:', periodo);
+        todosElementos.forEach(el => {
+            if (el.style) {
+                el.style.display = 'none';
+                el.style.visibility = 'hidden';
+            }
+        });
+        // Mostrar div de período colapsado
+        periodoColapsadoDiv.forEach(el => {
+            if (el.style) {
+                el.style.display = 'block';
+            }
+        });
+    }
+    
+    console.log('Ação concluída para período:', periodo);
+};
+</script>
+
+<!-- JavaScript para Sistema de Abas -->
+<script>
+// A função showTab já foi definida antes dos botões para garantir disponibilidade global
+// Se por algum motivo ainda não estiver definida, definir aqui como fallback
+if (typeof window.showTab !== 'function') {
+    window.showTab = function(tabName) {
+        // Esconder todos os conteúdos de abas
+        const tabContents = document.querySelectorAll('.tab-content');
+        tabContents.forEach(content => {
+            content.classList.remove('active');
+        });
+        
+        // Remover classe active de todos os botões
+        const tabButtons = document.querySelectorAll('.tab-button');
+        tabButtons.forEach(button => {
+            button.classList.remove('active');
+        });
+        
+        // Se for a aba Calendário, garantir que está na primeira semana
+        if (tabName === 'calendario') {
+            const url = new URL(window.location);
+            const semanaAtual = url.searchParams.get('semana_calendario');
+            // Se não há parâmetro ou é inválido, forçar primeira semana (0)
+            if (!semanaAtual || parseInt(semanaAtual) < 0) {
+                url.searchParams.set('semana_calendario', '0');
+                window.history.replaceState({}, '', url);
+                // Se realmente não havia parâmetro, recarregar para garantir primeira semana
+                if (!semanaAtual) {
+                    window.location.href = url.toString();
+                    return;
+                }
+            }
+        }
+        
+        // Mostrar a aba selecionada
+        const selectedTab = document.getElementById('tab-' + tabName);
+        if (selectedTab) {
+            selectedTab.classList.add('active');
+        }
+        
+        // Ativar o botão correspondente
+        const buttons = document.querySelectorAll('.tab-button');
+        buttons.forEach(button => {
+            if (button.onclick && button.onclick.toString().includes("'" + tabName + "'")) {
+                button.classList.add('active');
+            } else {
+                // Método alternativo: verificar pelo texto do botão
+                const buttonText = button.textContent.toLowerCase().trim();
+                if (buttonText.includes(tabName.toLowerCase())) {
+                    button.classList.add('active');
+                }
+            }
+        });
+        
+        // Salvar aba ativa no localStorage
+        localStorage.setItem('turmaDetalhesAbaAtiva', tabName);
+        localStorage.setItem('turma-tab-active', tabName);
+    };
+}
+
+// Salvar a aba ativa no localStorage e garantir primeira semana do calendário
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se precisa garantir primeira semana do calendário
+    const url = new URL(window.location);
+    const semanaCalendario = url.searchParams.get('semana_calendario');
+    const abaAtiva = localStorage.getItem('turmaDetalhesAbaAtiva');
+    
+    // Se estiver acessando a aba Calendário pela primeira vez (sem parâmetro), garantir primeira semana
+    if ((abaAtiva === 'calendario' || !abaAtiva) && (!semanaCalendario || semanaCalendario === '')) {
+        url.searchParams.set('semana_calendario', '0');
+        // Usar replaceState para não recarregar se já está na página
+        window.history.replaceState({}, '', url);
+    }
+    
+    const savedTab = localStorage.getItem('turmaDetalhesAbaAtiva') || localStorage.getItem('turma-tab-active');
+    if (savedTab) {
+        showTab(savedTab);
+    }
+    
+    // Salvar quando uma aba for clicada e garantir primeira semana para calendário
+    const tabButtons = document.querySelectorAll('.tab-button');
+    tabButtons.forEach(button => {
+        const originalOnclick = button.getAttribute('onclick');
+        if (originalOnclick) {
+            button.addEventListener('click', function() {
+                // Se for a aba calendário e não há parâmetro de semana, garantir primeira semana
+                if (originalOnclick.includes('calendario')) {
+                    const url = new URL(window.location);
+                    if (!url.searchParams.get('semana_calendario')) {
+                        url.searchParams.set('semana_calendario', '0');
+                        window.history.replaceState({}, '', url);
+                    }
+                }
+                const match = originalOnclick.match(/'([^']+)'/);
+                if (match && match[1]) {
+                    const tabName = match[1];
+                    localStorage.setItem('turma-tab-active', tabName);
+                }
+            });
+        }
+    });
+});
+</script>
 
 <!-- Modal para Inserir Alunos -->
 <div id="modalInserirAlunos" class="modal-overlay" style="display: none;">
