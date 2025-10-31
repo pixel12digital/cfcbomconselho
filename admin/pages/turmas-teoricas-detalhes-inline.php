@@ -3093,45 +3093,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                             Período da semana: <?= $dataInicioSemana ?> até <?= $dataFimSemana ?>
                         </small>
                     </div>
-                    <details style="flex: 1; min-width: 300px;">
-                        <summary style="cursor: pointer; color: #0c5460; font-weight: 600;">🔍 Ver detalhes de debug</summary>
-                        <div style="background: white; padding: 10px; margin-top: 10px; border-radius: 4px; font-size: 0.85rem; max-height: 200px; overflow-y: auto;">
-                            <strong>Aulas por dia da semana:</strong><br>
-                            <?php if (empty($debugDatas)): ?>
-                                Nenhuma aula encontrada para os dias desta semana.
-                            <?php else: ?>
-                                <?php foreach ($debugDatas as $info): ?>
-                                    • <?= $info ?><br>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                            <br>
-                            <strong>Datas disponíveis em aulasPorData (<?= count($debugDatasDisponiveis) ?>):</strong><br>
-                            <?php if (empty($debugDatasDisponiveis)): ?>
-                                Nenhuma data organizada.
-                            <?php else: ?>
-                                <?php foreach (array_slice($debugDatasDisponiveis, 0, 20) as $dataKey): ?>
-                                    • <?= $dataKey ?><br>
-                                <?php endforeach; ?>
-                                <?php if (count($debugDatasDisponiveis) > 20): ?>
-                                    ... e mais <?= count($debugDatasDisponiveis) - 20 ?> datas
-                                <?php endif; ?>
-                            <?php endif; ?>
-                            <br>
-                            <strong>Primeiras 3 aulas desta semana:</strong><br>
-                            <?php if (empty($todasAulasCalendario)): ?>
-                                Nenhuma aula nesta semana.
-                            <?php else: ?>
-                                <?php foreach (array_slice($todasAulasCalendario ?? [], 0, 3) as $aula): ?>
-                                    • ID <?= $aula['id'] ?? 'N/A' ?>: <?= $aula['data_aula'] ?? 'N/A' ?> às <?= substr($aula['hora_inicio'] ?? 'N/A', 0, 5) ?> - <?= $aula['nome_aula'] ?? 'N/A' ?><br>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
-                            <br>
-                            <strong>Filtro aplicado:</strong><br>
-                            • Semana selecionada: <?= $semanaSelecionada + 1 ?> de <?= count($todasSemanas) ?><br>
-                            • Datas da semana: <?= $dataInicioSemana ?> até <?= $dataFimSemana ?><br>
-                            • Aulas encontradas para este período: <?= $totalAulas ?>
-                        </div>
-                    </details>
                 </div>
             </div>
             <?php endif; ?>
@@ -3170,8 +3131,9 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             }
             
             .timeline-time-column {
-                background: #f8f9fa;
-                border-right: 2px solid #dee2e6;
+                background: #023A8D;
+                color: white;
+                border-right: 2px solid #0056b3;
                 position: sticky;
                 left: 0;
                 z-index: 10;
@@ -3214,10 +3176,12 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 position: sticky;
                 left: 0;
                 z-index: 5;
-                background: #f8f9fa;
-                border-right: 2px solid #dee2e6;
+                background: #023A8D;
+                color: white;
+                border-right: 2px solid #0056b3;
                 display: flex;
                 flex-direction: column;
+                overflow: hidden; /* Esconder linhas que ultrapassem a altura definida */
             }
             
             /* Container para linhas horizontais na coluna de horários */
@@ -3229,24 +3193,26 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 right: 0;
                 bottom: 0;
                 width: 100%;
-                /* Linhas horizontais: finas a cada 30 min, espessas nas horas inteiras */
+                height: 100%;
+                /* Linhas horizontais: finas a cada 30 min, espessas nas horas inteiras - ajustadas para fundo azul */
                 background-image: 
-                    /* Linhas finas a cada 30 minutos (meio-horas) */
+                    /* Linhas finas a cada 30 minutos (meio-horas) - mais claras para aparecer no azul */
                     repeating-linear-gradient(
                         to bottom,
                         transparent,
                         transparent 59px,
-                        #e9ecef 59px,
-                        #e9ecef 60px
+                        rgba(255, 255, 255, 0.15) 59px,
+                        rgba(255, 255, 255, 0.15) 60px
                     ),
-                    /* Linhas espessas nas horas inteiras (sobrepõe as finas) */
+                    /* Linhas espessas nas horas inteiras - mais visíveis no azul */
                     repeating-linear-gradient(
                         to bottom,
                         transparent,
                         transparent 119px,
-                        #dee2e6 119px,
-                        #dee2e6 120px
+                        rgba(255, 255, 255, 0.3) 119px,
+                        rgba(255, 255, 255, 0.3) 120px
                     );
+                background-size: 100% 100%;
                 pointer-events: none;
                 z-index: 1;
             }
@@ -3276,9 +3242,9 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 top: -8px;
                 left: 8px;
                 font-size: 0.75rem;
-                color: #6c757d;
+                color: white;
                 font-weight: 600;
-                background: #f8f9fa;
+                background: #023A8D;
                 padding: 0 4px;
             }
             
@@ -3287,7 +3253,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 top: 4px;
                 right: 8px;
                 font-size: 0.65rem;
-                color: #adb5bd;
+                color: rgba(255, 255, 255, 0.8);
                 text-transform: uppercase;
                 font-weight: 500;
             }
@@ -3297,7 +3263,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 border-right: 1px solid #e9ecef;
                 background: white;
                 /* A altura será definida inline via style */
-                overflow: visible;
+                overflow: hidden; /* Esconder linhas que ultrapassem a altura definida */
             }
             
             /* Grade padrão: linhas horizontais nas colunas de dias */
@@ -3307,7 +3273,8 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 top: 0;
                 left: 0;
                 right: 0;
-                bottom: 0;
+                /* IMPORTANTE: Usar height em vez de bottom para limitar exatamente ao necessário */
+                height: 100%;
                 width: 100%;
                 /* Linhas horizontais: finas a cada 30 min, espessas nas horas inteiras */
                 background-image: 
@@ -3327,6 +3294,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                         #dee2e6 119px,
                         #dee2e6 120px
                     );
+                background-size: 100% 100%;
                 pointer-events: none;
                 z-index: 0;
             }
@@ -3462,13 +3430,33 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 opacity: 0;
                 transition: max-height 0.3s ease, opacity 0.3s ease;
                 pointer-events: none;
+                /* Garantir que display: none não sobrescreva */
             }
             
             .periodo-expandido {
                 max-height: none !important;
-                opacity: 1;
+                opacity: 1 !important;
                 transition: max-height 0.3s ease, opacity 0.3s ease;
                 pointer-events: auto;
+                /* Quando expandido, garantir que está visível - usar revert para manter display original */
+                visibility: visible !important;
+            }
+            
+            /* Timeline hour markers devem sempre ser visíveis quando expandidos */
+            .timeline-hour-marker.periodo-expandido {
+                display: flex !important;
+                visibility: visible !important;
+            }
+            
+            /* Timeline slots vazios devem ser visíveis quando expandidos */
+            .timeline-slot.vazio.periodo-expandido {
+                display: block !important;
+                visibility: visible !important;
+            }
+            
+            /* Remover display: none quando período está expandido */
+            .periodo-expandido[style*="display: none"] {
+                display: revert !important;
             }
             </style>
             
@@ -3529,13 +3517,17 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                     $horaMaxima = $horaMaximaFinal;
                     
                     // Calcular altura total: do início até exatamente 23:00 (ou mais se houver aulas depois)
-                    $alturaTotalMinutos = $horaMaximaFinal - $horaMinimaFinal;
-                    $alturaTotalPx = $alturaTotalMinutos * 2; // 2px por minuto
-                    
-                    // GARANTIR que altura termine exatamente em 23:00 quando não há aulas depois
+                    // SEMPRE terminar em 23:00 para evitar linhas extras
                     if (empty($todasAulasCalendario) || $horaMaximaReal <= 23 * 60) {
-                        // Altura = (23:00 - horaMinima) * 2px
+                        // Altura = (23:00 - horaMinima) * 2px - sempre terminar em 23:00
                         $alturaTotalPx = (23 * 60 - $horaMinimaFinal) * 2;
+                        // Garantir que horaMaximaFinal também seja 23:00 para consistência
+                        $horaMaximaFinal = 23 * 60;
+                        $horaMaxima = 23 * 60;
+                    } else {
+                        // Se há aulas após 23:00, estender apenas o necessário
+                        $alturaTotalMinutos = $horaMaximaFinal - $horaMinimaFinal;
+                        $alturaTotalPx = $alturaTotalMinutos * 2; // 2px por minuto
                     }
                     
                     // Debug detalhado
@@ -3563,9 +3555,9 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                     </div>
                     
                     <!-- Corpo da Timeline -->
-                    <div class="timeline-body" style="min-height: <?= $alturaTotalPx ?>px; height: <?= $alturaTotalPx ?>px;">
+                    <div class="timeline-body" style="min-height: <?= $alturaTotalPx ?>px; height: <?= $alturaTotalPx ?>px;" data-altura-original="<?= $alturaTotalPx ?>">
                         <!-- Coluna de Horários -->
-                        <div class="timeline-hours" id="timeline-hours-column" style="min-height: <?= $alturaTotalPx ?>px; height: <?= $alturaTotalPx ?>px;">
+                        <div class="timeline-hours" id="timeline-hours-column" style="min-height: <?= $alturaTotalPx ?>px; height: <?= $alturaTotalPx ?>px;" data-altura-original="<?= $alturaTotalPx ?>">
                             <?php
                             // Renderizar períodos com possibilidade de colapsar
                             $periodoRenderizado = '';
@@ -3637,6 +3629,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                     }
                                     
                                     // Renderizar toggle apenas se período está vazio (para colapsar)
+                                    // REMOVIDO: Badge "Sem aulas" que estava poluindo a interface
                                     if ($aulasNoPeriodo == 0) {
                                         $periodoAlturaColapsado = 40;
                                         ?>
@@ -3650,7 +3643,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                                    style="font-size: 0.7rem; transition: transform 0.2s;"></i>
                                                 <span><?= $periodo ?></span>
                                             </div>
-                                            <span class="periodo-badge" style="background: #6c757d;">Sem aulas - Clique para expandir</span>
                                         </div>
                                         <?php
                                         // Marcar período como colapsado inicialmente
@@ -3692,7 +3684,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                         
                         <!-- Colunas dos Dias -->
                         <?php foreach ($semanaDisplay['dias'] as $diaIdx => $data): ?>
-                            <div class="timeline-day-column" data-dia-semana="<?= $diaIdx ?>" data-data="<?= $data ?>" style="position: relative; min-height: <?= $alturaTotalPx ?>px; height: <?= $alturaTotalPx ?>px;" id="dia-col-<?= $diaIdx ?>">
+                            <div class="timeline-day-column" data-dia-semana="<?= $diaIdx ?>" data-data="<?= $data ?>" style="position: relative; min-height: <?= $alturaTotalPx ?>px; height: <?= $alturaTotalPx ?>px;" data-altura-original="<?= $alturaTotalPx ?>" id="dia-col-<?= $diaIdx ?>">
                                 <?php if ($data): 
                                     // Normalizar formato de data para busca (garantir Y-m-d)
                                     $dataBusca = $data;
@@ -4776,28 +4768,147 @@ window.togglePeriodo = function(periodoNome) {
         });
     };
     
+    // Função para ajustar altura da timeline baseado em períodos colapsados
+    const ajustarAlturaTimeline = function() {
+        const periodosOrdem = ['manhã', 'tarde', 'noite'];
+        const inicioPeriodos = {
+            'manhã': 6 * 60,    // 06:00
+            'tarde': 12 * 60,   // 12:00
+            'noite': 18 * 60    // 18:00
+        };
+        
+        const fimPeriodos = {
+            'manhã': 12 * 60,   // 12:00
+            'tarde': 18 * 60,   // 18:00
+            'noite': 23 * 60    // 23:00
+        };
+        
+        // Obter altura total original (do PHP)
+        const timelineBody = document.querySelector('.timeline-body');
+        if (!timelineBody) return;
+        
+        // SEMPRE usar o atributo data-altura-original como fonte da verdade
+        let alturaOriginalStr = timelineBody.getAttribute('data-altura-original');
+        
+        // Se não houver atributo, tentar obter do estilo inline inicial ou usar um valor padrão
+        if (!alturaOriginalStr || alturaOriginalStr === '0' || alturaOriginalStr === '') {
+            // Tentar obter do primeiro elemento que tenha a altura definida
+            const primeiroElementoComAltura = document.querySelector('[data-altura-original]');
+            if (primeiroElementoComAltura) {
+                alturaOriginalStr = primeiroElementoComAltura.getAttribute('data-altura-original');
+            }
+            
+            // Se ainda não encontrou, calcular baseado no range 06:00-23:00
+            if (!alturaOriginalStr || alturaOriginalStr === '0' || alturaOriginalStr === '') {
+                alturaOriginalStr = ((23 * 60 - 6 * 60) * 2).toString(); // (23:00 - 06:00) * 2px por minuto
+                // Salvar no atributo para próximas chamadas
+                timelineBody.setAttribute('data-altura-original', alturaOriginalStr);
+            }
+        }
+        
+        const alturaOriginal = parseFloat(alturaOriginalStr);
+        
+        // Calcular altura economizada por períodos colapsados
+        let alturaEconomizadaTotal = 0;
+        periodosOrdem.forEach(p => {
+            const toggle = document.querySelector(`.timeline-toggle-periodo[data-periodo="${p}"]`);
+            const icon = document.getElementById('icon-' + p);
+            const iconTransform = icon ? icon.style.transform : '';
+            const estaColapsado = !iconTransform || iconTransform === '' || iconTransform === 'rotate(0deg)' || iconTransform === 'none';
+            
+            if (toggle && estaColapsado) {
+                // Este período está colapsado
+                const duracaoPeriodo = fimPeriodos[p] - inicioPeriodos[p];
+                const alturaPeriodoExpandido = duracaoPeriodo * 2; // 2px por minuto
+                const alturaPeriodoColapsado = 40; // altura do toggle quando colapsado
+                const alturaEconomizada = alturaPeriodoExpandido - alturaPeriodoColapsado;
+                
+                alturaEconomizadaTotal += alturaEconomizada;
+            }
+        });
+        
+        // Calcular nova altura
+        // Se nenhum período está colapsado, usar altura original completa
+        const novaAltura = alturaEconomizadaTotal > 0 
+            ? Math.max(0, alturaOriginal - alturaEconomizadaTotal)
+            : alturaOriginal;
+        
+        // Aplicar nova altura aos containers
+        const containers = [
+            '.timeline-body',
+            '.timeline-hours',
+            '.timeline-day-column'
+        ];
+        
+        containers.forEach(selector => {
+            const elements = document.querySelectorAll(selector);
+            elements.forEach(el => {
+                el.style.minHeight = novaAltura + 'px';
+                el.style.height = novaAltura + 'px';
+            });
+        });
+        
+        console.log(`Altura ajustada: original=${alturaOriginal}px, economizada=${alturaEconomizadaTotal}px, nova=${novaAltura}px`);
+    };
+    
     if (estaColapsado) {
-        // Expandir: mostrar todos os elementos do período (exceto aulas que já estão visíveis)
+        // Expandir: mostrar todos os elementos do período
         console.log('Expandindo período:', periodo);
+        
+        // Primeiro, remover display: none explicitamente de TODOS os elementos do período
         elementosParaColapsar.forEach(el => {
+            // Remover classe colapsado e adicionar expandido
+            el.classList.remove('periodo-colapsado');
+            el.classList.add('periodo-expandido');
+            
+            // CRÍTICO: Remover explicitamente display: none e outros estilos de colapso
+            if (el.style) {
+                el.style.removeProperty('display');
+                el.style.removeProperty('visibility');
+                el.style.removeProperty('max-height');
+                el.style.removeProperty('opacity');
+                el.style.removeProperty('height');
+            }
+        });
+        
+        // Garantir que marcadores de hora sejam exibidos como flex
+        markers.forEach(el => {
             el.classList.remove('periodo-colapsado');
             el.classList.add('periodo-expandido');
             if (el.style) {
-                el.style.display = '';
+                el.style.removeProperty('display');
+                el.style.removeProperty('visibility');
+                el.style.display = 'flex';
                 el.style.visibility = 'visible';
-                el.style.maxHeight = '';
-                el.style.opacity = '';
             }
         });
+        
+        // Garantir que slots vazios sejam exibidos como block
+        slotsVazios.forEach(el => {
+            el.classList.remove('periodo-colapsado');
+            el.classList.add('periodo-expandido');
+            if (el.style) {
+                el.style.removeProperty('display');
+                el.style.removeProperty('visibility');
+                el.style.display = 'block';
+                el.style.visibility = 'visible';
+            }
+        });
+        
         // Garantir que aulas também estão visíveis
         aulas.forEach(el => {
             el.classList.remove('periodo-colapsado');
             el.classList.add('periodo-expandido');
             if (el.style) {
+                el.style.removeProperty('display');
+                el.style.removeProperty('visibility');
                 el.style.display = 'block';
                 el.style.visibility = 'visible';
+                el.style.maxHeight = 'none';
+                el.style.opacity = '1';
             }
         });
+        
         // Esconder div de período colapsado
         periodoColapsadoDiv.forEach(el => {
             if (el.style) {
@@ -4837,8 +4948,10 @@ window.togglePeriodo = function(periodoNome) {
     }
     
     // IMPORTANTE: Ajustar posição de todas as aulas após colapsar/expandir
+    // E também ajustar altura da timeline para evitar linhas extras
     setTimeout(() => {
         ajustarPosicaoAulas();
+        ajustarAlturaTimeline();
     }, 100);
     
     console.log('Ação concluída para período:', periodo);
