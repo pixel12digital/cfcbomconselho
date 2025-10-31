@@ -379,29 +379,262 @@ function handleObterDisciplinas($turmaManager) {
 
 function handleVerificarConflitos($turmaManager) {
     $dados = [
+        'turma_id' => $_GET['turma_id'] ?? null,
+        'disciplina' => $_GET['disciplina'] ?? null,
         'instrutor_id' => $_GET['instrutor_id'] ?? null,
         'data_aula' => $_GET['data_aula'] ?? null,
         'hora_inicio' => $_GET['hora_inicio'] ?? null,
-        'quantidade_aulas' => $_GET['quantidade_aulas'] ?? 1,
-        'turma_id' => $_GET['turma_id'] ?? null
+        'quantidade_aulas' => isset($_GET['quantidade_aulas']) ? (int)$_GET['quantidade_aulas'] : 1
     ];
     
-    if (!$dados['instrutor_id'] || !$dados['data_aula'] || !$dados['hora_inicio']) {
+    if (!$dados['turma_id'] || !$dados['instrutor_id'] || !$dados['data_aula'] || !$dados['hora_inicio'] || !$dados['disciplina']) {
         http_response_code(400);
         echo json_encode([
             'sucesso' => false,
-            'mensagem' => 'Parâmetros insuficientes para verificar conflitos'
+            'disponivel' => false,
+            'mensagem' => 'Parâmetros insuficientes para verificar conflitos. São necessários: turma_id, disciplina, instrutor_id, data_aula, hora_inicio'
         ], JSON_UNESCAPED_UNICODE);
         return;
     }
     
-    // Esta funcionalidade seria implementada no TurmaTeoricaManager
-    http_response_code(200);
-    echo json_encode([
-        'sucesso' => true,
-        'conflitos' => false,
-        'mensagem' => 'Horário disponível'
-    ], JSON_UNESCAPED_UNICODE);
+    try {
+        // Obter dados da turma
+        $resultadoTurma = $turmaManager->obterTurma($dados['turma_id']);
+        if (!$resultadoTurma['sucesso']) {
+            http_response_code(404);
+            echo json_encode([
+                'sucesso' => false,
+                'disponivel' => false,
+                'mensagem' => 'Turma não encontrada'
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        $turma = $resultadoTurma['dados'];
+        
+        // Usar método privado via Reflection ou criar método público
+        // Por enquanto, vamos fazer a verificação diretamente aqui
+        $db = Database::getInstance();
+        $conflitos = [];
+        $qtdAulas = $dados['quantidade_aulas'];
+        
+        // 1. Verificar carga horária da disciplina
+        $validacaoCargaHoraria = verificarCargaHorariaDisciplinaAPI($turmaManager, $dados['turma_id'], $dados['disciplina'], $qtdAulas);
+        if (!$validacaoCargaHoraria['disponivel']) {
+            http_response_code(200);
+            echo json_encode($validacaoCargaHoraria, JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        // 2. Verificar conflitos de horário para cada aula
+        for ($i = 0; $i < $qtdAulas; $i++) {
+            $horaInicioAula = calcularHorarioAulaAPI($dados['hora_inicio'], $i);
+            $horaFimAula = calcularHorarioFimAPI($horaInicioAula);
+            
+            // Verificar conflito de instrutor em aulas teóricas
+            $conflitoInstrutorTeorica = $db->fetch("
+                SELECT COUNT(*) as conflitos,
+                       GROUP_CONCAT(CONCAT(nome_aula, ' (', hora_inicio, '-', hora_fim, ')') SEPARATOR ', ') as aulas_conflitantes
+                FROM turma_aulas_agendadas 
+                WHERE instrutor_id = ? 
+                AND data_aula = ? 
+                AND status = 'agendada'
+                AND (
+                    (hora_inicio < ? AND hora_fim > ?) OR
+                    (hora_inicio >= ? AND hora_inicio < ?) OR
+                    (hora_fim > ? AND hora_fim <= ?)
+                )
+            ", [
+                $dados['instrutor_id'], 
+                $dados['data_aula'], 
+                $horaFimAula, $horaInicioAula, 
+                $horaInicioAula, $horaFimAula, 
+                $horaInicioAula, $horaFimAula
+            ]);
+            
+            // Verificar conflito de instrutor em aulas práticas
+            $conflitoInstrutorPratica = $db->fetch("
+                SELECT COUNT(*) as conflitos
+                FROM aulas 
+                WHERE instrutor_id = ? 
+                AND data_aula = ? 
+                AND status IN ('agendada', 'confirmada')
+                AND (
+                    (hora_inicio < ? AND hora_fim > ?) OR
+                    (hora_inicio >= ? AND hora_inicio < ?) OR
+                    (hora_fim > ? AND hora_fim <= ?)
+                )
+            ", [
+                $dados['instrutor_id'], 
+                $dados['data_aula'], 
+                $horaFimAula, $horaInicioAula, 
+                $horaInicioAula, $horaFimAula, 
+                $horaInicioAula, $horaFimAula
+            ]);
+            
+            $totalConflitosInstrutor = ($conflitoInstrutorTeorica['conflitos'] ?? 0) + ($conflitoInstrutorPratica['conflitos'] ?? 0);
+            
+            if ($totalConflitosInstrutor > 0) {
+                $instrutor = $db->fetch("
+                    SELECT COALESCE(u.nome, i.nome, 'Instrutor') as nome
+                    FROM instrutores i
+                    LEFT JOIN usuarios u ON i.usuario_id = u.id
+                    WHERE i.id = ?
+                ", [$dados['instrutor_id']]);
+                
+                $nomeInstrutor = $instrutor['nome'] ?? 'Instrutor';
+                $aulasConflitantes = $conflitoInstrutorTeorica['aulas_conflitantes'] ?? '';
+                
+                $conflitos[] = [
+                    'tipo' => 'instrutor',
+                    'mensagem' => "👨‍🏫 INSTRUTOR INDISPONÍVEL: O instrutor {$nomeInstrutor} já possui aula agendada no horário {$horaInicioAula} às {$horaFimAula}.",
+                    'horario' => "{$horaInicioAula} - {$horaFimAula}",
+                    'aulas_conflitantes' => $aulasConflitantes
+                ];
+            }
+            
+            // Verificar conflito de sala
+            $conflitoSala = $db->fetch("
+                SELECT COUNT(*) as conflitos,
+                       GROUP_CONCAT(CONCAT(t.nome, ' - ', taa.nome_aula, ' (', taa.hora_inicio, '-', taa.hora_fim, ')') SEPARATOR ', ') as turmas_conflitantes
+                FROM turma_aulas_agendadas taa
+                JOIN turmas_teoricas t ON taa.turma_id = t.id
+                WHERE taa.sala_id = ? 
+                AND taa.data_aula = ? 
+                AND taa.status = 'agendada'
+                AND taa.turma_id != ?
+                AND (
+                    (taa.hora_inicio < ? AND taa.hora_fim > ?) OR
+                    (taa.hora_inicio >= ? AND taa.hora_inicio < ?) OR
+                    (taa.hora_fim > ? AND taa.hora_fim <= ?)
+                )
+            ", [
+                $turma['sala_id'], 
+                $dados['data_aula'], 
+                $dados['turma_id'],
+                $horaFimAula, $horaInicioAula, 
+                $horaInicioAula, $horaFimAula, 
+                $horaInicioAula, $horaFimAula
+            ]);
+            
+            if ($conflitoSala && $conflitoSala['conflitos'] > 0) {
+                $sala = $db->fetch("SELECT nome FROM salas WHERE id = ?", [$turma['sala_id']]);
+                $nomeSala = $sala['nome'] ?? 'Sala';
+                $turmasConflitantes = $conflitoSala['turmas_conflitantes'] ?? '';
+                
+                $conflitos[] = [
+                    'tipo' => 'sala',
+                    'mensagem' => "🏢 SALA INDISPONÍVEL: A sala {$nomeSala} já está ocupada no horário {$horaInicioAula} às {$horaFimAula}.",
+                    'horario' => "{$horaInicioAula} - {$horaFimAula}",
+                    'turmas_conflitantes' => $turmasConflitantes
+                ];
+            }
+        }
+        
+        if (!empty($conflitos)) {
+            http_response_code(200);
+            echo json_encode([
+                'sucesso' => true,
+                'disponivel' => false,
+                'mensagem' => '❌ Conflito de horário detectado',
+                'conflitos' => $conflitos,
+                'detalhes' => array_column($conflitos, 'mensagem')
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+        
+        http_response_code(200);
+        echo json_encode([
+            'sucesso' => true,
+            'disponivel' => true,
+            'mensagem' => '✅ Horário disponível! Você pode agendar as aulas.'
+        ], JSON_UNESCAPED_UNICODE);
+        
+    } catch (Exception $e) {
+        error_log("Erro ao verificar conflitos: " . $e->getMessage());
+        http_response_code(500);
+        echo json_encode([
+            'sucesso' => false,
+            'disponivel' => false,
+            'mensagem' => 'Erro ao verificar disponibilidade: ' . $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+    }
+}
+
+// Funções auxiliares para cálculo de horários
+function calcularHorarioAulaAPI($horarioInicial, $indiceAula) {
+    $timestamp = strtotime($horarioInicial) + ($indiceAula * 50 * 60);
+    return date('H:i:s', $timestamp);
+}
+
+function calcularHorarioFimAPI($horarioInicio) {
+    $timestamp = strtotime($horarioInicio) + (50 * 60);
+    return date('H:i:s', $timestamp);
+}
+
+// Função auxiliar para verificar carga horária
+function verificarCargaHorariaDisciplinaAPI($turmaManager, $turmaId, $disciplina, $qtdAulasNovas) {
+    try {
+        $db = Database::getInstance();
+        
+        // Buscar curso_tipo da turma
+        $turma = $db->fetch("SELECT curso_tipo FROM turmas_teoricas WHERE id = ?", [$turmaId]);
+        if (!$turma) {
+            return [
+                'disponivel' => false,
+                'mensagem' => 'Turma não encontrada'
+            ];
+        }
+        
+        // Buscar carga horária máxima
+        $cargaMaxima = $db->fetch("
+            SELECT aulas_obrigatorias
+            FROM disciplinas_configuracao
+            WHERE curso_tipo = ? AND disciplina = ? AND ativa = 1
+        ", [$turma['curso_tipo'], $disciplina]);
+        
+        if (!$cargaMaxima) {
+            return [
+                'disponivel' => false,
+                'mensagem' => "Disciplina '{$disciplina}' não encontrada na configuração do curso"
+            ];
+        }
+        
+        $cargaMaximaAulas = (int)$cargaMaxima['aulas_obrigatorias'];
+        
+        // Contar aulas já agendadas
+        $aulasAgendadas = $db->fetch("
+            SELECT COUNT(*) as total
+            FROM turma_aulas_agendadas 
+            WHERE turma_id = ? AND disciplina = ? AND status IN ('agendada', 'realizada')
+        ", [$turmaId, $disciplina]);
+        
+        $totalAgendadas = (int)$aulasAgendadas['total'];
+        $totalAposAgendamento = $totalAgendadas + $qtdAulasNovas;
+        
+        if ($totalAgendadas >= $cargaMaximaAulas) {
+            return [
+                'disponivel' => false,
+                'mensagem' => "❌ DISCIPLINA COMPLETA: A disciplina já possui todas as {$cargaMaximaAulas} aulas obrigatórias agendadas."
+            ];
+        }
+        
+        if ($totalAposAgendamento > $cargaMaximaAulas) {
+            $aulasRestantes = $cargaMaximaAulas - $totalAgendadas;
+            return [
+                'disponivel' => false,
+                'mensagem' => "❌ CARGA HORÁRIA EXCEDIDA: Você ainda pode agendar apenas {$aulasRestantes} aula(s) restante(s)."
+            ];
+        }
+        
+        return ['disponivel' => true];
+        
+    } catch (Exception $e) {
+        return [
+            'disponivel' => false,
+            'mensagem' => 'Erro ao verificar carga horária: ' . $e->getMessage()
+        ];
+    }
 }
 
 function handleCriarTurmaBasica($turmaManager, $dados, $user) {

@@ -1176,8 +1176,8 @@ class TurmaTeoricaManager {
                 $horaInicio = $this->calcularHorarioAula($dados['hora_inicio'], $i);
                 $horaFim = $this->calcularHorarioFim($horaInicio);
                 
-                // Verificar conflito de instrutor
-                $conflitoInstrutor = $this->db->fetch("
+                // Verificar conflito de instrutor em aulas teóricas (sobreposição de horários)
+                $conflitoInstrutorTeorica = $this->db->fetch("
                     SELECT COUNT(*) as conflitos 
                     FROM turma_aulas_agendadas 
                     WHERE instrutor_id = ? 
@@ -1185,29 +1185,51 @@ class TurmaTeoricaManager {
                     AND status = 'agendada'
                     AND (
                         (hora_inicio < ? AND hora_fim > ?) OR
-                        (hora_inicio < ? AND hora_fim > ?) OR
-                        (hora_inicio >= ? AND hora_fim <= ?)
+                        (hora_inicio >= ? AND hora_inicio < ?) OR
+                        (hora_fim > ? AND hora_fim <= ?)
                     )
-                ", [$dados['instrutor_id'], $dados['data_aula'], $horaInicio, $horaInicio, $horaFim, $horaFim, $horaInicio, $horaFim]);
+                ", [$dados['instrutor_id'], $dados['data_aula'], $horaFim, $horaInicio, $horaInicio, $horaFim, $horaInicio, $horaFim]);
+                
+                // Verificar conflito de instrutor em aulas práticas (sobreposição de horários)
+                $conflitoInstrutorPratica = $this->db->fetch("
+                    SELECT COUNT(*) as conflitos 
+                    FROM aulas 
+                    WHERE instrutor_id = ? 
+                    AND data_aula = ? 
+                    AND status IN ('agendada', 'confirmada')
+                    AND (
+                        (hora_inicio < ? AND hora_fim > ?) OR
+                        (hora_inicio >= ? AND hora_inicio < ?) OR
+                        (hora_fim > ? AND hora_fim <= ?)
+                    )
+                ", [$dados['instrutor_id'], $dados['data_aula'], $horaFim, $horaInicio, $horaInicio, $horaFim, $horaInicio, $horaFim]);
+                
+                $conflitoInstrutor = [
+                    'conflitos' => ($conflitoInstrutorTeorica['conflitos'] ?? 0) + ($conflitoInstrutorPratica['conflitos'] ?? 0)
+                ];
                 
                 if ($conflitoInstrutor['conflitos'] > 0) {
                     $nomeInstrutor = $this->obterNomeInstrutor($dados['instrutor_id']);
                     $conflitos[] = "👨‍🏫 INSTRUTOR INDISPONÍVEL: O instrutor {$nomeInstrutor} já possui aula agendada no horário {$horaInicio} às {$horaFim}. Escolha outro horário ou instrutor.";
                 }
                 
-                // Verificar conflito de sala
-                $conflitoSala = $this->db->fetch("
+                // Verificar conflito de sala em aulas teóricas (sobreposição de horários)
+                // Nota: permitir mesma sala para a mesma turma, mas não para outras turmas
+                $conflitoSalaTeorica = $this->db->fetch("
                     SELECT COUNT(*) as conflitos 
                     FROM turma_aulas_agendadas 
                     WHERE sala_id = ? 
                     AND data_aula = ? 
                     AND status = 'agendada'
+                    AND turma_id != ?
                     AND (
                         (hora_inicio < ? AND hora_fim > ?) OR
-                        (hora_inicio < ? AND hora_fim > ?) OR
-                        (hora_inicio >= ? AND hora_fim <= ?)
+                        (hora_inicio >= ? AND hora_inicio < ?) OR
+                        (hora_fim > ? AND hora_fim <= ?)
                     )
-                ", [$turma['sala_id'], $dados['data_aula'], $horaInicio, $horaInicio, $horaFim, $horaFim, $horaInicio, $horaFim]);
+                ", [$turma['sala_id'], $dados['data_aula'], $dados['turma_id'], $horaFim, $horaInicio, $horaInicio, $horaFim, $horaInicio, $horaFim]);
+                
+                $conflitoSala = $conflitoSalaTeorica;
                 
                 if ($conflitoSala['conflitos'] > 0) {
                     $nomeSala = $this->obterNomeSala($turma['sala_id']);
@@ -1307,17 +1329,31 @@ class TurmaTeoricaManager {
             $totalAgendadas = (int)$aulasAgendadas['total'];
             $totalAposAgendamento = $totalAgendadas + $qtdAulasNovas;
             
-            if ($totalAposAgendamento > $cargaMaximaAulas) {
+            // Verificar se disciplina já está completa
+            if ($totalAgendadas >= $cargaMaximaAulas) {
                 $nomeDisciplina = $this->obterNomeDisciplina($disciplina);
                 return [
                     'disponivel' => false,
-                    'mensagem' => "❌ CARGA HORÁRIA EXCEDIDA: A disciplina '{$nomeDisciplina}' possui carga horária máxima de {$cargaMaximaAulas} aulas. Já foram agendadas {$totalAgendadas} aulas e você está tentando agendar mais {$qtdAulasNovas} aulas. Máximo permitido: {$cargaMaximaAulas} aulas.",
+                    'mensagem' => "❌ DISCIPLINA COMPLETA: A disciplina '{$nomeDisciplina}' já possui todas as {$cargaMaximaAulas} aulas obrigatórias agendadas. Não é possível adicionar mais aulas.",
+                    'tipo_erro' => 'disciplina_completa',
+                    'aulas_agendadas' => $totalAgendadas,
+                    'aulas_obrigatorias' => $cargaMaximaAulas
+                ];
+            }
+            
+            if ($totalAposAgendamento > $cargaMaximaAulas) {
+                $nomeDisciplina = $this->obterNomeDisciplina($disciplina);
+                $aulasRestantes = $cargaMaximaAulas - $totalAgendadas;
+                return [
+                    'disponivel' => false,
+                    'mensagem' => "❌ CARGA HORÁRIA EXCEDIDA: A disciplina '{$nomeDisciplina}' possui carga horária máxima de {$cargaMaximaAulas} aulas. Já foram agendadas {$totalAgendadas} aulas e você está tentando agendar mais {$qtdAulasNovas} aulas. Você ainda pode agendar apenas {$aulasRestantes} aula(s) restante(s).",
                     'tipo_erro' => 'carga_horaria_excedida',
                     'detalhes' => [
                         'disciplina' => $nomeDisciplina,
                         'carga_maxima' => $cargaMaximaAulas,
                         'aulas_agendadas' => $totalAgendadas,
                         'aulas_tentando_agendar' => $qtdAulasNovas,
+                        'aulas_restantes' => $aulasRestantes,
                         'total_apos_agendamento' => $totalAposAgendamento
                     ]
                 ];
@@ -1417,14 +1453,21 @@ class TurmaTeoricaManager {
     
     private function obterProximaOrdemDisciplina($turmaId, $disciplina) {
         try {
+            // Contar o número total de aulas ativas (não canceladas) da disciplina
+            // A próxima ordem será sempre: total de aulas ativas + 1
+            // Isso garante numeração sequencial sem lacunas, mesmo se aulas foram canceladas
             $resultado = $this->db->fetch(
-                "SELECT COALESCE(MAX(ordem_disciplina), 0) + 1 as proxima_ordem 
+                "SELECT COUNT(*) as total_aulas_ativas 
                  FROM turma_aulas_agendadas 
-                 WHERE turma_id = ? AND disciplina = ?",
+                 WHERE turma_id = ? AND disciplina = ? AND status != 'cancelada'",
                 [$turmaId, $disciplina]
             );
             
-            return (int)$resultado['proxima_ordem'];
+            $totalAulasAtivas = (int)($resultado['total_aulas_ativas'] ?? 0);
+            
+            // A próxima ordem será o total de aulas ativas + 1
+            // Se temos 15 aulas ativas, a próxima será 16 (não importa quais ordens existem)
+            return $totalAulasAtivas + 1;
         } catch (Exception $e) {
             return 1;
         }
@@ -1432,14 +1475,21 @@ class TurmaTeoricaManager {
     
     private function obterProximaOrdemGlobal($turmaId) {
         try {
+            // Contar o número total de aulas ativas (não canceladas) da turma
+            // A próxima ordem será sempre: total de aulas ativas + 1
+            // Isso garante numeração sequencial sem lacunas, mesmo se aulas foram canceladas
             $resultado = $this->db->fetch(
-                "SELECT COALESCE(MAX(ordem_global), 0) + 1 as proxima_ordem 
+                "SELECT COUNT(*) as total_aulas_ativas 
                  FROM turma_aulas_agendadas 
-                 WHERE turma_id = ?",
+                 WHERE turma_id = ? AND status != 'cancelada'",
                 [$turmaId]
             );
             
-            return (int)$resultado['proxima_ordem'];
+            $totalAulasAtivas = (int)($resultado['total_aulas_ativas'] ?? 0);
+            
+            // A próxima ordem será o total de aulas ativas + 1
+            // Se temos 37 aulas ativas, a próxima será 38 (não importa quais ordens existem)
+            return $totalAulasAtivas + 1;
         } catch (Exception $e) {
             return 1;
         }

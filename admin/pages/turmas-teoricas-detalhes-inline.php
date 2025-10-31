@@ -13,6 +13,42 @@ if (!$turmaId) {
     return;
 }
 
+// Processar agendamento de aula via AJAX
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['acao'] === 'agendar_aula') {
+    $dadosAula = [
+        'turma_id' => isset($_POST['turma_id']) ? (int)$_POST['turma_id'] : 0,
+        'disciplina' => $_POST['disciplina'] ?? '',
+        'instrutor_id' => isset($_POST['instrutor_id']) ? (int)$_POST['instrutor_id'] : 0,
+        'data_aula' => $_POST['data_aula'] ?? '',
+        'hora_inicio' => $_POST['hora_inicio'] ?? '',
+        'quantidade_aulas' => isset($_POST['quantidade_aulas']) ? (int)$_POST['quantidade_aulas'] : 1,
+        'criado_por' => getCurrentUser()['id'] ?? 1
+    ];
+    
+    // Detectar se é requisição AJAX
+    $isAjax = (
+        !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && 
+        strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest'
+    ) || (
+        !empty($_SERVER['HTTP_ACCEPT']) && 
+        strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false
+    ) || (
+        isset($_POST['ajax']) && $_POST['ajax'] === 'true'
+    );
+    
+    if ($isAjax && $dadosAula['turma_id'] && $dadosAula['disciplina']) {
+        $resultado = $turmaManager->agendarAula($dadosAula);
+        
+        // Limpar qualquer output anterior
+        if (ob_get_level()) {
+            ob_clean();
+        }
+        header('Content-Type: application/json');
+        echo json_encode($resultado);
+        exit;
+    }
+}
+
 // Processar remoção de aluno da turma
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['acao'] === 'remover_aluno') {
     $alunoId = isset($_POST['aluno_id']) ? (int)$_POST['aluno_id'] : 0;
@@ -96,6 +132,80 @@ function obterNomeSala($salaId, $salasCadastradas) {
         }
     }
     return 'Sala não encontrada';
+}
+
+// Gerar horários disponíveis (07:00 às 21:10, intervalos de 50min)
+$horariosDisponiveis = [
+    '07:00', '07:50', '08:40', '09:30', '10:20', '11:10',
+    '13:00', '13:50', '14:40', '15:30', '16:20', '17:10', '18:00',
+    '18:50', '19:40', '20:30', '21:10'
+];
+
+// Obter disciplinas do curso para agendamento
+$disciplinasCurso = $turmaManager->obterDisciplinasParaAgendamento($turmaId);
+
+// Obter instrutores disponíveis para agendamento (após ter $turma definido)
+try {
+    $cfcId = $turma['cfc_id'] ?? $user['cfc_id'] ?? 1;
+    
+    // Primeiro tentar buscar instrutores do CFC da turma com ativo = 1 ou ativo = true
+    $instrutores = $db->fetchAll("
+        SELECT i.id, 
+               COALESCE(u.nome, i.nome, 'Instrutor sem nome') as nome,
+               i.categoria_habilitacao 
+        FROM instrutores i 
+        LEFT JOIN usuarios u ON i.usuario_id = u.id 
+        WHERE (i.ativo = 1 OR i.ativo = TRUE OR i.ativo IS NULL) AND i.cfc_id = ?
+        ORDER BY COALESCE(u.nome, i.nome, '') ASC
+    ", [$cfcId]);
+    
+    // Se não encontrou instrutores, buscar todos os ativos do CFC (sem filtro de ativo)
+    if (empty($instrutores)) {
+        $instrutores = $db->fetchAll("
+            SELECT i.id, 
+                   COALESCE(u.nome, i.nome, 'Instrutor sem nome') as nome,
+                   i.categoria_habilitacao 
+            FROM instrutores i 
+            LEFT JOIN usuarios u ON i.usuario_id = u.id 
+            WHERE i.cfc_id = ?
+            ORDER BY COALESCE(u.nome, i.nome, '') ASC
+        ", [$cfcId]);
+    }
+    
+    // Se ainda não encontrou, buscar todos os ativos independente do CFC
+    if (empty($instrutores)) {
+        $instrutores = $db->fetchAll("
+            SELECT i.id, 
+                   COALESCE(u.nome, i.nome, 'Instrutor sem nome') as nome,
+                   i.categoria_habilitacao 
+            FROM instrutores i 
+            LEFT JOIN usuarios u ON i.usuario_id = u.id 
+            WHERE (i.ativo = 1 OR i.ativo = TRUE OR i.ativo IS NULL)
+            ORDER BY COALESCE(u.nome, i.nome, '') ASC
+        ");
+    }
+    
+    // Último fallback: buscar TODOS os instrutores
+    if (empty($instrutores)) {
+        $instrutores = $db->fetchAll("
+            SELECT i.id, 
+                   COALESCE(u.nome, i.nome, 'Instrutor sem nome') as nome,
+                   i.categoria_habilitacao 
+            FROM instrutores i 
+            LEFT JOIN usuarios u ON i.usuario_id = u.id 
+            ORDER BY COALESCE(u.nome, i.nome, '') ASC
+        ");
+    }
+    
+    // Log para debug
+    if (empty($instrutores)) {
+        error_log("Nenhum instrutor encontrado no banco. CFC ID usado: " . $cfcId);
+    } else {
+        error_log("Instrutores encontrados: " . count($instrutores) . " para CFC ID: " . $cfcId);
+    }
+} catch (Exception $e) {
+    error_log("Erro ao buscar instrutores: " . $e->getMessage());
+    $instrutores = [];
 }
 
 // Obter progresso das disciplinas
@@ -197,16 +307,20 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     );
     
     // Buscar histórico completo de agendamentos para esta disciplina
+    // Ordenar por ordem_disciplina para garantir ordem correta e excluir canceladas do histórico
     $agendamentosDisciplina = $db->fetchAll(
         "SELECT 
             taa.*,
-            i.nome as instrutor_nome,
-            s.nome as sala_nome
+            COALESCE(u.nome, i.nome, 'Não informado') as instrutor_nome,
+            COALESCE(s.nome, 'Não informada') as sala_nome
          FROM turma_aulas_agendadas taa
          LEFT JOIN instrutores i ON taa.instrutor_id = i.id
+         LEFT JOIN usuarios u ON i.usuario_id = u.id
          LEFT JOIN salas s ON taa.sala_id = s.id
-         WHERE taa.turma_id = ? AND taa.disciplina = ?
-         ORDER BY taa.data_aula, taa.hora_inicio",
+         WHERE taa.turma_id = ? 
+         AND taa.disciplina = ? 
+         AND taa.status != 'cancelada'
+         ORDER BY taa.ordem_disciplina ASC, taa.data_aula ASC, taa.hora_inicio ASC",
         [$turmaId, $disciplinaId]
     );
     
@@ -2131,10 +2245,19 @@ foreach ($disciplinasSelecionadas as $disciplina) {
                             <!-- Seção: Histórico de Agendamentos -->
                             <?php if (!empty($agendamentos)): ?>
                                 <div class="historico-agendamentos">
-                                    <h6 class="mb-3">
-                                        <i class="fas fa-calendar-alt me-2" style="color: #023A8D;"></i>
-                                        Histórico de Agendamentos - <?= htmlspecialchars($disciplina['nome_disciplina']) ?>
-                                    </h6>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-calendar-alt me-2" style="color: #023A8D;"></i>
+                                            Histórico de Agendamentos - <?= htmlspecialchars($disciplina['nome_disciplina']) ?>
+                                        </h6>
+                                        <button type="button" 
+                                                class="btn btn-primary btn-sm" 
+                                                onclick="abrirModalAgendarAula('<?= $disciplinaId ?>', '<?= htmlspecialchars($disciplina['nome_disciplina'], ENT_QUOTES) ?>', '<?= htmlspecialchars($turma['data_inicio']) ?>', '<?= htmlspecialchars($turma['data_fim']) ?>')"
+                                                style="display: inline-flex; align-items: center; gap: 6px;">
+                                            <i class="fas fa-plus"></i>
+                                            Agendar Nova Aula
+                                        </button>
+                                    </div>
                                     
                                     <div class="table-responsive">
                                         <table class="table table-striped table-hover">
@@ -2152,7 +2275,7 @@ foreach ($disciplinasSelecionadas as $disciplina) {
                                             </thead>
                                             <tbody>
                                                 <?php foreach ($agendamentos as $agendamento): ?>
-                                                    <tr>
+                                                    <tr data-agendamento-id="<?= $agendamento['id'] ?>">
                                                         <td>
                                                             <strong><?= htmlspecialchars($agendamento['nome_aula']) ?></strong>
                                                         </td>
@@ -2230,10 +2353,19 @@ foreach ($disciplinasSelecionadas as $disciplina) {
                                 </div>
                             <?php else: ?>
                                 <div class="historico-agendamentos">
-                                    <h6 class="mb-3">
-                                        <i class="fas fa-calendar-alt me-2" style="color: #023A8D;"></i>
-                                        Histórico de Agendamentos - <?= htmlspecialchars($disciplina['nome_disciplina']) ?>
-                                    </h6>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                                        <h6 class="mb-0">
+                                            <i class="fas fa-calendar-alt me-2" style="color: #023A8D;"></i>
+                                            Histórico de Agendamentos - <?= htmlspecialchars($disciplina['nome_disciplina']) ?>
+                                        </h6>
+                                        <button type="button" 
+                                                class="btn btn-primary btn-sm" 
+                                                onclick="abrirModalAgendarAula('<?= $disciplinaId ?>', '<?= htmlspecialchars($disciplina['nome_disciplina'], ENT_QUOTES) ?>', '<?= htmlspecialchars($turma['data_inicio']) ?>', '<?= htmlspecialchars($turma['data_fim']) ?>')"
+                                                style="display: inline-flex; align-items: center; gap: 6px;">
+                                            <i class="fas fa-plus"></i>
+                                            Agendar Nova Aula
+                                        </button>
+                                    </div>
                                     
                                     <div class="text-center py-4">
                                         <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
@@ -2333,6 +2465,136 @@ foreach ($disciplinasSelecionadas as $disciplina) {
             <button type="button" class="btn btn-secondary" onclick="fecharModalInserirAlunos()">
                 <i class="fas fa-times"></i>
                 Fechar
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal para Agendar Nova Aula -->
+<div id="modalAgendarAula" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="max-width: 600px; max-height: 90vh;">
+        <div class="modal-header">
+            <h3>
+                <i class="fas fa-calendar-plus"></i>
+                📅 Agendar Nova Aula
+            </h3>
+            <button type="button" class="btn-close" onclick="fecharModalAgendarAula()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
+            <form id="formAgendarAulaModal">
+                <input type="hidden" name="acao" value="agendar_aula">
+                <input type="hidden" name="ajax" value="true">
+                <input type="hidden" name="turma_id" id="modal_turma_id" value="<?= $turmaId ?>">
+                <input type="hidden" name="disciplina" id="modal_disciplina_id">
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="modal_disciplina_nome" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                        Disciplina *
+                    </label>
+                    <input type="text" 
+                           id="modal_disciplina_nome" 
+                           class="form-control" 
+                           readonly 
+                           style="background-color: #f8f9fa; cursor: not-allowed;">
+                </div>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <label for="modal_instrutor_id" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                        Instrutor *
+                    </label>
+                    <select id="modal_instrutor_id" name="instrutor_id" class="form-control" required>
+                        <option value="">Selecione um instrutor...</option>
+                        <?php if (!empty($instrutores)): ?>
+                            <?php foreach ($instrutores as $instrutor): ?>
+                                <option value="<?= (int)$instrutor['id'] ?>">
+                                    <?= htmlspecialchars($instrutor['nome'] ?? 'Instrutor sem nome') ?>
+                                    <?php if (!empty($instrutor['categoria_habilitacao'])): ?>
+                                        - <?= htmlspecialchars($instrutor['categoria_habilitacao']) ?>
+                                    <?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        <?php else: ?>
+                            <option value="" disabled>Nenhum instrutor disponível</option>
+                        <?php endif; ?>
+                    </select>
+                    <?php if (empty($instrutores)): ?>
+                        <small class="text-danger" style="display: block; margin-top: 5px;">
+                            <i class="fas fa-exclamation-triangle"></i> Nenhum instrutor ativo encontrado. Verifique o cadastro de instrutores.
+                        </small>
+                    <?php endif; ?>
+                </div>
+                
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                    <div class="form-group">
+                        <label for="modal_data_aula" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                            Data da Aula *
+                        </label>
+                        <input type="date" 
+                               id="modal_data_aula" 
+                               name="data_aula" 
+                               class="form-control" 
+                               required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modal_hora_inicio" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                            Horário de Início *
+                        </label>
+                        <input type="time"
+                               id="modal_hora_inicio"
+                               name="hora_inicio"
+                               class="form-control"
+                               placeholder="HH:MM"
+                               step="60"
+                               required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="modal_quantidade_aulas" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                            Qtd Aulas *
+                        </label>
+                        <select id="modal_quantidade_aulas" name="quantidade_aulas" class="form-control" required>
+                            <option value="1">1 aula</option>
+                            <option value="2" selected>2 aulas</option>
+                            <option value="3">3 aulas</option>
+                            <option value="4">4 aulas</option>
+                            <option value="5">5 aulas</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Preview do horário -->
+                <div id="previewHorarioModal" style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
+                    <strong>🕐 Preview do Agendamento:</strong>
+                    <div id="previewContentModal" style="margin-top: 8px; font-family: monospace;"></div>
+                </div>
+                
+                <!-- Alerta de conflitos -->
+                <div id="alertaConflitosModal" style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
+                    <strong>⚠️ Conflito Detectado:</strong>
+                    <div id="conflitosContentModal" style="margin-top: 8px;"></div>
+                </div>
+                
+                <!-- Mensagem de erro/sucesso -->
+                <div id="mensagemAgendamento" style="display: none; padding: 12px; border-radius: 6px; margin-bottom: 15px;"></div>
+            </form>
+        </div>
+        
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="fecharModalAgendarAula()">
+                <i class="fas fa-times"></i>
+                Cancelar
+            </button>
+            <button type="button" id="btnVerificarDisponibilidade" class="btn btn-outline-secondary" onclick="verificarDisponibilidadeModal()">
+                <i class="fas fa-search"></i>
+                🔍 Verificar Disponibilidade
+            </button>
+            <button type="button" id="btnAgendarAula" class="btn btn-primary" onclick="enviarAgendamentoModal()" disabled>
+                <i class="fas fa-plus"></i>
+                ➕ Agendar Aula(s)
             </button>
         </div>
     </div>
@@ -4443,11 +4705,16 @@ function removeDisciplina(disciplinaId) {
 
 // Modal de edição de agendamento
 function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instrutorId, salaId, duracao, observacoes) {
+    window.currentEditAgendamentoId = id;
     // Criar modal dinamicamente se não existir
     let modal = document.getElementById('modalEditarAgendamento');
     if (!modal) {
         modal = criarModalEdicao();
         document.body.appendChild(modal);
+        // Garantir que os listeners do campo de hora sejam anexados
+        setTimeout(() => {
+            anexarAutoCalculoHoraFim();
+        }, 0);
     }
     
     // Buscar dados completos do agendamento
@@ -4468,17 +4735,19 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                 document.getElementById('editDuracaoDisplay').textContent = (agendamento.duracao_minutos || 50) + ' min';
                 document.getElementById('editObservacoes').value = agendamento.observacoes || '';
                 
-                // Carregar horários disponíveis no select incluindo o horário do agendamento
+                // Carregar horário no input incluindo o horário do agendamento
                 carregarHorariosDisponiveis(agendamento.hora_inicio).then((horarioAjustado) => {
-                    const selectHoraInicio = document.getElementById('editHoraInicio');
-                    if (selectHoraInicio) {
+                    const inputHoraInicio = document.getElementById('editHoraInicio');
+                    if (inputHoraInicio) {
                         // Usar o horário ajustado se disponível, senão normalizar o original
                         const horaInicio = horarioAjustado || (agendamento.hora_inicio.length === 8 ? agendamento.hora_inicio.substring(0, 5) : agendamento.hora_inicio);
                         if (horaInicio) {
-                            selectHoraInicio.value = horaInicio;
+                            inputHoraInicio.value = horaInicio;
                             // Calcular hora de fim automaticamente
-                            calcularHoraFimAuto();
-                            anexarAutoCalculoHoraFim();
+                            setTimeout(() => {
+                                calcularHoraFimAuto();
+                                anexarAutoCalculoHoraFim();
+                            }, 100);
                         }
                     }
                 });
@@ -4510,16 +4779,18 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                 document.getElementById('editDuracaoDisplay').textContent = agendamento.duracao_minutos + ' min';
                 document.getElementById('editObservacoes').value = agendamento.observacoes || '';
                 
-                // Carregar horários disponíveis incluindo o horário do agendamento
+                // Carregar horário no input incluindo o horário do agendamento
                 carregarHorariosDisponiveis(agendamento.hora_inicio).then((horarioAjustado) => {
-                    const selectHoraInicio = document.getElementById('editHoraInicio');
-                    if (selectHoraInicio) {
+                    const inputHoraInicio = document.getElementById('editHoraInicio');
+                    if (inputHoraInicio) {
                         // Usar o horário ajustado se disponível, senão normalizar o original
                         const horaInicio = horarioAjustado || (agendamento.hora_inicio.length === 8 ? agendamento.hora_inicio.substring(0, 5) : agendamento.hora_inicio);
                         if (horaInicio) {
-                            selectHoraInicio.value = horaInicio;
-                            calcularHoraFimAuto();
-                            anexarAutoCalculoHoraFim();
+                            inputHoraInicio.value = horaInicio;
+                            setTimeout(() => {
+                                calcularHoraFimAuto();
+                                anexarAutoCalculoHoraFim();
+                            }, 100);
                         }
                     }
                 });
@@ -4537,16 +4808,18 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                 document.getElementById('editDuracaoDisplay').textContent = duracao + ' min';
                 document.getElementById('editObservacoes').value = observacoes || '';
                 
-                // Carregar horários disponíveis incluindo o horário passado
+                // Carregar horário no input incluindo o horário passado
                 carregarHorariosDisponiveis(horaInicio).then((horarioAjustado) => {
-                    const selectHoraInicio = document.getElementById('editHoraInicio');
-                    if (selectHoraInicio) {
+                    const inputHoraInicio = document.getElementById('editHoraInicio');
+                    if (inputHoraInicio) {
                         // Usar o horário ajustado se disponível, senão normalizar o original
                         const horaInicioParaUsar = horarioAjustado || (horaInicio.length === 8 ? horaInicio.substring(0, 5) : horaInicio);
                         if (horaInicioParaUsar) {
-                            selectHoraInicio.value = horaInicioParaUsar;
-                            calcularHoraFimAuto();
-                            anexarAutoCalculoHoraFim();
+                            inputHoraInicio.value = horaInicioParaUsar;
+                            setTimeout(() => {
+                                calcularHoraFimAuto();
+                                anexarAutoCalculoHoraFim();
+                            }, 100);
                         }
                     }
                 });
@@ -4565,13 +4838,17 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
             document.getElementById('editDuracaoDisplay').textContent = duracao + ' min';
             document.getElementById('editObservacoes').value = observacoes || '';
             
-            // Carregar horários disponíveis incluindo o horário passado
+            // Carregar horário no input incluindo o horário passado
             carregarHorariosDisponiveis(horaInicio).then(() => {
-                const selectHoraInicio = document.getElementById('editHoraInicio');
-                if (selectHoraInicio && horaInicio) {
-                    selectHoraInicio.value = horaInicio;
-                    calcularHoraFimAuto();
-                    anexarAutoCalculoHoraFim();
+                const inputHoraInicio = document.getElementById('editHoraInicio');
+                if (inputHoraInicio && horaInicio) {
+                    // Normalizar horário se necessário
+                    const horaNormalizada = horaInicio.length === 8 ? horaInicio.substring(0, 5) : horaInicio;
+                    inputHoraInicio.value = horaNormalizada;
+                    setTimeout(() => {
+                        calcularHoraFimAuto();
+                        anexarAutoCalculoHoraFim();
+                    }, 100);
                 }
             });
             
@@ -4603,6 +4880,9 @@ function cancelarAgendamento(id, nomeAula) {
         console.log('🔧 [DEBUG] URL:', url);
         console.log('🔧 [DEBUG] Dados:', data);
         
+        // Encontrar a linha da tabela antes de fazer a requisição
+        const linhaAgendamento = document.querySelector(`tr[data-agendamento-id="${id}"]`);
+        
         fetch(url, {
             method: 'PUT',
             headers: {
@@ -4612,7 +4892,6 @@ function cancelarAgendamento(id, nomeAula) {
         })
         .then(response => {
             console.log('🔧 [DEBUG] Status da resposta:', response.status);
-            console.log('🔧 [DEBUG] Headers da resposta:', response.headers);
             return response.text();
         })
         .then(text => {
@@ -4621,22 +4900,51 @@ function cancelarAgendamento(id, nomeAula) {
                 const data = JSON.parse(text);
                 console.log('🔧 [DEBUG] Dados parseados:', data);
                 if (data.sucesso) {
-                    showFeedback('Agendamento cancelado com sucesso!', 'success');
-                    // Recarregar página após 1 segundo
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
+                    // Remover a linha da tabela sem recarregar a página
+                    if (linhaAgendamento) {
+                        // Salvar referências antes de remover
+                        const tbody = linhaAgendamento.parentElement;
+                        const container = tbody?.closest('.historico-agendamentos');
+                        
+                        // Adicionar animação de fade out antes de remover
+                        linhaAgendamento.style.transition = 'opacity 0.3s ease-out';
+                        linhaAgendamento.style.opacity = '0';
+                        
+                        setTimeout(() => {
+                            linhaAgendamento.remove();
+                            console.log('✅ [DEBUG] Linha removida da tabela');
+                            
+                            // Verificar se a tabela ficou vazia e mostrar mensagem
+                            if (tbody && tbody.querySelectorAll('tr').length === 0) {
+                                if (container) {
+                                    const table = container.querySelector('.table-responsive');
+                                    if (table) {
+                                        table.remove();
+                                        container.insertAdjacentHTML('beforeend', `
+                                            <div class="text-center py-4">
+                                                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                                                <h6 class="text-muted">Nenhum agendamento encontrado</h6>
+                                                <p class="text-muted small">Não há aulas agendadas para esta disciplina ainda.</p>
+                                            </div>
+                                        `);
+                                    }
+                                }
+                            }
+                        }, 300);
+                    }
+                    
+                    showFeedback('✅ Agendamento cancelado com sucesso!', 'success');
                 } else {
-                    showFeedback('Erro ao cancelar agendamento: ' + (data.mensagem || data.message || 'Erro desconhecido'), 'error');
+                    showFeedback('❌ Erro ao cancelar agendamento: ' + (data.mensagem || data.message || 'Erro desconhecido'), 'error');
                 }
             } catch (e) {
                 console.error('❌ [AGENDAMENTO] Resposta não é JSON válido:', text);
-                showFeedback('Erro: Resposta inválida do servidor', 'error');
+                showFeedback('❌ Erro: Resposta inválida do servidor', 'error');
             }
         })
         .catch(error => {
             console.error('❌ [AGENDAMENTO] Erro:', error);
-            showFeedback('Erro ao cancelar agendamento: ' + error.message, 'error');
+            showFeedback('❌ Erro ao cancelar agendamento: ' + error.message, 'error');
         });
     }
 }
@@ -4718,12 +5026,35 @@ function salvarEdicaoAgendamento() {
             const data = JSON.parse(text);
             if (data.sucesso || data.success) {
                 showFeedback(data.mensagem || 'Agendamento editado com sucesso!', 'success');
-                // Fechar modal
+                // Atualizar linha da tabela (sem recarregar)
+                try {
+                    const row = document.querySelector(`[data-agendamento-id="${window.currentEditAgendamentoId}"]`);
+                    if (row) {
+                        const nome = document.getElementById('editNomeAula')?.value || '';
+                        const dataAula = document.getElementById('editDataAula')?.value || '';
+                        const horaInicio = document.getElementById('editHoraInicio')?.value || '';
+                        const horaFim = document.getElementById('editHoraFim')?.value || '';
+                        const instrutorSel = document.getElementById('editInstrutor');
+                        const instrutorNome = instrutorSel && instrutorSel.options[instrutorSel.selectedIndex] ? instrutorSel.options[instrutorSel.selectedIndex].text : '';
+                        const salaSel = document.getElementById('editSala');
+                        const salaNome = salaSel && salaSel.options[salaSel.selectedIndex] ? salaSel.options[salaSel.selectedIndex].text : '';
+                        
+                        const cells = row.querySelectorAll('td');
+                        if (cells.length >= 7) {
+                            cells[0].innerHTML = `<strong>${nome}</strong>`;
+                            if (dataAula) {
+                                const dataBR = new Date(dataAula + 'T00:00:00').toLocaleDateString('pt-BR');
+                                cells[1].textContent = dataBR;
+                            }
+                            cells[2].textContent = `${horaInicio?.slice(0,5)} - ${horaFim?.slice(0,5)}`;
+                            cells[3].textContent = instrutorNome || cells[3].textContent;
+                            cells[4].textContent = salaNome || cells[4].textContent;
+                            cells[5].textContent = '50 min';
+                        }
+                    }
+                } catch (e) { console.error('Erro ao atualizar linha editada:', e); }
+                // Fechar modal sem recarregar
                 fecharModalEdicao();
-                // Recarregar a página para mostrar os dados atualizados do banco
-                setTimeout(() => {
-                    window.location.reload();
-                }, 1500);
             } else {
                 showFeedback('Erro ao editar agendamento: ' + (data.mensagem || data.message || data.error || 'Erro desconhecido'), 'error');
             }
@@ -4785,9 +5116,13 @@ function criarModalEdicao() {
                             <label for="editHoraInicio" class="form-label fw-semibold">
                                 Hora Início <span class="text-danger">*</span>
                             </label>
-                            <select class="form-select" id="editHoraInicio" name="hora_inicio" required>
-                                <option value="">Selecione o horário...</option>
-                            </select>
+                            <input type="time" 
+                                   class="form-control" 
+                                   id="editHoraInicio" 
+                                   name="hora_inicio" 
+                                   placeholder="HH:MM"
+                                   step="60"
+                                   required>
                         </div>
                         <div class="col-md-4">
                             <label for="editHoraFim" class="form-label fw-semibold">
@@ -4952,15 +5287,9 @@ function carregarDadosSelects(instrutorId = null, salaId = null) {
         });
 }
 
-// Carregar horários disponíveis
+// Carregar horários disponíveis (simplificado para input time)
 function carregarHorariosDisponiveis(horarioCustomizado = null) {
     return new Promise((resolve, reject) => {
-        const horarios = [
-            '07:00', '07:50', '08:40', '09:30', '10:20', '11:10',
-            '13:00', '13:50', '14:40', '15:30', '16:20', '17:10', '18:00',
-            '18:50', '19:40', '20:30', '21:10'
-        ];
-        
         // Normalizar horário customizado para formato HH:MM (remover segundos se houver)
         let horarioCustomizadoNormalizado = null;
         if (horarioCustomizado) {
@@ -4972,85 +5301,42 @@ function carregarHorariosDisponiveis(horarioCustomizado = null) {
             }
         }
         
-        // Função para verificar se um horário respeita o intervalo de 50 minutos
-        function respeitaIntervalo50Minutos(horario) {
-            const [hora, minuto] = horario.split(':').map(Number);
-            // Os horários devem ter minutos em 0 ou 50, OU serem específicos que não quebrem o padrão
-            // Vamos definir os horários válidos que respeitam 50min de intervalo
-            const horariosValidos = [
-                '07:00', '07:50', '08:40', '09:30', '10:20', '11:10',
-                '13:00', '13:50', '14:40', '15:30', '16:20', '17:10', '18:00',
-                '18:50', '19:40', '20:30', '21:10'
-            ];
-            return horariosValidos.includes(horario);
-        }
-        
-        // Se houver um horário customizado, verificar se respeita o padrão antes de adicionar
-        if (horarioCustomizadoNormalizado && !horarios.includes(horarioCustomizadoNormalizado)) {
-            // Só adicionar se respeitar o intervalo de 50 minutos
-            if (respeitaIntervalo50Minutos(horarioCustomizadoNormalizado)) {
-                horarios.push(horarioCustomizadoNormalizado);
-                horarios.sort(); // Ordenar para manter ordem crescente
-            } else {
-                console.warn('⚠️ Horário customizado não respeita padrão de 50min:', horarioCustomizadoNormalizado);
-                // Encontrar o horário válido mais próximo
-                const [horaIni, minutoIni] = horarioCustomizadoNormalizado.split(':').map(Number);
-                const minutosIni = horaIni * 60 + minutoIni;
-                
-                let menorDiferenca = Infinity;
-                let horarioMaisProximo = null;
-                
-                horarios.forEach(h => {
-                    const [hH, mM] = h.split(':').map(Number);
-                    const minutos = hH * 60 + mM;
-                    const diferenca = Math.abs(minutos - minutosIni);
-                    
-                    if (diferenca < menorDiferenca) {
-                        menorDiferenca = diferenca;
-                        horarioMaisProximo = h;
-                    }
-                });
-                
-                if (horarioMaisProximo) {
-                    console.log('✅ Ajustando horário de', horarioCustomizadoNormalizado, 'para', horarioMaisProximo);
-                    horarioCustomizadoNormalizado = horarioMaisProximo;
-                }
+        const inputHoraInicio = document.getElementById('editHoraInicio');
+        if (inputHoraInicio) {
+            // Se houver horário customizado, definir o valor
+            if (horarioCustomizadoNormalizado) {
+                inputHoraInicio.value = horarioCustomizadoNormalizado;
             }
-        }
-        
-        const selectHoraInicio = document.getElementById('editHoraInicio');
-        if (selectHoraInicio) {
-            // Limpar opções existentes
-            selectHoraInicio.innerHTML = '<option value="">Selecione o horário...</option>';
-            
-            // Adicionar horários
-            horarios.forEach(horario => {
-                const option = document.createElement('option');
-                option.value = horario;
-                option.textContent = horario;
-                selectHoraInicio.appendChild(option);
-            });
             
             // Adicionar listener para calcular hora de fim automaticamente
-            selectHoraInicio.addEventListener('change', calcularHoraFimAuto);
+            if (!inputHoraInicio.hasAttribute('data-listener-added')) {
+                inputHoraInicio.addEventListener('change', calcularHoraFimAuto);
+                inputHoraInicio.addEventListener('input', calcularHoraFimAuto);
+                inputHoraInicio.setAttribute('data-listener-added', 'true');
+            }
             
-            // Retornar o horário customizado ajustado (se houver)
+            // Calcular hora de fim automaticamente se houver valor
+            if (horarioCustomizadoNormalizado) {
+                setTimeout(() => calcularHoraFimAuto(), 100);
+            }
+            
+            // Retornar o horário customizado normalizado (se houver)
             resolve(horarioCustomizadoNormalizado || null);
         } else {
-            reject('Select hora_inicio não encontrado');
+            reject('Input hora_inicio não encontrado');
         }
     });
 }
 
 // Calcular hora de fim automaticamente (hora início + duração)
 function calcularHoraFimAuto() {
-    const selectHoraInicio = document.getElementById('editHoraInicio');
+    const inputHoraInicio = document.getElementById('editHoraInicio');
     const inputHoraFim = document.getElementById('editHoraFim');
     const displayHoraFim = document.getElementById('editHoraFimDisplay');
     const editDuracao = document.getElementById('editDuracao');
     
-    if (selectHoraInicio && inputHoraFim && displayHoraFim) {
-        const horaInicio = selectHoraInicio.value;
+    if (inputHoraInicio && inputHoraFim && displayHoraFim) {
+        const horaInicio = inputHoraInicio.value;
         
         if (horaInicio) {
             // Obter duração do campo ou usar 50 como padrão
@@ -5483,6 +5769,67 @@ function removerMatricula(matriculaId, nomeAluno) {
         });
     }
 }
+
+function enviarAgendamentoModal() {
+    const form = document.getElementById('formAgendarAulaModal');
+    const formData = new FormData(form);
+    
+    // Validar campos
+    if (!formData.get('instrutor_id') || !formData.get('data_aula') || !formData.get('hora_inicio')) {
+        mostrarMensagemModal('Preencha todos os campos obrigatórios.', 'error');
+        return;
+    }
+    
+    const btnAgendar = document.getElementById('btnAgendarAula');
+    btnAgendar.disabled = true;
+    btnAgendar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agendando...';
+    
+    // Enviar via AJAX
+    fetch(getBasePath() + '/admin/api/turmas-teoricas.php', {
+        method: 'POST',
+        body: new URLSearchParams(Object.fromEntries(formData)),
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(async data => {
+        if (data.sucesso) {
+            mostrarMensagemModal('✅ ' + data.mensagem, 'success');
+            
+            // Buscar os agendamentos criados para renderizar na tabela
+            const ids = (data.aulas_agendadas || []).join(',');
+            const disciplinaId = formData.get('disciplina');
+            if (ids) {
+                try {
+                    const res = await fetch(getBasePath() + '/admin/api/agendamentos-por-ids.php?ids=' + ids);
+                    const json = await res.json();
+                    if (json.success) {
+                        inserirAgendamentosNaTabela(disciplinaId, json.data);
+                    }
+                } catch (e) {
+                    console.error('Erro ao buscar agendamentos recém-criados:', e);
+                }
+            }
+            
+            // Fechar modal e resetar botão
+            fecharModalAgendarAula();
+            btnAgendar.disabled = false;
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+        } else {
+            mostrarMensagemModal('❌ ' + (data.mensagem || 'Erro ao agendar aula. Tente novamente.'), 'error');
+            btnAgendar.disabled = false;
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        mostrarMensagemModal('❌ Erro ao processar agendamento. Tente novamente.', 'error');
+        btnAgendar.disabled = false;
+        btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+    });
+}
+
 </script>
 
 <style>
@@ -5557,6 +5904,27 @@ function removerMatricula(matriculaId, nomeAluno) {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+    flex-wrap: wrap;
+}
+
+/* Responsividade para modal de agendamento */
+@media (max-width: 768px) {
+    .modal-content {
+        width: 95%;
+        max-width: 95%;
+    }
+    
+    .modal-footer {
+        flex-direction: column-reverse;
+    }
+    
+    .modal-footer .btn {
+        width: 100%;
+    }
+    
+    #modalAgendarAula .modal-body > div[style*="grid"] {
+        grid-template-columns: 1fr !important;
+    }
 }
 
 /* Grid de alunos */
@@ -5799,3 +6167,773 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- JavaScript para Modal de Agendamento -->
+<script>
+// Variáveis globais para o modal
+let turmaIdModal = <?= $turmaId ?>;
+let dataInicioModal = '';
+let dataFimModal = '';
+
+// Função para abrir o modal de agendamento
+function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim) {
+    try {
+        turmaIdModal = <?= $turmaId ?>;
+        dataInicioModal = dataInicio;
+        dataFimModal = dataFim;
+        
+        // Preencher os campos do modal com verificação de existência
+        const modalDisciplinaId = document.getElementById('modal_disciplina_id');
+        const modalDisciplinaNome = document.getElementById('modal_disciplina_nome');
+        const modalDataAula = document.getElementById('modal_data_aula');
+        const modalInstrutorId = document.getElementById('modal_instrutor_id');
+        const modalHoraInicio = document.getElementById('modal_hora_inicio');
+        const modalQuantidadeAulas = document.getElementById('modal_quantidade_aulas');
+        const previewHorario = document.getElementById('previewHorarioModal');
+        const alertaConflitos = document.getElementById('alertaConflitosModal');
+        const mensagemAgendamento = document.getElementById('mensagemAgendamento');
+        const btnAgendar = document.getElementById('btnAgendarAula');
+        const modal = document.getElementById('modalAgendarAula');
+        
+        if (!modal) {
+            console.error('Modal não encontrado!');
+            alert('Erro: Modal de agendamento não encontrado. Recarregue a página.');
+            return;
+        }
+        
+        // Preencher campos se existirem
+        if (modalDisciplinaId) modalDisciplinaId.value = disciplinaId;
+        if (modalDisciplinaNome) modalDisciplinaNome.value = disciplinaNome;
+        if (modalDataAula) {
+            // Definir limites de data baseado no período da turma
+            modalDataAula.min = dataInicio;
+            modalDataAula.max = dataFim;
+            modalDataAula.value = '';
+            
+            // Log para debug
+            console.log('🔧 [DEBUG] Limites do calendário configurados:', {
+                min: dataInicio,
+                max: dataFim,
+                dataInicioFormatada: new Date(dataInicio + 'T00:00:00').toLocaleDateString('pt-BR'),
+                dataFimFormatada: new Date(dataFim + 'T00:00:00').toLocaleDateString('pt-BR')
+            });
+            
+            // Aviso se a data fim está muito próxima
+            const hoje = new Date();
+            const dataFimDate = new Date(dataFim + 'T00:00:00');
+            const diasRestantes = Math.ceil((dataFimDate - hoje) / (1000 * 60 * 60 * 24));
+            
+            if (diasRestantes <= 7 && diasRestantes > 0) {
+                console.warn('⚠️ [AVISO] Restam apenas', diasRestantes, 'dias no período da turma');
+            }
+        }
+        
+        // Limpar campos e mensagens
+        if (modalInstrutorId) modalInstrutorId.value = '';
+        if (modalHoraInicio) modalHoraInicio.value = '';
+        if (modalQuantidadeAulas) modalQuantidadeAulas.value = '2';
+        if (previewHorario) previewHorario.style.display = 'none';
+        if (alertaConflitos) alertaConflitos.style.display = 'none';
+        if (mensagemAgendamento) mensagemAgendamento.style.display = 'none';
+        if (btnAgendar) btnAgendar.disabled = true;
+        
+        // Mostrar modal
+        modal.style.display = 'flex';
+    } catch (error) {
+        console.error('Erro ao abrir modal:', error);
+        alert('Erro ao abrir modal de agendamento. Verifique o console para mais detalhes.');
+    }
+}
+
+// Função para fechar o modal
+function fecharModalAgendarAula() {
+    document.getElementById('modalAgendarAula').style.display = 'none';
+}
+
+// Fechar modal ao clicar fora dele
+document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('modalAgendarAula');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) {
+                fecharModalAgendarAula();
+            }
+        });
+    }
+});
+
+// Atualizar preview quando campos mudarem
+function atualizarPreviewModal() {
+    const disciplinaNome = document.getElementById('modal_disciplina_nome').value;
+    const dataAula = document.getElementById('modal_data_aula').value;
+    const horaInicio = document.getElementById('modal_hora_inicio').value;
+    const qtdAulas = parseInt(document.getElementById('modal_quantidade_aulas').value);
+    
+    if (dataAula && horaInicio && qtdAulas) {
+        const data = new Date(dataAula + 'T00:00:00');
+        const dataFormatada = data.toLocaleDateString('pt-BR');
+        
+        // Calcular horários das aulas
+        let horariosPreview = [];
+        for (let i = 0; i < qtdAulas; i++) {
+            const [horas, minutos] = horaInicio.split(':').map(Number);
+            const inicioMinutos = (horas * 60) + minutos + (i * 50);
+            const fimMinutos = inicioMinutos + 50;
+            
+            const horaInicioAula = String(Math.floor(inicioMinutos / 60)).padStart(2, '0') + ':' + 
+                                 String(inicioMinutos % 60).padStart(2, '0');
+            const horaFimAula = String(Math.floor(fimMinutos / 60)).padStart(2, '0') + ':' + 
+                               String(fimMinutos % 60).padStart(2, '0');
+            
+            horariosPreview.push(`${horaInicioAula} - ${horaFimAula}`);
+        }
+        
+        document.getElementById('previewContentModal').innerHTML = `
+            <strong>${disciplinaNome}</strong><br>
+            📅 ${dataFormatada}<br>
+            🕐 ${horariosPreview.join(', ')}<br>
+            🎓 ${qtdAulas} aula(s) de 50 minutos cada
+        `;
+        document.getElementById('previewHorarioModal').style.display = 'block';
+    } else {
+        document.getElementById('previewHorarioModal').style.display = 'none';
+    }
+}
+
+// Event listeners para atualizar preview
+document.addEventListener('DOMContentLoaded', function() {
+    const dataAula = document.getElementById('modal_data_aula');
+    const horaInicio = document.getElementById('modal_hora_inicio');
+    const qtdAulas = document.getElementById('modal_quantidade_aulas');
+    const instrutorId = document.getElementById('modal_instrutor_id');
+    
+    if (dataAula) {
+        dataAula.addEventListener('change', function() {
+            atualizarPreviewModal();
+            // Verificar disponibilidade automaticamente se todos os campos estiverem preenchidos
+            verificarDisponibilidadeAuto();
+        });
+    }
+    
+    if (horaInicio) {
+        horaInicio.addEventListener('change', function() {
+            atualizarPreviewModal();
+            verificarDisponibilidadeAuto();
+        });
+    }
+    
+    if (qtdAulas) {
+        qtdAulas.addEventListener('change', function() {
+            atualizarPreviewModal();
+            verificarDisponibilidadeAuto();
+        });
+    }
+    
+    if (instrutorId) {
+        instrutorId.addEventListener('change', function() {
+            verificarDisponibilidadeAuto();
+        });
+    }
+});
+
+// Verificação automática de disponibilidade (sem mostrar mensagem, apenas habilitar/desabilitar botão)
+let timeoutVerificacao = null;
+function verificarDisponibilidadeAuto() {
+    // Cancelar verificação anterior se ainda estiver aguardando
+    if (timeoutVerificacao) {
+        clearTimeout(timeoutVerificacao);
+    }
+    
+    // Aguardar 500ms após o usuário parar de digitar
+    timeoutVerificacao = setTimeout(() => {
+        const instrutor = document.getElementById('modal_instrutor_id')?.value;
+        const dataAula = document.getElementById('modal_data_aula')?.value;
+        const horaInicio = document.getElementById('modal_hora_inicio')?.value;
+        const disciplinaId = document.getElementById('modal_disciplina_id')?.value;
+        const quantidadeAulas = document.getElementById('modal_quantidade_aulas')?.value || 1;
+        
+        const btnAgendar = document.getElementById('btnAgendarAula');
+        
+        // Se todos os campos obrigatórios estão preenchidos, verificar
+        if (instrutor && dataAula && horaInicio && disciplinaId) {
+            const params = new URLSearchParams({
+                acao: 'verificar_conflitos',
+                turma_id: turmaIdModal,
+                disciplina: disciplinaId,
+                instrutor_id: instrutor,
+                data_aula: dataAula,
+                hora_inicio: horaInicio,
+                quantidade_aulas: quantidadeAulas
+            });
+            
+            fetch(getBasePath() + '/admin/api/turmas-teoricas.php?' + params.toString(), {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (btnAgendar) {
+                    if (data.sucesso && data.disponivel) {
+                        btnAgendar.disabled = false;
+                    } else {
+                        btnAgendar.disabled = true;
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Erro na verificação automática:', error);
+                if (btnAgendar) btnAgendar.disabled = true;
+            });
+        } else {
+            // Se campos não estão completos, desabilitar botão
+            if (btnAgendar) btnAgendar.disabled = true;
+        }
+    }, 500);
+}
+
+// Função para verificar disponibilidade
+function verificarDisponibilidadeModal() {
+    const instrutor = document.getElementById('modal_instrutor_id').value;
+    const dataAula = document.getElementById('modal_data_aula').value;
+    const horaInicio = document.getElementById('modal_hora_inicio').value;
+    const disciplinaId = document.getElementById('modal_disciplina_id').value;
+    const quantidadeAulas = document.getElementById('modal_quantidade_aulas').value || 1;
+    
+    if (!instrutor || !dataAula || !horaInicio || !disciplinaId) {
+        mostrarMensagemModal('❌ Preencha todos os campos obrigatórios antes de verificar conflitos.', 'error');
+        return;
+    }
+    
+    const btnVerificar = document.getElementById('btnVerificarDisponibilidade');
+    const btnAgendar = document.getElementById('btnAgendarAula');
+    const alertaConflitos = document.getElementById('alertaConflitosModal');
+    
+    btnVerificar.disabled = true;
+    btnVerificar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+    btnAgendar.disabled = true;
+    
+    // Limpar mensagens anteriores
+    if (alertaConflitos) alertaConflitos.style.display = 'none';
+    mostrarMensagemModal('', '');
+    
+    // Construir URL com parâmetros
+    const params = new URLSearchParams({
+        acao: 'verificar_conflitos',
+        turma_id: turmaIdModal,
+        disciplina: disciplinaId,
+        instrutor_id: instrutor,
+        data_aula: dataAula,
+        hora_inicio: horaInicio,
+        quantidade_aulas: quantidadeAulas
+    });
+    
+    console.log('🔧 [DEBUG] Verificando disponibilidade:', params.toString());
+    
+    // Chamar API real de verificação
+    fetch(getBasePath() + '/admin/api/turmas-teoricas.php?' + params.toString(), {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        console.log('🔧 [DEBUG] Status da resposta:', response.status);
+        return response.json();
+    })
+    .then(data => {
+        console.log('🔧 [DEBUG] Resultado da verificação:', data);
+        
+        btnVerificar.disabled = false;
+        btnVerificar.innerHTML = '<i class="fas fa-search"></i> 🔍 Verificar Disponibilidade';
+        
+        if (data.sucesso && data.disponivel) {
+            // Horário disponível
+            if (alertaConflitos) alertaConflitos.style.display = 'none';
+            btnAgendar.disabled = false;
+            mostrarMensagemModal('✅ ' + (data.mensagem || 'Horário disponível! Você pode agendar as aulas.'), 'success');
+        } else {
+            // Há conflitos
+            if (alertaConflitos) {
+                let mensagemConflitos = '<strong>⚠️ Conflitos detectados:</strong><ul style="margin: 10px 0; padding-left: 20px;">';
+                
+                if (data.detalhes && data.detalhes.length > 0) {
+                    data.detalhes.forEach(conflito => {
+                        mensagemConflitos += '<li>' + conflito + '</li>';
+                    });
+                } else if (data.conflitos && data.conflitos.length > 0) {
+                    data.conflitos.forEach(conflito => {
+                        mensagemConflitos += '<li>' + conflito.mensagem + '</li>';
+                    });
+                } else {
+                    mensagemConflitos += '<li>' + (data.mensagem || 'Conflito detectado') + '</li>';
+                }
+                
+                mensagemConflitos += '</ul>';
+                alertaConflitos.innerHTML = mensagemConflitos;
+                alertaConflitos.style.display = 'block';
+            }
+            
+            btnAgendar.disabled = true;
+            mostrarMensagemModal('❌ ' + (data.mensagem || 'Conflito de horário detectado. Verifique os detalhes acima.'), 'error');
+        }
+    })
+    .catch(error => {
+        console.error('❌ [DEBUG] Erro ao verificar disponibilidade:', error);
+        btnVerificar.disabled = false;
+        btnVerificar.innerHTML = '<i class="fas fa-search"></i> 🔍 Verificar Disponibilidade';
+        btnAgendar.disabled = true;
+        mostrarMensagemModal('❌ Erro ao verificar disponibilidade. Tente novamente.', 'error');
+    });
+}
+
+// Função para enviar agendamento
+function enviarAgendamentoModal() {
+    const form = document.getElementById('formAgendarAulaModal');
+    const formData = new FormData(form);
+    
+    // Validar campos
+    if (!formData.get('instrutor_id') || !formData.get('data_aula') || !formData.get('hora_inicio')) {
+        mostrarMensagemModal('❌ Preencha todos os campos obrigatórios.', 'error');
+        return;
+    }
+    
+    // Verificar disponibilidade antes de agendar (última verificação)
+    const instrutor = formData.get('instrutor_id');
+    const dataAula = formData.get('data_aula');
+    const horaInicio = formData.get('hora_inicio');
+    const disciplinaId = formData.get('disciplina');
+    const quantidadeAulas = formData.get('quantidade_aulas') || 1;
+    
+    const btnAgendar = document.getElementById('btnAgendarAula');
+    btnAgendar.disabled = true;
+    btnAgendar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
+    
+    // Primeiro verificar conflitos antes de agendar
+    const params = new URLSearchParams({
+        acao: 'verificar_conflitos',
+        turma_id: turmaIdModal,
+        disciplina: disciplinaId,
+        instrutor_id: instrutor,
+        data_aula: dataAula,
+        hora_inicio: horaInicio,
+        quantidade_aulas: quantidadeAulas
+    });
+    
+    // Verificar disponibilidade antes de agendar
+    fetch(getBasePath() + '/admin/api/turmas-teoricas.php?' + params.toString(), {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(verificacao => {
+        console.log('🔧 [DEBUG] Verificação antes de agendar:', verificacao);
+        
+        if (!verificacao.sucesso || !verificacao.disponivel) {
+            // Há conflitos, não permitir agendamento
+            btnAgendar.disabled = true;
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+            
+            const alertaConflitos = document.getElementById('alertaConflitosModal');
+            if (alertaConflitos) {
+                let mensagemConflitos = '<strong>⚠️ Conflitos detectados:</strong><ul style="margin: 10px 0; padding-left: 20px;">';
+                
+                if (verificacao.detalhes && verificacao.detalhes.length > 0) {
+                    verificacao.detalhes.forEach(conflito => {
+                        mensagemConflitos += '<li>' + conflito + '</li>';
+                    });
+                } else if (verificacao.conflitos && verificacao.conflitos.length > 0) {
+                    verificacao.conflitos.forEach(conflito => {
+                        mensagemConflitos += '<li>' + conflito.mensagem + '</li>';
+                    });
+                } else {
+                    mensagemConflitos += '<li>' + (verificacao.mensagem || 'Conflito detectado') + '</li>';
+                }
+                
+                mensagemConflitos += '</ul>';
+                alertaConflitos.innerHTML = mensagemConflitos;
+                alertaConflitos.style.display = 'block';
+            }
+            
+            mostrarMensagemModal('❌ ' + (verificacao.mensagem || 'Não é possível agendar devido a conflitos de horário. Verifique os detalhes acima.'), 'error');
+            return;
+        }
+        
+        // Se passou na verificação, proceder com o agendamento
+        btnAgendar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agendando...';
+        
+        // Enviar via AJAX
+        fetch(getBasePath() + '/admin/api/turmas-teoricas.php', {
+            method: 'POST',
+            body: new URLSearchParams(Object.fromEntries(formData)),
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            console.log('🔧 [DEBUG] Status da resposta:', response.status);
+            return response.json();
+        })
+        .then(async data => {
+            console.log('🔧 [DEBUG] Dados recebidos do servidor:', data);
+            
+            if (data.sucesso) {
+                mostrarMensagemModal('✅ ' + data.mensagem, 'success');
+                
+                // Buscar os agendamentos criados para renderizar na tabela
+                const ids = (data.aulas_agendadas || []).join(',');
+                const disciplinaId = formData.get('disciplina');
+                
+                console.log('🔧 [DEBUG] IDs retornados:', ids);
+                console.log('🔧 [DEBUG] Disciplina ID:', disciplinaId);
+                
+                // Sempre recarregar do servidor para garantir ordem correta e evitar duplicatas
+                if (disciplinaId) {
+                    console.log('🔄 [DEBUG] Recarregando agendamentos da disciplina após agendamento bem-sucedido');
+                    recarregarAgendamentosDisciplina(disciplinaId);
+                } else {
+                    console.warn('⚠️ [DEBUG] Disciplina ID não disponível, não é possível recarregar agendamentos');
+                }
+                
+                // Fechar modal e resetar botão
+                setTimeout(() => {
+                    fecharModalAgendarAula();
+                }, 500);
+                btnAgendar.disabled = false;
+                btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+            } else {
+                mostrarMensagemModal('❌ ' + (data.mensagem || 'Erro ao agendar aula. Tente novamente.'), 'error');
+                btnAgendar.disabled = false;
+                btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+            }
+        })
+        .catch(error => {
+            console.error('❌ [DEBUG] Erro ao enviar agendamento:', error);
+            mostrarMensagemModal('❌ Erro ao processar agendamento. Tente novamente.', 'error');
+            btnAgendar.disabled = false;
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+        });
+    });
+}
+
+// Inserir novas linhas na tabela da disciplina sem recarregar
+function inserirAgendamentosNaTabela(disciplinaId, agendamentos) {
+    console.log('🔧 [DEBUG] Inserindo agendamentos na tabela:', { disciplinaId, agendamentos });
+    
+    // Tentar encontrar o container da disciplina de múltiplas formas
+    let container = document.getElementById('detalhes-disciplina-' + disciplinaId);
+    if (!container) {
+        container = document.getElementById('data-disciplina-' + disciplinaId);
+    }
+    if (!container) {
+        console.error('❌ [DEBUG] Container da disciplina não encontrado:', disciplinaId);
+        // Como fallback, recarregar do servidor
+        recarregarAgendamentosDisciplina(disciplinaId);
+        return;
+    }
+    
+    let tbody = container.querySelector('table tbody');
+    
+    // Se não houver tbody, pode ser que não haja agendamentos ainda
+    if (!tbody) {
+        // Verificar se há uma seção de "nenhum agendamento" e substituir
+        const historicoSection = container.querySelector('.historico-agendamentos');
+        if (historicoSection) {
+            // Criar estrutura da tabela
+            const tableHTML = `
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead class="table-primary">
+                            <tr>
+                                <th>Aula</th>
+                                <th>Data</th>
+                                <th>Horário</th>
+                                <th>Instrutor</th>
+                                <th>Sala</th>
+                                <th>Duração</th>
+                                <th>Status</th>
+                                <th width="100">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            `;
+            // Substituir a seção vazia pela tabela
+            const emptySection = historicoSection.querySelector('.text-center');
+            if (emptySection) {
+                emptySection.remove();
+            }
+            historicoSection.insertAdjacentHTML('beforeend', tableHTML);
+            tbody = historicoSection.querySelector('table tbody');
+        } else {
+            console.error('❌ [DEBUG] Não foi possível encontrar ou criar tbody');
+            recarregarAgendamentosDisciplina(disciplinaId);
+            return;
+        }
+    }
+    
+    if (!tbody) {
+        console.error('❌ [DEBUG] Tbody ainda não encontrado após tentativas');
+        recarregarAgendamentosDisciplina(disciplinaId);
+        return;
+    }
+    
+    // Verificar agendamentos existentes para evitar duplicatas
+    const agendamentosExistentes = Array.from(tbody.querySelectorAll('tr')).map(tr => 
+        tr.getAttribute('data-agendamento-id')
+    );
+    
+    // Filtrar apenas agendamentos que ainda não existem
+    const novosAgendamentos = agendamentos.filter(aula => 
+        !agendamentosExistentes.includes(String(aula.id))
+    );
+    
+    console.log('🔧 [DEBUG] Agendamentos novos a inserir:', novosAgendamentos.length);
+    
+    if (novosAgendamentos.length === 0) {
+        console.log('⚠️ [DEBUG] Todos os agendamentos já existem na tabela, recarregando do servidor para garantir ordem correta');
+        recarregarAgendamentosDisciplina(disciplinaId);
+        return;
+    }
+    
+    // Ordenar agendamentos para inserir na ordem correta (ordem_disciplina ASC, data_aula ASC, hora_inicio ASC)
+    novosAgendamentos.sort((a, b) => {
+        // Ordenar por ordem_disciplina
+        const ordemA = a.ordem_disciplina || 0;
+        const ordemB = b.ordem_disciplina || 0;
+        if (ordemA !== ordemB) return ordemA - ordemB;
+        
+        // Se ordem igual, ordenar por data_aula
+        const dataA = new Date(a.data_aula + 'T00:00:00').getTime();
+        const dataB = new Date(b.data_aula + 'T00:00:00').getTime();
+        if (dataA !== dataB) return dataA - dataB;
+        
+        // Se data igual, ordenar por hora_inicio
+        const horaA = a.hora_inicio || '00:00:00';
+        const horaB = b.hora_inicio || '00:00:00';
+        return horaA.localeCompare(horaB);
+    });
+    
+    // Inserir cada agendamento na posição correta
+    novosAgendamentos.forEach(aula => {
+        // Verificar se já existe na tabela antes de inserir
+        if (tbody.querySelector(`tr[data-agendamento-id="${aula.id}"]`)) {
+            console.log('⚠️ [DEBUG] Agendamento já existe, pulando:', aula.id);
+            return;
+        }
+        
+        const tr = document.createElement('tr');
+        tr.setAttribute('data-agendamento-id', aula.id);
+        
+        // Formatar data
+        const dataBR = aula.data_aula ? new Date(aula.data_aula + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A';
+        
+        // Formatar horário
+        const horaInicio = aula.hora_inicio ? (aula.hora_inicio.length >= 5 ? aula.hora_inicio.substring(0, 5) : aula.hora_inicio) : '--:--';
+        const horaFim = aula.hora_fim ? (aula.hora_fim.length >= 5 ? aula.hora_fim.substring(0, 5) : aula.hora_fim) : '--:--';
+        
+        tr.innerHTML = `
+            <td><strong>${aula.nome_aula || 'Aula'}</strong></td>
+            <td>${dataBR}</td>
+            <td>${horaInicio} - ${horaFim}</td>
+            <td>${aula.instrutor_nome || 'Não informado'}</td>
+            <td>${aula.sala_nome || 'Não informada'}</td>
+            <td>${aula.duracao_minutos || 50} min</td>
+            <td><span class="badge bg-warning">Agendada</span></td>
+            <td>
+                <div class="btn-group" role="group">
+                    <button type="button" 
+                            class="btn btn-sm btn-outline-primary" 
+                            onclick="editarAgendamento(${aula.id}, '${(aula.nome_aula || '').replace(/'/g, "\\'")}', '${aula.data_aula}', '${horaInicio}', '${horaFim}', '${aula.instrutor_id || ''}', '${aula.sala_id || ''}', '${aula.duracao_minutos || 50}', '${(aula.observacoes || '').replace(/'/g, "\\'")}')"
+                            title="Editar agendamento">
+                        <span style="font-size: 14px; font-weight: bold;">✏</span>
+                    </button>
+                    <button type="button" 
+                            class="btn btn-sm btn-outline-danger" 
+                            onclick="cancelarAgendamento(${aula.id}, '${(aula.nome_aula || '').replace(/'/g, "\\'")}')"
+                            title="Cancelar agendamento">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+            </td>
+        `;
+        
+        // Encontrar posição correta para inserir (ordem crescente: ordem_disciplina, data_aula, hora_inicio)
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        let posicaoInsercao = null;
+        
+        const ordemAula = aula.ordem_disciplina || 0;
+        const dataAula = new Date(aula.data_aula + 'T00:00:00').getTime();
+        const horaAula = aula.hora_inicio || '00:00:00';
+        
+        for (let i = 0; i < rows.length; i++) {
+            const row = rows[i];
+            const ordemRow = parseInt(row.querySelector('td')?.dataset?.ordem || row.getAttribute('data-ordem') || '0');
+            const dataRowStr = row.querySelector('td:nth-child(2)')?.textContent;
+            const horaRowStr = row.querySelector('td:nth-child(3)')?.textContent?.split(' - ')[0] || '00:00';
+            
+            // Se não conseguir obter dados da linha existente, usar atributos data
+            const dataRow = dataRowStr ? new Date(dataRowStr.split('/').reverse().join('-') + 'T00:00:00').getTime() : 0;
+            
+            // Comparar
+            if (ordemAula < ordemRow || 
+                (ordemAula === ordemRow && dataAula < dataRow) ||
+                (ordemAula === ordemRow && dataAula === dataRow && horaAula < horaRowStr)) {
+                posicaoInsercao = row;
+                break;
+            }
+        }
+        
+        // Inserir na posição correta ou no final se não encontrou posição
+        if (posicaoInsercao) {
+            tbody.insertBefore(tr, posicaoInsercao);
+        } else {
+            tbody.appendChild(tr);
+        }
+        
+        console.log('✅ [DEBUG] Agendamento inserido na tabela:', aula.id, '- Posição:', posicaoInsercao ? 'antes de ' + posicaoInsercao.getAttribute('data-agendamento-id') : 'final');
+    });
+    
+    console.log('✅ [DEBUG] Total de agendamentos inseridos:', novosAgendamentos.length);
+}
+
+// Função para mostrar mensagens no modal
+function mostrarMensagemModal(mensagem, tipo) {
+    const divMensagem = document.getElementById('mensagemAgendamento');
+    divMensagem.textContent = mensagem;
+    divMensagem.style.display = 'block';
+    
+    if (tipo === 'success') {
+        divMensagem.style.backgroundColor = '#d4edda';
+        divMensagem.style.color = '#155724';
+        divMensagem.style.border = '1px solid #c3e6cb';
+    } else {
+        divMensagem.style.backgroundColor = '#f8d7da';
+        divMensagem.style.color = '#721c24';
+        divMensagem.style.border = '1px solid #f5c6cb';
+    }
+    
+    // Ocultar após 5 segundos
+    setTimeout(() => {
+        divMensagem.style.display = 'none';
+    }, 5000);
+}
+
+// Função para recarregar agendamentos da disciplina do servidor
+function recarregarAgendamentosDisciplina(disciplinaId) {
+    console.log('🔄 [DEBUG] Recarregando agendamentos da disciplina do servidor:', disciplinaId);
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const turmaId = urlParams.get('turma_id') || <?= $turmaId ?>;
+    
+    fetch(getBasePath() + '/admin/api/listar-agendamentos-turma.php?turma_id=' + turmaId + '&disciplina=' + encodeURIComponent(disciplinaId))
+        .then(response => response.json())
+        .then(data => {
+            console.log('🔧 [DEBUG] Agendamentos carregados do servidor:', data);
+            if (data.success && data.agendamentos) {
+                console.log('✅ [DEBUG] Total de agendamentos encontrados:', data.agendamentos.length);
+                // Recriar toda a seção de histórico
+                atualizarSecaoHistorico(disciplinaId, data.agendamentos);
+            } else {
+                console.error('❌ [DEBUG] Erro ao carregar agendamentos:', data);
+            }
+        })
+        .catch(error => {
+            console.error('❌ [DEBUG] Erro ao buscar agendamentos:', error);
+        });
+}
+
+// Atualizar seção completa do histórico
+function atualizarSecaoHistorico(disciplinaId, agendamentos) {
+    const container = document.getElementById('detalhes-disciplina-' + disciplinaId) || 
+                     document.getElementById('data-disciplina-' + disciplinaId);
+    if (!container) {
+        console.error('❌ [DEBUG] Container não encontrado para disciplina:', disciplinaId);
+        return;
+    }
+    
+    const historicoSection = container.querySelector('.historico-agendamentos');
+    if (!historicoSection) {
+        console.error('❌ [DEBUG] Seção de histórico não encontrada');
+        return;
+    }
+    
+    // Remover tabela existente
+    const oldTable = historicoSection.querySelector('.table-responsive');
+    if (oldTable) oldTable.remove();
+    
+    // Remover seção vazia se existir
+    const emptySection = historicoSection.querySelector('.text-center');
+    if (emptySection) emptySection.remove();
+    
+    // Criar nova tabela com todos os agendamentos
+    if (agendamentos.length > 0) {
+        let tbodyHTML = '';
+        agendamentos.forEach(aula => {
+            const dataBR = aula.data_aula ? new Date(aula.data_aula + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A';
+            const horaInicio = aula.hora_inicio ? (aula.hora_inicio.length >= 5 ? aula.hora_inicio.substring(0, 5) : aula.hora_inicio) : '--:--';
+            const horaFim = aula.hora_fim ? (aula.hora_fim.length >= 5 ? aula.hora_fim.substring(0, 5) : aula.hora_fim) : '--:--';
+            
+            tbodyHTML += `
+                <tr data-agendamento-id="${aula.id}">
+                    <td><strong>${aula.nome_aula || 'Aula'}</strong></td>
+                    <td>${dataBR}</td>
+                    <td>${horaInicio} - ${horaFim}</td>
+                    <td>${aula.instrutor_nome || 'Não informado'}</td>
+                    <td>${aula.sala_nome || 'Não informada'}</td>
+                    <td>${aula.duracao_minutos || 50} min</td>
+                    <td><span class="badge bg-warning">Agendada</span></td>
+                    <td>
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="editarAgendamento(${aula.id}, '${(aula.nome_aula || '').replace(/'/g, "\\'")}', '${aula.data_aula}', '${horaInicio}', '${horaFim}', '${aula.instrutor_id || ''}', '${aula.sala_id || ''}', '${aula.duracao_minutos || 50}', '')" title="Editar agendamento">
+                                <span style="font-size: 14px; font-weight: bold;">✏</span>
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelarAgendamento(${aula.id}, '${(aula.nome_aula || '').replace(/'/g, "\\'")}')" title="Cancelar agendamento">
+                                <i class="fas fa-times"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        });
+        
+        const tableHTML = `
+            <div class="table-responsive">
+                <table class="table table-striped table-hover">
+                    <thead class="table-primary">
+                        <tr>
+                            <th>Aula</th>
+                            <th>Data</th>
+                            <th>Horário</th>
+                            <th>Instrutor</th>
+                            <th>Sala</th>
+                            <th>Duração</th>
+                            <th>Status</th>
+                            <th width="100">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>${tbodyHTML}</tbody>
+                </table>
+            </div>
+        `;
+        historicoSection.insertAdjacentHTML('beforeend', tableHTML);
+        console.log('✅ [DEBUG] Tabela atualizada com', agendamentos.length, 'agendamentos');
+    } else {
+        // Se não há agendamentos, mostrar mensagem vazia
+        historicoSection.insertAdjacentHTML('beforeend', `
+            <div class="text-center py-4">
+                <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
+                <h6 class="text-muted">Nenhum agendamento encontrado</h6>
+                <p class="text-muted small">Não há aulas agendadas para esta disciplina ainda.</p>
+            </div>
+        `);
+    }
+}
+</script>
+
+```
+</rewr
