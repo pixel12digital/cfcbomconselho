@@ -5415,7 +5415,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Modal para Agendar Nova Aula -->
 <div id="modalAgendarAula" class="modal-overlay" style="display: none;">
-    <div class="modal-content" style="max-width: 600px; max-height: 90vh;">
+    <div class="modal-content" style="max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
         <div class="modal-header">
             <h3>
                 <i class="fas fa-calendar-plus"></i>
@@ -5426,128 +5426,157 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
         </div>
         
-        <div class="modal-body">
-            <form id="formAgendarAulaModal">
-                <input type="hidden" name="acao" value="agendar_aula">
-                <input type="hidden" name="ajax" value="true">
-                <input type="hidden" name="turma_id" id="modal_turma_id" value="<?= $turmaId ?>">
-                <input type="hidden" name="disciplina" id="modal_disciplina_id">
-                
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label for="modal_disciplina_nome" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
-                        Disciplina *
-                    </label>
-                    <input type="text" 
-                           id="modal_disciplina_nome" 
-                           class="form-control" 
-                           readonly 
-                           style="background-color: #f8f9fa; cursor: not-allowed;">
-                </div>
-                
-                <!-- Informações sobre aulas da disciplina -->
-                <div id="infoDisciplinaModal" style="background: #f0f7ff; border-left: 4px solid #4a90e2; padding: 12px 15px; border-radius: 6px; margin-bottom: 20px; display: none;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-                        <div style="flex: 1; min-width: 120px;">
-                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">Total de Aulas:</div>
-                            <div style="font-size: 1.1rem; font-weight: 600; color: #333;">
-                                <span id="infoTotalObrigatorias">-</span> aulas
-                            </div>
-                        </div>
-                        <div style="flex: 1; min-width: 120px;">
-                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">Agendadas:</div>
-                            <div style="font-size: 1.1rem; font-weight: 600; color: #28a745;">
-                                <span id="infoTotalAgendadas">-</span> aulas
-                            </div>
-                        </div>
-                        <div style="flex: 1; min-width: 120px;">
-                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">Faltantes:</div>
-                            <div style="font-size: 1.1rem; font-weight: 600; color: #dc3545;">
-                                <span id="infoTotalFaltantes">-</span> aulas
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="form-group" style="margin-bottom: 20px;">
-                    <label for="modal_instrutor_id" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
-                        Instrutor *
-                    </label>
-                    <select id="modal_instrutor_id" name="instrutor_id" class="form-control" required>
-                        <option value="">Selecione um instrutor...</option>
-                        <?php if (!empty($instrutores)): ?>
-                            <?php foreach ($instrutores as $instrutor): ?>
-                                <option value="<?= (int)$instrutor['id'] ?>">
-                                    <?= htmlspecialchars($instrutor['nome'] ?? 'Instrutor sem nome') ?>
-                                    <?php if (!empty($instrutor['categoria_habilitacao'])): ?>
-                                        - <?= htmlspecialchars($instrutor['categoria_habilitacao']) ?>
-                                    <?php endif; ?>
-                                </option>
-                            <?php endforeach; ?>
-                        <?php else: ?>
-                            <option value="" disabled>Nenhum instrutor disponível</option>
-                        <?php endif; ?>
-                    </select>
-                    <?php if (empty($instrutores)): ?>
-                        <small class="text-danger" style="display: block; margin-top: 5px;">
-                            <i class="fas fa-exclamation-triangle"></i> Nenhum instrutor ativo encontrado. Verifique o cadastro de instrutores.
-                        </small>
-                    <?php endif; ?>
-                </div>
-                
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
-                    <div class="form-group">
-                        <label for="modal_data_aula" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
-                            Data da Aula *
+        <div class="modal-body" style="display: flex; gap: 20px; flex: 1; overflow: hidden;">
+            <!-- Coluna Esquerda: Formulário de Agendamento -->
+            <div style="flex: 2; min-width: 0; overflow-y: auto; padding-right: 10px;">
+                <form id="formAgendarAulaModal">
+                    <input type="hidden" name="acao" value="agendar_aula">
+                    <input type="hidden" name="ajax" value="true">
+                    <input type="hidden" name="turma_id" id="modal_turma_id" value="<?= $turmaId ?>">
+                    <input type="hidden" name="disciplina" id="modal_disciplina_id">
+                    
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="modal_disciplina_nome" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                            Disciplina *
                         </label>
-                        <input type="date" 
-                               id="modal_data_aula" 
-                               name="data_aula" 
+                        <input type="text" 
+                               id="modal_disciplina_nome" 
                                class="form-control" 
-                               required>
+                               readonly 
+                               style="background-color: #f8f9fa; cursor: not-allowed;">
                     </div>
                     
-                    <div class="form-group">
-                        <label for="modal_hora_inicio" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
-                            Horário de Início *
+                    <div class="form-group" style="margin-bottom: 20px;">
+                        <label for="modal_instrutor_id" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                            Instrutor *
                         </label>
-                        <input type="time"
-                               id="modal_hora_inicio"
-                               name="hora_inicio"
-                               class="form-control"
-                               placeholder="HH:MM"
-                               step="60"
-                               required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="modal_quantidade_aulas" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
-                            Qtd Aulas *
-                        </label>
-                        <select id="modal_quantidade_aulas" name="quantidade_aulas" class="form-control" required>
-                            <option value="1">1 aula</option>
-                            <option value="2" selected>2 aulas</option>
-                            <option value="3">3 aulas</option>
-                            <option value="4">4 aulas</option>
-                            <option value="5">5 aulas</option>
+                        <select id="modal_instrutor_id" name="instrutor_id" class="form-control" required>
+                            <option value="">Selecione um instrutor...</option>
+                            <?php if (!empty($instrutores)): ?>
+                                <?php foreach ($instrutores as $instrutor): ?>
+                                    <option value="<?= (int)$instrutor['id'] ?>">
+                                        <?= htmlspecialchars($instrutor['nome'] ?? 'Instrutor sem nome') ?>
+                                        <?php if (!empty($instrutor['categoria_habilitacao'])): ?>
+                                            - <?= htmlspecialchars($instrutor['categoria_habilitacao']) ?>
+                                        <?php endif; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <option value="" disabled>Nenhum instrutor disponível</option>
+                            <?php endif; ?>
                         </select>
+                        <?php if (empty($instrutores)): ?>
+                            <small class="text-danger" style="display: block; margin-top: 5px;">
+                                <i class="fas fa-exclamation-triangle"></i> Nenhum instrutor ativo encontrado. Verifique o cadastro de instrutores.
+                            </small>
+                        <?php endif; ?>
                     </div>
-                </div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                        <div class="form-group">
+                            <label for="modal_data_aula" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                                Data da Aula *
+                            </label>
+                            <input type="date" 
+                                   id="modal_data_aula" 
+                                   name="data_aula" 
+                                   class="form-control" 
+                                   required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="modal_hora_inicio" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                                Horário de Início *
+                            </label>
+                            <input type="time"
+                                   id="modal_hora_inicio"
+                                   name="hora_inicio"
+                                   class="form-control"
+                                   placeholder="HH:MM"
+                                   step="60"
+                                   required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="modal_quantidade_aulas" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                                Qtd Aulas *
+                            </label>
+                            <select id="modal_quantidade_aulas" name="quantidade_aulas" class="form-control" required>
+                                <option value="1">1 aula</option>
+                                <option value="2" selected>2 aulas</option>
+                                <option value="3">3 aulas</option>
+                                <option value="4">4 aulas</option>
+                                <option value="5">5 aulas</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Preview do horário -->
+                    <div id="previewHorarioModal" style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
+                        <strong>🕐 Preview do Agendamento:</strong>
+                        <div id="previewContentModal" style="margin-top: 8px; font-family: monospace;"></div>
+                    </div>
+                    
+                    <!-- Alerta de conflitos -->
+                    <div id="alertaConflitosModal" style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
+                        <strong>⚠️ Conflito Detectado:</strong>
+                        <div id="conflitosContentModal" style="margin-top: 8px;"></div>
+                    </div>
+                    
+                    <!-- Mensagem de erro/sucesso -->
+                    <div id="mensagemAgendamento" style="display: none; padding: 12px; border-radius: 6px; margin-bottom: 15px;"></div>
+                </form>
+            </div>
+            
+            <!-- Coluna Direita: Estatísticas das Disciplinas -->
+            <div style="flex: 1; min-width: 300px; background: #f8f9fa; border-left: 1px solid #dee2e6; padding: 20px; overflow-y: auto; max-height: 100%;">
+                <h4 style="color: #023A8D; margin-bottom: 20px; font-size: 1.1rem; font-weight: 600;">
+                    Estatísticas das Disciplinas
+                </h4>
                 
-                <!-- Preview do horário -->
-                <div id="previewHorarioModal" style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
-                    <strong>🕐 Preview do Agendamento:</strong>
-                    <div id="previewContentModal" style="margin-top: 8px; font-family: monospace;"></div>
+                <div id="estatisticas-disciplinas-modal" style="display: flex; flex-direction: column; gap: 12px;">
+                    <?php foreach ($disciplinasSelecionadas as $disciplina): 
+                        $disciplinaId = $disciplina['disciplina_id'];
+                        $stats = $estatisticasDisciplinas[$disciplinaId] ?? ['agendadas' => 0, 'realizadas' => 0, 'faltantes' => 0, 'obrigatorias' => 0];
+                        
+                        $nomeDisciplina = htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['nome_original'] ?? 'Disciplina');
+                        $percentual = $stats['obrigatorias'] > 0 ? round(($stats['agendadas'] / $stats['obrigatorias']) * 100, 1) : 0;
+                        
+                        // Definir cor baseada no progresso
+                        if ($percentual >= 100) {
+                            $corBarra = '#28a745';
+                        } elseif ($percentual >= 75) {
+                            $corBarra = '#ffc107';
+                        } elseif ($stats['agendadas'] > 0) {
+                            $corBarra = '#17a2b8';
+                        } else {
+                            $corBarra = '#dc3545';
+                        }
+                    ?>
+                    <div class="disciplina-stats-item-modal" 
+                         data-disciplina-id="<?= $disciplinaId ?>"
+                         style="background: white; padding: 12px; border-left: 3px solid <?= $corBarra ?>; border-radius: 4px; cursor: pointer; transition: all 0.2s;"
+                         onclick="selecionarDisciplinaModal('<?= $disciplinaId ?>', '<?= htmlspecialchars($nomeDisciplina, ENT_QUOTES) ?>')">
+                        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;">
+                            <div style="width: 8px; height: 8px; border-radius: 50%; background: <?= $corBarra ?>; flex-shrink: 0;"></div>
+                            <span style="font-weight: 600; color: #023A8D; font-size: 0.9rem; flex: 1;"><?= $nomeDisciplina ?></span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+                            <span style="color: #023A8D; font-weight: 600; font-size: 0.95rem;">
+                                <?= $stats['agendadas'] ?>/<?= $stats['obrigatorias'] ?>
+                            </span>
+                            <span style="color: <?= $corBarra ?>; font-weight: bold; font-size: 0.9rem;">
+                                <?= $percentual ?>%
+                            </span>
+                        </div>
+                        <div style="display: flex; justify-content: space-between; font-size: 0.75rem; color: #666; margin-top: 4px;">
+                            <span>Agendadas: <strong style="color: #023A8D;"><?= $stats['agendadas'] ?></strong></span>
+                            <span>Faltantes: <strong style="color: #dc3545;"><?= $stats['faltantes'] ?></strong></span>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
-                
-                <!-- Alerta de conflitos -->
-                <div id="alertaConflitosModal" style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
-                    <strong>⚠️ Conflito Detectado:</strong>
-                    <div id="conflitosContentModal" style="margin-top: 8px;"></div>
-                </div>
-                
-                <!-- Mensagem de erro/sucesso -->
-                <div id="mensagemAgendamento" style="display: none; padding: 12px; border-radius: 6px; margin-bottom: 15px;"></div>
-            </form>
+            </div>
         </div>
         
         <div class="modal-footer">
@@ -8897,6 +8926,31 @@ function enviarAgendamentoModal() {
     #modalAgendarAula .modal-body > div[style*="grid"] {
         grid-template-columns: 1fr !important;
     }
+    
+    /* Modal com layout de duas colunas: empilhar em mobile */
+    #modalAgendarAula .modal-body {
+        flex-direction: column;
+    }
+    
+    #modalAgendarAula .modal-body > div[style*="flex: 1"] {
+        flex: none;
+        min-width: 100%;
+        border-left: none;
+        border-top: 1px solid #dee2e6;
+        padding-top: 20px;
+        margin-top: 20px;
+    }
+}
+
+/* Estilos para itens de estatística no modal */
+.disciplina-stats-item-modal:hover {
+    background-color: #f0f7ff !important;
+    transform: translateX(2px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+}
+
+.disciplina-stats-item-modal {
+    transition: all 0.2s ease;
 }
 
 /* Grid de alunos */
@@ -9216,11 +9270,148 @@ function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim
         // Buscar informações sobre a disciplina após um pequeno delay para garantir que o DOM está pronto
         setTimeout(() => {
             buscarInfoDisciplina(disciplinaId);
+            atualizarEstatisticasModal();
         }, 100);
+        
+        // Destacar a disciplina selecionada na sidebar
+        destacarDisciplinaSelecionada(disciplinaId);
         
     } catch (error) {
         console.error('Erro ao abrir modal:', error);
         alert('Erro ao abrir modal de agendamento. Verifique o console para mais detalhes.');
+    }
+}
+
+// Função para selecionar disciplina ao clicar na sidebar
+function selecionarDisciplinaModal(disciplinaId, disciplinaNome) {
+    // Atualizar campos do formulário
+    const modalDisciplinaId = document.getElementById('modal_disciplina_id');
+    const modalDisciplinaNome = document.getElementById('modal_disciplina_nome');
+    
+    if (modalDisciplinaId) modalDisciplinaId.value = disciplinaId;
+    if (modalDisciplinaNome) modalDisciplinaNome.value = disciplinaNome;
+    
+    // Destacar disciplina selecionada
+    destacarDisciplinaSelecionada(disciplinaId);
+    
+    // Buscar informações atualizadas da disciplina
+    buscarInfoDisciplina(disciplinaId);
+}
+
+// Função para destacar disciplina selecionada na sidebar
+function destacarDisciplinaSelecionada(disciplinaId) {
+    // Remover destaque de todas as disciplinas
+    const items = document.querySelectorAll('.disciplina-stats-item-modal');
+    items.forEach(item => {
+        item.style.backgroundColor = 'white';
+        item.style.boxShadow = 'none';
+    });
+    
+    // Destacar disciplina selecionada
+    const itemSelecionado = document.querySelector(`.disciplina-stats-item-modal[data-disciplina-id="${disciplinaId}"]`);
+    if (itemSelecionado) {
+        itemSelecionado.style.backgroundColor = '#e7f3ff';
+        itemSelecionado.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+    }
+}
+
+// Função para atualizar estatísticas no modal
+async function atualizarEstatisticasModal() {
+    try {
+        const turmaId = <?= $turmaId ?>;
+        const basePath = getBasePath();
+        const url = `${basePath}/admin/api/estatisticas-turma.php?turma_id=${turmaId}`;
+        
+        const response = await fetch(url);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        
+        if (data.success && data.disciplinas) {
+            // Atualizar cada item de estatística no modal
+            Object.keys(data.disciplinas).forEach(disciplinaId => {
+                const stats = data.disciplinas[disciplinaId];
+                atualizarItemEstatisticaModal(disciplinaId, stats);
+            });
+        }
+    } catch (error) {
+        console.error('❌ [DEBUG] Erro ao atualizar estatísticas do modal:', error);
+    }
+}
+
+// Função para atualizar um item de estatística no modal
+function atualizarItemEstatisticaModal(disciplinaId, stats) {
+    const item = document.querySelector(`.disciplina-stats-item-modal[data-disciplina-id="${disciplinaId}"]`);
+    if (!item) return;
+    
+    const percentual = stats.obrigatorias > 0 ? Math.round((stats.agendadas / stats.obrigatorias) * 100 * 10) / 10 : 0;
+    
+    // Atualizar cor baseada no progresso
+    let corBarra = '#dc3545';
+    if (percentual >= 100) {
+        corBarra = '#28a745';
+    } else if (percentual >= 75) {
+        corBarra = '#ffc107';
+    } else if (stats.agendadas > 0) {
+        corBarra = '#17a2b8';
+    }
+    
+    // Atualizar borda esquerda
+    item.style.borderLeftColor = corBarra;
+    
+    // Atualizar círculo indicador
+    const circulo = item.querySelector('div[style*="border-radius: 50%"]');
+    if (circulo) {
+        circulo.style.backgroundColor = corBarra;
+    }
+    
+    // Atualizar valores usando estrutura específica do HTML
+    // Buscar fração (agendadas/obrigatorias)
+    const linhaFracao = item.querySelectorAll('div[style*="justify-content: space-between"]')[0];
+    if (linhaFracao) {
+        const spans = linhaFracao.querySelectorAll('span');
+        // Primeiro span é a fração
+        if (spans[0]) {
+            spans[0].textContent = `${stats.agendadas}/${stats.obrigatorias}`;
+        }
+        // Segundo span é o percentual
+        if (spans[1]) {
+            spans[1].textContent = `${percentual}%`;
+            spans[1].style.color = corBarra;
+        }
+    }
+    
+    // Atualizar linha de detalhes (Agendadas/Faltantes)
+    const linhaDetalhes = item.querySelectorAll('div[style*="justify-content: space-between"]')[1];
+    if (linhaDetalhes) {
+        const spans = linhaDetalhes.querySelectorAll('span');
+        spans.forEach(span => {
+            const texto = span.textContent.trim();
+            
+            // Atualizar "Agendadas: X"
+            if (texto.startsWith('Agendadas:')) {
+                const strong = span.querySelector('strong');
+                if (strong) {
+                    strong.textContent = stats.agendadas;
+                } else {
+                    // Se não tiver strong, atualizar o próprio span
+                    span.innerHTML = `Agendadas: <strong style="color: #023A8D;">${stats.agendadas}</strong>`;
+                }
+            }
+            
+            // Atualizar "Faltantes: X"
+            if (texto.startsWith('Faltantes:')) {
+                const strong = span.querySelector('strong');
+                if (strong) {
+                    strong.textContent = stats.faltantes;
+                } else {
+                    // Se não tiver strong, atualizar o próprio span
+                    span.innerHTML = `Faltantes: <strong style="color: #dc3545;">${stats.faltantes}</strong>`;
+                }
+            }
+        });
     }
 }
 
@@ -9669,12 +9860,14 @@ function enviarAgendamentoModal() {
                     // Atualizar estatísticas após um pequeno delay para garantir que o recarregamento terminou
                     setTimeout(() => {
                         atualizarEstatisticasTurma();
+                        atualizarEstatisticasModal(); // Atualizar também no modal
                     }, 800);
                 } else {
                     console.warn('⚠️ [DEBUG] Disciplina ID não disponível, não é possível recarregar agendamentos');
                     // Mesmo sem disciplinaId, atualizar estatísticas gerais
                     setTimeout(() => {
                         atualizarEstatisticasTurma();
+                        atualizarEstatisticasModal(); // Atualizar também no modal
                     }, 500);
                 }
                 
