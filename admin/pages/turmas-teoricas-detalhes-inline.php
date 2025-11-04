@@ -2053,20 +2053,13 @@ window.showTab = function(tabName) {
         button.classList.remove('active');
     });
     
-    // Se for a aba Calendário, garantir que está na primeira semana
+    // Se for a aba Calendário, respeitar a semana calculada pelo servidor
+    // O servidor já calcula a semana correta baseada na data_inicio da turma
     if (tabName === 'calendario') {
         const url = new URL(window.location);
         const semanaAtual = url.searchParams.get('semana_calendario');
-        // Se não há parâmetro ou é inválido, forçar primeira semana (0)
-        if (!semanaAtual || parseInt(semanaAtual) < 0) {
-            url.searchParams.set('semana_calendario', '0');
-            window.history.replaceState({}, '', url);
-            // Se realmente não havia parâmetro, recarregar para garantir primeira semana
-            if (!semanaAtual) {
-                window.location.href = url.toString();
-                return;
-            }
-        }
+        // Se não há parâmetro, o servidor já definiu a semana correta
+        // Não precisamos forçar semana 0 aqui
     }
     
     // Mostrar a aba selecionada
@@ -2627,37 +2620,47 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
         $dataInicio = new DateTime($turma['data_inicio']);
         $dataFim = new DateTime($turma['data_fim']);
         
-        // Obter primeiro domingo do período
+        // Obter primeiro domingo da semana que contém data_inicio
+        // Isso garante que a semana completa seja exibida (incluindo dias antes de data_inicio)
         $primeiroDomingo = clone $dataInicio;
-        $diaSemanaAtual = (int)$primeiroDomingo->format('w');
+        $diaSemanaAtual = (int)$primeiroDomingo->format('w'); // 0 = domingo, 1 = segunda, etc.
+        
+        // Se não é domingo, voltar para o domingo anterior
         if ($diaSemanaAtual > 0) {
             $primeiroDomingo->modify('-' . $diaSemanaAtual . ' days');
         }
-        if ($primeiroDomingo < $dataInicio) {
+        
+        // Garantir que não vá antes demais (só precisa da semana que contém data_inicio)
+        if ($primeiroDomingo < $dataInicio && ($dataInicio->diff($primeiroDomingo)->days > 7)) {
             $primeiroDomingo = clone $dataInicio;
             $diaSemanaAtual = (int)$primeiroDomingo->format('w');
-            if ($diaSemanaAtual != 0) {
-                $diasParaProximoDomingo = 7 - $diaSemanaAtual;
-                $primeiroDomingo->modify('+' . $diasParaProximoDomingo . ' days');
-            }
-            if ($primeiroDomingo > $dataFim) {
-                $primeiroDomingo = clone $dataInicio;
+            if ($diaSemanaAtual > 0) {
+                $primeiroDomingo->modify('-' . $diaSemanaAtual . ' days');
             }
         }
         
-        // Calcular semanas disponíveis
+        // Calcular semanas disponíveis - INCLUIR TODOS OS DIAS DA SEMANA (mesmo fora do período)
+        // Dias fora do período serão visíveis mas não clicáveis
         $todasSemanasTmp = [];
         $semanaAtual = clone $primeiroDomingo;
-        while ($semanaAtual <= $dataFim) {
+        
+        // Calcular até a semana que contém data_fim
+        $ultimaSemana = clone $dataFim;
+        $diaSemanaUltima = (int)$ultimaSemana->format('w');
+        if ($diaSemanaUltima > 0) {
+            $ultimaSemana->modify('-' . $diaSemanaUltima . ' days');
+        }
+        // Garantir que vamos até pelo menos data_fim
+        $dataFimParaLoop = clone $ultimaSemana;
+        $dataFimParaLoop->modify('+6 days');
+        
+        while ($semanaAtual <= $dataFimParaLoop) {
             $semana = [];
             for ($dia = 0; $dia < 7; $dia++) {
                 $diaSemana = clone $semanaAtual;
                 $diaSemana->modify("+$dia days");
-                if ($diaSemana <= $dataFim && $diaSemana >= $dataInicio) {
-                    $semana[] = $diaSemana->format('Y-m-d');
-                } else {
-                    $semana[] = null;
-                }
+                // SEMPRE incluir o dia, mesmo se fora do período
+                $semana[] = $diaSemana->format('Y-m-d');
             }
             $todasSemanasTmp[] = [
                 'dias' => $semana,
@@ -2667,20 +2670,42 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             $semanaAtual->modify('+7 days');
         }
         
-        // Semana selecionada
-        $semanaSelecionada = isset($_GET['semana_calendario']) && $_GET['semana_calendario'] !== '' ? (int)$_GET['semana_calendario'] : 0;
+        // Semana selecionada - SEMPRE começar na semana que contém a data_inicio da turma
+        $semanaSelecionada = isset($_GET['semana_calendario']) && $_GET['semana_calendario'] !== '' ? (int)$_GET['semana_calendario'] : null;
+        
+        // Se não foi especificada na URL, encontrar a semana que contém a data_inicio
+        if ($semanaSelecionada === null) {
+            $semanaSelecionada = 0;
+            foreach ($todasSemanasTmp as $idx => $semana) {
+                // Verificar se algum dia da semana contém a data_inicio
+                foreach ($semana['dias'] as $dia) {
+                    if ($dia && $dia === $dataInicio->format('Y-m-d')) {
+                        $semanaSelecionada = $idx;
+                        break 2; // Sair de ambos os loops
+                    }
+                }
+                // Se não encontrou na semana atual, verificar se a data_inicio está entre o início e fim desta semana
+                if ($semana['inicio']) {
+                    $inicioSemana = $semana['inicio'];
+                    $fimSemana = clone $inicioSemana;
+                    $fimSemana->modify('+6 days');
+                    
+                    if ($dataInicio >= $inicioSemana && $dataInicio <= $fimSemana) {
+                        $semanaSelecionada = $idx;
+                        break;
+                    }
+                }
+            }
+        }
+        
         if ($semanaSelecionada < 0 || $semanaSelecionada >= count($todasSemanasTmp)) {
             $semanaSelecionada = 0;
         }
         
         $semanaDisplay = $todasSemanasTmp[$semanaSelecionada] ?? $todasSemanasTmp[0];
         
-        // Calcular datas da semana selecionada para filtrar
-        $datasSemanaSelecionada = array_filter($semanaDisplay['dias'], function($d) { return $d !== null; });
-        $dataInicioSemana = min($datasSemanaSelecionada);
-        $dataFimSemana = max($datasSemanaSelecionada);
-        
-        // Buscar apenas aulas da semana selecionada
+        // Buscar TODAS as aulas do período da turma (não apenas da semana selecionada)
+        // Isso permite visualizar e navegar por todo o período disponível
         try {
             $todasAulasCalendario = $db->fetchAll(
                 "SELECT 
@@ -2697,7 +2722,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                  AND taa.data_aula >= ?
                  AND taa.data_aula <= ?
                  ORDER BY taa.data_aula ASC, taa.hora_inicio ASC",
-                [$turmaId, $dataInicioSemana, $dataFimSemana]
+                [$turmaId, $turma['data_inicio'], $turma['data_fim']]
             );
             
             // Debug removido - não necessário para produção
@@ -2958,6 +2983,22 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             
             <input type="hidden" id="semana-atual-indice" value="<?= $semanaSelecionada ?>">
             <input type="hidden" id="semanas-disponiveis" value='<?= htmlspecialchars($semanasJson) ?>'>
+            <input type="hidden" id="turma-data-inicio" value="<?= $turma['data_inicio'] ?>">
+            <input type="hidden" id="turma-data-fim" value="<?= $turma['data_fim'] ?>">
+            <script>
+            // Garantir que a URL reflita a semana correta calculada pelo servidor
+            (function() {
+                const url = new URL(window.location);
+                const semanaNaUrl = url.searchParams.get('semana_calendario');
+                const semanaCalculada = <?= $semanaSelecionada ?>;
+                
+                // Se não há parâmetro na URL ou está diferente do calculado, atualizar
+                if (!semanaNaUrl || parseInt(semanaNaUrl) !== semanaCalculada) {
+                    url.searchParams.set('semana_calendario', semanaCalculada.toString());
+                    window.history.replaceState({}, '', url);
+                }
+            })();
+            </script>
             
             <!-- Dados para JavaScript (todas as aulas para atualização dinâmica) -->
             <script type="application/json" id="dados-calendario">
@@ -3164,6 +3205,15 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 background: #f1f3f4;
             }
             
+            /* Indicar visualmente datas fora do período */
+            .timeline-day-header.dia-fora-periodo {
+                opacity: 0.5;
+            }
+            
+            .timeline-day-header.dia-fora-periodo .dia-data {
+                opacity: 0.4;
+            }
+            
             /* Corpo do calendário */
             .timeline-body {
                 display: grid;
@@ -3326,6 +3376,11 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             /* Slots individuais sempre capturam eventos */
             .timeline-slot.slot-individual {
                 pointer-events: auto !important;
+            }
+            
+            /* Slots desabilitados (fora do período) não são clicáveis */
+            .timeline-slot.slot-desabilitado {
+                pointer-events: none !important;
             }
             
             /* Eventos/Aulas - estilo Google Calendar */
@@ -3531,13 +3586,18 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                         $hojeStr = $hoje->format('Y-m-d');
                         foreach ($semanaDisplay['dias'] as $idx => $data): 
                             $ehHoje = ($data === $hojeStr);
+                            $dataForaPeriodo = false;
+                            if ($data) {
+                                $dataDia = new DateTime($data);
+                                $dataForaPeriodo = ($dataDia < $dataInicio || $dataDia > $dataFim);
+                            }
                         ?>
-                            <div class="timeline-day-header <?= $ehHoje ? 'hoje' : '' ?>" data-dia-semana="<?= $idx ?>">
+                            <div class="timeline-day-header <?= $ehHoje ? 'hoje' : '' ?> <?= $dataForaPeriodo ? 'dia-fora-periodo' : '' ?>" data-dia-semana="<?= $idx ?>">
                                 <?php if ($data): 
                                     $diaFormatado = new DateTime($data);
                                 ?>
                                     <span class="dia-nome"><?= $diasSemana[$idx] ?></span>
-                                    <span class="dia-data data-display"><?= $diaFormatado->format('d') ?></span>
+                                    <span class="dia-data data-display" style="<?= $dataForaPeriodo ? 'opacity: 0.4;' : '' ?>"><?= $diaFormatado->format('d') ?></span>
                                 <?php else: ?>
                                     <span class="dia-nome" style="opacity: 0.5;"><?= $diasSemana[$idx] ?></span>
                                     <span class="dia-data data-display">-</span>
@@ -3874,6 +3934,10 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         
                                         // CRÍTICO: Criar slots individuais de 30 minutos mesmo quando não há eventos
                                         // Isso garante comportamento igual ao Google Calendar: cada slot é clicável independentemente
+                                        // IMPORTANTE: Desabilitar slots para datas fora do período da turma
+                                        $dataDateTime = new DateTime($data);
+                                        $dataForaPeriodo = ($dataDateTime < $dataInicio || $dataDateTime > $dataFim);
+                                        
                                         $horaAtualSlot = $horaMinima;
                                         while ($horaAtualSlot < $horaMaxima) {
                                             $top = ($horaAtualSlot - $horaMinima) * 2;
@@ -3889,14 +3953,21 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                             } else {
                                                 $periodoSlot = 'noite';
                                             }
+                                            
+                                            // Se data está fora do período, desabilitar slot (visível mas não clicável)
+                                            $classeSlot = $dataForaPeriodo ? 'slot-individual slot-desabilitado' : 'slot-individual';
+                                            $estiloSlot = $dataForaPeriodo ? 'opacity: 0.3; cursor: not-allowed;' : '';
+                                            $onclickSlot = $dataForaPeriodo ? '' : "onclick=\"agendarNoSlot('{$data}', '{$horaSlot}')\"";
+                                            $titleSlot = $dataForaPeriodo ? 'Data fora do período da turma' : "Clique para agendar aula às {$horaSlot}";
                                     ?>
-                                    <div class="timeline-slot vazio slot-individual" 
+                                    <div class="timeline-slot vazio <?= $classeSlot ?>" 
                                          data-periodo="<?= $periodoSlot ?>"
-                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 15;"
-                                         onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
                                          data-data="<?= $data ?>"
                                          data-hora-inicio="<?= $horaSlot ?>"
-                                         title="Clique para agendar aula às <?= $horaSlot ?>">
+                                         data-fora-periodo="<?= $dataForaPeriodo ? '1' : '0' ?>"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 15; <?= $estiloSlot ?>"
+                                         <?= $onclickSlot ?>
+                                         title="<?= $titleSlot ?>">
                                     </div>
                                     <?php
                                             // Avançar 30 minutos
@@ -4056,6 +4127,10 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                     
                                     // CRÍTICO: Criar slots individuais de 30 minutos para TODOS os horários disponíveis
                                     // Isso garante comportamento igual ao Google Calendar: cada slot é clicável independentemente
+                                    // IMPORTANTE: Desabilitar slots para datas fora do período da turma
+                                    $dataDateTime = new DateTime($data);
+                                    $dataForaPeriodo = ($dataDateTime < $dataInicio || $dataDateTime > $dataFim);
+                                    
                                     $horaAtualSlot = $horaMinima;
                                     while ($horaAtualSlot < $horaMaxima) {
                                         // Verificar se este horário já está coberto por uma aula
@@ -4082,14 +4157,21 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                             } else {
                                                 $periodoSlot = 'noite';
                                             }
+                                            
+                                            // Se data está fora do período, desabilitar slot (visível mas não clicável)
+                                            $classeSlot = $dataForaPeriodo ? 'slot-individual slot-desabilitado' : 'slot-individual';
+                                            $estiloSlot = $dataForaPeriodo ? 'opacity: 0.3; cursor: not-allowed;' : '';
+                                            $onclickSlot = $dataForaPeriodo ? '' : "onclick=\"agendarNoSlot('{$data}', '{$horaSlot}')\"";
+                                            $titleSlot = $dataForaPeriodo ? 'Data fora do período da turma' : "Clique para agendar aula às {$horaSlot}";
                                     ?>
-                                    <div class="timeline-slot vazio slot-individual" 
+                                    <div class="timeline-slot vazio <?= $classeSlot ?>" 
                                          data-periodo="<?= $periodoSlot ?>"
-                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 15;"
-                                         onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
                                          data-data="<?= $data ?>"
                                          data-hora-inicio="<?= $horaSlot ?>"
-                                         title="Clique para agendar aula às <?= $horaSlot ?>">
+                                         data-fora-periodo="<?= $dataForaPeriodo ? '1' : '0' ?>"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 15; <?= $estiloSlot ?>"
+                                         <?= $onclickSlot ?>
+                                         title="<?= $titleSlot ?>">
                                     </div>
                                     <?php
                                         }
@@ -4476,6 +4558,9 @@ function mudarSemana(direcao) {
         }
         
         // Atualizar datas nos cabeçalhos das colunas do calendário
+        const dataInicioTurma = document.getElementById('turma-data-inicio')?.value;
+        const dataFimTurma = document.getElementById('turma-data-fim')?.value;
+        
         semana.dias.forEach((data, idx) => {
             const dayHeader = document.querySelector(`.timeline-day-header[data-dia-semana="${idx}"]`);
             if (dayHeader && data) {
@@ -4492,12 +4577,26 @@ function mudarSemana(direcao) {
                 } else {
                     dayHeader.classList.remove('hoje');
                 }
+                
+                // Verificar se está fora do período da turma
+                if (dataInicioTurma && dataFimTurma) {
+                    const dataInicio = new Date(dataInicioTurma + 'T00:00:00');
+                    const dataFim = new Date(dataFimTurma + 'T00:00:00');
+                    const dataForaPeriodo = (dataObj < dataInicio || dataObj > dataFim);
+                    
+                    if (dataForaPeriodo) {
+                        dayHeader.classList.add('dia-fora-periodo');
+                    } else {
+                        dayHeader.classList.remove('dia-fora-periodo');
+                    }
+                }
             } else if (dayHeader) {
                 const dataDisplay = dayHeader.querySelector('.data-display');
                 if (dataDisplay) {
                     dataDisplay.textContent = '-';
                 }
                 dayHeader.classList.remove('hoje');
+                dayHeader.classList.remove('dia-fora-periodo');
             }
         });
         
@@ -4770,6 +4869,14 @@ document.addEventListener('click', function(e) {
     // Verificar se o clique foi em um slot vazio
     const slot = e.target.closest('.timeline-slot.vazio');
     if (slot && slot.hasAttribute('data-data') && slot.hasAttribute('data-hora-inicio')) {
+        // Verificar se o slot está desabilitado (fora do período)
+        const foraPeriodo = slot.getAttribute('data-fora-periodo') === '1';
+        if (foraPeriodo) {
+            e.preventDefault();
+            e.stopPropagation();
+            return; // Não fazer nada se estiver fora do período
+        }
+        
         // Prevenir duplo clique (caso tenha onclick inline também)
         e.preventDefault();
         e.stopPropagation();
@@ -4787,17 +4894,8 @@ document.addEventListener('click', function(e) {
 
 // Inicializar ao carregar
 document.addEventListener('DOMContentLoaded', function() {
-    // Garantir que a primeira aba mostrada seja a primeira semana do calendário
-    const url = new URL(window.location);
-    const semanaCalendario = url.searchParams.get('semana_calendario');
-    
-    // Se estiver na aba Calendário e não houver parâmetro ou for inválido, garantir primeira semana
-    const abaAtiva = localStorage.getItem('turmaDetalhesAbaAtiva') || 'resumo';
-    if (abaAtiva === 'calendario' && (!semanaCalendario || parseInt(semanaCalendario) < 0)) {
-        url.searchParams.set('semana_calendario', '0');
-        window.history.replaceState({}, '', url);
-    }
-    
+    // O servidor já calcula a semana correta baseada na data_inicio da turma
+    // Não precisamos forçar semana 0 aqui
     const semanasJsonElement = document.getElementById('semanas-disponiveis');
     if (!semanasJsonElement) return;
     
