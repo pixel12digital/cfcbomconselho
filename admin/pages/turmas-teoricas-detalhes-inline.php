@@ -2778,13 +2778,22 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             }
         }
         
-        // Definir cores por disciplina
+        // Definir cores por disciplina - estilo Google Calendar (cores pastéis suaves)
         $coresDisciplinas = [
-            'legislacao_transito' => '#FFC107',
-            'direcao_defensiva' => '#28a745',
-            'primeiros_socorros' => '#dc3545',
-            'meio_ambiente_cidadania' => '#17a2b8',
-            'mecanica_basica' => '#6f42c1'
+            'legislacao_transito' => '#fbbc04',      // Amarelo suave
+            'direcao_defensiva' => '#34a853',        // Verde suave
+            'primeiros_socorros' => '#ea4335',       // Vermelho suave
+            'meio_ambiente_cidadania' => '#4285f4',  // Azul suave
+            'mecanica_basica' => '#9c27b0'           // Roxo suave
+        ];
+        
+        // Cores de fundo mais claras (pastéis) para melhor legibilidade do texto escuro
+        $coresFundoDisciplinas = [
+            'legislacao_transito' => '#fef7e0',      // Amarelo muito claro
+            'direcao_defensiva' => '#e6f4ea',        // Verde muito claro
+            'primeiros_socorros' => '#fce8e6',       // Vermelho muito claro
+            'meio_ambiente_cidadania' => '#e8f0fe',  // Azul muito claro
+            'mecanica_basica' => '#f3e5f5'           // Roxo muito claro
         ];
         
         // Calcular horários dinamicamente baseado nas aulas agendadas
@@ -2901,43 +2910,50 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
         ?>
         
         <div style="padding: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px;">
-                <h4 style="color: #023A8D; margin: 0; display: flex; align-items: center;">
-                    <i class="fas fa-calendar-alt me-2"></i>Calendário de Agendamentos
-                </h4>
-                <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                    <!-- Navegação de Semana -->
-                    <div style="display: flex; align-items: center; gap: 8px; background: #f8f9fa; padding: 6px 12px; border-radius: 6px;">
-                        <button id="btn-semana-anterior" onclick="mudarSemana(-1)" style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 6px 10px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='white'">
-                            <i class="fas fa-chevron-left"></i>
+            <!-- Cabeçalho estilo Google Calendar -->
+            <div class="google-calendar-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
+                <div style="display: flex; align-items: center; gap: 16px;">
+                    <h3 style="margin: 0; color: #202124; font-size: 22px; font-weight: 400; font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+                        Calendário
+                    </h3>
+                    <!-- Botão Hoje estilo Google Calendar -->
+                    <button id="btn-hoje" onclick="irParaHoje()" style="background: #1a73e8; color: white; border: none; border-radius: 24px; padding: 8px 24px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);" onmouseover="this.style.background='#1765cc'; this.style.boxShadow='0 1px 3px rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15)'" onmouseout="this.style.background='#1a73e8'; this.style.boxShadow='0 1px 2px rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15)'">
+                        Hoje
+                    </button>
+                    <!-- Navegação estilo Google Calendar -->
+                    <div style="display: flex; align-items: center; gap: 4px; border: 1px solid #dadce0; border-radius: 4px; overflow: hidden;">
+                        <button id="btn-semana-anterior" onclick="mudarSemana(-1)" style="background: white; border: none; padding: 8px 12px; cursor: pointer; transition: background 0.15s; color: #5f6368;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                            <i class="fas fa-chevron-left" style="font-size: 12px;"></i>
                         </button>
-                        <span id="info-semana-atual" style="font-size: 0.9rem; font-weight: 600; color: #023A8D; min-width: 220px; text-align: center;">
-                            <?php 
-                            $semanaDisplay = $todasSemanas[$semanaSelecionada] ?? $todasSemanas[0];
-                            $totalSemanas = count($todasSemanas);
-                            if ($semanaDisplay['inicio']):
-                                // Semana vai de domingo (dias[0]) a sábado (dias[6])
-                                $inicioSemana = $semanaDisplay['inicio'];
-                                $fimSemana = clone $inicioSemana;
-                                $fimSemana->modify('+6 days'); // Domingo + 6 dias = Sábado
-                                echo 'Semana ' . ($semanaSelecionada + 1) . ' de ' . $totalSemanas . '<br>';
-                                echo '<small style="font-size: 0.8rem; opacity: 0.9;">' . $inicioSemana->format('d/m') . ' - ' . $fimSemana->format('d/m/Y') . '</small>';
-                            else:
-                                echo 'Carregando...';
-                            endif;
-                            ?>
-                        </span>
-                        <button id="btn-semana-proxima" onclick="mudarSemana(1)" style="background: white; border: 1px solid #ddd; border-radius: 4px; padding: 6px 10px; cursor: pointer; transition: all 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='white'">
-                            <i class="fas fa-chevron-right"></i>
+                        <div style="border-left: 1px solid #dadce0; border-right: 1px solid #dadce0; padding: 0 12px;">
+                            <span id="info-semana-atual" style="font-size: 14px; font-weight: 400; color: #202124; white-space: nowrap;">
+                                <?php 
+                                $semanaDisplay = $todasSemanas[$semanaSelecionada] ?? $todasSemanas[0];
+                                $totalSemanas = count($todasSemanas);
+                                if ($semanaDisplay['inicio']):
+                                    $inicioSemana = $semanaDisplay['inicio'];
+                                    $fimSemana = clone $inicioSemana;
+                                    $fimSemana->modify('+6 days');
+                                    $meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+                                    echo $inicioSemana->format('j') . ' - ' . $fimSemana->format('j') . ' de ' . $meses[$fimSemana->format('n') - 1] . ', ' . $fimSemana->format('Y');
+                                else:
+                                    echo 'Carregando...';
+                                endif;
+                                ?>
+                            </span>
+                        </div>
+                        <button id="btn-semana-proxima" onclick="mudarSemana(1)" style="background: white; border: none; padding: 8px 12px; cursor: pointer; transition: background 0.15s; color: #5f6368;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                            <i class="fas fa-chevron-right" style="font-size: 12px;"></i>
                         </button>
                     </div>
-                    <select id="filtro-disciplina-calendario" style="padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px; font-size: 0.9rem;" onchange="filtrarCalendario()">
-                        <option value="">Todas as disciplinas</option>
-                        <?php foreach ($disciplinasSelecionadas as $disc): ?>
-                            <option value="<?= $disc['disciplina_id'] ?>"><?= htmlspecialchars($disc['nome_disciplina'] ?? $disc['nome_original'] ?? 'Disciplina') ?></option>
-                        <?php endforeach; ?>
-                    </select>
                 </div>
+                <!-- Filtro estilo Google Calendar -->
+                <select id="filtro-disciplina-calendario" style="padding: 8px 32px 8px 12px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px; background: white; color: #202124; cursor: pointer; appearance: none; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235f6368' d='M6 9L1 4h10z'/%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 12px center;" onchange="filtrarCalendario()">
+                    <option value="">Todas as disciplinas</option>
+                    <?php foreach ($disciplinasSelecionadas as $disc): ?>
+                        <option value="<?= $disc['disciplina_id'] ?>"><?= htmlspecialchars($disc['nome_disciplina'] ?? $disc['nome_original'] ?? 'Disciplina') ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
             
             <input type="hidden" id="semana-atual-indice" value="<?= $semanaSelecionada ?>">
@@ -3065,38 +3081,54 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 </div>
             </div>
             
-            <!-- Calendário Estilo Timeline (Google Calendar) -->
+            <!-- Calendário Estilo Google Calendar -->
             <style>
+            /* Container principal - estilo Google Calendar */
             .timeline-calendar {
                 position: relative;
-                background: white;
+                background: #ffffff;
                 border-radius: 8px;
                 overflow: hidden;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+                font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
             }
             
+            /* Cabeçalho estilo Google Calendar - mais limpo e moderno */
             .timeline-header {
                 display: grid;
                 grid-template-columns: 80px repeat(7, 1fr);
-                background: #023A8D;
-                color: white;
-                border-bottom: 2px solid #0056b3;
+                background: #ffffff;
+                color: #3c4043;
+                border-bottom: 1px solid #dadce0;
+                min-height: 64px;
             }
             
             .timeline-time-column {
-                background: #023A8D;
-                color: white;
-                border-right: 2px solid #0056b3;
+                background: #ffffff;
+                color: #3c4043;
+                border-right: 1px solid #dadce0;
                 position: sticky;
                 left: 0;
                 z-index: 10;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: 500;
+                font-size: 13px;
             }
             
             .timeline-day-header {
-                padding: 12px;
+                padding: 8px 4px;
                 text-align: center;
-                font-weight: 600;
-                font-size: 0.9rem;
-                border-right: 1px solid rgba(255, 255, 255, 0.2);
+                font-weight: 500;
+                font-size: 11px;
+                color: #5f6368;
+                border-right: 1px solid #dadce0;
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                min-height: 64px;
             }
             
             .timeline-day-header:last-child {
@@ -3105,38 +3137,55 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             
             .timeline-day-header .dia-nome {
                 display: block;
-                font-size: 0.95rem;
+                font-size: 11px;
+                font-weight: 500;
+                color: #5f6368;
                 margin-bottom: 4px;
+                text-transform: uppercase;
+                letter-spacing: 0.5px;
             }
             
             .timeline-day-header .dia-data {
                 display: block;
-                font-size: 0.75rem;
-                opacity: 0.9;
+                font-size: 26px;
+                font-weight: 400;
+                color: #3c4043;
+                line-height: 1;
+                margin-top: 2px;
             }
             
+            /* Destacar dia atual */
+            .timeline-day-header.hoje .dia-data {
+                color: #1a73e8;
+                font-weight: 500;
+            }
+            
+            .timeline-day-header.hoje {
+                background: #f1f3f4;
+            }
+            
+            /* Corpo do calendário */
             .timeline-body {
                 display: grid;
                 grid-template-columns: 80px repeat(7, 1fr);
                 position: relative;
-                align-items: start; /* Garantir alinhamento no topo */
-                background: white;
-                border: 1px solid #e9ecef;
+                align-items: start;
+                background: #ffffff;
             }
             
+            /* Coluna de horários estilo Google Calendar */
             .timeline-hours {
                 position: sticky;
                 left: 0;
                 z-index: 5;
-                background: #023A8D;
-                color: white;
-                border-right: 2px solid #0056b3;
+                background: #ffffff;
+                border-right: 1px solid #dadce0;
                 display: flex;
                 flex-direction: column;
-                overflow: hidden; /* Esconder linhas que ultrapassem a altura definida */
+                overflow: hidden;
             }
             
-            /* Container para linhas horizontais na coluna de horários */
+            /* Linhas horizontais na coluna de horários - estilo Google Calendar */
             .timeline-hours::after {
                 content: '';
                 position: absolute;
@@ -3146,141 +3195,104 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 bottom: 0;
                 width: 100%;
                 height: 100%;
-                /* Linhas horizontais: finas a cada 30 min, espessas nas horas inteiras - ajustadas para fundo azul */
+                /* Linhas muito sutis estilo Google Calendar */
                 background-image: 
-                    /* Linhas finas a cada 30 minutos (meio-horas) - mais claras para aparecer no azul */
                     repeating-linear-gradient(
                         to bottom,
                         transparent,
                         transparent 59px,
-                        rgba(255, 255, 255, 0.15) 59px,
-                        rgba(255, 255, 255, 0.15) 60px
-                    ),
-                    /* Linhas espessas nas horas inteiras - mais visíveis no azul */
-                    repeating-linear-gradient(
-                        to bottom,
-                        transparent,
-                        transparent 119px,
-                        rgba(255, 255, 255, 0.3) 119px,
-                        rgba(255, 255, 255, 0.3) 120px
+                        #dadce0 59px,
+                        #dadce0 60px
                     );
                 background-size: 100% 100%;
                 pointer-events: none;
                 z-index: 1;
             }
             
-            
-            .timeline-day-column {
-                position: relative;
-                /* Remover flex-direction para permitir posicionamento absoluto dos slots */
-            }
-            
             .timeline-hour-marker {
                 position: relative;
-                /* Removido border-bottom - linhas agora vêm do background da coluna */
-                height: 60px; /* Altura fixa de 30 minutos = 60px (2px por minuto) */
+                height: 60px;
                 display: flex;
                 align-items: flex-start;
                 box-sizing: border-box;
-                z-index: 2; /* Acima das linhas do background */
-            }
-            
-            .timeline-hour-marker.hora-inteira {
-                /* Linha mais espessa vem do ::before da coluna */
+                z-index: 2;
             }
             
             .timeline-hour-label {
                 position: absolute;
-                top: -8px;
+                top: -6px;
                 left: 8px;
-                font-size: 0.75rem;
-                color: white;
-                font-weight: 600;
-                background: #023A8D;
+                font-size: 10px;
+                color: #5f6368;
+                font-weight: 400;
+                background: #ffffff;
                 padding: 0 4px;
             }
             
             .timeline-period-label {
-                position: absolute;
-                top: 4px;
-                right: 8px;
-                font-size: 0.65rem;
-                color: rgba(255, 255, 255, 0.8);
-                text-transform: uppercase;
-                font-weight: 500;
+                display: none; /* Removido para design mais limpo */
             }
             
+            /* Colunas dos dias - estilo Google Calendar */
             .timeline-day-column {
                 position: relative;
-                border-right: 1px solid #e9ecef;
-                background: white;
-                /* A altura será definida inline via style */
-                overflow: hidden; /* Esconder linhas que ultrapassem a altura definida */
-            }
-            
-            /* Grade padrão: linhas horizontais nas colunas de dias */
-            .timeline-day-column::before {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                /* IMPORTANTE: Usar height em vez de bottom para limitar exatamente ao necessário */
-                height: 100%;
-                width: 100%;
-                /* Linhas horizontais: finas a cada 30 min, espessas nas horas inteiras */
-                background-image: 
-                    /* Linhas finas a cada 30 minutos (meio-horas) - 1px */
-                    repeating-linear-gradient(
-                        to bottom,
-                        transparent,
-                        transparent 59px,
-                        #e9ecef 59px,
-                        #e9ecef 60px
-                    ),
-                    /* Linhas espessas nas horas inteiras - 2px */
-                    repeating-linear-gradient(
-                        to bottom,
-                        transparent,
-                        transparent 119px,
-                        #dee2e6 119px,
-                        #dee2e6 120px
-                    );
-                background-size: 100% 100%;
-                pointer-events: none;
-                z-index: 0;
+                border-right: 1px solid #dadce0;
+                background: #ffffff;
+                overflow: hidden;
             }
             
             .timeline-day-column:last-child {
                 border-right: none;
             }
             
+            /* Grade de linhas horizontais estilo Google Calendar */
+            .timeline-day-column::before {
+                content: '';
+                position: absolute;
+                top: 0;
+                left: 0;
+                right: 0;
+                height: 100%;
+                width: 100%;
+                /* Linhas muito sutis - estilo Google Calendar */
+                background-image: 
+                    repeating-linear-gradient(
+                        to bottom,
+                        transparent,
+                        transparent 59px,
+                        #dadce0 59px,
+                        #dadce0 60px
+                    );
+                background-size: 100% 100%;
+                pointer-events: none;
+                z-index: 0;
+            }
+            
+            /* Slots vazios - estilo Google Calendar */
             .timeline-slot {
                 position: absolute;
                 left: 0;
                 right: 0;
                 cursor: pointer;
-                transition: all 0.2s;
+                transition: all 0.15s ease;
                 border-radius: 4px;
                 padding: 4px 8px;
-                font-size: 0.75rem;
-                z-index: 10; /* Acima das linhas da grade */
+                font-size: 12px;
+                z-index: 10;
                 box-sizing: border-box;
-                margin: 0 1px; /* Pequena margem para não sobrepor as bordas verticais */
+                margin: 0 2px;
             }
             
             .timeline-slot.vazio {
-                background: rgba(248, 249, 250, 0.5);
-                border: 1px dashed rgba(173, 181, 189, 0.4);
-                transition: all 0.2s ease;
+                background: transparent;
+                border: none;
+                transition: all 0.15s ease;
             }
             
             .timeline-slot.vazio:hover {
-                background: rgba(2, 58, 141, 0.08);
-                border-color: rgba(2, 58, 141, 0.5);
-                border-style: solid;
-                border-width: 1px;
-                box-shadow: inset 0 0 0 1px rgba(2, 58, 141, 0.1);
+                background: #e8f0fe;
+                border: 1px solid #1a73e8;
+                border-radius: 4px;
             }
             
             .timeline-slot.vazio::before {
@@ -3289,37 +3301,60 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 top: 50%;
                 left: 50%;
                 transform: translate(-50%, -50%);
-                color: #adb5bd;
-                font-size: 1.2rem;
-                font-weight: bold;
+                color: #1a73e8;
+                font-size: 18px;
+                font-weight: 300;
                 opacity: 0;
-                transition: opacity 0.2s ease;
+                transition: opacity 0.15s ease;
+                pointer-events: none;
             }
             
             .timeline-slot.vazio:hover::before {
-                opacity: 0.5;
+                opacity: 0.6;
             }
             
+            /* Slots grandes de período não devem mostrar conteúdo visível */
+            .timeline-slot.periodo-slot::before {
+                display: none;
+            }
+            
+            /* Slots grandes de intervalo não devem capturar eventos quando há slots menores */
+            .timeline-slot.slot-intervalo {
+                pointer-events: none;
+            }
+            
+            /* Slots individuais sempre capturam eventos */
+            .timeline-slot.slot-individual {
+                pointer-events: auto !important;
+            }
+            
+            /* Eventos/Aulas - estilo Google Calendar */
             .timeline-slot.aula {
-                color: white;
-                font-weight: 600;
-                box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-                overflow: visible;
+                color: #202124;
+                font-weight: 400;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+                overflow: hidden;
                 text-overflow: ellipsis;
                 white-space: normal;
                 word-wrap: break-word;
                 display: block;
-                min-height: 40px;
+                min-height: 24px;
+                border-left: 3px solid;
+                border-radius: 0 4px 4px 0;
+                padding: 6px 10px;
+                line-height: 1.4;
             }
             
-            .timeline-slot.aula.ultima {
-                border: 2px solid white;
-                box-shadow: 0 0 0 2px currentColor, 0 2px 8px rgba(0,0,0,0.15);
-            }
-            
+            /* Hover nos eventos - estilo Google Calendar */
             .timeline-slot.aula:hover {
-                transform: translateY(-1px);
-                box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+                box-shadow: 0 2px 6px rgba(0,0,0,0.16), 0 2px 4px rgba(0,0,0,0.23);
+                z-index: 15;
+            }
+            
+            /* Última aula destacada */
+            .timeline-slot.aula.ultima {
+                border-left-width: 4px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.16), 0 2px 4px rgba(0,0,0,0.23);
             }
             
             .timeline-periodo-colapsado {
@@ -3488,16 +3523,21 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                     
                     <!-- Cabeçalho -->
                     <div class="timeline-header">
-                        <div class="timeline-time-column" style="padding: 12px; text-align: center; font-weight: 600; border-right: 2px solid rgba(255, 255, 255, 0.3);">
-                            Horário
+                        <div class="timeline-time-column">
+                            <!-- Espaço vazio para alinhamento -->
                         </div>
-                        <?php foreach ($semanaDisplay['dias'] as $idx => $data): ?>
-                            <div class="timeline-day-header" data-dia-semana="<?= $idx ?>">
+                        <?php 
+                        $hoje = new DateTime();
+                        $hojeStr = $hoje->format('Y-m-d');
+                        foreach ($semanaDisplay['dias'] as $idx => $data): 
+                            $ehHoje = ($data === $hojeStr);
+                        ?>
+                            <div class="timeline-day-header <?= $ehHoje ? 'hoje' : '' ?>" data-dia-semana="<?= $idx ?>">
                                 <?php if ($data): 
                                     $diaFormatado = new DateTime($data);
                                 ?>
                                     <span class="dia-nome"><?= $diasSemana[$idx] ?></span>
-                                    <span class="dia-data data-display"><?= $diaFormatado->format('d/m') ?></span>
+                                    <span class="dia-data data-display"><?= $diaFormatado->format('d') ?></span>
                                 <?php else: ?>
                                     <span class="dia-nome" style="opacity: 0.5;"><?= $diasSemana[$idx] ?></span>
                                     <span class="dia-data data-display">-</span>
@@ -3580,26 +3620,9 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         }
                                     }
                                     
-                                    // Renderizar toggle apenas se período está vazio (para colapsar)
-                                    // REMOVIDO: Badge "Sem aulas" que estava poluindo a interface
-                                    if ($aulasNoPeriodo == 0) {
-                                        $periodoAlturaColapsado = 40;
-                                        ?>
-                                        <div class="timeline-toggle-periodo" 
-                                             onclick="togglePeriodo('<?= strtolower($periodo) ?>')"
-                                             data-periodo="<?= strtolower($periodo) ?>"
-                                             style="height: <?= $periodoAlturaColapsado ?>px;">
-                                            <div class="periodo-info">
-                                                <i class="fas fa-chevron-right periodo-icon" 
-                                                   id="icon-<?= strtolower($periodo) ?>" 
-                                                   style="font-size: 0.7rem; transition: transform 0.2s;"></i>
-                                                <span><?= $periodo ?></span>
-                                            </div>
-                                        </div>
-                                        <?php
-                                        // Marcar período como colapsado inicialmente
-                                        echo "<script>document.addEventListener('DOMContentLoaded', function() { togglePeriodo('" . strtolower($periodo) . "'); });</script>";
-                                    }
+                                    // REMOVIDO: Toggle de período para períodos vazios
+                                    // Isso estava causando linhas extras sem horário correspondente
+                                    // Períodos vazios agora são renderizados normalmente com slots de período
                                 }
                                 
                                 // Renderizar marcador de hora normal
@@ -3837,21 +3860,47 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                             // O JavaScript controlará o colapso visualmente se o usuário clicar
                                     ?>
                                     <div class="timeline-slot vazio periodo-slot" 
-                                         data-periodo="<?= strtolower($nomePeriodo) ?>"
+                                         data-periodo="<?= strtolower($nomePeriodo) ?>" 
                                          data-periodo-inicio="<?= $periodoInicio ?>"
                                          data-periodo-fim="<?= $periodoFim ?>"
-                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; <?= $displayStyle ?>"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 1; pointer-events: none;"
                                          onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
                                          data-data="<?= $data ?>"
                                          data-hora-inicio="<?= $horaSlot ?>"
                                          title="Clique para agendar aula em <?= $nomePeriodo ?>">
-                                        <?php if ($altura > 60 && (!isset($periodoInfo['colapsado']) || !$periodoInfo['colapsado'])): ?>
-                                        <div style="display: flex; align-items: center; justify-content: center; height: 100%; padding: 10px; pointer-events: none;">
-                                            <span style="color: #adb5bd; font-size: 0.7rem; text-align: center;"><?= $nomePeriodo ?> - Clique para agendar</span>
-                                        </div>
-                                        <?php endif; ?>
                                     </div>
                                     <?php
+                                        }
+                                        
+                                        // CRÍTICO: Criar slots individuais de 30 minutos mesmo quando não há eventos
+                                        // Isso garante comportamento igual ao Google Calendar: cada slot é clicável independentemente
+                                        $horaAtualSlot = $horaMinima;
+                                        while ($horaAtualSlot < $horaMaxima) {
+                                            $top = ($horaAtualSlot - $horaMinima) * 2;
+                                            $altura = 60; // 30 minutos = 60px (2px por minuto)
+                                            $horaSlot = sprintf('%02d:%02d', floor($horaAtualSlot / 60), $horaAtualSlot % 60);
+                                            
+                                            // Determinar período
+                                            $periodoSlot = '';
+                                            if ($horaAtualSlot < 12 * 60) {
+                                                $periodoSlot = 'manhã';
+                                            } elseif ($horaAtualSlot < 18 * 60) {
+                                                $periodoSlot = 'tarde';
+                                            } else {
+                                                $periodoSlot = 'noite';
+                                            }
+                                    ?>
+                                    <div class="timeline-slot vazio slot-individual" 
+                                         data-periodo="<?= $periodoSlot ?>"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 15;"
+                                         onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
+                                         data-data="<?= $data ?>"
+                                         data-hora-inicio="<?= $horaSlot ?>"
+                                         title="Clique para agendar aula às <?= $horaSlot ?>">
+                                    </div>
+                                    <?php
+                                            // Avançar 30 minutos
+                                            $horaAtualSlot += 30;
                                         }
                                     } else {
                                         // Renderizar cada evento
@@ -3890,9 +3939,9 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                             // REMOVIDO: Verificação de colapso para slots vazios
                                             // Slots sempre visíveis
                                     ?>
-                                    <div class="timeline-slot vazio" 
+                                    <div class="timeline-slot vazio slot-intervalo" 
                                          data-periodo="<?= $periodoSlot ?>"
-                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px;"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 5; pointer-events: none;"
                                          onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
                                          data-data="<?= $data ?>"
                                          data-hora-inicio="<?= $horaSlot ?>"
@@ -3941,9 +3990,14 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                             $horaFimStr = substr($horaFimStr, 0, 5);
                                         }
                                     ?>
+                                    <?php
+                                    // Usar cor de fundo clara para melhor legibilidade
+                                    $corFundo = $coresFundoDisciplinas[$aula['disciplina_id']] ?? '#f1f3f4';
+                                    $corBorda = $corDisciplina;
+                                    ?>
                                     <div class="timeline-slot aula <?= $ehUltima ? 'ultima' : '' ?>"
                                          data-periodo="<?= $periodoAula ?>"
-                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; background: <?= $corDisciplina ?>; position: absolute; left: 2px; right: 2px; z-index: 10; border: 1px solid rgba(255,255,255,0.3); overflow: hidden; box-sizing: border-box; display: block !important;"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; background: <?= $corFundo ?>; border-left-color: <?= $corBorda ?>; position: absolute; left: 2px; right: 2px; z-index: 10; overflow: hidden; box-sizing: border-box; display: block !important;"
                                          onclick="verDetalhesAula(<?= $aula['id'] ?>)"
                                          data-aula-id="<?= $aula['id'] ?>"
                                          data-disciplina-id="<?= $aula['disciplina_id'] ?>"
@@ -3951,18 +4005,18 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                          data-fim-minutos="<?= $evento['fim'] ?>"
                                          data-top-original="<?= $top ?>"
                                          title="<?= htmlspecialchars($nomeDisciplina) ?> - <?= htmlspecialchars($aula['nome_aula']) ?> (<?= $horaInicioStr ?> - <?= $horaFimStr ?>)">
-                                        <div style="font-weight: 600; margin-bottom: 2px; font-size: 0.8rem;">
+                                        <div style="font-weight: 500; margin-bottom: 2px; font-size: 12px; color: #202124;">
                                             <?= htmlspecialchars($nomeDisciplina) ?>
                                         </div>
-                                        <div style="opacity: 0.95; font-size: 0.7rem;">
+                                        <div style="font-size: 11px; color: #5f6368; margin-top: 2px;">
                                             <?= htmlspecialchars($aula['nome_aula']) ?>
                                         </div>
-                                        <div style="font-size: 0.65rem; opacity: 0.9; margin-top: 2px;">
+                                        <div style="font-size: 10px; color: #5f6368; margin-top: 2px;">
                                             <?= $horaInicioStr ?> - <?= $horaFimStr ?>
                                         </div>
                                         <?php if ($ehUltima): ?>
-                                            <div style="font-size: 0.6rem; margin-top: 2px; opacity: 0.95;">
-                                                <i class="fas fa-flag"></i> Última
+                                            <div style="font-size: 10px; margin-top: 3px; color: <?= $corBorda ?>; font-weight: 500;">
+                                                <i class="fas fa-flag" style="font-size: 8px;"></i> Última
                                             </div>
                                         <?php endif; ?>
                                     </div>
@@ -3989,9 +4043,9 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         }
                                         // REMOVIDO: Verificação de colapso para slot final
                                     ?>
-                                    <div class="timeline-slot vazio" 
+                                    <div class="timeline-slot vazio slot-intervalo" 
                                          data-periodo="<?= $periodoSlotFinal ?>"
-                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px;"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 5; pointer-events: none;"
                                          onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
                                          data-data="<?= $data ?>"
                                          data-hora-inicio="<?= $horaSlot ?>"
@@ -4000,70 +4054,48 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                     <?php
                                     }
                                     
-                                    // Adicionar slots vazios clicáveis para horários comuns apenas em períodos expandidos
-                                    // Horários comuns por período
-                                    $horariosComuns = [
-                                        'manhã' => [7 * 60, 8 * 60, 9 * 60, 10 * 60, 11 * 60],
-                                        'tarde' => [13 * 60, 14 * 60, 15 * 60, 16 * 60, 17 * 60],
-                                        'noite' => [18 * 60, 19 * 60, 20 * 60, 21 * 60]
-                                    ];
-                                    
-                                    foreach ($horariosComuns as $nomePeriodo => $horas) {
-                                        // Criar slots sempre, independente de colapso
-                                        // O colapso é apenas visual e controlado pelo JavaScript
-                                        
-                                        foreach ($horas as $horaMin) {
-                                            if ($horaMin < $horaMinima || $horaMin >= $horaMaxima) {
-                                                continue;
-                                            }
-                                            
-                                            // Verificar se já há aula neste horário
-                                            $jaTemAula = false;
-                                            foreach ($eventos as $evento) {
-                                                if ($evento['inicio'] <= $horaMin && $evento['fim'] > $horaMin) {
-                                                    $jaTemAula = true;
-                                                    break;
-                                                }
-                                                if (abs($evento['inicio'] - $horaMin) < 30) {
-                                                    $jaTemAula = true;
-                                                    break;
-                                                }
-                                            }
-                                            
-                                            // Verificar se está em intervalo vazio
-                                            $jaCoberto = false;
-                                            if (!empty($eventos)) {
-                                                foreach ($eventos as $idx => $evento) {
-                                                    if ($idx == 0 && $horaMin < $evento['inicio']) {
-                                                        $jaCoberto = true;
-                                                        break;
-                                                    }
-                                                    if ($idx > 0 && $horaMin > $eventos[$idx - 1]['fim'] && $horaMin < $evento['inicio']) {
-                                                        $jaCoberto = true;
-                                                        break;
-                                                    }
-                                                }
-                                                if (!$jaCoberto && $horaMin > end($eventos)['fim']) {
-                                                    $jaCoberto = true;
-                                                }
-                                            }
-                                            
-                                            if (!$jaTemAula && !$jaCoberto) {
-                                                $top = ($horaMin - $horaMinima) * 2;
-                                                $altura = 60;
-                                                $horaSlot = sprintf('%02d:%02d', floor($horaMin / 60), $horaMin % 60);
-                                                ?>
-                                                <div class="timeline-slot vazio" 
-                                                     style="top: <?= $top ?>px; height: <?= $altura ?>px; min-height: 60px; position: relative;"
-                                                     onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
-                                                     data-data="<?= $data ?>"
-                                                     data-hora-inicio="<?= $horaSlot ?>"
-                                                     data-periodo="<?= $nomePeriodo ?>"
-                                                     title="Clique para agendar aula às <?= $horaSlot ?>">
-                                                </div>
-                                                <?php
+                                    // CRÍTICO: Criar slots individuais de 30 minutos para TODOS os horários disponíveis
+                                    // Isso garante comportamento igual ao Google Calendar: cada slot é clicável independentemente
+                                    $horaAtualSlot = $horaMinima;
+                                    while ($horaAtualSlot < $horaMaxima) {
+                                        // Verificar se este horário já está coberto por uma aula
+                                        $estaCobertoPorAula = false;
+                                        foreach ($eventos as $evento) {
+                                            if ($evento['inicio'] <= $horaAtualSlot && $evento['fim'] > $horaAtualSlot) {
+                                                $estaCobertoPorAula = true;
+                                                break;
                                             }
                                         }
+                                        
+                                        // Se não está coberto por aula, criar slot clicável de 30 minutos
+                                        if (!$estaCobertoPorAula) {
+                                            $top = ($horaAtualSlot - $horaMinima) * 2;
+                                            $altura = 60; // 30 minutos = 60px (2px por minuto)
+                                            $horaSlot = sprintf('%02d:%02d', floor($horaAtualSlot / 60), $horaAtualSlot % 60);
+                                            
+                                            // Determinar período
+                                            $periodoSlot = '';
+                                            if ($horaAtualSlot < 12 * 60) {
+                                                $periodoSlot = 'manhã';
+                                            } elseif ($horaAtualSlot < 18 * 60) {
+                                                $periodoSlot = 'tarde';
+                                            } else {
+                                                $periodoSlot = 'noite';
+                                            }
+                                    ?>
+                                    <div class="timeline-slot vazio slot-individual" 
+                                         data-periodo="<?= $periodoSlot ?>"
+                                         style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 15;"
+                                         onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
+                                         data-data="<?= $data ?>"
+                                         data-hora-inicio="<?= $horaSlot ?>"
+                                         title="Clique para agendar aula às <?= $horaSlot ?>">
+                                    </div>
+                                    <?php
+                                        }
+                                        
+                                        // Avançar 30 minutos
+                                        $horaAtualSlot += 30;
                                     }
                                     ?>
                                 <?php endif; ?>
@@ -4249,11 +4281,43 @@ function filtrarCalendario() {
     // Para slots vazios, manter sempre visíveis para poder agendar
 }
 
-function agendarNoSlot(data, hora) {
-    // Converter data para formato do modal (Y-m-d)
-    const dataFormatada = data;
+function irParaHoje() {
+    // Encontrar a semana que contém hoje
+    const semanasJson = document.getElementById('semanas-disponiveis').value;
+    if (!semanasJson) return;
     
-    // Buscar disciplina que precisa de mais aulas (priorizar a que tem mais faltantes)
+    const semanas = JSON.parse(semanasJson);
+    const hoje = new Date();
+    const hojeStr = hoje.toISOString().split('T')[0]; // YYYY-MM-DD
+    
+    // Encontrar índice da semana que contém hoje
+    let indiceSemanaHoje = -1;
+    for (let i = 0; i < semanas.length; i++) {
+        const semana = semanas[i];
+        if (semana.dias && semana.dias.includes(hojeStr)) {
+            indiceSemanaHoje = i;
+            break;
+        }
+    }
+    
+    // Se encontrou, navegar para essa semana
+    if (indiceSemanaHoje >= 0) {
+        const indiceAtual = parseInt(document.getElementById('semana-atual-indice').value);
+        const diferenca = indiceSemanaHoje - indiceAtual;
+        if (diferenca !== 0) {
+            mudarSemana(diferenca);
+        }
+    } else {
+        // Se não encontrou, mostrar mensagem
+        alert('Semana atual não está disponível neste período.');
+    }
+}
+
+function agendarNoSlot(data, hora) {
+    // Quick Event Creation - estilo Google Calendar
+    // Ao clicar em um slot vazio, abre modal com data e hora já preenchidos
+    
+    // Buscar disciplinas disponíveis para seleção
     const disciplinas = <?= json_encode(array_map(function($d) use ($estatisticasDisciplinas) {
         $id = $d['disciplina_id'];
         $stats = $estatisticasDisciplinas[$id] ?? [];
@@ -4264,36 +4328,105 @@ function agendarNoSlot(data, hora) {
         ];
     }, $disciplinasSelecionadas)) ?>;
     
-    // Ordenar por faltantes (maior primeiro) e pegar a primeira
-    disciplinas.sort((a, b) => b.faltantes - a.faltantes);
-    const disciplinaSelecionada = disciplinas[0];
+    // Verificar se há disciplinas com aulas faltantes
+    const disciplinasComFaltantes = disciplinas.filter(d => d.faltantes > 0);
     
-    if (disciplinaSelecionada && disciplinaSelecionada.faltantes > 0) {
-        // Abrir modal de agendamento com dados pré-preenchidos
-        abrirModalAgendarAula(
-            disciplinaSelecionada.id,
-            disciplinaSelecionada.nome,
-            '<?= $turma['data_inicio'] ?>',
-            '<?= $turma['data_fim'] ?>'
-        );
-        
-        // Aguardar o modal abrir e preencher campos
-        setTimeout(() => {
-            const dataInput = document.querySelector('#modalAgendarAula input[name="data_aula"], #modalAgendarAula input[id*="data"]');
-            const horaInput = document.querySelector('#modalAgendarAula input[name="hora_inicio"], #modalAgendarAula input[id*="hora"]');
-            
-            if (dataInput) {
-                dataInput.value = dataFormatada;
-                dataInput.dispatchEvent(new Event('change'));
-            }
-            if (horaInput) {
-                horaInput.value = hora;
-                horaInput.dispatchEvent(new Event('change'));
-            }
-        }, 300);
-    } else {
+    if (disciplinasComFaltantes.length === 0) {
         alert('Todas as disciplinas já têm todas as aulas agendadas!');
+        return;
     }
+    
+    // Selecione a primeira disciplina com mais faltantes como padrão
+    disciplinasComFaltantes.sort((a, b) => b.faltantes - a.faltantes);
+    const disciplinaPadrao = disciplinasComFaltantes[0];
+    
+    // Abrir modal com dados pré-preenchidos (Quick Event Creation)
+    abrirModalAgendarAulaComDataHora(
+        disciplinaPadrao.id,
+        disciplinaPadrao.nome,
+        '<?= $turma['data_inicio'] ?>',
+        '<?= $turma['data_fim'] ?>',
+        data,  // Data do slot clicado
+        hora   // Hora do slot clicado
+    );
+}
+
+// Nova função para abrir modal com data e hora pré-preenchidas (Quick Event Creation)
+function abrirModalAgendarAulaComDataHora(disciplinaId, disciplinaNome, dataInicio, dataFim, dataPreenchida, horaPreenchida) {
+    // Primeiro abre o modal normalmente
+    abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim);
+    
+    // Usar requestAnimationFrame para garantir que o DOM está pronto
+    requestAnimationFrame(() => {
+        // Preencher data e hora imediatamente
+        const dataInput = document.getElementById('modal_data_aula');
+        const horaInput = document.getElementById('modal_hora_inicio');
+        const horaFimInput = document.getElementById('modal_hora_fim');
+        
+        if (dataInput && dataPreenchida) {
+            // Garantir formato YYYY-MM-DD
+            let dataFormatada = dataPreenchida;
+            if (!dataFormatada.includes('-')) {
+                // Se veio em formato brasileiro (DD/MM/YYYY), converter
+                const partes = dataFormatada.split('/');
+                if (partes.length === 3) {
+                    dataFormatada = partes[2] + '-' + partes[1].padStart(2, '0') + '-' + partes[0].padStart(2, '0');
+                }
+            }
+            dataInput.value = dataFormatada;
+            
+            // Disparar evento para atualizar preview se houver
+            dataInput.dispatchEvent(new Event('change', { bubbles: true }));
+            dataInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        if (horaInput && horaPreenchida) {
+            // Garantir formato HH:MM
+            let horaFormatada = horaPreenchida;
+            if (!horaFormatada.includes(':')) {
+                // Se veio sem formato, assumir HH:MM
+                horaFormatada = horaFormatada.length === 4 ? 
+                    horaFormatada.substring(0, 2) + ':' + horaFormatada.substring(2) : 
+                    horaFormatada;
+            }
+            // Garantir formato HH:MM (com 2 dígitos)
+            if (horaFormatada.match(/^\d{1,2}:\d{1,2}$/)) {
+                const [h, m] = horaFormatada.split(':');
+                horaFormatada = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+            }
+            
+            horaInput.value = horaFormatada;
+            
+            // Calcular hora fim automaticamente (padrão: 50 minutos)
+            if (horaFimInput && horaFormatada) {
+                const [hora, minuto] = horaFormatada.split(':').map(Number);
+                const dataHoraInicio = new Date();
+                dataHoraInicio.setHours(hora, minuto, 0, 0);
+                dataHoraInicio.setMinutes(dataHoraInicio.getMinutes() + 50); // Duração padrão: 50 minutos
+                
+                const horaFimFormatada = String(dataHoraInicio.getHours()).padStart(2, '0') + ':' + 
+                                        String(dataHoraInicio.getMinutes()).padStart(2, '0');
+                horaFimInput.value = horaFimFormatada;
+            }
+            
+            // Disparar evento para atualizar preview se houver
+            horaInput.dispatchEvent(new Event('change', { bubbles: true }));
+            horaInput.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        // Se houver função de preview de horário, chamá-la
+        if (typeof atualizarPreviewHorario === 'function') {
+            setTimeout(() => atualizarPreviewHorario(), 100);
+        }
+        
+        // Focar no campo de instrutor para facilitar continuação do preenchimento
+        setTimeout(() => {
+            const instrutorInput = document.getElementById('modal_instrutor_id');
+            if (instrutorInput) {
+                instrutorInput.focus();
+            }
+        }, 200);
+    });
 }
 
 function verDetalhesAula(aulaId) {
@@ -4326,40 +4459,45 @@ function mudarSemana(direcao) {
         const fim = new Date(semana.inicio + 'T00:00:00');
         fim.setDate(fim.getDate() + 6); // Domingo + 6 dias = Sábado
         
-        const formatarData = (data) => {
-            const dia = String(data.getDate()).padStart(2, '0');
-            const mes = String(data.getMonth() + 1).padStart(2, '0');
-            return dia + '/' + mes;
-        };
-        
-        const formatarDataCompleta = (data) => {
-            const dia = String(data.getDate()).padStart(2, '0');
-            const mes = String(data.getMonth() + 1).padStart(2, '0');
+        // Formatar data estilo Google Calendar: "d - d de M, Y"
+        const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+        const formatarDataGoogle = (data) => {
+            const dia = data.getDate();
+            const mes = meses[data.getMonth()];
             const ano = data.getFullYear();
-            return dia + '/' + mes + '/' + ano;
+            return dia + ' de ' + mes + ', ' + ano;
         };
         
-        const totalSemanas = semanas.length;
-        const semanaNumero = novoIndice + 1;
-        document.getElementById('info-semana-atual').innerHTML = 
-            'Semana ' + semanaNumero + ' de ' + totalSemanas + '<br>' +
-            '<small style="font-size: 0.8rem; opacity: 0.9;">' + formatarData(inicio) + ' - ' + formatarDataCompleta(fim) + '</small>';
+        // Atualizar texto do cabeçalho estilo Google Calendar
+        const textoData = inicio.getDate() + ' - ' + formatarDataGoogle(fim);
+        const infoSemanaEl = document.getElementById('info-semana-atual');
+        if (infoSemanaEl) {
+            infoSemanaEl.textContent = textoData;
+        }
         
-        // Atualizar datas nos cabeçalhos das colunas
-        const diasSemana = ['Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta'];
+        // Atualizar datas nos cabeçalhos das colunas do calendário
         semana.dias.forEach((data, idx) => {
-            const th = document.querySelector(`th[data-dia-semana="${idx}"]`);
-            if (th && data) {
+            const dayHeader = document.querySelector(`.timeline-day-header[data-dia-semana="${idx}"]`);
+            if (dayHeader && data) {
                 const dataObj = new Date(data + 'T00:00:00');
-                const small = th.querySelector('.data-display');
-                if (small) {
-                    small.textContent = formatarData(dataObj);
+                const dataDisplay = dayHeader.querySelector('.data-display');
+                if (dataDisplay) {
+                    dataDisplay.textContent = dataObj.getDate();
                 }
-            } else if (th) {
-                const small = th.querySelector('.data-display');
-                if (small) {
-                    small.textContent = '-';
+                
+                // Verificar se é hoje e aplicar classe
+                const hojeStr = new Date().toISOString().split('T')[0];
+                if (data === hojeStr) {
+                    dayHeader.classList.add('hoje');
+                } else {
+                    dayHeader.classList.remove('hoje');
                 }
+            } else if (dayHeader) {
+                const dataDisplay = dayHeader.querySelector('.data-display');
+                if (dataDisplay) {
+                    dataDisplay.textContent = '-';
+                }
+                dayHeader.classList.remove('hoje');
             }
         });
         
@@ -4625,6 +4763,27 @@ function atualizarCalendarioSemana(novoIndice) {
         tbody.appendChild(tr);
     });
 }
+
+// Event delegation para slots vazios (Quick Event Creation)
+// Garante que funciona mesmo quando slots são criados dinamicamente via AJAX
+document.addEventListener('click', function(e) {
+    // Verificar se o clique foi em um slot vazio
+    const slot = e.target.closest('.timeline-slot.vazio');
+    if (slot && slot.hasAttribute('data-data') && slot.hasAttribute('data-hora-inicio')) {
+        // Prevenir duplo clique (caso tenha onclick inline também)
+        e.preventDefault();
+        e.stopPropagation();
+        
+        // Capturar dados do slot
+        const data = slot.getAttribute('data-data');
+        const hora = slot.getAttribute('data-hora-inicio');
+        
+        // Chamar função de Quick Event Creation
+        if (data && hora) {
+            agendarNoSlot(data, hora);
+        }
+    }
+});
 
 // Inicializar ao carregar
 document.addEventListener('DOMContentLoaded', function() {
@@ -5185,6 +5344,30 @@ document.addEventListener('DOMContentLoaded', function() {
                            class="form-control" 
                            readonly 
                            style="background-color: #f8f9fa; cursor: not-allowed;">
+                </div>
+                
+                <!-- Informações sobre aulas da disciplina -->
+                <div id="infoDisciplinaModal" style="background: #f0f7ff; border-left: 4px solid #4a90e2; padding: 12px 15px; border-radius: 6px; margin-bottom: 20px; display: none;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+                        <div style="flex: 1; min-width: 120px;">
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">Total de Aulas:</div>
+                            <div style="font-size: 1.1rem; font-weight: 600; color: #333;">
+                                <span id="infoTotalObrigatorias">-</span> aulas
+                            </div>
+                        </div>
+                        <div style="flex: 1; min-width: 120px;">
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">Agendadas:</div>
+                            <div style="font-size: 1.1rem; font-weight: 600; color: #28a745;">
+                                <span id="infoTotalAgendadas">-</span> aulas
+                            </div>
+                        </div>
+                        <div style="flex: 1; min-width: 120px;">
+                            <div style="font-size: 0.85rem; color: #666; margin-bottom: 4px;">Faltantes:</div>
+                            <div style="font-size: 1.1rem; font-weight: 600; color: #dc3545;">
+                                <span id="infoTotalFaltantes">-</span> aulas
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="form-group" style="margin-bottom: 20px;">
@@ -8885,6 +9068,7 @@ function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim
         const mensagemAgendamento = document.getElementById('mensagemAgendamento');
         const btnAgendar = document.getElementById('btnAgendarAula');
         const modal = document.getElementById('modalAgendarAula');
+        const infoDisciplina = document.getElementById('infoDisciplinaModal');
         
         if (!modal) {
             console.error('Modal não encontrado!');
@@ -8930,9 +9114,104 @@ function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim
         
         // Mostrar modal
         modal.style.display = 'flex';
+        
+        // Buscar informações sobre a disciplina após um pequeno delay para garantir que o DOM está pronto
+        setTimeout(() => {
+            buscarInfoDisciplina(disciplinaId);
+        }, 100);
+        
     } catch (error) {
         console.error('Erro ao abrir modal:', error);
         alert('Erro ao abrir modal de agendamento. Verifique o console para mais detalhes.');
+    }
+}
+
+// Função para buscar informações da disciplina
+async function buscarInfoDisciplina(disciplinaId) {
+    try {
+        console.log('🔍 [INFO] Buscando informações da disciplina:', disciplinaId);
+        
+        const turmaId = <?= $turmaId ?>;
+        const basePath = getBasePath();
+        const url = `${basePath}/admin/api/info-disciplina-turma.php?turma_id=${turmaId}&disciplina=${encodeURIComponent(disciplinaId)}`;
+        
+        console.log('🔍 [INFO] URL da API:', url);
+        
+        const response = await fetch(url);
+        console.log('🔍 [INFO] Status da resposta:', response.status);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        // Ler a resposta como texto primeiro para verificar se é JSON válido
+        const textResponse = await response.text();
+        
+        // Verificar se a resposta é realmente JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('❌ [ERROR] Content-Type não é JSON:', contentType);
+            console.error('❌ [ERROR] Resposta recebida:', textResponse.substring(0, 500));
+            throw new Error('Resposta do servidor não é JSON válido');
+        }
+        
+        let data;
+        try {
+            data = JSON.parse(textResponse);
+        } catch (parseError) {
+            console.error('❌ [ERROR] Erro ao fazer parse do JSON:', parseError);
+            console.error('❌ [ERROR] Resposta recebida:', textResponse.substring(0, 500));
+            throw new Error('Resposta não é JSON válido');
+        }
+        console.log('🔍 [INFO] Dados recebidos:', data);
+        
+        if (data.sucesso && data.dados) {
+            const info = data.dados;
+            const infoDisciplina = document.getElementById('infoDisciplinaModal');
+            const infoTotalObrigatorias = document.getElementById('infoTotalObrigatorias');
+            const infoTotalAgendadas = document.getElementById('infoTotalAgendadas');
+            const infoTotalFaltantes = document.getElementById('infoTotalFaltantes');
+            
+            console.log('🔍 [INFO] Elementos encontrados:', {
+                infoDisciplina: !!infoDisciplina,
+                infoTotalObrigatorias: !!infoTotalObrigatorias,
+                infoTotalAgendadas: !!infoTotalAgendadas,
+                infoTotalFaltantes: !!infoTotalFaltantes
+            });
+            
+            if (infoDisciplina && infoTotalObrigatorias && infoTotalAgendadas && infoTotalFaltantes) {
+                infoTotalObrigatorias.textContent = info.total_obrigatorias || 0;
+                infoTotalAgendadas.textContent = info.total_agendadas || 0;
+                infoTotalFaltantes.textContent = info.total_faltantes || 0;
+                
+                console.log('✅ [INFO] Informações atualizadas:', {
+                    obrigatorias: info.total_obrigatorias,
+                    agendadas: info.total_agendadas,
+                    faltantes: info.total_faltantes
+                });
+                
+                // Mostrar o card de informações com estilo inline para garantir visibilidade
+                infoDisciplina.style.display = 'block';
+                infoDisciplina.style.visibility = 'visible';
+                infoDisciplina.style.opacity = '1';
+            } else {
+                console.error('❌ [ERROR] Alguns elementos não foram encontrados no DOM');
+            }
+        } else {
+            console.warn('⚠️ [WARN] Não foi possível buscar informações da disciplina:', data.mensagem || 'Resposta sem sucesso');
+            // Ocultar o card se houver erro
+            const infoDisciplina = document.getElementById('infoDisciplinaModal');
+            if (infoDisciplina) {
+                infoDisciplina.style.display = 'none';
+            }
+        }
+    } catch (error) {
+        console.error('❌ [ERROR] Erro ao buscar informações da disciplina:', error);
+        // Ocultar o card se houver erro
+        const infoDisciplina = document.getElementById('infoDisciplinaModal');
+        if (infoDisciplina) {
+            infoDisciplina.style.display = 'none';
+        }
     }
 }
 
@@ -9285,6 +9564,9 @@ function enviarAgendamentoModal() {
                 if (disciplinaId) {
                     console.log('🔄 [DEBUG] Recarregando agendamentos da disciplina após agendamento bem-sucedido');
                     recarregarAgendamentosDisciplina(disciplinaId);
+                    
+                    // Atualizar informações da disciplina no modal
+                    buscarInfoDisciplina(disciplinaId);
                     
                     // Atualizar estatísticas após um pequeno delay para garantir que o recarregamento terminou
                     setTimeout(() => {
