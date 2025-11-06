@@ -222,7 +222,14 @@ $stats = [
                         👁️ Detalhes
                     </a>
                     
-                    <?php if (in_array($turma['status'], ['criando', 'completa']) && $turma['alunos_matriculados'] == 0): ?>
+                    <?php if (isset($isAdmin) && $isAdmin): ?>
+                        <button type="button" 
+                                onclick="excluirTurmaCompleta(<?= $turma['id'] ?>, '<?= htmlspecialchars(addslashes($turma['nome'])) ?>')" 
+                                class="btn-danger" 
+                                style="padding: 8px 16px; font-size: 0.9rem; margin-left: 10px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
+                            🗑️ Excluir Completamente
+                        </button>
+                    <?php elseif (in_array($turma['status'], ['criando', 'completa']) && $turma['alunos_matriculados'] == 0): ?>
                         <button type="button" 
                                 onclick="excluirTurma(<?= $turma['id'] ?>, '<?= htmlspecialchars($turma['nome']) ?>')" 
                                 class="btn-danger" 
@@ -266,7 +273,7 @@ function getBasePath() {
     return window.location.pathname.includes('/cfc-bom-conselho/') ? '/cfc-bom-conselho' : '';
 }
 
-// Função para excluir turma
+// Função para excluir turma (versão antiga - mantida para compatibilidade)
 function excluirTurma(turmaId, nomeTurma) {
     if (confirm(`Tem certeza que deseja excluir a turma "${nomeTurma}"?\n\nEsta ação não pode ser desfeita.`)) {
         // Fazer requisição para excluir
@@ -313,5 +320,69 @@ function excluirTurma(turmaId, nomeTurma) {
             alert('❌ Erro ao excluir turma: ' + error.message);
         });
     }
+}
+
+/**
+ * Excluir turma completamente (apenas para administradores)
+ * Exclui a turma e todos os dados relacionados (agendamentos, alunos, etc.)
+ */
+function excluirTurmaCompleta(turmaId, nomeTurma) {
+    // Confirmação com detalhes
+    const mensagem = `⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n` +
+                     `Você está prestes a excluir COMPLETAMENTE a turma:\n` +
+                     `"${nomeTurma}"\n\n` +
+                     `Isso irá excluir:\n` +
+                     `• A turma em si\n` +
+                     `• Todas as aulas agendadas\n` +
+                     `• Todas as matrículas de alunos\n` +
+                     `• Todos os registros relacionados\n\n` +
+                     `Tem certeza que deseja continuar?`;
+    
+    if (!confirm(mensagem)) {
+        return;
+    }
+    
+    // Segunda confirmação para garantir
+    if (!confirm('⚠️ ÚLTIMA CONFIRMAÇÃO!\n\nEsta ação não pode ser desfeita. Deseja realmente excluir esta turma?')) {
+        return;
+    }
+    
+    // Mostrar loading
+    const btnExcluir = event.target.closest('button');
+    const textoOriginal = btnExcluir.innerHTML;
+    btnExcluir.disabled = true;
+    btnExcluir.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Excluindo...';
+    
+    // Fazer requisição para API
+    fetch(getBasePath() + '/admin/api/turmas-teoricas.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            acao: 'excluir',
+            turma_id: turmaId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            // Sucesso - mostrar mensagem e recarregar página
+            alert('✅ ' + data.mensagem);
+            location.reload();
+        } else {
+            // Erro - restaurar botão e mostrar mensagem
+            btnExcluir.disabled = false;
+            btnExcluir.innerHTML = textoOriginal;
+            alert('❌ Erro: ' + data.mensagem);
+        }
+    })
+    .catch(error => {
+        // Erro de rede - restaurar botão e mostrar mensagem
+        btnExcluir.disabled = false;
+        btnExcluir.innerHTML = textoOriginal;
+        console.error('Erro ao excluir turma:', error);
+        alert('❌ Erro ao excluir turma. Verifique sua conexão e tente novamente.');
+    });
 }
 </script>

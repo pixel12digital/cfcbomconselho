@@ -1950,6 +1950,17 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         <a href="?page=turmas-teoricas" class="btn-secondary">
             ← Voltar para Lista
         </a>
+        <?php 
+        // Verificar se é administrador (variável pode vir do arquivo pai ou precisamos verificar aqui)
+        $isAdminLocal = isset($isAdmin) ? $isAdmin : (function_exists('isAdmin') ? isAdmin() : false);
+        if ($isAdminLocal && isset($turma)): 
+        ?>
+        <button onclick="excluirTurmaCompleta(<?= $turma['id'] ?>, '<?= htmlspecialchars(addslashes($turma['nome'])) ?>')" 
+                class="btn-danger" 
+                style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-trash-alt"></i>Excluir Turma Completamente
+        </button>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -11780,6 +11791,70 @@ function atualizarSecaoHistorico(disciplinaId, agendamentos) {
     // Executar em resize para atualizar variável CSS se necessário
     window.addEventListener('resize', removerEstilosInlineDuplicados, { passive: true });
 })();
+
+/**
+ * Excluir turma completamente (apenas para administradores)
+ * Exclui a turma e todos os dados relacionados (agendamentos, alunos, etc.)
+ */
+function excluirTurmaCompleta(turmaId, nomeTurma) {
+    // Confirmação com detalhes
+    const mensagem = `⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n` +
+                     `Você está prestes a excluir COMPLETAMENTE a turma:\n` +
+                     `"${nomeTurma}"\n\n` +
+                     `Isso irá excluir:\n` +
+                     `• A turma em si\n` +
+                     `• Todas as aulas agendadas\n` +
+                     `• Todas as matrículas de alunos\n` +
+                     `• Todos os registros relacionados\n\n` +
+                     `Tem certeza que deseja continuar?`;
+    
+    if (!confirm(mensagem)) {
+        return;
+    }
+    
+    // Segunda confirmação para garantir
+    if (!confirm('⚠️ ÚLTIMA CONFIRMAÇÃO!\n\nEsta ação não pode ser desfeita. Deseja realmente excluir esta turma?')) {
+        return;
+    }
+    
+    // Mostrar loading
+    const btnExcluir = event.target.closest('button');
+    const textoOriginal = btnExcluir.innerHTML;
+    btnExcluir.disabled = true;
+    btnExcluir.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Excluindo...';
+    
+    // Fazer requisição para API
+    fetch('api/turmas-teoricas.php', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            acao: 'excluir',
+            turma_id: turmaId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.sucesso) {
+            // Sucesso - mostrar mensagem e redirecionar
+            alert('✅ ' + data.mensagem);
+            window.location.href = '?page=turmas-teoricas';
+        } else {
+            // Erro - restaurar botão e mostrar mensagem
+            btnExcluir.disabled = false;
+            btnExcluir.innerHTML = textoOriginal;
+            alert('❌ Erro: ' + data.mensagem);
+        }
+    })
+    .catch(error => {
+        // Erro de rede - restaurar botão e mostrar mensagem
+        btnExcluir.disabled = false;
+        btnExcluir.innerHTML = textoOriginal;
+        console.error('Erro ao excluir turma:', error);
+        alert('❌ Erro ao excluir turma. Verifique sua conexão e tente novamente.');
+    });
+}
 </script>
 
 ```
