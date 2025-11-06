@@ -4855,6 +4855,17 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         $corDisciplina = $coresDisciplinas[$aula['disciplina_id']] ?? '#023A8D';
                                         $nomeDisciplina = $disciplinasMap[$aula['disciplina_id']] ?? 'Disciplina';
                                         
+                                        // Extrair apenas a parte após a disciplina do nome_aula para evitar repetição
+                                        $nomeAulaExibicao = $aula['nome_aula'] ?? '';
+                                        if (strpos($nomeAulaExibicao, $nomeDisciplina) === 0) {
+                                            // Se nome_aula começa com o nome da disciplina, remover para evitar duplicação
+                                            $nomeAulaExibicao = trim(str_replace($nomeDisciplina, '', $nomeAulaExibicao));
+                                            // Remover " - " inicial se existir
+                                            if (strpos($nomeAulaExibicao, ' - ') === 0) {
+                                                $nomeAulaExibicao = substr($nomeAulaExibicao, 3);
+                                            }
+                                        }
+                                        
                                         // Calcular posição e altura (densidade compacta: ~1.67px por minuto)
                                         // CRÍTICO: Usar $horaMinima que já foi atualizado acima para garantir alinhamento
                                         // Calcular top baseado no início do evento
@@ -4913,13 +4924,15 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                          data-inicio-minutos="<?= $evento['inicio'] ?>"
                                          data-fim-minutos="<?= $evento['fim'] ?>"
                                          data-top-original="<?= $top ?>"
-                                         title="<?= htmlspecialchars($nomeDisciplina) ?> - <?= htmlspecialchars($aula['nome_aula']) ?> (<?= $horaInicioStr ?> - <?= $horaFimStr ?>)">
+                                         title="<?= htmlspecialchars($aula['nome_aula']) ?> (<?= $horaInicioStr ?> - <?= $horaFimStr ?>)">
                                         <div style="font-weight: 500; margin-bottom: 2px; font-size: 12px; color: #202124;">
                                             <?= htmlspecialchars($nomeDisciplina) ?>
                                         </div>
+                                        <?php if (!empty($nomeAulaExibicao)): ?>
                                         <div style="font-size: 11px; color: #5f6368; margin-top: 2px;">
-                                            <?= htmlspecialchars($aula['nome_aula']) ?>
+                                            <?= htmlspecialchars($nomeAulaExibicao) ?>
                                         </div>
+                                        <?php endif; ?>
                                         <div style="font-size: 10px; color: #5f6368; margin-top: 2px;">
                                             <?= $horaInicioStr ?> - <?= $horaFimStr ?>
                                         </div>
@@ -5711,17 +5724,28 @@ function atualizarCalendarioSemana(novoIndice) {
                 const corDisciplina = coresDisciplinas[aula.disciplina_id] || '#023A8D';
                 const nomeDisciplina = disciplinasMap[aula.disciplina_id] || 'Disciplina';
                 
+                // Extrair apenas a parte após a disciplina do nome_aula para evitar repetição
+                let nomeAulaExibicao = aula.nome_aula || '';
+                if (nomeAulaExibicao.indexOf(nomeDisciplina) === 0) {
+                    // Se nome_aula começa com o nome da disciplina, remover para evitar duplicação
+                    nomeAulaExibicao = nomeAulaExibicao.replace(nomeDisciplina, '').trim();
+                    // Remover " - " inicial se existir
+                    if (nomeAulaExibicao.indexOf(' - ') === 0) {
+                        nomeAulaExibicao = nomeAulaExibicao.substring(3);
+                    }
+                }
+                
                 const divAula = document.createElement('div');
                 divAula.className = 'calendario-aula';
                 divAula.setAttribute('data-aula-id', aula.id);
                 divAula.setAttribute('data-disciplina-id', aula.disciplina_id);
                 divAula.style.cssText = `background: ${corDisciplina}; color: white; padding: 6px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; ${ehUltima ? 'border: 2px solid #fff; box-shadow: 0 0 0 2px ' + corDisciplina + ';' : ''}`;
                 divAula.onclick = () => verDetalhesAula(aula.id);
-                divAula.title = nomeDisciplina + ' - ' + aula.nome_aula;
+                divAula.title = aula.nome_aula;
                 
                 divAula.innerHTML = `
                     <div style="font-weight: 600; margin-bottom: 2px;">${nomeDisciplina.substring(0, 15)}</div>
-                    <div style="opacity: 0.9; font-size: 0.7rem;">${aula.nome_aula.substring(0, 20)}</div>
+                    ${nomeAulaExibicao ? `<div style="opacity: 0.9; font-size: 0.7rem;">${nomeAulaExibicao.substring(0, 20)}</div>` : ''}
                     ${ehUltima ? '<div style="font-size: 0.65rem; margin-top: 2px; opacity: 0.95;"><i class="fas fa-flag"></i> Última</div>' : ''}
                 `;
                 
