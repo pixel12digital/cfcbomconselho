@@ -417,6 +417,10 @@ class TurmaTeoricaManager {
                 ];
             }
             
+            // Normalizar disciplina uma única vez no início
+            $disciplinaNormalizada = $this->normalizarDisciplina($dados['disciplina']);
+            $dados['disciplina'] = $disciplinaNormalizada; // Atualizar nos dados para usar nas validações
+            
             // Verificar conflitos de horário
             $conflitos = $this->verificarConflitosHorario($dados, $resultadoTurma['dados']);
             if (!$conflitos['disponivel']) {
@@ -430,8 +434,8 @@ class TurmaTeoricaManager {
             
             $this->db->beginTransaction();
             
-            // Calcular ordem da disciplina
-            $ordemDisciplina = $this->obterProximaOrdemDisciplina($dados['turma_id'], $dados['disciplina']);
+            // Calcular ordem da disciplina (usar disciplina normalizada)
+            $ordemDisciplina = $this->obterProximaOrdemDisciplina($dados['turma_id'], $disciplinaNormalizada);
             $ordemGlobal = $this->obterProximaOrdemGlobal($dados['turma_id']);
             
             // Agendar as aulas (pode ser mais de uma no mesmo dia)
@@ -444,8 +448,8 @@ class TurmaTeoricaManager {
                 
                 $aulaId = $this->db->insert('turma_aulas_agendadas', [
                     'turma_id' => $dados['turma_id'],
-                    'disciplina' => $dados['disciplina'],
-                    'nome_aula' => $this->gerarNomeAula($dados['disciplina'], $ordemDisciplina + $i),
+                    'disciplina' => $disciplinaNormalizada,
+                    'nome_aula' => $this->gerarNomeAula($disciplinaNormalizada, $ordemDisciplina + $i),
                     'instrutor_id' => $dados['instrutor_id'],
                     'sala_id' => $resultadoTurma['dados']['sala_id'],
                     'data_aula' => $dados['data_aula'],
@@ -1264,8 +1268,61 @@ class TurmaTeoricaManager {
      * @param int $qtdAulasNovas Quantidade de aulas a agendar
      * @return array Resultado da validação
      */
+    /**
+     * Normalizar nome da disciplina para formato do banco (remover acentos, converter para lowercase com underscores)
+     */
+    private function normalizarDisciplina($disciplina) {
+        if (empty($disciplina)) {
+            return '';
+        }
+        
+        // Mapeamento de acentos para caracteres sem acento
+        $acentos = [
+            'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a',
+            'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+            'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+            'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
+            'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+            'ç' => 'c', 'ñ' => 'n',
+            'À' => 'a', 'Á' => 'a', 'Â' => 'a', 'Ã' => 'a', 'Ä' => 'a',
+            'È' => 'e', 'É' => 'e', 'Ê' => 'e', 'Ë' => 'e',
+            'Ì' => 'i', 'Í' => 'i', 'Î' => 'i', 'Ï' => 'i',
+            'Ò' => 'o', 'Ó' => 'o', 'Ô' => 'o', 'Õ' => 'o', 'Ö' => 'o',
+            'Ù' => 'u', 'Ú' => 'u', 'Û' => 'u', 'Ü' => 'u',
+            'Ç' => 'c', 'Ñ' => 'n'
+        ];
+        
+        // Converter para lowercase e remover acentos
+        $normalizado = strtolower($disciplina);
+        $normalizado = strtr($normalizado, $acentos);
+        
+        // Se já estiver no formato correto (com underscores), remover "de", "da", "do"
+        if (strpos($normalizado, '_') !== false) {
+            // Remover palavras comuns: de, da, do, das, dos
+            $normalizado = preg_replace('/\b(de|da|do|das|dos)\b_?/i', '', $normalizado);
+            $normalizado = preg_replace('/_+/', '_', $normalizado); // Remover underscores duplos
+            $normalizado = trim($normalizado, '_'); // Remover underscores no início/fim
+            return $normalizado;
+        }
+        
+        // Remover palavras comuns: de, da, do, das, dos, e, a, o
+        $normalizado = preg_replace('/\b(de|da|do|das|dos|e|a|o|as|os)\b/i', '', $normalizado);
+        
+        // Converter espaços para underscores
+        $normalizado = preg_replace('/\s+/', '_', trim($normalizado));
+        
+        // Remover underscores duplos e limpar
+        $normalizado = preg_replace('/_+/', '_', $normalizado);
+        $normalizado = trim($normalizado, '_');
+        
+        return $normalizado;
+    }
+    
     private function verificarCargaHorariaDisciplina($turmaId, $disciplina, $qtdAulasNovas) {
         try {
+            // Normalizar disciplina para formato do banco (remover acentos)
+            $disciplinaNormalizada = $this->normalizarDisciplina($disciplina);
+            
             // Primeiro, buscar o curso_tipo da turma
             $turma = $this->db->fetch("SELECT curso_tipo FROM turmas_teoricas WHERE id = ?", [$turmaId]);
             
@@ -1279,7 +1336,7 @@ class TurmaTeoricaManager {
             
             $cursoTipo = $turma['curso_tipo'];
             
-            error_log("DEBUG verificarCargaHoraria: turma_id={$turmaId}, curso_tipo={$cursoTipo}, disciplina={$disciplina}");
+            error_log("DEBUG verificarCargaHoraria: turma_id={$turmaId}, curso_tipo={$cursoTipo}, disciplina_original={$disciplina}, disciplina_normalizada={$disciplinaNormalizada}");
             
             // Agora buscar a carga horária máxima da disciplina para este curso
             $cargaMaxima = $this->db->fetch("
@@ -1288,7 +1345,7 @@ class TurmaTeoricaManager {
                 WHERE dc.curso_tipo = ?
                     AND dc.disciplina = ?
                     AND dc.ativa = 1
-            ", [$cursoTipo, $disciplina]);
+            ", [$cursoTipo, $disciplinaNormalizada]);
             
             error_log("DEBUG verificarCargaHoraria: resultado=" . json_encode($cargaMaxima));
             
@@ -1299,14 +1356,31 @@ class TurmaTeoricaManager {
                     WHERE curso_tipo = ?
                 ", [$cursoTipo]);
                 
-                error_log("DEBUG: Total de disciplinas configuradas para curso '{$cursoTipo}': " . ($configExiste['total'] ?? 0));
+                error_log("❌ [DEBUG verificarCargaHoraria] Total de disciplinas configuradas para curso '{$cursoTipo}': " . ($configExiste['total'] ?? 0));
                 
                 $disciplinasExistentes = $this->db->fetchAll("
-                    SELECT disciplina, nome_disciplina FROM disciplinas_configuracao 
+                    SELECT disciplina, nome_disciplina, aulas_obrigatorias FROM disciplinas_configuracao 
                     WHERE curso_tipo = ? AND ativa = 1
                 ", [$cursoTipo]);
                 
-                error_log("DEBUG: Disciplinas existentes para curso '{$cursoTipo}': " . json_encode($disciplinasExistentes));
+                error_log("❌ [DEBUG verificarCargaHoraria] Disciplinas existentes para curso '{$cursoTipo}': " . json_encode($disciplinasExistentes));
+                
+                // Tentar busca case-insensitive
+                $buscaCaseInsensitive = $this->db->fetch("
+                    SELECT disciplina, nome_disciplina, aulas_obrigatorias FROM disciplinas_configuracao 
+                    WHERE curso_tipo = ? AND LOWER(disciplina) = LOWER(?) AND ativa = 1
+                ", [$cursoTipo, $disciplinaNormalizada]);
+                
+                error_log("🔍 [DEBUG verificarCargaHoraria] Busca case-insensitive: " . ($buscaCaseInsensitive ? json_encode($buscaCaseInsensitive) : 'NULL'));
+                
+                // Verificar se existe alguma disciplina similar
+                $disciplinasSimilares = $this->db->fetchAll("
+                    SELECT disciplina, nome_disciplina FROM disciplinas_configuracao 
+                    WHERE curso_tipo = ? AND ativa = 1
+                    AND (disciplina LIKE ? OR LOWER(disciplina) LIKE ?)
+                ", [$cursoTipo, "%{$disciplinaNormalizada}%", "%" . strtolower($disciplinaNormalizada) . "%"]);
+                
+                error_log("🔍 [DEBUG verificarCargaHoraria] Disciplinas similares encontradas: " . json_encode($disciplinasSimilares));
                 
                 return [
                     'disponivel' => false,
@@ -1324,14 +1398,14 @@ class TurmaTeoricaManager {
                 WHERE turma_id = ? 
                 AND disciplina = ? 
                 AND status IN ('agendada', 'realizada')
-            ", [$turmaId, $disciplina]);
+            ", [$turmaId, $disciplinaNormalizada]);
             
             $totalAgendadas = (int)$aulasAgendadas['total'];
             $totalAposAgendamento = $totalAgendadas + $qtdAulasNovas;
             
             // Verificar se disciplina já está completa
             if ($totalAgendadas >= $cargaMaximaAulas) {
-                $nomeDisciplina = $this->obterNomeDisciplina($disciplina);
+                $nomeDisciplina = $this->obterNomeDisciplina($disciplinaNormalizada);
                 return [
                     'disponivel' => false,
                     'mensagem' => "❌ DISCIPLINA COMPLETA: A disciplina '{$nomeDisciplina}' já possui todas as {$cargaMaximaAulas} aulas obrigatórias agendadas. Não é possível adicionar mais aulas.",
@@ -1342,7 +1416,7 @@ class TurmaTeoricaManager {
             }
             
             if ($totalAposAgendamento > $cargaMaximaAulas) {
-                $nomeDisciplina = $this->obterNomeDisciplina($disciplina);
+                $nomeDisciplina = $this->obterNomeDisciplina($disciplinaNormalizada);
                 $aulasRestantes = $cargaMaximaAulas - $totalAgendadas;
                 return [
                     'disponivel' => false,

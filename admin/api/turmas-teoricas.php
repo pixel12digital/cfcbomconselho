@@ -378,14 +378,39 @@ function handleObterDisciplinas($turmaManager) {
 }
 
 function handleVerificarConflitos($turmaManager) {
+    error_log("🔍 [DEBUG handleVerificarConflitos] INÍCIO");
+    error_log("🔍 [DEBUG] GET params: " . json_encode($_GET));
+    
     $dados = [
         'turma_id' => $_GET['turma_id'] ?? null,
         'disciplina' => $_GET['disciplina'] ?? null,
         'instrutor_id' => $_GET['instrutor_id'] ?? null,
         'data_aula' => $_GET['data_aula'] ?? null,
         'hora_inicio' => $_GET['hora_inicio'] ?? null,
-        'quantidade_aulas' => isset($_GET['quantidade_aulas']) ? (int)$_GET['quantidade_aulas'] : 1
+        'quantidade_aulas' => isset($_GET['quantidade_aulas']) ? (int)$_GET['quantidade_aulas'] : 1,
+        'aula_id' => $_GET['aula_id'] ?? null // Para edição, pode ter aula_id
     ];
+    
+    error_log("🔍 [DEBUG] Dados processados: " . json_encode($dados));
+    
+    // Se disciplina não veio, tentar buscar da aula existente (modo edição)
+    if (empty($dados['disciplina']) && !empty($dados['aula_id'])) {
+        error_log("🔍 [DEBUG] Disciplina vazia, buscando da aula existente: aula_id={$dados['aula_id']}");
+        $db = Database::getInstance();
+        $aulaExistente = $db->fetch("SELECT disciplina, nome_aula FROM turma_aulas_agendadas WHERE id = ?", [$dados['aula_id']]);
+        error_log("🔍 [DEBUG] Aula existente: " . json_encode($aulaExistente));
+        if ($aulaExistente && !empty($aulaExistente['disciplina'])) {
+            $dados['disciplina'] = $aulaExistente['disciplina'];
+            error_log("🔍 [DEBUG] Disciplina obtida da aula existente: '{$dados['disciplina']}'");
+        }
+    }
+    
+    // Normalizar disciplina antes de validar
+    $disciplinaOriginal = $dados['disciplina'];
+    if (!empty($dados['disciplina'])) {
+        $dados['disciplina'] = normalizarDisciplinaAPI($dados['disciplina']);
+        error_log("🔍 [DEBUG] Disciplina normalizada: '{$disciplinaOriginal}' -> '{$dados['disciplina']}'");
+    }
     
     if (!$dados['turma_id'] || !$dados['instrutor_id'] || !$dados['data_aula'] || !$dados['hora_inicio'] || !$dados['disciplina']) {
         http_response_code(400);
@@ -418,8 +443,10 @@ function handleVerificarConflitos($turmaManager) {
         $conflitos = [];
         $qtdAulas = $dados['quantidade_aulas'];
         
-        // 1. Verificar carga horária da disciplina
+        // 1. Verificar carga horária da disciplina (já normalizada acima)
+        error_log("🔍 [DEBUG] Chamando verificarCargaHorariaDisciplinaAPI com: turma_id={$dados['turma_id']}, disciplina='{$dados['disciplina']}', qtdAulas={$qtdAulas}");
         $validacaoCargaHoraria = verificarCargaHorariaDisciplinaAPI($turmaManager, $dados['turma_id'], $dados['disciplina'], $qtdAulas);
+        error_log("🔍 [DEBUG] Resultado verificarCargaHorariaDisciplinaAPI: " . json_encode($validacaoCargaHoraria));
         if (!$validacaoCargaHoraria['disponivel']) {
             http_response_code(200);
             echo json_encode($validacaoCargaHoraria, JSON_UNESCAPED_UNICODE);
@@ -547,7 +574,7 @@ function handleVerificarConflitos($turmaManager) {
         echo json_encode([
             'sucesso' => true,
             'disponivel' => true,
-            'mensagem' => '✅ Horário disponível! Você pode agendar as aulas.'
+            'mensagem' => 'Horário disponível! Você pode agendar as aulas.'
         ], JSON_UNESCAPED_UNICODE);
         
     } catch (Exception $e) {
@@ -573,30 +600,124 @@ function calcularHorarioFimAPI($horarioInicio) {
 }
 
 // Função auxiliar para verificar carga horária
+/**
+ * Normalizar nome da disciplina para formato do banco (remover acentos, converter para lowercase com underscores)
+ */
+function normalizarDisciplinaAPI($disciplina) {
+    if (empty($disciplina)) {
+        return '';
+    }
+    
+    // Mapeamento de acentos para caracteres sem acento
+    $acentos = [
+        'à' => 'a', 'á' => 'a', 'â' => 'a', 'ã' => 'a', 'ä' => 'a',
+        'è' => 'e', 'é' => 'e', 'ê' => 'e', 'ë' => 'e',
+        'ì' => 'i', 'í' => 'i', 'î' => 'i', 'ï' => 'i',
+        'ò' => 'o', 'ó' => 'o', 'ô' => 'o', 'õ' => 'o', 'ö' => 'o',
+        'ù' => 'u', 'ú' => 'u', 'û' => 'u', 'ü' => 'u',
+        'ç' => 'c', 'ñ' => 'n',
+        'À' => 'a', 'Á' => 'a', 'Â' => 'a', 'Ã' => 'a', 'Ä' => 'a',
+        'È' => 'e', 'É' => 'e', 'Ê' => 'e', 'Ë' => 'e',
+        'Ì' => 'i', 'Í' => 'i', 'Î' => 'i', 'Ï' => 'i',
+        'Ò' => 'o', 'Ó' => 'o', 'Ô' => 'o', 'Õ' => 'o', 'Ö' => 'o',
+        'Ù' => 'u', 'Ú' => 'u', 'Û' => 'u', 'Ü' => 'u',
+        'Ç' => 'c', 'Ñ' => 'n'
+    ];
+    
+    // Converter para lowercase e remover acentos
+    $normalizado = strtolower($disciplina);
+    $normalizado = strtr($normalizado, $acentos);
+    
+    // Se já estiver no formato correto (com underscores), remover "de", "da", "do"
+    if (strpos($normalizado, '_') !== false) {
+        // Remover palavras comuns: de, da, do, das, dos
+        $normalizado = preg_replace('/\b(de|da|do|das|dos)\b_?/i', '', $normalizado);
+        $normalizado = preg_replace('/_+/', '_', $normalizado); // Remover underscores duplos
+        $normalizado = trim($normalizado, '_'); // Remover underscores no início/fim
+        return $normalizado;
+    }
+    
+    // Remover palavras comuns: de, da, do, das, dos, e, a, o
+    $normalizado = preg_replace('/\b(de|da|do|das|dos|e|a|o|as|os)\b/i', '', $normalizado);
+    
+    // Converter espaços para underscores
+    $normalizado = preg_replace('/\s+/', '_', trim($normalizado));
+    
+    // Remover underscores duplos e limpar
+    $normalizado = preg_replace('/_+/', '_', $normalizado);
+    $normalizado = trim($normalizado, '_');
+    
+    return $normalizado;
+}
+
 function verificarCargaHorariaDisciplinaAPI($turmaManager, $turmaId, $disciplina, $qtdAulasNovas) {
     try {
+        error_log("🔍 [DEBUG verificarCargaHorariaDisciplinaAPI] INÍCIO");
+        error_log("🔍 [DEBUG] Parâmetros recebidos: turmaId={$turmaId}, disciplina='{$disciplina}', qtdAulasNovas={$qtdAulasNovas}");
+        
         $db = Database::getInstance();
+        
+        // Normalizar disciplina para formato do banco (remover acentos)
+        $disciplinaNormalizada = normalizarDisciplinaAPI($disciplina);
+        error_log("🔍 [DEBUG] Disciplina normalizada: '{$disciplinaNormalizada}'");
         
         // Buscar curso_tipo da turma
         $turma = $db->fetch("SELECT curso_tipo FROM turmas_teoricas WHERE id = ?", [$turmaId]);
         if (!$turma) {
+            error_log("❌ [DEBUG] Turma não encontrada: turmaId={$turmaId}");
             return [
                 'disponivel' => false,
                 'mensagem' => 'Turma não encontrada'
             ];
         }
         
+        $cursoTipo = $turma['curso_tipo'];
+        error_log("🔍 [DEBUG] Curso tipo encontrado: '{$cursoTipo}'");
+        
+        // Buscar todas as disciplinas configuradas para debug
+        $todasDisciplinas = $db->fetchAll("
+            SELECT disciplina, nome_disciplina, aulas_obrigatorias
+            FROM disciplinas_configuracao
+            WHERE curso_tipo = ? AND ativa = 1
+        ", [$cursoTipo]);
+        error_log("🔍 [DEBUG] Total de disciplinas configuradas para curso '{$cursoTipo}': " . count($todasDisciplinas));
+        error_log("🔍 [DEBUG] Disciplinas configuradas: " . json_encode($todasDisciplinas));
+        
         // Buscar carga horária máxima
+        error_log("🔍 [DEBUG] Buscando disciplina no banco: curso_tipo='{$cursoTipo}', disciplina='{$disciplinaNormalizada}'");
         $cargaMaxima = $db->fetch("
             SELECT aulas_obrigatorias
             FROM disciplinas_configuracao
             WHERE curso_tipo = ? AND disciplina = ? AND ativa = 1
-        ", [$turma['curso_tipo'], $disciplina]);
+        ", [$cursoTipo, $disciplinaNormalizada]);
         
+        error_log("🔍 [DEBUG] Resultado da busca: " . ($cargaMaxima ? json_encode($cargaMaxima) : 'NULL'));
+        
+        // Se não encontrou, fazer busca case-insensitive para debug
         if (!$cargaMaxima) {
+            error_log("⚠️ [DEBUG] Disciplina não encontrada com busca exata. Tentando busca case-insensitive...");
+            $cargaMaximaCaseInsensitive = $db->fetch("
+                SELECT disciplina, nome_disciplina, aulas_obrigatorias
+                FROM disciplinas_configuracao
+                WHERE curso_tipo = ? AND LOWER(disciplina) = LOWER(?) AND ativa = 1
+            ", [$cursoTipo, $disciplinaNormalizada]);
+            error_log("🔍 [DEBUG] Busca case-insensitive: " . ($cargaMaximaCaseInsensitive ? json_encode($cargaMaximaCaseInsensitive) : 'NULL'));
+            
+            // Preparar informações de debug para retornar
+            $debugInfo = [
+                'disciplina_original' => $disciplina,
+                'disciplina_normalizada' => $disciplinaNormalizada,
+                'curso_tipo' => $cursoTipo,
+                'turma_id' => $turmaId,
+                'total_disciplinas_configuradas' => count($todasDisciplinas),
+                'disciplinas_configuradas' => $todasDisciplinas,
+                'busca_case_insensitive' => $cargaMaximaCaseInsensitive
+            ];
+            
             return [
                 'disponivel' => false,
-                'mensagem' => "Disciplina '{$disciplina}' não encontrada na configuração do curso"
+                'mensagem' => "Disciplina '{$disciplina}' (normalizada: '{$disciplinaNormalizada}') não encontrada na configuração do curso '{$cursoTipo}'",
+                'debug_info' => $debugInfo
             ];
         }
         
@@ -607,7 +728,7 @@ function verificarCargaHorariaDisciplinaAPI($turmaManager, $turmaId, $disciplina
             SELECT COUNT(*) as total
             FROM turma_aulas_agendadas 
             WHERE turma_id = ? AND disciplina = ? AND status IN ('agendada', 'realizada')
-        ", [$turmaId, $disciplina]);
+        ", [$turmaId, $disciplinaNormalizada]);
         
         $totalAgendadas = (int)$aulasAgendadas['total'];
         $totalAposAgendamento = $totalAgendadas + $qtdAulasNovas;

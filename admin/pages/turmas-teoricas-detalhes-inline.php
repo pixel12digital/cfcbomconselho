@@ -6828,7 +6828,7 @@ document.addEventListener('DOMContentLoaded', function() {
         <div class="modal-header">
             <h3 id="modal_titulo">
                 <i class="fas fa-calendar-plus"></i>
-                📅 Agendar Nova Aula
+                Agendar Nova Aula
             </h3>
             <button type="button" class="btn-close" onclick="fecharModalAgendarAula()">
                 <i class="fas fa-times"></i>
@@ -7009,12 +7009,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 Cancelar
             </button>
             <button type="button" id="btnVerificarDisponibilidade" class="btn btn-outline-secondary" onclick="verificarDisponibilidadeModal()">
-                <i class="fas fa-search"></i>
-                🔍 Verificar Disponibilidade
+                <i class="fas fa-search"></i> Verificar Disponibilidade
             </button>
             <button type="button" id="btnAgendarAula" class="btn btn-primary" onclick="enviarAgendamentoModal()" disabled>
                 <i class="fas fa-plus"></i>
-                <span id="btnAgendarTexto">➕ Agendar Aula(s)</span>
+                <span id="btnAgendarTexto">Agendar Aula(s)</span>
             </button>
         </div>
     </div>
@@ -9199,10 +9198,10 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
     if (modalAcao) modalAcao.value = 'editar_aula';
     if (modalAulaId) modalAulaId.value = id;
     if (modalTitulo) {
-        modalTitulo.innerHTML = '<i class="fas fa-edit"></i> ✏️ Editar Agendamento';
+        modalTitulo.innerHTML = '<i class="fas fa-edit"></i> Editar Agendamento';
     }
     if (btnAgendarTexto) {
-        btnAgendarTexto.textContent = '💾 Salvar Alterações';
+        btnAgendarTexto.textContent = 'Salvar Alterações';
     }
     if (campoObservacoes) {
         campoObservacoes.style.display = 'block';
@@ -9240,12 +9239,20 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                     // Tentar extrair do nome
                     const partes = agendamento.nome_aula.split(' - ');
                     if (partes.length > 0) {
-                        // Buscar disciplina por nome
-                        disciplinaId = partes[0].toLowerCase().replace(/\s+/g, '_');
+                        // Normalizar: remover acentos e converter para formato do banco
+                        disciplinaId = partes[0].toLowerCase()
+                            .normalize('NFD')
+                            .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+                            .replace(/\s+/g, '_') // Converte espaços para underscore
+                            .replace(/ç/g, 'c') // Converte ç para c
+                            .replace(/ñ/g, 'n'); // Converte ñ para n
                     }
                 }
                 
-                if (modalDisciplinaId && disciplinaId) modalDisciplinaId.value = disciplinaId;
+                // Normalizar disciplina antes de preencher no campo
+                if (modalDisciplinaId && disciplinaId) {
+                    modalDisciplinaId.value = normalizarDisciplinaJS(disciplinaId);
+                }
                 if (modalDisciplinaNome && agendamento.nome_aula) {
                     // Extrair nome da disciplina (sem " - Aula X")
                     const nomeDisciplina = agendamento.nome_aula.split(' - ')[0];
@@ -9328,11 +9335,15 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                 if (!disciplinaId && agendamento.nome_aula) {
                     const partes = agendamento.nome_aula.split(' - ');
                     if (partes.length > 0) {
-                        disciplinaId = partes[0].toLowerCase().replace(/\s+/g, '_');
+                        // Normalizar disciplina extraída do nome da aula
+                        disciplinaId = normalizarDisciplinaJS(partes[0]);
                     }
                 }
                 
-                if (modalDisciplinaId && disciplinaId) modalDisciplinaId.value = disciplinaId;
+                // Normalizar disciplina antes de preencher no campo (caso já venha do banco)
+                if (modalDisciplinaId && disciplinaId) {
+                    modalDisciplinaId.value = normalizarDisciplinaJS(disciplinaId);
+                }
                 if (modalDisciplinaNome && agendamento.nome_aula) {
                     const nomeDisciplina = agendamento.nome_aula.split(' - ')[0];
                     modalDisciplinaNome.value = nomeDisciplina;
@@ -10401,7 +10412,12 @@ function enviarAgendamentoModal() {
     .then(response => response.json())
     .then(async data => {
         if (data.sucesso) {
-            mostrarMensagemModal('✅ ' + data.mensagem, 'success');
+            // Remover ícones duplicados da mensagem (se já tiver ✅, não adicionar outro)
+            let mensagem = data.mensagem || 'Operação realizada com sucesso!';
+            if (!mensagem.startsWith('✅') && !mensagem.startsWith('✓')) {
+                mensagem = '✅ ' + mensagem;
+            }
+            mostrarMensagemModal(mensagem, 'success');
             
             // Buscar os agendamentos criados para renderizar na tabela
             const ids = (data.aulas_agendadas || []).join(',');
@@ -10421,11 +10437,11 @@ function enviarAgendamentoModal() {
             // Fechar modal e resetar botão
             fecharModalAgendarAula();
             btnAgendar.disabled = false;
-            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> Agendar Aula(s)';
         } else {
             mostrarMensagemModal('❌ ' + (data.mensagem || 'Erro ao agendar aula. Tente novamente.'), 'error');
             btnAgendar.disabled = false;
-            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> Agendar Aula(s)';
         }
     })
     .catch(error => {
@@ -10806,6 +10822,56 @@ let turmaIdModal = <?= $turmaId ?>;
 let dataInicioModal = '';
 let dataFimModal = '';
 
+// Função para normalizar disciplina (remover acentos) - escopo global
+function normalizarDisciplinaJS(disciplina) {
+    if (!disciplina) return '';
+    
+    console.log('🔧 [normalizarDisciplinaJS] Entrada:', disciplina);
+    
+    let normalizado = disciplina;
+    
+    // Primeiro, remover acentos e converter para minúsculas (independente do formato)
+    normalizado = normalizado
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // Remove acentos
+        .replace(/ç/g, 'c') // Converte ç para c
+        .replace(/ñ/g, 'n'); // Converte ñ para n
+    
+    console.log('🔧 [normalizarDisciplinaJS] Após remover acentos:', normalizado);
+    
+    // Se já tiver underscores, remover "de", "da", "do" que estão entre underscores
+    if (normalizado.includes('_')) {
+        // Remover "_de_", "_da_", "_do_", etc. e também no início/fim
+        normalizado = normalizado
+            .replace(/_(de|da|do|das|dos)_/gi, '_') // Remove palavras comuns entre underscores
+            .replace(/^(de|da|do|das|dos)_/gi, '') // Remove no início
+            .replace(/_(de|da|do|das|dos)$/gi, '') // Remove no fim
+            .replace(/_+/g, '_') // Remover underscores duplos
+            .replace(/^_+|_+$/g, ''); // Remover underscores no início/fim
+        console.log('🔧 [normalizarDisciplinaJS] Após remover palavras comuns (underscore):', normalizado);
+        return normalizado;
+    }
+    
+    // Se tiver espaços, remover palavras comuns primeiro
+    if (normalizado.includes(' ')) {
+        // Remover palavras comuns com word boundaries
+        normalizado = normalizado.replace(/\s+(de|da|do|das|dos|e|a|o|as|os)(\s+|$)/gi, ' ');
+        normalizado = normalizado.replace(/^(de|da|do|das|dos|e|a|o|as|os)\s+/gi, '');
+        normalizado = normalizado.trim();
+        console.log('🔧 [normalizarDisciplinaJS] Após remover palavras comuns (espaço):', normalizado);
+    }
+    
+    // Converter espaços para underscores
+    normalizado = normalizado
+        .replace(/\s+/g, '_') // Converte espaços para underscore
+        .replace(/_+/g, '_') // Remover underscores duplos
+        .replace(/^_+|_+$/g, ''); // Remover underscores no início/fim
+    
+    console.log('🔧 [normalizarDisciplinaJS] Resultado final:', normalizado);
+    return normalizado;
+}
+
 // Função para abrir o modal de agendamento
 function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim) {
     try {
@@ -10833,8 +10899,8 @@ function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim
             return;
         }
         
-        // Preencher campos se existirem
-        if (modalDisciplinaId) modalDisciplinaId.value = disciplinaId;
+        // Preencher campos se existirem (normalizar disciplina)
+        if (modalDisciplinaId) modalDisciplinaId.value = normalizarDisciplinaJS(disciplinaId);
         if (modalDisciplinaNome) modalDisciplinaNome.value = disciplinaNome;
         if (modalDataAula) {
             // Definir limites de data baseado no período da turma
@@ -10872,10 +10938,10 @@ function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim
         if (modalAcao) modalAcao.value = 'agendar_aula';
         if (modalAulaId) modalAulaId.value = '';
         if (modalTitulo) {
-            modalTitulo.innerHTML = '<i class="fas fa-calendar-plus"></i> 📅 Agendar Nova Aula';
+            modalTitulo.innerHTML = '<i class="fas fa-calendar-plus"></i> Agendar Nova Aula';
         }
         if (btnAgendarTexto) {
-            btnAgendarTexto.textContent = '➕ Agendar Aula(s)';
+            btnAgendarTexto.textContent = 'Agendar Aula(s)';
         }
         if (campoObservacoes) {
             campoObservacoes.style.display = 'none';
@@ -10923,7 +10989,10 @@ function selecionarDisciplinaModal(disciplinaId, disciplinaNome) {
     const modalDisciplinaId = document.getElementById('modal_disciplina_id');
     const modalDisciplinaNome = document.getElementById('modal_disciplina_nome');
     
-    if (modalDisciplinaId) modalDisciplinaId.value = disciplinaId;
+    // Normalizar disciplina antes de salvar no campo
+    const disciplinaNormalizada = normalizarDisciplinaJS(disciplinaId);
+    
+    if (modalDisciplinaId) modalDisciplinaId.value = disciplinaNormalizada;
     if (modalDisciplinaNome) modalDisciplinaNome.value = disciplinaNome;
     
     // Destacar disciplina selecionada
@@ -11354,10 +11423,49 @@ function verificarDisponibilidadeModal() {
     const instrutor = document.getElementById('modal_instrutor_id').value;
     const dataAula = document.getElementById('modal_data_aula').value;
     const horaInicio = document.getElementById('modal_hora_inicio').value;
-    const disciplinaId = document.getElementById('modal_disciplina_id').value;
+    let disciplinaId = document.getElementById('modal_disciplina_id').value;
     const quantidadeAulas = document.getElementById('modal_quantidade_aulas').value || 1;
     
+    console.log('🔍 [DEBUG FRONTEND] Verificando disponibilidade - Valores iniciais:', {
+        instrutor,
+        dataAula,
+        horaInicio,
+        disciplinaId_original: disciplinaId,
+        disciplinaId_tipo: typeof disciplinaId,
+        disciplinaId_length: disciplinaId ? disciplinaId.length : 0,
+        quantidadeAulas
+    });
+    
+    // Normalizar disciplina antes de enviar
+    const disciplinaOriginal = disciplinaId;
+    if (disciplinaId) {
+        console.log('🔍 [DEBUG FRONTEND] ANTES da normalização:', {
+            valor: disciplinaId,
+            tem_acentos: /[àáâãäèéêëìíîïòóôõöùúûüçñ]/i.test(disciplinaId),
+            tem_espacos: disciplinaId.includes(' '),
+            tem_underscores: disciplinaId.includes('_'),
+            tem_de: disciplinaId.toLowerCase().includes('de')
+        });
+        
+        disciplinaId = normalizarDisciplinaJS(disciplinaId);
+        
+        console.log('🔍 [DEBUG FRONTEND] DEPOIS da normalização:', {
+            valor_original: disciplinaOriginal,
+            valor_normalizado: disciplinaId,
+            tem_acentos: /[àáâãäèéêëìíîïòóôõöùúûüçñ]/i.test(disciplinaId),
+            tem_espacos: disciplinaId.includes(' '),
+            tem_underscores: disciplinaId.includes('_'),
+            tem_de: disciplinaId.includes('de')
+        });
+    }
+    
     if (!instrutor || !dataAula || !horaInicio || !disciplinaId) {
+        console.error('❌ [DEBUG FRONTEND] Campos obrigatórios faltando:', {
+            instrutor: !!instrutor,
+            dataAula: !!dataAula,
+            horaInicio: !!horaInicio,
+            disciplinaId: !!disciplinaId
+        });
         mostrarMensagemModal('❌ Preencha todos os campos obrigatórios antes de verificar conflitos.', 'error');
         return;
     }
@@ -11374,6 +11482,10 @@ function verificarDisponibilidadeModal() {
     if (alertaConflitos) alertaConflitos.style.display = 'none';
     mostrarMensagemModal('', '');
     
+    // Obter aula_id se estiver editando
+    const modalAulaId = document.getElementById('modal_aula_id');
+    const aulaId = modalAulaId ? modalAulaId.value : null;
+    
     // Construir URL com parâmetros
     const params = new URLSearchParams({
         acao: 'verificar_conflitos',
@@ -11385,7 +11497,22 @@ function verificarDisponibilidadeModal() {
         quantidade_aulas: quantidadeAulas
     });
     
-    console.log('🔧 [DEBUG] Verificando disponibilidade:', params.toString());
+    // Adicionar aula_id se estiver editando (para buscar disciplina da aula existente se necessário)
+    if (aulaId) {
+        params.set('aula_id', aulaId);
+        console.log('🔍 [DEBUG FRONTEND] Modo edição detectado - aula_id:', aulaId);
+    }
+    
+    console.log('🔍 [DEBUG FRONTEND] Parâmetros finais enviados:', {
+        url: params.toString(),
+        turma_id: turmaIdModal,
+        disciplina: disciplinaId,
+        instrutor_id: instrutor,
+        data_aula: dataAula,
+        hora_inicio: horaInicio,
+        quantidade_aulas: quantidadeAulas,
+        aula_id: aulaId || null
+    });
     
     // Chamar API real de verificação
     fetch(getBasePath() + '/admin/api/turmas-teoricas.php?' + params.toString(), {
@@ -11399,16 +11526,58 @@ function verificarDisponibilidadeModal() {
         return response.json();
     })
     .then(data => {
-        console.log('🔧 [DEBUG] Resultado da verificação:', data);
+        console.log('🔧 [DEBUG] Resultado completo da verificação:', data);
+        
+        // Se houver informações de debug, logar detalhadamente
+        if (data.debug_info) {
+            console.error('🔍 [DEBUG FRONTEND] Informações de Debug Detalhadas:', {
+                disciplina_original: data.debug_info.disciplina_original,
+                disciplina_normalizada: data.debug_info.disciplina_normalizada,
+                curso_tipo: data.debug_info.curso_tipo,
+                turma_id: data.debug_info.turma_id,
+                total_disciplinas: data.debug_info.total_disciplinas_configuradas,
+                busca_case_insensitive: data.debug_info.busca_case_insensitive
+            });
+            console.error('🔍 [DEBUG FRONTEND] Todas as disciplinas configuradas:', JSON.stringify(data.debug_info.disciplinas_configuradas, null, 2));
+            console.error('🔍 [DEBUG FRONTEND] Nomes das disciplinas no banco:', 
+                JSON.stringify(data.debug_info.disciplinas_configuradas.map(d => ({ 
+                    disciplina: d.disciplina, 
+                    nome: d.nome_disciplina 
+                })), null, 2)
+            );
+            console.error('🔍 [DEBUG FRONTEND] Comparação:', JSON.stringify({
+                'Buscando': data.debug_info.disciplina_normalizada,
+                'Disciplinas no banco': data.debug_info.disciplinas_configuradas.map(d => d.disciplina),
+                'Match exato?': data.debug_info.disciplinas_configuradas.some(d => d.disciplina === data.debug_info.disciplina_normalizada),
+                'Match case-insensitive?': data.debug_info.disciplinas_configuradas.some(d => d.disciplina.toLowerCase() === data.debug_info.disciplina_normalizada.toLowerCase())
+            }, null, 2));
+            
+            // Mostrar diferença de caracteres
+            const buscando = data.debug_info.disciplina_normalizada;
+            const noBanco = data.debug_info.disciplinas_configuradas.map(d => d.disciplina);
+            console.error('🔍 [DEBUG FRONTEND] Análise detalhada:', {
+                'Buscando (chars)': buscando.split(''),
+                'Buscando (length)': buscando.length,
+                'Primeira disciplina no banco': noBanco[0] || null,
+                'Primeira disciplina (chars)': noBanco[0] ? noBanco[0].split('') : null,
+                'Primeira disciplina (length)': noBanco[0] ? noBanco[0].length : null,
+                'São iguais?': buscando === noBanco[0]
+            });
+        }
         
         btnVerificar.disabled = false;
-        btnVerificar.innerHTML = '<i class="fas fa-search"></i> 🔍 Verificar Disponibilidade';
+        btnVerificar.innerHTML = '<i class="fas fa-search"></i> Verificar Disponibilidade';
         
         if (data.sucesso && data.disponivel) {
             // Horário disponível
             if (alertaConflitos) alertaConflitos.style.display = 'none';
             btnAgendar.disabled = false;
-            mostrarMensagemModal('✅ ' + (data.mensagem || 'Horário disponível! Você pode agendar as aulas.'), 'success');
+            // Remover ícones duplicados da mensagem (se já tiver ✅, não adicionar outro)
+            let mensagem = data.mensagem || 'Horário disponível! Você pode agendar as aulas.';
+            if (!mensagem.startsWith('✅') && !mensagem.startsWith('✓')) {
+                mensagem = '✅ ' + mensagem;
+            }
+            mostrarMensagemModal(mensagem, 'success');
         } else {
             // Há conflitos
             if (alertaConflitos) {
@@ -11438,7 +11607,7 @@ function verificarDisponibilidadeModal() {
     .catch(error => {
         console.error('❌ [DEBUG] Erro ao verificar disponibilidade:', error);
         btnVerificar.disabled = false;
-        btnVerificar.innerHTML = '<i class="fas fa-search"></i> 🔍 Verificar Disponibilidade';
+        btnVerificar.innerHTML = '<i class="fas fa-search"></i> Verificar Disponibilidade';
         btnAgendar.disabled = true;
         mostrarMensagemModal('❌ Erro ao verificar disponibilidade. Tente novamente.', 'error');
     });
@@ -11479,7 +11648,14 @@ function enviarAgendamentoModal() {
     const instrutor = formData.get('instrutor_id');
     const dataAula = formData.get('data_aula');
     const horaInicio = formData.get('hora_inicio');
-    const disciplinaId = formData.get('disciplina');
+    let disciplinaId = formData.get('disciplina');
+    
+    // Normalizar disciplina antes de enviar
+    if (disciplinaId) {
+        disciplinaId = normalizarDisciplinaJS(disciplinaId);
+        formData.set('disciplina', disciplinaId); // Atualizar no formData
+    }
+    
     const quantidadeAulas = formData.get('quantidade_aulas') || 1;
     
     const btnAgendar = document.getElementById('btnAgendarAula');
@@ -11521,7 +11697,7 @@ function enviarAgendamentoModal() {
         if (!verificacao.sucesso || !verificacao.disponivel) {
             // Há conflitos, não permitir agendamento
             btnAgendar.disabled = true;
-            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> Agendar Aula(s)';
             
             const alertaConflitos = document.getElementById('alertaConflitosModal');
             if (alertaConflitos) {
@@ -11557,7 +11733,7 @@ function enviarAgendamentoModal() {
         if (btnAgendarTexto) {
             btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ' + btnAgendarTexto.textContent;
         } else {
-            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> Agendar Aula(s)';
         }
         mostrarMensagemModal('❌ Erro ao verificar disponibilidade. Tente novamente.', 'error');
     });
@@ -11590,7 +11766,12 @@ function enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao)
         console.log('🔧 [DEBUG] Dados recebidos do servidor:', data);
         
         if (data.sucesso) {
-            mostrarMensagemModal('✅ ' + data.mensagem, 'success');
+            // Remover ícones duplicados da mensagem (se já tiver ✅, não adicionar outro)
+            let mensagem = data.mensagem || 'Operação realizada com sucesso!';
+            if (!mensagem.startsWith('✅') && !mensagem.startsWith('✓')) {
+                mensagem = '✅ ' + mensagem;
+            }
+            mostrarMensagemModal(mensagem, 'success');
             
             const disciplinaId = formData.get('disciplina');
             
@@ -11642,7 +11823,7 @@ function enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao)
             if (btnAgendarTexto) {
                 btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ' + btnAgendarTexto.textContent;
             } else {
-                btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+                btnAgendar.innerHTML = '<i class="fas fa-plus"></i> Agendar Aula(s)';
             }
         } else {
             mostrarMensagemModal('❌ ' + (data.mensagem || 'Erro ao ' + (isEdicaoConfirmada ? 'salvar' : 'agendar') + ' aula. Tente novamente.'), 'error');
@@ -11650,7 +11831,7 @@ function enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao)
             if (btnAgendarTexto) {
                 btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ' + btnAgendarTexto.textContent;
             } else {
-                btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+                btnAgendar.innerHTML = '<i class="fas fa-plus"></i> Agendar Aula(s)';
             }
         }
     })
@@ -11661,7 +11842,7 @@ function enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao)
         if (btnAgendarTexto) {
             btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ' + btnAgendarTexto.textContent;
         } else {
-            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> Agendar Aula(s)';
         }
     });
 }
