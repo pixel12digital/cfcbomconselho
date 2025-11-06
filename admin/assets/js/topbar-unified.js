@@ -61,8 +61,19 @@ class TopbarUnified {
             topbar.style.right = '0';
             topbar.style.zIndex = '1000';
             
-            // Garantir que o body tenha padding-top correto
-            document.body.style.paddingTop = '64px';
+            // CRÍTICO: Usar variável CSS em vez de inline style para evitar duplicação
+            // Medir altura real da navbar e aplicar via CSS variable
+            const navbarHeight = topbar.offsetHeight || 64;
+            document.documentElement.style.setProperty('--navbar-h', `${navbarHeight}px`);
+            
+            // Remover qualquer padding-top inline do body (se existir)
+            document.body.style.paddingTop = '';
+            
+            // Remover qualquer margin-top inline do .admin-main (se existir)
+            const adminMain = document.querySelector('.admin-main, .admin-container');
+            if (adminMain) {
+                adminMain.style.marginTop = '';
+            }
             
             // Monitorar scroll para garantir que a topbar permaneça no topo
             this.monitorScroll();
@@ -84,8 +95,14 @@ class TopbarUnified {
                 topbar.style.right = '0';
                 topbar.style.zIndex = '1000';
                 
-                // Garantir que o body tenha padding-top correto
-                document.body.style.paddingTop = '64px';
+                // CRÍTICO: Atualizar variável CSS se a altura mudar, mas NÃO aplicar inline style
+                const navbarHeight = topbar.offsetHeight || 64;
+                document.documentElement.style.setProperty('--navbar-h', `${navbarHeight}px`);
+                
+                // Garantir que não há padding-top inline no body
+                if (document.body.style.paddingTop) {
+                    document.body.style.paddingTop = '';
+                }
             }
         }, { passive: true });
         

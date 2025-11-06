@@ -53,8 +53,19 @@ header[class*="header"] {
    AJUSTES DE LAYOUT PARA ELIMINAR GAP COMPLETAMENTE
    ===================================================== */
 
+/* CRÍTICO: Variável CSS para altura da navbar (será definida via JS) */
+:root {
+    --navbar-h: 64px;
+}
+
+/* CRÍTICO: Usar scroll-padding-top para compensar navbar fixa */
+html {
+    scroll-padding-top: var(--navbar-h);
+}
+
 body {
-    padding-top: 64px !important;
+    /* CRÍTICO: Padding-top apenas se necessário para não cobrir conteúdo */
+    padding-top: var(--navbar-h) !important;
     margin: 0 !important;
     /* Garantir que não haja espaçamento extra */
     padding-left: 0 !important;
@@ -72,18 +83,22 @@ body {
 }
 
 .admin-main {
-    margin-top: 64px !important;
+    /* CRÍTICO: margin-top ZERADO - a compensação da navbar já está no body.padding-top */
+    margin-top: 0 !important;
     margin-left: 70px !important;
-    padding: 24px !important;
-    min-height: calc(100vh - 64px) !important;
+    /* CRÍTICO: Padding reduzido para respiro consistente - alinhado ao respiro lateral */
+    padding: 14px 24px 24px 24px !important;
+    padding-top: 14px !important;
+    min-height: calc(100vh - var(--navbar-h)) !important;
+    box-sizing: border-box !important;
     /* Garantir que não haja espaçamento extra */
     margin-right: 0 !important;
     margin-bottom: 0 !important;
 }
 
 .admin-sidebar {
-    top: 64px !important;
-    height: calc(100vh - 64px) !important;
+    top: var(--navbar-h) !important;
+    height: calc(100vh - var(--navbar-h)) !important;
     /* Garantir que a sidebar seja sticky também */
     position: fixed !important;
     z-index: 999 !important;

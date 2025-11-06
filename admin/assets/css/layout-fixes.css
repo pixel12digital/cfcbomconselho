@@ -11,14 +11,25 @@
     box-sizing: border-box;
 }
 
+/* CRÍTICO: Variável CSS para altura da navbar (será definida via JS) */
+:root {
+    --navbar-h: 64px;
+}
+
 html, body {
     margin: 0 !important;
     padding: 0 !important;
     height: 100%;
 }
 
+/* CRÍTICO: Usar scroll-padding-top para compensar navbar fixa (sem somar com margin-top) */
+html {
+    scroll-padding-top: var(--navbar-h);
+}
+
 body {
-    padding-top: 64px !important;
+    /* CRÍTICO: Padding-top apenas se necessário para não cobrir conteúdo, mas sem somar com margin-top */
+    padding-top: var(--navbar-h) !important;
     margin: 0 !important;
     padding-left: 0 !important;
     padding-right: 0 !important;
@@ -74,10 +85,10 @@ body {
 
 .admin-sidebar {
     position: fixed !important;
-    top: 64px !important;
+    top: var(--navbar-h) !important;
     left: 0 !important;
     width: 70px !important;
-    height: calc(100vh - 64px) !important;
+    height: calc(100vh - var(--navbar-h)) !important;
     background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%) !important;
     box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15) !important;
     z-index: 999 !important;
@@ -93,21 +104,24 @@ body {
 .admin-main {
     flex: 1;
     margin-left: 70px !important;
-    margin-top: 64px !important;
-    padding: 24px !important;
-    min-height: calc(100vh - 64px) !important;
+    /* CRÍTICO: margin-top ZERADO - a compensação da navbar já está no body.padding-top */
+    margin-top: 0 !important;
+    /* CRÍTICO: Padding reduzido para respiro consistente - alinhado ao respiro lateral */
+    padding: 14px 24px 24px 24px !important;
+    min-height: calc(100vh - var(--navbar-h)) !important;
     background-color: #f8f9fa;
     margin-right: 0 !important;
     margin-bottom: 0 !important;
-    /* Garantir que não haja espaçamento superior */
-    padding-top: 24px !important;
+    box-sizing: border-box !important;
+    /* CRÍTICO: Padding-top reduzido para 14px (desktop) - alinhado ao respiro lateral */
+    padding-top: 14px !important;
 }
 
 /* =====================================================
    ELIMINAR GAPS EM TODOS OS ELEMENTOS
    ===================================================== */
 
-/* Resetar elementos que podem causar gap */
+/* CRÍTICO: Resetar elementos que podem causar gap - zerar margin-top do primeiro filho */
 .admin-main > *:first-child,
 .admin-main .page-header:first-child,
 .admin-main .container:first-child,
@@ -115,6 +129,16 @@ body {
 .admin-main .card:first-child {
     margin-top: 0 !important;
     padding-top: 0 !important;
+}
+
+/* CRÍTICO: Remover pseudo-elementos do primeiro filho que possam criar espaço */
+.admin-main > *:first-child::before,
+.admin-main > *:first-child::after {
+    display: none !important;
+    content: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 /* Corrigir elementos específicos do Bootstrap */
@@ -133,15 +157,33 @@ body {
     padding-top: 0 !important;
 }
 
-/* Corrigir elementos específicos do dashboard */
+/* CRÍTICO: Corrigir elementos específicos do dashboard - zerar margin-top do page-header */
 .stat-card,
 .chart-section,
-.page-header,
 .main-content,
 .content-wrapper,
 .page-wrapper {
     margin-top: 0 !important;
     padding-top: 0 !important;
+}
+
+/* CRÍTICO: Zerar margin-top do page-header (header da seção "Gestão de Turmas") */
+.page-header,
+.admin-main .page-header {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* CRÍTICO: Remover pseudo-elementos do page-header que possam criar espaço */
+.page-header::before,
+.page-header::after,
+.admin-main .page-header::before,
+.admin-main .page-header::after {
+    display: none !important;
+    content: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
 }
 
 /* =====================================================
@@ -201,7 +243,9 @@ header[class*="header"] {
     }
     
     .admin-main {
-        padding: 16px !important;
+        /* CRÍTICO: Padding reduzido em mobile - respiro de 10px no topo */
+        padding: 10px 16px 16px 16px !important;
+        padding-top: 10px !important;
     }
 }
 
@@ -211,7 +255,9 @@ header[class*="header"] {
     }
     
     .admin-main {
-        padding: 12px !important;
+        /* CRÍTICO: Padding reduzido em mobile pequeno - respiro de 8px no topo */
+        padding: 8px 12px 12px 12px !important;
+        padding-top: 8px !important;
     }
 }
 

@@ -2089,6 +2089,70 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     padding-bottom: 0 !important;
 }
 
+/* CRÍTICO: Zerar margin-top do .admin-main (a compensação da navbar está no body.padding-top) */
+.admin-main,
+.admin-container {
+    margin-top: 0 !important;
+}
+
+/* CRÍTICO: Remover qualquer inline style que possa estar aplicando margin-top */
+.admin-main[style*="margin-top"],
+.admin-container[style*="margin-top"] {
+    margin-top: 0 !important;
+}
+
+/* CRÍTICO: Reduzir padding-top do wrapper principal para respiro consistente */
+.admin-main {
+    padding-top: 14px !important;
+}
+
+@media (max-width: 768px) {
+    .admin-main {
+        padding-top: 10px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-main {
+        padding-top: 8px !important;
+    }
+}
+
+/* CRÍTICO: Garantir que o primeiro elemento dentro do admin-main não tenha margin-top */
+.admin-main > *:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* CRÍTICO: Zerar margin-top do page-header (header da seção "Gestão de Turmas") */
+.page-header,
+.admin-main .page-header {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* CRÍTICO: Remover pseudo-elementos do page-header que possam criar espaço */
+.page-header::before,
+.page-header::after,
+.admin-main .page-header::before,
+.admin-main .page-header::after {
+    display: none !important;
+    content: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* CRÍTICO: Remover pseudo-elementos do primeiro filho que possam criar espaço */
+.admin-main > *:first-child::before,
+.admin-main > *:first-child::after {
+    display: none !important;
+    content: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
 /* CRÍTICO: Garantir que o último elemento dentro do admin-main não tenha margin-bottom */
 .admin-main > *:last-child,
 .wizard-content > *:last-child,
@@ -2118,6 +2182,18 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 .wizard-content[style*="display: flex"] {
     gap: 0 !important;
     row-gap: 0 !important;
+}
+
+/* CRÍTICO: Garantir que não haja gap no topo do primeiro grupo de elementos */
+.admin-main > *:first-child {
+    margin-top: 0 !important;
+}
+
+/* CRÍTICO: Se o admin-main usar Grid/Flex, garantir que o primeiro row/item não tenha gap superior */
+.admin-main[style*="display: grid"] > *:first-child,
+.admin-main[style*="display: flex"] > *:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
 }
 
 /* Exceto para elementos que precisam de borda superior (como headers) */
@@ -11661,6 +11737,49 @@ function atualizarSecaoHistorico(disciplinaId, agendamentos) {
         `);
     }
 }
+
+// CRÍTICO: Garantir que estilos inline sejam removidos e variável CSS seja aplicada
+(function() {
+    function removerEstilosInlineDuplicados() {
+        // Remover padding-top inline do body (se existir)
+        if (document.body.style.paddingTop) {
+            document.body.style.paddingTop = '';
+        }
+        
+        // Remover margin-top inline do .admin-main e .admin-container (se existir)
+        const adminMain = document.querySelector('.admin-main');
+        const adminContainer = document.querySelector('.admin-container');
+        
+        if (adminMain && adminMain.style.marginTop) {
+            adminMain.style.marginTop = '';
+        }
+        
+        if (adminContainer && adminContainer.style.marginTop) {
+            adminContainer.style.marginTop = '';
+        }
+        
+        // Garantir que a variável CSS --navbar-h esteja definida
+        const topbar = document.querySelector('.topbar');
+        if (topbar) {
+            const navbarHeight = topbar.offsetHeight || 64;
+            document.documentElement.style.setProperty('--navbar-h', `${navbarHeight}px`);
+        }
+    }
+    
+    // Executar imediatamente
+    removerEstilosInlineDuplicados();
+    
+    // Executar após DOMContentLoaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', removerEstilosInlineDuplicados);
+    }
+    
+    // Executar após um pequeno delay para garantir que outros scripts já executaram
+    setTimeout(removerEstilosInlineDuplicados, 100);
+    
+    // Executar em resize para atualizar variável CSS se necessário
+    window.addEventListener('resize', removerEstilosInlineDuplicados, { passive: true });
+})();
 </script>
 
 ```
