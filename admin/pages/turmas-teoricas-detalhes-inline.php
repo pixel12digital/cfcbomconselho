@@ -5373,10 +5373,16 @@ function abrirModalAgendarAulaComDataHora(disciplinaId, disciplinaNome, dataInic
             horaInput.dispatchEvent(new Event('input', { bubbles: true }));
         }
         
-        // Se houver função de preview de horário, chamá-la
-        if (typeof atualizarPreviewHorario === 'function') {
-            setTimeout(() => atualizarPreviewHorario(), 100);
-        }
+        // Atualizar preview após preencher campos
+        setTimeout(() => {
+            if (typeof atualizarPreviewModal === 'function') {
+                atualizarPreviewModal();
+            }
+            // Fallback para função antiga se existir
+            if (typeof atualizarPreviewHorario === 'function') {
+                atualizarPreviewHorario();
+            }
+        }, 150);
         
         // Focar no campo de instrutor para facilitar continuação do preenchimento
         setTimeout(() => {
@@ -9268,6 +9274,13 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                     if (modalInstrutorId && agendamento.instrutor_id) {
                         modalInstrutorId.value = agendamento.instrutor_id;
                     }
+                    
+                    // Atualizar preview após todos os campos serem preenchidos
+                    setTimeout(() => {
+                        if (typeof atualizarPreviewModal === 'function') {
+                            atualizarPreviewModal();
+                        }
+                    }, 150);
                 });
                 
                 // Atualizar estatísticas no modal após carregar dados
@@ -9345,6 +9358,13 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                     if (modalInstrutorId && agendamento.instrutor_id) {
                         modalInstrutorId.value = agendamento.instrutor_id;
                     }
+                    
+                    // Atualizar preview após todos os campos serem preenchidos
+                    setTimeout(() => {
+                        if (typeof atualizarPreviewModal === 'function') {
+                            atualizarPreviewModal();
+                        }
+                    }, 150);
                 });
                 
                 // Mostrar modal
@@ -11148,41 +11168,85 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // Atualizar preview quando campos mudarem
+let previewUpdateTimeout = null;
 function atualizarPreviewModal() {
-    const disciplinaNome = document.getElementById('modal_disciplina_nome').value;
-    const dataAula = document.getElementById('modal_data_aula').value;
-    const horaInicio = document.getElementById('modal_hora_inicio').value;
-    const qtdAulas = parseInt(document.getElementById('modal_quantidade_aulas').value);
-    
-    if (dataAula && horaInicio && qtdAulas) {
-        const data = new Date(dataAula + 'T00:00:00');
-        const dataFormatada = data.toLocaleDateString('pt-BR');
-        
-        // Calcular horários das aulas
-        let horariosPreview = [];
-        for (let i = 0; i < qtdAulas; i++) {
-            const [horas, minutos] = horaInicio.split(':').map(Number);
-            const inicioMinutos = (horas * 60) + minutos + (i * 50);
-            const fimMinutos = inicioMinutos + 50;
-            
-            const horaInicioAula = String(Math.floor(inicioMinutos / 60)).padStart(2, '0') + ':' + 
-                                 String(inicioMinutos % 60).padStart(2, '0');
-            const horaFimAula = String(Math.floor(fimMinutos / 60)).padStart(2, '0') + ':' + 
-                               String(fimMinutos % 60).padStart(2, '0');
-            
-            horariosPreview.push(`${horaInicioAula} - ${horaFimAula}`);
-        }
-        
-        document.getElementById('previewContentModal').innerHTML = `
-            <strong>${disciplinaNome}</strong><br>
-            📅 ${dataFormatada}<br>
-            🕐 ${horariosPreview.join(', ')}<br>
-            🎓 ${qtdAulas} aula(s) de 50 minutos cada
-        `;
-        document.getElementById('previewHorarioModal').style.display = 'block';
-    } else {
-        document.getElementById('previewHorarioModal').style.display = 'none';
+    // Proteção contra chamadas excessivas - debounce
+    if (previewUpdateTimeout) {
+        clearTimeout(previewUpdateTimeout);
     }
+    
+    previewUpdateTimeout = setTimeout(() => {
+        try {
+            // CRÍTICO: Ler valores diretamente dos campos do formulário, sem transformações
+            const disciplinaNomeEl = document.getElementById('modal_disciplina_nome');
+            const dataAulaEl = document.getElementById('modal_data_aula');
+            const horaInicioEl = document.getElementById('modal_hora_inicio');
+            const qtdAulasEl = document.getElementById('modal_quantidade_aulas');
+            
+            // Verificar se os elementos existem
+            if (!disciplinaNomeEl || !dataAulaEl || !horaInicioEl || !qtdAulasEl) {
+                return;
+            }
+            
+            // Obter valores exatos dos campos
+            const disciplinaNome = disciplinaNomeEl.value || '';
+            const dataAula = dataAulaEl.value || '';
+            const horaInicio = horaInicioEl.value || '';
+            const qtdAulas = parseInt(qtdAulasEl.value) || 1;
+            
+            // Validar se todos os campos necessários estão preenchidos
+            if (dataAula && horaInicio && qtdAulas > 0) {
+                // Formatar data exatamente como está no campo (formato brasileiro)
+                let dataFormatada = dataAula; // Valor padrão
+                const dataObj = new Date(dataAula + 'T00:00:00');
+                if (!isNaN(dataObj.getTime())) {
+                    // Se data válida, formatar para brasileiro
+                    dataFormatada = dataObj.toLocaleDateString('pt-BR');
+                }
+                
+                // Calcular horários das aulas baseado EXATAMENTE no horário de início e quantidade informados
+                let horariosPreview = [];
+                for (let i = 0; i < qtdAulas; i++) {
+                    const [horas, minutos] = horaInicio.split(':').map(Number);
+                    if (isNaN(horas) || isNaN(minutos)) {
+                        continue; // Pular se horário inválido
+                    }
+                    
+                    const inicioMinutos = (horas * 60) + minutos + (i * 50);
+                    const fimMinutos = inicioMinutos + 50;
+                    
+                    const horaInicioAula = String(Math.floor(inicioMinutos / 60)).padStart(2, '0') + ':' + 
+                                         String(inicioMinutos % 60).padStart(2, '0');
+                    const horaFimAula = String(Math.floor(fimMinutos / 60)).padStart(2, '0') + ':' + 
+                                       String(fimMinutos % 60).padStart(2, '0');
+                    
+                    horariosPreview.push(`${horaInicioAula} - ${horaFimAula}`);
+                }
+                
+                // Atualizar preview com valores EXATOS dos campos
+                const previewContent = document.getElementById('previewContentModal');
+                const previewDiv = document.getElementById('previewHorarioModal');
+                
+                if (previewContent && previewDiv) {
+                    previewContent.innerHTML = `
+                        <strong>${disciplinaNome || 'Disciplina não selecionada'}</strong><br>
+                        📅 ${dataFormatada}<br>
+                        🕐 ${horariosPreview.length > 0 ? horariosPreview.join(', ') : horaInicio}<br>
+                        🎓 ${qtdAulas} aula(s) de 50 minutos cada
+                    `;
+                    previewDiv.style.display = 'block';
+                }
+            } else {
+                // Ocultar preview se campos não estiverem completos
+                const previewDiv = document.getElementById('previewHorarioModal');
+                if (previewDiv) {
+                    previewDiv.style.display = 'none';
+                }
+            }
+        } catch (error) {
+            console.error('Erro ao atualizar preview:', error);
+        }
+    }, 100); // Debounce de 100ms
 }
 
 // Event listeners para atualizar preview
@@ -11195,7 +11259,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (dataAula) {
         dataAula.addEventListener('change', function() {
             atualizarPreviewModal();
-            // Verificar disponibilidade automaticamente se todos os campos estiverem preenchidos
             verificarDisponibilidadeAuto();
         });
     }
@@ -11211,6 +11274,14 @@ document.addEventListener('DOMContentLoaded', function() {
         qtdAulas.addEventListener('change', function() {
             atualizarPreviewModal();
             verificarDisponibilidadeAuto();
+        });
+    }
+    
+    // Também atualizar quando disciplina mudar
+    const disciplinaNome = document.getElementById('modal_disciplina_nome');
+    if (disciplinaNome) {
+        disciplinaNome.addEventListener('change', function() {
+            atualizarPreviewModal();
         });
     }
     
