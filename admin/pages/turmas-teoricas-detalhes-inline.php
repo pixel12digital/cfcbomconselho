@@ -2221,10 +2221,7 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 .google-calendar-header.gx-0,
 .google-calendar-header.gy-0,
 .google-calendar-header .row,
-.google-calendar-header .col,
-#legenda-calendario.g-0,
-#legenda-calendario.gx-0,
-#legenda-calendario.gy-0 {
+.google-calendar-header .col {
     gap: inherit !important;
     margin: inherit !important;
 }
@@ -2235,12 +2232,7 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     margin-right: 14px !important;
 }
 
-/* CRÍTICO: Garantir espaçamento nos filhos diretos da legenda (fallback) */
-#legenda-calendario > *:not(:last-child) {
-    margin-right: 14px !important;
-}
-
-/* Desktop (≥1200px) - Toolbar + badge + legenda em linha única */
+/* Desktop (≥1200px) - Toolbar + badge em linha única */
 @media (min-width: 1200px) {
     .google-calendar-header {
         flex-wrap: nowrap !important;
@@ -2251,19 +2243,9 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     .google-calendar-header > *:not(:last-child):not(#filtro-disciplina-calendario) {
         margin-right: 14px !important;
     }
-    
-    #legenda-calendario {
-        flex-wrap: nowrap !important;
-        column-gap: 14px !important;
-        row-gap: 6px !important;
-    }
-    
-    #legenda-calendario > *:not(:last-child) {
-        margin-right: 14px !important;
-    }
 }
 
-/* Tablet (768-1199px) - Toolbar em 2 linhas, legenda compacta */
+/* Tablet (768-1199px) - Toolbar em 2 linhas */
 @media (min-width: 768px) and (max-width: 1199px) {
     .google-calendar-header {
         column-gap: 12px !important;
@@ -2279,20 +2261,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         margin-bottom: 6px !important;
     }
     
-    #legenda-calendario {
-        column-gap: 12px !important;
-        row-gap: 6px !important;
-        padding: 6px 12px !important;
-    }
-    
-    #legenda-calendario > *:not(:last-child) {
-        margin-right: 12px !important;
-    }
-    
-    #legenda-calendario > * {
-        margin-bottom: 6px !important;
-    }
-    
     .timeline-calendar {
         min-height: calc(100vh - 200px) !important;
         /* Remover max-height para permitir que o calendário se expanda conforme necessário */
@@ -2302,7 +2270,7 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     }
 }
 
-/* Mobile (<768px) - Toolbar colapsada, legenda pode quebrar */
+/* Mobile (<768px) - Toolbar colapsada */
 @media (max-width: 767px) {
     .google-calendar-header {
         flex-direction: row !important;
@@ -2336,22 +2304,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         margin-left: 0 !important;
         margin-right: 0 !important;
         width: 100% !important;
-    }
-    
-    /* Legenda pode quebrar em 2 linhas em mobile mantendo gap */
-    #legenda-calendario {
-        column-gap: 12px !important;
-        row-gap: 6px !important;
-        padding: 6px 10px !important;
-        flex-wrap: wrap !important;
-    }
-    
-    #legenda-calendario > *:not(:last-child) {
-        margin-right: 12px !important;
-    }
-    
-    #legenda-calendario > * {
-        margin-bottom: 6px !important;
     }
     
     .timeline-day-header {
@@ -3566,26 +3518,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             }
             
             ?>
-            
-            <!-- Legenda compacta com respiro horizontal -->
-            <!-- CRÍTICO: Container flex que agrupa os 3 chips lado a lado -->
-            <!-- FALLBACK: Espaçamento aplicado diretamente nos chips para garantir respiro mesmo se gap for anulado -->
-            <div id="legenda-calendario" style="background: #f8f9fa; padding: 6px 12px; border-radius: 4px; margin-bottom: 8px; display: flex !important; column-gap: 14px; row-gap: 6px; flex-wrap: wrap; align-items: center; min-height: 28px;">
-                <!-- CRÍTICO: Cada chip é um filho direto do container flex -->
-                <!-- FALLBACK: margin-right para garantir espaçamento mesmo se gap for anulado -->
-                <div style="display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; margin-right: 14px !important;">
-                    <div style="width: 14px; height: 14px; background: #e9ecef; border: 1.5px dashed #adb5bd; border-radius: 3px; flex-shrink: 0;"></div>
-                    <span style="font-size: 0.75rem; color: #5f6368; line-height: 1;">Disponível</span>
-                </div>
-                <div style="display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; margin-right: 14px !important;">
-                    <div style="width: 14px; height: 14px; background: #023A8D; border-radius: 3px; flex-shrink: 0;"></div>
-                    <span style="font-size: 0.75rem; color: #5f6368; line-height: 1;">Aula agendada</span>
-                </div>
-                <div style="display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; margin-right: 0 !important;">
-                    <div style="width: 14px; height: 14px; background: #28a745; border: 1.5px solid #fff; box-shadow: 0 0 0 1.5px #28a745; border-radius: 3px; flex-shrink: 0;"></div>
-                    <span style="font-size: 0.75rem; color: #5f6368; line-height: 1;">Última aula</span>
-                </div>
-            </div>
             
             <!-- Calendário Estilo Google Calendar -->
             <style>
@@ -6160,13 +6092,11 @@ document.addEventListener('DOMContentLoaded', function() {
         
         // Calcular altura dos elementos superiores
         const header = document.querySelector('.google-calendar-header');
-        const legenda = document.getElementById('legenda-calendario');
         const tabCalendario = document.getElementById('tab-calendario');
         const wrapper = tabCalendario ? tabCalendario.parentElement : null;
         
         let alturaSuperiores = 0;
         if (header) alturaSuperiores += header.offsetHeight;
-        if (legenda && legenda.offsetParent !== null) alturaSuperiores += legenda.offsetHeight;
         
         // Altura do topbar/admin-main (aproximada)
         const adminMain = document.querySelector('.admin-main');
