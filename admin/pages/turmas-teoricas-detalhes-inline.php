@@ -221,8 +221,8 @@ try {
     $aulasAgendadas = [];
 }
 
-// Calcular estatísticas
-$totalAulas = count($aulasAgendadas);
+// Calcular estatísticas (para seção de detalhes, não calendário)
+$totalAulasDetalhes = count($aulasAgendadas);
 $totalMinutosAgendados = array_sum(array_column($aulasAgendadas, 'duracao_minutos'));
 
 // Calcular carga horária total do curso baseado nas disciplinas obrigatórias
@@ -2294,9 +2294,11 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     }
     
     .timeline-calendar {
-        height: calc(100vh - 200px) !important;
         min-height: calc(100vh - 200px) !important;
-        max-height: calc(100vh - 200px) !important;
+        /* Remover max-height para permitir que o calendário se expanda conforme necessário */
+        /* max-height removido para permitir scroll e mostrar todas as aulas */
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
     }
 }
 
@@ -2372,9 +2374,11 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     }
     
     .timeline-calendar {
-        height: calc(100vh - 160px) !important;
         min-height: calc(100vh - 160px) !important;
-        max-height: calc(100vh - 160px) !important;
+        /* Remover max-height para permitir que o calendário se expanda conforme necessário */
+        /* max-height removido para permitir scroll e mostrar todas as aulas */
+        overflow-y: auto !important;
+        overflow-x: hidden !important;
     }
     
     .timeline-hour-marker {
@@ -3092,6 +3096,14 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
         // Buscar TODAS as aulas do período da turma (não apenas da semana selecionada)
         // Isso permite visualizar e navegar por todo o período disponível
         try {
+            // Primeiro, buscar todas as aulas da turma (sem filtro de período para debug)
+            $todasAulasSemFiltro = $db->fetchAll(
+                "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ?",
+                [$turmaId]
+            );
+            $totalAulasSemFiltro = $todasAulasSemFiltro[0]['total'] ?? 0;
+            
+            // Buscar aulas com filtros
             $todasAulasCalendario = $db->fetchAll(
                 "SELECT 
                     taa.*,
@@ -3103,17 +3115,43 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                  LEFT JOIN usuarios u ON i.usuario_id = u.id
                  LEFT JOIN salas s ON taa.sala_id = s.id
                  WHERE taa.turma_id = ? 
-                 AND (taa.status IS NULL OR taa.status != 'cancelada')
+                 AND (taa.status IS NULL OR taa.status = '' OR taa.status = 'agendada' OR taa.status != 'cancelada')
                  AND taa.data_aula >= ?
                  AND taa.data_aula <= ?
                  ORDER BY taa.data_aula ASC, taa.hora_inicio ASC",
                 [$turmaId, $turma['data_inicio'], $turma['data_fim']]
             );
             
-            // Debug removido - não necessário para produção
+            // Log para debug
+            error_log("Calendário Turma $turmaId: Total de aulas sem filtro: $totalAulasSemFiltro, Com filtros: " . count($todasAulasCalendario));
+            
+            // Se não encontrou aulas com filtros mas há aulas sem filtro, buscar todas (pode estar fora do período)
+            if (count($todasAulasCalendario) == 0 && $totalAulasSemFiltro > 0) {
+                error_log("Calendário Turma $turmaId: Nenhuma aula encontrada com filtros, buscando todas as aulas...");
+                $todasAulasCalendario = $db->fetchAll(
+                    "SELECT 
+                        taa.*,
+                        taa.disciplina as disciplina_id,
+                        COALESCE(u.nome, i.nome, 'Não informado') as instrutor_nome,
+                        COALESCE(s.nome, 'Não informada') as sala_nome
+                     FROM turma_aulas_agendadas taa
+                     LEFT JOIN instrutores i ON taa.instrutor_id = i.id
+                     LEFT JOIN usuarios u ON i.usuario_id = u.id
+                     LEFT JOIN salas s ON taa.sala_id = s.id
+                     WHERE taa.turma_id = ? 
+                     AND (taa.status IS NULL OR taa.status = '' OR taa.status = 'agendada' OR taa.status != 'cancelada')
+                     ORDER BY taa.data_aula ASC, taa.hora_inicio ASC",
+                    [$turmaId]
+                );
+                error_log("Calendário Turma $turmaId: Encontradas " . count($todasAulasCalendario) . " aulas sem filtro de período");
+            }
+            
+            // Definir totalAulas aqui para uso posterior
+            $totalAulas = count($todasAulasCalendario);
         } catch (Exception $e) {
             error_log("Erro ao buscar aulas para calendário: " . $e->getMessage());
             $todasAulasCalendario = [];
+            $totalAulas = 0;
         }
         
         // Adicionar nome da disciplina baseado nas disciplinas selecionadas
@@ -3122,13 +3160,24 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             $disciplinasMap[$disc['disciplina_id']] = $disc['nome_disciplina'] ?? $disc['nome_original'] ?? 'Disciplina';
         }
         
-        foreach ($todasAulasCalendario as &$aula) {
+        // IMPORTANTE: Não usar referência (&$aula) para evitar modificar o array original
+        // Criar uma cópia do array para modificações
+        $todasAulasCalendarioModificadas = [];
+        foreach ($todasAulasCalendario as $aula) {
             $aula['nome_disciplina'] = $disciplinasMap[$aula['disciplina_id']] ?? 'Disciplina';
+            $todasAulasCalendarioModificadas[] = $aula;
         }
+        $todasAulasCalendario = $todasAulasCalendarioModificadas;
         
         // Organizar aulas por data e disciplina
         $aulasPorData = [];
         $ultimaAulaPorDisciplina = [];
+        
+        // Debug: verificar todas as aulas antes de organizar
+        error_log("Calendário Turma $turmaId: Total de aulas para organizar: " . count($todasAulasCalendario));
+        foreach ($todasAulasCalendario as $idx => $aulaDebug) {
+            error_log("  Aula " . ($idx + 1) . ": ID=" . ($aulaDebug['id'] ?? 'N/A') . ", Data=" . ($aulaDebug['data_aula'] ?? 'N/A') . ", Inicio=" . ($aulaDebug['hora_inicio'] ?? 'N/A') . ", Fim=" . ($aulaDebug['hora_fim'] ?? 'N/A'));
+        }
         
         foreach ($todasAulasCalendario as $aula) {
             $data = $aula['data_aula'];
@@ -3280,11 +3329,32 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
         }
         
         // Definir períodos (Manhã, Tarde, Noite)
+        // IMPORTANTE: O período "Noite" será ajustado dinamicamente para incluir todas as aulas
         $periodos = [
             'Manhã' => ['inicio' => 6 * 60, 'fim' => 12 * 60, 'colapsado' => false],
             'Tarde' => ['inicio' => 12 * 60, 'fim' => 18 * 60, 'colapsado' => false],
-            'Noite' => ['inicio' => 18 * 60, 'fim' => 23 * 60, 'colapsado' => false]
+            'Noite' => ['inicio' => 18 * 60, 'fim' => 24 * 60, 'colapsado' => false] // Estender até 24:00 para incluir aulas até 23:00+
         ];
+        
+        // Ajustar período "Noite" dinamicamente se houver aulas após 23:00
+        if (!empty($todasAulasCalendario)) {
+            $ultimaHoraFimPeriodo = 0;
+            foreach ($todasAulasCalendario as $aula) {
+                $horaFimStr = $aula['hora_fim'];
+                if (strlen($horaFimStr) == 8) {
+                    $horaFimStr = substr($horaFimStr, 0, 5);
+                }
+                list($horaFim, $minFim) = explode(':', $horaFimStr);
+                $horaFimMinutos = (int)$horaFim * 60 + (int)$minFim;
+                if ($horaFimMinutos > $ultimaHoraFimPeriodo) {
+                    $ultimaHoraFimPeriodo = $horaFimMinutos;
+                }
+            }
+            // Ajustar fim do período Noite para incluir todas as aulas + margem
+            if ($ultimaHoraFimPeriodo > 18 * 60) {
+                $periodos['Noite']['fim'] = max(23 * 60, $ultimaHoraFimPeriodo + 60);
+            }
+        }
         
         // SIMPLIFICADO: NUNCA colapsar períodos automaticamente
         // Isso estava causando problemas de renderização
@@ -3410,7 +3480,10 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             
             <!-- Debug Info (Temporário) -->
             <?php 
-            $totalAulas = count($todasAulasCalendario ?? []);
+            // $totalAulas já foi definido acima, mas garantir que existe
+            if (!isset($totalAulas)) {
+                $totalAulas = count($todasAulasCalendario ?? []);
+            }
             
             // Buscar total de aulas no período completo (para estatísticas)
             try {
@@ -4193,6 +4266,13 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                     // Calcular altura total da timeline (baseado em minutos)
                     // IMPORTANTE: Verificar TODAS as aulas para encontrar o range real
                     // E garantir que usamos SEMPRE o mesmo range para coluna de horários e posicionamento das aulas
+                    
+                    // Debug: verificar quantas aulas temos neste ponto
+                    error_log("Calendário Turma $turmaId: [CÁLCULO ALTURA] Total de aulas em todasAulasCalendario: " . count($todasAulasCalendario));
+                    foreach ($todasAulasCalendario as $idx => $aulaDebug) {
+                        error_log("  [CÁLCULO ALTURA] Aula " . ($idx + 1) . ": ID=" . ($aulaDebug['id'] ?? 'N/A') . ", Fim=" . ($aulaDebug['hora_fim'] ?? 'N/A'));
+                    }
+                    
                     $horaMinimaReal = $horaMinima; // Começar com o mínimo definido (6:00 ou menor das aulas)
                     $horaMaximaReal = $horaMaxima; // Começar com o máximo definido (23:00 ou maior das aulas)
                     
@@ -4222,14 +4302,73 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                         }
                     }
                     
-                    // Se não há aulas ou a última aula termina antes de 23:00, terminar em 23:00 (fechar range diário)
-                    // Se há aulas após 23:00, estender para mostrar todas
-                    if (empty($todasAulasCalendario) || $horaMaximaReal <= 23 * 60) {
-                        $horaMaximaFinal = 23 * 60; // Terminar exatamente em 23:00 se não houver aulas depois (fechar range diário em 23:00, não 24:00)
+                    // Garantir que a altura máxima inclua TODAS as aulas, especialmente a última
+                    // Se há aulas, sempre incluir pelo menos até o fim da última aula + margem de 60 minutos
+                    if (empty($todasAulasCalendario)) {
+                        // Sem aulas: mostrar de 6:00 a 23:00
+                        $horaMinimaFinal = 6 * 60;
+                        $horaMaximaFinal = 23 * 60;
                     } else {
-                        $horaMaximaFinal = $horaMaximaReal; // Estender se houver aulas após 23:00
+                        // Com aulas: garantir que TODAS as aulas estejam completamente visíveis
+                        // Encontrar a última hora de término de todas as aulas
+                        $ultimaHoraFim = 0;
+                        $ultimaAulaId = null;
+                        
+                        // Debug: verificar se a Aula 111 está no array
+                        $aula111Encontrada = false;
+                        foreach ($todasAulasCalendario as $aulaCheck) {
+                            if (($aulaCheck['id'] ?? null) == 111) {
+                                $aula111Encontrada = true;
+                                error_log("Calendário Turma $turmaId: [VERIFICAÇÃO] Aula 111 encontrada no array! hora_fim='" . ($aulaCheck['hora_fim'] ?? 'N/A') . "'");
+                                break;
+                            }
+                        }
+                        if (!$aula111Encontrada) {
+                            error_log("Calendário Turma $turmaId: [ERRO] Aula 111 NÃO encontrada no array todasAulasCalendario! Total de aulas: " . count($todasAulasCalendario));
+                            foreach ($todasAulasCalendario as $idx => $aulaDebug) {
+                                error_log("  Aula no array: ID=" . ($aulaDebug['id'] ?? 'N/A') . ", Fim=" . ($aulaDebug['hora_fim'] ?? 'N/A'));
+                            }
+                        }
+                        
+                        foreach ($todasAulasCalendario as $aula) {
+                            $aulaId = $aula['id'] ?? 'N/A';
+                            $horaFimStr = $aula['hora_fim'];
+                            
+                            // Normalizar formato (pode ser HH:MM:SS ou HH:MM)
+                            if (strlen($horaFimStr) == 8) {
+                                $horaFimStr = substr($horaFimStr, 0, 5);
+                            }
+                            
+                            // Garantir que explode funciona corretamente
+                            $horaFimParts = explode(':', $horaFimStr);
+                            if (count($horaFimParts) >= 2) {
+                                $horaFim = (int)($horaFimParts[0] ?? 0);
+                                $minFim = (int)($horaFimParts[1] ?? 0);
+                                $horaFimMinutos = $horaFim * 60 + $minFim;
+                                
+                                if ($horaFimMinutos > $ultimaHoraFim) {
+                                    $ultimaHoraFim = $horaFimMinutos;
+                                    $ultimaAulaId = $aulaId;
+                                }
+                                
+                                // Debug específico para cada aula (especialmente Aula 111)
+                                if ($aulaId == 111) {
+                                    error_log("Calendário Turma $turmaId: [AULA 111 PROCESSADA] hora_fim original='" . ($aula['hora_fim'] ?? 'N/A') . "', hora_fim normalizada='$horaFimStr', horaFimMinutos=$horaFimMinutos (" . sprintf('%02d:%02d', $horaFim, $minFim) . ")");
+                                }
+                                error_log("Calendário Turma $turmaId: Aula ID=$aulaId, hora_fim original='" . ($aula['hora_fim'] ?? 'N/A') . "', hora_fim normalizada='$horaFimStr', horaFimMinutos=$horaFimMinutos (" . sprintf('%02d:%02d', $horaFim, $minFim) . ")");
+                            } else {
+                                error_log("Calendário Turma $turmaId: ERRO ao processar hora_fim da Aula ID=$aulaId, formato inválido: '$horaFimStr'");
+                            }
+                        }
+                        
+                        // Garantir que a última aula esteja completamente visível + margem de 60 minutos
+                        // Sempre mostrar pelo menos até 23:00, mas estender se necessário
+                        $horaMaximaFinal = max(23 * 60, $ultimaHoraFim + 60); // Última aula + 1 hora de margem
+                        $horaMinimaFinal = min($horaMinima, $horaMinimaReal);
+                        
+                        // Log para debug
+                        error_log("Calendário Turma $turmaId: Última hora fim encontrada: " . sprintf('%02d:%02d', floor($ultimaHoraFim/60), $ultimaHoraFim%60) . " (Aula ID=$ultimaAulaId) | horaMaximaFinal: " . sprintf('%02d:%02d', floor($horaMaximaFinal/60), $horaMaximaFinal%60));
                     }
-                    $horaMinimaFinal = min($horaMinima, $horaMinimaReal); // Usar o menor entre o padrão e o real
                     
                     // CRÍTICO: Atualizar as variáveis GLOBAIS para serem usadas em TODOS os cálculos
                     // Isso garante que coluna de horários e posicionamento das aulas usem o mesmo range
@@ -4241,22 +4380,9 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                     $horaMaxima = $horaMaximaFinal;
                     
                     // Calcular altura total baseada no conteúdo real
-                    // SEMPRE mostrar até 23:00 (fechar range diário em 23:00, não 24:00) para evitar faixa extra
                     // Densidade compacta: 50px por slot de 30min = ~1.67px por minuto
-                    if (empty($todasAulasCalendario)) {
-                        // Sem aulas: mostrar de 6:00 a 23:00 (fechar em 23:00 para evitar faixa extra)
-                        $horaMinimaFinal = 6 * 60;
-                        $horaMaximaFinal = 23 * 60; // Fechar em 23:00 (não 23:59)
-                        $alturaTotalPx = (23 * 60 - 6 * 60) * (50 / 30); // Altura exata até 23:00 (17 horas × 1.67px/min = ~1700px)
-                    } else if ($horaMaximaReal <= 23 * 60) {
-                        // Se a última aula termina antes de 23:00, sempre mostrar até 23:00 (fechar range)
-                        $horaMaximaFinal = 23 * 60; // Fechar em 23:00 para evitar faixa extra
-                        $alturaTotalPx = ($horaMaximaFinal - $horaMinimaFinal) * (50 / 30); // Densidade compacta
-                    } else {
-                        // Se há aulas após 23:00, estender apenas o necessário
-                        $alturaTotalMinutos = $horaMaximaFinal - $horaMinimaFinal;
-                        $alturaTotalPx = $alturaTotalMinutos * (50 / 30); // Densidade compacta: ~1.67px por minuto
-                    }
+                    $alturaTotalMinutos = $horaMaximaFinal - $horaMinimaFinal;
+                    $alturaTotalPx = $alturaTotalMinutos * (50 / 30); // Densidade compacta: ~1.67px por minuto
                     
                     // Atualizar variáveis globais para garantir consistência
                     $horaMinima = $horaMinimaFinal;
@@ -4305,11 +4431,11 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                             $periodoRenderizado = '';
                             // Usar $horaMinima e $horaMaxima que já foram atualizados acima
                             $horaAtual = $horaMinima;
-                            // Renderizar até a hora máxima calculada, mas fechar exatamente em 23:00 (não renderizar linha extra)
-                            // Limite máximo para renderização: 23:00 (1380 minutos) - última hora inteira
-                            $horaMaximaLimite = min($horaMaxima, 23 * 60); // Não ultrapassar 23:00
+                            // Renderizar até a hora máxima calculada (inclui margem para última aula)
+                            // Usar $horaMaxima que já foi calculado incluindo todas as aulas + margem
+                            $horaMaximaLimite = $horaMaxima; // Usar o máximo calculado, não limitar a 23:00
                             
-                            // Garantir exatamente 24 slots (00-23), parando antes de ultrapassar 23:00
+                            // Renderizar todos os slots até a hora máxima (garante que última aula seja visível)
                             while ($horaAtual < $horaMaximaLimite):
                                 $horas = floor($horaAtual / 60);
                                 $minutos = $horaAtual % 60;
@@ -4386,22 +4512,26 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                 // Avançar 30 minutos
                                 $horaAtual += 30;
                                 
-                                // Parar exatamente em 23:00 (não ultrapassar para evitar linha extra)
-                                if ($horaAtual > 23 * 60) {
-                                    break;
-                                }
+                                // Continuar até atingir horaMaximaLimite (não limitar a 23:00)
+                                // O loop já para quando $horaAtual >= $horaMaximaLimite
                             endwhile;
                             
-                            // Renderizar última linha (23:00) se ainda não foi renderizada
-                            // Verificar se o último slot renderizado foi 22:30, então precisamos renderizar 23:00
-                            if ($horaAtual == 23 * 60 && $horaMaximaLimite >= 23 * 60):
+                            // Renderizar última linha se necessário (quando horaMaximaLimite ultrapassa o último slot de 30min)
+                            // Verificar se precisamos renderizar um marcador final
+                            if ($horaAtual < $horaMaximaLimite):
+                                $horasFinais = floor($horaMaximaLimite / 60);
+                                $minutosFinais = $horaMaximaLimite % 60;
+                                $horaTextoFinal = sprintf('%02d:%02d', $horasFinais, $minutosFinais);
+                                $alturaFinal = ($horaMaximaLimite - $horaAtual) * (50 / 30);
                             ?>
                             <div class="timeline-hour-marker hora-inteira" 
-                                 style="height: 50px; flex-shrink: 0;"
-                                 data-hora-minutos="1380"
-                                 data-hora-texto="23:00"
+                                 style="height: <?= $alturaFinal ?>px; flex-shrink: 0;"
+                                 data-hora-minutos="<?= $horaMaximaLimite ?>"
+                                 data-hora-texto="<?= $horaTextoFinal ?>"
                                  data-periodo="noite">
-                                <span class="timeline-hour-label">23:00</span>
+                                <?php if ($minutosFinais == 0): ?>
+                                    <span class="timeline-hour-label"><?= $horaTextoFinal ?></span>
+                                <?php endif; ?>
                             </div>
                             <?php
                             endif;
@@ -4497,6 +4627,32 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         }
                                     }
                                     
+                                    // SEMPRE buscar diretamente de $todasAulasCalendario como fallback adicional
+                                    // Isso garante que todas as aulas sejam encontradas mesmo se houver problema na organização
+                                    if (!empty($todasAulasCalendario)) {
+                                        $aulasEncontradasDiretamente = [];
+                                        foreach ($todasAulasCalendario as $aula) {
+                                            $aulaDataNormalizada = $normalizarData($aula['data_aula'] ?? '');
+                                            if ($aulaDataNormalizada && $aulaDataNormalizada == $dataNormalizadaBusca) {
+                                                // Verificar se já está em $aulasDoDia
+                                                $jaExiste = false;
+                                                foreach ($aulasDoDia as $aulaExistente) {
+                                                    if (($aulaExistente['id'] ?? null) == ($aula['id'] ?? null)) {
+                                                        $jaExiste = true;
+                                                        break;
+                                                    }
+                                                }
+                                                if (!$jaExiste) {
+                                                    $aulasDoDia[] = $aula;
+                                                    $aulasEncontradasDiretamente[] = $aula['id'] ?? 'N/A';
+                                                }
+                                            }
+                                        }
+                                        if (!empty($aulasEncontradasDiretamente)) {
+                                            error_log("Calendário Turma $turmaId: Aulas adicionadas diretamente para $dataNormalizadaBusca: " . implode(', ', $aulasEncontradasDiretamente));
+                                        }
+                                    }
+                                    
                                     // Debug detalhado - sempre exibir para diagnóstico
                                     $debugDia = "<!-- Debug Dia $dataBusca (normalizada: $dataNormalizadaBusca): " . count($aulasDoDia) . " aulas encontradas. ";
                                     if (count($aulasDoDia) > 0) {
@@ -4536,8 +4692,31 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         return strcmp($a['hora_inicio'], $b['hora_inicio']);
                                     });
                                     
+                                    // Debug específico para verificar todas as aulas do dia
+                                    echo "<!-- DEBUG AULAS DO DIA $dataBusca: Total encontrado: " . count($aulasDoDia) . " -->";
+                                    foreach ($aulasDoDia as $idx => $aulaDebug) {
+                                        echo "<!-- Aula " . ($idx + 1) . ": ID=" . ($aulaDebug['id'] ?? 'N/A') . ", Nome=" . htmlspecialchars($aulaDebug['nome_aula'] ?? 'N/A') . ", Inicio=" . ($aulaDebug['hora_inicio'] ?? 'N/A') . ", Fim=" . ($aulaDebug['hora_fim'] ?? 'N/A') . " -->";
+                                    }
+                                    
                                     // Calcular posições das aulas e slots vazios
                                     $eventos = [];
+                                    
+                                    // Debug: verificar se a Aula 111 está em aulasDoDia
+                                    $aula111NoDia = false;
+                                    foreach ($aulasDoDia as $aulaCheck) {
+                                        if (($aulaCheck['id'] ?? null) == 111) {
+                                            $aula111NoDia = true;
+                                            error_log("Calendário Turma $turmaId: [EVENTOS] Aula 111 encontrada em aulasDoDia para $dataBusca! hora_fim='" . ($aulaCheck['hora_fim'] ?? 'N/A') . "'");
+                                            break;
+                                        }
+                                    }
+                                    if (!$aula111NoDia && $dataBusca == '2025-11-12') {
+                                        error_log("Calendário Turma $turmaId: [ERRO EVENTOS] Aula 111 NÃO encontrada em aulasDoDia para $dataBusca! Total de aulas: " . count($aulasDoDia));
+                                        foreach ($aulasDoDia as $idx => $aulaDebug) {
+                                            error_log("  Aula em aulasDoDia: ID=" . ($aulaDebug['id'] ?? 'N/A') . ", Fim=" . ($aulaDebug['hora_fim'] ?? 'N/A'));
+                                        }
+                                    }
+                                    
                                     foreach ($aulasDoDia as $aula) {
                                         // Converter hora_inicio e hora_fim para minutos (formato pode ser HH:MM ou HH:MM:SS)
                                         $horaInicioStr = $aula['hora_inicio'];
@@ -4582,6 +4761,16 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                     usort($eventos, function($a, $b) {
                                         return $a['inicio'] - $b['inicio'];
                                     });
+                                    
+                                    // Debug específico para verificar eventos antes da renderização
+                                    echo "<!-- DEBUG EVENTOS DO DIA $dataBusca: Total de eventos: " . count($eventos) . " -->";
+                                    error_log("Calendário Turma $turmaId: [RENDERIZAÇÃO] Dia $dataBusca - Total de eventos: " . count($eventos));
+                                    foreach ($eventos as $idx => $eventoDebug) {
+                                        $aulaDebug = $eventoDebug['aula'];
+                                        $debugMsg = "Evento " . ($idx + 1) . ": ID=" . ($aulaDebug['id'] ?? 'N/A') . ", Nome=" . htmlspecialchars($aulaDebug['nome_aula'] ?? 'N/A') . ", Inicio=" . ($eventoDebug['inicio'] ?? 'N/A') . "min (" . sprintf('%02d:%02d', floor($eventoDebug['inicio']/60), $eventoDebug['inicio']%60) . "), Fim=" . ($eventoDebug['fim'] ?? 'N/A') . "min (" . sprintf('%02d:%02d', floor($eventoDebug['fim']/60), $eventoDebug['fim']%60) . ")";
+                                        echo "<!-- $debugMsg -->";
+                                        error_log("Calendário Turma $turmaId: [RENDERIZAÇÃO] $debugMsg");
+                                    }
                                     
                                     // Renderizar aulas e slots vazios
                                     // Usar $horaMinima que já foi atualizado acima para garantir consistência
@@ -4630,8 +4819,9 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         $dataForaPeriodo = ($dataDateTime < $dataInicio || $dataDateTime > $dataFim);
                                         
                                         $horaAtualSlot = $horaMinima;
-                                        // Limite máximo: 23:00 (1380 minutos) - garantir exatamente 24 slots (00-23)
-                                        $horaMaximaSlot = min($horaMaxima, 23 * 60);
+                                        // Usar $horaMaxima que já foi calculado acima (inclui margem para última aula)
+                                        // Garantir que todos os slots até a última aula sejam renderizados
+                                        $horaMaximaSlot = $horaMaxima; // Usar o máximo calculado, não limitar a 23:00
                                         while ($horaAtualSlot < $horaMaximaSlot) {
                                             $top = ($horaAtualSlot - $horaMinima) * (50 / 30);
                                             $altura = 50; // 30 minutos = 50px (densidade compacta: ~1.67px por minuto)
@@ -4673,7 +4863,14 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         }
                                     } else {
                                         // Renderizar cada evento
+                                        $eventosRenderizados = 0;
                                         foreach ($eventos as $evento) {
+                                            $eventosRenderizados++;
+                                            $aulaAtual = $evento['aula'];
+                                            
+                                            // Debug específico para cada evento sendo renderizado
+                                            echo "<!-- RENDERIZANDO EVENTO $eventosRenderizados de " . count($eventos) . ": Aula ID=" . ($aulaAtual['id'] ?? 'N/A') . ", Nome=" . htmlspecialchars($aulaAtual['nome_aula'] ?? 'N/A') . " -->";
+                                            
                                             // Determinar período desta aula
                                             $periodoAula = '';
                                             if ($evento['inicio'] < 12 * 60) {
@@ -4742,9 +4939,20 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         }
                                         
                                         // Garantir que a altura não ultrapasse o limite da timeline
-                                        $maxTop = ($horaMaxima - $horaMinima) * (50 / 30);
-                                        if ($top + $altura > $maxTop) {
-                                            $altura = max(40, $maxTop - $top);
+                                        // IMPORTANTE: Se a aula ultrapassar o limite, ajustar $horaMaxima em vez de cortar a aula
+                                        $maxTopAtual = ($horaMaxima - $horaMinima) * (50 / 30);
+                                        $alturaNecessaria = $top + $altura;
+                                        
+                                        if ($alturaNecessaria > $maxTopAtual) {
+                                            // A aula ultrapassa o limite atual - ajustar horaMaxima para incluir a aula completa
+                                            $minutosAdicionais = ceil(($alturaNecessaria - $maxTopAtual) / (50 / 30));
+                                            $horaMaxima = $horaMaxima + $minutosAdicionais;
+                                            
+                                            // Recalcular altura total
+                                            $alturaTotalMinutos = $horaMaxima - $horaMinima;
+                                            $alturaTotalPx = $alturaTotalMinutos * (50 / 30);
+                                            
+                                            echo "<!-- AJUSTE: Aula ID {$aula['id']} ultrapassava limite. horaMaxima ajustada de " . sprintf('%02d:%02d', floor(($horaMaxima - $minutosAdicionais)/60), ($horaMaxima - $minutosAdicionais)%60) . " para " . sprintf('%02d:%02d', floor($horaMaxima/60), $horaMaxima%60) . " -->";
                                         }
                                         
                                         // Debug da posição para diagnóstico
@@ -11791,6 +11999,128 @@ function atualizarSecaoHistorico(disciplinaId, agendamentos) {
     // Executar em resize para atualizar variável CSS se necessário
     window.addEventListener('resize', removerEstilosInlineDuplicados, { passive: true });
 })();
+
+/**
+ * Ajustar altura do calendário para incluir todas as aulas
+ * Garante que a última aula seja completamente visível
+ */
+function ajustarAlturaCalendario() {
+    const timelineBody = document.querySelector('.timeline-body');
+    const timelineHours = document.querySelector('.timeline-hours');
+    const dayColumns = document.querySelectorAll('.timeline-day-column');
+    const timelineCalendar = document.querySelector('.timeline-calendar');
+    
+    if (!timelineBody || !timelineHours) {
+        console.log('⚠️ Elementos do calendário não encontrados');
+        return;
+    }
+    
+    // Encontrar a última aula renderizada
+    const todasAulas = document.querySelectorAll('.timeline-slot.aula');
+    let ultimaAulaBottom = 0;
+    let ultimaAulaId = null;
+    
+    todasAulas.forEach(aula => {
+        const top = parseFloat(aula.style.top) || 0;
+        const height = parseFloat(aula.style.height) || 0;
+        const bottom = top + height;
+        if (bottom > ultimaAulaBottom) {
+            ultimaAulaBottom = bottom;
+            ultimaAulaId = aula.getAttribute('data-aula-id') || 'N/A';
+        }
+    });
+    
+    console.log('🔍 Debug calendário:', {
+        totalAulas: todasAulas.length,
+        ultimaAulaBottom: ultimaAulaBottom + 'px',
+        ultimaAulaId: ultimaAulaId,
+        alturaAtualBody: timelineBody.offsetHeight + 'px',
+        alturaAtualHours: timelineHours.offsetHeight + 'px'
+    });
+    
+    // Calcular altura necessária (última aula + margem de 100px)
+    const alturaNecessaria = ultimaAulaBottom + 100;
+    
+    // Obter altura atual (do style ou offsetHeight)
+    const alturaAtualBody = parseFloat(timelineBody.style.minHeight) || timelineBody.offsetHeight;
+    const alturaAtualHours = parseFloat(timelineHours.style.minHeight) || timelineHours.offsetHeight;
+    
+    // Sempre ajustar para garantir que todas as aulas sejam visíveis
+    if (alturaNecessaria > alturaAtualBody || todasAulas.length > 0) {
+        timelineBody.style.minHeight = alturaNecessaria + 'px';
+        timelineHours.style.minHeight = alturaNecessaria + 'px';
+        dayColumns.forEach(col => {
+            col.style.minHeight = alturaNecessaria + 'px';
+        });
+        
+        // Garantir que o container pai permita scroll
+        if (timelineCalendar) {
+            timelineCalendar.style.overflowY = 'auto';
+            timelineCalendar.style.overflowX = 'hidden';
+        }
+        
+        console.log('✅ Altura do calendário ajustada:', {
+            anterior: Math.max(alturaAtualBody, alturaAtualHours) + 'px',
+            nova: alturaNecessaria + 'px',
+            ultimaAula: ultimaAulaId
+        });
+        
+        // Scroll automático para a última aula após ajuste
+        setTimeout(() => {
+            const ultimaAula = document.querySelector(`.timeline-slot.aula[data-aula-id="${ultimaAulaId}"]`);
+            if (ultimaAula && ultimaAulaId !== 'N/A') {
+                ultimaAula.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                console.log('📍 Scroll automático para última aula:', ultimaAulaId);
+            }
+        }, 500);
+    }
+}
+
+// Executar após carregamento completo
+document.addEventListener('DOMContentLoaded', function() {
+    // Verificar quantas aulas foram renderizadas
+    setTimeout(function() {
+        const todasAulas = document.querySelectorAll('.timeline-slot.aula');
+        console.log('📚 Total de aulas renderizadas no DOM:', todasAulas.length);
+        
+        todasAulas.forEach((aula, idx) => {
+            const aulaId = aula.getAttribute('data-aula-id');
+            const nomeAula = aula.querySelector('div')?.textContent || 'N/A';
+            const top = aula.style.top;
+            const height = aula.style.height;
+            console.log(`  Aula ${idx + 1}: ID=${aulaId}, Nome="${nomeAula}", Top=${top}, Height=${height}`);
+        });
+        
+        ajustarAlturaCalendario();
+    }, 500);
+    
+    setTimeout(ajustarAlturaCalendario, 1000);
+    setTimeout(ajustarAlturaCalendario, 2000); // Executar novamente após 2 segundos
+});
+
+// Executar após qualquer atualização dinâmica
+if (typeof MutationObserver !== 'undefined') {
+    const observer = new MutationObserver(function(mutations) {
+        let shouldAdjust = false;
+        mutations.forEach(function(mutation) {
+            if (mutation.addedNodes.length > 0) {
+                mutation.addedNodes.forEach(function(node) {
+                    if (node.nodeType === 1 && (node.classList.contains('timeline-slot') || node.querySelector('.timeline-slot'))) {
+                        shouldAdjust = true;
+                    }
+                });
+            }
+        });
+        if (shouldAdjust) {
+            setTimeout(ajustarAlturaCalendario, 100);
+        }
+    });
+    
+    const timelineBody = document.querySelector('.timeline-body');
+    if (timelineBody) {
+        observer.observe(timelineBody, { childList: true, subtree: true });
+    }
+}
 
 /**
  * Excluir turma completamente (apenas para administradores)
