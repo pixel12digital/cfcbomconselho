@@ -2007,11 +2007,309 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     padding: 0;
     animation: fadeIn 0.3s ease;
     background: transparent;
+    border-bottom: none !important;
+    /* CRÍTICO: Zerar padding-bottom e margin-bottom para evitar faixa em branco */
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    min-height: auto !important;
 }
 
 .tab-content.active {
     display: block;
+    border-bottom: none !important;
+    /* CRÍTICO: Zerar padding-bottom e margin-bottom mesmo quando ativo */
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
 }
+
+/* Remover borda inferior específica da aba calendário */
+#tab-calendario {
+    border-bottom: none !important;
+    /* CRÍTICO: Zerar espaçamento inferior da aba calendário */
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+    min-height: auto !important;
+}
+
+#tab-calendario * {
+    border-bottom: none !important;
+}
+
+/* CRÍTICO: Remover pseudo-elementos da aba calendário que podem criar espaço */
+#tab-calendario::after,
+#tab-calendario::before,
+.tab-content::after,
+.tab-content::before {
+    display: none !important;
+    content: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* CRÍTICO: Zerar margin-bottom do último elemento dentro da aba calendário */
+#tab-calendario > *:last-child {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* CRÍTICO: Garantir que o wrapper do calendário não tenha espaçamento extra */
+#tab-calendario .container-fluid,
+#tab-calendario .row,
+#tab-calendario .col,
+#tab-calendario .col-md,
+#tab-calendario .col-lg,
+#tab-calendario .col-xl {
+    padding-bottom: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* CRÍTICO: Se houver gap/row-gap em Grid/Flex, zerar para o último item */
+#tab-calendario [style*="display: grid"],
+#tab-calendario [style*="display: flex"] {
+    gap: 0 !important;
+    row-gap: 0 !important;
+}
+
+/* CRÍTICO: Último filho do conteúdo da página não deve ter margin-bottom */
+#tab-calendario:last-child,
+.tab-content:last-child {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* CRÍTICO: Remover espaçamento extra dos wrappers externos (admin-main, wizard-content, etc.) */
+.admin-main,
+.wizard-content,
+.turma-wizard,
+.admin-container,
+.main-content,
+.content-wrapper,
+.page-wrapper {
+    padding-bottom: 0 !important;
+}
+
+/* CRÍTICO: Garantir que o último elemento dentro do admin-main não tenha margin-bottom */
+.admin-main > *:last-child,
+.wizard-content > *:last-child,
+.turma-wizard > *:last-child {
+    margin-bottom: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* CRÍTICO: Remover pseudo-elementos dos wrappers externos que podem criar espaço */
+.admin-main::after,
+.admin-main::before,
+.wizard-content::after,
+.wizard-content::before,
+.turma-wizard::after,
+.turma-wizard::before {
+    display: none !important;
+    content: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* CRÍTICO: Se houver gap/row-gap em Grid/Flex nos wrappers externos, zerar */
+.admin-main[style*="display: grid"],
+.admin-main[style*="display: flex"],
+.wizard-content[style*="display: grid"],
+.wizard-content[style*="display: flex"] {
+    gap: 0 !important;
+    row-gap: 0 !important;
+}
+
+/* Exceto para elementos que precisam de borda superior (como headers) */
+#tab-calendario .timeline-header {
+    border-bottom: 1px solid #dadce0 !important;
+}
+
+/* =====================================================
+   RESPONSIVIDADE - COMPACTAR LAYOUT PARA MAXIMIZAR GRID
+   ===================================================== */
+
+/* CRÍTICO: Neutralizar qualquer classe Bootstrap que possa zerar gap/margens */
+.google-calendar-header.g-0,
+.google-calendar-header.gx-0,
+.google-calendar-header.gy-0,
+.google-calendar-header .row,
+.google-calendar-header .col,
+#legenda-calendario.g-0,
+#legenda-calendario.gx-0,
+#legenda-calendario.gy-0 {
+    gap: inherit !important;
+    margin: inherit !important;
+}
+
+/* CRÍTICO: Garantir espaçamento nos filhos diretos do cabeçalho (fallback) */
+/* Aplicar margin-right em todos exceto o último e o filtro (que usa margin-left: auto) */
+.google-calendar-header > *:not(:last-child):not(#filtro-disciplina-calendario) {
+    margin-right: 14px !important;
+}
+
+/* CRÍTICO: Garantir espaçamento nos filhos diretos da legenda (fallback) */
+#legenda-calendario > *:not(:last-child) {
+    margin-right: 14px !important;
+}
+
+/* Desktop (≥1200px) - Toolbar + badge + legenda em linha única */
+@media (min-width: 1200px) {
+    .google-calendar-header {
+        flex-wrap: nowrap !important;
+        column-gap: 14px !important;
+        row-gap: 6px !important;
+    }
+    
+    .google-calendar-header > *:not(:last-child):not(#filtro-disciplina-calendario) {
+        margin-right: 14px !important;
+    }
+    
+    #legenda-calendario {
+        flex-wrap: nowrap !important;
+        column-gap: 14px !important;
+        row-gap: 6px !important;
+    }
+    
+    #legenda-calendario > *:not(:last-child) {
+        margin-right: 14px !important;
+    }
+}
+
+/* Tablet (768-1199px) - Toolbar em 2 linhas, legenda compacta */
+@media (min-width: 768px) and (max-width: 1199px) {
+    .google-calendar-header {
+        column-gap: 12px !important;
+        row-gap: 6px !important;
+    }
+    
+    .google-calendar-header > *:not(:last-child):not(#filtro-disciplina-calendario) {
+        margin-right: 12px !important;
+    }
+    
+    /* Quando quebrar linha, garantir espaçamento vertical */
+    .google-calendar-header > * {
+        margin-bottom: 6px !important;
+    }
+    
+    #legenda-calendario {
+        column-gap: 12px !important;
+        row-gap: 6px !important;
+        padding: 6px 12px !important;
+    }
+    
+    #legenda-calendario > *:not(:last-child) {
+        margin-right: 12px !important;
+    }
+    
+    #legenda-calendario > * {
+        margin-bottom: 6px !important;
+    }
+    
+    .timeline-calendar {
+        height: calc(100vh - 200px) !important;
+        min-height: calc(100vh - 200px) !important;
+        max-height: calc(100vh - 200px) !important;
+    }
+}
+
+/* Mobile (<768px) - Toolbar colapsada, legenda pode quebrar */
+@media (max-width: 767px) {
+    .google-calendar-header {
+        flex-direction: row !important;
+        flex-wrap: wrap !important;
+        column-gap: 12px !important;
+        row-gap: 8px !important;
+        padding: 6px 0 !important;
+    }
+    
+    .google-calendar-header > *:not(:last-child):not(#filtro-disciplina-calendario) {
+        margin-right: 12px !important;
+    }
+    
+    /* Quando quebrar linha, garantir espaçamento vertical */
+    .google-calendar-header > * {
+        margin-bottom: 8px !important;
+    }
+    
+    /* Garantir altura mínima de toque confortável em mobile */
+    .google-calendar-header button,
+    .google-calendar-header select {
+        min-height: 40px !important;
+    }
+    
+    .google-calendar-header h3 {
+        font-size: 16px !important;
+    }
+    
+    /* Filtro vai para linha própria em mobile se necessário */
+    .google-calendar-header #filtro-disciplina-calendario {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+    }
+    
+    /* Legenda pode quebrar em 2 linhas em mobile mantendo gap */
+    #legenda-calendario {
+        column-gap: 12px !important;
+        row-gap: 6px !important;
+        padding: 6px 10px !important;
+        flex-wrap: wrap !important;
+    }
+    
+    #legenda-calendario > *:not(:last-child) {
+        margin-right: 12px !important;
+    }
+    
+    #legenda-calendario > * {
+        margin-bottom: 6px !important;
+    }
+    
+    .timeline-day-header {
+        min-height: 32px !important;
+        height: 32px !important;
+        padding: 1px !important;
+    }
+    
+    .timeline-day-header .dia-nome {
+        font-size: 7px !important;
+    }
+    
+    .timeline-day-header .dia-data {
+        font-size: 14px !important;
+    }
+    
+    .timeline-header {
+        min-height: 32px !important;
+        height: 32px !important;
+    }
+    
+    .timeline-calendar {
+        height: calc(100vh - 160px) !important;
+        min-height: calc(100vh - 160px) !important;
+        max-height: calc(100vh - 160px) !important;
+    }
+    
+    .timeline-hour-marker {
+        height: 45px !important;
+    }
+    
+    .timeline-hour-label {
+        font-size: 8px !important;
+    }
+}
+
+/* Reduzir espaçamentos verticais entre seções */
+#tab-calendario > div {
+    margin-top: 4px !important;
+    margin-bottom: 4px !important;
+}
+
+#tab-calendario > div:first-child {
+    margin-top: 0 !important;
+}
+
+/* Ajustar altura dinâmica do calendário via JavaScript */
 
 @keyframes fadeIn {
     from {
@@ -2934,46 +3232,54 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
         }, $todasSemanas));
         ?>
         
-        <div style="padding: 20px;">
-            <!-- Cabeçalho estilo Google Calendar -->
-            <div class="google-calendar-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; flex-wrap: wrap; gap: 16px;">
-                <div style="display: flex; align-items: center; gap: 16px;">
-                    <h3 style="margin: 0; color: #202124; font-size: 22px; font-weight: 400; font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
-                        Calendário
-                    </h3>
-                    <!-- Botão Hoje estilo Google Calendar -->
-                    <button id="btn-hoje" onclick="irParaHoje()" style="background: #1a73e8; color: white; border: none; border-radius: 24px; padding: 8px 24px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15);" onmouseover="this.style.background='#1765cc'; this.style.boxShadow='0 1px 3px rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15)'" onmouseout="this.style.background='#1a73e8'; this.style.boxShadow='0 1px 2px rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15)'">
-                        Hoje
-                    </button>
-                    <!-- Navegação estilo Google Calendar -->
-                    <div style="display: flex; align-items: center; gap: 4px; border: 1px solid #dadce0; border-radius: 4px; overflow: hidden;">
-                        <button id="btn-semana-anterior" onclick="mudarSemana(-1)" style="background: white; border: none; padding: 8px 12px; cursor: pointer; transition: background 0.15s; color: #5f6368;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
-                            <i class="fas fa-chevron-left" style="font-size: 12px;"></i>
-                        </button>
-                        <div style="border-left: 1px solid #dadce0; border-right: 1px solid #dadce0; padding: 0 12px;">
-                            <span id="info-semana-atual" style="font-size: 14px; font-weight: 400; color: #202124; white-space: nowrap;">
-                                <?php 
-                                $semanaDisplay = $todasSemanas[$semanaSelecionada] ?? $todasSemanas[0];
-                                $totalSemanas = count($todasSemanas);
-                                if ($semanaDisplay['inicio']):
-                                    $inicioSemana = $semanaDisplay['inicio'];
-                                    $fimSemana = clone $inicioSemana;
-                                    $fimSemana->modify('+6 days');
-                                    $meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
-                                    echo $inicioSemana->format('j') . ' - ' . $fimSemana->format('j') . ' de ' . $meses[$fimSemana->format('n') - 1] . ', ' . $fimSemana->format('Y');
-                                else:
-                                    echo 'Carregando...';
-                                endif;
-                                ?>
-                            </span>
-                        </div>
-                        <button id="btn-semana-proxima" onclick="mudarSemana(1)" style="background: white; border: none; padding: 8px 12px; cursor: pointer; transition: background 0.15s; color: #5f6368;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
-                            <i class="fas fa-chevron-right" style="font-size: 12px;"></i>
-                        </button>
-                    </div>
+        <div style="padding: 4px 8px;">
+            <!-- Cabeçalho compacto estilo Google Calendar -->
+            <!-- CRÍTICO: Container flex que agrupa TODOS os 5 itens lado a lado -->
+            <!-- FALLBACK: Espaçamento aplicado diretamente nos filhos para garantir respiro mesmo se gap for anulado -->
+            <div class="google-calendar-header" style="display: flex !important; align-items: center; margin-bottom: 8px; flex-wrap: wrap; column-gap: 14px; row-gap: 6px; padding: 6px 0;">
+                <!-- CRÍTICO: Todos os 5 itens no mesmo nível do container flex -->
+                <!-- FALLBACK: margin-right para garantir espaçamento mesmo se gap for anulado -->
+                <h3 style="margin: 0 14px 0 0 !important; color: #202124; font-size: 18px; font-weight: 400; font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; line-height: 1.2; flex-shrink: 0;">
+                    Calendário
+                </h3>
+                <!-- Badge compacto inline -->
+                <div style="background: #d1ecf1; border-left: 3px solid #17a2b8; padding: 4px 10px; border-radius: 4px; display: inline-flex; align-items: center; height: 24px; flex-shrink: 0; margin-right: 14px !important;">
+                    <strong style="color: #0c5460; font-size: 0.8rem; font-weight: 500; line-height: 1;">
+                        ✅ <span id="total-aulas-semana"><?= $totalAulas ?></span> aulas
+                    </strong>
                 </div>
-                <!-- Filtro estilo Google Calendar -->
-                <select id="filtro-disciplina-calendario" style="padding: 8px 32px 8px 12px; border: 1px solid #dadce0; border-radius: 4px; font-size: 14px; background: white; color: #202124; cursor: pointer; appearance: none; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235f6368' d='M6 9L1 4h10z'/%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 12px center;" onchange="filtrarCalendario()">
+                <!-- Botão Hoje compacto -->
+                <button id="btn-hoje" onclick="irParaHoje()" style="background: #1a73e8; color: white; border: none; border-radius: 16px; padding: 6px 16px; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15); height: 28px; line-height: 1; flex-shrink: 0; margin-right: 14px !important;" onmouseover="this.style.background='#1765cc'; this.style.boxShadow='0 1px 3px rgba(60,64,67,0.3), 0 4px 8px 3px rgba(60,64,67,0.15)'" onmouseout="this.style.background='#1a73e8'; this.style.boxShadow='0 1px 2px rgba(60,64,67,0.3), 0 1px 3px 1px rgba(60,64,67,0.15)'">
+                    Hoje
+                </button>
+                <!-- Navegação compacta -->
+                <div style="display: flex; align-items: center; gap: 0; border: 1px solid #dadce0; border-radius: 4px; overflow: hidden; flex-shrink: 0; margin-right: 14px !important;">
+                    <button id="btn-semana-anterior" onclick="mudarSemana(-1)" style="background: white; border: none; padding: 6px 10px; cursor: pointer; transition: background 0.15s; color: #5f6368; height: 28px; display: flex; align-items: center;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                        <i class="fas fa-chevron-left" style="font-size: 11px;"></i>
+                    </button>
+                    <div style="border-left: 1px solid #dadce0; border-right: 1px solid #dadce0; padding: 0 10px; height: 28px; display: flex; align-items: center;">
+                        <span id="info-semana-atual" style="font-size: 13px; font-weight: 400; color: #202124; white-space: nowrap; line-height: 1;">
+                            <?php 
+                            $semanaDisplay = $todasSemanas[$semanaSelecionada] ?? $todasSemanas[0];
+                            $totalSemanas = count($todasSemanas);
+                            if ($semanaDisplay['inicio']):
+                                $inicioSemana = $semanaDisplay['inicio'];
+                                $fimSemana = clone $inicioSemana;
+                                $fimSemana->modify('+6 days');
+                                $meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+                                echo $inicioSemana->format('j') . ' - ' . $fimSemana->format('j') . ' de ' . $meses[$fimSemana->format('n') - 1] . ', ' . $fimSemana->format('Y');
+                            else:
+                                echo 'Carregando...';
+                            endif;
+                            ?>
+                        </span>
+                    </div>
+                    <button id="btn-semana-proxima" onclick="mudarSemana(1)" style="background: white; border: none; padding: 6px 10px; cursor: pointer; transition: background 0.15s; color: #5f6368; height: 28px; display: flex; align-items: center;" onmouseover="this.style.background='#f8f9fa'" onmouseout="this.style.background='white'">
+                        <i class="fas fa-chevron-right" style="font-size: 11px;"></i>
+                    </button>
+                </div>
+                <!-- Filtro compacto -->
+                <select id="filtro-disciplina-calendario" style="padding: 6px 28px 6px 10px; border: 1px solid #dadce0; border-radius: 4px; font-size: 13px; background: white; color: #202124; cursor: pointer; appearance: none; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235f6368' d='M6 9L1 4h10z'/%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 10px center; height: 28px; line-height: 1; flex-shrink: 0; margin-left: auto !important; margin-right: 0 !important;" onchange="filtrarCalendario()">
                     <option value="">Todas as disciplinas</option>
                     <?php foreach ($disciplinasSelecionadas as $disc): ?>
                         <option value="<?= $disc['disciplina_id'] ?>"><?= htmlspecialchars($disc['nome_disciplina'] ?? $disc['nome_original'] ?? 'Disciplina') ?></option>
@@ -3100,48 +3406,142 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             }
             
             ?>
-            <div style="background: #d1ecf1; border-left: 3px solid #17a2b8; padding: 10px 15px; border-radius: 4px; margin-bottom: 15px;">
-                <strong style="color: #0c5460; font-size: 0.95rem;">
-                    ✅ <span id="total-aulas-semana"><?= $totalAulas ?></span> aulas nesta semana
-                </strong>
-            </div>
             
-            <!-- Legenda -->
-            <div style="background: #f8f9fa; padding: 15px; border-radius: 6px; margin-bottom: 20px; display: flex; gap: 20px; flex-wrap: wrap;">
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 20px; height: 20px; background: #e9ecef; border: 2px dashed #adb5bd; border-radius: 4px;"></div>
-                    <span style="font-size: 0.85rem;">Disponível</span>
+            <!-- Legenda compacta com respiro horizontal -->
+            <!-- CRÍTICO: Container flex que agrupa os 3 chips lado a lado -->
+            <!-- FALLBACK: Espaçamento aplicado diretamente nos chips para garantir respiro mesmo se gap for anulado -->
+            <div id="legenda-calendario" style="background: #f8f9fa; padding: 6px 12px; border-radius: 4px; margin-bottom: 8px; display: flex !important; column-gap: 14px; row-gap: 6px; flex-wrap: wrap; align-items: center; min-height: 28px;">
+                <!-- CRÍTICO: Cada chip é um filho direto do container flex -->
+                <!-- FALLBACK: margin-right para garantir espaçamento mesmo se gap for anulado -->
+                <div style="display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; margin-right: 14px !important;">
+                    <div style="width: 14px; height: 14px; background: #e9ecef; border: 1.5px dashed #adb5bd; border-radius: 3px; flex-shrink: 0;"></div>
+                    <span style="font-size: 0.75rem; color: #5f6368; line-height: 1;">Disponível</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 20px; height: 20px; background: #023A8D; border-radius: 4px;"></div>
-                    <span style="font-size: 0.85rem;">Aula agendada</span>
+                <div style="display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; margin-right: 14px !important;">
+                    <div style="width: 14px; height: 14px; background: #023A8D; border-radius: 3px; flex-shrink: 0;"></div>
+                    <span style="font-size: 0.75rem; color: #5f6368; line-height: 1;">Aula agendada</span>
                 </div>
-                <div style="display: flex; align-items: center; gap: 8px;">
-                    <div style="width: 20px; height: 20px; background: #28a745; border: 2px solid #fff; box-shadow: 0 0 0 2px #28a745; border-radius: 4px;"></div>
-                    <span style="font-size: 0.85rem;">Última aula (por disciplina)</span>
+                <div style="display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0; margin-right: 0 !important;">
+                    <div style="width: 14px; height: 14px; background: #28a745; border: 1.5px solid #fff; box-shadow: 0 0 0 1.5px #28a745; border-radius: 3px; flex-shrink: 0;"></div>
+                    <span style="font-size: 0.75rem; color: #5f6368; line-height: 1;">Última aula</span>
                 </div>
             </div>
             
             <!-- Calendário Estilo Google Calendar -->
             <style>
-            /* Container principal - estilo Google Calendar */
+            /* Container principal - estilo Google Calendar - altura máxima da viewport */
             .timeline-calendar {
                 position: relative;
                 background: #ffffff;
                 border-radius: 8px;
-                overflow: hidden;
+                overflow-x: hidden;
+                overflow-y: auto;
+                /* CRÍTICO: Reservar espaço do scrollbar sempre para alinhar header e body */
+                /* O scrollbar aparece neste container, então scrollbar-gutter deve estar aqui */
+                scrollbar-gutter: stable both-edges;
                 box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
                 font-family: 'Google Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+                display: flex;
+                flex-direction: column;
+                /* CRÍTICO: Calcular altura máxima baseada na viewport menos elementos superiores */
+                height: calc(100vh - 180px);
+                min-height: calc(100vh - 180px);
+                max-height: calc(100vh - 180px);
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+                border-bottom: none !important;
+                /* CRÍTICO: Padding zero para não afetar alinhamento */
+                padding-left: 0 !important;
+                padding-right: 0 !important;
             }
             
+            /* CRÍTICO: Zerar padding-bottom e min-height do wrapper externo */
+            #calendario-container {
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+                min-height: auto !important;
+            }
+            
+            /* CRÍTICO: Remover pseudo-elementos do wrapper externo que podem criar faixa */
+            #calendario-container::after,
+            #calendario-container::before,
+            .timeline-calendar::after,
+            .timeline-calendar::before {
+                display: none !important;
+                content: none !important;
+                height: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            /* Remover borda inferior do corpo do calendário e elementos relacionados */
+            .timeline-body,
+            .timeline-body *,
+            .timeline-day-column,
+            .timeline-hour-marker,
+            .timeline-slot {
+                border-bottom: none !important;
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+            }
+            
+            /* Remover borda inferior do último elemento */
+            .timeline-calendar > *:last-child {
+                border-bottom: none !important;
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+            }
+            
+            .timeline-body > *:last-child {
+                border-bottom: none !important;
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+            }
+            
+            /* Garantir que não há faixa branca na parte inferior bloqueando horários */
+            #calendario-container,
+            #calendario-container > * {
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+            }
+            
+            .timeline-day-column:last-child {
+                border-bottom: none !important;
+            }
+            
+            .timeline-hour-marker:last-child {
+                border-bottom: none !important;
+            }
+            
+            
             /* Cabeçalho estilo Google Calendar - mais limpo e moderno */
+            /* CRÍTICO: Grid unificado com body para alinhamento perfeito */
             .timeline-header {
-                display: grid;
-                grid-template-columns: 80px repeat(7, 1fr);
+                display: grid !important;
+                grid-template-columns: 80px repeat(7, minmax(0, 1fr)) !important;
+                column-gap: 0 !important;
+                box-sizing: border-box !important;
                 background: #ffffff;
                 color: #3c4043;
                 border-bottom: 1px solid #dadce0;
-                min-height: 64px;
+                /* CRÍTICO: Sem bordas verticais no header - bordas ficam apenas no body */
+                border-left: none !important;
+                border-right: none !important;
+                border-top: none !important;
+                min-height: 36px;
+                height: 36px;
+                position: sticky;
+                top: 0;
+                z-index: 50;
+                box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+                /* CRÍTICO: Padding zero para evitar desalinhamento */
+                padding: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                padding-top: 0 !important;
+                padding-bottom: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
             }
             
             .timeline-time-column {
@@ -3150,49 +3550,70 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 border-right: 1px solid #dadce0;
                 position: sticky;
                 left: 0;
-                z-index: 10;
+                z-index: 51;
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-weight: 500;
-                font-size: 13px;
+                font-size: 12px;
+                box-sizing: border-box !important;
+                width: 80px !important;
+                min-width: 80px !important;
+                max-width: 80px !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
             }
             
             .timeline-day-header {
-                padding: 8px 4px;
+                /* CRÍTICO: Padding ZERO para evitar desalinhamento - era padding: 2px que causava o problema */
+                padding: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                padding-top: 0 !important;
+                padding-bottom: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
                 text-align: center;
                 font-weight: 500;
-                font-size: 11px;
+                font-size: 10px;
                 color: #5f6368;
-                border-right: 1px solid #dadce0;
+                /* CRÍTICO: Bordas apenas do 2º ao 7º item para evitar duplicidade */
+                border-left: none !important;
+                border-right: none !important;
+                border-top: none !important;
+                border-bottom: none !important;
                 display: flex;
                 flex-direction: column;
                 align-items: center;
                 justify-content: center;
-                min-height: 64px;
+                min-height: 36px;
+                height: 36px;
+                box-sizing: border-box !important;
             }
             
-            .timeline-day-header:last-child {
-                border-right: none;
-            }
+            /* CRÍTICO: Header NÃO tem bordas verticais - bordas ficam apenas no body para evitar desalinhamento */
+            /* As linhas verticais são desenhadas apenas no .timeline-day-column do body */
             
             .timeline-day-header .dia-nome {
                 display: block;
-                font-size: 11px;
+                font-size: 8px;
                 font-weight: 500;
                 color: #5f6368;
-                margin-bottom: 4px;
+                margin-bottom: 1px;
                 text-transform: uppercase;
-                letter-spacing: 0.5px;
+                letter-spacing: 0.3px;
+                line-height: 1;
             }
             
             .timeline-day-header .dia-data {
                 display: block;
-                font-size: 26px;
+                font-size: 16px;
                 font-weight: 400;
                 color: #3c4043;
                 line-height: 1;
-                margin-top: 2px;
+                margin-top: 0;
             }
             
             /* Destacar dia atual */
@@ -3214,13 +3635,88 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 opacity: 0.4;
             }
             
-            /* Corpo do calendário */
+            /* Container externo do calendário */
+            #calendario-container {
+                padding-bottom: 0;
+                margin-bottom: 0;
+                overflow: visible;
+                border-bottom: none !important;
+            }
+            
+            /* Remover borda inferior do container pai */
+            #tab-calendario > div,
+            #tab-calendario > div > div {
+                border-bottom: none !important;
+            }
+            
+            /* Remover qualquer borda inferior do container com padding */
+            #tab-calendario div[style*="padding: 20px"],
+            #tab-calendario div[style*="padding:20px"] {
+                border-bottom: none !important;
+            }
+            
+            /* Corpo do calendário - altura automática baseada no conteúdo */
+            /* CRÍTICO: Grid unificado com header para alinhamento perfeito */
             .timeline-body {
-                display: grid;
-                grid-template-columns: 80px repeat(7, 1fr);
+                display: grid !important;
+                grid-template-columns: 80px repeat(7, minmax(0, 1fr)) !important;
+                column-gap: 0 !important;
+                box-sizing: border-box !important;
                 position: relative;
                 align-items: start;
                 background: #ffffff;
+                flex: 1;
+                overflow-x: hidden;
+                overflow-y: visible;
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+                border-bottom: none !important;
+                /* CRÍTICO: Padding zero para evitar desalinhamento */
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                /* CRÍTICO: Remover min-height padrão - será definido dinamicamente */
+                min-height: auto !important;
+                /* CRÍTICO: Garantir que body não tenha scrollbar próprio - o scroll está no .timeline-calendar */
+            }
+            
+            /* CRÍTICO: Não sobrescrever altura definida dinamicamente via JavaScript */
+            /* Remover estas regras que podem conflitar com o ajuste dinâmico */
+            /* .timeline-body[style*="height"] {
+                height: auto !important;
+            }
+            
+            .timeline-body[style*="min-height"] {
+                min-height: fit-content !important;
+            } */
+            
+            /* CRÍTICO: Limitar altura dos pseudo-elementos ao conteúdo real renderizado */
+            /* Garantir que ::after e ::before não criem faixa extra abaixo de 23:00 */
+            .timeline-hours::after,
+            .timeline-day-column::before {
+                /* A altura será limitada pelo container pai que não deve ultrapassar o último slot */
+                /* Se o container tem min-height, os pseudo-elementos devem respeitar isso */
+                /* Mas não devem criar espaço extra além do último slot renderizado */
+            }
+            
+            /* Garantir que o último slot (23:00) seja o último elemento visível */
+            .timeline-hour-marker:last-child {
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+            
+            /* Garantir que não há espaço extra após o último slot */
+            .timeline-hours:has(.timeline-hour-marker:last-child)::after {
+                /* Limitar altura do ::after ao último marcador de hora */
+                height: calc(100% - 0px) !important;
+                max-height: calc(100% - 0px) !important;
+            }
+            
+            .timeline-day-column:has(.timeline-slot:last-child)::before {
+                /* Limitar altura do ::before ao último slot */
+                height: calc(100% - 0px) !important;
+                max-height: calc(100% - 0px) !important;
             }
             
             /* Coluna de horários estilo Google Calendar */
@@ -3233,35 +3729,63 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 display: flex;
                 flex-direction: column;
                 overflow: hidden;
+                box-sizing: border-box !important;
+                width: 80px !important;
+                min-width: 80px !important;
+                max-width: 80px !important;
+                /* CRÍTICO: Zerar padding e margin para evitar espaço extra */
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                min-height: auto !important;
             }
             
+            /* CRÍTICO: Não sobrescrever altura definida dinamicamente via JavaScript */
+            /* Remover esta regra que pode conflitar com o ajuste dinâmico */
+            /* .timeline-hours[style*="height"] {
+                height: auto !important;
+            } */
+            
             /* Linhas horizontais na coluna de horários - estilo Google Calendar */
+            /* CRÍTICO: CSS permanente - aplicado sempre, não depende de JS */
             .timeline-hours::after {
-                content: '';
-                position: absolute;
-                top: 0;
-                left: 0;
-                right: 0;
-                bottom: 0;
-                width: 100%;
-                height: 100%;
-                /* Linhas muito sutis estilo Google Calendar */
+                content: '' !important;
+                position: absolute !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                /* CRÍTICO: Não usar bottom: 0 - isso cria faixa extra */
+                /* A altura será ajustada dinamicamente via JavaScript baseada no último slot renderizado */
+                /* Usar height: 100% inicialmente, mas será sobrescrito pelo JS */
+                height: 100% !important;
+                width: 100% !important;
+                /* Linhas muito sutis estilo Google Calendar - removendo última linha */
                 background-image: 
                     repeating-linear-gradient(
                         to bottom,
                         transparent,
-                        transparent 59px,
-                        #dadce0 59px,
-                        #dadce0 60px
-                    );
-                background-size: 100% 100%;
-                pointer-events: none;
-                z-index: 1;
+                        transparent 49px,
+                        #dadce0 49px,
+                        #dadce0 50px
+                    ) !important;
+                /* Ajustar background-size para não ultrapassar o conteúdo real */
+                background-size: 100% calc(100% - 1px) !important;
+                background-position: top !important;
+                background-repeat: no-repeat !important;
+                pointer-events: none !important;
+                z-index: 1 !important;
+                border-bottom: none !important;
+                /* Garantir que não ultrapasse o último slot (23:00) */
+                overflow: hidden !important;
+                display: block !important;
             }
             
             .timeline-hour-marker {
                 position: relative;
-                height: 60px;
+                height: 50px;
                 display: flex;
                 align-items: flex-start;
                 box-sizing: border-box;
@@ -3270,13 +3794,13 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             
             .timeline-hour-label {
                 position: absolute;
-                top: -6px;
-                left: 8px;
-                font-size: 10px;
+                top: -5px;
+                left: 6px;
+                font-size: 9px;
                 color: #5f6368;
                 font-weight: 400;
                 background: #ffffff;
-                padding: 0 4px;
+                padding: 0 3px;
             }
             
             .timeline-period-label {
@@ -3286,10 +3810,61 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             /* Colunas dos dias - estilo Google Calendar */
             .timeline-day-column {
                 position: relative;
-                border-right: 1px solid #dadce0;
+                /* CRÍTICO: Bordas apenas do 2º ao 7º item para evitar duplicidade e alinhar com header */
+                border-left: none !important;
+                border-right: none !important;
+                border-top: none !important;
+                border-bottom: none !important;
                 background: #ffffff;
-                overflow: hidden;
+                overflow: visible;
+                box-sizing: border-box !important;
+                /* CRÍTICO: Zerar padding e margin para evitar espaço extra */
+                padding-bottom: 0 !important;
+                margin-bottom: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                min-height: auto !important;
             }
+            
+            /* CRÍTICO: Aplicar borda esquerda apenas do 2º ao 7º item (primeira coluna sem borda) */
+            /* CSS permanente - não depende de JS */
+            .timeline-day-column:not(:first-child) {
+                border-left: 1px solid #dadce0 !important;
+            }
+            
+            .timeline-day-column:last-child {
+                border-right: none !important;
+            }
+            
+            /* CRÍTICO: Linhas horizontais permanentes nos slots (CSS puro) */
+            .timeline-slot {
+                border-top: 1px solid #dadce0 !important;
+            }
+            
+            .timeline-slot:first-child {
+                border-top: none !important;
+            }
+            
+            /* CRÍTICO: Zerar margin-bottom do último filho da grade */
+            .timeline-hour-marker:last-child,
+            .timeline-day-column:last-child,
+            .timeline-body > *:last-child {
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+            
+            /* Garantir que os slots dentro das colunas sejam visíveis */
+            .timeline-day-column .timeline-slot {
+                position: absolute;
+            }
+            
+            /* CRÍTICO: Não sobrescrever altura definida dinamicamente via JavaScript */
+            /* Remover esta regra que pode conflitar com o ajuste dinâmico */
+            /* .timeline-day-column[style*="height"] {
+                height: auto !important;
+            } */
             
             .timeline-day-column:last-child {
                 border-right: none;
@@ -3302,20 +3877,29 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 top: 0;
                 left: 0;
                 right: 0;
+                /* CRÍTICO: Não usar bottom: 0 - isso cria faixa extra */
+                /* A altura será ajustada dinamicamente via JavaScript baseada no último slot renderizado */
+                /* Usar height: 100% inicialmente, mas será sobrescrito pelo JS */
                 height: 100%;
                 width: 100%;
-                /* Linhas muito sutis - estilo Google Calendar */
-                background-image: 
+                /* Linhas muito sutis - estilo Google Calendar - removendo última linha */
+                    background-image: 
                     repeating-linear-gradient(
                         to bottom,
                         transparent,
-                        transparent 59px,
-                        #dadce0 59px,
-                        #dadce0 60px
+                        transparent 49px,
+                        #dadce0 49px,
+                        #dadce0 50px
                     );
-                background-size: 100% 100%;
+                /* Ajustar background-size para não ultrapassar o conteúdo real */
+                background-size: 100% calc(100% - 1px);
+                background-position: top;
+                background-repeat: no-repeat;
                 pointer-events: none;
                 z-index: 0;
+                border-bottom: none !important;
+                /* Garantir que não ultrapasse o último slot (23:00) */
+                overflow: hidden;
             }
             
             /* Slots vazios - estilo Google Calendar */
@@ -3337,6 +3921,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 background: transparent;
                 border: none;
                 transition: all 0.15s ease;
+                pointer-events: auto;
             }
             
             .timeline-slot.vazio:hover {
@@ -3354,13 +3939,14 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 color: #1a73e8;
                 font-size: 18px;
                 font-weight: 300;
-                opacity: 0;
+                opacity: 0.3;
                 transition: opacity 0.15s ease;
                 pointer-events: none;
+                z-index: 11;
             }
             
             .timeline-slot.vazio:hover::before {
-                opacity: 0.6;
+                opacity: 0.8;
             }
             
             /* Slots grandes de período não devem mostrar conteúdo visível */
@@ -3376,6 +3962,15 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             /* Slots individuais sempre capturam eventos */
             .timeline-slot.slot-individual {
                 pointer-events: auto !important;
+                z-index: 15 !important;
+            }
+            
+            .timeline-slot.slot-individual::before {
+                opacity: 0.25 !important;
+            }
+            
+            .timeline-slot.slot-individual:hover::before {
+                opacity: 0.8 !important;
             }
             
             /* Slots desabilitados (fora do período) não são clicáveis */
@@ -3502,7 +4097,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             }
             </style>
             
-            <div style="overflow-x: auto;" id="calendario-container">
+            <div style="padding-bottom: 0; margin-bottom: 0;" id="calendario-container">
                 <div class="timeline-calendar" id="timeline-calendario">
                     <?php
                     $semanaDisplay = $todasSemanas[$semanaSelecionada] ?? $todasSemanas[0];
@@ -3540,10 +4135,10 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                         }
                     }
                     
-                    // Se não há aulas ou a última aula termina antes de 23:00, terminar em 23:00
+                    // Se não há aulas ou a última aula termina antes de 23:00, terminar em 23:00 (fechar range diário)
                     // Se há aulas após 23:00, estender para mostrar todas
                     if (empty($todasAulasCalendario) || $horaMaximaReal <= 23 * 60) {
-                        $horaMaximaFinal = 23 * 60; // Terminar exatamente em 23:00 se não houver aulas depois
+                        $horaMaximaFinal = 23 * 60; // Terminar exatamente em 23:00 se não houver aulas depois (fechar range diário em 23:00, não 24:00)
                     } else {
                         $horaMaximaFinal = $horaMaximaReal; // Estender se houver aulas após 23:00
                     }
@@ -3558,19 +4153,27 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                     $horaMinima = $horaMinimaFinal;
                     $horaMaxima = $horaMaximaFinal;
                     
-                    // Calcular altura total: do início até exatamente 23:00 (ou mais se houver aulas depois)
-                    // SEMPRE terminar em 23:00 para evitar linhas extras
-                    if (empty($todasAulasCalendario) || $horaMaximaReal <= 23 * 60) {
-                        // Altura = (23:00 - horaMinima) * 2px - sempre terminar em 23:00
-                        $alturaTotalPx = (23 * 60 - $horaMinimaFinal) * 2;
-                        // Garantir que horaMaximaFinal também seja 23:00 para consistência
-                        $horaMaximaFinal = 23 * 60;
-                        $horaMaxima = 23 * 60;
+                    // Calcular altura total baseada no conteúdo real
+                    // SEMPRE mostrar até 23:00 (fechar range diário em 23:00, não 24:00) para evitar faixa extra
+                    // Densidade compacta: 50px por slot de 30min = ~1.67px por minuto
+                    if (empty($todasAulasCalendario)) {
+                        // Sem aulas: mostrar de 6:00 a 23:00 (fechar em 23:00 para evitar faixa extra)
+                        $horaMinimaFinal = 6 * 60;
+                        $horaMaximaFinal = 23 * 60; // Fechar em 23:00 (não 23:59)
+                        $alturaTotalPx = (23 * 60 - 6 * 60) * (50 / 30); // Altura exata até 23:00 (17 horas × 1.67px/min = ~1700px)
+                    } else if ($horaMaximaReal <= 23 * 60) {
+                        // Se a última aula termina antes de 23:00, sempre mostrar até 23:00 (fechar range)
+                        $horaMaximaFinal = 23 * 60; // Fechar em 23:00 para evitar faixa extra
+                        $alturaTotalPx = ($horaMaximaFinal - $horaMinimaFinal) * (50 / 30); // Densidade compacta
                     } else {
                         // Se há aulas após 23:00, estender apenas o necessário
                         $alturaTotalMinutos = $horaMaximaFinal - $horaMinimaFinal;
-                        $alturaTotalPx = $alturaTotalMinutos * 2; // 2px por minuto
+                        $alturaTotalPx = $alturaTotalMinutos * (50 / 30); // Densidade compacta: ~1.67px por minuto
                     }
+                    
+                    // Atualizar variáveis globais para garantir consistência
+                    $horaMinima = $horaMinimaFinal;
+                    $horaMaxima = $horaMaximaFinal;
                     
                     // Debug detalhado
                     echo "<!-- DEBUG Timeline: horaMinima=$horaMinimaFinal (" . sprintf('%02d:%02d', floor($horaMinimaFinal/60), $horaMinimaFinal%60) . "), horaMaxima=$horaMaximaFinal (" . sprintf('%02d:%02d', floor($horaMaximaFinal/60), $horaMaximaFinal%60) . "), alturaTotal=$alturaTotalPx px, totalAulas=" . count($todasAulasCalendario) . " -->";
@@ -3607,38 +4210,25 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                     </div>
                     
                     <!-- Corpo da Timeline -->
-                    <div class="timeline-body" style="min-height: <?= $alturaTotalPx ?>px; height: <?= $alturaTotalPx ?>px;" data-altura-original="<?= $alturaTotalPx ?>">
+                    <div class="timeline-body" style="min-height: <?= $alturaTotalPx ?>px;" data-altura-original="<?= $alturaTotalPx ?>">
                         <!-- Coluna de Horários -->
-                        <div class="timeline-hours" id="timeline-hours-column" style="min-height: <?= $alturaTotalPx ?>px; height: <?= $alturaTotalPx ?>px;" data-altura-original="<?= $alturaTotalPx ?>">
+                        <div class="timeline-hours" id="timeline-hours-column" style="min-height: <?= $alturaTotalPx ?>px;" data-altura-original="<?= $alturaTotalPx ?>">
                             <?php
                             // Renderizar períodos com possibilidade de colapsar
                             $periodoRenderizado = '';
                             // Usar $horaMinima e $horaMaxima que já foram atualizados acima
                             $horaAtual = $horaMinima;
-                            // Sempre renderizar até 23:00 para manter a grade completa
-                            $horaMaximaLimite = 23 * 60;
+                            // Renderizar até a hora máxima calculada, mas fechar exatamente em 23:00 (não renderizar linha extra)
+                            // Limite máximo para renderização: 23:00 (1380 minutos) - última hora inteira
+                            $horaMaximaLimite = min($horaMaxima, 23 * 60); // Não ultrapassar 23:00
                             
-                            while ($horaAtual <= $horaMaximaLimite):
+                            // Garantir exatamente 24 slots (00-23), parando antes de ultrapassar 23:00
+                            while ($horaAtual < $horaMaximaLimite):
                                 $horas = floor($horaAtual / 60);
                                 $minutos = $horaAtual % 60;
                                 
-                                // Se chegou exatamente em 23:00, renderizar e parar
-                                if ($horaAtual == 23 * 60) {
-                                    $horaTexto = "23:00";
-                                    $ehHoraInteira = true;
-                                    $periodo = 'Noite';
-                                    $ehInicioPeriodo = false;
-                                    
-                                    // Renderizar linha de 23:00
-                                    ?>
-                                    <div class="timeline-hour-marker hora-inteira" 
-                                         style="height: 60px; flex-shrink: 0;"
-                                         data-hora-minutos="<?= 23 * 60 ?>"
-                                         data-hora-texto="23:00"
-                                         data-periodo="noite">
-                                        <span class="timeline-hour-label">23:00</span>
-                                    </div>
-                                    <?php
+                                // Não renderizar se passou do limite (usar < em vez de <= para evitar linha extra)
+                                if ($horaAtual >= $horaMaximaLimite) {
                                     break;
                                 }
                                 
@@ -3686,8 +4276,8 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                 }
                                 
                                 // Renderizar marcador de hora normal
-                                // Cada slot de 30 minutos = 60px (2px por minuto)
-                                $altura = 60;
+                                // Cada slot de 30 minutos = 50px (densidade compacta: ~1.67px por minuto)
+                                $altura = 50;
                             ?>
                             <div class="timeline-hour-marker <?= $ehHoraInteira ? 'hora-inteira' : '' ?>" 
                                  style="height: <?= $altura ?>px; flex-shrink: 0;"
@@ -3709,17 +4299,31 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                 // Avançar 30 minutos
                                 $horaAtual += 30;
                                 
-                                // Se passou de 23:00, parar o loop
+                                // Parar exatamente em 23:00 (não ultrapassar para evitar linha extra)
                                 if ($horaAtual > 23 * 60) {
                                     break;
                                 }
                             endwhile;
+                            
+                            // Renderizar última linha (23:00) se ainda não foi renderizada
+                            // Verificar se o último slot renderizado foi 22:30, então precisamos renderizar 23:00
+                            if ($horaAtual == 23 * 60 && $horaMaximaLimite >= 23 * 60):
+                            ?>
+                            <div class="timeline-hour-marker hora-inteira" 
+                                 style="height: 50px; flex-shrink: 0;"
+                                 data-hora-minutos="1380"
+                                 data-hora-texto="23:00"
+                                 data-periodo="noite">
+                                <span class="timeline-hour-label">23:00</span>
+                            </div>
+                            <?php
+                            endif;
                             ?>
                         </div>
                         
                         <!-- Colunas dos Dias -->
                         <?php foreach ($semanaDisplay['dias'] as $diaIdx => $data): ?>
-                            <div class="timeline-day-column" data-dia-semana="<?= $diaIdx ?>" data-data="<?= $data ?>" style="position: relative; min-height: <?= $alturaTotalPx ?>px; height: <?= $alturaTotalPx ?>px;" data-altura-original="<?= $alturaTotalPx ?>" id="dia-col-<?= $diaIdx ?>">
+                            <div class="timeline-day-column" data-dia-semana="<?= $diaIdx ?>" data-data="<?= $data ?>" style="position: relative; min-height: <?= $alturaTotalPx ?>px;" data-altura-original="<?= $alturaTotalPx ?>" id="dia-col-<?= $diaIdx ?>">
                                 <?php if ($data): 
                                     // Normalizar formato de data para busca (garantir Y-m-d)
                                     $dataBusca = $data;
@@ -3819,8 +4423,8 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                             }
                                             $parts = explode(':', $horaInicioTeste);
                                             $inicioMinutos = (int)($parts[0] ?? 0) * 60 + (int)($parts[1] ?? 0);
-                                            $topCalculado = ($inicioMinutos - $horaMinima) * 2;
-                                            $debugDia .= " | Calculo top: ($inicioMinutos - $horaMinima) * 2 = $topCalculado px";
+                                            $topCalculado = ($inicioMinutos - $horaMinima) * (50 / 30);
+                                            $debugDia .= " | Calculo top: ($inicioMinutos - $horaMinima) * (50/30) = $topCalculado px";
                                         }
                                     } else {
                                         $debugDia .= " NENHUMA AULA ENCONTRADA! Verificando aulasPorData...";
@@ -3912,8 +4516,8 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                             if ($periodoFim > $horaMaxima) $periodoFim = $horaMaxima;
                                             if ($periodoInicio >= $periodoFim) continue;
                                             
-                                            $top = ($periodoInicio - $horaMinima) * 2;
-                                            $altura = ($periodoFim - $periodoInicio) * 2;
+                                            $top = ($periodoInicio - $horaMinima) * (50 / 30);
+                                            $altura = ($periodoFim - $periodoInicio) * (50 / 30);
                                             $horaSlot = sprintf('%02d:%02d', floor($periodoInicio / 60), $periodoInicio % 60);
                                             
                                             // REMOVIDO: displayStyle baseado em colapso - períodos sempre visíveis inicialmente
@@ -3939,9 +4543,11 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         $dataForaPeriodo = ($dataDateTime < $dataInicio || $dataDateTime > $dataFim);
                                         
                                         $horaAtualSlot = $horaMinima;
-                                        while ($horaAtualSlot < $horaMaxima) {
-                                            $top = ($horaAtualSlot - $horaMinima) * 2;
-                                            $altura = 60; // 30 minutos = 60px (2px por minuto)
+                                        // Limite máximo: 23:00 (1380 minutos) - garantir exatamente 24 slots (00-23)
+                                        $horaMaximaSlot = min($horaMaxima, 23 * 60);
+                                        while ($horaAtualSlot < $horaMaximaSlot) {
+                                            $top = ($horaAtualSlot - $horaMinima) * (50 / 30);
+                                            $altura = 50; // 30 minutos = 50px (densidade compacta: ~1.67px por minuto)
                                             $horaSlot = sprintf('%02d:%02d', floor($horaAtualSlot / 60), $horaAtualSlot % 60);
                                             
                                             // Determinar período
@@ -3972,6 +4578,11 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                     <?php
                                             // Avançar 30 minutos
                                             $horaAtualSlot += 30;
+                                            
+                                            // Parar exatamente em 23:00 (não ultrapassar para evitar slot extra)
+                                            if ($horaAtualSlot > 23 * 60) {
+                                                break;
+                                            }
                                         }
                                     } else {
                                         // Renderizar cada evento
@@ -3994,8 +4605,8 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                             if ($evento['inicio'] > $ultimoFim && $evento['inicio'] - $ultimoFim >= 30) {
                                             $slotInicio = $ultimoFim;
                                             $slotFim = $evento['inicio'];
-                                            $top = ($slotInicio - $horaMinima) * 2;
-                                            $altura = ($slotFim - $slotInicio) * 2;
+                                            $top = ($slotInicio - $horaMinima) * (50 / 30);
+                                            $altura = ($slotFim - $slotInicio) * (50 / 30);
                                             $horaSlot = sprintf('%02d:%02d', floor($slotInicio / 60), $slotInicio % 60);
                                             
                                             // Determinar período do slot vazio
@@ -4028,14 +4639,14 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         $corDisciplina = $coresDisciplinas[$aula['disciplina_id']] ?? '#023A8D';
                                         $nomeDisciplina = $disciplinasMap[$aula['disciplina_id']] ?? 'Disciplina';
                                         
-                                        // Calcular posição e altura (2px por minuto)
+                                        // Calcular posição e altura (densidade compacta: ~1.67px por minuto)
                                         // CRÍTICO: Usar $horaMinima que já foi atualizado acima para garantir alinhamento
                                         // Calcular top baseado no início do evento
-                                        $top = ($evento['inicio'] - $horaMinima) * 2;
+                                        $top = ($evento['inicio'] - $horaMinima) * (50 / 30);
                                         
-                                        // Calcular altura baseado na duração (2px por minuto)
+                                        // Calcular altura baseado na duração (densidade compacta: ~1.67px por minuto)
                                         $duracaoMinutos = $evento['fim'] - $evento['inicio'];
-                                        $altura = max(40, $duracaoMinutos * 2); // Mínimo de 40px para visibilidade
+                                        $altura = max(35, $duracaoMinutos * (50 / 30)); // Mínimo de 35px para visibilidade
                                         
                                         // Validar que top não seja negativo (aula antes do início da timeline)
                                         if ($top < 0) {
@@ -4044,7 +4655,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         }
                                         
                                         // Garantir que a altura não ultrapasse o limite da timeline
-                                        $maxTop = ($horaMaxima - $horaMinima) * 2;
+                                        $maxTop = ($horaMaxima - $horaMinima) * (50 / 30);
                                         if ($top + $altura > $maxTop) {
                                             $altura = max(40, $maxTop - $top);
                                         }
@@ -4099,8 +4710,8 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                     // Slot vazio final (se houver espaço significativo após última aula)
                                     // Só criar se houver pelo menos 1 hora de espaço
                                     if ($ultimoFim < $horaMaxima && $horaMaxima - $ultimoFim >= 60) {
-                                        $top = ($ultimoFim - $horaMinima) * 2;
-                                        $altura = ($horaMaxima - $ultimoFim) * 2;
+                                        $top = ($ultimoFim - $horaMinima) * (50 / 30);
+                                        $altura = ($horaMaxima - $ultimoFim) * (50 / 30);
                                         $horaSlot = sprintf('%02d:%02d', floor($ultimoFim / 60), $ultimoFim % 60);
                                         
                                         // Determinar período do slot final
@@ -4132,7 +4743,9 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                     $dataForaPeriodo = ($dataDateTime < $dataInicio || $dataDateTime > $dataFim);
                                     
                                     $horaAtualSlot = $horaMinima;
-                                    while ($horaAtualSlot < $horaMaxima) {
+                                    // Limite máximo: 23:00 (1380 minutos) - garantir exatamente 24 slots (00-23)
+                                    $horaMaximaSlot = min($horaMaxima, 23 * 60);
+                                    while ($horaAtualSlot < $horaMaximaSlot) {
                                         // Verificar se este horário já está coberto por uma aula
                                         $estaCobertoPorAula = false;
                                         foreach ($eventos as $evento) {
@@ -4144,8 +4757,8 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         
                                         // Se não está coberto por aula, criar slot clicável de 30 minutos
                                         if (!$estaCobertoPorAula) {
-                                            $top = ($horaAtualSlot - $horaMinima) * 2;
-                                            $altura = 60; // 30 minutos = 60px (2px por minuto)
+                                            $top = ($horaAtualSlot - $horaMinima) * (50 / 30);
+                                            $altura = 50; // 30 minutos = 50px (densidade compacta: ~1.67px por minuto)
                                             $horaSlot = sprintf('%02d:%02d', floor($horaAtualSlot / 60), $horaAtualSlot % 60);
                                             
                                             // Determinar período
@@ -4178,6 +4791,11 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         
                                         // Avançar 30 minutos
                                         $horaAtualSlot += 30;
+                                        
+                                        // Parar exatamente em 23:00 (não ultrapassar para evitar slot extra)
+                                        if ($horaAtualSlot > 23 * 60) {
+                                            break;
+                                        }
                                     }
                                     ?>
                                 <?php endif; ?>
@@ -4187,6 +4805,17 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 </div>
             </div>
         </div>
+        <!-- CRÍTICO: Garantir que não há espaçamento extra após o calendário -->
+        <style>
+            #tab-calendario > div:last-child {
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+            #tab-calendario > div:last-child > div:last-child {
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+        </style>
     </div>
 
     <!-- Aba Estatísticas -->
@@ -4387,7 +5016,15 @@ function irParaHoje() {
         const indiceAtual = parseInt(document.getElementById('semana-atual-indice').value);
         const diferenca = indiceSemanaHoje - indiceAtual;
         if (diferenca !== 0) {
+            // mudarSemana já chama reexecutarPosRender() após o AJAX
             mudarSemana(diferenca);
+        } else {
+            // Se já está na semana de hoje, garantir que pós-render está aplicado
+            if (typeof window.reexecutarPosRender === 'function') {
+                setTimeout(() => {
+                    window.reexecutarPosRender();
+                }, 33);
+            }
         }
     } else {
         // Se não encontrou, mostrar mensagem
@@ -4653,6 +5290,14 @@ function mudarSemana(direcao) {
                 if (calendarioAtual) {
                     // Substituir todo o conteúdo interno
                     calendarioAtual.innerHTML = novoCalendario.innerHTML;
+                    
+                    // CRÍTICO: Reexecutar funções de pós-render após re-render do calendário
+                    // Debounce de 33ms para garantir que o DOM está completamente renderizado
+                    setTimeout(() => {
+                        if (typeof window.reexecutarPosRender === 'function') {
+                            window.reexecutarPosRender();
+                        }
+                    }, 33);
                 }
             } else {
                 // Fallback: recarregar a página
@@ -4894,6 +5539,435 @@ document.addEventListener('click', function(e) {
 
 // Inicializar ao carregar
 document.addEventListener('DOMContentLoaded', function() {
+    // CRÍTICO: Remover faixa em branco abaixo de 23:00 após carregamento completo
+    function removerFaixaBranca() {
+        const timelineHours = document.querySelector('.timeline-hours');
+        const timelineDayColumns = document.querySelectorAll('.timeline-day-column');
+        const timelineBody = document.querySelector('.timeline-body');
+        const calendarioContainer = document.getElementById('calendario-container');
+        const timelineCalendar = document.querySelector('.timeline-calendar');
+        
+        if (timelineHours) {
+            // Encontrar o último marcador de hora (deve ser 23:00)
+            const ultimoMarcador = timelineHours.querySelector('.timeline-hour-marker:last-child');
+            if (ultimoMarcador) {
+                const ultimoMarcadorTop = ultimoMarcador.offsetTop;
+                const ultimoMarcadorHeight = ultimoMarcador.offsetHeight;
+                // CRÍTICO: Calcular altura exata sem arredondamento - usar Math.floor para evitar subpixel
+                const alturaReal = Math.floor(ultimoMarcadorTop + ultimoMarcadorHeight);
+                
+                // CRÍTICO: Zerar padding-bottom e min-height de TODOS os wrappers
+                const wrappers = [calendarioContainer, timelineCalendar, timelineBody, timelineHours];
+                wrappers.forEach(wrapper => {
+                    if (wrapper) {
+                        wrapper.style.paddingBottom = '0px';
+                        wrapper.style.marginBottom = '0px';
+                    }
+                });
+                
+                // CRÍTICO: Aplicar mesma altura exata (sem variação) para TODOS os containers
+                const containers = ['.timeline-body', '.timeline-hours', '.timeline-day-column'];
+                containers.forEach(selector => {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach(el => {
+                        // Usar altura exata arredondada para evitar diferenças por subpixel
+                        el.style.minHeight = alturaReal + 'px';
+                        el.style.height = alturaReal + 'px';
+                        el.style.maxHeight = alturaReal + 'px';
+                        el.style.paddingBottom = '0px';
+                        el.style.marginBottom = '0px';
+                    });
+                });
+                
+                // CRÍTICO: Zerar margin-bottom do último filho
+                const ultimoMarcadorEl = timelineHours.querySelector('.timeline-hour-marker:last-child');
+                if (ultimoMarcadorEl) {
+                    ultimoMarcadorEl.style.marginBottom = '0px';
+                    ultimoMarcadorEl.style.paddingBottom = '0px';
+                }
+                
+                // Limitar pseudo-elemento ::after da coluna de horários
+                const styleAfter = document.createElement('style');
+                styleAfter.id = 'fix-faixa-branca-after';
+                styleAfter.textContent = `
+                    .timeline-hours::after {
+                        height: ${alturaReal}px !important;
+                        max-height: ${alturaReal}px !important;
+                        bottom: auto !important;
+                    }
+                `;
+                // Remover estilo anterior se existir
+                const estiloAnterior = document.getElementById('fix-faixa-branca-after');
+                if (estiloAnterior) estiloAnterior.remove();
+                document.head.appendChild(styleAfter);
+            }
+        }
+        
+        // Limitar pseudo-elementos ::before das colunas dos dias
+        timelineDayColumns.forEach(column => {
+            const slots = column.querySelectorAll('.timeline-slot');
+            if (slots.length > 0) {
+                const ultimoSlot = slots[slots.length - 1];
+                const ultimoSlotTop = ultimoSlot.offsetTop;
+                const ultimoSlotHeight = ultimoSlot.offsetHeight;
+                // CRÍTICO: Usar mesma altura exata (arredondada) para manter sincronização
+                const alturaRealColuna = Math.floor(ultimoSlotTop + ultimoSlotHeight);
+                
+                // Ajustar altura da coluna
+                column.style.minHeight = alturaRealColuna + 'px';
+                column.style.height = alturaRealColuna + 'px';
+                column.style.maxHeight = alturaRealColuna + 'px';
+                column.style.paddingBottom = '0px';
+                column.style.marginBottom = '0px';
+                
+                // Zerar margin-bottom do último slot
+                ultimoSlot.style.marginBottom = '0px';
+                ultimoSlot.style.paddingBottom = '0px';
+                
+                // Limitar pseudo-elemento ::before desta coluna
+                const styleBefore = document.createElement('style');
+                styleBefore.id = `fix-faixa-branca-before-${column.id}`;
+                styleBefore.textContent = `
+                    .timeline-day-column[id="${column.id}"]::before {
+                        height: ${alturaRealColuna}px !important;
+                        max-height: ${alturaRealColuna}px !important;
+                        bottom: auto !important;
+                    }
+                `;
+                // Remover estilo anterior se existir
+                const estiloAnterior = document.getElementById(`fix-faixa-branca-before-${column.id}`);
+                if (estiloAnterior) estiloAnterior.remove();
+                document.head.appendChild(styleBefore);
+            }
+        });
+        
+        // CRÍTICO: Garantir que eixo de horas e grade tenham exatamente a mesma altura
+        if (timelineHours && timelineBody) {
+            const alturaEixo = Math.floor(timelineHours.scrollHeight);
+            const alturaGrade = Math.floor(timelineBody.scrollHeight);
+            const alturaFinal = Math.max(alturaEixo, alturaGrade);
+            
+            // Aplicar altura final idêntica para ambos
+            timelineHours.style.height = alturaFinal + 'px';
+            timelineHours.style.minHeight = alturaFinal + 'px';
+            timelineHours.style.maxHeight = alturaFinal + 'px';
+            timelineBody.style.height = alturaFinal + 'px';
+            timelineBody.style.minHeight = alturaFinal + 'px';
+            timelineBody.style.maxHeight = alturaFinal + 'px';
+            
+            // Aplicar também nas colunas dos dias
+            timelineDayColumns.forEach(column => {
+                column.style.height = alturaFinal + 'px';
+                column.style.minHeight = alturaFinal + 'px';
+                column.style.maxHeight = alturaFinal + 'px';
+            });
+        }
+    }
+    
+    // CRÍTICO: Remover espaçamento extra do wrapper abaixo do calendário
+    function removerEspacamentoWrapperCalendario() {
+        const tabCalendario = document.getElementById('tab-calendario');
+        if (!tabCalendario) return;
+        
+        // Zerar padding-bottom e margin-bottom de todos os ancestrais diretos
+        let elemento = tabCalendario;
+        let nivel = 0;
+        while (elemento && nivel < 10) { // Verificar até 10 níveis acima para pegar todos os wrappers
+            elemento.style.paddingBottom = '0px';
+            elemento.style.marginBottom = '0px';
+            
+            // Verificar se é Grid/Flex e zerar gap
+            const display = window.getComputedStyle(elemento).display;
+            if (display === 'grid' || display === 'flex') {
+                elemento.style.gap = '0px';
+                elemento.style.rowGap = '0px';
+            }
+            
+            elemento = elemento.parentElement;
+            nivel++;
+        }
+        
+        // CRÍTICO: Zerar padding-bottom de wrappers específicos conhecidos
+        const wrappersConhecidos = [
+            '.admin-main',
+            '.wizard-content',
+            '.turma-wizard',
+            '.admin-container',
+            '.main-content',
+            '.content-wrapper',
+            '.page-wrapper'
+        ];
+        
+        wrappersConhecidos.forEach(selector => {
+            const elementos = document.querySelectorAll(selector);
+            elementos.forEach(el => {
+                el.style.paddingBottom = '0px';
+                el.style.marginBottom = '0px';
+                
+                // Verificar gap em Grid/Flex
+                const display = window.getComputedStyle(el).display;
+                if (display === 'grid' || display === 'flex') {
+                    el.style.gap = '0px';
+                    el.style.rowGap = '0px';
+                }
+                
+                // Zerar margin-bottom do último filho
+                const ultimoFilho = el.lastElementChild;
+                if (ultimoFilho) {
+                    ultimoFilho.style.marginBottom = '0px';
+                    ultimoFilho.style.paddingBottom = '0px';
+                }
+            });
+        });
+        
+        // Zerar margin-bottom do último filho dentro da aba calendário
+        const ultimoFilho = tabCalendario.lastElementChild;
+        if (ultimoFilho) {
+            ultimoFilho.style.marginBottom = '0px';
+            ultimoFilho.style.paddingBottom = '0px';
+        }
+        
+        // Remover pseudo-elementos que possam criar espaço
+        const style = document.createElement('style');
+        style.id = 'fix-wrapper-calendario';
+        style.textContent = `
+            #tab-calendario::after,
+            #tab-calendario::before,
+            .tab-content::after,
+            .tab-content::before,
+            .admin-main::after,
+            .admin-main::before,
+            .wizard-content::after,
+            .wizard-content::before,
+            .turma-wizard::after,
+            .turma-wizard::before {
+                display: none !important;
+                content: none !important;
+                height: 0 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            #tab-calendario > *:last-child,
+            .admin-main > *:last-child,
+            .wizard-content > *:last-child,
+            .turma-wizard > *:last-child {
+                margin-bottom: 0 !important;
+                padding-bottom: 0 !important;
+            }
+        `;
+        const estiloAnterior = document.getElementById('fix-wrapper-calendario');
+        if (estiloAnterior) estiloAnterior.remove();
+        document.head.appendChild(style);
+    }
+    
+    // CRÍTICO: Garantir alinhamento perfeito entre header e body do calendário
+    function garantirAlinhamentoHeaderBody() {
+        const timelineHeader = document.querySelector('.timeline-header');
+        const timelineBody = document.querySelector('.timeline-body');
+        const timelineCalendar = document.querySelector('.timeline-calendar');
+        
+        if (!timelineHeader || !timelineBody || !timelineCalendar) return;
+        
+        // CRÍTICO: O scrollbar está no .timeline-calendar, então medir a largura do scrollbar dele
+        const scrollbarWidth = timelineCalendar.offsetWidth - timelineCalendar.clientWidth;
+        
+        // Verificar se scrollbar-gutter é suportado e está funcionando
+        const scrollbarGutterSupported = CSS.supports('scrollbar-gutter', 'stable');
+        const computedStyle = window.getComputedStyle(timelineCalendar);
+        const scrollbarGutterValue = computedStyle.scrollbarGutter;
+        
+        // Se scrollbar-gutter não está funcionando ou não é suportado, aplicar fallback
+        if (!scrollbarGutterSupported || scrollbarGutterValue === 'none' || scrollbarGutterValue === '') {
+            if (scrollbarWidth > 0) {
+                // Aplicar padding-right no header para compensar o scrollbar
+                timelineHeader.style.paddingRight = scrollbarWidth + 'px';
+            } else {
+                timelineHeader.style.paddingRight = '0px';
+            }
+        } else {
+            // Se scrollbar-gutter está funcionando, garantir que não há padding extra
+            timelineHeader.style.paddingRight = '0px';
+        }
+        
+        // CRÍTICO: Garantir que header e body tenham exatamente a mesma largura
+        // Medir a largura do body (que está dentro do container com scrollbar)
+        const bodyWidth = timelineBody.offsetWidth;
+        const headerWidth = timelineHeader.offsetWidth;
+        
+        // Se houver diferença, ajustar o header para corresponder ao body
+        if (Math.abs(bodyWidth - headerWidth) > 1) {
+            // Forçar mesma largura do body no header
+            timelineHeader.style.width = bodyWidth + 'px';
+            timelineHeader.style.maxWidth = bodyWidth + 'px';
+            timelineHeader.style.minWidth = bodyWidth + 'px';
+        }
+        
+        // CRÍTICO: Sincronizar larguras das colunas individuais
+        const headerColumns = timelineHeader.querySelectorAll('.timeline-day-header');
+        const bodyColumns = timelineBody.querySelectorAll('.timeline-day-column');
+        
+        if (headerColumns.length === bodyColumns.length && headerColumns.length === 7) {
+            bodyColumns.forEach((bodyCol, index) => {
+                const headerCol = headerColumns[index];
+                if (headerCol && bodyCol) {
+                    const bodyColWidth = bodyCol.offsetWidth;
+                    const headerColWidth = headerCol.offsetWidth;
+                    
+                    // Se houver diferença, ajustar o header para corresponder ao body
+                    if (Math.abs(bodyColWidth - headerColWidth) > 1) {
+                        headerCol.style.width = bodyColWidth + 'px';
+                        headerCol.style.minWidth = bodyColWidth + 'px';
+                        headerCol.style.maxWidth = bodyColWidth + 'px';
+                    }
+                }
+            });
+        }
+        
+        // CRÍTICO: Garantir que a coluna de horários também está alinhada
+        const timeColumnHeader = timelineHeader.querySelector('.timeline-time-column');
+        const timeColumnBody = timelineBody.querySelector('.timeline-hours');
+        
+        if (timeColumnHeader && timeColumnBody) {
+            const timeColBodyWidth = timeColumnBody.offsetWidth;
+            const timeColHeaderWidth = timeColumnHeader.offsetWidth;
+            
+            if (Math.abs(timeColBodyWidth - timeColHeaderWidth) > 1) {
+                timeColumnHeader.style.width = timeColBodyWidth + 'px';
+                timeColumnHeader.style.minWidth = timeColBodyWidth + 'px';
+                timeColumnHeader.style.maxWidth = timeColBodyWidth + 'px';
+            }
+        }
+    }
+    
+    // CRÍTICO: Ajustar altura do calendário para ocupar máximo da viewport
+    function ajustarAlturaCalendario() {
+        const timelineCalendar = document.querySelector('.timeline-calendar');
+        if (!timelineCalendar) return;
+        
+        // Calcular altura dos elementos superiores
+        const header = document.querySelector('.google-calendar-header');
+        const legenda = document.getElementById('legenda-calendario');
+        const tabCalendario = document.getElementById('tab-calendario');
+        const wrapper = tabCalendario ? tabCalendario.parentElement : null;
+        
+        let alturaSuperiores = 0;
+        if (header) alturaSuperiores += header.offsetHeight;
+        if (legenda && legenda.offsetParent !== null) alturaSuperiores += legenda.offsetHeight;
+        
+        // Altura do topbar/admin-main (aproximada)
+        const adminMain = document.querySelector('.admin-main');
+        const paddingTop = adminMain ? parseInt(window.getComputedStyle(adminMain).paddingTop) : 24;
+        const topbarHeight = 64; // Altura fixa do topbar
+        
+        // Calcular altura disponível
+        const alturaViewport = window.innerHeight;
+        const alturaDisponivel = alturaViewport - topbarHeight - paddingTop - alturaSuperiores - 40; // 40px de margem de segurança
+        
+        // Aplicar altura ao calendário
+        timelineCalendar.style.height = alturaDisponivel + 'px';
+        timelineCalendar.style.minHeight = alturaDisponivel + 'px';
+        timelineCalendar.style.maxHeight = alturaDisponivel + 'px';
+    }
+    
+    // CRÍTICO: Função para reexecutar todas as funções de pós-render (idempotente)
+    // Definir ANTES de ser chamada para estar disponível globalmente
+    // Tornar global para poder ser chamada de qualquer lugar (mudarSemana, irParaHoje, etc.)
+    window.reexecutarPosRender = function reexecutarPosRender() {
+        // Remover observadores antigos se existirem
+        if (window.timelineResizeObserver) {
+            window.timelineResizeObserver.disconnect();
+            window.timelineResizeObserver = null;
+        }
+        
+        // Reexecutar todas as funções de pós-render
+        removerFaixaBranca();
+        removerEspacamentoWrapperCalendario();
+        ajustarAlturaCalendario();
+        garantirAlinhamentoHeaderBody();
+        
+        // Reanexar ResizeObserver no novo body
+        const timelineBody = document.querySelector('.timeline-body');
+        if (timelineBody && window.ResizeObserver) {
+            window.timelineResizeObserver = new ResizeObserver(() => {
+                garantirAlinhamentoHeaderBody();
+            });
+            window.timelineResizeObserver.observe(timelineBody);
+        }
+    };
+    
+    // CRÍTICO: MutationObserver para detectar quando o calendário é re-renderizado
+    const calendarioContainer = document.querySelector('#tab-calendario');
+    if (calendarioContainer && window.MutationObserver) {
+        const mutationObserver = new MutationObserver((mutations) => {
+            let shouldReexecutar = false;
+            
+            mutations.forEach((mutation) => {
+                // Verificar se houve mudanças no childList (novos elementos adicionados)
+                if (mutation.type === 'childList') {
+                    // Verificar se um novo .timeline-body foi adicionado
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1) { // Element node
+                            if (node.classList && node.classList.contains('timeline-body')) {
+                                shouldReexecutar = true;
+                            }
+                            // Verificar filhos também
+                            if (node.querySelector && node.querySelector('.timeline-body')) {
+                                shouldReexecutar = true;
+                            }
+                        }
+                    });
+                }
+                
+                // Verificar se houve mudanças no subtree (mudanças profundas)
+                if (mutation.type === 'childList' && mutation.target.querySelector('.timeline-body')) {
+                    shouldReexecutar = true;
+                }
+            });
+            
+            // Reexecutar com debounce se necessário
+            if (shouldReexecutar) {
+                clearTimeout(window.posRenderTimeout);
+                window.posRenderTimeout = setTimeout(() => {
+                    if (typeof window.reexecutarPosRender === 'function') {
+                        window.reexecutarPosRender();
+                    }
+                }, 33);
+            }
+        });
+        
+        // Observar mudanças no childList e subtree
+        mutationObserver.observe(calendarioContainer, {
+            childList: true,
+            subtree: true
+        });
+        
+        // Guardar referência para poder desconectar se necessário
+        window.calendarioMutationObserver = mutationObserver;
+    }
+    
+    // CRÍTICO: Usar ResizeObserver para sincronizar larguras em tempo real
+    const timelineBody = document.querySelector('.timeline-body');
+    if (timelineBody && window.ResizeObserver) {
+        window.timelineResizeObserver = new ResizeObserver(() => {
+            garantirAlinhamentoHeaderBody();
+        });
+        window.timelineResizeObserver.observe(timelineBody);
+    }
+    
+    // CRÍTICO: Executar pós-render na carga inicial
+    setTimeout(() => {
+        if (typeof window.reexecutarPosRender === 'function') {
+            window.reexecutarPosRender();
+        }
+    }, 100);
+    
+    // Também executar após eventos de redimensionamento
+    window.addEventListener('resize', () => {
+        if (typeof window.reexecutarPosRender === 'function') {
+            window.reexecutarPosRender();
+        }
+    });
+    
     // O servidor já calcula a semana correta baseada na data_inicio da turma
     // Não precisamos forçar semana 0 aqui
     const semanasJsonElement = document.getElementById('semanas-disponiveis');
@@ -5043,8 +6117,8 @@ window.togglePeriodo = function(periodoNome) {
                     // Este período anterior está colapsado
                     // Calcular altura do período quando expandido
                     const duracaoPeriodo = fimPeriodos[p] - inicioPeriodos[p];
-                    const alturaPeriodoExpandido = duracaoPeriodo * 2; // 2px por minuto
-                    const alturaPeriodoColapsado = 40; // altura do toggle quando colapsado
+                    const alturaPeriodoExpandido = duracaoPeriodo * (50 / 30); // Densidade compacta: ~1.67px por minuto
+                    const alturaPeriodoColapsado = 35; // altura do toggle quando colapsado (reduzida)
                     const alturaEconomizada = alturaPeriodoExpandido - alturaPeriodoColapsado;
                     
                     offset += alturaEconomizada;
@@ -5091,7 +6165,7 @@ window.togglePeriodo = function(periodoNome) {
             
             // Se ainda não encontrou, calcular baseado no range 06:00-23:00
             if (!alturaOriginalStr || alturaOriginalStr === '0' || alturaOriginalStr === '') {
-                alturaOriginalStr = ((23 * 60 - 6 * 60) * 2).toString(); // (23:00 - 06:00) * 2px por minuto
+                alturaOriginalStr = ((23 * 60 - 6 * 60) * (50 / 30)).toString(); // (23:00 - 06:00) * densidade compacta
                 // Salvar no atributo para próximas chamadas
                 timelineBody.setAttribute('data-altura-original', alturaOriginalStr);
             }
@@ -5137,6 +6211,67 @@ window.togglePeriodo = function(periodoNome) {
                 el.style.minHeight = novaAltura + 'px';
                 el.style.height = novaAltura + 'px';
             });
+        });
+        
+        // CRÍTICO: Limitar altura dos pseudo-elementos ao conteúdo real renderizado
+        // Garantir que ::after e ::before não criem faixa extra abaixo de 23:00
+        const timelineHours = document.querySelector('.timeline-hours');
+        const timelineDayColumns = document.querySelectorAll('.timeline-day-column');
+        
+        if (timelineHours) {
+            // Encontrar o último marcador de hora renderizado
+            const ultimoMarcador = timelineHours.querySelector('.timeline-hour-marker:last-child');
+            if (ultimoMarcador) {
+                const ultimoMarcadorTop = ultimoMarcador.offsetTop;
+                const ultimoMarcadorHeight = ultimoMarcador.offsetHeight;
+                const alturaReal = ultimoMarcadorTop + ultimoMarcadorHeight;
+                
+                // Ajustar altura dos containers para altura real (sem espaço extra)
+                containers.forEach(selector => {
+                    const elements = document.querySelectorAll(selector);
+                    elements.forEach(el => {
+                        // Usar altura real do último elemento, não o min-height calculado
+                        el.style.minHeight = alturaReal + 'px';
+                        el.style.height = alturaReal + 'px';
+                    });
+                });
+                
+                // Limitar pseudo-elemento ::after da coluna de horários
+                const style = document.createElement('style');
+                style.textContent = `
+                    .timeline-hours::after {
+                        height: ${alturaReal}px !important;
+                        max-height: ${alturaReal}px !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // Limitar pseudo-elementos ::before das colunas dos dias
+        timelineDayColumns.forEach(column => {
+            // Encontrar o último slot renderizado nesta coluna
+            const slots = column.querySelectorAll('.timeline-slot');
+            if (slots.length > 0) {
+                const ultimoSlot = slots[slots.length - 1];
+                const ultimoSlotTop = ultimoSlot.offsetTop;
+                const ultimoSlotHeight = ultimoSlot.offsetHeight;
+                const alturaRealColuna = ultimoSlotTop + ultimoSlotHeight;
+                
+                // Ajustar altura da coluna
+                column.style.minHeight = alturaRealColuna + 'px';
+                column.style.height = alturaRealColuna + 'px';
+                
+                // Limitar pseudo-elemento ::before desta coluna
+                const style = document.createElement('style');
+                style.textContent = `
+                    .timeline-day-column[id="${column.id}"]::before {
+                        height: ${alturaRealColuna}px !important;
+                        max-height: ${alturaRealColuna}px !important;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
         });
         
         console.log(`Altura ajustada: original=${alturaOriginal}px, economizada=${alturaEconomizadaTotal}px, nova=${novaAltura}px`);
