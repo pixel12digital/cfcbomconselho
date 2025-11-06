@@ -5444,13 +5444,32 @@ function abrirModalAgendarAulaComDataHora(disciplinaId, disciplinaNome, dataInic
 }
 
 function verDetalhesAula(aulaId) {
-    // Buscar detalhes da aula e mostrar em um tooltip ou modal pequeno
-    // Por enquanto, apenas um alert simples
-    // TODO: Implementar modal de detalhes mais completo
-    const aulaElement = document.querySelector(`[data-aula-id="${aulaId}"]`);
-    if (aulaElement) {
-        alert('Clique na aba "Disciplinas" para ver e editar detalhes completos da aula.');
-    }
+    // Buscar detalhes da aula e abrir modal de edição
+    fetch(`api/agendamento-detalhes.php?id=${aulaId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success && data.agendamento) {
+                const agendamento = data.agendamento;
+                // Chamar função de edição com os dados carregados
+                editarAgendamento(
+                    agendamento.id,
+                    agendamento.nome_aula || '',
+                    agendamento.data_aula || '',
+                    agendamento.hora_inicio || '',
+                    agendamento.hora_fim || '',
+                    agendamento.instrutor_id || null,
+                    agendamento.sala_id || null,
+                    agendamento.duracao_minutos || 50,
+                    agendamento.observacoes || ''
+                );
+            } else {
+                alert('Erro ao carregar detalhes da aula. Tente novamente.');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar detalhes da aula:', error);
+            alert('Erro ao carregar detalhes da aula. Tente novamente.');
+        });
 }
 
 function mudarSemana(direcao) {
@@ -6847,7 +6866,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <div id="modalAgendarAula" class="modal-overlay" style="display: none;">
     <div class="modal-content" style="max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
         <div class="modal-header">
-            <h3>
+            <h3 id="modal_titulo">
                 <i class="fas fa-calendar-plus"></i>
                 📅 Agendar Nova Aula
             </h3>
@@ -6860,10 +6879,12 @@ document.addEventListener('DOMContentLoaded', function() {
             <!-- Coluna Esquerda: Formulário de Agendamento -->
             <div style="flex: 2; min-width: 0; overflow-y: auto; padding-right: 10px;">
                 <form id="formAgendarAulaModal">
-                    <input type="hidden" name="acao" value="agendar_aula">
+                    <input type="hidden" name="acao" id="modal_acao" value="agendar_aula">
                     <input type="hidden" name="ajax" value="true">
                     <input type="hidden" name="turma_id" id="modal_turma_id" value="<?= $turmaId ?>">
                     <input type="hidden" name="disciplina" id="modal_disciplina_id">
+                    <input type="hidden" name="aula_id" id="modal_aula_id" value="">
+                    <input type="hidden" id="modal_modo" value="criar">
                     
                     <div class="form-group" style="margin-bottom: 20px;">
                         <label for="modal_disciplina_nome" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
@@ -6955,6 +6976,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <!-- Mensagem de erro/sucesso -->
                     <div id="mensagemAgendamento" style="display: none; padding: 12px; border-radius: 6px; margin-bottom: 15px;"></div>
+                    
+                    <!-- Campo de observações (mostrado apenas na edição) -->
+                    <div id="campoObservacoesModal" style="display: none; margin-top: 20px;">
+                        <label for="modal_observacoes" style="display: block; margin-bottom: 5px; font-weight: 600; color: #333;">
+                            Observações
+                        </label>
+                        <textarea 
+                            id="modal_observacoes" 
+                            name="observacoes" 
+                            class="form-control" 
+                            rows="3" 
+                            placeholder="Digite observações adicionais sobre o agendamento..."></textarea>
+                    </div>
                 </form>
             </div>
             
@@ -7020,7 +7054,7 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
             <button type="button" id="btnAgendarAula" class="btn btn-primary" onclick="enviarAgendamentoModal()" disabled>
                 <i class="fas fa-plus"></i>
-                ➕ Agendar Aula(s)
+                <span id="btnAgendarTexto">➕ Agendar Aula(s)</span>
             </button>
         </div>
     </div>
@@ -9129,19 +9163,97 @@ function removeDisciplina(disciplinaId) {
 
 // ===== SISTEMA DE EDIÇÃO DE AGENDAMENTOS =====
 
-// Modal de edição de agendamento
+// Função auxiliar para exibir o modal de edição
+function exibirModalEdicao(modal) {
+    if (!modal) {
+        modal = document.getElementById('modalEditarAgendamento');
+    }
+    
+    if (!modal) {
+        console.error('Modal de edição não encontrado!');
+        return;
+    }
+    
+    // Remover modais existentes antes de exibir
+    const modaisExistentes = document.querySelectorAll('#modalEditarAgendamento');
+    modaisExistentes.forEach(m => {
+        if (m !== modal && m.parentNode) {
+            m.parentNode.removeChild(m);
+        }
+    });
+    
+    // Garantir que o modal está no DOM
+    if (!modal.parentNode) {
+        document.body.appendChild(modal);
+    }
+    
+    // Mostrar modal seguindo o padrão do sistema
+    modal.classList.add('show');
+    modal.style.cssText = `
+        display: flex !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0, 0, 0, 0.5) !important;
+        z-index: 999999 !important;
+        align-items: center !important;
+        justify-content: center !important;
+        opacity: 1 !important;
+        visibility: visible !important;
+        pointer-events: auto !important;
+    `;
+    
+    // Bloquear scroll do body
+    document.body.style.overflow = 'hidden';
+    
+    // Adicionar animação de fade-in
+    setTimeout(() => {
+        modal.classList.add('popup-fade-in');
+    }, 10);
+}
+
+// Modal de edição de agendamento - usa o mesmo modal de agendamento
 function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instrutorId, salaId, duracao, observacoes) {
     window.currentEditAgendamentoId = id;
-    // Criar modal dinamicamente se não existir
-    let modal = document.getElementById('modalEditarAgendamento');
+    
+    // Usar o mesmo modal de agendamento, mas em modo de edição
+    const modal = document.getElementById('modalAgendarAula');
     if (!modal) {
-        modal = criarModalEdicao();
-        document.body.appendChild(modal);
-        // Garantir que os listeners do campo de hora sejam anexados
-        setTimeout(() => {
-            anexarAutoCalculoHoraFim();
-        }, 0);
+        console.error('Modal de agendamento não encontrado!');
+        alert('Erro: Modal não encontrado. Recarregue a página.');
+        return;
     }
+    
+    // Configurar modo de edição
+    const modalModo = document.getElementById('modal_modo');
+    const modalAcao = document.getElementById('modal_acao');
+    const modalAulaId = document.getElementById('modal_aula_id');
+    const modalTitulo = document.getElementById('modal_titulo');
+    const btnAgendarTexto = document.getElementById('btnAgendarTexto');
+    const campoObservacoes = document.getElementById('campoObservacoesModal');
+    const modalObservacoes = document.getElementById('modal_observacoes');
+    
+    if (modalModo) modalModo.value = 'editar';
+    if (modalAcao) modalAcao.value = 'editar_aula';
+    if (modalAulaId) modalAulaId.value = id;
+    if (modalTitulo) {
+        modalTitulo.innerHTML = '<i class="fas fa-edit"></i> ✏️ Editar Agendamento';
+    }
+    if (btnAgendarTexto) {
+        btnAgendarTexto.textContent = '💾 Salvar Alterações';
+    }
+    if (campoObservacoes) {
+        campoObservacoes.style.display = 'block';
+    }
+    if (modalObservacoes && observacoes) {
+        modalObservacoes.value = observacoes;
+    }
+    
+    // Exibir modal imediatamente (dados serão preenchidos depois)
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
     
     // Buscar dados completos do agendamento
     fetch(`api/agendamento-detalhes.php?id=${id}`)
@@ -9153,35 +9265,74 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
             if (data.success) {
                 const agendamento = data.agendamento;
                 
-                // Preencher campos do modal com dados reais
-                document.getElementById('editAgendamentoId').value = agendamento.id;
-                document.getElementById('editNomeAula').value = agendamento.nome_aula;
-                document.getElementById('editDataAula').value = agendamento.data_aula;
-                document.getElementById('editDuracao').value = agendamento.duracao_minutos || 50;
-                document.getElementById('editDuracaoDisplay').textContent = (agendamento.duracao_minutos || 50) + ' min';
-                document.getElementById('editObservacoes').value = agendamento.observacoes || '';
+                // Preencher campos do modal unificado com dados reais
+                const modalDisciplinaId = document.getElementById('modal_disciplina_id');
+                const modalDisciplinaNome = document.getElementById('modal_disciplina_nome');
+                const modalDataAula = document.getElementById('modal_data_aula');
+                const modalHoraInicio = document.getElementById('modal_hora_inicio');
+                const modalInstrutorId = document.getElementById('modal_instrutor_id');
+                const modalQuantidadeAulas = document.getElementById('modal_quantidade_aulas');
+                const modalObservacoes = document.getElementById('modal_observacoes');
+                
+                // Extrair disciplina do nome da aula (ex: "Legislação de Trânsito - Aula 2" -> "legislacao_transito")
+                let disciplinaId = agendamento.disciplina || '';
+                if (!disciplinaId && agendamento.nome_aula) {
+                    // Tentar extrair do nome
+                    const partes = agendamento.nome_aula.split(' - ');
+                    if (partes.length > 0) {
+                        // Buscar disciplina por nome
+                        disciplinaId = partes[0].toLowerCase().replace(/\s+/g, '_');
+                    }
+                }
+                
+                if (modalDisciplinaId && disciplinaId) modalDisciplinaId.value = disciplinaId;
+                if (modalDisciplinaNome && agendamento.nome_aula) {
+                    // Extrair nome da disciplina (sem " - Aula X")
+                    const nomeDisciplina = agendamento.nome_aula.split(' - ')[0];
+                    modalDisciplinaNome.value = nomeDisciplina;
+                }
+                if (modalDataAula && agendamento.data_aula) modalDataAula.value = agendamento.data_aula;
+                if (modalObservacoes) modalObservacoes.value = agendamento.observacoes || '';
+                
+                // Calcular quantidade de aulas baseado na duração
+                const duracao = agendamento.duracao_minutos || 50;
+                const quantidadeAulas = Math.ceil(duracao / 50);
+                if (modalQuantidadeAulas) {
+                    modalQuantidadeAulas.value = quantidadeAulas.toString();
+                }
                 
                 // Carregar horário no input incluindo o horário do agendamento
-                carregarHorariosDisponiveis(agendamento.hora_inicio).then((horarioAjustado) => {
-                    const inputHoraInicio = document.getElementById('editHoraInicio');
-                    if (inputHoraInicio) {
-                        // Usar o horário ajustado se disponível, senão normalizar o original
-                        const horaInicio = horarioAjustado || (agendamento.hora_inicio.length === 8 ? agendamento.hora_inicio.substring(0, 5) : agendamento.hora_inicio);
-                        if (horaInicio) {
-                            inputHoraInicio.value = horaInicio;
-                            // Calcular hora de fim automaticamente
-                            setTimeout(() => {
-                                calcularHoraFimAuto();
-                                anexarAutoCalculoHoraFim();
-                            }, 100);
-                        }
+                if (agendamento.hora_inicio) {
+                    const horaInicio = agendamento.hora_inicio.length === 8 ? agendamento.hora_inicio.substring(0, 5) : agendamento.hora_inicio;
+                    if (modalHoraInicio && horaInicio) {
+                        modalHoraInicio.value = horaInicio;
+                    }
+                }
+                
+                // Carregar selects com os valores corretos
+                carregarDadosSelects(agendamento.instrutor_id, agendamento.sala_id).then(() => {
+                    if (modalInstrutorId && agendamento.instrutor_id) {
+                        modalInstrutorId.value = agendamento.instrutor_id;
                     }
                 });
                 
-                console.log('✅ [DEBUG] Dados do agendamento carregados:', agendamento);
+                // Atualizar estatísticas no modal após carregar dados
+                setTimeout(() => {
+                    if (disciplinaId && typeof buscarInfoDisciplina === 'function') {
+                        buscarInfoDisciplina(disciplinaId).catch(err => {
+                            // Ignorar erros silenciosamente
+                        });
+                    }
+                    if (typeof atualizarEstatisticasModal === 'function') {
+                        atualizarEstatisticasModal();
+                    }
+                    // Destacar disciplina selecionada na sidebar
+                    if (typeof destacarDisciplinaSelecionada === 'function') {
+                        destacarDisciplinaSelecionada(disciplinaId);
+                    }
+                }, 100);
                 
-                // Carregar selects com os valores corretos
-                carregarDadosSelects(agendamento.instrutor_id, agendamento.sala_id);
+                console.log('✅ [DEBUG] Dados do agendamento carregados no modal unificado:', agendamento);
             } else {
                 console.error('❌ [DEBUG] Erro ao carregar dados do agendamento:', data.message);
                 // Tentar API de fallback
@@ -9197,99 +9348,154 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
             if (data && data.success) {
                 const agendamento = data.agendamento;
                 
-                // Preencher campos do modal com dados de fallback
-                document.getElementById('editAgendamentoId').value = agendamento.id;
-                document.getElementById('editNomeAula').value = agendamento.nome_aula;
-                document.getElementById('editDataAula').value = agendamento.data_aula;
-                document.getElementById('editDuracao').value = agendamento.duracao_minutos;
-                document.getElementById('editDuracaoDisplay').textContent = agendamento.duracao_minutos + ' min';
-                document.getElementById('editObservacoes').value = agendamento.observacoes || '';
+                // Preencher campos do modal unificado com dados de fallback
+                const modalDisciplinaId = document.getElementById('modal_disciplina_id');
+                const modalDisciplinaNome = document.getElementById('modal_disciplina_nome');
+                const modalDataAula = document.getElementById('modal_data_aula');
+                const modalHoraInicio = document.getElementById('modal_hora_inicio');
+                const modalInstrutorId = document.getElementById('modal_instrutor_id');
+                const modalQuantidadeAulas = document.getElementById('modal_quantidade_aulas');
+                const modalObservacoes = document.getElementById('modal_observacoes');
                 
-                // Carregar horário no input incluindo o horário do agendamento
-                carregarHorariosDisponiveis(agendamento.hora_inicio).then((horarioAjustado) => {
-                    const inputHoraInicio = document.getElementById('editHoraInicio');
-                    if (inputHoraInicio) {
-                        // Usar o horário ajustado se disponível, senão normalizar o original
-                        const horaInicio = horarioAjustado || (agendamento.hora_inicio.length === 8 ? agendamento.hora_inicio.substring(0, 5) : agendamento.hora_inicio);
-                        if (horaInicio) {
-                            inputHoraInicio.value = horaInicio;
-                            setTimeout(() => {
-                                calcularHoraFimAuto();
-                                anexarAutoCalculoHoraFim();
-                            }, 100);
-                        }
+                let disciplinaId = agendamento.disciplina || '';
+                if (!disciplinaId && agendamento.nome_aula) {
+                    const partes = agendamento.nome_aula.split(' - ');
+                    if (partes.length > 0) {
+                        disciplinaId = partes[0].toLowerCase().replace(/\s+/g, '_');
+                    }
+                }
+                
+                if (modalDisciplinaId && disciplinaId) modalDisciplinaId.value = disciplinaId;
+                if (modalDisciplinaNome && agendamento.nome_aula) {
+                    const nomeDisciplina = agendamento.nome_aula.split(' - ')[0];
+                    modalDisciplinaNome.value = nomeDisciplina;
+                }
+                if (modalDataAula && agendamento.data_aula) modalDataAula.value = agendamento.data_aula;
+                if (modalObservacoes) modalObservacoes.value = agendamento.observacoes || '';
+                
+                const duracao = agendamento.duracao_minutos || 50;
+                const quantidadeAulas = Math.ceil(duracao / 50);
+                if (modalQuantidadeAulas) {
+                    modalQuantidadeAulas.value = quantidadeAulas.toString();
+                }
+                
+                if (agendamento.hora_inicio) {
+                    const horaInicio = agendamento.hora_inicio.length === 8 ? agendamento.hora_inicio.substring(0, 5) : agendamento.hora_inicio;
+                    if (modalHoraInicio && horaInicio) {
+                        modalHoraInicio.value = horaInicio;
+                    }
+                }
+                
+                // Carregar selects e depois definir valores
+                carregarDadosSelects(agendamento.instrutor_id, agendamento.sala_id).then(() => {
+                    if (modalInstrutorId && agendamento.instrutor_id) {
+                        modalInstrutorId.value = agendamento.instrutor_id;
                     }
                 });
                 
-                console.log('✅ [DEBUG] Dados de fallback carregados:', agendamento);
+                // Mostrar modal
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
                 
-                // Carregar selects com os valores corretos
-                carregarDadosSelects(agendamento.instrutor_id, agendamento.sala_id);
+                console.log('✅ [DEBUG] Dados de fallback carregados no modal unificado');
             } else {
                 // Usar dados passados como parâmetro como último fallback
-                document.getElementById('editAgendamentoId').value = id;
-                document.getElementById('editNomeAula').value = nomeAula;
-                document.getElementById('editDataAula').value = dataAula;
-                document.getElementById('editDuracao').value = duracao;
-                document.getElementById('editDuracaoDisplay').textContent = duracao + ' min';
-                document.getElementById('editObservacoes').value = observacoes || '';
+                const modalDisciplinaId = document.getElementById('modal_disciplina_id');
+                const modalDisciplinaNome = document.getElementById('modal_disciplina_nome');
+                const modalDataAula = document.getElementById('modal_data_aula');
+                const modalHoraInicio = document.getElementById('modal_hora_inicio');
+                const modalInstrutorId = document.getElementById('modal_instrutor_id');
+                const modalQuantidadeAulas = document.getElementById('modal_quantidade_aulas');
+                const modalObservacoes = document.getElementById('modal_observacoes');
                 
-                // Carregar horário no input incluindo o horário passado
-                carregarHorariosDisponiveis(horaInicio).then((horarioAjustado) => {
-                    const inputHoraInicio = document.getElementById('editHoraInicio');
-                    if (inputHoraInicio) {
-                        // Usar o horário ajustado se disponível, senão normalizar o original
-                        const horaInicioParaUsar = horarioAjustado || (horaInicio.length === 8 ? horaInicio.substring(0, 5) : horaInicio);
-                        if (horaInicioParaUsar) {
-                            inputHoraInicio.value = horaInicioParaUsar;
-                            setTimeout(() => {
-                                calcularHoraFimAuto();
-                                anexarAutoCalculoHoraFim();
-                            }, 100);
-                        }
+                // Extrair disciplina do nome da aula
+                let disciplinaId = '';
+                if (nomeAula) {
+                    const partes = nomeAula.split(' - ');
+                    if (partes.length > 0) {
+                        disciplinaId = partes[0].toLowerCase().replace(/\s+/g, '_');
+                        if (modalDisciplinaNome) modalDisciplinaNome.value = partes[0];
+                    }
+                }
+                if (modalDisciplinaId && disciplinaId) modalDisciplinaId.value = disciplinaId;
+                if (modalDataAula && dataAula) modalDataAula.value = dataAula;
+                if (modalObservacoes) modalObservacoes.value = observacoes || '';
+                
+                const quantidadeAulas = Math.ceil((duracao || 50) / 50);
+                if (modalQuantidadeAulas) {
+                    modalQuantidadeAulas.value = quantidadeAulas.toString();
+                }
+                
+                if (horaInicio) {
+                    const horaNormalizada = horaInicio.length === 8 ? horaInicio.substring(0, 5) : horaInicio;
+                    if (modalHoraInicio && horaNormalizada) {
+                        modalHoraInicio.value = horaNormalizada;
+                    }
+                }
+                
+                carregarDadosSelects(instrutorId, salaId).then(() => {
+                    if (modalInstrutorId && instrutorId) {
+                        modalInstrutorId.value = instrutorId;
                     }
                 });
                 
-                console.log('⚠️ [DEBUG] Usando dados passados como parâmetro');
-                carregarDadosSelects(instrutorId, salaId);
+                // Mostrar modal
+                modal.style.display = 'flex';
+                document.body.style.overflow = 'hidden';
+                
+                console.log('⚠️ [DEBUG] Usando dados passados como parâmetro no modal unificado');
             }
         })
         .catch(error => {
             console.error('❌ [DEBUG] Erro ao buscar dados do agendamento:', error);
             // Usar dados passados como parâmetro como último fallback
-            document.getElementById('editAgendamentoId').value = id;
-            document.getElementById('editNomeAula').value = nomeAula;
-            document.getElementById('editDataAula').value = dataAula;
-            document.getElementById('editDuracao').value = duracao;
-            document.getElementById('editDuracaoDisplay').textContent = duracao + ' min';
-            document.getElementById('editObservacoes').value = observacoes || '';
+            const modalDisciplinaId = document.getElementById('modal_disciplina_id');
+            const modalDisciplinaNome = document.getElementById('modal_disciplina_nome');
+            const modalDataAula = document.getElementById('modal_data_aula');
+            const modalHoraInicio = document.getElementById('modal_hora_inicio');
+            const modalInstrutorId = document.getElementById('modal_instrutor_id');
+            const modalQuantidadeAulas = document.getElementById('modal_quantidade_aulas');
+            const modalObservacoes = document.getElementById('modal_observacoes');
             
-            // Carregar horário no input incluindo o horário passado
-            carregarHorariosDisponiveis(horaInicio).then(() => {
-                const inputHoraInicio = document.getElementById('editHoraInicio');
-                if (inputHoraInicio && horaInicio) {
-                    // Normalizar horário se necessário
-                    const horaNormalizada = horaInicio.length === 8 ? horaInicio.substring(0, 5) : horaInicio;
-                    inputHoraInicio.value = horaNormalizada;
-                    setTimeout(() => {
-                        calcularHoraFimAuto();
-                        anexarAutoCalculoHoraFim();
-                    }, 100);
+            // Extrair disciplina do nome da aula
+            let disciplinaId = '';
+            if (nomeAula) {
+                const partes = nomeAula.split(' - ');
+                if (partes.length > 0) {
+                    disciplinaId = partes[0].toLowerCase().replace(/\s+/g, '_');
+                    if (modalDisciplinaNome) modalDisciplinaNome.value = partes[0];
+                }
+            }
+            if (modalDisciplinaId && disciplinaId) modalDisciplinaId.value = disciplinaId;
+            if (modalDataAula && dataAula) modalDataAula.value = dataAula;
+            if (modalObservacoes) modalObservacoes.value = observacoes || '';
+            
+            const quantidadeAulas = Math.ceil((duracao || 50) / 50);
+            if (modalQuantidadeAulas) {
+                modalQuantidadeAulas.value = quantidadeAulas.toString();
+            }
+            
+            if (horaInicio) {
+                const horaNormalizada = horaInicio.length === 8 ? horaInicio.substring(0, 5) : horaInicio;
+                if (modalHoraInicio && horaNormalizada) {
+                    modalHoraInicio.value = horaNormalizada;
+                }
+            }
+            
+            carregarDadosSelects(instrutorId, salaId).then(() => {
+                if (modalInstrutorId && instrutorId) {
+                    modalInstrutorId.value = instrutorId;
                 }
             });
             
-            console.log('⚠️ [DEBUG] Usando dados passados como parâmetro (catch)');
-            carregarDadosSelects(instrutorId, salaId);
+            // Mostrar modal
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+            
+            console.log('⚠️ [DEBUG] Usando dados passados como parâmetro (catch) no modal unificado');
         });
     
-    // Mostrar modal seguindo o padrão do sistema
-    modal.classList.add('show');
-    modal.style.display = 'flex';
-    
-    // Adicionar animação de fade-in
-    setTimeout(() => {
-        modal.classList.add('popup-fade-in');
-    }, 10);
+    // Modal já é exibido dentro dos handlers acima
 }
 
 // Cancelar agendamento
@@ -9630,92 +9836,87 @@ function criarModalEdicao() {
 
 // Função para fechar o modal de edição
 function fecharModalEdicao() {
-    const modal = document.getElementById('modalEditarAgendamento');
-    if (modal) {
-        modal.classList.remove('show');
-        setTimeout(() => {
-            modal.remove();
-        }, 300);
-    }
+    const modais = document.querySelectorAll('#modalEditarAgendamento');
+    modais.forEach(modal => {
+        if (modal) {
+            modal.classList.remove('show');
+            modal.style.cssText = 'display: none !important; visibility: hidden !important; opacity: 0 !important; pointer-events: none !important;';
+            setTimeout(() => {
+                if (modal.parentNode) {
+                    modal.parentNode.removeChild(modal);
+                }
+            }, 300);
+        }
+    });
+    
+    // Restaurar body
+    document.body.style.overflow = '';
+    document.body.style.paddingRight = '';
+    document.body.classList.remove('modal-open', 'modal-unlocked-view');
+    
+    // Remover backdrops
+    document.querySelectorAll('.modal-backdrop, .modal-overlay').forEach(b => {
+        if (b.id !== 'modalAgendarAula' && b.parentNode) {
+            b.parentNode.removeChild(b);
+        }
+    });
 }
 
 // Função para carregar dados dos selects
 function carregarDadosSelects(instrutorId = null, salaId = null) {
-    console.log('🔧 [DEBUG] Carregando dados dos selects...');
-    
-    // Carregar instrutores
-    fetch('api/instrutores-real.php')
-        .then(response => {
-            console.log('🔧 [DEBUG] Resposta instrutores:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('🔧 [DEBUG] Dados instrutores:', data);
-            if (data.success) {
-                const selectInstrutor = document.getElementById('editInstrutor');
-                if (selectInstrutor) {
-                    selectInstrutor.innerHTML = '<option value="">Selecione um instrutor</option>';
-                    data.instrutores.forEach(instrutor => {
-                        const option = document.createElement('option');
-                        option.value = instrutor.id;
-                        option.textContent = instrutor.nome;
-                        selectInstrutor.appendChild(option);
-                    });
-                    
-                    // Definir valor selecionado se fornecido
-                    if (instrutorId) {
-                        selectInstrutor.value = instrutorId;
-                        console.log('✅ [DEBUG] Instrutor selecionado:', instrutorId);
+    // Retornar Promise para permitir .then() nas chamadas
+    return new Promise((resolve) => {
+        console.log('🔧 [DEBUG] Carregando dados dos selects...');
+        
+        // Carregar instrutores - usar o select do modal unificado
+        fetch('api/instrutores-real.php')
+            .then(response => {
+                console.log('🔧 [DEBUG] Resposta instrutores:', response.status);
+                return response.json();
+            })
+            .then(data => {
+                console.log('🔧 [DEBUG] Dados instrutores:', data);
+                if (data.success) {
+                    // Usar o select do modal unificado
+                    const selectInstrutor = document.getElementById('modal_instrutor_id');
+                    if (selectInstrutor) {
+                        // Limpar opções existentes, mas manter a primeira opção se existir
+                        const primeiraOpcao = selectInstrutor.querySelector('option[value=""]');
+                        selectInstrutor.innerHTML = primeiraOpcao ? primeiraOpcao.outerHTML : '<option value="">Selecione um instrutor...</option>';
+                        
+                        data.instrutores.forEach(instrutor => {
+                            const option = document.createElement('option');
+                            option.value = instrutor.id;
+                            option.textContent = instrutor.nome || 'Instrutor sem nome';
+                            if (instrutor.categoria_habilitacao) {
+                                option.textContent += ' - ' + instrutor.categoria_habilitacao;
+                            }
+                            selectInstrutor.appendChild(option);
+                        });
+                        
+                        // Definir valor selecionado se fornecido
+                        if (instrutorId) {
+                            selectInstrutor.value = instrutorId;
+                            console.log('✅ [DEBUG] Instrutor selecionado:', instrutorId);
+                        }
+                        
+                        console.log('✅ [DEBUG] Instrutores carregados:', data.instrutores.length);
+                    } else {
+                        console.log('❌ [DEBUG] Select instrutor não encontrado (modal_instrutor_id)');
                     }
-                    
-                    console.log('✅ [DEBUG] Instrutores carregados:', data.instrutores.length);
                 } else {
-                    console.log('❌ [DEBUG] Select instrutor não encontrado');
+                    console.log('❌ [DEBUG] Erro ao carregar instrutores:', data.message);
                 }
-            } else {
-                console.log('❌ [DEBUG] Erro ao carregar instrutores:', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('❌ [DEBUG] Erro ao carregar instrutores:', error);
-        });
-    
-    // Carregar salas
-    fetch('api/salas-real.php')
-        .then(response => {
-            console.log('🔧 [DEBUG] Resposta salas:', response.status);
-            return response.json();
-        })
-        .then(data => {
-            console.log('🔧 [DEBUG] Dados salas:', data);
-            if (data.success) {
-                const selectSala = document.getElementById('editSala');
-                if (selectSala) {
-                    selectSala.innerHTML = '<option value="">Selecione uma sala</option>';
-                    data.salas.forEach(sala => {
-                        const option = document.createElement('option');
-                        option.value = sala.id;
-                        option.textContent = sala.nome;
-                        selectSala.appendChild(option);
-                    });
-                    
-                    // Definir valor selecionado se fornecido
-                    if (salaId) {
-                        selectSala.value = salaId;
-                        console.log('✅ [DEBUG] Sala selecionada:', salaId);
-                    }
-                    
-                    console.log('✅ [DEBUG] Salas carregadas:', data.salas.length);
-                } else {
-                    console.log('❌ [DEBUG] Select sala não encontrado');
-                }
-            } else {
-                console.log('❌ [DEBUG] Erro ao carregar salas:', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('❌ [DEBUG] Erro ao carregar salas:', error);
-        });
+                
+                // Resolver promise após carregar instrutores
+                resolve();
+            })
+            .catch(error => {
+                console.error('❌ [DEBUG] Erro ao carregar instrutores:', error);
+                // Resolver mesmo em caso de erro
+                resolve();
+            });
+    });
 }
 
 // Carregar horários disponíveis (simplificado para input time)
@@ -10685,10 +10886,33 @@ function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim
             }
         }
         
+        // Configurar modo de criação
+        const modalModo = document.getElementById('modal_modo');
+        const modalAcao = document.getElementById('modal_acao');
+        const modalAulaId = document.getElementById('modal_aula_id');
+        const modalTitulo = document.getElementById('modal_titulo');
+        const btnAgendarTexto = document.getElementById('btnAgendarTexto');
+        const campoObservacoes = document.getElementById('campoObservacoesModal');
+        
+        if (modalModo) modalModo.value = 'criar';
+        if (modalAcao) modalAcao.value = 'agendar_aula';
+        if (modalAulaId) modalAulaId.value = '';
+        if (modalTitulo) {
+            modalTitulo.innerHTML = '<i class="fas fa-calendar-plus"></i> 📅 Agendar Nova Aula';
+        }
+        if (btnAgendarTexto) {
+            btnAgendarTexto.textContent = '➕ Agendar Aula(s)';
+        }
+        if (campoObservacoes) {
+            campoObservacoes.style.display = 'none';
+        }
+        
         // Limpar campos e mensagens
         if (modalInstrutorId) modalInstrutorId.value = '';
         if (modalHoraInicio) modalHoraInicio.value = '';
         if (modalQuantidadeAulas) modalQuantidadeAulas.value = '2';
+        const modalObservacoes = document.getElementById('modal_observacoes');
+        if (modalObservacoes) modalObservacoes.value = '';
         if (previewHorario) previewHorario.style.display = 'none';
         if (alertaConflitos) alertaConflitos.style.display = 'none';
         if (mensagemAgendamento) mensagemAgendamento.style.display = 'none';
@@ -10696,10 +10920,17 @@ function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim
         
         // Mostrar modal
         modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
         
         // Buscar informações sobre a disciplina após um pequeno delay para garantir que o DOM está pronto
+        // Tornar opcional - não bloquear o modal se falhar
         setTimeout(() => {
-            buscarInfoDisciplina(disciplinaId);
+            // Tentar buscar informações, mas não bloquear se falhar
+            if (disciplinaId && typeof buscarInfoDisciplina === 'function') {
+                buscarInfoDisciplina(disciplinaId).catch(err => {
+                    // Ignorar erros silenciosamente
+                });
+            }
             atualizarEstatisticasModal();
         }, 100);
         
@@ -10724,8 +10955,12 @@ function selecionarDisciplinaModal(disciplinaId, disciplinaNome) {
     // Destacar disciplina selecionada
     destacarDisciplinaSelecionada(disciplinaId);
     
-    // Buscar informações atualizadas da disciplina
-    buscarInfoDisciplina(disciplinaId);
+    // Buscar informações atualizadas da disciplina (opcional - não bloquear se falhar)
+    if (disciplinaId && typeof buscarInfoDisciplina === 'function') {
+        buscarInfoDisciplina(disciplinaId).catch(err => {
+            // Ignorar erros silenciosamente
+        });
+    }
 }
 
 // Função para destacar disciplina selecionada na sidebar
@@ -10846,7 +11081,14 @@ function atualizarItemEstatisticaModal(disciplinaId, stats) {
 }
 
 // Função para buscar informações da disciplina
+// Esta função é opcional - não bloqueia o modal se falhar
 async function buscarInfoDisciplina(disciplinaId) {
+    // Validar parâmetro
+    if (!disciplinaId || disciplinaId === '' || disciplinaId === 'undefined' || disciplinaId === 'null') {
+        // Retornar Promise resolvida para não quebrar chamadas com .catch()
+        return Promise.resolve();
+    }
+    
     try {
         console.log('🔍 [INFO] Buscando informações da disciplina:', disciplinaId);
         
@@ -10859,78 +11101,78 @@ async function buscarInfoDisciplina(disciplinaId) {
         const response = await fetch(url);
         console.log('🔍 [INFO] Status da resposta:', response.status);
         
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
         // Ler a resposta como texto primeiro para verificar se é JSON válido
         const textResponse = await response.text();
+        
+        // Se não for 200, tentar parsear JSON de erro, mas não quebrar a aplicação
+        if (!response.ok) {
+            console.warn('⚠️ [INFO] Erro ao buscar informações da disciplina. Status:', response.status);
+            // Tentar parsear resposta de erro
+            try {
+                const errorData = JSON.parse(textResponse);
+                console.warn('⚠️ [INFO] Mensagem de erro:', errorData.mensagem || errorData.message || 'Erro desconhecido');
+            } catch (e) {
+                console.warn('⚠️ [INFO] Resposta não é JSON válido:', textResponse.substring(0, 200));
+            }
+            // Não lançar erro, apenas retornar silenciosamente
+            return Promise.resolve();
+        }
         
         // Verificar se a resposta é realmente JSON
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
-            console.error('❌ [ERROR] Content-Type não é JSON:', contentType);
-            console.error('❌ [ERROR] Resposta recebida:', textResponse.substring(0, 500));
-            throw new Error('Resposta do servidor não é JSON válido');
+            console.warn('⚠️ [INFO] Content-Type não é JSON:', contentType);
+            console.warn('⚠️ [INFO] Resposta recebida:', textResponse.substring(0, 500));
+            // Não lançar erro, apenas retornar silenciosamente
+            return Promise.resolve();
         }
         
         let data;
         try {
             data = JSON.parse(textResponse);
         } catch (parseError) {
-            console.error('❌ [ERROR] Erro ao fazer parse do JSON:', parseError);
-            console.error('❌ [ERROR] Resposta recebida:', textResponse.substring(0, 500));
-            throw new Error('Resposta não é JSON válido');
+            console.warn('⚠️ [INFO] Erro ao fazer parse do JSON, ignorando:', parseError);
+            // Não quebrar a aplicação, apenas retornar silenciosamente
+            return Promise.resolve();
         }
-        console.log('🔍 [INFO] Dados recebidos:', data);
         
-        if (data.sucesso && data.dados) {
+        if (data && data.sucesso && data.dados) {
             const info = data.dados;
             const infoDisciplina = document.getElementById('infoDisciplinaModal');
             const infoTotalObrigatorias = document.getElementById('infoTotalObrigatorias');
             const infoTotalAgendadas = document.getElementById('infoTotalAgendadas');
             const infoTotalFaltantes = document.getElementById('infoTotalFaltantes');
             
-            console.log('🔍 [INFO] Elementos encontrados:', {
-                infoDisciplina: !!infoDisciplina,
-                infoTotalObrigatorias: !!infoTotalObrigatorias,
-                infoTotalAgendadas: !!infoTotalAgendadas,
-                infoTotalFaltantes: !!infoTotalFaltantes
-            });
-            
             if (infoDisciplina && infoTotalObrigatorias && infoTotalAgendadas && infoTotalFaltantes) {
                 infoTotalObrigatorias.textContent = info.total_obrigatorias || 0;
                 infoTotalAgendadas.textContent = info.total_agendadas || 0;
                 infoTotalFaltantes.textContent = info.total_faltantes || 0;
                 
-                console.log('✅ [INFO] Informações atualizadas:', {
-                    obrigatorias: info.total_obrigatorias,
-                    agendadas: info.total_agendadas,
-                    faltantes: info.total_faltantes
-                });
-                
                 // Mostrar o card de informações com estilo inline para garantir visibilidade
                 infoDisciplina.style.display = 'block';
                 infoDisciplina.style.visibility = 'visible';
                 infoDisciplina.style.opacity = '1';
-            } else {
-                console.error('❌ [ERROR] Alguns elementos não foram encontrados no DOM');
             }
         } else {
-            console.warn('⚠️ [WARN] Não foi possível buscar informações da disciplina:', data.mensagem || 'Resposta sem sucesso');
-            // Ocultar o card se houver erro
+            // Ocultar o card se houver erro ou resposta inválida
             const infoDisciplina = document.getElementById('infoDisciplinaModal');
             if (infoDisciplina) {
                 infoDisciplina.style.display = 'none';
             }
         }
+        
+        // Retornar Promise resolvida para permitir .catch() nas chamadas
+        return Promise.resolve();
     } catch (error) {
-        console.error('❌ [ERROR] Erro ao buscar informações da disciplina:', error);
+        // Não quebrar a aplicação, apenas logar o erro silenciosamente
+        console.warn('⚠️ [INFO] Erro ao buscar informações da disciplina (ignorado):', error.message);
         // Ocultar o card se houver erro
         const infoDisciplina = document.getElementById('infoDisciplinaModal');
         if (infoDisciplina) {
             infoDisciplina.style.display = 'none';
         }
+        // Retornar Promise resolvida mesmo em caso de erro
+        return Promise.resolve();
     }
 }
 
@@ -11177,10 +11419,30 @@ function verificarDisponibilidadeModal() {
     });
 }
 
-// Função para enviar agendamento
+// Função para enviar agendamento (criação ou edição)
 function enviarAgendamentoModal() {
     const form = document.getElementById('formAgendarAulaModal');
+    if (!form) {
+        console.error('Formulário não encontrado!');
+        return;
+    }
+    
     const formData = new FormData(form);
+    
+    // Detectar se é criação ou edição
+    const modalModo = document.getElementById('modal_modo');
+    const modalAcao = document.getElementById('modal_acao');
+    const modalAulaId = document.getElementById('modal_aula_id');
+    const isEdicao = modalModo && modalModo.value === 'editar';
+    const aulaId = modalAulaId ? modalAulaId.value : null;
+    
+    // Ajustar ação baseado no modo
+    if (isEdicao && aulaId) {
+        formData.set('acao', 'editar_aula');
+        formData.set('aula_id', aulaId);
+    } else {
+        formData.set('acao', 'agendar_aula');
+    }
     
     // Validar campos
     if (!formData.get('instrutor_id') || !formData.get('data_aula') || !formData.get('hora_inicio')) {
@@ -11188,7 +11450,7 @@ function enviarAgendamentoModal() {
         return;
     }
     
-    // Verificar disponibilidade antes de agendar (última verificação)
+    // Verificar disponibilidade antes de agendar (última verificação) - apenas para criação
     const instrutor = formData.get('instrutor_id');
     const dataAula = formData.get('data_aula');
     const horaInicio = formData.get('hora_inicio');
@@ -11196,7 +11458,17 @@ function enviarAgendamentoModal() {
     const quantidadeAulas = formData.get('quantidade_aulas') || 1;
     
     const btnAgendar = document.getElementById('btnAgendarAula');
+    const btnAgendarTexto = document.getElementById('btnAgendarTexto');
     btnAgendar.disabled = true;
+    
+    // Para edição, enviar diretamente sem verificar conflitos
+    if (isEdicao) {
+        btnAgendar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+        enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao);
+        return;
+    }
+    
+    // Para criação, verificar conflitos primeiro
     btnAgendar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando...';
     
     // Primeiro verificar conflitos antes de agendar
@@ -11252,73 +11524,120 @@ function enviarAgendamentoModal() {
         }
         
         // Se passou na verificação, proceder com o agendamento
+        enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao);
+    })
+    .catch(error => {
+        console.error('Erro ao verificar disponibilidade:', error);
+        btnAgendar.disabled = false;
+        if (btnAgendarTexto) {
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ' + btnAgendarTexto.textContent;
+        } else {
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+        }
+        mostrarMensagemModal('❌ Erro ao verificar disponibilidade. Tente novamente.', 'error');
+    });
+}
+
+// Função auxiliar para enviar dados do agendamento
+function enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao) {
+    const modalModo = document.getElementById('modal_modo');
+    const isEdicaoConfirmada = modalModo && modalModo.value === 'editar';
+    
+    if (isEdicaoConfirmada) {
+        btnAgendar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+    } else {
         btnAgendar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agendando...';
+    }
+    
+    // Enviar via AJAX
+    fetch(getBasePath() + '/admin/api/turmas-teoricas.php', {
+        method: 'POST',
+        body: new URLSearchParams(Object.fromEntries(formData)),
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        console.log('🔧 [DEBUG] Status da resposta:', response.status);
+        return response.json();
+    })
+    .then(async data => {
+        console.log('🔧 [DEBUG] Dados recebidos do servidor:', data);
         
-        // Enviar via AJAX
-        fetch(getBasePath() + '/admin/api/turmas-teoricas.php', {
-            method: 'POST',
-            body: new URLSearchParams(Object.fromEntries(formData)),
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => {
-            console.log('🔧 [DEBUG] Status da resposta:', response.status);
-            return response.json();
-        })
-        .then(async data => {
-            console.log('🔧 [DEBUG] Dados recebidos do servidor:', data);
+        if (data.sucesso) {
+            mostrarMensagemModal('✅ ' + data.mensagem, 'success');
             
-            if (data.sucesso) {
-                mostrarMensagemModal('✅ ' + data.mensagem, 'success');
-                
-                // Buscar os agendamentos criados para renderizar na tabela
-                const ids = (data.aulas_agendadas || []).join(',');
-                const disciplinaId = formData.get('disciplina');
-                
-                console.log('🔧 [DEBUG] IDs retornados:', ids);
-                console.log('🔧 [DEBUG] Disciplina ID:', disciplinaId);
-                
-                // Sempre recarregar do servidor para garantir ordem correta e evitar duplicatas
-                if (disciplinaId) {
-                    console.log('🔄 [DEBUG] Recarregando agendamentos da disciplina após agendamento bem-sucedido');
-                    recarregarAgendamentosDisciplina(disciplinaId);
-                    
-                    // Atualizar informações da disciplina no modal
-                    buscarInfoDisciplina(disciplinaId);
-                    
-                    // Atualizar estatísticas após um pequeno delay para garantir que o recarregamento terminou
-                    setTimeout(() => {
-                        atualizarEstatisticasTurma();
-                        atualizarEstatisticasModal(); // Atualizar também no modal
-                    }, 800);
+            const disciplinaId = formData.get('disciplina');
+            
+            // Recarregar calendário e estatísticas
+            if (disciplinaId) {
+                // Recarregar calendário
+                if (typeof recarregarCalendario === 'function') {
+                    recarregarCalendario();
                 } else {
-                    console.warn('⚠️ [DEBUG] Disciplina ID não disponível, não é possível recarregar agendamentos');
-                    // Mesmo sem disciplinaId, atualizar estatísticas gerais
+                    // Fallback: recarregar página
                     setTimeout(() => {
-                        atualizarEstatisticasTurma();
-                        atualizarEstatisticasModal(); // Atualizar também no modal
-                    }, 500);
+                        window.location.reload();
+                    }, 1000);
                 }
                 
-                // Fechar modal e resetar botão
+                // Atualizar informações da disciplina no modal (opcional - não bloquear se falhar)
+                if (typeof buscarInfoDisciplina === 'function') {
+                    buscarInfoDisciplina(disciplinaId).catch(err => {
+                        // Ignorar erros silenciosamente
+                    });
+                }
+                
+                // Atualizar estatísticas após um pequeno delay
                 setTimeout(() => {
-                    fecharModalAgendarAula();
+                    if (typeof atualizarEstatisticasTurma === 'function') {
+                        atualizarEstatisticasTurma();
+                    }
+                    if (typeof atualizarEstatisticasModal === 'function') {
+                        atualizarEstatisticasModal();
+                    }
                 }, 500);
-                btnAgendar.disabled = false;
-                btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
             } else {
-                mostrarMensagemModal('❌ ' + (data.mensagem || 'Erro ao agendar aula. Tente novamente.'), 'error');
-                btnAgendar.disabled = false;
+                // Sem disciplinaId, apenas recarregar calendário
+                if (typeof recarregarCalendario === 'function') {
+                    recarregarCalendario();
+                } else {
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
+            }
+            
+            // Fechar modal e resetar botão
+            setTimeout(() => {
+                fecharModalAgendarAula();
+            }, isEdicaoConfirmada ? 800 : 1500);
+            
+            btnAgendar.disabled = false;
+            if (btnAgendarTexto) {
+                btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ' + btnAgendarTexto.textContent;
+            } else {
                 btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
             }
-        })
-        .catch(error => {
-            console.error('❌ [DEBUG] Erro ao enviar agendamento:', error);
-            mostrarMensagemModal('❌ Erro ao processar agendamento. Tente novamente.', 'error');
+        } else {
+            mostrarMensagemModal('❌ ' + (data.mensagem || 'Erro ao ' + (isEdicaoConfirmada ? 'salvar' : 'agendar') + ' aula. Tente novamente.'), 'error');
             btnAgendar.disabled = false;
+            if (btnAgendarTexto) {
+                btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ' + btnAgendarTexto.textContent;
+            } else {
+                btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('❌ [DEBUG] Erro ao enviar agendamento:', error);
+        mostrarMensagemModal('❌ Erro ao processar agendamento. Tente novamente.', 'error');
+        btnAgendar.disabled = false;
+        if (btnAgendarTexto) {
+            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ' + btnAgendarTexto.textContent;
+        } else {
             btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
-        });
+        }
     });
 }
 
