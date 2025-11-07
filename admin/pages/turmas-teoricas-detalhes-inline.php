@@ -348,6 +348,41 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     $historicoAgendamentos[$disciplinaId] = $agendamentosDisciplina;
 }
 
+// Paleta base de cores por disciplina (utilizada em múltiplos componentes)
+$paletaCoresDisciplinas = [
+    'legislacao_transito' => [
+        'base' => '#fbbc04',
+        'fundo' => '#fef7e0',
+    ],
+    'direcao_defensiva' => [
+        'base' => '#34a853',
+        'fundo' => '#e6f4ea',
+    ],
+    'primeiros_socorros' => [
+        'base' => '#ea4335',
+        'fundo' => '#fce8e6',
+    ],
+    'meio_ambiente_cidadania' => [
+        'base' => '#4285f4',
+        'fundo' => '#e8f0fe',
+    ],
+    'mecanica_basica' => [
+        'base' => '#9c27b0',
+        'fundo' => '#f3e5f5',
+    ],
+];
+
+function obterCorDisciplina(string $disciplinaSlug, array $paleta, string $tipo = 'base'): string
+{
+    $slugNormalizado = strtolower($disciplinaSlug);
+    if (isset($paleta[$slugNormalizado][$tipo])) {
+        return $paleta[$slugNormalizado][$tipo];
+    }
+
+    // Fallback suave (azul neutro)
+    return $tipo === 'fundo' ? '#e8f1fd' : '#2563eb';
+}
+
 /* Helpers de badge e metadados */
 function formatarPeriodoTurma(array $turma): array {
     $inicio = isset($turma['data_inicio']) && $turma['data_inicio'] ? date('d/m/Y', strtotime($turma['data_inicio'])) : null;
@@ -371,6 +406,110 @@ function obterStatusBadgeTexto(string $status): string {
         'finalizada' => 'Concluída'
     ];
     return $statusLabels[$status] ?? ucfirst($status);
+}
+
+function formatarDiaSemanaCurto(DateTimeImmutable $data): string
+{
+    static $dias = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    return $dias[(int) $data->format('w')] ?? $data->format('D');
+}
+
+function formatarMesCurto(DateTimeImmutable $data): string
+{
+    static $meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    return $meses[(int) $data->format('n') - 1] ?? $data->format('M');
+}
+
+function formatarCabecalhoProximas(DateTimeImmutable $data): string
+{
+    return sprintf('%s, %02d %s', formatarDiaSemanaCurto($data), $data->format('d'), formatarMesCurto($data));
+}
+
+function formatarStatusAulaProxima(string $status): array
+{
+    $status = strtolower(trim($status));
+    $mapeamento = [
+        'confirmada' => ['label' => 'Confirmada', 'classe' => 'confirmada'],
+        'reagendada' => ['label' => 'Reagendada', 'classe' => 'reagendada'],
+        'cancelada' => ['label' => 'Cancelada', 'classe' => 'cancelada'],
+        'pendente' => ['label' => 'Pendente', 'classe' => 'pendente'],
+        'aguardando' => ['label' => 'Aguardando', 'classe' => 'pendente'],
+        'agendada' => ['label' => 'Agendada', 'classe' => 'agendada'],
+    ];
+
+    if (isset($mapeamento[$status])) {
+        return $mapeamento[$status];
+    }
+
+    return ['label' => ucfirst($status ?: 'Agendada'), 'classe' => 'agendada'];
+}
+
+function criarBadgeTempo(DateTimeImmutable $agora, DateTimeImmutable $inicio): ?array
+{
+    if ($inicio <= $agora) {
+        return ['label' => 'agora', 'classe' => 'now'];
+    }
+
+    $intervalo = $agora->diff($inicio);
+
+    if ($intervalo->days === 0) {
+        if ($intervalo->h === 0) {
+            $minutos = max(1, $intervalo->i);
+            return ['label' => "em {$minutos} min", 'classe' => 'soon'];
+        }
+        return ['label' => "em {$intervalo->h}h", 'classe' => 'soon'];
+    }
+
+    if ($intervalo->days === 1) {
+        return ['label' => 'amanhã', 'classe' => 'tomorrow'];
+    }
+
+    if ($intervalo->days < 7) {
+        return ['label' => "em {$intervalo->days}d", 'classe' => 'later'];
+    }
+
+    return null;
+}
+
+function formatarDuracaoMinutos(?int $duracao): string
+{
+    if (!$duracao || $duracao <= 0) {
+        return '50 min';
+    }
+
+    if ($duracao < 60) {
+        return "{$duracao} min";
+    }
+
+    $horas = intdiv($duracao, 60);
+    $minutos = $duracao % 60;
+    if ($minutos === 0) {
+        return $horas === 1 ? '1h' : "{$horas}h";
+    }
+
+    return sprintf('%dh %02d', $horas, $minutos);
+}
+
+function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTimeImmutable $fim, ?int $duracaoMin): string
+{
+    $partes = [];
+    $partes[] = sprintf('%s às %s', $inicio->format('d/m'), $inicio->format('H:i'));
+    if (!empty($aula['nome'])) {
+        $partes[] = $aula['nome'];
+    }
+    if (!empty($aula['instrutor'])) {
+        $partes[] = $aula['instrutor'];
+    }
+    if (!empty($aula['sala'])) {
+        $partes[] = 'Sala ' . $aula['sala'];
+    }
+    if ($duracaoMin) {
+        $partes[] = sprintf('%d minutos', $duracaoMin);
+    } elseif ($fim) {
+        $partes[] = sprintf('até %s', $fim->format('H:i'));
+    }
+
+    return implode(' — ', $partes);
 }
 
 ?>
@@ -2959,21 +3098,108 @@ function updateTurmaHeaderName(newName) {
         }
 
         .resumo-proximas {
-            margin-top: 16px;
-            background: #ffffff;
-            border: 1px solid #e5e7ef;
-            border-radius: 10px;
-            padding: 12px 16px;
+            margin-top: 24px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 18px;
+            position: relative;
+        }
+
+        .resumo-proximas.is-loading .resumo-proximas-body {
+            display: none;
+        }
+
+        .resumo-proximas.is-loading .resumo-proximas-skeleton {
+            display: grid;
         }
 
         .resumo-proximas-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 10px;
-            font-size: 0.95rem;
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+
+        .resumo-proximas-header span {
             font-weight: 600;
-            color: #0f172a;
+            color: #111827;
+        }
+
+        .resumo-proximas-header-actions {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .resumo-proximas-link {
+            border: none;
+            background: transparent;
+            color: #023A8D;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 10px;
+            border-radius: 999px;
+            cursor: pointer;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .resumo-proximas-link:hover {
+            background: rgba(2, 58, 141, 0.08);
+        }
+
+        .resumo-proximas-link--ghost {
+            color: #4b5563;
+        }
+
+        .resumo-proximas-link--ghost:hover {
+            background: #f3f4f6;
+            color: #111827;
+        }
+
+        .resumo-proximas-skeleton {
+            display: none;
+            gap: 12px;
+        }
+
+        .resumo-proximas-skeleton-item {
+            height: 56px;
+            border-radius: 12px;
+            background: linear-gradient(90deg, #f3f4f6 0%, #e5e7eb 50%, #f3f4f6 100%);
+            background-size: 200% 100%;
+            animation: resumoProximasShimmer 1.2s ease-in-out infinite;
+        }
+
+        @keyframes resumoProximasShimmer {
+            0% {
+                background-position: 200% 0;
+            }
+            100% {
+                background-position: -200% 0;
+            }
+        }
+
+        .resumo-proximas-body {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+
+        .resumo-proximas-group {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .resumo-proximas-group-header {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: #1f2937;
+            text-transform: capitalize;
+            letter-spacing: 0.02em;
         }
 
         .resumo-proximas-list {
@@ -2988,54 +3214,258 @@ function updateTurmaHeaderName(newName) {
         .resumo-proximas-item {
             display: flex;
             flex-direction: column;
-            gap: 2px;
-            border-left: 3px solid transparent;
-            padding-left: 10px;
+            gap: 8px;
+            background: #f9fafb;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 12px 14px;
+            position: relative;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
         }
 
-        .resumo-proximas-item.is-overdue {
-            border-left-color: #dc3545;
+        .resumo-proximas-item:hover {
+            border-color: rgba(2, 58, 141, 0.35);
+            box-shadow: 0 12px 24px -15px rgba(2, 58, 141, 0.45);
+            transform: translateY(-1px);
         }
 
-        .resumo-proximas-data {
-            font-size: 0.9rem;
+        .resumo-proximas-item.has-conflict {
+            border-color: #fca5a5;
+        }
+
+        .resumo-proximas-line {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .resumo-proximas-line-main {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            min-width: 0;
+        }
+
+        .resumo-proximas-line-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-left: auto;
+            flex-shrink: 0;
+        }
+
+        .resumo-proximas-hour {
             font-weight: 600;
+            font-size: 0.95rem;
             color: #111827;
         }
 
-        .resumo-proximas-nome {
-            font-size: 0.95rem;
-            font-weight: 500;
-            color: #1f2937;
+        .resumo-proximas-sep {
+            color: #9ca3af;
+            font-size: 0.82rem;
         }
 
-        .resumo-proximas-meta {
-            font-size: 0.78rem;
-            color: #6b7280;
-        }
-
-        .resumo-proximas-link {
-            border: none;
-            background: transparent;
-            color: #023A8D;
-            font-size: 0.85rem;
-            font-weight: 600;
+        .resumo-proximas-pill {
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            padding: 4px 8px;
-            border-radius: 6px;
-            cursor: pointer;
-        }
-
-        .resumo-proximas-link:hover {
-            background: rgba(2, 58, 141, 0.08);
-        }
-
-        .resumo-proximas-vazio {
-            margin: 0;
+            padding: 4px 12px;
+            border-radius: 999px;
             font-size: 0.82rem;
+            font-weight: 600;
+            background: var(--pill-bg, #e5e7eb);
+            color: var(--pill-color, #1f2937);
+            white-space: nowrap;
+        }
+
+        .resumo-proximas-duration {
+            font-size: 0.82rem;
+            color: #4b5563;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .resumo-proximas-status {
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 4px 10px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            background: #e5e7eb;
+            color: #1f2937;
+        }
+
+        .resumo-proximas-status--confirmada {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .resumo-proximas-status--reagendada {
+            background: #ede9fe;
+            color: #5b21b6;
+        }
+
+        .resumo-proximas-status--cancelada {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .resumo-proximas-status--pendente,
+        .resumo-proximas-status--agendada {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .resumo-proximas-badge {
+            font-size: 0.74rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            padding: 4px 10px;
+            border-radius: 999px;
+            text-transform: uppercase;
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .resumo-proximas-badge--now {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+
+        .resumo-proximas-badge--soon {
+            background: #fef3c7;
+            color: #92400e;
+        }
+
+        .resumo-proximas-badge--tomorrow {
+            background: #dbeafe;
+            color: #1d4ed8;
+        }
+
+        .resumo-proximas-badge--later {
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .resumo-proximas-conflict {
+            color: #b91c1c;
+            font-size: 0.9rem;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .resumo-proximas-actions {
+            border: none;
+            background: transparent;
             color: #6b7280;
+            cursor: pointer;
+            padding: 4px;
+            border-radius: 6px;
+            transition: background 0.2s ease, color 0.2s ease;
+        }
+
+        .resumo-proximas-actions:hover {
+            background: rgba(2, 58, 141, 0.08);
+            color: #023A8D;
+        }
+
+        .resumo-proximas-actions-menu {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 14px;
+            min-width: 190px;
+            padding: 6px 0;
+            border-radius: 10px;
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            box-shadow: 0 18px 28px -18px rgba(15, 23, 42, 0.45);
+            z-index: 30;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .resumo-proximas-actions-menu[hidden] {
+            display: none;
+        }
+
+        .resumo-proximas-actions-item {
+            border: none;
+            background: transparent;
+            padding: 8px 14px;
+            font-size: 0.85rem;
+            color: #111827;
+            text-align: left;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .resumo-proximas-actions-item:hover {
+            background: #f3f4f6;
+            color: #023A8D;
+        }
+
+        .resumo-proximas-subline {
+            font-size: 0.78rem;
+            color: #4b5563;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .resumo-proximas-meta {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .resumo-proximas-empty {
+            margin-top: 12px;
+            padding: 16px;
+            border-radius: 12px;
+            border: 1px dashed #aec8f5;
+            background: #f8fafc;
+            color: #4b5563;
+            font-size: 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .resumo-proximas-empty a {
+            color: #023A8D;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        .resumo-proximas-empty a:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 768px) {
+            .resumo-proximas-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+            }
+            .resumo-proximas-header-actions {
+                width: 100%;
+                justify-content: flex-start;
+            }
+            .resumo-proximas-line {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 6px;
+            }
+            .resumo-proximas-line-meta {
+                margin-left: 0;
+            }
         }
 
         @media (max-width: 1024px) {
@@ -3083,54 +3513,159 @@ function updateTurmaHeaderName(newName) {
                     continue;
                 }
 
-                $statusAula = strtolower($agendamento['status'] ?? '');
+                $statusAula = strtolower(trim((string)($agendamento['status'] ?? '')));
                 if ($statusAula === 'realizada') {
                     continue;
                 }
 
-                $horaInicio = $agendamento['hora_inicio'] ?? '00:00:00';
+                $horaInicioStr = trim((string)($agendamento['hora_inicio'] ?? ''));
+                if ($horaInicioStr === '') {
+                    $horaInicioStr = '00:00:00';
+                }
+
                 try {
-                    $dataHora = new DateTimeImmutable(trim($dataAula . ' ' . $horaInicio));
+                    $inicio = new DateTimeImmutable($dataAula . ' ' . $horaInicioStr);
                 } catch (Exception $e) {
                     continue;
                 }
 
-                if ($dataHora < $agora) {
+                $horaFimStr = trim((string)($agendamento['hora_fim'] ?? ''));
+                $fim = null;
+                if ($horaFimStr !== '') {
+                    try {
+                        $fim = new DateTimeImmutable($dataAula . ' ' . $horaFimStr);
+                    } catch (Exception $e) {
+                        $fim = null;
+                    }
+                }
+
+                $duracaoMinutos = (int)($agendamento['duracao_minutos'] ?? 0);
+                if ($fim instanceof DateTimeImmutable && $duracaoMinutos <= 0) {
+                    $duracaoMinutos = (int) max(0, round(($fim->getTimestamp() - $inicio->getTimestamp()) / 60));
+                } elseif (!$fim instanceof DateTimeImmutable && $duracaoMinutos > 0) {
+                    $fim = $inicio->modify('+' . $duracaoMinutos . ' minutes');
+                }
+
+                if ($fim instanceof DateTimeImmutable && $fim <= $agora) {
                     continue;
+                }
+
+                if (!$fim instanceof DateTimeImmutable && $inicio < $agora) {
+                    // Não conseguimos determinar se ainda está ocorrendo -> ignorar
+                    continue;
+                }
+
+                $estaEmAndamento = $inicio <= $agora && (!$fim || $fim > $agora);
+                $badgeTempo = criarBadgeTempo($agora, $inicio);
+                if ($estaEmAndamento) {
+                    $badgeTempo = ['label' => 'agora', 'classe' => 'now'];
                 }
 
                 $nomeAula = trim((string)($agendamento['nome_aula'] ?? ''));
                 if ($nomeAula === '') {
-                    $nomeAula = $disciplinasPorId[$disciplinaId] ?? 'Aula agendada';
+                    $nomeAula = $disciplinasPorId[$disciplinaId] ?? $agendamento['nome_disciplina'] ?? 'Aula agendada';
                 }
-                // Remover sufixos como " - Aula 1"
                 $nomeAula = preg_replace('/\s*-\s*Aula\s*\d+$/i', '', $nomeAula);
 
-                $detalhesPartes = [];
                 $instrutorNome = trim((string)($agendamento['instrutor_nome'] ?? ''));
-                if ($instrutorNome !== '') {
-                    $detalhesPartes[] = $instrutorNome;
-                }
                 $salaNome = trim((string)($agendamento['sala_nome'] ?? ''));
-                if ($salaNome !== '') {
-                    $detalhesPartes[] = 'Sala ' . preg_replace('/^Sala\s+/i', '', $salaNome);
-                }
+                $salaNormalizada = $salaNome !== '' ? preg_replace('/^Sala\s+/i', '', $salaNome) : '';
+
+                $disciplinaSlug = strtolower((string)($agendamento['disciplina'] ?? $disciplinaId ?? ''));
+                $statusFormatado = formatarStatusAulaProxima($statusAula);
+                $duracaoTexto = formatarDuracaoMinutos($duracaoMinutos);
+                $ariaLabel = montarAriaLabelProxima(
+                    [
+                        'nome' => $nomeAula,
+                        'instrutor' => $instrutorNome,
+                        'sala' => $salaNormalizada,
+                    ],
+                    $inicio,
+                    $fim,
+                    $duracaoMinutos
+                );
 
                 $proximasAulas[] = [
-                    'timestamp' => $dataHora->getTimestamp(),
-                    'data' => $dataHora->format('d/m'),
-                    'hora' => $horaInicio ? date('H:i', strtotime($horaInicio)) : null,
+                    'id' => $agendamento['id'] ?? null,
+                    'timestamp' => $inicio->getTimestamp(),
+                    'fim_timestamp' => $fim instanceof DateTimeImmutable ? $fim->getTimestamp() : null,
+                    'inicio' => $inicio,
+                    'fim' => $fim,
+                    'data_iso' => $inicio->format('Y-m-d'),
+                    'hora' => $inicio->format('H:i'),
                     'nome' => $nomeAula,
-                    'detalhes' => implode(' • ', array_filter($detalhesPartes)),
+                    'disciplina_nome' => $disciplinaNome = $disciplinasPorId[$disciplinaId] ?? $agendamento['nome_disciplina'] ?? 'Disciplina',
+                    'disciplina_slug' => $disciplinaSlug,
+                    'instrutor' => $instrutorNome,
+                    'sala' => $salaNormalizada,
+                    'duracao_min' => $duracaoMinutos,
+                    'duracao_texto' => $duracaoTexto,
+                    'status_label' => $statusFormatado['label'],
+                    'status_class' => $statusFormatado['classe'],
+                    'status_raw' => $statusAula,
+                    'badge' => $badgeTempo,
+                    'is_ongoing' => $estaEmAndamento,
+                    'aria_label' => $ariaLabel,
+                    'data_aula' => $dataAula,
+                    'hora_inicio_raw' => $horaInicioStr,
+                    'hora_fim_raw' => $horaFimStr,
                 ];
             }
         }
 
-        usort($proximasAulas, function (array $a, array $b) {
+        usort($proximasAulas, static function (array $a, array $b) {
+            if ($a['is_ongoing'] !== $b['is_ongoing']) {
+                return $a['is_ongoing'] ? -1 : 1;
+            }
+            if ($a['timestamp'] === $b['timestamp']) {
+                return ($a['fim_timestamp'] ?? PHP_INT_MAX) <=> ($b['fim_timestamp'] ?? PHP_INT_MAX);
+            }
             return $a['timestamp'] <=> $b['timestamp'];
         });
 
-        $proximasAulasDisplay = array_slice($proximasAulas, 0, 4);
+        // Detectar conflitos (sobreposição no mesmo dia)
+        $totalAulas = count($proximasAulas);
+        for ($i = 0; $i < $totalAulas; $i++) {
+            $proximasAulas[$i]['tem_conflito'] = false;
+        }
+
+        for ($i = 0; $i < $totalAulas; $i++) {
+            for ($j = $i + 1; $j < $totalAulas; $j++) {
+                if ($proximasAulas[$i]['data_iso'] !== $proximasAulas[$j]['data_iso']) {
+                    continue;
+                }
+
+                $inicioI = $proximasAulas[$i]['timestamp'];
+                $fimI = $proximasAulas[$i]['fim_timestamp'] ?? null;
+                $inicioJ = $proximasAulas[$j]['timestamp'];
+                $fimJ = $proximasAulas[$j]['fim_timestamp'] ?? null;
+
+                if ($fimI === null || $fimJ === null) {
+                    continue;
+                }
+
+                $sobrepoe = $inicioI < $fimJ && $inicioJ < $fimI;
+                if ($sobrepoe) {
+                    $proximasAulas[$i]['tem_conflito'] = true;
+                    $proximasAulas[$j]['tem_conflito'] = true;
+                }
+            }
+        }
+
+        $proximasAulasDisplay = array_slice($proximasAulas, 0, 5);
+
+        // Agrupar por data para exibição
+        $proximasAulasAgrupadas = [];
+        foreach ($proximasAulasDisplay as $aulaResumo) {
+            $dataIso = $aulaResumo['data_iso'];
+            if (!isset($proximasAulasAgrupadas[$dataIso])) {
+                $proximasAulasAgrupadas[$dataIso] = [
+                    'cabecalho' => formatarCabecalhoProximas($aulaResumo['inicio']),
+                    'itens' => [],
+                ];
+            }
+            $proximasAulasAgrupadas[$dataIso]['itens'][] = $aulaResumo;
+        }
         ?>
         <div class="resumo-turma-card">
             <div class="resumo-turma-header">
@@ -3155,45 +3690,217 @@ function updateTurmaHeaderName(newName) {
                     <span class="resumo-kpi-label">Disciplinas</span>
                 </div>
             </div>
-            <?php if (!empty($proximasAulasDisplay)): ?>
-            <div class="resumo-proximas">
-                <div class="resumo-proximas-header">
-                    <span>Próximas aulas</span>
+        <?php if (!empty($proximasAulasDisplay)): ?>
+        <div class="resumo-proximas is-loading" data-proximas-aulas>
+            <div class="resumo-proximas-header">
+                <span>Próximas aulas</span>
+                <div class="resumo-proximas-header-actions">
+                    <button type="button" class="resumo-proximas-link resumo-proximas-link--ghost" onclick="showTab('calendario'); document.getElementById('tab-calendario')?.scrollIntoView({behavior: 'smooth'});">
+                        Ver todas
+                    </button>
                     <button type="button" class="resumo-proximas-link" onclick="showTab('calendario'); document.getElementById('tab-calendario')?.scrollIntoView({behavior: 'smooth'});">
                         Abrir calendário
                         <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.8rem;"></i>
                     </button>
                 </div>
-                <ul class="resumo-proximas-list">
-                    <?php foreach ($proximasAulasDisplay as $aulaResumo): ?>
-                    <li class="resumo-proximas-item">
-                        <span class="resumo-proximas-data">
-                            <?= htmlspecialchars($aulaResumo['data']) ?><?= $aulaResumo['hora'] ? ' · ' . htmlspecialchars($aulaResumo['hora']) : '' ?>
-                        </span>
-                        <span class="resumo-proximas-nome">
-                            <?= htmlspecialchars($aulaResumo['nome']) ?>
-                        </span>
-                        <?php if (!empty($aulaResumo['detalhes'])): ?>
-                        <span class="resumo-proximas-meta"><?= htmlspecialchars($aulaResumo['detalhes']) ?></span>
-                        <?php endif; ?>
-                    </li>
-                    <?php endforeach; ?>
-                </ul>
             </div>
-            <?php else: ?>
-            <div class="resumo-proximas">
-                <div class="resumo-proximas-header">
-                    <span>Próximas aulas</span>
-                    <button type="button" class="resumo-proximas-link" onclick="showTab('calendario'); document.getElementById('tab-calendario')?.scrollIntoView({behavior: 'smooth'});">
-                        Abrir calendário
-                        <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.8rem;"></i>
-                    </button>
+            <div class="resumo-proximas-skeleton" aria-hidden="true">
+                <div class="resumo-proximas-skeleton-item"></div>
+                <div class="resumo-proximas-skeleton-item"></div>
+                <div class="resumo-proximas-skeleton-item"></div>
+            </div>
+            <div class="resumo-proximas-body">
+                <?php foreach ($proximasAulasAgrupadas as $grupo): ?>
+                <div class="resumo-proximas-group">
+                    <div class="resumo-proximas-group-header"><?= htmlspecialchars($grupo['cabecalho']) ?></div>
+                    <ul class="resumo-proximas-list">
+                        <?php foreach ($grupo['itens'] as $aulaResumo): ?>
+                        <?php
+                            $corDisciplina = obterCorDisciplina($aulaResumo['disciplina_slug'], $paletaCoresDisciplinas, 'base');
+                            $corDisciplinaFundo = obterCorDisciplina($aulaResumo['disciplina_slug'], $paletaCoresDisciplinas, 'fundo');
+                            $temIdAula = !empty($aulaResumo['id']);
+                        ?>
+                        <li class="resumo-proximas-item<?= $aulaResumo['tem_conflito'] ? ' has-conflict' : '' ?>"
+                            data-aula-id="<?= htmlspecialchars((string)($aulaResumo['id'] ?? '')) ?>"
+                            data-aula-nome="<?= htmlspecialchars($aulaResumo['nome'], ENT_QUOTES) ?>"
+                            data-data-aula="<?= htmlspecialchars($aulaResumo['data_aula']) ?>"
+                            data-hora-inicio="<?= htmlspecialchars($aulaResumo['hora_inicio_raw']) ?>"
+                            data-hora-fim="<?= htmlspecialchars($aulaResumo['hora_fim_raw']) ?>"
+                            aria-label="<?= htmlspecialchars($aulaResumo['aria_label']) ?>">
+                            <div class="resumo-proximas-line">
+                                <div class="resumo-proximas-line-main">
+                                    <span class="resumo-proximas-hour"><?= htmlspecialchars($aulaResumo['hora']) ?></span>
+                                    <span class="resumo-proximas-sep">•</span>
+                                    <span class="resumo-proximas-pill" style="--pill-color: <?= htmlspecialchars($corDisciplina) ?>; --pill-bg: <?= htmlspecialchars($corDisciplinaFundo) ?>;">
+                                        <?= htmlspecialchars($aulaResumo['disciplina_nome']) ?>
+                                    </span>
+                                    <span class="resumo-proximas-sep">•</span>
+                                    <span class="resumo-proximas-duration"><?= htmlspecialchars($aulaResumo['duracao_texto']) ?></span>
+                                </div>
+                                <div class="resumo-proximas-line-meta">
+                                    <?php if ($aulaResumo['tem_conflito']): ?>
+                                    <span class="resumo-proximas-conflict" title="Conflito de horário">
+                                        <i class="fas fa-triangle-exclamation"></i>
+                                    </span>
+                                    <?php endif; ?>
+                                    <?php if (!empty($aulaResumo['badge'])): ?>
+                                    <span class="resumo-proximas-badge resumo-proximas-badge--<?= htmlspecialchars($aulaResumo['badge']['classe']) ?>">
+                                        <?= htmlspecialchars($aulaResumo['badge']['label']) ?>
+                                    </span>
+                                    <?php endif; ?>
+                                    <span class="resumo-proximas-status resumo-proximas-status--<?= htmlspecialchars($aulaResumo['status_class']) ?>">
+                                        <?= htmlspecialchars($aulaResumo['status_label']) ?>
+                                    </span>
+                                    <?php if ($temIdAula): ?>
+                                    <button type="button" class="resumo-proximas-actions" data-quick-actions-trigger aria-label="Ações rápidas para <?= htmlspecialchars($aulaResumo['nome'], ENT_QUOTES) ?>">
+                                        <i class="fas fa-ellipsis-vertical"></i>
+                                    </button>
+                                    <div class="resumo-proximas-actions-menu" role="menu" hidden>
+                                        <button type="button" class="resumo-proximas-actions-item" data-quick-action="calendar">
+                                            <i class="fas fa-calendar-day"></i>
+                                            Abrir no calendário
+                                        </button>
+                                        <button type="button" class="resumo-proximas-actions-item" data-quick-action="edit">
+                                            <i class="fas fa-pen"></i>
+                                            Editar
+                                        </button>
+                                        <button type="button" class="resumo-proximas-actions-item" data-quick-action="cancel">
+                                            <i class="fas fa-ban"></i>
+                                            Cancelar
+                                        </button>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                            <div class="resumo-proximas-subline">
+                                <?php if (!empty($aulaResumo['instrutor'])): ?>
+                                <span class="resumo-proximas-meta">
+                                    <i class="fas fa-chalkboard-teacher"></i>
+                                    <?= htmlspecialchars($aulaResumo['instrutor']) ?>
+                                </span>
+                                <?php endif; ?>
+                                <?php if (!empty($aulaResumo['instrutor']) && !empty($aulaResumo['sala'])): ?>
+                                <span class="resumo-proximas-sep">•</span>
+                                <?php endif; ?>
+                                <?php if (!empty($aulaResumo['sala'])): ?>
+                                <span class="resumo-proximas-meta">
+                                    <i class="fas fa-door-open"></i>
+                                    Sala <?= htmlspecialchars($aulaResumo['sala']) ?>
+                                </span>
+                                <?php endif; ?>
+                            </div>
+                        </li>
+                        <?php endforeach; ?>
+                    </ul>
                 </div>
-                <p class="resumo-proximas-vazio">Nenhuma aula futura agendada.</p>
+                <?php endforeach; ?>
             </div>
-            <?php endif; ?>
+        </div>
+        <?php else: ?>
+        <div class="resumo-proximas">
+            <div class="resumo-proximas-header">
+                <span>Próximas aulas</span>
+                <button type="button" class="resumo-proximas-link" onclick="showTab('calendario'); document.getElementById('tab-calendario')?.scrollIntoView({behavior: 'smooth'});">
+                    Abrir calendário
+                    <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.8rem;"></i>
+                </button>
+            </div>
+            <div class="resumo-proximas-empty">
+                <span>Sem próximas aulas — agende pelo Calendário.</span>
+                <a href="javascript:void(0);" onclick="showTab('calendario'); document.getElementById('tab-calendario')?.scrollIntoView({behavior: 'smooth'});">
+                    Ir para o calendário
+                </a>
+            </div>
+        </div>
+        <?php endif; ?>
         </div>
     </div>
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const container = document.querySelector('[data-proximas-aulas]');
+        if (!container || container.dataset.enhanced === 'true') {
+            return;
+        }
+
+        container.dataset.enhanced = 'true';
+
+        requestAnimationFrame(function () {
+            container.classList.remove('is-loading');
+        });
+
+        const closeMenus = function () {
+            container.querySelectorAll('.resumo-proximas-actions-menu').forEach(function (menu) {
+                if (!menu.hasAttribute('hidden')) {
+                    menu.setAttribute('hidden', 'hidden');
+                }
+                menu.dataset.open = 'false';
+            });
+        };
+
+        container.querySelectorAll('[data-quick-actions-trigger]').forEach(function (trigger) {
+            trigger.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const menu = trigger.nextElementSibling;
+                if (!menu) {
+                    return;
+                }
+
+                const isOpen = menu.dataset.open === 'true';
+                closeMenus();
+
+                if (!isOpen) {
+                    menu.dataset.open = 'true';
+                    menu.hidden = false;
+                }
+            });
+        });
+
+        container.querySelectorAll('[data-quick-action]').forEach(function (button) {
+            button.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                const item = button.closest('.resumo-proximas-item');
+                if (!item) {
+                    return;
+                }
+
+                const action = button.dataset.quickAction;
+                const aulaId = item.dataset.aulaId;
+                const nomeAula = item.dataset.aulaNome || 'esta aula';
+
+                if (action === 'calendar') {
+                    if (typeof showTab === 'function') {
+                        showTab('calendario');
+                    }
+                    const calendario = document.getElementById('tab-calendario');
+                    if (calendario) {
+                        calendario.scrollIntoView({ behavior: 'smooth' });
+                    }
+                } else if (action === 'edit' && aulaId) {
+                    if (typeof editarAgendamento === 'function') {
+                        editarAgendamento(aulaId, '', '', '', '', '', '', '', '');
+                    }
+                } else if (action === 'cancel' && aulaId) {
+                    if (typeof cancelarAgendamento === 'function') {
+                        cancelarAgendamento(aulaId, nomeAula);
+                    }
+                }
+
+                closeMenus();
+            });
+        });
+
+        document.addEventListener('click', closeMenus);
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                closeMenus();
+            }
+        });
+    });
+    </script>
     
     <!-- Aba Disciplinas -->
     <div id="tab-disciplinas" class="tab-content">
@@ -3807,23 +4514,13 @@ function updateTurmaHeaderName(newName) {
             }
         }
         
-        // Definir cores por disciplina - estilo Google Calendar (cores pastéis suaves)
-        $coresDisciplinas = [
-            'legislacao_transito' => '#fbbc04',      // Amarelo suave
-            'direcao_defensiva' => '#34a853',        // Verde suave
-            'primeiros_socorros' => '#ea4335',       // Vermelho suave
-            'meio_ambiente_cidadania' => '#4285f4',  // Azul suave
-            'mecanica_basica' => '#9c27b0'           // Roxo suave
-        ];
-        
-        // Cores de fundo mais claras (pastéis) para melhor legibilidade do texto escuro
-        $coresFundoDisciplinas = [
-            'legislacao_transito' => '#fef7e0',      // Amarelo muito claro
-            'direcao_defensiva' => '#e6f4ea',        // Verde muito claro
-            'primeiros_socorros' => '#fce8e6',       // Vermelho muito claro
-            'meio_ambiente_cidadania' => '#e8f0fe',  // Azul muito claro
-            'mecanica_basica' => '#f3e5f5'           // Roxo muito claro
-        ];
+        // Definir cores por disciplina utilizando a paleta centralizada
+        $coresDisciplinas = [];
+        $coresFundoDisciplinas = [];
+        foreach ($paletaCoresDisciplinas as $slugDisciplina => $coresDisciplina) {
+            $coresDisciplinas[$slugDisciplina] = $coresDisciplina['base'];
+            $coresFundoDisciplinas[$slugDisciplina] = $coresDisciplina['fundo'];
+        }
         
         // Calcular horários dinamicamente baseado nas aulas agendadas
         // Encontrar a menor hora e maior hora das aulas para criar timeline
@@ -6281,19 +6978,45 @@ function mudarSemana(direcao) {
     carregarSemanaPorIndice(novoIndice, { forcarRecarregamento: true });
 }
 
-(function inicializarCalendarioSemana() {
-    const iniciar = () => {
-        const indiceAtualInput = document.getElementById('semana-atual-indice');
-        const indiceInicial = parseInt(indiceAtualInput ? indiceAtualInput.value : '0', 10) || 0;
-        carregarSemanaPorIndice(indiceInicial, { apenasSeVazio: true });
-    };
+window.calendarioSemanaInicializado = false;
 
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', iniciar, { once: true });
-    } else {
-        iniciar();
+window.inicializarCalendarioSemana = function inicializarCalendarioSemana(opcoes = {}) {
+    const { forceFetch = false, remeasure = false } = opcoes;
+    const indiceAtualInput = document.getElementById('semana-atual-indice');
+    const indiceInicial = parseInt(indiceAtualInput ? indiceAtualInput.value : '0', 10) || 0;
+
+    const deveForcarFetch = forceFetch || !window.calendarioSemanaInicializado;
+    const parametrosCarregamento = deveForcarFetch
+        ? { forcarRecarregamento: true }
+        : { apenasSeVazio: true };
+
+    carregarSemanaPorIndice(indiceInicial, parametrosCarregamento);
+
+    if (!window.calendarioSemanaInicializado) {
+        window.calendarioSemanaInicializado = true;
     }
-})();
+
+    if (remeasure && typeof window.reexecutarPosRender === 'function') {
+        setTimeout(() => window.reexecutarPosRender(), 120);
+    }
+};
+
+document.addEventListener('DOMContentLoaded', () => {
+    const url = new URL(window.location);
+    const tabParam = url.searchParams.get('tab');
+    const abaInicial = tabParam || localStorage.getItem('turmaDetalhesAbaAtiva') || localStorage.getItem('turma-tab-active');
+
+    if (tabParam && tabParam !== localStorage.getItem('turmaDetalhesAbaAtiva')) {
+        localStorage.setItem('turmaDetalhesAbaAtiva', tabParam);
+        localStorage.setItem('turma-tab-active', tabParam);
+    }
+
+    if (abaInicial === 'calendario') {
+        requestAnimationFrame(() => {
+            window.inicializarCalendarioSemana({ forceFetch: true, remeasure: true });
+        });
+    }
+});
 function atualizarCalendarioSemana(novoIndice) {
     // Mostrar indicador de carregamento
     const calendarioContainer = document.querySelector('.timeline-calendar');
@@ -7417,6 +8140,20 @@ if (typeof window.showTab !== 'function') {
             selectedTab.classList.add('active');
         }
         
+        if (tabName === 'calendario') {
+            requestAnimationFrame(() => {
+                if (typeof window.inicializarCalendarioSemana === 'function') {
+                    const jaInicializado = window.calendarioSemanaInicializado === true;
+                    window.inicializarCalendarioSemana({
+                        forceFetch: !jaInicializado,
+                        remeasure: true
+                    });
+                } else if (typeof window.reexecutarPosRender === 'function') {
+                    setTimeout(() => window.reexecutarPosRender(), 120);
+                }
+            });
+        }
+
         // Ativar o botão correspondente
         const buttons = document.querySelectorAll('.tab-button');
         buttons.forEach(button => {
@@ -7442,7 +8179,8 @@ document.addEventListener('DOMContentLoaded', function() {
     // Verificar se precisa garantir primeira semana do calendário
     const url = new URL(window.location);
     const semanaCalendario = url.searchParams.get('semana_calendario');
-    const abaAtiva = localStorage.getItem('turmaDetalhesAbaAtiva');
+    const tabParam = url.searchParams.get('tab');
+    const abaAtiva = tabParam || localStorage.getItem('turmaDetalhesAbaAtiva');
     
     // Se estiver acessando a aba Calendário pela primeira vez (sem parâmetro), garantir primeira semana
     if ((abaAtiva === 'calendario' || !abaAtiva) && (!semanaCalendario || semanaCalendario === '')) {
@@ -7451,9 +8189,9 @@ document.addEventListener('DOMContentLoaded', function() {
         window.history.replaceState({}, '', url);
     }
     
-    const savedTab = localStorage.getItem('turmaDetalhesAbaAtiva') || localStorage.getItem('turma-tab-active');
+    const savedTab = tabParam || localStorage.getItem('turmaDetalhesAbaAtiva') || localStorage.getItem('turma-tab-active');
     if (savedTab) {
-        showTab(savedTab);
+        requestAnimationFrame(() => showTab(savedTab));
     }
     
     // Salvar quando uma aba for clicada e garantir primeira semana para calendário

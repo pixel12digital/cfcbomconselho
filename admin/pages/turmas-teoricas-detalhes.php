@@ -19,24 +19,44 @@ if (!$resultadoTurma['sucesso']) {
 
 $turma = $resultadoTurma['dados'];
 
-$statusLabels = [
-    'criando' => 'Agendando',
-    'agendando' => 'Agendando',
-    'completa' => 'Agendado',
-    'ativa' => 'Em andamento',
-    'finalizada' => 'Concluída'
+$totalAulasObrigatorias = 0;
+$totalAulasAgendadas = 0;
+
+if (!empty($progressoDisciplinas) && is_array($progressoDisciplinas)) {
+    foreach ($progressoDisciplinas as $disciplinaProgresso) {
+        $totalAulasObrigatorias += (int)($disciplinaProgresso['aulas_obrigatorias'] ?? 0);
+        $totalAulasAgendadas += (int)($disciplinaProgresso['aulas_agendadas'] ?? 0);
+    }
+}
+
+if ($totalAulasObrigatorias <= 0) {
+    $percentualAgendamento = $totalAulasAgendadas > 0 ? 100 : 0;
+} else {
+    $percentualAgendamento = (int)round(($totalAulasAgendadas / $totalAulasObrigatorias) * 100);
+}
+$percentualAgendamento = max(0, min(100, $percentualAgendamento));
+
+$agendamentoStatus = [
+    'label' => 'Pendente',
+    'background' => '#f1f3f5',
+    'textColor' => '#495057',
 ];
 
-$statusColors = [
-    'criando' => '#ffc107',
-    'agendando' => '#ffc107',
-    'completa' => '#007bff',
-    'ativa' => '#28a745',
-    'finalizada' => '#6c757d'
-];
+if ($percentualAgendamento >= 100) {
+    $agendamentoStatus = [
+        'label' => 'Concluída',
+        'background' => '#e6f4ea',
+        'textColor' => '#1e7d3c',
+    ];
+} elseif ($percentualAgendamento > 0) {
+    $agendamentoStatus = [
+        'label' => 'Em andamento',
+        'background' => '#fff4e5',
+        'textColor' => '#8a6100',
+    ];
+}
 
-$statusBadgeText = $statusLabels[$turma['status']] ?? ucfirst($turma['status']);
-$statusBadgeColor = $statusColors[$turma['status']] ?? '#6c757d';
+$agendamentoStatus['percent'] = $percentualAgendamento;
 
 // Obter progresso das disciplinas
 $progressoDisciplinas = $turmaManager->obterProgressoDisciplinas($turmaId);
@@ -99,10 +119,18 @@ try {
                 <?= htmlspecialchars($turma['curso_nome'] ?? 'Curso não especificado') ?>
             </p>
             
-            <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                <span style="background: <?= $statusBadgeColor ?>; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
-                    <?= htmlspecialchars($statusBadgeText) ?>
+            <div style="display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px;">
+                <span style="font-size: 0.85rem; font-weight: 600; color: var(--gray-600); text-transform: uppercase;">
+                    Status do agendamento
                 </span>
+                <div style="display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <span style="background: <?= $agendamentoStatus['background'] ?>; color: <?= $agendamentoStatus['textColor'] ?>; padding: 6px 14px; border-radius: 999px; font-size: 0.95rem; font-weight: 600;">
+                        <?= htmlspecialchars($agendamentoStatus['label']) ?> - <?= $agendamentoStatus['percent'] ?>% agendado
+                    </span>
+                </div>
+                <small style="color: var(--gray-500); font-size: 0.75rem;">
+                    Indicador baseado nas aulas agendadas em relação ao total obrigatório da turma.
+                </small>
             </div>
         </div>
         
