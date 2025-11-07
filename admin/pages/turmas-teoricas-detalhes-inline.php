@@ -530,9 +530,15 @@ function obterStatusBadgeTexto(string $status): string {
     color: #666;
     min-width: 300px;
     max-width: 100%;
+    width: 100%;
     word-wrap: break-word;
     overflow-wrap: break-word;
-    white-space: pre-wrap;
+    white-space: normal;
+    text-align: left !important;
+    display: block !important;
+    padding: 12px !important;
+    margin: 0 !important;
+    box-sizing: border-box;
 }
 
 /* ==========================================
@@ -641,7 +647,6 @@ function obterStatusBadgeTexto(string $status): string {
     position: relative !important;
     z-index: 11 !important;
 }
-
 /* Tamanhos específicos para ícones */
 .btn-group .btn i.fa-edit {
     font-size: 14px !important;
@@ -2183,7 +2188,7 @@ $salaNome = obterNomeSala($turma['sala_id'], $salasCadastradas);
 $salaDisplay = trim((string)$salaNome) !== '' ? $salaNome : 'Sala não definida';
 [$periodoInicio, $periodoFim] = formatarPeriodoTurma($turma);
 $modalidadeTexto = obterModalidadeTexto($turma['modalidade'] ?? null);
-$statusBadgeText = obterStatusBadgeTexto($turma['status'] ?? '');
+$observacoesTexto = trim((string)($turma['observacoes'] ?? ''));
 ?>
 <div class="masthead">
     <nav class="breadcrumb-nav" aria-label="Breadcrumb">
@@ -2192,7 +2197,16 @@ $statusBadgeText = obterStatusBadgeTexto($turma['status'] ?? '');
         <span class="current-context"><?= htmlspecialchars($turma['nome']) ?></span>
     </nav>
     <div class="masthead-top">
-        <h1 class="page-title"><?= htmlspecialchars($turma['nome']) ?></h1>
+        <h1 class="page-title">
+            <span class="inline-edit" data-field="nome" data-type="text" data-value="<?= htmlspecialchars($turma['nome']) ?>">
+                <?= htmlspecialchars($turma['nome']) ?>
+                <i class="fas fa-edit edit-icon"></i>
+            </span>
+            <span class="status-badge status-<?= $turma['status'] ?> inline-edit" data-field="status" data-type="select" data-value="<?= $turma['status'] ?>" style="margin-left: 12px;">
+                <?= obterStatusBadgeTexto($turma['status']) ?>
+                <i class="fas fa-edit edit-icon"></i>
+            </span>
+        </h1>
         <div class="masthead-actions">
             <button onclick="abrirModalInserirAlunos()" class="action-btn action-btn-tonal action-inline" type="button">
                 <i class="fas fa-user-plus"></i>
@@ -2237,11 +2251,6 @@ $statusBadgeText = obterStatusBadgeTexto($turma['status'] ?? '');
         <span class="turma-meta-item">
             <i class="fas fa-chalkboard-teacher icon icon-18"></i>
             <?= htmlspecialchars($modalidadeTexto) ?>
-        </span>
-        <span class="turma-meta-separator">•</span>
-        <span class="turma-meta-item">
-            <i class="fas fa-bullseye icon icon-18"></i>
-            <?= htmlspecialchars($statusBadgeText) ?>
         </span>
     </div>
 </div>
@@ -2782,26 +2791,26 @@ function updateTurmaHeaderName(newName) {
         <i class="fas fa-graduation-cap me-2"></i>Informações Básicas
     </h4>
     
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; align-items: flex-start; justify-items: start;">
         <div>
-            <h5 style="color: #023A8D; font-size: 1.5rem; margin-bottom: 10px;">
-                        <span class="inline-edit" data-field="nome" data-type="text" data-value="<?= htmlspecialchars($turma['nome']) ?>">
-                            <?= htmlspecialchars($turma['nome']) ?>
-                            <i class="fas fa-edit edit-icon"></i>
-                        </span>
-            </h5>
-            <p style="color: #666; margin-bottom: 15px;">
+            <p style="color: #666; margin-bottom: 10px;">
                 <span class="inline-edit" data-field="curso_tipo" data-type="select" data-value="<?= htmlspecialchars($turma['curso_tipo'] ?? '') ?>">
                     <?= htmlspecialchars($tiposCurso[$turma['curso_tipo']] ?? 'Curso não especificado') ?>
                     <i class="fas fa-edit edit-icon"></i>
                 </span>
             </p>
-            
-            <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                <span class="status-badge status-<?= $turma['status'] ?> inline-edit" data-field="status" data-type="select" data-value="<?= $turma['status'] ?>">
-                    <?= obterStatusBadgeTexto($turma['status']) ?>
-                    <i class="fas fa-edit edit-icon"></i>
-                </span>
+            <div style="margin-bottom: 15px; text-align: left;">
+                <h6 style="color: #023A8D; margin-bottom: 6px;">Observações</h6>
+                <div style="color: #666; font-style: italic; text-align: left;">
+                    <span class="inline-edit" data-field="observacoes" data-type="textarea" data-value="<?= htmlspecialchars($observacoesTexto) ?>">
+                        <?php if ($observacoesTexto !== ''): ?>
+                            <?= nl2br(htmlspecialchars($observacoesTexto)) ?>
+                        <?php else: ?>
+                            <span style="color: #999; font-style: italic;">Nenhuma observação cadastrada</span>
+                        <?php endif; ?>
+                        <i class="fas fa-edit edit-icon"></i>
+                    </span>
+                </div>
             </div>
         </div>
         
@@ -2848,17 +2857,6 @@ function updateTurmaHeaderName(newName) {
         </div>
     </div>
     
-    <?php if (!empty($turma['observacoes'])): ?>
-    <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-        <h6 style="color: #023A8D; margin-bottom: 10px;">Observações:</h6>
-        <p style="color: #666; margin: 0;">
-            <span class="inline-edit" data-field="observacoes" data-type="textarea" data-value="<?= htmlspecialchars($turma['observacoes']) ?>">
-                <?= nl2br(htmlspecialchars($turma['observacoes'])) ?>
-                <i class="fas fa-edit edit-icon"></i>
-            </span>
-        </p>
-    </div>
-    <?php endif; ?>
 </div>
 
         <!-- Resumo Rápido -->
@@ -9157,16 +9155,40 @@ function applyDisplayStyles(element, field) {
             element.style.minWidth = '120px';
             element.style.maxWidth = '100%';
             break;
-        case 'observacoes':
+        case 'observacoes': {
             element.style.fontStyle = 'italic';
             element.style.color = '#666';
             element.style.border = 'none';
             element.style.minWidth = '300px';
             element.style.maxWidth = '100%';
-            element.style.whiteSpace = 'pre-wrap';
+            element.style.width = '100%';
+            element.style.boxSizing = 'border-box';
+            element.style.whiteSpace = 'normal';
             element.style.wordWrap = 'break-word';
             element.style.overflowWrap = 'break-word';
+            element.style.textAlign = 'left';
+            element.style.display = 'block';
+            element.style.padding = '12px';
+            element.style.margin = '0';
+            // Remover qualquer centralização que venha do backend
+            element.querySelectorAll('*').forEach(child => {
+                if (child instanceof HTMLElement) {
+                    const inlineTextAlign = child.style.textAlign;
+                    if (inlineTextAlign && inlineTextAlign.toLowerCase() !== 'left') {
+                        child.style.textAlign = 'left';
+                    }
+                    const inlineDisplay = child.style.display;
+                    if (inlineDisplay && inlineDisplay.toLowerCase() === 'inline') {
+                        child.style.display = 'inline';
+                    }
+                    if (child.tagName === 'CENTER') {
+                        child.style.textAlign = 'left';
+                        child.style.display = 'block';
+                    }
+                }
+            });
             break;
+        }
     }
 }
 
