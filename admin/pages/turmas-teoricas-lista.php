@@ -15,6 +15,14 @@ $filtros = [
 $resultado = $turmaManager->listarTurmas($filtros);
 $turmas = $resultado['sucesso'] ? $resultado['dados'] : [];
 
+$statusLabels = [
+    'criando' => 'Agendando',
+    'agendando' => 'Agendando',
+    'completa' => 'Agendado',
+    'ativa' => 'Em andamento',
+    'finalizada' => 'Concluída'
+];
+
 // Estatísticas rápidas
 $stats = [
     'total' => count($turmas),
@@ -27,13 +35,17 @@ $stats = [
 <!-- Cabeçalho com estatísticas -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
     <div>
-        <h3 style="margin: 0; color: #023A8D;">📚 Turmas Teóricas</h3>
-        <p style="margin: 5px 0 0 0; color: #666;">
+        <h3 style="margin: 0; color: var(--primary-dark); display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-layer-group icon icon-24"></i>
+            Turmas Teóricas
+        </h3>
+        <p style="margin: 5px 0 0 0; color: var(--gray-600);">
             Gerencie turmas teóricas com controle completo de disciplinas e carga horária
         </p>
     </div>
-    <a href="?page=turmas-teoricas&acao=nova&step=1" class="btn-primary">
-        ➕ Nova Turma Teórica
+    <a href="?page=turmas-teoricas&acao=nova&step=1" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+        <i class="fas fa-plus icon icon-20"></i>
+        Nova Turma Teórica
     </a>
 </div>
 
@@ -66,7 +78,10 @@ $stats = [
         <input type="hidden" name="page" value="turmas-teoricas">
         
         <div style="flex: 1; min-width: 200px;">
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">🔍 Buscar</label>
+            <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px; font-weight: 600; color: var(--gray-600);">
+                <i class="fas fa-search icon icon-20"></i>
+                Buscar
+            </label>
             <input type="text" 
                    name="busca" 
                    value="<?= htmlspecialchars($filtros['busca']) ?>"
@@ -75,7 +90,10 @@ $stats = [
         </div>
         
         <div style="min-width: 150px;">
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">📊 Status</label>
+            <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px; font-weight: 600; color: var(--gray-600);">
+                <i class="fas fa-stream icon icon-20"></i>
+                Status
+            </label>
             <select name="status" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                 <option value="">Todos</option>
                 <option value="criando" <?= $filtros['status'] === 'criando' ? 'selected' : '' ?>>Criando</option>
@@ -87,7 +105,10 @@ $stats = [
         </div>
         
         <div style="min-width: 150px;">
-            <label style="display: block; margin-bottom: 5px; font-weight: 600;">📚 Curso</label>
+            <label style="display: flex; align-items: center; gap: 6px; margin-bottom: 5px; font-weight: 600; color: var(--gray-600);">
+                <i class="fas fa-graduation-cap icon icon-20"></i>
+                Curso
+            </label>
             <select name="curso_tipo" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                 <option value="">Todos</option>
                 <?php foreach ($cursosDisponiveis as $key => $nome): ?>
@@ -99,11 +120,13 @@ $stats = [
         </div>
         
         <div>
-            <button type="submit" class="btn-primary" style="padding: 8px 20px;">
-                🔍 Filtrar
+            <button type="submit" class="btn-primary" style="padding: 8px 20px; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-search icon icon-20"></i>
+                Filtrar
             </button>
-            <a href="?page=turmas-teoricas" class="btn-secondary" style="padding: 8px 15px; margin-left: 5px;">
-                🗑️ Limpar
+            <a href="?page=turmas-teoricas" class="btn-secondary" style="padding: 8px 15px; margin-left: 5px; display: inline-flex; align-items: center; gap: 8px;">
+                <i class="fas fa-undo icon icon-20"></i>
+                Limpar
             </a>
         </div>
     </form>
@@ -111,38 +134,60 @@ $stats = [
 
 <!-- Lista de turmas -->
 <?php if (empty($turmas)): ?>
-    <div style="text-align: center; padding: 60px 20px; color: #666;">
-        <div style="font-size: 4rem; margin-bottom: 20px;">📚</div>
+    <div style="text-align: center; padding: 60px 20px; color: var(--gray-600);">
+        <div style="font-size: 4rem; margin-bottom: 20px;">
+            <i class="fas fa-layer-group icon icon-64"></i>
+        </div>
         <h4>Nenhuma turma teórica encontrada</h4>
         <p>Comece criando uma nova turma teórica para organizar suas aulas por disciplinas.</p>
-        <a href="?page=turmas-teoricas&acao=nova&step=1" class="btn-primary" style="margin-top: 20px;">
-            ➕ Criar Primeira Turma
+        <a href="?page=turmas-teoricas&acao=nova&step=1" class="btn-primary" style="margin-top: 20px; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-plus icon icon-20"></i>
+            Criar Primeira Turma
         </a>
     </div>
 <?php else: ?>
     <div style="display: grid; gap: 20px;">
         <?php foreach ($turmas as $turma): ?>
+            <?php $statusBadgeText = $statusLabels[$turma['status']] ?? ucfirst($turma['status']); ?>
             <div class="turma-card">
-                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px;">
-                    <div>
+                <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 15px; gap: 10px;">
+                    <div style="flex: 1; min-width: 0;">
                         <h5 style="margin: 0 0 5px 0; font-size: 1.2rem;">
-                            <?= htmlspecialchars($turma['nome']) ?>
+                            <a href="?page=turmas-teoricas&acao=detalhes&turma_id=<?= $turma['id'] ?>"
+                               class="turma-title-link">
+                                <?= htmlspecialchars($turma['nome']) ?>
+                            </a>
                         </h5>
                         <div style="color: #666; font-size: 0.9rem;">
                             <?= htmlspecialchars($turma['curso_nome'] ?? 'Curso não especificado') ?>
                         </div>
                     </div>
                     <span class="status-badge status-<?= $turma['status'] ?>">
-                        <?= ucfirst($turma['status']) ?>
+                        <?= htmlspecialchars($statusBadgeText) ?>
                     </span>
                 </div>
                 
                 <div class="turma-meta">
-                    <span><strong>🏢</strong> <?= htmlspecialchars($turma['sala_nome'] ?? 'Sala não definida') ?></span>
-                    <span><strong>📅</strong> <?= date('d/m/Y', strtotime($turma['data_inicio'])) ?> - <?= date('d/m/Y', strtotime($turma['data_fim'])) ?></span>
-                    <span><strong>👥</strong> <?= $turma['alunos_matriculados'] ?>/<?= $turma['max_alunos'] ?> alunos</span>
-                    <span><strong>⏱️</strong> <?= $turma['horas_agendadas'] ?? 0 ?>h agendadas</span>
-                    <span><strong>🎯</strong> <?= $turma['modalidade'] === 'online' ? '💻 Online' : '🏢 Presencial' ?></span>
+                    <span class="turma-meta__item">
+                        <i class="fas fa-door-open icon icon-20 icon-muted"></i>
+                        <?= htmlspecialchars($turma['sala_nome'] ?? 'Sala não definida') ?>
+                    </span>
+                    <span class="turma-meta__item">
+                        <i class="fas fa-calendar icon icon-20 icon-muted"></i>
+                        <?= date('d/m/Y', strtotime($turma['data_inicio'])) ?> - <?= date('d/m/Y', strtotime($turma['data_fim'])) ?>
+                    </span>
+                    <span class="turma-meta__item">
+                        <i class="fas fa-user-friends icon icon-20 icon-muted"></i>
+                        <?= $turma['alunos_matriculados'] ?>/<?= $turma['max_alunos'] ?> alunos
+                    </span>
+                    <span class="turma-meta__item">
+                        <i class="fas fa-clock icon icon-20 icon-muted"></i>
+                        <?= $turma['horas_agendadas'] ?? 0 ?>h agendadas
+                    </span>
+                    <span class="turma-meta__item">
+                        <i class="fas fa-chalkboard-teacher icon icon-20 icon-muted"></i>
+                        <?= $turma['modalidade'] === 'online' ? 'Online' : 'Presencial' ?>
+                    </span>
                 </div>
                 
                 <!-- Progresso visual das disciplinas -->
@@ -166,13 +211,13 @@ $stats = [
                                             <?php endif; ?>
                                         </div>
                                     </div>
-                                    <div style="font-size: 1.2rem;">
+                                    <div>
                                         <?php if ($disc['status_disciplina'] === 'completa'): ?>
-                                            ✅
+                                            <i class="fas fa-check-circle icon icon-20 icon-success"></i>
                                         <?php elseif ($disc['status_disciplina'] === 'parcial'): ?>
-                                            ⚠️
+                                            <i class="fas fa-exclamation-circle icon icon-20 icon-warning"></i>
                                         <?php else: ?>
-                                            ❌
+                                            <i class="fas fa-times-circle icon icon-20 icon-danger"></i>
                                         <?php endif; ?>
                                     </div>
                                 </div>
@@ -182,61 +227,13 @@ $stats = [
                 <?php endif; ?>
                 
                 <!-- Ações -->
-                <div style="margin-top: 20px; text-align: right;">
-                    <?php if ($turma['status'] === 'criando'): ?>
-                        <a href="?page=turmas-teoricas&acao=detalhes&turma_id=<?= $turma['id'] ?>" 
-                           class="btn-warning" style="padding: 8px 16px; font-size: 0.9rem;">
-                            📅 Continuar Agendamento
-                        </a>
-                    <?php elseif ($turma['status'] === 'agendando'): ?>
-                        <a href="?page=turmas-teoricas&acao=detalhes&turma_id=<?= $turma['id'] ?>" 
-                           class="btn-warning" style="padding: 8px 16px; font-size: 0.9rem; margin-right: 10px;">
-                            📅 Continuar Agendamento
-                        </a>
-                    <?php elseif ($turma['status'] === 'completa'): ?>
-                        <a href="?page=turmas-teoricas&acao=alunos&step=4&turma_id=<?= $turma['id'] ?>" 
-                           class="btn-primary" style="padding: 8px 16px; font-size: 0.9rem; margin-right: 10px;">
-                            👥 Matricular Alunos
-                        </a>
-                        <a href="?page=turmas-teoricas&acao=ativar&turma_id=<?= $turma['id'] ?>" 
-                           class="btn-warning" style="padding: 8px 16px; font-size: 0.9rem;">
-                            🎯 Ativar Turma
-                        </a>
-                    <?php elseif ($turma['status'] === 'ativa'): ?>
-                        <a href="?page=turmas-teoricas&acao=alunos&step=4&turma_id=<?= $turma['id'] ?>" 
-                           class="btn-primary" style="padding: 8px 16px; font-size: 0.9rem; margin-right: 10px;">
-                            👥 Gerenciar Alunos
-                        </a>
-                        <a href="?page=turma-diario&turma_id=<?= $turma['id'] ?>" 
-                           class="btn-secondary" style="padding: 8px 16px; font-size: 0.9rem; margin-right: 10px;">
-                            📋 Diário de Classe
-                        </a>
-                        <a href="?page=turma-presencas&turma_id=<?= $turma['id'] ?>" 
-                           class="btn-secondary" style="padding: 8px 16px; font-size: 0.9rem;">
-                            ✅ Controle de Presença
-                        </a>
-                    <?php endif; ?>
-                    
-                    <a href="?page=turmas-teoricas&acao=detalhes&turma_id=<?= $turma['id'] ?>" 
-                       class="btn-secondary" style="padding: 8px 16px; font-size: 0.9rem; margin-left: 10px;">
-                        👁️ Detalhes
+                <div class="turma-actions">
+                    <a href="?page=turmas-teoricas&acao=detalhes&turma_id=<?= $turma['id'] ?>"
+                       class="btn-primary"
+                       style="padding: 8px 16px; font-size: 0.9rem;"
+                       title="Abrir a página para editar informações, alunos e calendário da turma.">
+                        Gerenciar Turma
                     </a>
-                    
-                    <?php if (isset($isAdmin) && $isAdmin): ?>
-                        <button type="button" 
-                                onclick="excluirTurmaCompleta(<?= $turma['id'] ?>, '<?= htmlspecialchars(addslashes($turma['nome'])) ?>')" 
-                                class="btn-danger" 
-                                style="padding: 8px 16px; font-size: 0.9rem; margin-left: 10px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                            🗑️ Excluir Completamente
-                        </button>
-                    <?php elseif (in_array($turma['status'], ['criando', 'completa']) && $turma['alunos_matriculados'] == 0): ?>
-                        <button type="button" 
-                                onclick="excluirTurma(<?= $turma['id'] ?>, '<?= htmlspecialchars($turma['nome']) ?>')" 
-                                class="btn-danger" 
-                                style="padding: 8px 16px; font-size: 0.9rem; margin-left: 10px;">
-                            🗑️ Excluir
-                        </button>
-                    <?php endif; ?>
                 </div>
             </div>
         <?php endforeach; ?>
@@ -251,6 +248,24 @@ $stats = [
 <?php endif; ?>
 
 <style>
+.icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    color: inherit;
+    line-height: 1;
+}
+
+.icon-20 { font-size: 20px; }
+.icon-24 { font-size: 24px; }
+.icon-64 { font-size: 64px; }
+
+.icon-muted { color: var(--gray-500); }
+.icon-success { color: var(--success-color); }
+.icon-warning { color: var(--warning-color); }
+.icon-danger { color: var(--danger-color); }
+
 .btn-danger {
     background: #dc3545;
     color: white;
@@ -264,6 +279,38 @@ $stats = [
 .btn-danger:hover {
     background: #c82333;
     transform: translateY(-1px);
+}
+
+.turma-actions {
+    margin-top: 20px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.turma-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 15px;
+    font-size: 14px;
+    color: var(--gray-700);
+}
+
+.turma-meta__item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.turma-title-link {
+    color: inherit;
+    text-decoration: none;
+}
+
+.turma-title-link:hover {
+    text-decoration: underline;
 }
 </style>
 
@@ -309,15 +356,15 @@ function excluirTurma(turmaId, nomeTurma) {
         .then(data => {
             console.log('Dados processados:', data);
             if (data.sucesso) {
-                alert('✅ Turma excluída com sucesso!');
+                alert('Turma excluída com sucesso.');
                 location.reload();
             } else {
-                alert('❌ Erro ao excluir turma: ' + data.mensagem);
+                alert('Erro ao excluir turma: ' + data.mensagem);
             }
         })
         .catch(error => {
             console.error('Erro completo:', error);
-            alert('❌ Erro ao excluir turma: ' + error.message);
+            alert('Erro ao excluir turma: ' + error.message);
         });
     }
 }
@@ -328,7 +375,7 @@ function excluirTurma(turmaId, nomeTurma) {
  */
 function excluirTurmaCompleta(turmaId, nomeTurma) {
     // Confirmação com detalhes
-    const mensagem = `⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n` +
+    const mensagem = `ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n` +
                      `Você está prestes a excluir COMPLETAMENTE a turma:\n` +
                      `"${nomeTurma}"\n\n` +
                      `Isso irá excluir:\n` +
@@ -343,7 +390,7 @@ function excluirTurmaCompleta(turmaId, nomeTurma) {
     }
     
     // Segunda confirmação para garantir
-    if (!confirm('⚠️ ÚLTIMA CONFIRMAÇÃO!\n\nEsta ação não pode ser desfeita. Deseja realmente excluir esta turma?')) {
+    if (!confirm('ÚLTIMA CONFIRMAÇÃO!\n\nEsta ação não pode ser desfeita. Deseja realmente excluir esta turma?')) {
         return;
     }
     
@@ -368,13 +415,13 @@ function excluirTurmaCompleta(turmaId, nomeTurma) {
     .then(data => {
         if (data.sucesso) {
             // Sucesso - mostrar mensagem e recarregar página
-            alert('✅ ' + data.mensagem);
+            alert(data.mensagem);
             location.reload();
         } else {
             // Erro - restaurar botão e mostrar mensagem
             btnExcluir.disabled = false;
             btnExcluir.innerHTML = textoOriginal;
-            alert('❌ Erro: ' + data.mensagem);
+            alert('Erro: ' + data.mensagem);
         }
     })
     .catch(error => {
@@ -382,7 +429,7 @@ function excluirTurmaCompleta(turmaId, nomeTurma) {
         btnExcluir.disabled = false;
         btnExcluir.innerHTML = textoOriginal;
         console.error('Erro ao excluir turma:', error);
-        alert('❌ Erro ao excluir turma. Verifique sua conexão e tente novamente.');
+        alert('Erro ao excluir turma. Verifique sua conexão e tente novamente.');
     });
 }
 </script>

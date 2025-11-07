@@ -962,7 +962,6 @@ body.modal-open {
     border-radius: 20px;
     font-size: 12px;
     font-weight: 600;
-    text-transform: uppercase;
 }
 
 .status-criando { background: #fff3cd; color: #856404; }
@@ -4894,7 +4893,8 @@ function carregarDisciplinasDoBanco() {
         <link rel="stylesheet" href="assets/css/fix-modal-zindex.css">
         
         <!-- Script específico para corrigir ícones de edição sobre modais -->
-        <script src="assets/js/fix-modal-icons.js"></script>
+        <!-- TEMPORARIAMENTE DESABILITADO - Causava loop infinito e travamento -->
+        <!-- <script src="assets/js/fix-modal-icons.js"></script> -->
         
         <!-- FOOTER -->
         <div class="popup-modal-footer">

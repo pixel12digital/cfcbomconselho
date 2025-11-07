@@ -19,6 +19,25 @@ if (!$resultadoTurma['sucesso']) {
 
 $turma = $resultadoTurma['dados'];
 
+$statusLabels = [
+    'criando' => 'Agendando',
+    'agendando' => 'Agendando',
+    'completa' => 'Agendado',
+    'ativa' => 'Em andamento',
+    'finalizada' => 'Concluída'
+];
+
+$statusColors = [
+    'criando' => '#ffc107',
+    'agendando' => '#ffc107',
+    'completa' => '#007bff',
+    'ativa' => '#28a745',
+    'finalizada' => '#6c757d'
+];
+
+$statusBadgeText = $statusLabels[$turma['status']] ?? ucfirst($turma['status']);
+$statusBadgeColor = $statusColors[$turma['status']] ?? '#6c757d';
+
 // Obter progresso das disciplinas
 $progressoDisciplinas = $turmaManager->obterProgressoDisciplinas($turmaId);
 
@@ -52,11 +71,12 @@ try {
 <!-- Cabeçalho -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px;">
     <div>
-        <h3 style="margin: 0; color: #023A8D;">
-            <i class="fas fa-info-circle me-2"></i>Detalhes da Turma
+        <h3 style="margin: 0; color: var(--primary-dark); display: flex; align-items: center; gap: 8px;">
+            <i class="fas fa-sliders-h icon icon-24"></i>
+            Gerenciar Turma
         </h3>
-        <p style="margin: 5px 0 0 0; color: #666;">
-            Informações completas sobre a turma teórica
+        <p style="margin: 5px 0 0 0; color: var(--gray-600);">
+            Ajuste dados, alunos e calendário desta turma teórica.
         </p>
     </div>
     <a href="?page=turmas-teoricas" class="btn-secondary">
@@ -65,45 +85,45 @@ try {
 </div>
 
 <!-- Informações Básicas -->
-<div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-    <h4 style="color: #023A8D; margin-bottom: 20px; display: flex; align-items: center;">
-        <i class="fas fa-graduation-cap me-2"></i>Informações Básicas
+<div id="edit-scope-basicas" style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+    <h4 style="color: var(--primary-dark); margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-graduation-cap icon icon-24"></i>Informações Básicas
     </h4>
     
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px;">
         <div>
-            <h5 style="color: #023A8D; font-size: 1.5rem; margin-bottom: 10px;">
+            <h5 style="color: var(--primary-dark); font-size: 1.5rem; margin-bottom: 10px;">
                 <?= htmlspecialchars($turma['nome']) ?>
             </h5>
-            <p style="color: #666; margin-bottom: 15px;">
+            <p style="color: var(--gray-600); margin-bottom: 15px;">
                 <?= htmlspecialchars($turma['curso_nome'] ?? 'Curso não especificado') ?>
             </p>
             
             <div style="display: flex; align-items: center; margin-bottom: 10px;">
-                <span style="background: <?= $turma['status'] === 'ativa' ? '#28a745' : ($turma['status'] === 'completa' ? '#007bff' : '#ffc107') ?>; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 600; text-transform: uppercase;">
-                    <?= ucfirst($turma['status']) ?>
+                <span style="background: <?= $statusBadgeColor ?>; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 600;">
+                    <?= htmlspecialchars($statusBadgeText) ?>
                 </span>
             </div>
         </div>
         
         <div style="display: grid; gap: 10px;">
-            <div style="display: flex; align-items: center;">
-                <i class="fas fa-building me-2" style="color: #023A8D; width: 20px;"></i>
+            <div class="info-row">
+                <i class="fas fa-building icon icon-20 icon-brand"></i>
                 <span><strong>Sala:</strong> <?= htmlspecialchars($turma['sala_nome'] ?? 'Não definida') ?></span>
             </div>
             
-            <div style="display: flex; align-items: center;">
-                <i class="fas fa-calendar-alt me-2" style="color: #023A8D; width: 20px;"></i>
+            <div class="info-row">
+                <i class="fas fa-calendar-alt icon icon-20 icon-brand"></i>
                 <span><strong>Período:</strong> <?= date('d/m/Y', strtotime($turma['data_inicio'])) ?> - <?= date('d/m/Y', strtotime($turma['data_fim'])) ?></span>
             </div>
             
-            <div style="display: flex; align-items: center;">
-                <i class="fas fa-users me-2" style="color: #023A8D; width: 20px;"></i>
+            <div class="info-row">
+                <i class="fas fa-users icon icon-20 icon-brand"></i>
                 <span><strong>Alunos:</strong> <?= $totalAlunos ?>/<?= $turma['max_alunos'] ?></span>
             </div>
             
-            <div style="display: flex; align-items: center;">
-                <i class="fas fa-clock me-2" style="color: #023A8D; width: 20px;"></i>
+            <div class="info-row">
+                <i class="fas fa-clock icon icon-20 icon-brand"></i>
                 <span><strong>Modalidade:</strong> <?= ucfirst($turma['modalidade']) ?></span>
             </div>
         </div>
@@ -111,8 +131,8 @@ try {
     
     <?php if (!empty($turma['observacoes'])): ?>
     <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee;">
-        <h6 style="color: #023A8D; margin-bottom: 10px;">Observações:</h6>
-        <p style="color: #666; margin: 0;"><?= nl2br(htmlspecialchars($turma['observacoes'])) ?></p>
+        <h6 style="color: var(--primary-dark); margin-bottom: 10px;">Observações:</h6>
+        <p style="color: var(--gray-600); margin: 0;"><?= nl2br(htmlspecialchars($turma['observacoes'])) ?></p>
     </div>
     <?php endif; ?>
 </div>
@@ -143,16 +163,16 @@ try {
 <!-- Progresso das Disciplinas -->
 <?php if (!empty($progressoDisciplinas)): ?>
 <div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-    <h4 style="color: #023A8D; margin-bottom: 20px; display: flex; align-items: center;">
-        <i class="fas fa-chart-line me-2"></i>Progresso das Disciplinas
+    <h4 style="color: var(--primary-dark); margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-chart-line icon icon-24"></i>Progresso das Disciplinas
     </h4>
     
     <div style="display: grid; gap: 15px;">
         <?php foreach ($progressoDisciplinas as $disciplina): ?>
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #023A8D;">
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid var(--primary-dark);">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h6 style="margin: 0; color: #023A8D;"><?= htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['disciplina']) ?></h6>
-                <span style="font-size: 0.9rem; color: #666;">
+                <h6 style="margin: 0; color: var(--primary-dark);"><?= htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['disciplina']) ?></h6>
+                <span style="font-size: 0.9rem; color: var(--gray-600);">
                     <?= $disciplina['aulas_agendadas'] ?? 0 ?>/<?= $disciplina['aulas_obrigatorias'] ?? 0 ?> aulas
                 </span>
             </div>
@@ -165,13 +185,13 @@ try {
             }
             ?>
             <div style="width: 100%; height: 8px; background: #e9ecef; border-radius: 4px; overflow: hidden;">
-                <div style="width: <?= $percentual ?>%; height: 100%; background: linear-gradient(90deg, #023A8D, #F7931E); transition: width 0.3s ease;"></div>
+                <div style="width: <?= $percentual ?>%; height: 100%; background: linear-gradient(90deg, var(--primary-dark), #F7931E); transition: width 0.3s ease;"></div>
             </div>
             
-            <div style="margin-top: 8px; font-size: 0.8rem; color: #666;">
+            <div style="margin-top: 8px; font-size: 0.8rem; color: var(--gray-600);">
                 <?= $percentual ?>% completo
                 <?php if (!empty($disciplina['aulas_faltantes']) && $disciplina['aulas_faltantes'] > 0): ?>
-                    - <span style="color: #dc3545;">Faltam <?= $disciplina['aulas_faltantes'] ?> aulas</span>
+                    - <span style="color: var(--danger-color);">Faltam <?= $disciplina['aulas_faltantes'] ?> aulas</span>
                 <?php endif; ?>
             </div>
         </div>
@@ -183,19 +203,19 @@ try {
 <!-- Aulas Agendadas -->
 <?php if (!empty($aulasAgendadas)): ?>
 <div style="background: white; border-radius: 12px; padding: 25px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-    <h4 style="color: #023A8D; margin-bottom: 20px; display: flex; align-items: center;">
-        <i class="fas fa-calendar-check me-2"></i>Aulas Agendadas (<?= count($aulasAgendadas) ?>)
+    <h4 style="color: var(--primary-dark); margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-calendar-check icon icon-24"></i>Aulas Agendadas (<?= count($aulasAgendadas) ?>)
     </h4>
     
     <div style="display: grid; gap: 15px;">
         <?php foreach ($aulasAgendadas as $aula): ?>
-        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid #28a745;">
+        <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; border-left: 4px solid var(--success-color);">
             <div style="display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 10px;">
                 <div style="flex: 1; min-width: 200px;">
-                    <h6 style="margin: 0 0 5px 0; color: #023A8D;">
+                    <h6 style="margin: 0 0 5px 0; color: var(--primary-dark);">
                         <?= htmlspecialchars($aula['nome_aula']) ?>
                     </h6>
-                    <div style="color: #666; font-size: 0.9rem;">
+                    <div style="color: var(--gray-600); font-size: 0.9rem;">
                         <div><strong>Disciplina:</strong> <?= htmlspecialchars($aula['disciplina']) ?></div>
                         <div><strong>Data:</strong> <?= date('d/m/Y', strtotime($aula['data_aula'])) ?></div>
                         <div><strong>Horário:</strong> <?= $aula['hora_inicio'] ?> - <?= $aula['hora_fim'] ?></div>
@@ -204,7 +224,7 @@ try {
                 </div>
                 
                 <div style="text-align: right;">
-                    <span style="background: <?= $aula['status'] === 'agendada' ? '#007bff' : ($aula['status'] === 'realizada' ? '#28a745' : '#dc3545') ?>; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">
+                    <span style="background: <?= $aula['status'] === 'agendada' ? 'var(--primary-dark)' : ($aula['status'] === 'realizada' ? 'var(--success-color)' : 'var(--danger-color)') ?>; color: white; padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; text-transform: uppercase;">
                         <?= ucfirst($aula['status']) ?>
                     </span>
                 </div>
@@ -212,7 +232,7 @@ try {
             
             <?php if (!empty($aula['observacoes'])): ?>
             <div style="margin-top: 10px; padding-top: 10px; border-top: 1px solid #dee2e6;">
-                <small style="color: #666;"><strong>Observações:</strong> <?= htmlspecialchars($aula['observacoes']) ?></small>
+                <small style="color: var(--gray-600);"><strong>Observações:</strong> <?= htmlspecialchars($aula['observacoes']) ?></small>
             </div>
             <?php endif; ?>
         </div>
@@ -223,43 +243,97 @@ try {
 
 <!-- Ações -->
 <div style="background: white; border-radius: 12px; padding: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
-    <h4 style="color: #023A8D; margin-bottom: 20px;">Ações Disponíveis</h4>
+    <h4 style="color: var(--primary-dark); margin-bottom: 20px; display: flex; align-items: center; gap: 8px;">
+        <i class="fas fa-tools icon icon-24"></i>Ações Disponíveis
+    </h4>
     
     <div style="display: flex; gap: 15px; flex-wrap: wrap;">
         <?php if ($turma['status'] === 'criando' || $turma['status'] === 'agendando'): ?>
-        <a href="?page=turmas-teoricas&acao=agendar&step=2&turma_id=<?= $turma['id'] ?>" class="btn-primary">
-            <i class="fas fa-calendar-plus me-2"></i>Continuar Agendamento
+        <a href="?page=turmas-teoricas&acao=agendar&step=2&turma_id=<?= $turma['id'] ?>" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-calendar-plus icon icon-20"></i>Continuar Agendamento
         </a>
         <?php endif; ?>
         
         <?php if ($turma['status'] === 'completa'): ?>
-        <a href="?page=turmas-teoricas&acao=alunos&step=4&turma_id=<?= $turma['id'] ?>" class="btn-primary">
-            <i class="fas fa-users me-2"></i>Gerenciar Alunos
+        <a href="?page=turmas-teoricas&acao=alunos&step=4&turma_id=<?= $turma['id'] ?>" class="btn-primary" style="display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-users icon icon-20"></i>Gerenciar Alunos
         </a>
         <?php endif; ?>
         
         <?php if ($turma['status'] === 'criando' || $turma['status'] === 'agendando'): ?>
-        <a href="?page=turmas-teoricas&acao=editar&step=1&turma_id=<?= $turma['id'] ?>" class="btn-primary" style="background: #F7931E;">
-            <i class="fas fa-edit me-2"></i>Editar Turma
+        <a href="?page=turmas-teoricas&acao=editar&step=1&turma_id=<?= $turma['id'] ?>" class="btn-primary" style="background: var(--warning-color); border-color: var(--warning-color); display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-edit icon icon-20"></i>Editar Turma
         </a>
         <?php endif; ?>
         
         
-        <button onclick="window.print()" class="btn-secondary">
-            <i class="fas fa-print me-2"></i>Imprimir Detalhes
+        <button onclick="window.print()" class="btn-secondary" style="display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-print icon icon-20"></i>Imprimir Detalhes
         </button>
         
         <?php if (isset($isAdmin) && $isAdmin): ?>
         <button onclick="excluirTurmaCompleta(<?= $turma['id'] ?>, '<?= htmlspecialchars(addslashes($turma['nome'])) ?>')" 
                 class="btn-danger" 
-                style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
-            <i class="fas fa-trash-alt"></i>Excluir Turma Completamente
+                style="background: var(--danger-color); color: #fff; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
+            <i class="fas fa-trash-alt icon icon-20"></i>Excluir Turma Completamente
         </button>
         <?php endif; ?>
     </div>
 </div>
 
 <style>
+.icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    font-size: 24px;
+    color: inherit;
+}
+
+.icon-20 { font-size: 20px; }
+.icon-24 { font-size: 24px; }
+
+.icon-brand { color: var(--primary-dark); }
+.icon-muted { color: var(--gray-500); }
+.icon-success { color: var(--success-color); }
+.icon-warning { color: var(--warning-color); }
+.icon-danger { color: var(--danger-color); }
+
+.info-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--gray-700);
+    font-size: 0.95rem;
+}
+
+.info-row strong {
+    color: var(--gray-800);
+}
+
+#edit-scope-basicas .inline-edit-target {
+    position: relative;
+}
+
+#edit-scope-basicas .inline-edit-icon,
+#edit-scope-basicas .edit-icon {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: opacity 0.18s ease, visibility 0.18s ease;
+    color: var(--primary-dark);
+}
+
+#edit-scope-basicas .inline-edit-target:hover .inline-edit-icon,
+#edit-scope-basicas .inline-edit-target:hover .edit-icon,
+#edit-scope-basicas .inline-edit-target:focus-within .inline-edit-icon,
+#edit-scope-basicas .inline-edit-target:focus-within .edit-icon,
+#edit-scope-basicas .inline-edit-target.show-inline-icon .inline-edit-icon,
+#edit-scope-basicas .inline-edit-target.show-inline-icon .edit-icon {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
 @media print {
     .btn-secondary, .btn-primary {
         display: none !important;
@@ -276,11 +350,57 @@ try {
 }
 </style>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const scope = document.getElementById('edit-scope-basicas');
+    if (!scope) {
+        return;
+    }
+
+    const iconSelectors = 'i.fa-edit, i.fa-pen, i.fa-pencil, i.fa-pencil-alt';
+    const editIcons = scope.querySelectorAll(iconSelectors);
+    const trackedTargets = new Set();
+
+    editIcons.forEach(icon => {
+        icon.classList.add('inline-edit-icon');
+        icon.setAttribute('aria-hidden', 'true');
+
+        const target = icon.closest('.inline-edit, [data-field], .info-row, span, div');
+        if (!target) {
+            return;
+        }
+
+        target.classList.add('inline-edit-target');
+        trackedTargets.add(target);
+    });
+
+    trackedTargets.forEach(target => {
+        const showIcon = () => target.classList.add('show-inline-icon');
+        const hideIcon = () => target.classList.remove('show-inline-icon');
+
+        target.addEventListener('mouseenter', showIcon);
+        target.addEventListener('mouseleave', hideIcon);
+        target.addEventListener('focusin', showIcon);
+        target.addEventListener('focusout', hideIcon);
+        target.addEventListener('touchstart', () => {
+            showIcon();
+            if (target.__inlineIconTimer) {
+                clearTimeout(target.__inlineIconTimer);
+            }
+            target.__inlineIconTimer = setTimeout(() => {
+                hideIcon();
+            }, 1500);
+        }, { passive: true });
+    });
+});
+</script>
+
 <!-- CSS específico para corrigir z-index dos modais -->
 <link rel="stylesheet" href="assets/css/fix-modal-zindex.css">
 
 <!-- Script específico para corrigir ícones de edição sobre modais -->
-<script src="assets/js/fix-modal-icons.js"></script>
+<!-- TEMPORARIAMENTE DESABILITADO - Causava loop infinito e travamento -->
+<!-- <script src="assets/js/fix-modal-icons.js"></script> -->
 
 <!-- Script para exclusão de turma -->
 <script>
@@ -290,7 +410,7 @@ try {
  */
 function excluirTurmaCompleta(turmaId, nomeTurma) {
     // Confirmação com detalhes
-    const mensagem = `⚠️ ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n` +
+    const mensagem = `ATENÇÃO: Esta ação é IRREVERSÍVEL!\n\n` +
                      `Você está prestes a excluir COMPLETAMENTE a turma:\n` +
                      `"${nomeTurma}"\n\n` +
                      `Isso irá excluir:\n` +
@@ -305,7 +425,7 @@ function excluirTurmaCompleta(turmaId, nomeTurma) {
     }
     
     // Segunda confirmação para garantir
-    if (!confirm('⚠️ ÚLTIMA CONFIRMAÇÃO!\n\nEsta ação não pode ser desfeita. Deseja realmente excluir esta turma?')) {
+    if (!confirm('ÚLTIMA CONFIRMAÇÃO!\n\nEsta ação não pode ser desfeita. Deseja realmente excluir esta turma?')) {
         return;
     }
     
@@ -330,13 +450,13 @@ function excluirTurmaCompleta(turmaId, nomeTurma) {
     .then(data => {
         if (data.sucesso) {
             // Sucesso - mostrar mensagem e redirecionar
-            alert('✅ ' + data.mensagem);
+            alert(data.mensagem);
             window.location.href = '?page=turmas-teoricas';
         } else {
             // Erro - restaurar botão e mostrar mensagem
             btnExcluir.disabled = false;
             btnExcluir.innerHTML = textoOriginal;
-            alert('❌ Erro: ' + data.mensagem);
+            alert('Erro: ' + data.mensagem);
         }
     })
     .catch(error => {
@@ -344,7 +464,7 @@ function excluirTurmaCompleta(turmaId, nomeTurma) {
         btnExcluir.disabled = false;
         btnExcluir.innerHTML = textoOriginal;
         console.error('Erro ao excluir turma:', error);
-        alert('❌ Erro ao excluir turma. Verifique sua conexão e tente novamente.');
+        alert('Erro ao excluir turma. Verifique sua conexão e tente novamente.');
     });
 }
 </script>

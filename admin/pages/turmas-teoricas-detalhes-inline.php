@@ -339,6 +339,31 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     $historicoAgendamentos[$disciplinaId] = $agendamentosDisciplina;
 }
 
+/* Helpers de badge e metadados */
+function formatarPeriodoTurma(array $turma): array {
+    $inicio = isset($turma['data_inicio']) && $turma['data_inicio'] ? date('d/m/Y', strtotime($turma['data_inicio'])) : null;
+    $fim = isset($turma['data_fim']) && $turma['data_fim'] ? date('d/m/Y', strtotime($turma['data_fim'])) : null;
+    return [$inicio, $fim];
+}
+
+function obterModalidadeTexto(?string $modalidade): string {
+    if (!$modalidade) {
+        return 'Modalidade não definida';
+    }
+    return $modalidade === 'online' ? 'Online' : ($modalidade === 'hibrida' ? 'Híbrida' : 'Presencial');
+}
+
+function obterStatusBadgeTexto(string $status): string {
+    $statusLabels = [
+        'criando' => 'Agendando',
+        'agendando' => 'Agendando',
+        'completa' => 'Agendado',
+        'ativa' => 'Em andamento',
+        'finalizada' => 'Concluída'
+    ];
+    return $statusLabels[$status] ?? ucfirst($status);
+}
+
 ?>
 
 <style>
@@ -439,6 +464,20 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     transform: scale(1.1);
 }
 
+#edit-scope-basicas .edit-icon {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: opacity 0.18s ease, visibility 0.18s ease;
+    color: #023A8D;
+}
+
+#edit-scope-basicas .inline-edit:hover .edit-icon,
+#edit-scope-basicas .inline-edit:focus-within .edit-icon,
+#edit-scope-basicas .inline-edit.show-icon .edit-icon {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
 /* ==========================================
    ESTILOS ESPECÍFICOS POR CAMPO
    ========================================== */
@@ -449,7 +488,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     min-width: 200px;
     max-width: 100%;
 }
-
 .inline-edit[data-field="curso_tipo"] {
     min-width: 400px !important;
     max-width: none !important;
@@ -482,7 +520,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     font-weight: 600;
     text-transform: uppercase;
 }
-
 .inline-edit[data-field="modalidade"],
 .inline-edit[data-field="sala_id"] {
     font-weight: 500;
@@ -609,16 +646,13 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 .btn-group .btn i.fa-edit {
     font-size: 14px !important;
 }
-
 .btn-group .btn i.fa-times {
     font-size: 12px !important;
 }
-
 .btn-group .btn:hover {
     transform: scale(1.05) !important;
     box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
 }
-
 /* Estilos específicos para garantir visibilidade dos ícones */
 .btn-group .btn-outline-primary {
     color: #0d6efd !important;
@@ -637,7 +671,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     position: relative !important;
     z-index: 10 !important;
 }
-
 .btn-group .btn-outline-primary:hover {
     color: #ffffff !important;
     background-color: #0d6efd !important;
@@ -950,14 +983,12 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         width: 100%;
     }
 }
-
 .disciplina-details {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
     gap: 16px;
     margin-bottom: 16px;
 }
-
 /* Layout otimizado para desktop - detalhes da disciplina */
 @media (min-width: 768px) {
     .disciplina-details {
@@ -1197,6 +1228,7 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 .btn-edit-disciplina:hover {
     background: #1a4ba8;
     transform: translateY(-1px);
+    box-shadow: none;
 }
 
 .btn-edit-disciplina.btn-save-mode {
@@ -1257,7 +1289,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     margin-top: 8px;
     font-style: italic;
 }
-
 /* ==========================================
    ESTILOS PARA CARDS DE ESTATÍSTICAS
    ========================================== */
@@ -1267,7 +1298,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     gap: 20px;
     margin-bottom: 30px;
 }
-
 .stat-card {
     background: white;
     border-radius: 12px;
@@ -1448,7 +1478,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     border-radius: 3px;
     transition: all 0.2s ease;
 }
-
 .inline-edit-carga:hover {
     background: #e3f2fd;
     color: #1976d2;
@@ -1459,7 +1488,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     border: 1px solid #28a745;
     color: #155724;
 }
-
 /* ==========================================
    ESTILOS PARA SANFONA DE DISCIPLINAS
    ========================================== */
@@ -1689,6 +1717,37 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 
 /* Responsividade para tabela */
 @media (max-width: 768px) {
+    .masthead {
+        align-items: flex-start;
+    }
+
+    .masthead-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .masthead-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .action-inline {
+        display: none;
+    }
+
+    .action-menu-trigger {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        border: 1px solid var(--gray-300);
+        border-radius: 8px;
+        background: white;
+        padding: 8px 10px;
+        color: var(--gray-700);
+    }
+
     .aulas-table {
         font-size: 0.8rem;
     }
@@ -1728,6 +1787,304 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     
     .instrutor-info {
         font-size: 0.8rem;
+    }
+}
+
+/* ==========================================
+   ESTILOS PARA TABELA DE ALUNOS MATRICULADOS
+   ========================================== */
+.alunos-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.alunos-table th {
+    background: #f8f9fa;
+    border-bottom: 2px solid #dee2e6;
+    padding: 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    border-right: 1px solid #dee2e6;
+}
+
+.alunos-table td {
+    padding: 12px;
+    border-bottom: 1px solid #dee2e6;
+    border-right: 1px solid #dee2e6;
+    transition: background-color 0.2s;
+}
+
+.alunos-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+.aluno-avatar {
+    width: 40px;
+    height: 40px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.status-matriculado {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-cursando {
+    background: #cce5ff;
+    color: #004085;
+}
+
+.status-transferido {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.status-concluido {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    justify-content: center;
+}
+
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--gray-800);
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: none;
+}
+.action-btn-tonal {
+    background: rgba(37, 99, 235, 0.12);
+    color: var(--primary-dark);
+}
+
+.action-btn-tonal:hover {
+    background: rgba(37, 99, 235, 0.18);
+}
+
+.action-btn-outline-danger {
+    border-color: rgba(239, 68, 68, 0.4);
+    color: var(--danger-color);
+    background: transparent;
+}
+
+.action-btn-outline-danger:hover {
+    background: rgba(239, 68, 68, 0.08);
+}
+
+.masthead {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.masthead-top {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.masthead-left {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.page-title {
+    margin: 0;
+    color: var(--primary-dark);
+    font-size: 1.6rem;
+    font-weight: 700;
+}
+.icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: inherit;
+    line-height: 1;
+}
+
+.icon-18 {
+    font-size: 1.125rem;
+}
+.turma-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+    color: var(--gray-600);
+    font-size: 0.95rem;
+}
+
+.turma-meta-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--gray-700);
+}
+.turma-meta-item i {
+    color: var(--gray-500);
+}
+
+.turma-meta-separator {
+    color: var(--gray-400);
+}
+.breadcrumb-nav {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.9rem;
+    color: var(--gray-600);
+}
+.breadcrumb-nav a {
+    color: var(--primary-dark);
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.breadcrumb-nav a:hover {
+    text-decoration: underline;
+}
+
+.breadcrumb-separator {
+    color: var(--gray-400);
+}
+.current-context {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+.masthead-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.action-inline {
+    display: inline-flex;
+}
+
+.action-menu {
+    position: relative;
+}
+
+.action-menu-trigger {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    background: white;
+    padding: 8px 10px;
+    color: var(--gray-700);
+}
+
+.action-menu-trigger:hover,
+.action-menu-trigger:focus {
+    background: var(--gray-100);
+    color: var(--primary-dark);
+}
+.action-menu-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: 8px;
+    box-shadow: var(--shadow-md);
+    min-width: 200px;
+    padding: 6px;
+    display: none;
+    z-index: 2000;
+}
+
+.action-menu-dropdown.open {
+    display: block;
+}
+.action-menu-dropdown button,
+.action-menu-dropdown a {
+    width: 100%;
+    padding: 10px 12px;
+    border: none;
+    background: transparent;
+    color: var(--gray-700);
+    text-align: left;
+    font-size: 0.95rem;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+.action-menu-dropdown button:hover,
+.action-menu-dropdown a:hover {
+    background: var(--gray-100);
+    color: var(--primary-dark);
+}
+
+.action-menu-dropdown .danger {
+    color: var(--danger-color);
+}
+
+@media (max-width: 768px) {
+    .masthead {
+        align-items: flex-start;
+    }
+
+    .masthead-top {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 12px;
+    }
+
+    .masthead-actions {
+        width: 100%;
+        justify-content: flex-end;
+    }
+
+    .action-inline {
+        display: none;
+    }
+
+    .action-menu-trigger {
+        display: inline-flex;
     }
 }
 
@@ -1817,174 +2174,105 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         padding: 4px 8px;
     }
 }
-
-/* ==========================================
-   ESTILOS PARA TABELA DE ALUNOS MATRICULADOS
-   ========================================== */
-.alunos-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 15px;
-}
-
-.alunos-table th {
-    background: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    padding: 12px;
-    text-align: left;
-    font-weight: 600;
-    color: #495057;
-    border-right: 1px solid #dee2e6;
-}
-
-.alunos-table td {
-    padding: 12px;
-    border-bottom: 1px solid #dee2e6;
-    border-right: 1px solid #dee2e6;
-    transition: background-color 0.2s;
-}
-
-.alunos-table tr:hover {
-    background-color: #f8f9fa;
-}
-
-.aluno-avatar {
-    width: 40px;
-    height: 40px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-    font-weight: 600;
-    font-size: 0.9rem;
-}
-
-.status-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.status-matriculado {
-    background: #d4edda;
-    color: #155724;
-}
-
-.status-cursando {
-    background: #cce5ff;
-    color: #004085;
-}
-
-.status-transferido {
-    background: #fff3cd;
-    color: #856404;
-}
-
-.status-concluido {
-    background: #d1ecf1;
-    color: #0c5460;
-}
-
-.action-buttons {
-    display: flex;
-    gap: 5px;
-    justify-content: center;
-}
-
-.action-btn {
-    border: none;
-    padding: 6px 10px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8rem;
-    transition: all 0.2s;
-}
-
-.action-btn:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-}
-
-.btn-view {
-    background: #17a2b8;
-    color: white;
-}
-
-.btn-edit {
-    background: #ffc107;
-    color: #212529;
-}
-
-.btn-delete {
-    background: #dc3545;
-    color: white;
-}
 </style>
 <!-- Cabeçalho -->
-<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-    <div>
-        <h3 style="margin: 0; color: #023A8D;">
-            <i class="fas fa-info-circle me-2"></i>Detalhes da Turma
-        </h3>
-        <p style="margin: 5px 0 0 0; color: #666;">
-            Informações completas sobre a turma teórica - Clique nos campos para editar
-        </p>
+<?php 
+// Verificar se é administrador (variável pode vir do arquivo pai ou precisamos verificar aqui)
+$isAdminLocal = isset($isAdmin) ? $isAdmin : (function_exists('isAdmin') ? isAdmin() : false);
+$salaNome = obterNomeSala($turma['sala_id'], $salasCadastradas);
+$salaDisplay = trim((string)$salaNome) !== '' ? $salaNome : 'Sala não definida';
+[$periodoInicio, $periodoFim] = formatarPeriodoTurma($turma);
+$modalidadeTexto = obterModalidadeTexto($turma['modalidade'] ?? null);
+$statusBadgeText = obterStatusBadgeTexto($turma['status'] ?? '');
+?>
+<div class="masthead">
+    <nav class="breadcrumb-nav" aria-label="Breadcrumb">
+        <a href="?page=turmas-teoricas">Gestão de Turmas</a>
+        <span class="breadcrumb-separator">›</span>
+        <span class="current-context"><?= htmlspecialchars($turma['nome']) ?></span>
+    </nav>
+    <div class="masthead-top">
+        <h1 class="page-title"><?= htmlspecialchars($turma['nome']) ?></h1>
+        <div class="masthead-actions">
+            <button onclick="abrirModalInserirAlunos()" class="action-btn action-btn-tonal action-inline" type="button">
+                <i class="fas fa-user-plus"></i>
+                <span>Inserir Alunos</span>
+            </button>
+            <div class="action-menu">
+                <button type="button" class="action-btn action-menu-trigger" aria-haspopup="true" aria-expanded="false" onclick="toggleActionMenu(this)">
+                    <i class="fas fa-ellipsis-v"></i>
+                </button>
+                <div class="action-menu-dropdown" role="menu">
+                    <button type="button" onclick="closeAllActionMenus(); abrirModalInserirAlunos()">
+                        <i class="fas fa-user-plus"></i>
+                        Inserir Alunos
+                    </button>
+                    <button type="button" onclick="closeAllActionMenus(); window.print()">
+                        <i class="fas fa-print"></i>
+                        Imprimir Detalhes
+                    </button>
+                    <?php if ($isAdminLocal && isset($turma)): ?>
+                    <button type="button" class="danger" onclick="closeAllActionMenus(); excluirTurmaCompleta(<?= $turma['id'] ?>, '<?= htmlspecialchars(addslashes($turma['nome'])) ?>')">
+                        <i class="fas fa-trash-alt"></i>
+                        Excluir Turma
+                    </button>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
     </div>
-    <div style="display: flex; gap: 10px;">
-        <button onclick="abrirModalInserirAlunos()" class="btn-primary" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 500; transition: all 0.3s;">
-            <i class="fas fa-user-plus"></i>
-            Inserir Alunos
-        </button>
-        <a href="?page=turmas-teoricas" class="btn-secondary">
-            ← Voltar para Lista
-        </a>
-        <?php 
-        // Verificar se é administrador (variável pode vir do arquivo pai ou precisamos verificar aqui)
-        $isAdminLocal = isset($isAdmin) ? $isAdmin : (function_exists('isAdmin') ? isAdmin() : false);
-        if ($isAdminLocal && isset($turma)): 
-        ?>
-        <button onclick="excluirTurmaCompleta(<?= $turma['id'] ?>, '<?= htmlspecialchars(addslashes($turma['nome'])) ?>')" 
-                class="btn-danger" 
-                style="background: #dc3545; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; display: inline-flex; align-items: center; gap: 8px;">
-            <i class="fas fa-trash-alt"></i>Excluir Turma Completamente
-        </button>
-        <?php endif; ?>
+    <div class="turma-meta">
+        <span class="turma-meta-item">
+            <i class="fas fa-door-open icon icon-18"></i>
+            <?= htmlspecialchars($salaDisplay) ?>
+        </span>
+        <span class="turma-meta-separator">•</span>
+        <span class="turma-meta-item">
+            <i class="fas fa-calendar icon icon-18"></i>
+            <?= htmlspecialchars($periodoInicio ?: 'Data inicial indefinida') ?>
+            &ndash;
+            <?= htmlspecialchars($periodoFim ?: 'Data final indefinida') ?>
+        </span>
+        <span class="turma-meta-separator">•</span>
+        <span class="turma-meta-item">
+            <i class="fas fa-chalkboard-teacher icon icon-18"></i>
+            <?= htmlspecialchars($modalidadeTexto) ?>
+        </span>
+        <span class="turma-meta-separator">•</span>
+        <span class="turma-meta-item">
+            <i class="fas fa-bullseye icon icon-18"></i>
+            <?= htmlspecialchars($statusBadgeText) ?>
+        </span>
     </div>
 </div>
 
 <!-- Sistema de Abas -->
 <style>
 .tabs-container {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    background: transparent;
+    border-radius: 0;
+    box-shadow: none;
     margin-bottom: 20px;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .tabs-header {
     display: flex;
-    background: #f8f9fa;
-    border-bottom: 2px solid #e9ecef;
+    background: transparent;
+    border-bottom: 1px solid var(--gray-200);
     overflow-x: auto;
 }
 
 .tab-button {
-    padding: 14px 24px;
+    padding: 12px 20px;
     background: transparent;
     border: none;
     border-bottom: 3px solid transparent;
     cursor: pointer;
     font-size: 0.95rem;
     font-weight: 600;
-    color: #6c757d;
-    transition: all 0.3s ease;
+    color: var(--gray-500);
+    transition: color 0.2s ease, border-color 0.2s ease;
     white-space: nowrap;
     display: flex;
     align-items: center;
@@ -1993,14 +2281,13 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 }
 
 .tab-button:hover {
-    background: #e9ecef;
-    color: #023A8D;
+    color: var(--primary-dark);
 }
 
 .tab-button.active {
-    color: #023A8D;
-    background: white;
-    border-bottom-color: #023A8D;
+    color: var(--primary-dark);
+    background: transparent;
+    border-bottom-color: var(--primary-dark);
 }
 
 .tab-button i {
@@ -2193,7 +2480,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
 .admin-main > *:first-child {
     margin-top: 0 !important;
 }
-
 /* CRÍTICO: Se o admin-main usar Grid/Flex, garantir que o primeiro row/item não tenha gap superior */
 .admin-main[style*="display: grid"] > *:first-child,
 .admin-main[style*="display: flex"] > *:first-child {
@@ -2219,7 +2505,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     gap: inherit !important;
     margin: inherit !important;
 }
-
 /* CRÍTICO: Garantir espaçamento nos filhos diretos do cabeçalho (fallback) */
 /* Aplicar margin-right em todos exceto o último e o filtro (que usa margin-left: auto) */
 .google-calendar-header > *:not(:last-child):not(#filtro-disciplina-calendario) {
@@ -2263,7 +2548,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         overflow-x: hidden !important;
     }
 }
-
 /* Mobile (<768px) - Toolbar colapsada */
 @media (max-width: 767px) {
     .google-calendar-header {
@@ -2335,7 +2619,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
         font-size: 8px !important;
     }
 }
-
 /* Reduzir espaçamentos verticais entre seções */
 #tab-calendario > div {
     margin-top: 4px !important;
@@ -2372,7 +2655,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     }
 }
 </style>
-
 <script>
 // Definir showTab no escopo global ANTES dos botões para evitar erros
 window.showTab = function(tabName) {
@@ -2421,8 +2703,53 @@ window.showTab = function(tabName) {
     localStorage.setItem('turmaDetalhesAbaAtiva', tabName);
     localStorage.setItem('turma-tab-active', tabName);
 };
-</script>
 
+function closeAllActionMenus() {
+    document.querySelectorAll('.action-menu-dropdown.open').forEach(menu => {
+        menu.classList.remove('open');
+        const trigger = menu.previousElementSibling;
+        if (trigger) {
+            trigger.setAttribute('aria-expanded', 'false');
+        }
+    });
+    document.removeEventListener('click', handleActionMenuOutside);
+}
+
+function handleActionMenuOutside(event) {
+    if (event.target.closest('.action-menu')) {
+        return;
+    }
+    closeAllActionMenus();
+}
+
+function toggleActionMenu(trigger) {
+    const dropdown = trigger.nextElementSibling;
+    if (!dropdown) {
+        return;
+    }
+
+    const willOpen = !dropdown.classList.contains('open');
+    closeAllActionMenus();
+
+    if (willOpen) {
+        dropdown.classList.add('open');
+        trigger.setAttribute('aria-expanded', 'true');
+        document.addEventListener('click', handleActionMenuOutside);
+    }
+}
+
+function updateTurmaHeaderName(newName) {
+    const safeName = newName && newName.trim() !== '' ? newName : 'Turma sem nome';
+    const titleEl = document.querySelector('.page-title');
+    const breadcrumbEl = document.querySelector('.breadcrumb-nav .current-context');
+    if (titleEl) {
+        titleEl.textContent = safeName;
+    }
+    if (breadcrumbEl) {
+        breadcrumbEl.textContent = safeName;
+    }
+}
+</script>
 <div class="tabs-container">
     <div class="tabs-header">
         <button class="tab-button active" onclick="showTab('resumo')">
@@ -2450,7 +2777,7 @@ window.showTab = function(tabName) {
     <!-- Aba Resumo -->
     <div id="tab-resumo" class="tab-content active">
 <!-- Informações Básicas -->
-<div style="padding: 20px; margin-bottom: 20px;">
+<div id="edit-scope-basicas" style="padding: 20px; margin-bottom: 20px;">
     <h4 style="color: #023A8D; margin-bottom: 20px;">
         <i class="fas fa-graduation-cap me-2"></i>Informações Básicas
     </h4>
@@ -2472,7 +2799,7 @@ window.showTab = function(tabName) {
             
             <div style="display: flex; align-items: center; margin-bottom: 10px;">
                 <span class="status-badge status-<?= $turma['status'] ?> inline-edit" data-field="status" data-type="select" data-value="<?= $turma['status'] ?>">
-                    <?= ucfirst($turma['status']) ?>
+                    <?= obterStatusBadgeTexto($turma['status']) ?>
                     <i class="fas fa-edit edit-icon"></i>
                 </span>
             </div>
@@ -2513,7 +2840,7 @@ window.showTab = function(tabName) {
                 <i class="fas fa-clock me-2" style="color: #023A8D; width: 20px;"></i>
                 <span><strong>Modalidade:</strong> 
                     <span class="inline-edit" data-field="modalidade" data-type="select" data-value="<?= $turma['modalidade'] ?>">
-                        <?= ucfirst($turma['modalidade']) ?>
+                        <?= obterModalidadeTexto($turma['modalidade']) ?>
                         <i class="fas fa-edit edit-icon"></i>
                     </span>
                 </span>
@@ -2797,7 +3124,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
         <i class="fas fa-info-circle me-2"></i>
         <strong>Disciplinas Automáticas:</strong> As disciplinas desta turma são definidas automaticamente pelo tipo de curso selecionado. Para alterar as disciplinas, altere o tipo de curso da turma nas informações básicas.
     </div>
-    
 </div>
 
     </div>
@@ -2924,7 +3250,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                             </td>
                             <td style="text-align: center;">
                                 <div class="action-buttons">
-                                    <button onclick="removerMatricula(<?= $aluno['id'] ?>, '<?= htmlspecialchars($aluno['nome']) ?>')" class="action-btn btn-delete" title="Remover da Turma">
+                                    <button onclick="removerMatricula(<?= $aluno['id'] ?>, '<?= htmlspecialchars($aluno['nome']) ?>')" class="action-btn action-btn-outline-danger" title="Remover da Turma">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -3055,7 +3381,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                     taa.*,
                     taa.disciplina as disciplina_id,
                     COALESCE(u.nome, i.nome, 'Não informado') as instrutor_nome,
-                    COALESCE(s.nome, 'Não informada') as sala_nome
+                    COALESCE(s.nome, 'Sala não definida') as sala_nome
                  FROM turma_aulas_agendadas taa
                  LEFT JOIN instrutores i ON taa.instrutor_id = i.id
                  LEFT JOIN usuarios u ON i.usuario_id = u.id
@@ -3079,7 +3405,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                         taa.*,
                         taa.disciplina as disciplina_id,
                         COALESCE(u.nome, i.nome, 'Não informado') as instrutor_nome,
-                        COALESCE(s.nome, 'Não informada') as sala_nome
+                        COALESCE(s.nome, 'Sala não definida') as sala_nome
                      FROM turma_aulas_agendadas taa
                      LEFT JOIN instrutores i ON taa.instrutor_id = i.id
                      LEFT JOIN usuarios u ON i.usuario_id = u.id
@@ -3281,7 +3607,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             'Tarde' => ['inicio' => 12 * 60, 'fim' => 18 * 60, 'colapsado' => false],
             'Noite' => ['inicio' => 18 * 60, 'fim' => 24 * 60, 'colapsado' => false] // Estender até 24:00 para incluir aulas até 23:00+
         ];
-        
         // Ajustar período "Noite" dinamicamente se houver aulas após 23:00
         if (!empty($todasAulasCalendario)) {
             $ultimaHoraFimPeriodo = 0;
@@ -3775,7 +4100,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             .timeline-body[style*="min-height"] {
                 min-height: fit-content !important;
             } */
-            
             /* CRÍTICO: Limitar altura dos pseudo-elementos ao conteúdo real renderizado */
             /* Garantir que ::after e ::before não criem faixa extra abaixo de 23:00 */
             .timeline-hours::after,
@@ -3833,7 +4157,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             /* .timeline-hours[style*="height"] {
                 height: auto !important;
             } */
-            
             /* Linhas horizontais na coluna de horários - estilo Google Calendar */
             /* CRÍTICO: CSS permanente - aplicado sempre, não depende de JS */
             .timeline-hours::after {
@@ -4172,8 +4495,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             .periodo-expandido[style*="display: none"] {
                 display: revert !important;
             }
-            </style>
-            
+        </style>
             <div style="padding-bottom: 0; margin-bottom: 0;" id="calendario-container">
                 <div class="timeline-calendar" id="timeline-calendario">
                     <?php
@@ -4672,7 +4994,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                             'aula' => $aula
                                         ];
                                     }
-                                    
                                     // Ordenar eventos por início
                                     usort($eventos, function($a, $b) {
                                         return $a['inicio'] - $b['inicio'];
@@ -5096,7 +5417,7 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             <div id="progresso-geral-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 15px; margin-bottom: 20px; color: white;">
                 <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
                     <div style="flex: 1; min-width: 200px;">
-                        <div style="display: flex; align-items: baseline; gap: 12px;">
+                        <div style="display: flex; align-items: center; gap: 12px;">
                             <span id="percentual-geral" style="font-size: 2.5rem; font-weight: bold; line-height: 1;"><?= $percentualGeral ?>%</span>
                             <span id="total-aulas-texto" style="opacity: 0.95; font-size: 1rem; line-height: 1.2;">
                                 <?= $totalAulasAgendadas ?> de <?= $totalAulasObrigatorias ?> aulas agendadas
@@ -5171,7 +5492,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
         </div>
     </div>
 </div>
-
 <!-- JavaScript para Calendário -->
 <script>
 function filtrarCalendario() {
@@ -6079,7 +6399,6 @@ document.addEventListener('DOMContentLoaded', function() {
         if (estiloAnterior) estiloAnterior.remove();
         document.head.appendChild(style);
     }
-    
     // CRÍTICO: Garantir alinhamento perfeito entre header e body do calendário
     function garantirAlinhamentoHeaderBody() {
         const timelineHeader = document.querySelector('.timeline-header');
@@ -6447,7 +6766,6 @@ window.togglePeriodo = function(periodoNome) {
             console.log(`Aula ${aula.getAttribute('data-aula-id')} (${periodoAula}): topOriginal=${topOriginal}px, offset=${offset}px, topAjustado=${topAjustado}px`);
         });
     };
-    
     // Função para ajustar altura da timeline baseado em períodos colapsados
     const ajustarAlturaTimeline = function() {
         const periodosOrdem = ['manhã', 'tarde', 'noite'];
@@ -6873,7 +7191,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div style="display: flex; gap: 10px; align-items: center;">
                 <button type="button" 
                         id="btn_excluir_modal" 
-                        class="btn btn-sm btn-danger" 
+                        class="btn btn-sm action-btn-outline-danger" 
                         onclick="excluirAulaDoModal()"
                         style="display: none;"
                         title="Excluir esta aula">
@@ -7286,7 +7604,6 @@ function selecionarDisciplinasCadastradas() {
         atualizarContadorDisciplinasDetalhes();
     }, 500); // Aumentar o tempo para 500ms para garantir que as opções foram carregadas
 }
-
 // Atualizar disciplina (igual ao cadastro)
 function atualizarDisciplinaDetalhes(disciplinaId) {
     console.log('🔄 [DISCIPLINA] Atualizando disciplina:', disciplinaId, 'tipo:', typeof disciplinaId);
@@ -7759,7 +8076,6 @@ function atualizarContadorDisciplinasDetalhes() {
         console.log('ℹ️ [CONTADOR] Nenhuma disciplina selecionada');
     }
 }
-
 // Alternar entre visualização e edição de disciplina
 function toggleEditDisciplina(disciplinaId) {
     console.log('🔄 [EDIT] Alternando modo de edição para disciplina:', disciplinaId);
@@ -8230,7 +8546,6 @@ function testarDisciplinasCompletas() {
             console.error('❌ [TESTE-COMPLETO] Erro na API:', error);
         });
 }
-
 // Função de teste para verificar se tudo está funcionando
 function testarSistemaDisciplinas() {
     console.log('🧪 [TESTE] Iniciando teste do sistema de disciplinas...');
@@ -8347,6 +8662,38 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+    
+    const basicInfoScope = document.getElementById('edit-scope-basicas');
+    if (basicInfoScope) {
+        const scopedInlineEdits = basicInfoScope.querySelectorAll('.inline-edit');
+        scopedInlineEdits.forEach(target => {
+            const clearTimer = () => {
+                if (target.__hideIconTimer) {
+                    clearTimeout(target.__hideIconTimer);
+                    target.__hideIconTimer = null;
+                }
+            };
+
+            const hideIcon = () => {
+                clearTimer();
+                target.classList.remove('show-icon');
+            };
+
+            const showIcon = () => {
+                clearTimer();
+                target.classList.add('show-icon');
+            };
+
+            target.addEventListener('mouseenter', showIcon);
+            target.addEventListener('mouseleave', hideIcon);
+            target.addEventListener('focusin', showIcon);
+            target.addEventListener('focusout', hideIcon);
+            target.addEventListener('touchstart', () => {
+                showIcon();
+                target.__hideIconTimer = setTimeout(hideIcon, 1500);
+            }, { passive: true });
+        });
+    }
     
     // Atualizar contador inicial
     atualizarContadorDisciplinasDetalhes();
@@ -8556,6 +8903,8 @@ function applyFieldStyles(input, field) {
             input.style.fontSize = '1.5rem';
             input.style.fontWeight = 'bold';
             input.style.color = '#023A8D';
+            input.style.border = 'none';
+            input.style.minWidth = '200px';
             break;
         case 'curso_nome':
             input.style.color = '#666';
@@ -8612,7 +8961,6 @@ function setupInputEvents(input, element) {
         element.style.borderColor = '#28a745';
     });
 }
-
 function addSelectOptions(select, field) {
     const options = {
         'status': [
@@ -8697,7 +9045,6 @@ function saveFieldAutomatically(element, newValue) {
         showFeedback('Erro ao atualizar campo: ' + error.message, 'error');
     });
 }
-
 function cancelEditAutomatically(element) {
     const field = element.dataset.field;
     const originalValue = originalValues[field];
@@ -8761,6 +9108,7 @@ function applyDisplayStyles(element, field) {
             element.style.color = '#023A8D';
             element.style.border = 'none';
             element.style.minWidth = '200px';
+    updateTurmaHeaderName(element.dataset.value || element.textContent);
             break;
         case 'curso_tipo':
             element.style.color = '#666';
@@ -9167,9 +9515,7 @@ function removeDisciplina(disciplinaId) {
         });
     }
 }
-
 // ===== SISTEMA DE EDIÇÃO DE AGENDAMENTOS =====
-
 // Função auxiliar para exibir o modal de edição
 function exibirModalEdicao(modal) {
     if (!modal) {
@@ -9623,7 +9969,6 @@ function cancelarAgendamento(id, nomeAula) {
         });
     }
 }
-
 // Salvar edição de agendamento
 function salvarEdicaoAgendamento() {
     const form = document.getElementById('formEditarAgendamento');
@@ -10078,7 +10423,6 @@ function mostrarLoading(button) {
         button.disabled = false;
     };
 }
-
 // Carregar dados para os selects quando o modal for aberto
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🔧 [DEBUG] Iniciando carregamento de dados...');
@@ -10578,7 +10922,6 @@ function enviarAgendamentoModal() {
     background: #e9ecef;
     color: #495057;
 }
-
 .modal-body {
     padding: 20px;
     flex: 1;
@@ -11077,7 +11420,6 @@ function selecionarDisciplinaModal(disciplinaId, disciplinaNome) {
         });
     }
 }
-
 // Função para destacar disciplina selecionada na sidebar
 function destacarDisciplinaSelecionada(disciplinaId) {
     // Remover destaque de todas as disciplinas
@@ -11505,7 +11847,6 @@ function verificarDisponibilidadeAuto() {
         }
     }, 500);
 }
-
 // Função para verificar disponibilidade
 function verificarDisponibilidadeModal() {
     const instrutor = document.getElementById('modal_instrutor_id').value;
@@ -11933,7 +12274,6 @@ function enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao)
         }
     });
 }
-
 // Inserir novas linhas na tabela da disciplina sem recarregar
 function inserirAgendamentosNaTabela(disciplinaId, agendamentos) {
     console.log('🔧 [DEBUG] Inserindo agendamentos na tabela:', { disciplinaId, agendamentos });
@@ -12062,13 +12402,13 @@ function inserirAgendamentosNaTabela(disciplinaId, agendamentos) {
             <td>
                 <div class="btn-group" role="group">
                     <button type="button" 
-                            class="btn btn-sm btn-outline-primary" 
+                            class="btn btn-sm action-btn-tonal" 
                             onclick="editarAgendamento(${aula.id}, '${(aula.nome_aula || '').replace(/'/g, "\\'")}', '${aula.data_aula}', '${horaInicio}', '${horaFim}', '${aula.instrutor_id || ''}', '${aula.sala_id || ''}', '${aula.duracao_minutos || 50}', '${(aula.observacoes || '').replace(/'/g, "\\'")}')"
                             title="Editar agendamento">
                         <span style="font-size: 14px; font-weight: bold;">✏</span>
                     </button>
                     <button type="button" 
-                            class="btn btn-sm btn-outline-danger" 
+                            class="btn btn-sm action-btn-outline-danger" 
                             onclick="cancelarAgendamento(${aula.id}, '${(aula.nome_aula || '').replace(/'/g, "\\'")}')"
                             title="Cancelar agendamento">
                         <i class="fas fa-times"></i>
@@ -12416,7 +12756,6 @@ function atualizarCardDisciplina(disciplinaId, stats) {
         resumoEl.textContent = `${stats.agendadas}/${stats.obrigatorias} aulas (faltam ${stats.faltantes})`;
     }
 }
-
 // Função para atualizar cores do card baseado no progresso
 function atualizarCoresCardDisciplina(card, percentual, stats) {
     let corCard, bgCard, icon, status;
@@ -12523,10 +12862,10 @@ function atualizarSecaoHistorico(disciplinaId, agendamentos) {
                     <td><span class="badge bg-warning">Agendada</span></td>
                     <td>
                         <div class="btn-group" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="editarAgendamento(${aula.id}, '${(aula.nome_aula || '').replace(/'/g, "\\'")}', '${aula.data_aula}', '${horaInicio}', '${horaFim}', '${aula.instrutor_id || ''}', '${aula.sala_id || ''}', '${aula.duracao_minutos || 50}', '')" title="Editar agendamento">
+                            <button type="button" class="btn btn-sm action-btn-tonal" onclick="editarAgendamento(${aula.id}, '${(aula.nome_aula || '').replace(/'/g, "\\'")}', '${aula.data_aula}', '${horaInicio}', '${horaFim}', '${aula.instrutor_id || ''}', '${aula.sala_id || ''}', '${aula.duracao_minutos || 50}', '')" title="Editar agendamento">
                                 <span style="font-size: 14px; font-weight: bold;">✏</span>
                             </button>
-                            <button type="button" class="btn btn-sm btn-outline-danger" onclick="cancelarAgendamento(${aula.id}, '${(aula.nome_aula || '').replace(/'/g, "\\'")}')" title="Cancelar agendamento">
+                            <button type="button" class="btn btn-sm action-btn-outline-danger" onclick="cancelarAgendamento(${aula.id}, '${(aula.nome_aula || '').replace(/'/g, "\\'")}')" title="Cancelar agendamento">
                                 <i class="fas fa-times"></i>
                             </button>
                         </div>

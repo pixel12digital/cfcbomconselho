@@ -1494,21 +1494,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         </div>
                     </div>
                     <div class="nav-submenu" id="ferramentas">
-                        <a href="test-novas-regras-agendamento.php" class="nav-sublink" target="_blank">
-                            <i class="fas fa-flask"></i>
-                            <span>Teste Regras</span>
-                            <div class="nav-badge">🧪</div>
-                        </a>
-                        <a href="teste-producao-completo.php" class="nav-sublink" target="_blank">
-                            <i class="fas fa-vial"></i>
-                            <span>Teste Simulado</span>
-                            <div class="nav-badge">📋</div>
-                        </a>
-                        <a href="teste-producao-real.php" class="nav-sublink" target="_blank">
-                            <i class="fas fa-rocket"></i>
-                            <span>Teste Real</span>
-                            <div class="nav-badge">🚀</div>
-                        </a>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -2354,6 +2339,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     </script>
     
     <!-- PWA Registration -->
+    <?php 
+    // Desativar scripts pesados na página de detalhes de turmas teóricas para melhorar performance
+    $isTurmasTeoricasDetalhes = isset($_GET['page']) && $_GET['page'] === 'turmas-teoricas' && isset($_GET['acao']) && $_GET['acao'] === 'detalhes';
+    if (!$isTurmasTeoricasDetalhes): 
+    ?>
     <script src="../pwa/pwa-register.js"></script>
     
     <!-- Performance Metrics -->
@@ -2361,6 +2351,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     
     <!-- Automated PWA Tests -->
     <script src="../pwa/automated-test.js"></script>
+    <?php else: ?>
+    <!-- Scripts PWA desativados nesta página para melhorar performance do modal -->
+    <?php endif; ?>
+    
+    <?php 
+    // CORREÇÕES EMERGENCIAS PARA MODAL - Apenas na página de detalhes de turmas teóricas
+    $isTurmasTeoricasDetalhes = isset($_GET['page']) && $_GET['page'] === 'turmas-teoricas' && isset($_GET['acao']) && $_GET['acao'] === 'detalhes';
+    if ($isTurmasTeoricasDetalhes): 
+    ?>
+    <!-- Sistema de Correções Emergenciais para Modal Travado -->
+    <script src="assets/js/modal-fix-emergency.js"></script>
+    <?php endif; ?>
     
     <!-- JavaScript das Funcionalidades Específicas -->
     <?php if ($page === 'cfcs'): ?>
