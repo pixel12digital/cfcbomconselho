@@ -255,6 +255,15 @@ try {
 
 // Obter disciplinas selecionadas
 $disciplinasSelecionadas = $turmaManager->obterDisciplinasSelecionadas($turmaId);
+$disciplinasPorId = [];
+foreach ($disciplinasSelecionadas as $disciplinaSelecionada) {
+    $disciplinaIdTemp = $disciplinaSelecionada['disciplina_id'] ?? null;
+    if ($disciplinaIdTemp) {
+        $disciplinasPorId[$disciplinaIdTemp] = $disciplinaSelecionada['nome_disciplina']
+            ?? $disciplinaSelecionada['nome_original']
+            ?? 'Disciplina sem nome';
+    }
+}
 
 // Obter alunos matriculados na turma
 try {
@@ -461,6 +470,21 @@ function obterStatusBadgeTexto(string $status): string {
 
 .inline-edit:hover .edit-icon {
     opacity: 1;
+    transform: scale(1.1);
+}
+
+.masthead .inline-edit .edit-icon {
+    opacity: 0;
+    visibility: hidden;
+    transform: scale(1);
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+}
+
+.masthead .inline-edit:hover .edit-icon,
+.masthead .inline-edit:focus-within .edit-icon,
+.masthead .inline-edit.show-icon .edit-icon {
+    opacity: 1;
+    visibility: visible;
     transform: scale(1.1);
 }
 
@@ -2860,38 +2884,314 @@ function updateTurmaHeaderName(newName) {
 </div>
 
         <!-- Resumo Rápido -->
+        <style>
+        .resumo-turma-card {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-top: 20px;
+        }
+
+        .resumo-turma-header {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            color: #023A8D;
+            margin-bottom: 12px;
+        }
+
+        .resumo-turma-header i {
+            font-size: 1.1rem;
+        }
+
+        .resumo-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+.resumo-kpi {
+    background: #ffffff;
+    border: 1px solid #e5e7ef;
+    border-radius: 10px;
+    padding: 10px 16px;
+    min-height: 84px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 8px;
+        }
+
+.resumo-kpi-value {
+    font-size: 1.9rem;
+            line-height: 1.1;
+            font-weight: 700;
+            display: flex;
+            align-items: baseline;
+            gap: 6px;
+        }
+
+        .resumo-kpi-value--primary {
+            color: #023A8D;
+        }
+
+        .resumo-kpi-value--warning {
+            color: #F7931E;
+        }
+
+        .resumo-kpi-value--alert {
+            color: #dc3545;
+        }
+
+.resumo-kpi-sub {
+    font-size: 1rem;
+    font-weight: 500;
+    color: #94a3b8;
+        }
+
+        .resumo-kpi-label {
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: #6b7280;
+        }
+
+        .resumo-proximas {
+            margin-top: 16px;
+            background: #ffffff;
+            border: 1px solid #e5e7ef;
+            border-radius: 10px;
+            padding: 12px 16px;
+        }
+
+        .resumo-proximas-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .resumo-proximas-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .resumo-proximas-item {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            border-left: 3px solid transparent;
+            padding-left: 10px;
+        }
+
+        .resumo-proximas-item.is-overdue {
+            border-left-color: #dc3545;
+        }
+
+        .resumo-proximas-data {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #111827;
+        }
+
+        .resumo-proximas-nome {
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #1f2937;
+        }
+
+        .resumo-proximas-meta {
+            font-size: 0.78rem;
+            color: #6b7280;
+        }
+
+        .resumo-proximas-link {
+            border: none;
+            background: transparent;
+            color: #023A8D;
+            font-size: 0.85rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .resumo-proximas-link:hover {
+            background: rgba(2, 58, 141, 0.08);
+        }
+
+        .resumo-proximas-vazio {
+            margin: 0;
+            font-size: 0.82rem;
+            color: #6b7280;
+        }
+
+        @media (max-width: 1024px) {
+            .resumo-kpi-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+
+        @media (max-width: 600px) {
+            .resumo-kpi-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        </style>
 <?php
         // Calcular totais para resumo
-$totalAulasObrigatorias = 0;
-$totalAulasAgendadas = 0;
-foreach ($estatisticasDisciplinas as $stats) {
-    $totalAulasObrigatorias += $stats['obrigatorias'];
-    $totalAulasAgendadas += $stats['agendadas'];
-}
-$percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $totalAulasObrigatorias) * 100, 1) : 0;
+        $totalAulasObrigatorias = 0;
+        $totalAulasAgendadas = 0;
+        foreach ($estatisticasDisciplinas as $stats) {
+            $totalAulasObrigatorias += $stats['obrigatorias'];
+            $totalAulasAgendadas += $stats['agendadas'];
+        }
+        $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $totalAulasObrigatorias) * 100, 1) : 0;
+        $percentualFormatado = number_format($percentualGeral, 1, ',', '.');
+        $percentualClasse = 'resumo-kpi-value resumo-kpi-value--primary';
+        if ($percentualGeral < 50) {
+            $percentualClasse = 'resumo-kpi-value resumo-kpi-value--alert';
+        } elseif ($percentualGeral < 75) {
+            $percentualClasse = 'resumo-kpi-value resumo-kpi-value--warning';
+        }
+
+        $kpiAulasValor = $totalAulasObrigatorias > 0
+            ? sprintf('%d<span class="resumo-kpi-sub">/%d</span>', $totalAulasAgendadas, $totalAulasObrigatorias)
+            : (string) $totalAulasAgendadas;
+
+        $totalDisciplinasSelecionadas = count($disciplinasSelecionadas);
+
+        $agora = new DateTimeImmutable('now');
+        $proximasAulas = [];
+
+        foreach ($historicoAgendamentos as $disciplinaId => $agendamentosDisciplina) {
+            foreach ($agendamentosDisciplina as $agendamento) {
+                $dataAula = $agendamento['data_aula'] ?? null;
+                if (!$dataAula) {
+                    continue;
+                }
+
+                $statusAula = strtolower($agendamento['status'] ?? '');
+                if ($statusAula === 'realizada') {
+                    continue;
+                }
+
+                $horaInicio = $agendamento['hora_inicio'] ?? '00:00:00';
+                try {
+                    $dataHora = new DateTimeImmutable(trim($dataAula . ' ' . $horaInicio));
+                } catch (Exception $e) {
+                    continue;
+                }
+
+                if ($dataHora < $agora) {
+                    continue;
+                }
+
+                $nomeAula = trim((string)($agendamento['nome_aula'] ?? ''));
+                if ($nomeAula === '') {
+                    $nomeAula = $disciplinasPorId[$disciplinaId] ?? 'Aula agendada';
+                }
+                // Remover sufixos como " - Aula 1"
+                $nomeAula = preg_replace('/\s*-\s*Aula\s*\d+$/i', '', $nomeAula);
+
+                $detalhesPartes = [];
+                $instrutorNome = trim((string)($agendamento['instrutor_nome'] ?? ''));
+                if ($instrutorNome !== '') {
+                    $detalhesPartes[] = $instrutorNome;
+                }
+                $salaNome = trim((string)($agendamento['sala_nome'] ?? ''));
+                if ($salaNome !== '') {
+                    $detalhesPartes[] = 'Sala ' . preg_replace('/^Sala\s+/i', '', $salaNome);
+                }
+
+                $proximasAulas[] = [
+                    'timestamp' => $dataHora->getTimestamp(),
+                    'data' => $dataHora->format('d/m'),
+                    'hora' => $horaInicio ? date('H:i', strtotime($horaInicio)) : null,
+                    'nome' => $nomeAula,
+                    'detalhes' => implode(' • ', array_filter($detalhesPartes)),
+                ];
+            }
+        }
+
+        usort($proximasAulas, function (array $a, array $b) {
+            return $a['timestamp'] <=> $b['timestamp'];
+        });
+
+        $proximasAulasDisplay = array_slice($proximasAulas, 0, 4);
         ?>
-        <div style="background: #f8f9fa; padding: 20px; margin-top: 20px;">
-            <h5 style="color: #023A8D; margin-bottom: 15px; display: flex; align-items: center;">
-                <i class="fas fa-info-circle me-2"></i>Resumo da Turma
-            </h5>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px;">
-                <div style="text-align: center;">
-                    <div style="font-size: 1.8rem; font-weight: bold; color: #023A8D; margin-bottom: 5px;"><?= $totalAulasAgendadas ?>/<?= $totalAulasObrigatorias ?></div>
-                    <div style="font-size: 0.85rem; color: #666;">Aulas Agendadas</div>
+        <div class="resumo-turma-card">
+            <div class="resumo-turma-header">
+                <i class="fas fa-info-circle"></i>
+                <span>Resumo da Turma</span>
             </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 1.8rem; font-weight: bold; color: <?= $percentualGeral >= 100 ? '#28a745' : ($percentualGeral >= 75 ? '#ffc107' : '#dc3545') ?>; margin-bottom: 5px;"><?= $percentualGeral ?>%</div>
-                    <div style="font-size: 0.85rem; color: #666;">Progresso Geral</div>
-                    </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 1.8rem; font-weight: bold; color: #6f42c1; margin-bottom: 5px;"><?= $totalAlunos ?></div>
-                    <div style="font-size: 0.85rem; color: #666;">Alunos Matriculados</div>
-                    </div>
-                <div style="text-align: center;">
-                    <div style="font-size: 1.8rem; font-weight: bold; color: #F7931E; margin-bottom: 5px;"><?= count($disciplinasSelecionadas) ?></div>
-                    <div style="font-size: 0.85rem; color: #666;">Disciplinas</div>
+            <div class="resumo-kpi-grid">
+                <div class="resumo-kpi">
+                    <span class="resumo-kpi-value resumo-kpi-value--primary"><?= $kpiAulasValor ?></span>
+                    <span class="resumo-kpi-label">Aulas agendadas</span>
+                </div>
+                <div class="resumo-kpi">
+                    <span class="<?= $percentualClasse ?>"><?= $percentualFormatado ?>%</span>
+                    <span class="resumo-kpi-label">Progresso geral</span>
+                </div>
+                <div class="resumo-kpi">
+                    <span class="resumo-kpi-value resumo-kpi-value--primary"><?= $totalAlunos ?></span>
+                    <span class="resumo-kpi-label">Alunos matriculados</span>
+                </div>
+                <div class="resumo-kpi">
+                    <span class="resumo-kpi-value resumo-kpi-value--primary"><?= $totalDisciplinasSelecionadas ?></span>
+                    <span class="resumo-kpi-label">Disciplinas</span>
                 </div>
             </div>
+            <?php if (!empty($proximasAulasDisplay)): ?>
+            <div class="resumo-proximas">
+                <div class="resumo-proximas-header">
+                    <span>Próximas aulas</span>
+                    <button type="button" class="resumo-proximas-link" onclick="showTab('calendario'); document.getElementById('tab-calendario')?.scrollIntoView({behavior: 'smooth'});">
+                        Abrir calendário
+                        <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.8rem;"></i>
+                    </button>
+                </div>
+                <ul class="resumo-proximas-list">
+                    <?php foreach ($proximasAulasDisplay as $aulaResumo): ?>
+                    <li class="resumo-proximas-item">
+                        <span class="resumo-proximas-data">
+                            <?= htmlspecialchars($aulaResumo['data']) ?><?= $aulaResumo['hora'] ? ' · ' . htmlspecialchars($aulaResumo['hora']) : '' ?>
+                        </span>
+                        <span class="resumo-proximas-nome">
+                            <?= htmlspecialchars($aulaResumo['nome']) ?>
+                        </span>
+                        <?php if (!empty($aulaResumo['detalhes'])): ?>
+                        <span class="resumo-proximas-meta"><?= htmlspecialchars($aulaResumo['detalhes']) ?></span>
+                        <?php endif; ?>
+                    </li>
+                    <?php endforeach; ?>
+                </ul>
+            </div>
+            <?php else: ?>
+            <div class="resumo-proximas">
+                <div class="resumo-proximas-header">
+                    <span>Próximas aulas</span>
+                    <button type="button" class="resumo-proximas-link" onclick="showTab('calendario'); document.getElementById('tab-calendario')?.scrollIntoView({behavior: 'smooth'});">
+                        Abrir calendário
+                        <i class="fas fa-arrow-up-right-from-square" style="font-size: 0.8rem;"></i>
+                    </button>
+                </div>
+                <p class="resumo-proximas-vazio">Nenhuma aula futura agendada.</p>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
     
