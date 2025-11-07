@@ -2146,10 +2146,20 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
     color: var(--primary-dark);
     text-decoration: none;
     font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
 }
 
 .breadcrumb-nav a:hover {
     text-decoration: underline;
+    color: #1a4ba8;
+}
+
+.breadcrumb-nav a i {
+    font-size: 0.85rem;
+    color: var(--gray-500);
 }
 
 .breadcrumb-separator {
@@ -2355,7 +2365,10 @@ $observacoesTexto = trim((string)($turma['observacoes'] ?? ''));
 ?>
 <div class="masthead">
     <nav class="breadcrumb-nav" aria-label="Breadcrumb">
-        <a href="?page=turmas-teoricas">Gestão de Turmas</a>
+        <a href="?page=turmas-teoricas" title="Voltar para Gestão de Turmas">
+            <i class="fas fa-arrow-left"></i>
+            Gestão de Turmas
+        </a>
         <span class="breadcrumb-separator">›</span>
         <span class="current-context"><?= htmlspecialchars($turma['nome']) ?></span>
     </nav>
@@ -2842,15 +2855,6 @@ window.showTab = function(tabName) {
         button.classList.remove('active');
     });
     
-    // Se for a aba Calendário, respeitar a semana calculada pelo servidor
-    // O servidor já calcula a semana correta baseada na data_inicio da turma
-    if (tabName === 'calendario') {
-        const url = new URL(window.location);
-        const semanaAtual = url.searchParams.get('semana_calendario');
-        // Se não há parâmetro, o servidor já definiu a semana correta
-        // Não precisamos forçar semana 0 aqui
-    }
-    
     // Mostrar a aba selecionada
     const selectedTab = document.getElementById('tab-' + tabName);
     if (selectedTab) {
@@ -2874,6 +2878,16 @@ window.showTab = function(tabName) {
     // Salvar aba ativa no localStorage
     localStorage.setItem('turmaDetalhesAbaAtiva', tabName);
     localStorage.setItem('turma-tab-active', tabName);
+    
+    // CRÍTICO: Inicializar calendário quando a aba for exibida pela primeira vez
+    if (tabName === 'calendario') {
+        // Usar requestAnimationFrame para garantir que o container está visível e medido
+        requestAnimationFrame(() => {
+            if (typeof window.inicializarCalendarioSemana === 'function') {
+                window.inicializarCalendarioSemana({ forceFetch: true, remeasure: true });
+            }
+        });
+    }
 };
 
 function closeAllActionMenus() {
@@ -6889,7 +6903,9 @@ function carregarSemanaPorIndice(indice, opcoes = {}) {
             }
         });
 
-        const deveBuscarEventos = config.forcarRecarregamento || !config.apenasSeVazio || !document.querySelector('#tab-calendario .timeline-slot.aula');
+        // CRÍTICO: Sempre buscar eventos no primeiro carregamento ou quando forçado
+        const calendarioVazio = !document.querySelector('#tab-calendario .timeline-slot.aula');
+        const deveBuscarEventos = config.forcarRecarregamento || calendarioVazio || (!config.apenasSeVazio);
 
         if (deveBuscarEventos) {
             const url = new URL(window.location);
@@ -6978,13 +6994,17 @@ function mudarSemana(direcao) {
     carregarSemanaPorIndice(novoIndice, { forcarRecarregamento: true });
 }
 
-window.calendarioSemanaInicializado = false;
+// Flag global para controlar se o calendário já foi inicializado
+if (typeof window.calendarioSemanaInicializado === 'undefined') {
+    window.calendarioSemanaInicializado = false;
+}
 
 window.inicializarCalendarioSemana = function inicializarCalendarioSemana(opcoes = {}) {
     const { forceFetch = false, remeasure = false } = opcoes;
     const indiceAtualInput = document.getElementById('semana-atual-indice');
     const indiceInicial = parseInt(indiceAtualInput ? indiceAtualInput.value : '0', 10) || 0;
 
+    // CRÍTICO: Sempre forçar fetch no primeiro carregamento ou quando solicitado
     const deveForcarFetch = forceFetch || !window.calendarioSemanaInicializado;
     const parametrosCarregamento = deveForcarFetch
         ? { forcarRecarregamento: true }
@@ -6992,10 +7012,12 @@ window.inicializarCalendarioSemana = function inicializarCalendarioSemana(opcoes
 
     carregarSemanaPorIndice(indiceInicial, parametrosCarregamento);
 
+    // Marcar como inicializado após a primeira chamada
     if (!window.calendarioSemanaInicializado) {
         window.calendarioSemanaInicializado = true;
     }
 
+    // Re-medir e re-renderizar se solicitado (importante quando aba estava oculta)
     if (remeasure && typeof window.reexecutarPosRender === 'function') {
         setTimeout(() => window.reexecutarPosRender(), 120);
     }
