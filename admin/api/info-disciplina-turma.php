@@ -62,12 +62,10 @@ if (headers_sent($file, $line)) {
 }
 
 // Incluir dependências
-$rootPath = dirname(__DIR__);
-
 try {
-    require_once $rootPath . '/includes/config.php';
-    require_once $rootPath . '/includes/database.php';
-    require_once $rootPath . '/includes/auth.php';
+    require_once __DIR__ . '/../../includes/config.php';
+    require_once __DIR__ . '/../../includes/database.php';
+    require_once __DIR__ . '/../../includes/auth.php';
 } catch (Throwable $e) {
     $output = ob_get_clean();
     error_log("info-disciplina-turma.php: Erro ao incluir dependências: " . $e->getMessage());

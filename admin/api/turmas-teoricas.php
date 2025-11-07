@@ -9,7 +9,28 @@
  */
 
 // Limpar qualquer saída anterior
-ob_clean();
+while (ob_get_level()) {
+    ob_end_clean();
+}
+ob_start();
+
+// Registrar handler de erro fatal
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && ($error['type'] === E_ERROR || $error['type'] === E_PARSE || $error['type'] === E_CORE_ERROR || $error['type'] === E_COMPILE_ERROR)) {
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Erro interno do servidor',
+            'erro' => $error['message'] . ' em ' . $error['file'] . ':' . $error['line']
+        ], JSON_UNESCAPED_UNICODE);
+        exit;
+    }
+});
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -23,10 +44,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 // Incluir dependências
-require_once __DIR__ . '/../../includes/config.php';
-require_once __DIR__ . '/../../includes/database.php';
-require_once __DIR__ . '/../../includes/auth.php';
-require_once __DIR__ . '/../includes/TurmaTeoricaManager.php';
+try {
+    require_once __DIR__ . '/../../includes/config.php';
+    require_once __DIR__ . '/../../includes/database.php';
+    require_once __DIR__ . '/../../includes/auth.php';
+    require_once __DIR__ . '/../includes/TurmaTeoricaManager.php';
+} catch (Throwable $e) {
+    http_response_code(500);
+    echo json_encode([
+        'sucesso' => false,
+        'mensagem' => 'Erro ao carregar dependências: ' . $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
 
 // Verificar autenticação
 if (!isLoggedIn() || !hasPermission('admin')) {
@@ -150,6 +180,23 @@ function handlePostRequest($turmaManager, $user) {
             handleAgendarAula($turmaManager, $dados, $user);
             break;
             
+        case 'editar_aula':
+            handleEditarAula($turmaManager, $dados);
+            break;
+            
+        case 'cancelar_aula':
+            $aulaId = $dados['aula_id'] ?? null;
+            if ($aulaId) {
+                handleCancelarAula($aulaId);
+            } else {
+                http_response_code(400);
+                echo json_encode([
+                    'sucesso' => false,
+                    'mensagem' => 'ID da aula é obrigatório'
+                ], JSON_UNESCAPED_UNICODE);
+            }
+            break;
+            
         case 'matricular_aluno':
             handleMatricularAluno($turmaManager, $dados);
             break;
@@ -196,7 +243,16 @@ function handlePutRequest($turmaManager, $user) {
             break;
             
         case 'cancelar_aula':
-            handleCancelarAula($turmaManager, $dados);
+            $aulaId = $dados['aula_id'] ?? null;
+            if ($aulaId) {
+                handleCancelarAula($aulaId);
+            } else {
+                http_response_code(400);
+                echo json_encode([
+                    'sucesso' => false,
+                    'mensagem' => 'ID da aula é obrigatório'
+                ], JSON_UNESCAPED_UNICODE);
+            }
             break;
             
         case 'editar_aula':
@@ -218,13 +274,30 @@ function handlePutRequest($turmaManager, $user) {
  * Manipular requisições DELETE
  */
 function handleDeleteRequest($turmaManager, $user) {
-    $turmaId = $_GET['turma_id'] ?? null;
+    // Tentar obter dados do corpo da requisição (JSON)
+    $dados = json_decode(file_get_contents('php://input'), true);
     
+    // Se não for JSON, tentar GET params
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        $dados = $_GET;
+    }
+    
+    $acao = $dados['acao'] ?? '';
+    $aulaId = $dados['aula_id'] ?? null;
+    $turmaId = $dados['turma_id'] ?? null;
+    
+    // Cancelar aula individual
+    if ($acao === 'cancelar_aula' && $aulaId) {
+        handleCancelarAula($aulaId);
+        return;
+    }
+    
+    // Excluir/cancelar turma
     if (!$turmaId) {
         http_response_code(400);
         echo json_encode([
             'sucesso' => false,
-            'mensagem' => 'ID da turma é obrigatório para exclusão'
+            'mensagem' => 'ID da turma ou aula é obrigatório para exclusão'
         ], JSON_UNESCAPED_UNICODE);
         return;
     }
@@ -238,6 +311,100 @@ function handleDeleteRequest($turmaManager, $user) {
     } else {
         http_response_code(400);
         echo json_encode($resultado, JSON_UNESCAPED_UNICODE);
+    }
+}
+
+/**
+ * Cancelar uma aula individual
+ */
+function handleCancelarAula($aulaId) {
+    try {
+        $db = Database::getInstance();
+        
+        // Verificar se a aula existe
+        $aula = $db->fetch("SELECT * FROM turma_aulas_agendadas WHERE id = ?", [$aulaId]);
+        
+        if (!$aula) {
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            http_response_code(404);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'sucesso' => false,
+                'mensagem' => 'Aula não encontrada'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        // Verificar se a aula pode ser cancelada
+        if ($aula['status'] !== 'agendada') {
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            http_response_code(400);
+            header('Content-Type: application/json; charset=utf-8');
+            echo json_encode([
+                'sucesso' => false,
+                'mensagem' => 'Apenas aulas agendadas podem ser canceladas. Status atual: ' . $aula['status']
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+        
+        // Cancelar a aula (marcar como cancelada ao invés de excluir)
+        $resultado = $db->update('turma_aulas_agendadas', [
+            'status' => 'cancelada'
+        ], 'id = ?', [$aulaId]);
+        
+        if ($resultado) {
+            $response = json_encode([
+                'sucesso' => true,
+                'mensagem' => 'Aula cancelada com sucesso!'
+            ], JSON_UNESCAPED_UNICODE);
+            
+            // Limpar buffer e enviar resposta
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            http_response_code(200);
+            header('Content-Type: application/json; charset=utf-8');
+            echo $response;
+            exit;
+        } else {
+            $response = json_encode([
+                'sucesso' => false,
+                'mensagem' => 'Erro ao cancelar a aula. Tente novamente.'
+            ], JSON_UNESCAPED_UNICODE);
+            
+            // Limpar buffer e enviar resposta
+            while (ob_get_level()) {
+                ob_end_clean();
+            }
+            
+            http_response_code(500);
+            header('Content-Type: application/json; charset=utf-8');
+            echo $response;
+            exit;
+        }
+        
+    } catch (Exception $e) {
+        error_log("Erro ao cancelar aula: " . $e->getMessage());
+        
+        $response = json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Erro ao cancelar aula: ' . $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE);
+        
+        // Limpar buffer e enviar resposta
+        while (ob_get_level()) {
+            ob_end_clean();
+        }
+        
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo $response;
+        exit;
     }
 }
 
@@ -459,6 +626,7 @@ function handleVerificarConflitos($turmaManager) {
             $horaFimAula = calcularHorarioFimAPI($horaInicioAula);
             
             // Verificar conflito de instrutor em aulas teóricas
+            // IMPORTANTE: Se tiver aula_id (modo edição), excluir a própria aula da verificação
             $conflitoInstrutorTeorica = $db->fetch("
                 SELECT COUNT(*) as conflitos,
                        GROUP_CONCAT(CONCAT(nome_aula, ' (', hora_inicio, '-', hora_fim, ')') SEPARATOR ', ') as aulas_conflitantes
@@ -466,6 +634,7 @@ function handleVerificarConflitos($turmaManager) {
                 WHERE instrutor_id = ? 
                 AND data_aula = ? 
                 AND status = 'agendada'
+                AND (? IS NULL OR id != ?)
                 AND (
                     (hora_inicio < ? AND hora_fim > ?) OR
                     (hora_inicio >= ? AND hora_inicio < ?) OR
@@ -474,6 +643,7 @@ function handleVerificarConflitos($turmaManager) {
             ", [
                 $dados['instrutor_id'], 
                 $dados['data_aula'], 
+                $dados['aula_id'], $dados['aula_id'], // Excluir a própria aula se estiver editando
                 $horaFimAula, $horaInicioAula, 
                 $horaInicioAula, $horaFimAula, 
                 $horaInicioAula, $horaFimAula
@@ -521,6 +691,7 @@ function handleVerificarConflitos($turmaManager) {
             }
             
             // Verificar conflito de sala
+            // IMPORTANTE: Se tiver aula_id (modo edição), excluir a própria aula da verificação
             $conflitoSala = $db->fetch("
                 SELECT COUNT(*) as conflitos,
                        GROUP_CONCAT(CONCAT(t.nome, ' - ', taa.nome_aula, ' (', taa.hora_inicio, '-', taa.hora_fim, ')') SEPARATOR ', ') as turmas_conflitantes
@@ -530,6 +701,7 @@ function handleVerificarConflitos($turmaManager) {
                 AND taa.data_aula = ? 
                 AND taa.status = 'agendada'
                 AND taa.turma_id != ?
+                AND (? IS NULL OR taa.id != ?)
                 AND (
                     (taa.hora_inicio < ? AND taa.hora_fim > ?) OR
                     (taa.hora_inicio >= ? AND taa.hora_inicio < ?) OR
@@ -539,6 +711,7 @@ function handleVerificarConflitos($turmaManager) {
                 $turma['sala_id'], 
                 $dados['data_aula'], 
                 $dados['turma_id'],
+                $dados['aula_id'], $dados['aula_id'], // Excluir a própria aula se estiver editando
                 $horaFimAula, $horaInicioAula, 
                 $horaInicioAula, $horaFimAula, 
                 $horaInicioAula, $horaFimAula
@@ -885,63 +1058,7 @@ function handleAtualizarStatus($turmaManager, $dados) {
     ], JSON_UNESCAPED_UNICODE);
 }
 
-function handleCancelarAula($turmaManager, $dados) {
-    error_log("🔧 [DEBUG] handleCancelarAula chamada com dados: " . print_r($dados, true));
-    
-    $aulaId = $dados['aula_id'] ?? null;
-    $motivo = $dados['motivo'] ?? '';
-    
-    error_log("🔧 [DEBUG] aulaId: $aulaId, motivo: $motivo");
-    
-    if (!$aulaId) {
-        error_log("❌ [DEBUG] ID da aula não fornecido");
-        http_response_code(400);
-        echo json_encode([
-            'sucesso' => false,
-            'mensagem' => 'ID da aula é obrigatório'
-        ], JSON_UNESCAPED_UNICODE);
-        return;
-    }
-    
-    try {
-        $db = Database::getInstance();
-        error_log("🔧 [DEBUG] Tentando atualizar aula ID: $aulaId");
-        
-        $result = $db->update('turma_aulas_agendadas', [
-            'status' => 'cancelada',
-            'observacoes' => $motivo
-        ], 'id = ?', [$aulaId]);
-        
-        error_log("🔧 [DEBUG] Resultado da atualização: " . ($result ? 'sucesso' : 'falha'));
-        error_log("🔧 [DEBUG] Tipo do resultado: " . gettype($result));
-        error_log("🔧 [DEBUG] Valor do resultado: " . var_export($result, true));
-        
-        // Verificar se a atualização foi bem-sucedida
-        if ($result && $result->rowCount() > 0) {
-            error_log("🔧 [DEBUG] Atualização bem-sucedida, linhas afetadas: " . $result->rowCount());
-            http_response_code(200);
-            echo json_encode([
-                'sucesso' => true,
-                'mensagem' => 'Aula cancelada com sucesso'
-            ], JSON_UNESCAPED_UNICODE);
-        } else {
-            error_log("❌ [DEBUG] Atualização falhou ou nenhuma linha foi afetada");
-            http_response_code(400);
-            echo json_encode([
-                'sucesso' => false,
-                'mensagem' => 'Aula não encontrada ou não foi possível cancelar'
-            ], JSON_UNESCAPED_UNICODE);
-        }
-        
-    } catch (Exception $e) {
-        error_log("❌ [DEBUG] Erro ao cancelar aula: " . $e->getMessage());
-        http_response_code(500);
-        echo json_encode([
-            'sucesso' => false,
-            'mensagem' => 'Erro ao cancelar aula: ' . $e->getMessage()
-        ], JSON_UNESCAPED_UNICODE);
-    }
-}
+// NOTA: handleCancelarAula() foi movida para a linha ~311 para evitar duplicação
 
 function handleEditarAula($turmaManager, $dados) {
     error_log("🔧 [DEBUG] handleEditarAula chamada com dados: " . print_r($dados, true));
@@ -985,15 +1102,26 @@ function handleEditarAula($turmaManager, $dados) {
     // Dados a atualizar
     $novaDataAula = $dados['data_aula'] ?? $aulaExistente['data_aula'];
     $novaHoraInicio = $dados['hora_inicio'] ?? $aulaExistente['hora_inicio'];
-    $novaHoraFim = $dados['hora_fim'] ?? $aulaExistente['hora_fim'];
-
-    // Se a hora fim não vier do formulário, calcular automaticamente (50 minutos após o início)
-    if (empty($novaHoraFim) && !empty($novaHoraInicio)) {
+    
+    // IMPORTANTE: Ao editar uma aula, sempre calculamos 50 minutos de duração
+    // O campo 'quantidade_aulas' é usado apenas para CRIAR múltiplas aulas, não para EDITAR
+    // Quando editamos, estamos editando apenas UMA aula específica
+    $novaHoraFim = '';
+    if (!empty($novaHoraInicio)) {
         $tsInicio = strtotime($novaHoraInicio);
         if ($tsInicio !== false) {
+            // Uma aula sempre tem 50 minutos
             $novaHoraFim = date('H:i', $tsInicio + (50 * 60));
+            error_log("🔧 [DEBUG] Calculado hora_fim: {$novaHoraInicio} + 50min = {$novaHoraFim}");
         }
     }
+    
+    // Se não conseguiu calcular, usar a hora_fim existente (fallback)
+    if (empty($novaHoraFim)) {
+        $novaHoraFim = $aulaExistente['hora_fim'];
+        error_log("⚠️ [DEBUG] Usando hora_fim existente como fallback: {$novaHoraFim}");
+    }
+    
     $novoInstrutorId = $dados['instrutor_id'] ?? $aulaExistente['instrutor_id'];
     
     // Verificar conflitos de horário se houver mudança
@@ -1288,3 +1416,4 @@ function handleSalvarDisciplinas($turmaManager, $dados, $user) {
     }
 }
 ?>
+

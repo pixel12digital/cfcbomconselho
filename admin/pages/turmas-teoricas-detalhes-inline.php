@@ -643,8 +643,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     background-color: #0d6efd !important;
     border-color: #0d6efd !important;
 }
-
-.btn-group .btn-outline-primary i,
 .btn-group .btn-outline-primary i.fas,
 .btn-group .btn-outline-primary i.fa-edit {
     color: #0d6efd !important;
@@ -1286,7 +1284,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     transform: translateY(-4px);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
 }
-
 .stat-icon {
     width: 50px;
     height: 50px;
@@ -1297,7 +1294,6 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     font-size: 1.5rem;
     color: white;
 }
-
 .stat-content {
     flex: 1;
 }
@@ -1929,9 +1925,7 @@ foreach ($disciplinasSelecionadas as $disciplina) {
     background: #dc3545;
     color: white;
 }
-
 </style>
-
 <!-- Cabeçalho -->
 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
     <div>
@@ -3340,7 +3334,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             ];
         }, $todasSemanas));
         ?>
-        
         <div style="padding: 4px 8px;">
             <!-- Cabeçalho compacto estilo Google Calendar -->
             <!-- CRÍTICO: Container flex que agrupa TODOS os 5 itens lado a lado -->
@@ -3961,7 +3954,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             .timeline-day-column:last-child {
                 border-right: none;
             }
-            
             /* Grade de linhas horizontais estilo Google Calendar */
             .timeline-day-column::before {
                 content: '';
@@ -3993,7 +3985,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                 /* Garantir que não ultrapasse o último slot (23:00) */
                 overflow: hidden;
             }
-            
             /* Slots vazios - estilo Google Calendar */
             .timeline-slot {
                 position: absolute;
@@ -4091,12 +4082,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
             .timeline-slot.aula:hover {
                 box-shadow: 0 2px 6px rgba(0,0,0,0.16), 0 2px 4px rgba(0,0,0,0.23);
                 z-index: 15;
-            }
-            
-            /* Última aula destacada */
-            .timeline-slot.aula.ultima {
-                border-left-width: 4px;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.16), 0 2px 4px rgba(0,0,0,0.23);
             }
             
             .timeline-periodo-colapsado {
@@ -4353,7 +4338,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                             </div>
                         <?php endforeach; ?>
                     </div>
-                    
                     <!-- Corpo da Timeline -->
                     <div class="timeline-body" style="min-height: <?= $alturaTotalPx ?>px;" data-altura-original="<?= $alturaTotalPx ?>">
                         <!-- Coluna de Horários -->
@@ -4855,17 +4839,6 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                         $corDisciplina = $coresDisciplinas[$aula['disciplina_id']] ?? '#023A8D';
                                         $nomeDisciplina = $disciplinasMap[$aula['disciplina_id']] ?? 'Disciplina';
                                         
-                                        // Extrair apenas a parte após a disciplina do nome_aula para evitar repetição
-                                        $nomeAulaExibicao = $aula['nome_aula'] ?? '';
-                                        if (strpos($nomeAulaExibicao, $nomeDisciplina) === 0) {
-                                            // Se nome_aula começa com o nome da disciplina, remover para evitar duplicação
-                                            $nomeAulaExibicao = trim(str_replace($nomeDisciplina, '', $nomeAulaExibicao));
-                                            // Remover " - " inicial se existir
-                                            if (strpos($nomeAulaExibicao, ' - ') === 0) {
-                                                $nomeAulaExibicao = substr($nomeAulaExibicao, 3);
-                                            }
-                                        }
-                                        
                                         // Calcular posição e altura (densidade compacta: ~1.67px por minuto)
                                         // CRÍTICO: Usar $horaMinima que já foi atualizado acima para garantir alinhamento
                                         // Calcular top baseado no início do evento
@@ -4915,6 +4888,12 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                     $corFundo = $coresFundoDisciplinas[$aula['disciplina_id']] ?? '#f1f3f4';
                                     $corBorda = $corDisciplina;
                                     ?>
+                                    <?php
+                                        $statsTooltip = $estatisticasDisciplinas[$aula['disciplina_id']] ?? ['agendadas' => 0, 'obrigatorias' => 0];
+                                        $tooltipAgendadas = (int)($statsTooltip['agendadas'] ?? 0);
+                                        $tooltipObrigatorias = (int)($statsTooltip['obrigatorias'] ?? 0);
+                                        $tooltipLabel = htmlspecialchars($nomeDisciplina) . ' ' . $tooltipAgendadas . '/' . $tooltipObrigatorias . ' (' . $horaInicioStr . ' - ' . $horaFimStr . ')';
+                                    ?>
                                     <div class="timeline-slot aula <?= $ehUltima ? 'ultima' : '' ?>"
                                          data-periodo="<?= $periodoAula ?>"
                                          style="top: <?= $top ?>px; height: <?= $altura ?>px; background: <?= $corFundo ?>; border-left-color: <?= $corBorda ?>; position: absolute; left: 2px; right: 2px; z-index: 10; overflow: hidden; box-sizing: border-box; display: block !important;"
@@ -4924,23 +4903,13 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                          data-inicio-minutos="<?= $evento['inicio'] ?>"
                                          data-fim-minutos="<?= $evento['fim'] ?>"
                                          data-top-original="<?= $top ?>"
-                                         title="<?= htmlspecialchars($aula['nome_aula']) ?> (<?= $horaInicioStr ?> - <?= $horaFimStr ?>)">
+                                         title="<?= $tooltipLabel ?>">
                                         <div style="font-weight: 500; margin-bottom: 2px; font-size: 12px; color: #202124;">
                                             <?= htmlspecialchars($nomeDisciplina) ?>
                                         </div>
-                                        <?php if (!empty($nomeAulaExibicao)): ?>
-                                        <div style="font-size: 11px; color: #5f6368; margin-top: 2px;">
-                                            <?= htmlspecialchars($nomeAulaExibicao) ?>
-                                        </div>
-                                        <?php endif; ?>
                                         <div style="font-size: 10px; color: #5f6368; margin-top: 2px;">
                                             <?= $horaInicioStr ?> - <?= $horaFimStr ?>
                                         </div>
-                                        <?php if ($ehUltima): ?>
-                                            <div style="font-size: 10px; margin-top: 3px; color: <?= $corBorda ?>; font-weight: 500;">
-                                                <i class="fas fa-flag" style="font-size: 8px;"></i> Última
-                                            </div>
-                                        <?php endif; ?>
                                     </div>
                                     <?php
                                             $ultimoFim = $evento['fim'];
@@ -4975,13 +4944,11 @@ $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $
                                     </div>
                                     <?php
                                     }
-                                    
                                     // CRÍTICO: Criar slots individuais de 30 minutos para TODOS os horários disponíveis
                                     // Isso garante comportamento igual ao Google Calendar: cada slot é clicável independentemente
                                     // IMPORTANTE: Desabilitar slots para datas fora do período da turma
                                     $dataDateTime = new DateTime($data);
                                     $dataForaPeriodo = ($dataDateTime < $dataInicio || $dataDateTime > $dataFim);
-                                    
                                     $horaAtualSlot = $horaMinima;
                                     // Limite máximo: 23:00 (1380 minutos) - garantir exatamente 24 slots (00-23)
                                     $horaMaximaSlot = min($horaMaxima, 23 * 60);
@@ -5423,6 +5390,93 @@ function verDetalhesAula(aulaId) {
         });
 }
 
+/**
+ * Excluir aula a partir do modal de edição
+ */
+function excluirAulaDoModal() {
+    const aulaIdInput = document.getElementById('modal_aula_id');
+    const aulaId = aulaIdInput ? aulaIdInput.value : null;
+    
+    if (!aulaId) {
+        alert('❌ ID da aula não encontrado. Feche e abra o modal novamente.');
+        return;
+    }
+    
+    if (!confirm('⚠️ Tem certeza que deseja excluir esta aula?\n\nEsta ação não pode ser desfeita.')) {
+        return;
+    }
+    
+    console.log('🗑️ [DEBUG] Excluindo aula do modal:', aulaId);
+    
+    // Criar FormData para enviar via POST
+    const formData = new FormData();
+    formData.append('acao', 'cancelar_aula');
+    formData.append('aula_id', aulaId);
+    
+    // Desabilitar botão durante a requisição
+    const btnExcluir = document.getElementById('btn_excluir_modal');
+    if (btnExcluir) {
+        btnExcluir.disabled = true;
+        btnExcluir.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Excluindo...';
+    }
+    
+    // Enviar requisição para cancelar a aula via POST
+    const url = getBasePath() + '/admin/api/turmas-teoricas.php';
+    console.log('🔍 [DEBUG] URL da requisição:', url);
+    
+    fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => {
+        console.log('🔍 [DEBUG] Status da resposta:', response.status);
+        console.log('🔍 [DEBUG] Content-Type:', response.headers.get('content-type'));
+        
+        // Verificar se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('❌ [ERROR] Resposta não é JSON! Content-Type:', contentType);
+            return response.text().then(text => {
+                console.error('❌ [ERROR] Conteúdo da resposta:', text.substring(0, 500));
+                throw new Error('Servidor retornou ' + contentType + ' ao invés de JSON');
+            });
+        }
+        
+        return response.json();
+    })
+    .then(data => {
+        console.log('🔍 [DEBUG] Dados recebidos:', data);
+        if (data.sucesso) {
+            // Fechar modal primeiro
+            fecharModalAgendarAula();
+            
+            // Mostrar mensagem e recarregar
+            alert('✅ ' + (data.mensagem || 'Aula excluída com sucesso!'));
+            location.reload();
+        } else {
+            alert('❌ Erro: ' + (data.mensagem || 'Não foi possível excluir a aula.'));
+            
+            // Reabilitar botão
+            if (btnExcluir) {
+                btnExcluir.disabled = false;
+                btnExcluir.innerHTML = '<i class="fas fa-trash"></i> <span style="margin-left: 5px;">Excluir</span>';
+            }
+        }
+    })
+    .catch(error => {
+        console.error('❌ [ERROR] Erro ao excluir aula:', error);
+        alert('❌ Erro ao excluir a aula. Verifique o console para mais detalhes.');
+        
+        // Reabilitar botão
+        if (btnExcluir) {
+            btnExcluir.disabled = false;
+            btnExcluir.innerHTML = '<i class="fas fa-trash"></i> <span style="margin-left: 5px;">Excluir</span>';
+        }
+    });
+}
 function mudarSemana(direcao) {
     const semanasJson = document.getElementById('semanas-disponiveis').value;
     const semanas = JSON.parse(semanasJson);
@@ -5582,7 +5636,6 @@ function mudarSemana(direcao) {
     document.getElementById('btn-semana-anterior').disabled = novoIndice === 0;
     document.getElementById('btn-semana-proxima').disabled = novoIndice === semanas.length - 1;
 }
-
 function atualizarCalendarioSemana(novoIndice) {
     // Mostrar indicador de carregamento
     const calendarioContainer = document.querySelector('.timeline-calendar');
@@ -5730,16 +5783,9 @@ function atualizarCalendarioSemana(novoIndice) {
                 const corDisciplina = coresDisciplinas[aula.disciplina_id] || '#023A8D';
                 const nomeDisciplina = disciplinasMap[aula.disciplina_id] || 'Disciplina';
                 
-                // Extrair apenas a parte após a disciplina do nome_aula para evitar repetição
-                let nomeAulaExibicao = aula.nome_aula || '';
-                if (nomeAulaExibicao.indexOf(nomeDisciplina) === 0) {
-                    // Se nome_aula começa com o nome da disciplina, remover para evitar duplicação
-                    nomeAulaExibicao = nomeAulaExibicao.replace(nomeDisciplina, '').trim();
-                    // Remover " - " inicial se existir
-                    if (nomeAulaExibicao.indexOf(' - ') === 0) {
-                        nomeAulaExibicao = nomeAulaExibicao.substring(3);
-                    }
-                }
+                const statsTooltip = estatisticasDisciplinasMap?.[aula.disciplina_id] || estatisticasDisciplinasMap?.[String(aula.disciplina_id)] || {};
+                const agendadasTooltip = statsTooltip?.agendadas ?? 0;
+                const obrigatoriasTooltip = statsTooltip?.obrigatorias ?? 0;
                 
                 const divAula = document.createElement('div');
                 divAula.className = 'calendario-aula';
@@ -5747,12 +5793,11 @@ function atualizarCalendarioSemana(novoIndice) {
                 divAula.setAttribute('data-disciplina-id', aula.disciplina_id);
                 divAula.style.cssText = `background: ${corDisciplina}; color: white; padding: 6px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; ${ehUltima ? 'border: 2px solid #fff; box-shadow: 0 0 0 2px ' + corDisciplina + ';' : ''}`;
                 divAula.onclick = () => verDetalhesAula(aula.id);
-                divAula.title = aula.nome_aula;
+                divAula.title = `${nomeDisciplina} ${agendadasTooltip}/${obrigatoriasTooltip} (${aula.hora_inicio} - ${aula.hora_fim})`;
                 
                 divAula.innerHTML = `
                     <div style="font-weight: 600; margin-bottom: 2px;">${nomeDisciplina.substring(0, 15)}</div>
-                    ${nomeAulaExibicao ? `<div style="opacity: 0.9; font-size: 0.7rem;">${nomeAulaExibicao.substring(0, 20)}</div>` : ''}
-                    ${ehUltima ? '<div style="font-size: 0.65rem; margin-top: 2px; opacity: 0.95;"><i class="fas fa-flag"></i> Última</div>' : ''}
+                    <div style="font-size: 0.7rem;">${aula.hora_inicio} - ${aula.hora_fim}</div>
                 `;
                 
                 td.appendChild(divAula);
@@ -5812,7 +5857,6 @@ document.addEventListener('click', function(e) {
         }
     }
 });
-
 // Inicializar ao carregar
 document.addEventListener('DOMContentLoaded', function() {
     // CRÍTICO: Remover faixa em branco abaixo de 23:00 após carregamento completo
@@ -6241,12 +6285,10 @@ document.addEventListener('DOMContentLoaded', function() {
             window.reexecutarPosRender();
         }
     });
-    
     // O servidor já calcula a semana correta baseada na data_inicio da turma
     // Não precisamos forçar semana 0 aqui
     const semanasJsonElement = document.getElementById('semanas-disponiveis');
     if (!semanasJsonElement) return;
-    
     const semanasJson = semanasJsonElement.value;
     if (!semanasJson) return;
     
@@ -6278,7 +6320,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 });
-
 // Função para expandir/colapsar períodos
 window.togglePeriodo = function(periodoNome) {
     const periodo = periodoNome.toLowerCase();
@@ -6821,7 +6862,6 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
-
 <!-- Modal para Agendar Nova Aula -->
 <div id="modalAgendarAula" class="modal-overlay" style="display: none;">
     <div class="modal-content" style="max-width: 1200px; max-height: 90vh; display: flex; flex-direction: column;">
@@ -6830,9 +6870,20 @@ document.addEventListener('DOMContentLoaded', function() {
                 <i class="fas fa-calendar-plus"></i>
                 Agendar Nova Aula
             </h3>
-            <button type="button" class="btn-close" onclick="fecharModalAgendarAula()">
-                <i class="fas fa-times"></i>
-            </button>
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <button type="button" 
+                        id="btn_excluir_modal" 
+                        class="btn btn-sm btn-danger" 
+                        onclick="excluirAulaDoModal()"
+                        style="display: none;"
+                        title="Excluir esta aula">
+                    <i class="fas fa-trash"></i>
+                    <span style="margin-left: 5px;">Excluir</span>
+                </button>
+                <button type="button" class="btn-close" onclick="fecharModalAgendarAula()">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
         </div>
         
         <div class="modal-body" style="display: flex; gap: 20px; flex: 1; overflow: hidden;">
@@ -7436,7 +7487,6 @@ function adicionarDisciplinaDetalhes() {
     
     console.log('✅ [DISCIPLINA] Disciplina adicional adicionada');
 }
-
 // Função SIMPLES e DIRETA para carregar disciplinas - SEMPRE funciona
 function carregarDisciplinasSimples() {
     console.log('🚀 [SIMPLES] Carregando disciplinas de forma simples e direta...');
@@ -7949,7 +7999,7 @@ function carregarDetalhesDisciplina(disciplinaId) {
                 console.log('✅ [API] Sucesso! Renderizando detalhes...');
                 renderizarDetalhesDisciplina(disciplinaId, data);
             } else {
-                console.error('❌ [API] API retornou erro:', data.message);
+                console.error('❌ [API] API retornou erro:', data.message || 'Erro desconhecido');
                 mostrarErroDetalhes(disciplinaId, data.message || 'Erro desconhecido');
             }
         })
@@ -7965,7 +8015,6 @@ function carregarDetalhesDisciplina(disciplinaId) {
             if (dataElement) dataElement.style.display = 'block';
         });
 }
-
 /**
  * Renderizar detalhes da disciplina na interface
  * @param {number} disciplinaId - ID da disciplina
@@ -8598,7 +8647,6 @@ function addSelectOptions(select, field) {
         });
     }
 }
-
 // Funções de salvamento automático (botões removidos)
 function saveFieldAutomatically(element, newValue) {
     const field = element.dataset.field;
@@ -9172,7 +9220,6 @@ function exibirModalEdicao(modal) {
         modal.classList.add('popup-fade-in');
     }, 10);
 }
-
 // Modal de edição de agendamento - usa o mesmo modal de agendamento
 function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instrutorId, salaId, duracao, observacoes) {
     window.currentEditAgendamentoId = id;
@@ -9208,6 +9255,12 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
     }
     if (modalObservacoes && observacoes) {
         modalObservacoes.value = observacoes;
+    }
+    
+    // Mostrar botão de excluir no header (apenas em modo edição)
+    const btnExcluirModal = document.getElementById('btn_excluir_modal');
+    if (btnExcluirModal) {
+        btnExcluirModal.style.display = 'inline-flex';
     }
     
     // Exibir modal imediatamente (dados serão preenchidos depois)
@@ -9818,7 +9871,6 @@ function criarModalEdicao() {
     
     return modal;
 }
-
 // Função para fechar o modal de edição
 function fecharModalEdicao() {
     const modais = document.querySelectorAll('#modalEditarAgendamento');
@@ -10468,7 +10520,6 @@ function enviarAgendamentoModal() {
     justify-content: center;
     z-index: 9999;
 }
-
 .modal-content {
     background: white;
     border-radius: 8px;
@@ -10495,6 +10546,21 @@ function enviarAgendamentoModal() {
     color: #333;
     font-size: 18px;
     font-weight: 600;
+}
+
+#btn_excluir_modal {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+#btn_excluir_modal:hover {
+    background-color: #c82333;
+    transform: scale(1.05);
 }
 
 .btn-close {
@@ -10899,6 +10965,12 @@ function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim
             return;
         }
         
+        // IMPORTANTE: Esconder botão de excluir (só aparece em modo edição)
+        const btnExcluirModal = document.getElementById('btn_excluir_modal');
+        if (btnExcluirModal) {
+            btnExcluirModal.style.display = 'none';
+        }
+        
         // Preencher campos se existirem (normalizar disciplina)
         if (modalDisciplinaId) modalDisciplinaId.value = normalizarDisciplinaJS(disciplinaId);
         if (modalDisciplinaNome) modalDisciplinaNome.value = disciplinaNome;
@@ -11048,7 +11120,6 @@ async function atualizarEstatisticasModal() {
         console.error('❌ [DEBUG] Erro ao atualizar estatísticas do modal:', error);
     }
 }
-
 // Função para atualizar um item de estatística no modal
 function atualizarItemEstatisticaModal(disciplinaId, stats) {
     const item = document.querySelector(`.disciplina-stats-item-modal[data-disciplina-id="${disciplinaId}"]`);
@@ -11221,7 +11292,24 @@ async function buscarInfoDisciplina(disciplinaId) {
 
 // Função para fechar o modal
 function fecharModalAgendarAula() {
-    document.getElementById('modalAgendarAula').style.display = 'none';
+    const modal = document.getElementById('modalAgendarAula');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+    
+    // Esconder botão de excluir ao fechar
+    const btnExcluirModal = document.getElementById('btn_excluir_modal');
+    if (btnExcluirModal) {
+        btnExcluirModal.style.display = 'none';
+    }
+    
+    // Resetar modo para 'criar'
+    const modalModo = document.getElementById('modal_modo');
+    if (modalModo) {
+        modalModo.value = 'criar';
+    }
+    
+    document.body.style.overflow = '';
 }
 
 // Fechar modal ao clicar fora dele
@@ -11612,7 +11700,6 @@ function verificarDisponibilidadeModal() {
         mostrarMensagemModal('❌ Erro ao verificar disponibilidade. Tente novamente.', 'error');
     });
 }
-
 // Função para enviar agendamento (criação ou edição)
 function enviarAgendamentoModal() {
     const form = document.getElementById('formAgendarAulaModal');
@@ -12260,7 +12347,6 @@ function atualizarEstatisticasTurma() {
             console.error('❌ [DEBUG] Erro ao atualizar estatísticas:', error);
         });
 }
-
 // Função para atualizar o card de progresso geral
 function atualizarProgressoGeral(stats) {
     // Atualizar percentual
@@ -12711,6 +12797,3 @@ function excluirTurmaCompleta(turmaId, nomeTurma) {
     });
 }
 </script>
-
-```
-</rewr
