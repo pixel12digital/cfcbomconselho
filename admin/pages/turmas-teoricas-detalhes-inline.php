@@ -4005,7 +4005,7 @@ function updateTurmaHeaderName(newName) {
                 </div>
                 <!-- Filtro compacto -->
                 <select id="filtro-disciplina-calendario" style="padding: 6px 28px 6px 10px; border: 1px solid #dadce0; border-radius: 4px; font-size: 13px; background: white; color: #202124; cursor: pointer; appearance: none; background-image: url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%235f6368' d='M6 9L1 4h10z'/%3E%3C/svg%3E\"); background-repeat: no-repeat; background-position: right 10px center; height: 28px; line-height: 1; flex-shrink: 0; margin-left: auto !important; margin-right: 0 !important;" onchange="filtrarCalendario()">
-                    <option value="">Todas as disciplinas</option>
+                    <option value="all">Todas as disciplinas</option>
                     <?php foreach ($disciplinasSelecionadas as $disc): ?>
                         <option value="<?= $disc['disciplina_id'] ?>"><?= htmlspecialchars($disc['nome_disciplina'] ?? $disc['nome_original'] ?? 'Disciplina') ?></option>
                     <?php endforeach; ?>
@@ -5798,7 +5798,7 @@ function filtrarCalendario() {
     const slots = document.querySelectorAll('.timeline-slot.vazio');
     
     // Se não há filtro, mostrar tudo
-    if (!filtro) {
+    if (!filtro || filtro === 'all') {
         aulas.forEach(aula => aula.style.display = '');
         slots.forEach(slot => slot.style.display = '');
         return;
@@ -6095,27 +6095,49 @@ function excluirAulaDoModal() {
         }
     });
 }
-function mudarSemana(direcao) {
-    const semanasJson = document.getElementById('semanas-disponiveis').value;
-    const semanas = JSON.parse(semanasJson);
-    const indiceAtual = parseInt(document.getElementById('semana-atual-indice').value);
-    const novoIndice = indiceAtual + direcao;
-    
-    if (novoIndice < 0 || novoIndice >= semanas.length) {
-        return; // Não permitir ir além dos limites
+function carregarSemanaPorIndice(indice, opcoes = {}) {
+    const config = {
+        forcarRecarregamento: false,
+        apenasSeVazio: false,
+        ...opcoes
+    };
+
+    const semanasInput = document.getElementById('semanas-disponiveis');
+    if (!semanasInput || !semanasInput.value) {
+        return;
     }
-    
-    // Atualizar índice
-    document.getElementById('semana-atual-indice').value = novoIndice;
-    
+
+    let semanas;
+    try {
+        semanas = JSON.parse(semanasInput.value);
+    } catch (error) {
+        console.error('Erro ao interpretar semanas disponíveis:', error);
+        return;
+    }
+
+    if (!Array.isArray(semanas) || indice < 0 || indice >= semanas.length) {
+        return;
+    }
+
+    const indiceAtualInput = document.getElementById('semana-atual-indice');
+    if (indiceAtualInput) {
+        indiceAtualInput.value = indice;
+    }
+
+    const semana = semanas[indice];
+    if (!semana) {
+        return;
+    }
+
     // Atualizar cabeçalho da semana
-    const semana = semanas[novoIndice];
     if (semana.inicio) {
         const inicio = new Date(semana.inicio + 'T00:00:00');
-        const fim = new Date(semana.inicio + 'T00:00:00');
-        fim.setDate(fim.getDate() + 6); // Domingo + 6 dias = Sábado
-        
-        // Formatar data estilo Google Calendar: "d - d de M, Y"
+        const fimExclusivo = new Date(semana.inicio + 'T00:00:00');
+        fimExclusivo.setDate(fimExclusivo.getDate() + 7);
+
+        const fimInclusivo = new Date(fimExclusivo);
+        fimInclusivo.setDate(fimInclusivo.getDate() - 1);
+
         const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
         const formatarDataGoogle = (data) => {
             const dia = data.getDate();
@@ -6123,18 +6145,16 @@ function mudarSemana(direcao) {
             const ano = data.getFullYear();
             return dia + ' de ' + mes + ', ' + ano;
         };
-        
-        // Atualizar texto do cabeçalho estilo Google Calendar
-        const textoData = inicio.getDate() + ' - ' + formatarDataGoogle(fim);
+
+        const textoData = inicio.getDate() + ' - ' + formatarDataGoogle(fimInclusivo);
         const infoSemanaEl = document.getElementById('info-semana-atual');
         if (infoSemanaEl) {
             infoSemanaEl.textContent = textoData;
         }
-        
-        // Atualizar datas nos cabeçalhos das colunas do calendário
+
         const dataInicioTurma = document.getElementById('turma-data-inicio')?.value;
         const dataFimTurma = document.getElementById('turma-data-fim')?.value;
-        
+
         semana.dias.forEach((data, idx) => {
             const dayHeader = document.querySelector(`.timeline-day-header[data-dia-semana="${idx}"]`);
             if (dayHeader && data) {
@@ -6143,21 +6163,19 @@ function mudarSemana(direcao) {
                 if (dataDisplay) {
                     dataDisplay.textContent = dataObj.getDate();
                 }
-                
-                // Verificar se é hoje e aplicar classe
+
                 const hojeStr = new Date().toISOString().split('T')[0];
                 if (data === hojeStr) {
                     dayHeader.classList.add('hoje');
                 } else {
                     dayHeader.classList.remove('hoje');
                 }
-                
-                // Verificar se está fora do período da turma
+
                 if (dataInicioTurma && dataFimTurma) {
                     const dataInicio = new Date(dataInicioTurma + 'T00:00:00');
                     const dataFim = new Date(dataFimTurma + 'T00:00:00');
                     const dataForaPeriodo = (dataObj < dataInicio || dataObj > dataFim);
-                    
+
                     if (dataForaPeriodo) {
                         dayHeader.classList.add('dia-fora-periodo');
                     } else {
@@ -6173,87 +6191,109 @@ function mudarSemana(direcao) {
                 dayHeader.classList.remove('dia-fora-periodo');
             }
         });
-        
-        // Usar AJAX para carregar apenas o calendário sem recarregar a página
-        const url = new URL(window.location);
-        url.searchParams.set('semana_calendario', novoIndice);
-        url.searchParams.set('ajax', '1');
-        url.searchParams.set('acao', 'detalhes');
-        
-        // Mostrar indicador de carregamento
-        const calendarioContainer = document.querySelector('.timeline-calendar');
-        let loader = document.getElementById('calendario-loader');
-        if (!loader && calendarioContainer) {
-            loader = document.createElement('div');
-            loader.id = 'calendario-loader';
-            calendarioContainer.style.position = 'relative';
-            calendarioContainer.appendChild(loader);
-            
-            // Adicionar CSS para o spinner se não existir
-            if (!document.querySelector('#spinner-style')) {
-                const style = document.createElement('style');
-                style.id = 'spinner-style';
-                style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
-                document.head.appendChild(style);
-            }
-        }
-        
-        if (loader) {
-            loader.innerHTML = '<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000;"><div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #023A8D; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #023A8D; font-weight: 600;">Carregando...</p></div></div>';
-        }
-        
-        // Fazer requisição AJAX
-        fetch(url.toString(), {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest'
-            }
-        })
-        .then(response => response.text())
-        .then(html => {
-            // Remover loader
-            if (loader) {
-                loader.remove();
-            }
-            
-            // Usar uma div temporária para criar um DOM válido
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = html;
-            
-            // Buscar o conteúdo da tab-calendario
-            const novoCalendario = tempDiv.querySelector('#tab-calendario');
-            
-            if (novoCalendario) {
-                const calendarioAtual = document.querySelector('#tab-calendario');
-                if (calendarioAtual) {
-                    // Substituir todo o conteúdo interno
-                    calendarioAtual.innerHTML = novoCalendario.innerHTML;
-                    
-                    // CRÍTICO: Reexecutar funções de pós-render após re-render do calendário
-                    // Debounce de 33ms para garantir que o DOM está completamente renderizado
-                    setTimeout(() => {
-                        if (typeof window.reexecutarPosRender === 'function') {
-                            window.reexecutarPosRender();
-                        }
-                    }, 33);
+
+        const deveBuscarEventos = config.forcarRecarregamento || !config.apenasSeVazio || !document.querySelector('#tab-calendario .timeline-slot.aula');
+
+        if (deveBuscarEventos) {
+            const url = new URL(window.location);
+            url.searchParams.set('semana_calendario', indice);
+            url.searchParams.set('ajax', '1');
+            url.searchParams.set('acao', 'detalhes');
+
+            const calendarioContainer = document.querySelector('.timeline-calendar');
+            let loader = document.getElementById('calendario-loader');
+            if (!loader && calendarioContainer) {
+                loader = document.createElement('div');
+                loader.id = 'calendario-loader';
+                calendarioContainer.style.position = 'relative';
+                calendarioContainer.appendChild(loader);
+
+                if (!document.querySelector('#spinner-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'spinner-style';
+                    style.textContent = '@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }';
+                    document.head.appendChild(style);
                 }
-            } else {
-                // Fallback: recarregar a página
-                window.location.href = url.toString().replace('&ajax=1', '');
             }
-        })
-        .catch(error => {
-            // Em caso de erro, recarregar a página
+
             if (loader) {
-                loader.remove();
+                loader.innerHTML = '<div style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(255,255,255,0.9); display: flex; align-items: center; justify-content: center; z-index: 1000;"><div style="text-align: center;"><div style="border: 4px solid #f3f3f3; border-top: 4px solid #023A8D; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto;"></div><p style="margin-top: 10px; color: #023A8D; font-weight: 600;">Carregando...</p></div></div>';
             }
-            window.location.href = url.toString().replace('&ajax=1', '');
-        });
+
+            fetch(url.toString(), {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.text())
+            .then(html => {
+                if (loader) {
+                    loader.remove();
+                }
+
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = html;
+
+                const novoCalendario = tempDiv.querySelector('#tab-calendario');
+
+                if (novoCalendario) {
+                    const calendarioAtual = document.querySelector('#tab-calendario');
+                    if (calendarioAtual) {
+                        calendarioAtual.innerHTML = novoCalendario.innerHTML;
+
+                        setTimeout(() => {
+                            if (typeof window.reexecutarPosRender === 'function') {
+                                window.reexecutarPosRender();
+                            }
+                        }, 33);
+                    }
+                } else {
+                    window.location.href = url.toString().replace('&ajax=1', '');
+                }
+            })
+            .catch(() => {
+                if (loader) {
+                    loader.remove();
+                }
+                window.location.href = url.toString().replace('&ajax=1', '');
+            });
+        } else {
+            if (typeof window.reexecutarPosRender === 'function') {
+                setTimeout(() => window.reexecutarPosRender(), 33);
+            }
+        }
     }
-    
-    // Atualizar estado dos botões
-    document.getElementById('btn-semana-anterior').disabled = novoIndice === 0;
-    document.getElementById('btn-semana-proxima').disabled = novoIndice === semanas.length - 1;
+
+    const btnAnterior = document.getElementById('btn-semana-anterior');
+    const btnProximo = document.getElementById('btn-semana-proxima');
+    if (btnAnterior) {
+        btnAnterior.disabled = indice === 0;
+    }
+    if (btnProximo) {
+        btnProximo.disabled = indice === semanas.length - 1;
+    }
 }
+
+function mudarSemana(direcao) {
+    const indiceAtualInput = document.getElementById('semana-atual-indice');
+    const indiceAtual = parseInt(indiceAtualInput ? indiceAtualInput.value : '0', 10) || 0;
+    const novoIndice = indiceAtual + direcao;
+    carregarSemanaPorIndice(novoIndice, { forcarRecarregamento: true });
+}
+
+(function inicializarCalendarioSemana() {
+    const iniciar = () => {
+        const indiceAtualInput = document.getElementById('semana-atual-indice');
+        const indiceInicial = parseInt(indiceAtualInput ? indiceAtualInput.value : '0', 10) || 0;
+        carregarSemanaPorIndice(indiceInicial, { apenasSeVazio: true });
+    };
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', iniciar, { once: true });
+    } else {
+        iniciar();
+    }
+})();
 function atualizarCalendarioSemana(novoIndice) {
     // Mostrar indicador de carregamento
     const calendarioContainer = document.querySelector('.timeline-calendar');
