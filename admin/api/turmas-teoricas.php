@@ -931,6 +931,42 @@ function verificarCargaHorariaDisciplinaAPI($turmaManager, $turmaId, $disciplina
     }
 }
 
+function gerarNomeAulaAPI($disciplina, $ordem) {
+    $nomes = [
+        'legislacao_transito' => 'Legislação de Trânsito',
+        'primeiros_socorros' => 'Primeiros Socorros',
+        'direcao_defensiva' => 'Direção Defensiva',
+        'meio_ambiente_cidadania' => 'Meio Ambiente e Cidadania',
+        'mecanica_basica' => 'Mecânica Básica'
+    ];
+
+    $nomeDisciplina = $nomes[$disciplina] ?? ucfirst(str_replace('_', ' ', $disciplina));
+    return $ordem > 0 ? "{$nomeDisciplina} - Aula {$ordem}" : $nomeDisciplina;
+}
+
+function reordenarDisciplinaTurma($db, $turmaId, $disciplina) {
+    if (empty($disciplina)) {
+        return;
+    }
+
+    $aulas = $db->fetchAll(
+        "SELECT id, data_aula, hora_inicio FROM turma_aulas_agendadas WHERE turma_id = ? AND disciplina = ? AND status != 'cancelada' ORDER BY data_aula ASC, hora_inicio ASC, id ASC",
+        [$turmaId, $disciplina]
+    );
+
+    if (empty($aulas)) {
+        return;
+    }
+
+    foreach ($aulas as $indice => $aula) {
+        $ordem = $indice + 1;
+        $db->update('turma_aulas_agendadas', [
+            'ordem_disciplina' => $ordem,
+            'nome_aula' => gerarNomeAulaAPI($disciplina, $ordem)
+        ], 'id = ?', [$aula['id']]);
+    }
+}
+
 function handleCriarTurmaBasica($turmaManager, $dados, $user) {
     // Adicionar dados do usuário
     $dados['cfc_id'] = $user['cfc_id'];
@@ -1062,9 +1098,9 @@ function handleAtualizarStatus($turmaManager, $dados) {
 
 function handleEditarAula($turmaManager, $dados) {
     error_log("🔧 [DEBUG] handleEditarAula chamada com dados: " . print_r($dados, true));
-    
+
     $aulaId = $dados['aula_id'] ?? null;
-    
+
     if (!$aulaId) {
         http_response_code(400);
         echo json_encode([
@@ -1073,13 +1109,13 @@ function handleEditarAula($turmaManager, $dados) {
         ], JSON_UNESCAPED_UNICODE);
         return;
     }
-    
+
     $db = Database::getInstance();
-    
+
     // Buscar a aula atual
     $aulaExistente = $db->fetch("SELECT * FROM turma_aulas_agendadas WHERE id = ?", [$aulaId]);
     error_log("🔧 [DEBUG] Aula existente: " . print_r($aulaExistente, true));
-    
+
     if (!$aulaExistente) {
         http_response_code(404);
         echo json_encode([
@@ -1088,7 +1124,7 @@ function handleEditarAula($turmaManager, $dados) {
         ], JSON_UNESCAPED_UNICODE);
         return;
     }
-    
+
     // Verificar se pode ser editada (apenas aulas agendadas)
     if ($aulaExistente['status'] !== 'agendada') {
         http_response_code(400);
@@ -1098,11 +1134,30 @@ function handleEditarAula($turmaManager, $dados) {
         ], JSON_UNESCAPED_UNICODE);
         return;
     }
-    
-    // Dados a atualizar
+
+    $turmaId = (int)$aulaExistente['turma_id'];
+    $disciplinaOriginal = $aulaExistente['disciplina'] ?? '';
+    $novaDisciplina = $dados['disciplina'] ?? $disciplinaOriginal;
+
+    if (!empty($novaDisciplina)) {
+        $novaDisciplina = normalizarDisciplinaAPI($novaDisciplina);
+    }
+
+    if (empty($novaDisciplina)) {
+        http_response_code(400);
+        echo json_encode([
+            'sucesso' => false,
+            'mensagem' => 'Disciplina é obrigatória para atualizar a aula.'
+        ], JSON_UNESCAPED_UNICODE);
+        return;
+    }
+
+    $disciplinaAlterada = $novaDisciplina !== $disciplinaOriginal;
+
+    // Dados de data e horário
     $novaDataAula = $dados['data_aula'] ?? $aulaExistente['data_aula'];
     $novaHoraInicio = $dados['hora_inicio'] ?? $aulaExistente['hora_inicio'];
-    
+
     // IMPORTANTE: Ao editar uma aula, sempre calculamos 50 minutos de duração
     // O campo 'quantidade_aulas' é usado apenas para CRIAR múltiplas aulas, não para EDITAR
     // Quando editamos, estamos editando apenas UMA aula específica
@@ -1115,34 +1170,49 @@ function handleEditarAula($turmaManager, $dados) {
             error_log("🔧 [DEBUG] Calculado hora_fim: {$novaHoraInicio} + 50min = {$novaHoraFim}");
         }
     }
-    
+
     // Se não conseguiu calcular, usar a hora_fim existente (fallback)
     if (empty($novaHoraFim)) {
         $novaHoraFim = $aulaExistente['hora_fim'];
         error_log("⚠️ [DEBUG] Usando hora_fim existente como fallback: {$novaHoraFim}");
     }
-    
+
     $novoInstrutorId = $dados['instrutor_id'] ?? $aulaExistente['instrutor_id'];
-    
+
+    if ($disciplinaAlterada) {
+        $turmaManagerLocal = ($turmaManager instanceof TurmaTeoricaManager) ? $turmaManager : new TurmaTeoricaManager();
+        $validacaoCarga = verificarCargaHorariaDisciplinaAPI($turmaManagerLocal, $turmaId, $novaDisciplina, 1);
+
+        if (!$validacaoCarga['disponivel']) {
+            http_response_code(409);
+            echo json_encode([
+                'sucesso' => false,
+                'mensagem' => $validacaoCarga['mensagem'] ?? 'Disciplina selecionada não possui carga horária disponível',
+                'debug_info' => $validacaoCarga['debug_info'] ?? null
+            ], JSON_UNESCAPED_UNICODE);
+            return;
+        }
+    }
+
     // Verificar conflitos de horário se houver mudança
-    if ($novaDataAula != $aulaExistente['data_aula'] || 
-        $novaHoraInicio != $aulaExistente['hora_inicio'] || 
+    if ($novaDataAula != $aulaExistente['data_aula'] ||
+        $novaHoraInicio != $aulaExistente['hora_inicio'] ||
         $novoInstrutorId != $aulaExistente['instrutor_id']) {
-        
+
         // Verificar conflito de instrutor
         $conflitoInstrutor = $db->fetch("
-            SELECT id FROM turma_aulas_agendadas 
-            WHERE instrutor_id = ? 
-            AND data_aula = ? 
+            SELECT id FROM turma_aulas_agendadas
+            WHERE instrutor_id = ?
+            AND data_aula = ?
             AND id != ?
             AND status != 'cancelada'
             AND (
-                (hora_inicio <= ? AND hora_fim > ?) OR
-                (hora_inicio < ? AND hora_fim >= ?) OR
-                (hora_inicio >= ? AND hora_fim <= ?)
+                (hora_inicio <= ? AND hora_fim > ?)
+                OR (hora_inicio < ? AND hora_fim >= ?)
+                OR (hora_inicio >= ? AND hora_fim <= ?)
             )
         ", [$novoInstrutorId, $novaDataAula, $aulaId, $novaHoraInicio, $novaHoraInicio, $novaHoraFim, $novaHoraFim, $novaHoraInicio, $novaHoraFim]);
-        
+
         if ($conflitoInstrutor) {
             http_response_code(400);
             echo json_encode([
@@ -1151,24 +1221,24 @@ function handleEditarAula($turmaManager, $dados) {
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
-        
+
         // Verificar conflito de sala
-        $turma = $db->fetch("SELECT sala_id FROM turmas_teoricas WHERE id = ?", [$aulaExistente['turma_id']]);
+        $turma = $db->fetch("SELECT sala_id FROM turmas_teoricas WHERE id = ?", [$turmaId]);
         if ($turma && $turma['sala_id']) {
             $conflitoSala = $db->fetch("
                 SELECT taa.id FROM turma_aulas_agendadas taa
                 INNER JOIN turmas_teoricas tt ON tt.id = taa.turma_id
-                WHERE tt.sala_id = ? 
-                AND taa.data_aula = ? 
+                WHERE tt.sala_id = ?
+                AND taa.data_aula = ?
                 AND taa.id != ?
                 AND taa.status != 'cancelada'
                 AND (
-                    (taa.hora_inicio <= ? AND taa.hora_fim > ?) OR
-                    (taa.hora_inicio < ? AND taa.hora_fim >= ?) OR
-                    (taa.hora_inicio >= ? AND taa.hora_fim <= ?)
+                    (taa.hora_inicio <= ? AND taa.hora_fim > ?)
+                    OR (taa.hora_inicio < ? AND taa.hora_fim >= ?)
+                    OR (taa.hora_inicio >= ? AND taa.hora_fim <= ?)
                 )
             ", [$turma['sala_id'], $novaDataAula, $aulaId, $novaHoraInicio, $novaHoraInicio, $novaHoraFim, $novaHoraFim, $novaHoraInicio, $novaHoraFim]);
-            
+
             if ($conflitoSala) {
                 http_response_code(400);
                 echo json_encode([
@@ -1179,24 +1249,40 @@ function handleEditarAula($turmaManager, $dados) {
             }
         }
     }
-    
+
+    $novoNomeAula = $dados['nome_aula'] ?? $aulaExistente['nome_aula'];
+    if ($disciplinaAlterada) {
+        // Nome definitivo será ajustado após reordenar, usar placeholder coerente
+        $novoNomeAula = gerarNomeAulaAPI($novaDisciplina, 1);
+    }
+
     // Preparar dados para update
     $dadosUpdate = [
-        'nome_aula' => $dados['nome_aula'] ?? $aulaExistente['nome_aula'],
+        'nome_aula' => $novoNomeAula,
         'data_aula' => $novaDataAula,
         'hora_inicio' => $novaHoraInicio,
         'hora_fim' => $novaHoraFim,
         'instrutor_id' => $novoInstrutorId,
-        'observacoes' => $dados['observacoes'] ?? $aulaExistente['observacoes']
+        'observacoes' => $dados['observacoes'] ?? $aulaExistente['observacoes'],
+        'disciplina' => $novaDisciplina
     ];
-    
+
     error_log("🔧 [DEBUG] Dados para update: " . print_r($dadosUpdate, true));
-    
+
     // Atualizar a aula
     $result = $db->update('turma_aulas_agendadas', $dadosUpdate, 'id = ?', [$aulaId]);
-    
+
     error_log("🔧 [DEBUG] Resultado do update: " . ($result ? 'sucesso' : 'falha'));
-    
+
+    if ($disciplinaAlterada) {
+        try {
+            reordenarDisciplinaTurma($db, $turmaId, $disciplinaOriginal);
+            reordenarDisciplinaTurma($db, $turmaId, $novaDisciplina);
+        } catch (Exception $e) {
+            error_log('⚠️ [DEBUG] Falha ao reordenar disciplinas após edição: ' . $e->getMessage());
+        }
+    }
+
     http_response_code(200);
     echo json_encode([
         'sucesso' => true,
