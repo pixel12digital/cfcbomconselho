@@ -722,55 +722,73 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
     margin-bottom: 30px;
 }
 
-/* Estatísticas de Aulas */
+/* Estatísticas de Aulas - KPIs em Chips Padronizados */
 .aulas-stats-container {
     display: flex;
-    gap: 12px;
-    margin-top: 8px;
+    gap: 10px;
+    margin-top: 12px;
     flex-wrap: wrap;
+    align-items: center;
 }
 
 .stat-item {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 4px;
-    background: #f8f9fa;
-    padding: 4px 8px;
-    border-radius: 6px;
-    border: 1px solid #e9ecef;
-    font-size: 0.85rem;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 16px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
     min-width: fit-content;
+    transition: all 0.2s ease;
 }
 
 .stat-label {
-    color: #6c757d;
     font-weight: 500;
+    letter-spacing: 0.01em;
 }
 
 .stat-value {
-    font-weight: 600;
+    font-weight: 700;
     padding: 2px 6px;
-    border-radius: 4px;
-    min-width: 20px;
+    border-radius: 10px;
+    min-width: 22px;
     text-align: center;
+    background: rgba(255, 255, 255, 0.4);
 }
 
+/* KPI Agendadas - Neutro/Azul */
 .stat-agendadas {
     background: #e3f2fd;
-    color: #1976d2;
-    border: 1px solid #bbdefb;
+    color: #1565c0;
 }
 
+.stat-agendadas .stat-value {
+    background: rgba(255, 255, 255, 0.5);
+    color: #0d47a1;
+}
+
+/* KPI Realizadas - Verde */
 .stat-realizadas {
-    background: #e8f5e8;
+    background: #e8f5e9;
     color: #2e7d32;
-    border: 1px solid #c8e6c9;
 }
 
+.stat-realizadas .stat-value {
+    background: rgba(255, 255, 255, 0.5);
+    color: #1b5e20;
+}
+
+/* KPI Faltantes - Âmbar */
 .stat-faltantes {
     background: #fff3e0;
-    color: #f57c00;
-    border: 1px solid #ffcc02;
+    color: #e65100;
+}
+
+.stat-faltantes .stat-value {
+    background: rgba(255, 255, 255, 0.5);
+    color: #bf360c;
 }
 
 /* Estilos para botões de ação na tabela */
@@ -929,31 +947,118 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
 }
 
 .disciplina-cadastrada-card {
-    background: #f8f9fa;
-    border: none;
+    background: #ffffff;
+    border: 1px solid #e9ecef;
     border-left: 4px solid #023A8D;
-    border-radius: 0;
-    padding: 15px;
-    margin-bottom: 10px;
+    border-radius: 8px;
+    padding: 0;
+    margin-bottom: 16px;
     transition: all 0.3s ease;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
 }
 
 .disciplina-cadastrada-card:hover {
-    background: #e9ecef;
-    border-left-width: 5px;
+    box-shadow: 0 4px 12px rgba(2, 58, 141, 0.12);
+    transform: translateY(-2px);
+    border-left-width: 4px;
 }
 
 .disciplina-info-display {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;
     gap: 20px;
+}
+
+.disciplina-nome-display {
+    flex: 1;
 }
 
 .disciplina-nome-display h6 {
     margin: 0;
     color: #2c3e50;
     font-weight: 600;
+    font-size: 1.05rem;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.disciplina-nome-display h6 i.fa-graduation-cap {
+    color: #6c757d !important;
+    font-size: 1.1rem;
+}
+
+.disciplina-actions-menu {
+    position: relative;
+    display: inline-flex;
+}
+
+.disciplina-menu-trigger {
+    background: transparent;
+    border: none;
+    color: #6c757d;
+    font-size: 18px;
+    cursor: pointer;
+    padding: 4px 8px;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+    line-height: 1;
+}
+
+.disciplina-menu-trigger:hover {
+    background: #f8f9fa;
+    color: #023A8D;
+}
+
+.disciplina-menu-dropdown {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    min-width: 200px;
+    z-index: 1000;
+    display: none;
+    margin-top: 4px;
+}
+
+.disciplina-menu-dropdown.show {
+    display: block;
+}
+
+.disciplina-menu-item {
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #495057;
+    font-size: 14px;
+    border: none;
+    background: none;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.disciplina-menu-item:hover {
+    background: #f8f9fa;
+}
+
+.disciplina-menu-item i {
+    width: 16px;
+    text-align: center;
+}
+
+.disciplina-menu-item.danger {
+    color: #dc3545;
+}
+
+.disciplina-menu-item.danger:hover {
+    background: #fff5f5;
 }
 
 .status-badge {
@@ -1675,22 +1780,29 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
 .disciplina-header-clickable {
     cursor: pointer;
     transition: all 0.3s ease;
-    padding: 20px;
-    border-radius: 8px;
+    padding: 18px 20px;
+    border-radius: 8px 8px 0 0;
 }
 
 .disciplina-header-clickable:hover {
-    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    background: #fafbfc;
 }
 
 .disciplina-header-clickable:active {
-    background: linear-gradient(135deg, #e9ecef, #dee2e6);
+    background: #f1f3f5;
+}
+
+.disciplina-header-clickable:focus {
+    outline: 2px solid #023A8D;
+    outline-offset: -2px;
 }
 
 /* Chevron animado */
 .disciplina-chevron {
     transition: transform 0.3s ease;
-    color: #023A8D;
+    color: #6c757d;
+    font-size: 0.9rem;
+    margin-left: auto;
 }
 
 .disciplina-accordion.expanded .disciplina-chevron {
@@ -1699,11 +1811,15 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
 
 /* Conteúdo da sanfona */
 .disciplina-detalhes-content {
-    border-top: 1px solid #dee2e6;
-    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    background: #fafbfc;
     border-radius: 0 0 8px 8px;
     overflow: hidden;
     animation: slideDown 0.3s ease-out;
+}
+
+.disciplina-detalhes-data {
+    padding: 20px;
 }
 
 @keyframes slideDown {
@@ -1713,8 +1829,62 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
     }
     to {
         opacity: 1;
-        max-height: 1000px;
+        max-height: 3000px;
     }
+}
+
+/* Painel superior do accordion expandido */
+.disciplina-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+}
+
+.disciplina-panel-title {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: #023A8D;
+    font-size: 1.05rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.disciplina-panel-actions {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.disciplina-quick-filters {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.quick-filter-select {
+    padding: 6px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 13px;
+    background: white;
+    color: #495057;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.quick-filter-select:hover {
+    border-color: #023A8D;
+}
+
+.quick-filter-select:focus {
+    outline: none;
+    border-color: #023A8D;
+    box-shadow: 0 0 0 3px rgba(2, 58, 141, 0.1);
 }
 
 /* Loading spinner */
@@ -1729,69 +1899,102 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
     border-width: 0.2em;
 }
 
-/* Tabela de aulas */
-.aulas-table {
+/* Tabela de aulas - Densidade Reduzida */
+.aulas-table,
+.table-responsive table {
     width: 100%;
     border-collapse: collapse;
     margin: 0;
     background: white;
     border-radius: 8px;
     overflow: hidden;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+    font-size: 13px;
 }
 
-.aulas-table th {
-    background: linear-gradient(135deg, #023A8D, #1a4ba8);
+.aulas-table th,
+.table-responsive table th,
+.table-primary th {
+    background: #023A8D;
     color: white;
-    padding: 12px 8px;
+    padding: 10px 12px;
     font-weight: 600;
-    font-size: 0.9rem;
-    text-align: center;
+    font-size: 12px;
+    text-align: left;
     border: none;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
 
-.aulas-table td {
-    padding: 12px 8px;
-    border-bottom: 1px solid #e9ecef;
-    font-size: 0.9rem;
-    text-align: center;
+.aulas-table td,
+.table-responsive table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #f1f3f5;
+    font-size: 13px;
+    text-align: left;
     vertical-align: middle;
+    line-height: 1.4;
 }
 
-.aulas-table tbody tr:hover {
-    background: #f8f9fa;
+.aulas-table tbody tr,
+.table-responsive table tbody tr {
+    transition: background 0.15s ease;
 }
 
-.aulas-table tbody tr:last-child td {
+.aulas-table tbody tr:hover,
+.table-responsive table tbody tr:hover {
+    background: #fafbfc;
+}
+
+.aulas-table tbody tr:last-child td,
+.table-responsive table tbody tr:last-child td {
     border-bottom: none;
 }
 
-/* Status badges na tabela */
-.status-badge-table {
-    padding: 4px 8px;
+/* Status badges na tabela - Chips Semânticos */
+.status-badge-table,
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
     border-radius: 12px;
-    font-size: 0.8rem;
+    font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
+    letter-spacing: 0.03em;
+    line-height: 1.3;
 }
 
-.status-realizada {
-    background: #d4edda;
-    color: #155724;
-    border: 1px solid #c3e6cb;
+/* Status: AGENDADA - Neutro */
+.status-agendada,
+.badge.bg-warning {
+    background: #f8f9fa !important;
+    color: #495057 !important;
+    border: 1px solid #dee2e6;
 }
 
-.status-agendada {
-    background: #cce5ff;
-    color: #004085;
-    border: 1px solid #74c0fc;
+/* Status: REALIZADA - Verde */
+.status-realizada,
+.badge.bg-success {
+    background: #d1f4e0 !important;
+    color: #1e7d3c !important;
+    border: 1px solid #9ae6b4;
 }
 
-.status-cancelada {
-    background: #f8d7da;
-    color: #721c24;
-    border: 1px solid #f5c6cb;
+/* Status: CANCELADA - Vermelho */
+.status-cancelada,
+.badge.bg-danger {
+    background: #fee !important;
+    color: #c41e3a !important;
+    border: 1px solid #fca5a5;
+}
+
+/* Status: REAGENDADA - Azul */
+.status-reagendada,
+.badge.bg-info {
+    background: #dbeafe !important;
+    color: #1e40af !important;
+    border: 1px solid #93c5fd;
 }
 
 /* Informações do instrutor */
@@ -1881,6 +2084,245 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
     background: linear-gradient(90deg, #023A8D, #1a4ba8);
     border-radius: 4px;
     transition: width 0.3s ease;
+}
+
+/* ==========================================
+   SKELETON LOADING STATES
+   ========================================== */
+.skeleton {
+    background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s infinite;
+    border-radius: 4px;
+}
+
+@keyframes skeleton-loading {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.skeleton-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-left: 4px solid #dee2e6;
+    border-radius: 8px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+}
+
+.skeleton-title {
+    height: 20px;
+    width: 40%;
+    margin-bottom: 12px;
+}
+
+.skeleton-text {
+    height: 14px;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.skeleton-text-short {
+    height: 14px;
+    width: 60%;
+}
+
+.skeleton-chips {
+    display: flex;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.skeleton-chip {
+    height: 24px;
+    width: 80px;
+    border-radius: 16px;
+}
+
+/* ==========================================
+   EMPTY STATES
+   ========================================== */
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    color: #6c757d;
+}
+
+.empty-state-icon {
+    font-size: 3.5rem;
+    color: #dee2e6;
+    margin-bottom: 20px;
+    opacity: 0.6;
+}
+
+.empty-state-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #495057;
+    margin-bottom: 8px;
+}
+
+.empty-state-description {
+    font-size: 0.95rem;
+    color: #6c757d;
+    margin-bottom: 24px;
+    line-height: 1.5;
+}
+
+.empty-state-action {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 20px;
+    background: #023A8D;
+    color: white;
+    border-radius: 8px;
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.empty-state-action:hover {
+    background: #012454;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(2, 58, 141, 0.3);
+}
+
+/* ==========================================
+   ACESSIBILIDADE
+   ========================================== */
+/* Foco visível em todos os elementos interativos */
+button:focus,
+a:focus,
+select:focus,
+input:focus,
+.disciplina-header-clickable:focus {
+    outline: 2px solid #023A8D;
+    outline-offset: 2px;
+}
+
+/* Tooltips acessíveis */
+[title] {
+    position: relative;
+}
+
+/* Melhorar contraste dos ícones monocromáticos */
+.icon-mono {
+    color: #495057;
+}
+
+/* Estados de hover acessíveis */
+.btn-group .btn:focus,
+.action-btn:focus {
+    outline: 2px solid #023A8D;
+    outline-offset: 2px;
+    z-index: 20;
+}
+
+/* ==========================================
+   CONTROLES: EXPANDIR/RECOLHER TODOS
+   ========================================== */
+.disciplinas-global-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding: 12px 16px;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.global-controls-left {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.global-control-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border: 1px solid #dee2e6;
+    background: white;
+    color: #495057;
+    font-size: 13px;
+    font-weight: 500;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.global-control-btn:hover {
+    border-color: #023A8D;
+    color: #023A8D;
+    background: #f0f7ff;
+}
+
+.global-control-btn i {
+    font-size: 12px;
+}
+
+/* ==========================================
+   RESPONSIVIDADE - TABELA MOBILE
+   ========================================== */
+/* Em telas mobile, transformar tabela em lista stacked */
+@media (max-width: 768px) {
+    .table-responsive {
+        overflow-x: visible;
+    }
+    
+    .table-responsive table {
+        display: block;
+    }
+    
+    .table-responsive thead {
+        display: none;
+    }
+    
+    .table-responsive tbody {
+        display: block;
+    }
+    
+    .table-responsive tr {
+        display: block;
+        margin-bottom: 16px;
+        border: 1px solid #e9ecef;
+        border-radius: 8px;
+        padding: 12px;
+        background: white;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    }
+    
+    .table-responsive td {
+        display: block;
+        text-align: left !important;
+        padding: 6px 0 !important;
+        border: none;
+    }
+    
+    .table-responsive td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: #495057;
+        display: inline-block;
+        margin-right: 8px;
+        min-width: 100px;
+    }
+    
+    /* Ajustar chips e badges em mobile */
+    .badge,
+    .status-badge-table {
+        margin-top: 4px;
+    }
+    
+    /* Ações por linha em mobile */
+    .btn-group {
+        display: flex;
+        gap: 8px;
+        margin-top: 8px;
+        justify-content: flex-start;
+    }
 }
 
 /* Responsividade para tabela */
@@ -3932,6 +4374,25 @@ function updateTurmaHeaderName(newName) {
                 Disciplinas Cadastradas
             </h5>
             
+            <!-- Controles Globais -->
+            <div class="disciplinas-global-controls">
+                <div class="global-controls-left">
+                    <button class="global-control-btn" onclick="expandirTodasDisciplinas()" aria-label="Expandir todas as disciplinas">
+                        <i class="fas fa-chevron-down"></i>
+                        Expandir todas
+                    </button>
+                    <button class="global-control-btn" onclick="recolherTodasDisciplinas()" aria-label="Recolher todas as disciplinas">
+                        <i class="fas fa-chevron-up"></i>
+                        Recolher todas
+                    </button>
+                </div>
+                <div class="global-controls-right">
+                    <span style="font-size: 13px; color: #6c757d;">
+                        <?= count($disciplinasSelecionadas) ?> disciplina<?= count($disciplinasSelecionadas) != 1 ? 's' : '' ?>
+                    </span>
+                </div>
+            </div>
+            
             <?php foreach ($disciplinasSelecionadas as $index => $disciplina): ?>
                 <?php 
                 $disciplinaId = $disciplina['disciplina_id'];
@@ -3957,36 +4418,57 @@ function updateTurmaHeaderName(newName) {
                 ?>
                 <div class="disciplina-cadastrada-card disciplina-accordion" data-disciplina-id="<?= $disciplinaId ?>" data-turma-id="<?= $turmaId ?>">
                     <!-- Cabeçalho da Disciplina (Sempre Visível) -->
-                    <div class="disciplina-header-clickable" onclick="console.log('🖱️ [ONCLICK] ===== CLIQUE DETECTADO ====='); console.log('🖱️ [ONCLICK] Disciplina clicada:', '<?= htmlspecialchars($disciplinaId) ?>'); console.log('🖱️ [ONCLICK] Chamando toggleSimples...'); toggleSimples('<?= htmlspecialchars($disciplinaId) ?>'); console.log('🖱️ [ONCLICK] ===== FIM DO CLIQUE =====');">
+                    <div class="disciplina-header-clickable" 
+                         role="button" 
+                         tabindex="0"
+                         aria-expanded="false"
+                         aria-controls="detalhes-disciplina-<?= $disciplinaId ?>"
+                         onclick="console.log('🖱️ [ONCLICK] ===== CLIQUE DETECTADO ====='); console.log('🖱️ [ONCLICK] Disciplina clicada:', '<?= htmlspecialchars($disciplinaId) ?>'); console.log('🖱️ [ONCLICK] Chamando toggleSimples...'); toggleSimples('<?= htmlspecialchars($disciplinaId) ?>'); console.log('🖱️ [ONCLICK] ===== FIM DO CLIQUE =====');">
                         <div class="disciplina-info-display">
                             <div class="disciplina-nome-display">
                                 <h6>
-                                    <i class="fas fa-graduation-cap me-2" style="color: #023A8D;"></i>
+                                    <i class="fas fa-graduation-cap icon-mono"></i>
                                     <?= htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['nome_original'] ?? 'Disciplina não especificada') ?>
-                                    <i class="fas fa-chevron-down disciplina-chevron ms-2" style="transition: transform 0.3s ease;"></i>
+                                    <i class="fas fa-chevron-down disciplina-chevron"></i>
                                 </h6>
                                 
-                                <!-- Estatísticas de Aulas -->
+                                <!-- Estatísticas de Aulas - KPIs em Chips -->
                                 <div class="aulas-stats-container">
-                                    <div class="stat-item">
-                                        <span class="stat-label">Agendadas:</span>
-                                        <span class="stat-value stat-agendadas"><?= $stats['agendadas'] ?></span>
+                                    <div class="stat-item stat-agendadas">
+                                        <span class="stat-label">Agendadas</span>
+                                        <span class="stat-value"><?= $stats['agendadas'] ?></span>
                                     </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Realizadas:</span>
-                                        <span class="stat-value stat-realizadas"><?= $stats['realizadas'] ?></span>
+                                    <div class="stat-item stat-realizadas">
+                                        <span class="stat-label">Realizadas</span>
+                                        <span class="stat-value"><?= $stats['realizadas'] ?></span>
                                     </div>
-                                    <div class="stat-item">
-                                        <span class="stat-label">Faltantes:</span>
-                                        <span class="stat-value stat-faltantes"><?= $stats['faltantes'] ?></span>
+                                    <div class="stat-item stat-faltantes">
+                                        <span class="stat-label">Faltantes</span>
+                                        <span class="stat-value"><?= $stats['faltantes'] ?></span>
                                     </div>
                                 </div>
                             </div>
                             
-                            <div class="disciplina-detalhes-display">
-                                <div class="detalhe-item">
-                                    <span class="detalhe-label">Carga Horária:</span>
-                                    <span class="detalhe-valor"><?= isset($disciplina['carga_horaria_padrao']) ? $disciplina['carga_horaria_padrao'] : '1' ?> horas</span>
+                            <div class="disciplina-actions-menu">
+                                <button class="disciplina-menu-trigger" 
+                                        aria-label="Menu de ações da disciplina <?= htmlspecialchars($disciplina['nome_disciplina']) ?>"
+                                        title="Ações da disciplina"
+                                        onclick="event.stopPropagation(); toggleDisciplinaMenu(this);">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <div class="disciplina-menu-dropdown">
+                                    <button class="disciplina-menu-item" onclick="event.stopPropagation(); duplicarDisciplina(<?= $disciplinaId ?>);">
+                                        <i class="fas fa-copy"></i>
+                                        Duplicar disciplina
+                                    </button>
+                                    <button class="disciplina-menu-item" onclick="event.stopPropagation(); exportarDisciplina(<?= $disciplinaId ?>);">
+                                        <i class="fas fa-download"></i>
+                                        Exportar
+                                    </button>
+                                    <button class="disciplina-menu-item danger" onclick="event.stopPropagation(); removerDisciplina(<?= $disciplinaId ?>);">
+                                        <i class="fas fa-trash"></i>
+                                        Remover
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -4002,27 +4484,57 @@ function updateTurmaHeaderName(newName) {
                             <!-- Seção: Histórico de Agendamentos -->
                             <?php if (!empty($agendamentos)): ?>
                                 <div class="historico-agendamentos">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                        <h6 class="mb-0">
-                                            <i class="fas fa-calendar-alt me-2" style="color: #023A8D;"></i>
-                                            Histórico de Agendamentos - <?= htmlspecialchars($disciplina['nome_disciplina']) ?>
+                                    <!-- Cabeçalho do Painel Expandido -->
+                                    <div class="disciplina-panel-header">
+                                        <h6 class="disciplina-panel-title">
+                                            <i class="fas fa-calendar-alt"></i>
+                                            Histórico de Agendamentos
                                         </h6>
-                                        <button type="button" 
-                                                class="btn btn-primary btn-sm" 
-                                                onclick="abrirModalAgendarAula('<?= $disciplinaId ?>', '<?= htmlspecialchars($disciplina['nome_disciplina'], ENT_QUOTES) ?>', '<?= htmlspecialchars($turma['data_inicio']) ?>', '<?= htmlspecialchars($turma['data_fim']) ?>')"
-                                                style="display: inline-flex; align-items: center; gap: 6px;">
-                                            <i class="fas fa-plus"></i>
-                                            Agendar Nova Aula
-                                        </button>
+                                        <div class="disciplina-panel-actions">
+                                            <div class="disciplina-quick-filters">
+                                                <select class="quick-filter-select" 
+                                                        id="filter-sala-<?= $disciplinaId ?>" 
+                                                        aria-label="Filtrar por sala"
+                                                        onchange="filtrarAgendamentos(<?= $disciplinaId ?>, 'sala', this.value)">
+                                                    <option value="">Todas as salas</option>
+                                                    <!-- Opções serão preenchidas dinamicamente -->
+                                                </select>
+                                                <select class="quick-filter-select" 
+                                                        id="filter-instrutor-<?= $disciplinaId ?>"
+                                                        aria-label="Filtrar por instrutor"
+                                                        onchange="filtrarAgendamentos(<?= $disciplinaId ?>, 'instrutor', this.value)">
+                                                    <option value="">Todos os instrutores</option>
+                                                    <!-- Opções serão preenchidas dinamicamente -->
+                                                </select>
+                                                <select class="quick-filter-select" 
+                                                        id="filter-status-<?= $disciplinaId ?>"
+                                                        aria-label="Filtrar por situação"
+                                                        onchange="filtrarAgendamentos(<?= $disciplinaId ?>, 'status', this.value)">
+                                                    <option value="">Todas as situações</option>
+                                                    <option value="agendada">Agendada</option>
+                                                    <option value="realizada">Realizada</option>
+                                                    <option value="cancelada">Cancelada</option>
+                                                    <option value="reagendada">Reagendada</option>
+                                                </select>
+                                            </div>
+                                            <button type="button" 
+                                                    class="btn btn-primary btn-sm" 
+                                                    onclick="abrirModalAgendarAula('<?= $disciplinaId ?>', '<?= htmlspecialchars($disciplina['nome_disciplina'], ENT_QUOTES) ?>', '<?= htmlspecialchars($turma['data_inicio']) ?>', '<?= htmlspecialchars($turma['data_fim']) ?>')"
+                                                    aria-label="Agendar nova aula para <?= htmlspecialchars($disciplina['nome_disciplina']) ?>"
+                                                    style="display: inline-flex; align-items: center; gap: 6px;">
+                                                <i class="fas fa-plus"></i>
+                                                Agendar Nova Aula
+                                            </button>
+                                        </div>
                                     </div>
                                     
                                     <div class="table-responsive">
-                                        <table class="table table-striped table-hover">
+                                        <table class="table table-hover" data-disciplina-id="<?= $disciplinaId ?>">
                                             <thead class="table-primary">
                                                 <tr>
                                                     <th>Aula</th>
-                                                    <th>Data</th>
-                                                    <th>Horário</th>
+                                                    <th data-sortable="true" data-sort-key="data">Data</th>
+                                                    <th data-sortable="true" data-sort-key="horario">Horário</th>
                                                     <th>Instrutor</th>
                                                     <th>Sala</th>
                                                     <th>Duração</th>
@@ -4031,28 +4543,41 @@ function updateTurmaHeaderName(newName) {
                                                 </tr>
                                             </thead>
                                             <tbody>
-                                                <?php foreach ($agendamentos as $agendamento): ?>
-                                                    <tr data-agendamento-id="<?= $agendamento['id'] ?>">
-                                                        <td>
+                                                <?php 
+                                                // Ordenar agendamentos por data e hora (crescente)
+                                                usort($agendamentos, function($a, $b) {
+                                                    $dateTimeA = strtotime($a['data_aula'] . ' ' . $a['hora_inicio']);
+                                                    $dateTimeB = strtotime($b['data_aula'] . ' ' . $b['hora_inicio']);
+                                                    return $dateTimeA - $dateTimeB;
+                                                });
+                                                
+                                                foreach ($agendamentos as $agendamento): 
+                                                    $dataObj = new DateTime($agendamento['data_aula']);
+                                                    $diaSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'][$dataObj->format('w')];
+                                                    $mesAbrev = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'][(int)$dataObj->format('m') - 1];
+                                                    $dataFormatada = sprintf('%s, %d %s %s', $diaSemana, $dataObj->format('d'), $mesAbrev, $dataObj->format('Y'));
+                                                    $horarioFormatado = date('H:i', strtotime($agendamento['hora_inicio'])) . '–' . date('H:i', strtotime($agendamento['hora_fim']));
+                                                ?>
+                                                    <tr data-agendamento-id="<?= $agendamento['id'] ?>" data-sala="<?= htmlspecialchars($agendamento['sala_nome'] ?? '') ?>" data-instrutor="<?= htmlspecialchars($agendamento['instrutor_nome'] ?? '') ?>" data-status="<?= $agendamento['status'] ?>">
+                                                        <td data-label="Aula">
                                                             <strong><?= htmlspecialchars($agendamento['nome_aula']) ?></strong>
                                                         </td>
-                                                        <td>
-                                                            <?= date('d/m/Y', strtotime($agendamento['data_aula'])) ?>
+                                                        <td data-label="Data">
+                                                            <?= $dataFormatada ?>
                                                         </td>
-                                                        <td>
-                                                            <?= date('H:i', strtotime($agendamento['hora_inicio'])) ?> - 
-                                                            <?= date('H:i', strtotime($agendamento['hora_fim'])) ?>
+                                                        <td data-label="Horário">
+                                                            <?= $horarioFormatado ?>
                                                         </td>
-                                                        <td>
+                                                        <td data-label="Instrutor">
                                                             <?= htmlspecialchars($agendamento['instrutor_nome'] ?? 'Não informado') ?>
                                                         </td>
-                                                        <td>
+                                                        <td data-label="Sala">
                                                             <?= htmlspecialchars($agendamento['sala_nome'] ?? 'Não informada') ?>
                                                         </td>
-                                                        <td>
+                                                        <td data-label="Duração">
                                                             <?= $agendamento['duracao_minutos'] ?> min
                                                         </td>
-                                                        <td>
+                                                        <td data-label="Status">
                                                             <?php
                                                             $statusClass = '';
                                                             $statusText = '';
@@ -4080,21 +4605,36 @@ function updateTurmaHeaderName(newName) {
                                                             ?>
                                                             <span class="<?= $statusClass ?>"><?= $statusText ?></span>
                                                         </td>
-                                                        <td>
-                                                            <div class="btn-group" role="group">
-                                                                <?php if ($agendamento['status'] === 'agendada'): ?>
+                                                        <td data-label="Ações">
+                                                            <div class="btn-group" role="group" aria-label="Ações do agendamento">
+                                                                <?php if ($agendamento['status'] === 'agendada'): 
+                                                                    $labelEditar = sprintf('Editar agendamento de %s às %s', 
+                                                                        date('d/m', strtotime($agendamento['data_aula'])), 
+                                                                        date('H:i', strtotime($agendamento['hora_inicio'])));
+                                                                    $labelCancelar = sprintf('Cancelar agendamento de %s', 
+                                                                        $agendamento['nome_aula']);
+                                                                ?>
                                                                     <button type="button" 
                                                                             class="btn btn-sm btn-outline-primary" 
                                                                             onclick="editarAgendamento(<?= $agendamento['id'] ?>, '<?= htmlspecialchars($agendamento['nome_aula']) ?>', '<?= $agendamento['data_aula'] ?>', '<?= $agendamento['hora_inicio'] ?>', '<?= $agendamento['hora_fim'] ?>', '<?= $agendamento['instrutor_id'] ?>', '<?= $agendamento['sala_id'] ?? '' ?>', '<?= $agendamento['duracao_minutos'] ?>', '<?= htmlspecialchars($agendamento['observacoes'] ?? '') ?>')"
-                                                                            title="Editar agendamento"
-                                                                            aria-label="Editar agendamento"
+                                                                            title="<?= htmlspecialchars($labelEditar) ?>"
+                                                                            aria-label="<?= htmlspecialchars($labelEditar) ?>"
                                                                             style="min-width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-width: 2px; font-weight: 500; background: white; border-color: #0d6efd; color: #0d6efd;">
-                                                                        <span style="font-size: 14px; font-weight: bold; color: #0d6efd;">✏</span>
+                                                                        <i class="fas fa-pen" style="font-size: 12px;"></i>
+                                                                    </button>
+                                                                    <button type="button" 
+                                                                            class="btn btn-sm btn-outline-secondary" 
+                                                                            onclick="duplicarAgendamento(<?= $agendamento['id'] ?>)"
+                                                                            title="Duplicar agendamento"
+                                                                            aria-label="Duplicar agendamento"
+                                                                            style="min-width: 32px; height: 32px;">
+                                                                        <i class="fas fa-copy" style="font-size: 12px;"></i>
                                                                     </button>
                                                                     <button type="button" 
                                                                             class="btn btn-sm btn-outline-danger" 
-                                                                            onclick="cancelarAgendamento(<?= $agendamento['id'] ?>, '<?= htmlspecialchars($agendamento['nome_aula']) ?>')"
-                                                                            title="Cancelar agendamento">
+                                                                            onclick="if(confirm('Tem certeza que deseja cancelar este agendamento? Esta ação não pode ser desfeita.')) cancelarAgendamento(<?= $agendamento['id'] ?>, '<?= htmlspecialchars($agendamento['nome_aula']) ?>')"
+                                                                            title="<?= htmlspecialchars($labelCancelar) ?>"
+                                                                            aria-label="<?= htmlspecialchars($labelCancelar) ?>">
                                                                         <i class="fas fa-times"></i>
                                                                     </button>
                                                                 <?php else: ?>
@@ -4110,24 +4650,34 @@ function updateTurmaHeaderName(newName) {
                                 </div>
                             <?php else: ?>
                                 <div class="historico-agendamentos">
-                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
-                                        <h6 class="mb-0">
-                                            <i class="fas fa-calendar-alt me-2" style="color: #023A8D;"></i>
-                                            Histórico de Agendamentos - <?= htmlspecialchars($disciplina['nome_disciplina']) ?>
+                                    <!-- Cabeçalho do Painel Expandido -->
+                                    <div class="disciplina-panel-header">
+                                        <h6 class="disciplina-panel-title">
+                                            <i class="fas fa-calendar-alt"></i>
+                                            Histórico de Agendamentos
                                         </h6>
-                                        <button type="button" 
-                                                class="btn btn-primary btn-sm" 
-                                                onclick="abrirModalAgendarAula('<?= $disciplinaId ?>', '<?= htmlspecialchars($disciplina['nome_disciplina'], ENT_QUOTES) ?>', '<?= htmlspecialchars($turma['data_inicio']) ?>', '<?= htmlspecialchars($turma['data_fim']) ?>')"
-                                                style="display: inline-flex; align-items: center; gap: 6px;">
-                                            <i class="fas fa-plus"></i>
-                                            Agendar Nova Aula
-                                        </button>
+                                        <div class="disciplina-panel-actions">
+                                            <button type="button" 
+                                                    class="btn btn-primary btn-sm" 
+                                                    onclick="abrirModalAgendarAula('<?= $disciplinaId ?>', '<?= htmlspecialchars($disciplina['nome_disciplina'], ENT_QUOTES) ?>', '<?= htmlspecialchars($turma['data_inicio']) ?>', '<?= htmlspecialchars($turma['data_fim']) ?>')"
+                                                    aria-label="Agendar primeira aula para <?= htmlspecialchars($disciplina['nome_disciplina']) ?>"
+                                                    style="display: inline-flex; align-items: center; gap: 6px;">
+                                                <i class="fas fa-plus"></i>
+                                                Agendar Nova Aula
+                                            </button>
+                                        </div>
                                     </div>
                                     
-                                    <div class="text-center py-4">
-                                        <i class="fas fa-calendar-times fa-3x text-muted mb-3"></i>
-                                        <h6 class="text-muted">Nenhum agendamento encontrado</h6>
-                                        <p class="text-muted small">Não há aulas agendadas para esta disciplina ainda.</p>
+                                    <!-- Empty State -->
+                                    <div class="empty-state">
+                                        <div class="empty-state-icon">
+                                            <i class="fas fa-calendar-plus"></i>
+                                        </div>
+                                        <h5 class="empty-state-title">Sem agendamentos ainda</h5>
+                                        <p class="empty-state-description">
+                                            Esta disciplina ainda não possui aulas agendadas.<br>
+                                            Clique no botão acima para agendar a primeira aula.
+                                        </p>
                                     </div>
                                 </div>
                             <?php endif; ?>
@@ -4138,10 +4688,17 @@ function updateTurmaHeaderName(newName) {
         </div>
     <?php endif; ?>
     
-    <!-- Informação sobre disciplinas automáticas -->
-    <div class="alert alert-info">
-        <i class="fas fa-info-circle me-2"></i>
-        <strong>Disciplinas Automáticas:</strong> As disciplinas desta turma são definidas automaticamente pelo tipo de curso selecionado. Para alterar as disciplinas, altere o tipo de curso da turma nas informações básicas.
+    <!-- Informação sobre disciplinas automáticas - Callout discreto -->
+    <div style="background: #f8f9fa; border-left: 3px solid #6c757d; border-radius: 6px; padding: 14px 18px; margin-top: 30px; font-size: 13px; color: #495057;">
+        <div style="display: flex; align-items: flex-start; gap: 10px;">
+            <i class="fas fa-info-circle" style="color: #6c757d; margin-top: 2px; font-size: 14px;"></i>
+            <div>
+                <strong style="font-weight: 600; color: #343a40;">Sobre as disciplinas:</strong>
+                <span style="color: #6c757d;">
+                    As disciplinas são definidas automaticamente pelo tipo de curso selecionado. Os KPIs mostrados referem-se ao agendamento das aulas, não à presença dos alunos.
+                </span>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -14257,4 +14814,180 @@ function excluirTurmaCompleta(turmaId, nomeTurma) {
         alert('❌ Erro ao excluir turma. Verifique sua conexão e tente novamente.');
     });
 }
+
+// ==========================================
+// FUNÇÕES OTIMIZADAS PARA UX
+// ==========================================
+
+/**
+ * Toggle do menu de ações da disciplina
+ */
+function toggleDisciplinaMenu(button) {
+    const dropdown = button.nextElementSibling;
+    const isOpen = dropdown.classList.contains('show');
+    
+    // Fechar todos os outros menus
+    document.querySelectorAll('.disciplina-menu-dropdown.show').forEach(menu => {
+        menu.classList.remove('show');
+    });
+    
+    // Alternar o menu atual
+    if (!isOpen) {
+        dropdown.classList.add('show');
+        
+        // Fechar ao clicar fora
+        setTimeout(() => {
+            document.addEventListener('click', function closeMenu(e) {
+                if (!button.contains(e.target) && !dropdown.contains(e.target)) {
+                    dropdown.classList.remove('show');
+                    document.removeEventListener('click', closeMenu);
+                }
+            });
+        }, 10);
+    }
+}
+
+/**
+ * Expandir todas as disciplinas
+ */
+function expandirTodasDisciplinas() {
+    console.log('📂 Expandindo todas as disciplinas...');
+    const disciplinas = document.querySelectorAll('.disciplina-accordion');
+    
+    disciplinas.forEach(card => {
+        const disciplinaId = card.getAttribute('data-disciplina-id');
+        const content = card.querySelector('.disciplina-detalhes-content');
+        const header = card.querySelector('.disciplina-header-clickable');
+        
+        if (content && content.style.display === 'none') {
+            content.style.display = 'block';
+            card.classList.add('expanded');
+            
+            if (header) {
+                header.setAttribute('aria-expanded', 'true');
+            }
+            
+            console.log(`  ✅ Expandida: ${disciplinaId}`);
+        }
+    });
+}
+
+/**
+ * Recolher todas as disciplinas
+ */
+function recolherTodasDisciplinas() {
+    console.log('📁 Recolhendo todas as disciplinas...');
+    const disciplinas = document.querySelectorAll('.disciplina-accordion');
+    
+    disciplinas.forEach(card => {
+        const disciplinaId = card.getAttribute('data-disciplina-id');
+        const content = card.querySelector('.disciplina-detalhes-content');
+        const header = card.querySelector('.disciplina-header-clickable');
+        
+        if (content && content.style.display !== 'none') {
+            content.style.display = 'none';
+            card.classList.remove('expanded');
+            
+            if (header) {
+                header.setAttribute('aria-expanded', 'false');
+            }
+            
+            console.log(`  ✅ Recolhida: ${disciplinaId}`);
+        }
+    });
+}
+
+/**
+ * Filtrar agendamentos por sala, instrutor ou status
+ */
+function filtrarAgendamentos(disciplinaId, tipo, valor) {
+    console.log(`🔍 Filtrando agendamentos: disciplina=${disciplinaId}, tipo=${tipo}, valor=${valor}`);
+    
+    const tabela = document.querySelector(`table[data-disciplina-id="${disciplinaId}"]`);
+    if (!tabela) {
+        console.error('❌ Tabela não encontrada');
+        return;
+    }
+    
+    const linhas = tabela.querySelectorAll('tbody tr');
+    let visiveisCount = 0;
+    
+    linhas.forEach(linha => {
+        let mostrar = true;
+        
+        // Aplicar filtros
+        if (valor) {
+            const valorLinha = linha.getAttribute(`data-${tipo}`);
+            if (tipo === 'status') {
+                mostrar = valorLinha === valor;
+            } else {
+                mostrar = valorLinha && valorLinha.toLowerCase().includes(valor.toLowerCase());
+            }
+        }
+        
+        if (mostrar) {
+            linha.style.display = '';
+            visiveisCount++;
+        } else {
+            linha.style.display = 'none';
+        }
+    });
+    
+    console.log(`  ✅ ${visiveisCount} agendamentos visíveis de ${linhas.length}`);
+}
+
+/**
+ * Duplicar agendamento
+ */
+function duplicarAgendamento(agendamentoId) {
+    console.log('📋 Duplicando agendamento:', agendamentoId);
+    
+    if (!confirm('Deseja duplicar este agendamento?')) {
+        return;
+    }
+    
+    // Implementação simplificada - você pode ajustar conforme necessário
+    alert('Funcionalidade de duplicação será implementada em breve.');
+}
+
+/**
+ * Ações das disciplinas (menu de ⋮)
+ */
+function duplicarDisciplina(disciplinaId) {
+    console.log('📋 Duplicando disciplina:', disciplinaId);
+    alert('Funcionalidade de duplicação de disciplina será implementada em breve.');
+}
+
+function exportarDisciplina(disciplinaId) {
+    console.log('📤 Exportando disciplina:', disciplinaId);
+    alert('Funcionalidade de exportação será implementada em breve.');
+}
+
+function removerDisciplina(disciplinaId) {
+    console.log('🗑️ Removendo disciplina:', disciplinaId);
+    
+    if (confirm('Tem certeza que deseja remover esta disciplina? Esta ação não pode ser desfeita.')) {
+        alert('Funcionalidade de remoção será implementada em breve.');
+    }
+}
+
+// ==========================================
+// INICIALIZAÇÃO
+// ==========================================
+
+// Adicionar suporte a teclado nos accordions
+document.addEventListener('DOMContentLoaded', function() {
+    const accordionHeaders = document.querySelectorAll('.disciplina-header-clickable');
+    
+    accordionHeaders.forEach(header => {
+        header.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                header.click();
+            }
+        });
+    });
+    
+    console.log('✅ Funções de otimização UX carregadas');
+});
 </script>
