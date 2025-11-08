@@ -724,38 +724,40 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
 
 /* Estatísticas de Aulas - KPIs em Chips Padronizados */
 .aulas-stats-container {
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(110px, 1fr));
     gap: 10px;
     margin-top: 12px;
-    flex-wrap: wrap;
-    align-items: center;
+    max-width: 100%;
 }
 
 .stat-item {
     display: inline-flex;
     align-items: center;
+    justify-content: space-between;
     gap: 6px;
     padding: 6px 12px;
     border-radius: 16px;
-    font-size: 12px;
+    font-size: 11px;
     font-weight: 600;
     line-height: 1.4;
-    min-width: fit-content;
     transition: all 0.2s ease;
 }
 
 .stat-label {
     font-weight: 500;
     letter-spacing: 0.01em;
+    font-size: 11px;
 }
 
 .stat-value {
     font-weight: 700;
-    padding: 2px 6px;
+    padding: 2px 7px;
     border-radius: 10px;
-    min-width: 22px;
+    min-width: 24px;
     text-align: center;
-    background: rgba(255, 255, 255, 0.4);
+    background: rgba(255, 255, 255, 0.5);
+    font-size: 13px;
 }
 
 /* KPI Agendadas - Neutro/Azul */
@@ -769,26 +771,26 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
     color: #0d47a1;
 }
 
-/* KPI Realizadas - Verde */
+/* KPI Realizadas - Verde (Contraste AA: 4.5:1) */
 .stat-realizadas {
-    background: #e8f5e9;
-    color: #2e7d32;
-}
-
-.stat-realizadas .stat-value {
-    background: rgba(255, 255, 255, 0.5);
+    background: #c8e6c9;
     color: #1b5e20;
 }
 
-/* KPI Faltantes - Âmbar */
+.stat-realizadas .stat-value {
+    background: rgba(255, 255, 255, 0.6);
+    color: #194d19;
+}
+
+/* KPI Faltantes - Âmbar (Contraste AA: 4.5:1) */
 .stat-faltantes {
-    background: #fff3e0;
-    color: #e65100;
+    background: #ffe0b2;
+    color: #c35c00;
 }
 
 .stat-faltantes .stat-value {
-    background: rgba(255, 255, 255, 0.5);
-    color: #bf360c;
+    background: rgba(255, 255, 255, 0.6);
+    color: #b34900;
 }
 
 /* Estilos para botões de ação na tabela */
@@ -913,18 +915,62 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
 /* Responsividade para estatísticas */
 @media (max-width: 768px) {
     .aulas-stats-container {
+        grid-template-columns: repeat(2, 1fr);
         gap: 8px;
-        margin-top: 6px;
+        margin-top: 10px;
+    }
+    
+    .stat-item:last-child {
+        grid-column: 1 / -1;
+        max-width: 50%;
     }
     
     .stat-item {
-        font-size: 0.8rem;
-        padding: 3px 6px;
+        font-size: 10px;
+        padding: 5px 10px;
+    }
+    
+    .stat-label {
+        font-size: 10px;
     }
     
     .stat-value {
-        padding: 1px 4px;
-        min-width: 18px;
+        padding: 2px 6px;
+        min-width: 22px;
+        font-size: 12px;
+    }
+    
+    .disciplina-header-clickable {
+        position: relative;
+    }
+    
+    .disciplina-info-display {
+        display: block;
+        padding-right: 70px;
+    }
+    
+    .disciplina-nome-display {
+        margin-bottom: 10px;
+    }
+    
+    .disciplina-nome-display h6 {
+        flex-wrap: wrap;
+        padding-right: 0;
+    }
+    
+    .disciplina-actions-menu {
+        position: absolute;
+        top: 18px;
+        right: 46px;
+        z-index: 5;
+    }
+    
+    .disciplina-chevron {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        margin-left: 0;
+        z-index: 5;
     }
     
     .btn-group .btn {
@@ -936,13 +982,12 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
 
 @media (max-width: 576px) {
     .aulas-stats-container {
-        flex-direction: column;
-        gap: 6px;
+        grid-template-columns: repeat(2, 1fr);
     }
     
-    .stat-item {
-        justify-content: space-between;
-        width: 100%;
+    .stat-item:last-child {
+        grid-column: 1 / -1;
+        max-width: 100%;
     }
 }
 
@@ -968,6 +1013,7 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
     justify-content: space-between;
     align-items: flex-start;
     gap: 20px;
+    position: relative;
 }
 
 .disciplina-nome-display {
@@ -982,6 +1028,7 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
     display: flex;
     align-items: center;
     gap: 10px;
+    line-height: 1.3;
 }
 
 .disciplina-nome-display h6 i.fa-graduation-cap {
@@ -992,6 +1039,7 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
 .disciplina-actions-menu {
     position: relative;
     display: inline-flex;
+    flex-shrink: 0;
 }
 
 .disciplina-menu-trigger {
@@ -1803,6 +1851,7 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
     color: #6c757d;
     font-size: 0.9rem;
     margin-left: auto;
+    flex-shrink: 0;
 }
 
 .disciplina-accordion.expanded .disciplina-chevron {
@@ -4369,11 +4418,6 @@ function updateTurmaHeaderName(newName) {
     <!-- Disciplinas já cadastradas -->
     <?php if (!empty($disciplinasSelecionadas)): ?>
         <div class="disciplinas-cadastradas-section">
-            <h5 class="section-title">
-                <i class="fas fa-check-circle text-success me-2"></i>
-                Disciplinas Cadastradas
-            </h5>
-            
             <!-- Controles Globais -->
             <div class="disciplinas-global-controls">
                 <div class="global-controls-left">
@@ -4451,23 +4495,23 @@ function updateTurmaHeaderName(newName) {
                             
                             <div class="disciplina-actions-menu">
                                 <button class="disciplina-menu-trigger" 
-                                        aria-label="Menu de ações da disciplina <?= htmlspecialchars($disciplina['nome_disciplina']) ?>"
-                                        title="Ações da disciplina"
+                                        aria-label="Ações de <?= htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['nome_original'] ?? 'disciplina') ?>"
+                                        title="Ações de <?= htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['nome_original'] ?? 'disciplina') ?>"
                                         onclick="event.stopPropagation(); toggleDisciplinaMenu(this);">
                                     <i class="fas fa-ellipsis-v"></i>
                                 </button>
                                 <div class="disciplina-menu-dropdown">
                                     <button class="disciplina-menu-item" onclick="event.stopPropagation(); duplicarDisciplina(<?= $disciplinaId ?>);">
-                                        <i class="fas fa-copy"></i>
-                                        Duplicar disciplina
+                                        <i class="fas fa-clone"></i>
+                                        Agendar semelhante
                                     </button>
                                     <button class="disciplina-menu-item" onclick="event.stopPropagation(); exportarDisciplina(<?= $disciplinaId ?>);">
-                                        <i class="fas fa-download"></i>
-                                        Exportar
+                                        <i class="fas fa-file-export"></i>
+                                        Exportar agendamentos
                                     </button>
                                     <button class="disciplina-menu-item danger" onclick="event.stopPropagation(); removerDisciplina(<?= $disciplinaId ?>);">
-                                        <i class="fas fa-trash"></i>
-                                        Remover
+                                        <i class="fas fa-trash-alt"></i>
+                                        Remover disciplina
                                     </button>
                                 </div>
                             </div>
@@ -4560,7 +4604,12 @@ function updateTurmaHeaderName(newName) {
                                                 ?>
                                                     <tr data-agendamento-id="<?= $agendamento['id'] ?>" data-sala="<?= htmlspecialchars($agendamento['sala_nome'] ?? '') ?>" data-instrutor="<?= htmlspecialchars($agendamento['instrutor_nome'] ?? '') ?>" data-status="<?= $agendamento['status'] ?>">
                                                         <td data-label="Aula">
-                                                            <strong><?= htmlspecialchars($agendamento['nome_aula']) ?></strong>
+                                                            <?php
+                                                            // Remover " - Aula X" do nome e mostrar apenas a disciplina
+                                                            $nomeAulaDisplay = $agendamento['nome_aula'];
+                                                            $nomeAulaDisplay = preg_replace('/ - Aula \d+$/', '', $nomeAulaDisplay);
+                                                            ?>
+                                                            <strong><?= htmlspecialchars($nomeAulaDisplay) ?></strong>
                                                         </td>
                                                         <td data-label="Data">
                                                             <?= $dataFormatada ?>
@@ -4611,8 +4660,9 @@ function updateTurmaHeaderName(newName) {
                                                                     $labelEditar = sprintf('Editar agendamento de %s às %s', 
                                                                         date('d/m', strtotime($agendamento['data_aula'])), 
                                                                         date('H:i', strtotime($agendamento['hora_inicio'])));
-                                                                    $labelCancelar = sprintf('Cancelar agendamento de %s', 
-                                                                        $agendamento['nome_aula']);
+                                                                    // Remover " - Aula X" do label de cancelar
+                                                                    $nomeParaLabel = preg_replace('/ - Aula \d+$/', '', $agendamento['nome_aula']);
+                                                                    $labelCancelar = sprintf('Cancelar agendamento de %s', $nomeParaLabel);
                                                                 ?>
                                                                     <button type="button" 
                                                                             class="btn btn-sm btn-outline-primary" 
@@ -4625,10 +4675,10 @@ function updateTurmaHeaderName(newName) {
                                                                     <button type="button" 
                                                                             class="btn btn-sm btn-outline-secondary" 
                                                                             onclick="duplicarAgendamento(<?= $agendamento['id'] ?>)"
-                                                                            title="Duplicar agendamento"
-                                                                            aria-label="Duplicar agendamento"
+                                                                            title="Agendar semelhante – preenche automaticamente com os dados desta aula"
+                                                                            aria-label="Agendar aula semelhante a partir desta"
                                                                             style="min-width: 32px; height: 32px;">
-                                                                        <i class="fas fa-copy" style="font-size: 12px;"></i>
+                                                                        <i class="fas fa-clone" style="font-size: 12px;"></i>
                                                                     </button>
                                                                     <button type="button" 
                                                                             class="btn btn-sm btn-outline-danger" 
@@ -8948,13 +8998,19 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                     <!-- Preview do horário -->
                     <div id="previewHorarioModal" style="background: #e7f3ff; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
-                        <strong>🕐 Preview do Agendamento:</strong>
+                        <strong style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-clock" style="color: #0d6efd;"></i>
+                            Preview do Agendamento:
+                        </strong>
                         <div id="previewContentModal" style="margin-top: 8px; font-family: monospace;"></div>
                     </div>
                     
                     <!-- Alerta de conflitos -->
                     <div id="alertaConflitosModal" style="background: #f8d7da; color: #721c24; padding: 15px; border-radius: 8px; margin-bottom: 15px; display: none;">
-                        <strong>⚠️ Conflito Detectado:</strong>
+                        <strong style="display: flex; align-items: center; gap: 8px;">
+                            <i class="fas fa-exclamation-triangle" style="color: #721c24;"></i>
+                            Conflito Detectado:
+                        </strong>
                         <div id="conflitosContentModal" style="margin-top: 8px;"></div>
                     </div>
                     
@@ -11330,6 +11386,10 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                 // Normalizar disciplina antes de preencher no campo
                 if (modalDisciplinaId && disciplinaId) {
                     modalDisciplinaId.value = normalizarDisciplinaJS(disciplinaId);
+                    
+                    // ✅ Registrar disciplina aberta para manter accordion após salvar
+                    window.ultimaDisciplinaAberta = normalizarDisciplinaJS(disciplinaId);
+                    console.log('📌 Disciplina registrada ao editar:', window.ultimaDisciplinaAberta);
                 }
                 if (modalDisciplinaNome && agendamento.nome_aula) {
                     // Extrair nome da disciplina (sem " - Aula X")
@@ -12462,70 +12522,7 @@ function removerMatricula(matriculaId, nomeAluno) {
     }
 }
 
-function enviarAgendamentoModal() {
-    const form = document.getElementById('formAgendarAulaModal');
-    const formData = new FormData(form);
-    
-    // Validar campos
-    if (!formData.get('instrutor_id') || !formData.get('data_aula') || !formData.get('hora_inicio')) {
-        mostrarMensagemModal('Preencha todos os campos obrigatórios.', 'error');
-        return;
-    }
-    
-    const btnAgendar = document.getElementById('btnAgendarAula');
-    btnAgendar.disabled = true;
-    btnAgendar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Agendando...';
-    
-    // Enviar via AJAX
-    fetch(getBasePath() + '/admin/api/turmas-teoricas.php', {
-        method: 'POST',
-        body: new URLSearchParams(Object.fromEntries(formData)),
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
-    })
-    .then(response => response.json())
-    .then(async data => {
-        if (data.sucesso) {
-            // Remover ícones duplicados da mensagem (se já tiver ✅, não adicionar outro)
-            let mensagem = data.mensagem || 'Operação realizada com sucesso!';
-            if (!mensagem.startsWith('✅') && !mensagem.startsWith('✓')) {
-                mensagem = '✅ ' + mensagem;
-            }
-            mostrarMensagemModal(mensagem, 'success');
-            
-            // Buscar os agendamentos criados para renderizar na tabela
-            const ids = (data.aulas_agendadas || []).join(',');
-            const disciplinaId = formData.get('disciplina');
-            if (ids) {
-                try {
-                    const res = await fetch(getBasePath() + '/admin/api/agendamentos-por-ids.php?ids=' + ids);
-                    const json = await res.json();
-                    if (json.success) {
-                        inserirAgendamentosNaTabela(disciplinaId, json.data);
-                    }
-                } catch (e) {
-                    console.error('Erro ao buscar agendamentos recém-criados:', e);
-                }
-            }
-            
-            // Fechar modal e resetar botão
-            fecharModalAgendarAula();
-            btnAgendar.disabled = false;
-            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> Agendar Aula(s)';
-        } else {
-            mostrarMensagemModal('❌ ' + (data.mensagem || 'Erro ao agendar aula. Tente novamente.'), 'error');
-            btnAgendar.disabled = false;
-            btnAgendar.innerHTML = '<i class="fas fa-plus"></i> Agendar Aula(s)';
-        }
-    })
-    .catch(error => {
-        console.error('Erro:', error);
-        mostrarMensagemModal('❌ Erro ao processar agendamento. Tente novamente.', 'error');
-        btnAgendar.disabled = false;
-        btnAgendar.innerHTML = '<i class="fas fa-plus"></i> ➕ Agendar Aula(s)';
-    });
-}
+// ❌ FUNÇÃO ANTIGA REMOVIDA - usar a função enviarAgendamentoModal() mais completa definida abaixo
 
 </script>
 
@@ -12967,6 +12964,10 @@ function abrirModalAgendarAula(disciplinaId, disciplinaNome, dataInicio, dataFim
         dataInicioModal = dataInicio;
         dataFimModal = dataFim;
         
+        // ✅ Registrar disciplina aberta para manter accordion após salvar
+        window.ultimaDisciplinaAberta = normalizarDisciplinaJS(disciplinaId);
+        console.log('📌 Disciplina registrada para manter aberta:', window.ultimaDisciplinaAberta);
+        
         // Preencher os campos do modal com verificação de existência
         const modalDisciplinaId = document.getElementById('modal_disciplina_id');
         const modalDisciplinaNome = document.getElementById('modal_disciplina_nome');
@@ -13407,12 +13408,32 @@ function atualizarPreviewModal() {
                 
                 if (previewContent && previewDiv) {
                     previewContent.innerHTML = `
-                        <strong>${disciplinaNome || 'Disciplina não selecionada'}</strong><br>
-                        📅 ${dataFormatada}<br>
-                        🕐 ${horariosPreview.length > 0 ? horariosPreview.join(', ') : horaInicio}<br>
-                        🎓 ${qtdAulas} aula(s) de 50 minutos cada
+                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                            <div style="font-weight: 600; margin-bottom: 4px;">${disciplinaNome || 'Disciplina não selecionada'}</div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-calendar-day" style="color: #6c757d; width: 16px;"></i>
+                                <span>${dataFormatada}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-clock" style="color: #6c757d; width: 16px;"></i>
+                                <span>${horariosPreview.length > 0 ? horariosPreview.join(', ') : horaInicio}</span>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-graduation-cap" style="color: #6c757d; width: 16px;"></i>
+                                <span>${qtdAulas} aula(s) de 50 minutos cada</span>
+                            </div>
+                        </div>
                     `;
                     previewDiv.style.display = 'block';
+                    
+                    // Scroll suave até o preview após atualizar
+                    setTimeout(() => {
+                        previewDiv.scrollIntoView({ 
+                            behavior: 'smooth', 
+                            block: 'nearest',
+                            inline: 'nearest'
+                        });
+                    }, 150);
                 }
             } else {
                 // Ocultar preview se campos não estiverem completos
@@ -13686,6 +13707,17 @@ function verificarDisponibilidadeModal() {
                 mensagem = '✅ ' + mensagem;
             }
             mostrarMensagemModal(mensagem, 'success');
+            
+            // Scroll até a mensagem de sucesso
+            setTimeout(() => {
+                const mensagemEl = document.getElementById('mensagemAgendamento');
+                if (mensagemEl && mensagemEl.style.display !== 'none') {
+                    mensagemEl.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'nearest' 
+                    });
+                }
+            }, 150);
         } else {
             // Há conflitos
             if (alertaConflitos) {
@@ -13706,6 +13738,14 @@ function verificarDisponibilidadeModal() {
                 mensagemConflitos += '</ul>';
                 alertaConflitos.innerHTML = mensagemConflitos;
                 alertaConflitos.style.display = 'block';
+                
+                // Scroll até o alerta de conflitos
+                setTimeout(() => {
+                    alertaConflitos.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'nearest' 
+                    });
+                }, 150);
             }
             
             btnAgendar.disabled = true;
@@ -13718,6 +13758,17 @@ function verificarDisponibilidadeModal() {
         btnVerificar.innerHTML = '<i class="fas fa-search"></i> Verificar Disponibilidade';
         btnAgendar.disabled = true;
         mostrarMensagemModal('❌ Erro ao verificar disponibilidade. Tente novamente.', 'error');
+        
+        // Scroll até a mensagem de erro
+        setTimeout(() => {
+            const mensagemEl = document.getElementById('mensagemAgendamento');
+            if (mensagemEl && mensagemEl.style.display !== 'none') {
+                mensagemEl.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest' 
+                });
+            }
+        }, 150);
     });
 }
 // Função para enviar agendamento (criação ou edição)
@@ -13882,49 +13933,42 @@ function enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao)
             
             const disciplinaId = formData.get('disciplina');
             
-            // Recarregar calendário e estatísticas
-            if (disciplinaId) {
-                // Recarregar calendário
-                if (typeof recarregarCalendario === 'function') {
-                    recarregarCalendario();
-                } else {
-                    // Fallback: recarregar página
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
-                }
+            console.log('📋 [DEBUG] Pós-salvamento - disciplinaId:', disciplinaId, 'ultimaDisciplinaAberta:', window.ultimaDisciplinaAberta);
+            
+            // ✅ Atualizar apenas a disciplina específica (sem reload)
+            if (disciplinaId && window.ultimaDisciplinaAberta) {
+                console.log('🔄 Atualizando disciplina após salvamento:', disciplinaId);
                 
-                // Atualizar informações da disciplina no modal (opcional - não bloquear se falhar)
-                if (typeof buscarInfoDisciplina === 'function') {
-                    buscarInfoDisciplina(disciplinaId).catch(err => {
-                        // Ignorar erros silenciosamente
-                    });
-                }
-                
-                // Atualizar estatísticas após um pequeno delay
+                // Atualizar dados da disciplina sem recarregar página
                 setTimeout(() => {
-                    if (typeof atualizarEstatisticasTurma === 'function') {
-                        atualizarEstatisticasTurma();
-                    }
-                    if (typeof atualizarEstatisticasModal === 'function') {
-                        atualizarEstatisticasModal();
-                    }
-                }, 500);
-            } else {
-                // Sem disciplinaId, apenas recarregar calendário
+                    atualizarDisciplinaAposAgendamento(disciplinaId)
+                        .then(() => {
+                            console.log('✅ Disciplina atualizada com sucesso - accordion permanece aberto');
+                        })
+                        .catch(error => {
+                            console.error('❌ Erro ao atualizar disciplina:', error);
+                            alert('Erro ao atualizar dados. A página será recarregada.');
+                            // Em caso de erro, fazer reload interceptado
+                            window.location.reload();
+                        });
+                }, 300);
+                
+                // Atualizar calendário se a função existir
                 if (typeof recarregarCalendario === 'function') {
                     recarregarCalendario();
-                } else {
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
                 }
+            } else {
+                // Fallback: usar interceptação de reload
+                console.warn('⚠️ Nenhuma disciplina registrada - fallback para reload');
+                console.log('   disciplinaId:', disciplinaId);
+                console.log('   window.ultimaDisciplinaAberta:', window.ultimaDisciplinaAberta);
+                window.location.reload();
             }
             
-            // Fechar modal e resetar botão
+            // Fechar modal e resetar botão (aguardar um pouco mais)
             setTimeout(() => {
                 fecharModalAgendarAula();
-            }, isEdicaoConfirmada ? 800 : 1500);
+            }, isEdicaoConfirmada ? 1200 : 2000);
             
             btnAgendar.disabled = false;
             if (btnAgendarTexto) {
@@ -14138,18 +14182,41 @@ function inserirAgendamentosNaTabela(disciplinaId, agendamentos) {
 // Função para mostrar mensagens no modal
 function mostrarMensagemModal(mensagem, tipo) {
     const divMensagem = document.getElementById('mensagemAgendamento');
-    divMensagem.textContent = mensagem;
-    divMensagem.style.display = 'block';
     
+    // Substituir emojis por ícones FontAwesome monocromáticos
+    let mensagemFormatada = mensagem;
     if (tipo === 'success') {
+        // Remover emojis de sucesso existentes
+        mensagemFormatada = mensagem.replace(/✅|✓|☑️/g, '').trim();
+        // Adicionar ícone FontAwesome
+        divMensagem.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-check-circle" style="color: #155724; font-size: 18px; flex-shrink: 0;"></i>
+                <span>${mensagemFormatada}</span>
+            </div>
+        `;
         divMensagem.style.backgroundColor = '#d4edda';
         divMensagem.style.color = '#155724';
         divMensagem.style.border = '1px solid #c3e6cb';
-    } else {
+    } else if (tipo === 'error') {
+        // Remover emojis de erro existentes
+        mensagemFormatada = mensagem.replace(/❌|✗|⚠️/g, '').trim();
+        // Adicionar ícone FontAwesome
+        divMensagem.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <i class="fas fa-exclamation-circle" style="color: #721c24; font-size: 18px; flex-shrink: 0;"></i>
+                <span>${mensagemFormatada}</span>
+            </div>
+        `;
         divMensagem.style.backgroundColor = '#f8d7da';
         divMensagem.style.color = '#721c24';
         divMensagem.style.border = '1px solid #f5c6cb';
+    } else {
+        // Mensagem sem tipo definido
+        divMensagem.textContent = mensagem;
     }
+    
+    divMensagem.style.display = 'block';
     
     // Ocultar após 5 segundos
     setTimeout(() => {
@@ -14937,37 +15004,148 @@ function filtrarAgendamentos(disciplinaId, tipo, valor) {
 }
 
 /**
- * Duplicar agendamento
+ * Agendar aula semelhante (duplicar com pré-preenchimento)
+ * Abre o modal em modo CRIAR com dados pré-preenchidos, exceto data, horário e quantidade
  */
 function duplicarAgendamento(agendamentoId) {
-    console.log('📋 Duplicando agendamento:', agendamentoId);
+    console.log('📋 Agendando aula semelhante ao agendamento:', agendamentoId);
     
-    if (!confirm('Deseja duplicar este agendamento?')) {
+    const modal = document.getElementById('modalAgendarAula');
+    if (!modal) {
+        console.error('Modal de agendamento não encontrado!');
         return;
     }
     
-    // Implementação simplificada - você pode ajustar conforme necessário
-    alert('Funcionalidade de duplicação será implementada em breve.');
+    // Configurar modo CRIAR (não editar)
+    const modalModo = document.getElementById('modal_modo');
+    const modalAcao = document.getElementById('modal_acao');
+    const modalAulaId = document.getElementById('modal_aula_id');
+    const modalTitulo = document.getElementById('modal_titulo');
+    const btnAgendarTexto = document.getElementById('btnAgendarTexto');
+    const campoObservacoes = document.getElementById('campoObservacoesModal');
+    const modalObservacoes = document.getElementById('modal_observacoes');
+    const btnExcluirModal = document.getElementById('btn_excluir_modal');
+    
+    // Garantir modo CRIAR
+    if (modalModo) modalModo.value = 'criar';
+    if (modalAcao) modalAcao.value = 'agendar_aula';
+    if (modalAulaId) modalAulaId.value = ''; // Limpar ID para criar novo
+    if (modalTitulo) {
+        modalTitulo.innerHTML = '<i class="fas fa-plus"></i> Agendar Aula Semelhante';
+    }
+    if (btnAgendarTexto) {
+        btnAgendarTexto.textContent = 'Agendar Aula';
+    }
+    if (campoObservacoes) {
+        campoObservacoes.style.display = 'none'; // Ocultar observações em novo agendamento
+    }
+    if (modalObservacoes) {
+        modalObservacoes.value = ''; // Limpar observações
+    }
+    if (btnExcluirModal) {
+        btnExcluirModal.style.display = 'none'; // Ocultar botão excluir
+    }
+    
+    // Exibir modal imediatamente
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+    
+    // Buscar dados do agendamento original para pré-preencher
+    fetch(`api/agendamento-detalhes.php?id=${agendamentoId}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                const agendamento = data.agendamento;
+                
+                // Preencher APENAS os campos que devem ser copiados
+                const modalDisciplinaId = document.getElementById('modal_disciplina_id');
+                const modalDisciplinaNome = document.getElementById('modal_disciplina_nome');
+                const modalInstrutorId = document.getElementById('modal_instrutor_id');
+                const modalHoraInicio = document.getElementById('modal_hora_inicio');
+                
+                // NÃO preencher: data, quantidade de aulas, observações
+                const modalDataAula = document.getElementById('modal_data_aula');
+                const modalQuantidadeAulas = document.getElementById('modal_quantidade_aulas');
+                
+                // Pré-preencher disciplina
+                let disciplinaIdNormalizado = null;
+                if (modalDisciplinaId && agendamento.disciplina) {
+                    disciplinaIdNormalizado = normalizarDisciplinaJS(agendamento.disciplina);
+                    modalDisciplinaId.value = disciplinaIdNormalizado;
+                } else if (modalDisciplinaId && agendamento.nome_aula) {
+                    // Extrair disciplina do nome
+                    const nomeDisciplina = agendamento.nome_aula.split(' - ')[0];
+                    const disciplinaId = nomeDisciplina.toLowerCase()
+                        .normalize('NFD')
+                        .replace(/[\u0300-\u036f]/g, '')
+                        .replace(/\s+/g, '_')
+                        .replace(/ç/g, 'c')
+                        .replace(/ñ/g, 'n');
+                    disciplinaIdNormalizado = normalizarDisciplinaJS(disciplinaId);
+                    modalDisciplinaId.value = disciplinaIdNormalizado;
+                }
+                
+                // ✅ Registrar disciplina aberta para manter accordion após salvar
+                if (disciplinaIdNormalizado) {
+                    window.ultimaDisciplinaAberta = disciplinaIdNormalizado;
+                    console.log('📌 Disciplina registrada ao duplicar:', window.ultimaDisciplinaAberta);
+                }
+                
+                if (modalDisciplinaNome && agendamento.nome_aula) {
+                    const nomeDisciplina = agendamento.nome_aula.split(' - ')[0];
+                    modalDisciplinaNome.value = nomeDisciplina;
+                }
+                
+                // Pré-preencher instrutor
+                if (modalInstrutorId && agendamento.instrutor_id) {
+                    modalInstrutorId.value = agendamento.instrutor_id;
+                }
+                
+                // LIMPAR data, horário e quantidade (usuário deve escolher)
+                if (modalDataAula) {
+                    modalDataAula.value = '';
+                    modalDataAula.focus(); // Focar no campo de data
+                }
+                if (modalHoraInicio) {
+                    modalHoraInicio.value = ''; // Deixar horário em branco
+                }
+                if (modalQuantidadeAulas) {
+                    modalQuantidadeAulas.value = '1'; // Resetar para 1
+                }
+                
+                console.log('✅ Modal pré-preenchido para agendar aula semelhante');
+            } else {
+                console.error('Erro ao buscar dados do agendamento:', data.message);
+                alert('Erro ao carregar dados do agendamento.');
+            }
+        })
+        .catch(error => {
+            console.error('Erro ao buscar agendamento:', error);
+            alert('Erro ao carregar dados. Tente novamente.');
+        });
 }
 
 /**
  * Ações das disciplinas (menu de ⋮)
  */
 function duplicarDisciplina(disciplinaId) {
-    console.log('📋 Duplicando disciplina:', disciplinaId);
-    alert('Funcionalidade de duplicação de disciplina será implementada em breve.');
+    console.log('📋 Agendando aula semelhante para disciplina:', disciplinaId);
+    // TODO: Abrir modal pré-preenchido com a disciplina selecionada
+    alert('Esta funcionalidade abrirá o modal de agendamento com a disciplina pré-selecionada.');
 }
 
 function exportarDisciplina(disciplinaId) {
-    console.log('📤 Exportando disciplina:', disciplinaId);
-    alert('Funcionalidade de exportação será implementada em breve.');
+    console.log('📤 Exportando agendamentos da disciplina:', disciplinaId);
+    // TODO: Gerar CSV/PDF com todos os agendamentos da disciplina
+    alert('Esta funcionalidade exportará todos os agendamentos desta disciplina em formato CSV ou PDF.');
 }
 
 function removerDisciplina(disciplinaId) {
     console.log('🗑️ Removendo disciplina:', disciplinaId);
     
-    if (confirm('Tem certeza que deseja remover esta disciplina? Esta ação não pode ser desfeita.')) {
-        alert('Funcionalidade de remoção será implementada em breve.');
+    if (confirm('Tem certeza que deseja remover esta disciplina e todos os seus agendamentos? Esta ação não pode ser desfeita.')) {
+        // TODO: Implementar remoção via API
+        alert('Esta funcionalidade removerá a disciplina e todos os agendamentos associados.');
     }
 }
 
@@ -14989,5 +15167,214 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     console.log('✅ Funções de otimização UX carregadas');
+    
+    // Interceptar reload após agendamento bem-sucedido
+    interceptarReloadAgendamento();
 });
+
+/**
+ * Interceptar reload e atualizar apenas os dados necessários
+ * Mantém o accordion aberto após agendar/editar aula
+ */
+function interceptarReloadAgendamento() {
+    // Sobrescrever window.location.reload temporariamente
+    const originalReload = window.location.reload;
+    
+    // Inicializar variável global se não existir
+    if (!window.ultimaDisciplinaAberta) {
+        window.ultimaDisciplinaAberta = null;
+    }
+    
+    // Guardar qual disciplina está aberta quando clicar no accordion
+    window.addEventListener('click', function(e) {
+        const disciplinaCard = e.target.closest('.disciplina-accordion');
+        if (disciplinaCard) {
+            const disciplinaId = disciplinaCard.getAttribute('data-disciplina-id');
+            if (disciplinaId) {
+                window.ultimaDisciplinaAberta = disciplinaId;
+                console.log('📌 Disciplina clicada registrada:', window.ultimaDisciplinaAberta);
+            }
+        }
+    });
+    
+    // Sobrescrever reload
+    window.location.reload = function(forceReload) {
+        // Verificar se temos uma disciplina aberta (definida ao abrir modal ou clicar no accordion)
+        const ultimaDisciplina = window.ultimaDisciplinaAberta;
+        
+        if (ultimaDisciplina) {
+            console.log('🔄 Interceptando reload - atualizando disciplina:', ultimaDisciplina);
+            
+            // Em vez de recarregar, atualizar apenas os dados da disciplina
+            atualizarDisciplinaAposAgendamento(ultimaDisciplina)
+                .then(() => {
+                    console.log('✅ Dados atualizados com sucesso - accordion mantido aberto');
+                    // Limpar flags
+                    window.currentEditAgendamentoId = null;
+                })
+                .catch(error => {
+                    console.error('❌ Erro ao atualizar dados:', error);
+                    // Em caso de erro, fazer reload tradicional
+                    originalReload.call(window.location, forceReload);
+                });
+        } else {
+            // Sem disciplina registrada - fazer reload normal
+            console.log('ℹ️ Nenhuma disciplina registrada - reload normal');
+            originalReload.call(window.location, forceReload);
+        }
+    };
+}
+
+/**
+ * Atualizar dados da disciplina após agendamento
+ * @param {string} disciplinaId - ID da disciplina a ser atualizada
+ */
+async function atualizarDisciplinaAposAgendamento(disciplinaId) {
+    try {
+        console.log('🔄 Atualizando disciplina:', disciplinaId);
+        
+        // Buscar turma_id da página atual
+        const urlParams = new URLSearchParams(window.location.search);
+        const turmaId = urlParams.get('turma_id');
+        
+        if (!turmaId) {
+            throw new Error('turma_id não encontrado na URL');
+        }
+        
+        // Buscar dados atualizados da disciplina
+        const url = `${getBasePath()}/admin/api/disciplina-agendamentos.php?turma_id=${turmaId}&disciplina_id=${disciplinaId}`;
+        console.log('🌐 Buscando dados em:', url);
+        
+        const response = await fetch(url, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        console.log('📦 Dados recebidos:', data);
+        
+        if (!data.success) {
+            throw new Error(data.mensagem || 'Erro ao buscar dados');
+        }
+        
+        // Atualizar KPIs (chips de estatísticas)
+        const statsContainer = document.querySelector(`[data-disciplina-id="${disciplinaId}"] .aulas-stats-container`);
+        if (statsContainer && data.stats) {
+            statsContainer.querySelector('.stat-agendadas .stat-value').textContent = data.stats.agendadas || 0;
+            statsContainer.querySelector('.stat-realizadas .stat-value').textContent = data.stats.realizadas || 0;
+            statsContainer.querySelector('.stat-faltantes .stat-value').textContent = data.stats.faltantes || 0;
+        }
+        
+        // Atualizar tabela de agendamentos
+        const tabelaContainer = document.querySelector(`[data-disciplina-id="${disciplinaId}"] .table-responsive`);
+        if (tabelaContainer && data.agendamentos) {
+            // Recriar tbody com novos dados
+            const tbody = tabelaContainer.querySelector('tbody');
+            if (tbody && data.agendamentos.length > 0) {
+                // Gerar HTML das linhas
+                tbody.innerHTML = data.agendamentos.map(ag => gerarLinhaAgendamento(ag)).join('');
+            }
+        }
+        
+        // Garantir que o accordion permaneça aberto
+        const detalhesContent = document.getElementById(`detalhes-disciplina-${disciplinaId}`);
+        if (detalhesContent) {
+            detalhesContent.style.display = 'block';
+            console.log('✅ Detalhes da disciplina mantidos visíveis');
+        } else {
+            console.warn('⚠️ Elemento detalhes-disciplina não encontrado:', `detalhes-disciplina-${disciplinaId}`);
+        }
+        
+        const card = document.querySelector(`[data-disciplina-id="${disciplinaId}"]`);
+        if (card) {
+            card.classList.add('expanded');
+            
+            // Scroll suave até a disciplina atualizada
+            setTimeout(() => {
+                card.scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'nearest' 
+                });
+            }, 100);
+            
+            console.log('✅ Card da disciplina expandido');
+        } else {
+            console.warn('⚠️ Card da disciplina não encontrado:', `[data-disciplina-id="${disciplinaId}"]`);
+        }
+        
+        console.log('✅ Disciplina atualizada e mantida aberta');
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar disciplina:', error);
+        throw error;
+    }
+}
+
+/**
+ * Gerar HTML de uma linha de agendamento
+ */
+function gerarLinhaAgendamento(agendamento) {
+    // Formatar data
+    const data = new Date(agendamento.data_aula);
+    const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+    const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+    const dataFormatada = `${diasSemana[data.getDay()]}, ${data.getDate()} ${meses[data.getMonth()]} ${data.getFullYear()}`;
+    
+    // Formatar horário
+    const horarioFormatado = `${agendamento.hora_inicio.substring(0,5)}–${agendamento.hora_fim.substring(0,5)}`;
+    
+    // Nome da aula sem " - Aula X"
+    const nomeAulaDisplay = agendamento.nome_aula.replace(/ - Aula \d+$/, '');
+    
+    // Status badge
+    const statusMap = {
+        'agendada': { class: 'bg-warning', text: 'AGENDADA' },
+        'realizada': { class: 'bg-success', text: 'REALIZADA' },
+        'cancelada': { class: 'bg-danger', text: 'CANCELADA' },
+        'reagendada': { class: 'bg-info', text: 'REAGENDADA' }
+    };
+    const status = statusMap[agendamento.status] || { class: 'bg-secondary', text: agendamento.status.toUpperCase() };
+    
+    return `
+        <tr data-agendamento-id="${agendamento.id}" data-sala="${agendamento.sala_nome || ''}" data-instrutor="${agendamento.instrutor_nome || ''}" data-status="${agendamento.status}">
+            <td data-label="Aula"><strong>${nomeAulaDisplay}</strong></td>
+            <td data-label="Data">${dataFormatada}</td>
+            <td data-label="Horário">${horarioFormatado}</td>
+            <td data-label="Instrutor">${agendamento.instrutor_nome || 'Não informado'}</td>
+            <td data-label="Sala">${agendamento.sala_nome || 'Não informada'}</td>
+            <td data-label="Duração">${agendamento.duracao_minutos} min</td>
+            <td data-label="Status">
+                <span class="badge ${status.class}">${status.text}</span>
+            </td>
+            <td data-label="Ações">
+                <div class="btn-group" role="group">
+                    ${agendamento.status === 'agendada' ? `
+                        <button type="button" class="btn btn-sm btn-outline-primary" 
+                                onclick="editarAgendamento(${agendamento.id}, '${agendamento.nome_aula}', '${agendamento.data_aula}', '${agendamento.hora_inicio}', '${agendamento.hora_fim}', '${agendamento.instrutor_id}', '${agendamento.sala_id || ''}', '${agendamento.duracao_minutos}', '${agendamento.observacoes || ''}')"
+                                title="Editar agendamento"
+                                style="min-width: 32px; height: 32px;">
+                            <i class="fas fa-pen"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary"
+                                onclick="duplicarAgendamento(${agendamento.id})"
+                                title="Agendar semelhante"
+                                style="min-width: 32px; height: 32px;">
+                            <i class="fas fa-clone"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger"
+                                onclick="if(confirm('Tem certeza que deseja cancelar este agendamento?')) cancelarAgendamento(${agendamento.id}, '${agendamento.nome_aula}')"
+                                title="Cancelar agendamento">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    ` : '<span class="text-muted small">Não editável</span>'}
+                </div>
+            </td>
+        </tr>
+    `;
+}
 </script>
