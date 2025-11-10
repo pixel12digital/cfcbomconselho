@@ -1615,84 +1615,82 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
    ========================================== */
 .estatisticas-container {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 20px;
-    margin-bottom: 30px;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
 }
+
 .stat-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
     display: flex;
     align-items: center;
-    gap: 15px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    transition: all 0.3s ease;
-    border-left: 4px solid transparent;
+    gap: 16px;
+    padding: 16px 18px;
+    min-height: 96px;
+    background: #ffffff;
+    border: 1px solid #E9EDF3;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .stat-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
 }
+
 .stat-icon {
-    width: 50px;
-    height: 50px;
-    border-radius: 12px;
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: rgba(2, 58, 141, 0.16);
+    color: var(--brand-600, #023A8D);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.5rem;
-    color: white;
+    flex-shrink: 0;
 }
+
+.stat-icon i {
+    font-size: 1.35rem;
+    line-height: 1;
+}
+
 .stat-content {
-    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
 }
 
 .stat-number {
-    font-size: 2rem;
-    font-weight: bold;
-    margin-bottom: 5px;
-    color: #2c3e50;
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #101828;
+    line-height: 1.1;
 }
 
 .stat-label {
-    font-size: 0.9rem;
-    color: #6c757d;
+    font-size: 0.8rem;
     font-weight: 500;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    color: #475467;
 }
 
-/* Cores dos cards */
-.stat-card-blue {
-    border-left-color: #007bff;
+@media (max-width: 1200px) {
+    .estatisticas-container {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
-.stat-card-blue .stat-icon {
-    background: linear-gradient(135deg, #007bff, #0056b3);
-}
-
-.stat-card-green {
-    border-left-color: #28a745;
-}
-
-.stat-card-green .stat-icon {
-    background: linear-gradient(135deg, #28a745, #20c997);
-}
-
-.stat-card-orange {
-    border-left-color: #F7931E;
-}
-
-.stat-card-orange .stat-icon {
-    background: linear-gradient(135deg, #F7931E, #ff8c00);
-}
-
-.stat-card-purple {
-    border-left-color: #6f42c1;
-}
-
-.stat-card-purple .stat-icon {
-    background: linear-gradient(135deg, #6f42c1, #8e44ad);
+@media (max-width: 600px) {
+    .estatisticas-container {
+        grid-template-columns: 1fr;
+    }
+    
+    .stat-card {
+        min-height: 88px;
+    }
 }
 
 /* ==========================================
@@ -4505,10 +4503,6 @@ function updateTurmaHeaderName(newName) {
                                         <i class="fas fa-clone"></i>
                                         Agendar semelhante
                                     </button>
-                                    <button class="disciplina-menu-item" onclick="event.stopPropagation(); exportarDisciplina(<?= $disciplinaId ?>);">
-                                        <i class="fas fa-file-export"></i>
-                                        Exportar agendamentos
-                                    </button>
                                     <button class="disciplina-menu-item danger" onclick="event.stopPropagation(); removerDisciplina(<?= $disciplinaId ?>);">
                                         <i class="fas fa-trash-alt"></i>
                                         Remover disciplina
@@ -6965,47 +6959,64 @@ function updateTurmaHeaderName(newName) {
     <!-- Aba Estatísticas -->
     <div id="tab-estatisticas" class="tab-content">
         <!-- Estatísticas Gerais da Turma -->
-        <div class="estatisticas-container" style="margin-bottom: 25px;">
-    <div class="stat-card stat-card-blue">
-        <div class="stat-icon">
-            <i class="fas fa-calendar-alt"></i>
+        <div class="estatisticas-container">
+            <?php
+                $horasObrigatorias = $totalMinutosCurso / 60;
+                $horasObrigatoriasDisplay = fmod($horasObrigatorias, 1) === 0.0
+                    ? number_format($horasObrigatorias, 0, ',', '.')
+                    : number_format($horasObrigatorias, 1, ',', '.');
+                
+                $statCards = [
+                    [
+                        'value' => $totalAulas,
+                        'display' => number_format($totalAulas, 0, ',', '.'),
+                        'label' => 'Aulas Agendadas',
+                        'icon' => 'fas fa-calendar-alt',
+                        'tooltip' => 'Nenhuma aula foi agendada ainda.',
+                    ],
+                    [
+                        'value' => $totalHoras,
+                        'display' => number_format($totalHoras, 0, ',', '.') . 'h',
+                        'label' => 'Carga Horária Total',
+                        'icon' => 'fas fa-clock',
+                        'tooltip' => 'A carga horária total será exibida conforme as aulas forem programadas.',
+                    ],
+                    [
+                        'value' => $horasObrigatorias,
+                        'display' => $horasObrigatoriasDisplay . 'h',
+                        'label' => 'Carga Horária Obrigatória',
+                        'icon' => 'fas fa-graduation-cap',
+                        'tooltip' => 'Defina as disciplinas da turma para gerar a carga obrigatória.',
+                    ],
+                    [
+                        'value' => $totalAlunos,
+                        'display' => number_format($totalAlunos, 0, ',', '.'),
+                        'label' => 'Alunos Matriculados',
+                        'icon' => 'fas fa-users',
+                        'tooltip' => 'Nenhum aluno matriculado nesta turma ainda.',
+                    ],
+                ];
+            ?>
+            
+            <?php foreach ($statCards as $card): 
+                $hasTooltip = floatval($card['value']) <= 0;
+                $titleAttr = $hasTooltip ? ' title="' . htmlspecialchars($card['tooltip']) . '"' : '';
+                $tooltipAttr = $hasTooltip ? ' data-has-tooltip="true"' : '';
+                $labelUpper = function_exists('mb_strtoupper')
+                    ? mb_strtoupper($card['label'], 'UTF-8')
+                    : strtoupper($card['label']);
+            ?>
+                <div class="stat-card"<?= $titleAttr . $tooltipAttr; ?>>
+                    <div class="stat-icon">
+                        <i class="<?= htmlspecialchars($card['icon']); ?>"></i>
+                    </div>
+                    <div class="stat-content">
+                        <span class="stat-number"><?= htmlspecialchars($card['display']); ?></span>
+                        <span class="stat-label"><?= htmlspecialchars($labelUpper); ?></span>
+                    </div>
+                </div>
+            <?php endforeach; ?>
         </div>
-        <div class="stat-content">
-            <div class="stat-number"><?= $totalAulas ?></div>
-            <div class="stat-label">Aulas Agendadas</div>
-        </div>
-    </div>
-    
-    <div class="stat-card stat-card-green">
-        <div class="stat-icon">
-            <i class="fas fa-clock"></i>
-        </div>
-        <div class="stat-content">
-            <div class="stat-number"><?= $totalHoras ?>h</div>
-                    <div class="stat-label">Carga Horária Total</div>
-        </div>
-    </div>
-    
-    <div class="stat-card stat-card-orange">
-        <div class="stat-icon">
-            <i class="fas fa-graduation-cap"></i>
-        </div>
-        <div class="stat-content">
-            <div class="stat-number"><?= round($totalMinutosCurso / 60, 1) ?>h</div>
-            <div class="stat-label">Carga Horária Obrigatória</div>
-        </div>
-    </div>
-    
-    <div class="stat-card stat-card-purple">
-        <div class="stat-icon">
-            <i class="fas fa-users"></i>
-        </div>
-        <div class="stat-content">
-            <div class="stat-number"><?= $totalAlunos ?></div>
-            <div class="stat-label">Alunos Matriculados</div>
-        </div>
-    </div>
-</div>
 
         <!-- Progresso das Disciplinas -->
         <?php
@@ -14891,6 +14902,18 @@ function excluirTurmaCompleta(turmaId, nomeTurma) {
  */
 function toggleDisciplinaMenu(button) {
     const dropdown = button.nextElementSibling;
+    if (!dropdown) {
+        return;
+    }
+    
+    const disciplinaCard = button.closest('.disciplina-accordion');
+    if (disciplinaCard) {
+        const disciplinaId = disciplinaCard.getAttribute('data-disciplina-id');
+        if (disciplinaId && !disciplinaCard.classList.contains('expanded')) {
+            toggleSimples(disciplinaId);
+        }
+    }
+    
     const isOpen = dropdown.classList.contains('show');
     
     // Fechar todos os outros menus
