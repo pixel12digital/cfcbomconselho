@@ -7726,6 +7726,34 @@ window.inicializarCalendarioSemana = function inicializarCalendarioSemana(opcoes
     }
 };
 
+/**
+ * Recarrega a semana atual do calendário via AJAX após um novo agendamento.
+ * Mantém a semana selecionada e reaplica correções de layout.
+ */
+window.recarregarCalendario = function recarregarCalendario(opcoes = {}) {
+    const indiceAtualInput = document.getElementById('semana-atual-indice');
+
+    if (!indiceAtualInput) {
+        // Fallback: inicializar calendário completo caso elementos não estejam no DOM.
+        window.inicializarCalendarioSemana({ forceFetch: true, remeasure: true });
+        return;
+    }
+
+    const indiceAtual = parseInt(indiceAtualInput.value, 10);
+    const indiceSeguro = Number.isNaN(indiceAtual) ? 0 : indiceAtual;
+
+    const configuracoes = {
+        forcarRecarregamento: true,
+        ...opcoes
+    };
+
+    carregarSemanaPorIndice(indiceSeguro, configuracoes);
+
+    if (opcoes.remeasure !== false && typeof window.reexecutarPosRender === 'function') {
+        setTimeout(() => window.reexecutarPosRender(), 220);
+    }
+};
+
 document.addEventListener('DOMContentLoaded', () => {
     const url = new URL(window.location);
     const tabParam = url.searchParams.get('tab');
