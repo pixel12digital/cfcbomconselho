@@ -3474,6 +3474,15 @@ window.showTab = function(tabName) {
             }
         });
     }
+
+    // Garantir que as estatísticas estejam atualizadas sempre que a aba for exibida
+    if (tabName === 'estatisticas') {
+        requestAnimationFrame(() => {
+            if (typeof window.atualizarEstatisticasTurma === 'function') {
+                window.atualizarEstatisticasTurma();
+            }
+        });
+    }
 };
 
 function closeAllActionMenus() {
@@ -4698,7 +4707,7 @@ function updateTurmaHeaderName(newName) {
                                                             <?php
                                                             // Remover " - Aula X" do nome e mostrar apenas a disciplina
                                                             $nomeAulaDisplay = $agendamento['nome_aula'];
-                                                            $nomeAulaDisplay = preg_replace('/ - Aula \d+$/', '', $nomeAulaDisplay);
+                                                            $nomeAulaDisplay = preg_replace('/ - Aula \d+$/i', '', $nomeAulaDisplay);
                                                             ?>
                                                             <strong><?= htmlspecialchars($nomeAulaDisplay) ?></strong>
                                                         </td>
@@ -7178,17 +7187,25 @@ function updateTurmaHeaderName(newName) {
                     Progresso da Turma
                 </h4>
                 <div class="estatisticas-progress-meta">
-                    <span class="progress-badge"><?= $totalAulasAgendadasSoma ?>/<?= $totalAulasObrigatorias ?> aulas — <?= $percentualDisplay ?>%</span>
-                    <?php if ($totalAulasRealizadasSoma > 0): ?>
-                        <span class="progress-chip"><?= $totalAulasRealizadasSoma ?> realizadas</span>
-                    <?php endif; ?>
-                    <?php if ($totalAulasFaltantesSoma > 0): ?>
-                        <span class="progress-chip"><?= $totalAulasFaltantesSoma ?> faltantes</span>
-                    <?php endif; ?>
+                    <span id="total-aulas-texto" class="progress-badge">
+                        <?= $totalAulasAgendadasSoma ?>/<?= $totalAulasObrigatorias ?> aulas agendadas
+                    </span>
+                    <span class="progress-chip">
+                        <i class="fas fa-percentage"></i>
+                        <span id="percentual-geral"><?= $percentualDisplay ?>%</span>
+                    </span>
+                    <span class="progress-chip">
+                        Realizadas:
+                        <strong id="total-realizadas"><?= $totalAulasRealizadasSoma ?></strong>
+                    </span>
+                    <span class="progress-chip">
+                        Faltantes:
+                        <strong id="total-faltantes"><?= $totalAulasFaltantesSoma ?></strong>
+                    </span>
                 </div>
             </div>
             <div class="progress-bar" aria-hidden="true">
-                <div class="progress-bar-fill" style="width: <?= min($percentualGeral, 100) ?>%;"></div>
+                <div id="barra-progresso-geral" class="progress-bar-fill" style="width: <?= min($percentualGeral, 100) ?>%;"></div>
             </div>
         </div>
         
@@ -7200,43 +7217,59 @@ function updateTurmaHeaderName(newName) {
                     
                     $percentualDisciplina = $stats['obrigatorias'] > 0 ? round(($stats['agendadas'] / $stats['obrigatorias']) * 100, 1) : 0;
                     
-                    // Definir cor baseada no progresso
-                    if ($percentualDisciplina >= 100) {
-                        $corBarra = '#28a745';
-                        $statusIcon = '✓';
-                    } elseif ($percentualDisciplina >= 75) {
-                        $corBarra = '#ffc107';
-                        $statusIcon = '⚠';
-                    } elseif ($stats['agendadas'] > 0) {
-                        $corBarra = '#17a2b8';
-                        $statusIcon = '…';
-                    } else {
-                        $corBarra = '#dc3545';
-                        $statusIcon = '○';
-                    }
-                    
                     $nomeDisciplina = htmlspecialchars($disciplina['nome_disciplina'] ?? $disciplina['nome_original'] ?? 'Disciplina');
                 ?>
-                <div style="background: #f8f9fa; padding: 12px; border-left: 4px solid <?= $corBarra ?>; margin-bottom: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <?php
+                    $statusColor = '#6c757d';
+                    $statusBackground = '#f7f8fa';
+                    $statusIconClass = 'fa-minus-circle';
+                    $statusLabel = 'Não iniciado';
+
+                    if ($percentualDisciplina >= 100) {
+                        $statusColor = '#28a745';
+                        $statusIconClass = 'fa-check-circle';
+                        $statusLabel = 'Completo';
+                    } elseif ($percentualDisciplina >= 75) {
+                        $statusColor = '#0d6efd';
+                        $statusIconClass = 'fa-flag-checkered';
+                        $statusLabel = 'Quase completo';
+                    } elseif (($stats['agendadas'] ?? 0) > 0) {
+                        $statusColor = '#f2994a';
+                        $statusIconClass = 'fa-clock';
+                        $statusLabel = 'Em progresso';
+                    }
+                ?>
+                <div id="stats-card-<?= htmlspecialchars($disciplinaId) ?>"
+                     class="disciplina-progress-card"
+                     data-disciplina-id="<?= htmlspecialchars($disciplinaId) ?>"
+                     style="background: <?= $statusBackground ?>; border: 1px solid rgba(0,0,0,0.06); border-left: 4px solid <?= $statusColor ?>; padding: 16px; border-radius: 12px; margin-bottom: 14px;">
+                    <div style="display: flex; justify-content: space-between; gap: 16px; align-items: flex-start;">
                         <div style="flex: 1; min-width: 0;">
-                            <div style="display: flex; align-items: center; gap: 8px;">
-                                <span style="font-size: 1.2rem; color: <?= $corBarra ?>; font-weight: bold;"><?= $statusIcon ?></span>
-                                <span style="font-weight: 600; color: #023A8D; font-size: 0.95rem;"><?= $nomeDisciplina ?></span>
+                <div class="stat-status" style="display: inline-flex; align-items: center; gap: 6px; color: <?= $statusColor ?>; font-weight: 600; margin-bottom: 6px;">
+                                <i class="fas <?= $statusIconClass ?>"></i>
+                                <span><?= $statusLabel ?></span>
+                            </div>
+                            <div style="font-weight: 600; color: #023A8D; font-size: 0.95rem;"><?= $nomeDisciplina ?></div>
+                        </div>
+                        <div style="text-align: right;">
+                            <div style="color: #023A8D; font-weight: 600; font-size: 0.85rem;">
+                                <?= $stats['agendadas'] ?>/<?= $stats['obrigatorias'] ?> aulas
+                            </div>
+                            <div class="stat-percentual-valor" style="color: <?= $statusColor ?>; font-weight: 700; font-size: 1.1rem;">
+                                <?= $percentualDisciplina ?>%
                             </div>
                         </div>
-                        <div style="display: flex; gap: 15px; align-items: center; font-size: 0.85rem;">
-                            <span style="color: #023A8D; font-weight: 600;"><?= $stats['agendadas'] ?>/<?= $stats['obrigatorias'] ?></span>
-                            <span style="color: <?= $corBarra ?>; font-weight: bold; font-size: 1rem;"><?= $percentualDisciplina ?>%</span>
-                        </div>
                     </div>
-                    <div style="background: #e9ecef; height: 6px; overflow: hidden;">
-                        <div style="background: <?= $corBarra ?>; height: 100%; width: <?= min($percentualDisciplina, 100) ?>%; transition: width 0.3s ease;"></div>
+                    <div class="stat-resumo" style="margin-top: 6px; font-size: 0.8rem; color: #555;">
+                        <?= $stats['agendadas'] ?>/<?= $stats['obrigatorias'] ?> aulas (faltam <?= $stats['faltantes'] ?>)
                     </div>
-                    <div style="display: flex; justify-content: space-between; margin-top: 8px; font-size: 0.75rem; color: #666;">
-                        <span>Agendadas: <strong style="color: #023A8D;"><?= $stats['agendadas'] ?></strong></span>
-                        <span>Realizadas: <strong style="color: #28a745;"><?= $stats['realizadas'] ?></strong></span>
-                        <span>Faltantes: <strong style="color: #dc3545;"><?= $stats['faltantes'] ?></strong></span>
+                    <div class="stat-progresso" style="background: #e9ecef; height: 6px; border-radius: 999px; overflow: hidden; margin-top: 8px;">
+                        <div class="stat-progresso-barra" style="background: <?= $statusColor ?>; height: 100%; width: <?= min($percentualDisciplina, 100) ?>%; transition: width 0.3s ease;"></div>
+                    </div>
+                    <div style="display: flex; justify-content: flex-start; gap: 16px; margin-top: 8px; font-size: 0.75rem; color: #555; flex-wrap: wrap;">
+                        <span>Agendadas: <strong class="stat-agendadas-valor" style="color: #023A8D;"><?= $stats['agendadas'] ?></strong></span>
+                        <span>Realizadas: <strong class="stat-realizadas-valor" style="color: #28a745;"><?= $stats['realizadas'] ?></strong></span>
+                        <span>Faltantes: <strong class="stat-faltantes-valor" style="color: #dc3545;"><?= $stats['faltantes'] ?></strong></span>
                     </div>
                 </div>
                 <?php endforeach; ?>
@@ -15283,30 +15316,32 @@ function atualizarCardDisciplina(disciplinaId, stats) {
 function atualizarCoresCardDisciplina(card, percentual, stats) {
     let corCard, bgCard, icon, status;
     
+    const neutralBackground = '#f7f8fa';
     if (percentual >= 100) {
         corCard = '#28a745';
-        bgCard = '#d4edda';
+        bgCard = neutralBackground;
         icon = 'fa-check-circle';
         status = 'Completo';
     } else if (percentual >= 75) {
-        corCard = '#ffc107';
-        bgCard = '#fff3cd';
-        icon = 'fa-exclamation-triangle';
+        corCard = '#0d6efd';
+        bgCard = neutralBackground;
+        icon = 'fa-flag-checkered';
         status = 'Quase completo';
     } else if (stats.agendadas > 0) {
-        corCard = '#ffc107';
-        bgCard = '#fff3cd';
+        corCard = '#f2994a';
+        bgCard = neutralBackground;
         icon = 'fa-clock';
         status = 'Em progresso';
     } else {
-        corCard = '#dc3545';
-        bgCard = '#f8d7da';
-        icon = 'fa-times-circle';
+        corCard = '#6c757d';
+        bgCard = neutralBackground;
+        icon = 'fa-minus-circle';
         status = 'Não iniciado';
     }
     
     // Atualizar estilos do card
     card.style.background = bgCard;
+    card.style.borderColor = 'rgba(0,0,0,0.06)';
     card.style.borderLeftColor = corCard;
     
     // Atualizar ícone e status
@@ -15362,9 +15397,9 @@ function atualizarSecaoHistorico(disciplinaId, agendamentos) {
     const oldTable = historicoSection.querySelector('.table-responsive');
     if (oldTable) oldTable.remove();
     
-    // Remover seção vazia se existir
-    const emptySection = historicoSection.querySelector('.text-center');
-    if (emptySection) emptySection.remove();
+    // Remover empty states existentes
+    const emptyStates = historicoSection.querySelectorAll('.text-center, .empty-state');
+    emptyStates.forEach(el => el.remove());
     
     // Criar nova tabela com todos os agendamentos
     if (agendamentos.length > 0) {
@@ -16060,23 +16095,42 @@ async function atualizarDisciplinaAposAgendamento(disciplinaId) {
             throw new Error(data.mensagem || 'Erro ao buscar dados');
         }
         
+        const statsResposta = data.stats || {};
+        const agendadasTotais = (statsResposta.agendadas || 0) + (statsResposta.realizadas || 0);
+        const faltantesCalculado = Number.isFinite(statsResposta.faltantes)
+            ? statsResposta.faltantes
+            : Math.max((statsResposta.obrigatorias || 0) - agendadasTotais, 0);
+        const statsParaCards = {
+            agendadas: agendadasTotais,
+            realizadas: statsResposta.realizadas || 0,
+            faltantes: faltantesCalculado,
+            obrigatorias: statsResposta.obrigatorias || 0,
+            percentual: (statsResposta.obrigatorias || 0) > 0
+                ? Math.round((agendadasTotais / statsResposta.obrigatorias) * 100)
+                : 0
+        };
+        
         // Atualizar KPIs (chips de estatísticas)
         const statsContainer = document.querySelector(`[data-disciplina-id="${disciplinaId}"] .aulas-stats-container`);
-        if (statsContainer && data.stats) {
-            statsContainer.querySelector('.stat-agendadas .stat-value').textContent = data.stats.agendadas || 0;
-            statsContainer.querySelector('.stat-realizadas .stat-value').textContent = data.stats.realizadas || 0;
-            statsContainer.querySelector('.stat-faltantes .stat-value').textContent = data.stats.faltantes || 0;
+        if (statsContainer) {
+            const agendadasEl = statsContainer.querySelector('.stat-agendadas .stat-value');
+            if (agendadasEl) agendadasEl.textContent = statsParaCards.agendadas || 0;
+            
+            const realizadasEl = statsContainer.querySelector('.stat-realizadas .stat-value');
+            if (realizadasEl) realizadasEl.textContent = statsParaCards.realizadas || 0;
+            
+            const faltantesEl = statsContainer.querySelector('.stat-faltantes .stat-value');
+            if (faltantesEl) faltantesEl.textContent = statsParaCards.faltantes || 0;
         }
         
-        // Atualizar tabela de agendamentos
-        const tabelaContainer = document.querySelector(`[data-disciplina-id="${disciplinaId}"] .table-responsive`);
-        if (tabelaContainer && data.agendamentos) {
-            // Recriar tbody com novos dados
-            const tbody = tabelaContainer.querySelector('tbody');
-            if (tbody && data.agendamentos.length > 0) {
-                // Gerar HTML das linhas
-                tbody.innerHTML = data.agendamentos.map(ag => gerarLinhaAgendamento(ag)).join('');
-            }
+        // Atualizar cartão consolidado da disciplina
+        if (typeof atualizarCardDisciplina === 'function') {
+            atualizarCardDisciplina(disciplinaId, statsParaCards);
+        }
+        
+        // Atualizar histórico completo (cria tabela se necessário)
+        if (Array.isArray(data.agendamentos)) {
+            atualizarSecaoHistorico(disciplinaId, data.agendamentos);
         }
         
         // Garantir que o accordion permaneça aberto
@@ -16089,6 +16143,10 @@ async function atualizarDisciplinaAposAgendamento(disciplinaId) {
         }
         
         const card = document.querySelector(`[data-disciplina-id="${disciplinaId}"]`);
+        if (typeof atualizarEstatisticasTurma === 'function') {
+            atualizarEstatisticasTurma();
+        }
+        
         if (card) {
             card.classList.add('expanded');
             
@@ -16127,7 +16185,7 @@ function gerarLinhaAgendamento(agendamento) {
     const horarioFormatado = `${agendamento.hora_inicio.substring(0,5)}–${agendamento.hora_fim.substring(0,5)}`;
     
     // Nome da aula sem " - Aula X"
-    const nomeAulaDisplay = agendamento.nome_aula.replace(/ - Aula \d+$/, '');
+    const nomeAulaDisplay = agendamento.nome_aula.replace(/ - Aula \d+$/i, '');
     
     // Status badge
     const statusMap = {
