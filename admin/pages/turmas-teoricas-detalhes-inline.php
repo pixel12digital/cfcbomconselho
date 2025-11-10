@@ -238,10 +238,6 @@ try {
     $totalMinutosCurso = 0;
 }
 
-// Calcular carga horária restante (total do curso - já agendada)
-$cargaHorariaRestante = max(0, $totalMinutosCurso - $totalMinutosAgendados);
-$totalHoras = round($cargaHorariaRestante / 60, 1);
-
 // Obter alunos matriculados (se a tabela existir)
 try {
     $alunosMatriculados = $db->fetchAll(
@@ -1613,82 +1609,176 @@ function montarAriaLabelProxima(array $aula, DateTimeImmutable $inicio, ?DateTim
 /* ==========================================
    ESTILOS PARA CARDS DE ESTATÍSTICAS
    ========================================== */
-.estatisticas-container {
+.estatisticas-wrapper {
+    margin-top: 18px;
+}
+
+#tab-estatisticas .estatisticas-container {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
     gap: 16px;
-    margin-bottom: 24px;
+    margin-bottom: 20px;
+    align-items: stretch;
 }
 
-.stat-card {
+#tab-estatisticas .stat-card {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 8px;
+    padding: 14px 18px;
+    min-height: 92px;
+    background: #ffffff;
+    border: 1px solid #E1E6EE;
+    border-radius: 12px;
+    box-shadow: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+}
+
+#tab-estatisticas .stat-card::before {
+    display: none !important;
+}
+
+#tab-estatisticas .stat-card:hover,
+#tab-estatisticas .stat-card:focus-within {
+    border-color: #023A8D33;
+    box-shadow: 0 2px 6px rgba(2, 58, 141, 0.08);
+}
+
+#tab-estatisticas .stat-card:focus-within {
+    outline: none;
+}
+
+#tab-estatisticas .stat-header {
     display: flex;
     align-items: center;
-    gap: 16px;
-    padding: 16px 18px;
-    min-height: 96px;
-    background: #ffffff;
-    border: 1px solid #E9EDF3;
-    border-radius: 12px;
-    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    gap: 10px;
 }
 
-.stat-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 10px rgba(15, 23, 42, 0.08);
+#tab-estatisticas .stat-icon {
+    font-size: 0;
+    line-height: 0;
 }
 
-.stat-icon {
+#tab-estatisticas .stat-icon i {
+    font-size: 24px;
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     width: 36px;
     height: 36px;
     border-radius: 999px;
-    background: rgba(2, 58, 141, 0.16);
-    color: var(--brand-600, #023A8D);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
+    background: var(--brand-600, #023A8D);
+    box-shadow: 0 0 0 1px rgba(2, 58, 141, 0.2), 0 1px 2px rgba(2, 58, 141, 0.15);
+    transition: box-shadow 0.2s ease, background 0.2s ease;
 }
 
-.stat-icon i {
-    font-size: 1.35rem;
-    line-height: 1;
-}
-
-.stat-content {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-}
-
-.stat-number {
-    font-size: 1.75rem;
+#tab-estatisticas .stat-number {
+    font-size: 26px;
     font-weight: 700;
     color: #101828;
     line-height: 1.1;
 }
 
-.stat-label {
-    font-size: 0.8rem;
-    font-weight: 500;
-    letter-spacing: 0.02em;
+#tab-estatisticas .stat-label {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
     color: #475467;
+    line-height: 1.2;
 }
 
-@media (max-width: 1200px) {
-    .estatisticas-container {
+#tab-estatisticas .estatisticas-progress {
+    margin: 0;
+    padding: 12px 20px 16px;
+    background: #ffffff;
+    border: 1px solid #E1E6EE;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+#tab-estatisticas .estatisticas-progress-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+#tab-estatisticas .estatisticas-progress-title {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #023A8D;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#tab-estatisticas .estatisticas-progress-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+#tab-estatisticas .progress-badge {
+    background: rgba(2, 58, 141, 0.12);
+    color: #023A8D;
+    padding: 4px 12px;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    line-height: 1.2;
+}
+
+#tab-estatisticas .progress-chip {
+    background: #F1F3F9;
+    color: #475467;
+    border-radius: 999px;
+    padding: 3px 10px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    height: 24px;
+    line-height: 1;
+}
+
+#tab-estatisticas .progress-bar {
+    width: 100%;
+    height: 6px;
+    border-radius: 4px;
+    background: #E5E9F3;
+    overflow: hidden;
+}
+
+#tab-estatisticas .progress-bar-fill {
+    height: 100%;
+    background: var(--brand-600, #023A8D);
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+@media (max-width: 1024px) {
+    #tab-estatisticas .estatisticas-container {
         grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
 @media (max-width: 600px) {
-    .estatisticas-container {
+    #tab-estatisticas .estatisticas-container {
         grid-template-columns: 1fr;
     }
     
-    .stat-card {
+    #tab-estatisticas .stat-card {
         min-height: 88px;
     }
 }
@@ -6959,34 +7049,50 @@ function updateTurmaHeaderName(newName) {
     <!-- Aba Estatísticas -->
     <div id="tab-estatisticas" class="tab-content">
         <!-- Estatísticas Gerais da Turma -->
-        <div class="estatisticas-container">
+        <div class="estatisticas-wrapper">
+            <div class="estatisticas-container">
             <?php
-                $horasObrigatorias = $totalMinutosCurso / 60;
-                $horasObrigatoriasDisplay = fmod($horasObrigatorias, 1) === 0.0
-                    ? number_format($horasObrigatorias, 0, ',', '.')
-                    : number_format($horasObrigatorias, 1, ',', '.');
+                $totalAulasObrigatorias = 0;
+                $totalAulasAgendadasSoma = 0;
+                $totalAulasRealizadasSoma = 0;
+                
+                foreach ($estatisticasDisciplinas as $stats) {
+                    $totalAulasObrigatorias += $stats['obrigatorias'] ?? 0;
+                    $totalAulasAgendadasSoma += $stats['agendadas'] ?? 0;
+                    $totalAulasRealizadasSoma += $stats['realizadas'] ?? 0;
+                }
+                
+                $totalAulasFaltantesSoma = max($totalAulasObrigatorias - $totalAulasAgendadasSoma, 0);
+                
+                $totalCursoAulas = $totalMinutosAgendados > 0 ? ($totalMinutosAgendados / 50) : 0;
+                $totalCursoAulasDisplay = fmod($totalCursoAulas, 1) === 0.0
+                    ? number_format($totalCursoAulas, 0, ',', '.')
+                    : number_format($totalCursoAulas, 1, ',', '.');
+                
+                $totalMetaAulas = $totalAulasObrigatorias ?: ($totalMinutosCurso > 0 ? round($totalMinutosCurso / 50) : 0);
+                $totalMetaAulasDisplay = number_format($totalMetaAulas, 0, ',', '.');
                 
                 $statCards = [
                     [
-                        'value' => $totalAulas,
-                        'display' => number_format($totalAulas, 0, ',', '.'),
+                        'value' => $totalAulasDetalhes,
+                        'display' => number_format($totalAulasDetalhes, 0, ',', '.'),
                         'label' => 'Aulas Agendadas',
                         'icon' => 'fas fa-calendar-alt',
                         'tooltip' => 'Nenhuma aula foi agendada ainda.',
                     ],
                     [
-                        'value' => $totalHoras,
-                        'display' => number_format($totalHoras, 0, ',', '.') . 'h',
-                        'label' => 'Carga Horária Total',
-                        'icon' => 'fas fa-clock',
-                        'tooltip' => 'A carga horária total será exibida conforme as aulas forem programadas.',
+                        'value' => $totalCursoAulas,
+                        'display' => $totalCursoAulasDisplay,
+                        'label' => 'Total do Curso (aulas)',
+                        'icon' => 'fas fa-layer-group',
+                        'tooltip' => 'Nenhuma aula cadastrada para o curso.',
                     ],
                     [
-                        'value' => $horasObrigatorias,
-                        'display' => $horasObrigatoriasDisplay . 'h',
-                        'label' => 'Carga Horária Obrigatória',
-                        'icon' => 'fas fa-graduation-cap',
-                        'tooltip' => 'Defina as disciplinas da turma para gerar a carga obrigatória.',
+                        'value' => $totalMetaAulas,
+                        'display' => $totalMetaAulasDisplay,
+                        'label' => 'Obrigatória (meta em aulas)',
+                        'icon' => 'fas fa-bullseye',
+                        'tooltip' => 'Configure as disciplinas da turma para definir a meta obrigatória.',
                     ],
                     [
                         'value' => $totalAlunos,
@@ -7006,68 +7112,47 @@ function updateTurmaHeaderName(newName) {
                     ? mb_strtoupper($card['label'], 'UTF-8')
                     : strtoupper($card['label']);
             ?>
-                <div class="stat-card"<?= $titleAttr . $tooltipAttr; ?>>
-                    <div class="stat-icon">
-                        <i class="<?= htmlspecialchars($card['icon']); ?>"></i>
-                    </div>
-                    <div class="stat-content">
-                        <span class="stat-number"><?= htmlspecialchars($card['display']); ?></span>
-                        <span class="stat-label"><?= htmlspecialchars($labelUpper); ?></span>
-                    </div>
-                </div>
+                        <div class="stat-card"<?= $titleAttr . $tooltipAttr; ?>>
+                            <div class="stat-header">
+                                <span class="stat-icon">
+                                    <i class="<?= htmlspecialchars($card['icon']); ?>"></i>
+                                </span>
+                                <span class="stat-number"><?= htmlspecialchars($card['display']); ?></span>
+                            </div>
+                            <span class="stat-label"><?= htmlspecialchars($labelUpper); ?></span>
+                        </div>
             <?php endforeach; ?>
+        </div>
         </div>
 
         <!-- Progresso das Disciplinas -->
         <?php
-        // Calcular progresso geral
-        $totalAulasObrigatorias = 0;
-        $totalAulasAgendadas = 0;
-        $totalAulasRealizadas = 0;
-
-        foreach ($estatisticasDisciplinas as $stats) {
-            $totalAulasObrigatorias += $stats['obrigatorias'];
-            $totalAulasAgendadas += $stats['agendadas'];
-            $totalAulasRealizadas += $stats['realizadas'];
-        }
-
-        $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadas / $totalAulasObrigatorias) * 100, 1) : 0;
-        $corProgresso = $percentualGeral >= 100 ? '#28a745' : ($percentualGeral >= 75 ? '#ffc107' : '#dc3545');
+        $percentualGeral = $totalAulasObrigatorias > 0 ? round(($totalAulasAgendadasSoma / $totalAulasObrigatorias) * 100, 1) : 0;
+        $percentualDisplay = number_format($percentualGeral, 1, '.', '');
         ?>
 
-        <div style="padding: 20px;">
-            <h4 style="color: #023A8D; margin-bottom: 15px; display: flex; align-items: center;">
-                <i class="fas fa-chart-line me-2"></i>Progresso das Disciplinas
-            </h4>
-            
-            <!-- Progresso Geral -->
-            <div id="progresso-geral-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 8px; padding: 15px; margin-bottom: 20px; color: white;">
-                <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;">
-                    <div style="flex: 1; min-width: 200px;">
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <span id="percentual-geral" style="font-size: 2.5rem; font-weight: bold; line-height: 1;"><?= $percentualGeral ?>%</span>
-                            <span id="total-aulas-texto" style="opacity: 0.95; font-size: 1rem; line-height: 1.2;">
-                                <?= $totalAulasAgendadas ?> de <?= $totalAulasObrigatorias ?> aulas agendadas
-                            </span>
-                        </div>
-                    </div>
-                    <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                        <div style="background: rgba(255,255,255,0.25); padding: 8px 15px; border-radius: 6px;">
-                            <div id="total-realizadas" style="font-size: 1.3rem; font-weight: bold; line-height: 1.2;"><?= $totalAulasRealizadas ?></div>
-                            <div style="font-size: 0.8rem; opacity: 0.95;">Realizadas</div>
-                        </div>
-                        <div style="background: rgba(255,255,255,0.25); padding: 8px 15px; border-radius: 6px;">
-                            <div id="total-faltantes" style="font-size: 1.3rem; font-weight: bold; line-height: 1.2;"><?= ($totalAulasObrigatorias - $totalAulasAgendadas) ?></div>
-                            <div style="font-size: 0.8rem; opacity: 0.95;">Faltantes</div>
-                        </div>
-                    </div>
-                </div>
-                <div style="background: rgba(255,255,255,0.25); height: 8px; border-radius: 4px; margin-top: 15px; overflow: hidden;">
-                    <div id="barra-progresso-geral" style="background: white; height: 100%; width: <?= $percentualGeral ?>%; transition: width 0.3s ease; border-radius: 4px;"></div>
+        <div class="estatisticas-progress">
+            <div class="estatisticas-progress-header">
+                <h4 class="estatisticas-progress-title">
+                    <i class="fas fa-chart-line"></i>
+                    Progresso da Turma
+                </h4>
+                <div class="estatisticas-progress-meta">
+                    <span class="progress-badge"><?= $totalAulasAgendadasSoma ?>/<?= $totalAulasObrigatorias ?> aulas — <?= $percentualDisplay ?>%</span>
+                    <?php if ($totalAulasRealizadasSoma > 0): ?>
+                        <span class="progress-chip"><?= $totalAulasRealizadasSoma ?> realizadas</span>
+                    <?php endif; ?>
+                    <?php if ($totalAulasFaltantesSoma > 0): ?>
+                        <span class="progress-chip"><?= $totalAulasFaltantesSoma ?> faltantes</span>
+                    <?php endif; ?>
                 </div>
             </div>
-            
-            <!-- Lista de Progresso por Disciplina (Otimizada) -->
+            <div class="progress-bar" aria-hidden="true">
+                <div class="progress-bar-fill" style="width: <?= min($percentualGeral, 100) ?>%;"></div>
+            </div>
+        </div>
+        
+        <!-- Lista de Progresso por Disciplina (Otimizada) -->
             <div style="display: flex; flex-direction: column; gap: 10px;">
                 <?php foreach ($disciplinasSelecionadas as $disciplina): 
                     $disciplinaId = $disciplina['disciplina_id'];
