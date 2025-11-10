@@ -42,7 +42,10 @@ if (!in_array($userType, ['admin', 'instrutor'])) {
 }
 
 // Obter dados do usuário
-$cfcId = $_SESSION['cfc_id'] ?? 1;
+$sessionCfcId = $_SESSION['cfc_id'] ?? $_SESSION['user_cfc_id'] ?? null;
+$user = getCurrentUser();
+$userCfcId = $user['cfc_id'] ?? null;
+$cfcId = $sessionCfcId ?? $userCfcId;
 
 // Obter dados da requisição
 $input = json_decode(file_get_contents('php://input'), true);
@@ -66,18 +69,28 @@ try {
     // Debug: Log dos parâmetros recebidos
     error_log("API alunos-aptos-turma: turmaId=$turmaId, cfcId=$cfcId");
     
-    // Debug: Verificar se a turma existe
-    $turma = $db->fetch("
-        SELECT id, nome, cfc_id, max_alunos
-        FROM turmas_teoricas 
-        WHERE id = ? AND cfc_id = ?
-    ", [$turmaId, $cfcId]);
+// Debug: Verificar se a turma existe
+$turma = $db->fetch("
+    SELECT id, nome, cfc_id, max_alunos
+    FROM turmas_teoricas 
+    WHERE id = ?
+", [$turmaId]);
     
     if (!$turma) {
         http_response_code(404);
         echo json_encode(['sucesso' => false, 'mensagem' => 'Turma não encontrada']);
         exit;
     }
+
+if (!$cfcId) {
+    $cfcId = (int)$turma['cfc_id'];
+}
+
+if ($userType !== 'admin' && (int)$turma['cfc_id'] !== (int)$cfcId) {
+    http_response_code(403);
+    echo json_encode(['sucesso' => false, 'mensagem' => 'Você não tem permissão para visualizar alunos desta turma']);
+    exit;
+}
     
     // Buscar alunos aptos (com exames médico e psicotécnico aprovados)
     $alunosAptos = $db->fetchAll("
@@ -86,6 +99,8 @@ try {
             a.nome,
             a.cpf,
             a.categoria_cnh,
+            a.email,
+            a.telefone,
             c.nome as cfc_nome,
             c.id as cfc_id,
             em.data_resultado as data_exame_medico,
@@ -112,7 +127,7 @@ try {
             AND em.id IS NOT NULL 
             AND ep.id IS NOT NULL
         ORDER BY a.nome
-    ", [$turmaId, $cfcId]);
+    ", [$turmaId, $turma['cfc_id']]);
     
     // Debug: Log dos alunos encontrados
     error_log("API alunos-aptos-turma: Total de alunos aptos encontrados: " . count($alunosAptos));

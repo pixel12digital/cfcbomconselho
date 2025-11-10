@@ -72,6 +72,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             if (ob_get_level()) {
                 ob_clean();
             }
+            header('Content-Type: application/json; charset=utf-8');
             echo json_encode($resultado);
             exit;
         } else {
@@ -95,6 +96,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['acao']) && $_POST['ac
             if (ob_get_level()) {
                 ob_clean();
             }
+            header('Content-Type: application/json; charset=utf-8');
             echo json_encode($resultado);
             exit;
         }
@@ -240,11 +242,10 @@ try {
 
 // Obter alunos matriculados (se a tabela existir)
 try {
-    $alunosMatriculados = $db->fetchAll(
-        "SELECT COUNT(*) as total FROM turma_alunos WHERE turma_id = ?",
+    $totalAlunos = (int)$db->fetchColumn(
+        "SELECT COUNT(*) FROM turma_matriculas WHERE turma_id = ? AND status IN ('matriculado', 'cursando')",
         [$turmaId]
     );
-    $totalAlunos = $alunosMatriculados[0]['total'] ?? 0;
 } catch (Exception $e) {
     $totalAlunos = 0;
 }
@@ -265,18 +266,24 @@ foreach ($disciplinasSelecionadas as $disciplinaSelecionada) {
 try {
     $alunosMatriculados = $db->fetchAll("
         SELECT 
-            ta.*,
+            tm.id AS matricula_id,
+            tm.aluno_id,
+            tm.status,
+            tm.data_matricula,
+            tm.observacoes,
+            tm.frequencia_percentual,
             a.nome,
             a.cpf,
             a.categoria_cnh,
             a.telefone,
             a.email,
             c.nome as cfc_nome
-        FROM turma_alunos ta
-        JOIN alunos a ON ta.aluno_id = a.id
+        FROM turma_matriculas tm
+        JOIN alunos a ON tm.aluno_id = a.id
         JOIN cfcs c ON a.cfc_id = c.id
-        WHERE ta.turma_id = ? 
-        ORDER BY ta.data_matricula DESC, a.nome
+        WHERE tm.turma_id = ? 
+          AND tm.status IN ('matriculado', 'cursando', 'concluido', 'evadido', 'transferido')
+        ORDER BY tm.data_matricula DESC, a.nome
     ", [$turmaId]);
 } catch (Exception $e) {
     $alunosMatriculados = [];
@@ -4841,15 +4848,15 @@ function updateTurmaHeaderName(newName) {
     <!-- Aba Alunos -->
     <div id="tab-alunos" class="tab-content">
         <!-- Alunos Matriculados -->
-        <div style="padding: 20px;">
+        <div style="padding: 20px;" id="alunosMatriculadosWrapper">
     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
         <h4 style="color: #023A8D; margin: 0;">
             <i class="fas fa-users me-2"></i>Alunos Matriculados
         </h4>
         <div style="display: flex; gap: 10px; align-items: center;">
-            <span style="background: #e3f2fd; color: #1976d2; padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 500;">
+            <span id="total-alunos-matriculados-badge" style="background: #e3f2fd; color: #1976d2; padding: 6px 12px; border-radius: 20px; font-size: 0.9rem; font-weight: 500;" data-total-alunos-label data-quantidade="<?= is_countable($alunosMatriculados ?? null) ? count($alunosMatriculados) : 0 ?>">
                 <i class="fas fa-user-check me-1"></i>
-                <?= count($alunosMatriculados) ?> aluno(s)
+                <?= is_countable($alunosMatriculados ?? null) ? count($alunosMatriculados) : 0 ?> aluno(s)
             </span>
             <button onclick="abrirModalInserirAlunos()" class="btn-primary" style="padding: 8px 16px; background: #28a745; color: white; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-weight: 500; transition: all 0.3s; font-size: 0.9rem;">
                 <i class="fas fa-user-plus"></i>
@@ -4858,9 +4865,10 @@ function updateTurmaHeaderName(newName) {
         </div>
     </div>
     
+    <div id="lista-alunos-matriculados">
     <?php if (!empty($alunosMatriculados)): ?>
         <div style="overflow-x: auto;">
-            <table class="alunos-table">
+            <table class="alunos-table" id="tabela-alunos-matriculados">
                 <thead>
                     <tr>
                         <th>Nome</th>
@@ -4872,40 +4880,40 @@ function updateTurmaHeaderName(newName) {
                         <th style="text-align: center;">Ações</th>
                     </tr>
                 </thead>
-                <tbody>
-                    <?php foreach ($alunosMatriculados as $aluno): ?>
-                        <tr>
+                <tbody id="tabela-alunos-matriculados-body">
+                    <?php foreach ((array) $alunosMatriculados as $aluno): ?>
+                        <tr data-aluno-id="<?= (int) ($aluno['aluno_id'] ?? 0) ?>">
                             <td>
                                 <div style="display: flex; align-items: center; gap: 8px;">
                                     <div class="aluno-avatar">
-                                        <?= strtoupper(substr($aluno['nome'], 0, 2)) ?>
+                                        <?= strtoupper(substr($aluno['nome'] ?? '', 0, 2)) ?>
                                     </div>
                                     <div>
-                                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 2px;"><?= htmlspecialchars($aluno['nome']) ?></div>
+                                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 2px;"><?= htmlspecialchars($aluno['nome'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
                                         <?php if (!empty($aluno['email'])): ?>
                                             <div style="font-size: 0.8rem; color: #6c757d;">
-                                                <i class="fas fa-envelope me-1"></i><?= htmlspecialchars($aluno['email']) ?>
+                                                <i class="fas fa-envelope me-1"></i><?= htmlspecialchars($aluno['email'], ENT_QUOTES, 'UTF-8') ?>
                                             </div>
                                         <?php endif; ?>
                                         <?php if (!empty($aluno['telefone'])): ?>
                                             <div style="font-size: 0.8rem; color: #6c757d;">
-                                                <i class="fas fa-phone me-1"></i><?= htmlspecialchars($aluno['telefone']) ?>
+                                                <i class="fas fa-phone me-1"></i><?= htmlspecialchars($aluno['telefone'], ENT_QUOTES, 'UTF-8') ?>
                                             </div>
                                         <?php endif; ?>
                                     </div>
                                 </div>
                             </td>
                             <td style="font-family: monospace; font-size: 0.9rem;">
-                                <?= htmlspecialchars($aluno['cpf']) ?>
+                                <?= htmlspecialchars($aluno['cpf'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                             </td>
                             <td>
                                 <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
-                                    <?= htmlspecialchars($aluno['categoria_cnh']) ?>
+                                    <?= htmlspecialchars($aluno['categoria_cnh'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                                 </span>
                             </td>
                             <td>
                                 <span style="color: #495057; font-size: 0.9rem;">
-                                    <?= htmlspecialchars($aluno['cfc_nome']) ?>
+                                    <?= htmlspecialchars($aluno['cfc_nome'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                                 </span>
                             </td>
                             <td style="text-align: center;">
@@ -4960,7 +4968,11 @@ function updateTurmaHeaderName(newName) {
                             </td>
                             <td style="text-align: center;">
                                 <div class="action-buttons">
-                                    <button onclick="removerMatricula(<?= $aluno['id'] ?>, '<?= htmlspecialchars($aluno['nome']) ?>')" class="action-btn action-btn-outline-danger" title="Remover da Turma">
+                                    <button
+                                        data-role="remover-matricula"
+                                        onclick="removerMatricula(<?= (int) ($aluno['aluno_id'] ?? 0) ?>, '<?= htmlspecialchars($aluno['nome'] ?? '', ENT_QUOTES, 'UTF-8') ?>')"
+                                        class="action-btn action-btn-outline-danger"
+                                        title="Remover da Turma">
                                         <i class="fas fa-trash"></i>
                                     </button>
                                 </div>
@@ -4971,7 +4983,7 @@ function updateTurmaHeaderName(newName) {
             </table>
         </div>
     <?php else: ?>
-        <div style="text-align: center; padding: 40px 20px; color: #6c757d;">
+        <div style="text-align: center; padding: 40px 20px; color: #6c757d;" data-empty-state-alunos>
             <i class="fas fa-users" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
             <h5 style="margin-bottom: 10px; color: #495057;">Nenhum aluno matriculado</h5>
             <p style="margin-bottom: 20px;">Esta turma ainda não possui alunos matriculados.</p>
@@ -4981,6 +4993,7 @@ function updateTurmaHeaderName(newName) {
             </button>
         </div>
     <?php endif; ?>
+    </div>
 </div>
     </div>
 
@@ -6101,6 +6114,30 @@ function updateTurmaHeaderName(newName) {
                 line-height: 1.4;
             }
             
+            .calendario-aula {
+                position: relative;
+                transition: box-shadow 0.25s ease, transform 0.25s ease;
+            }
+            
+            .calendario-aula.calendario-aula--destaque {
+                outline: 3px solid rgba(255,255,255,0.9);
+                box-shadow: 0 0 0 3px rgba(2,58,141,0.35), 0 12px 20px rgba(2,58,141,0.25);
+                transform: translateY(-2px);
+                animation: calendarioAulaPulse 1.2s ease-in-out 0s 2;
+            }
+            
+            @keyframes calendarioAulaPulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.02); }
+                100% { transform: scale(1); }
+            }
+            
+            .calendario-slot-vazio.calendario-slot--destaque {
+                border-color: #023A8D !important;
+                background: rgba(2,58,141,0.08) !important;
+                box-shadow: inset 0 0 0 2px rgba(2,58,141,0.25);
+            }
+            
             /* Hover nos eventos - estilo Google Calendar */
             .timeline-slot.aula:hover {
                 box-shadow: 0 2px 6px rgba(0,0,0,0.16), 0 2px 4px rgba(0,0,0,0.23);
@@ -6736,7 +6773,7 @@ function updateTurmaHeaderName(newName) {
                                             // REMOVIDO: displayStyle baseado em colapso - períodos sempre visíveis inicialmente
                                             // O JavaScript controlará o colapso visualmente se o usuário clicar
                                     ?>
-                                    <div class="timeline-slot vazio periodo-slot" 
+                                    <div class="timeline-slot vazio periodo-slot calendario-slot-vazio" 
                                          data-periodo="<?= strtolower($nomePeriodo) ?>" 
                                          data-periodo-inicio="<?= $periodoInicio ?>"
                                          data-periodo-fim="<?= $periodoFim ?>"
@@ -6780,7 +6817,7 @@ function updateTurmaHeaderName(newName) {
                                             $onclickSlot = $dataForaPeriodo ? '' : "onclick=\"agendarNoSlot('{$data}', '{$horaSlot}')\"";
                                             $titleSlot = $dataForaPeriodo ? 'Data fora do período da turma' : "Clique para agendar aula às {$horaSlot}";
                                     ?>
-                                    <div class="timeline-slot vazio <?= $classeSlot ?>" 
+                                    <div class="timeline-slot vazio <?= $classeSlot ?> calendario-slot-vazio" 
                                          data-periodo="<?= $periodoSlot ?>"
                                          data-data="<?= $data ?>"
                                          data-hora-inicio="<?= $horaSlot ?>"
@@ -6842,7 +6879,7 @@ function updateTurmaHeaderName(newName) {
                                             // REMOVIDO: Verificação de colapso para slots vazios
                                             // Slots sempre visíveis
                                     ?>
-                                    <div class="timeline-slot vazio slot-intervalo" 
+                                    <div class="timeline-slot vazio slot-intervalo calendario-slot-vazio" 
                                          data-periodo="<?= $periodoSlot ?>"
                                          style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 5; pointer-events: none;"
                                          onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
@@ -6915,7 +6952,7 @@ function updateTurmaHeaderName(newName) {
                                         $tooltipObrigatorias = (int)($statsTooltip['obrigatorias'] ?? 0);
                                         $tooltipLabel = htmlspecialchars($nomeDisciplina) . ' ' . $tooltipAgendadas . '/' . $tooltipObrigatorias . ' (' . $horaInicioStr . ' - ' . $horaFimStr . ')';
                                     ?>
-                                    <div class="timeline-slot aula <?= $ehUltima ? 'ultima' : '' ?>"
+                                    <div class="timeline-slot aula <?= $ehUltima ? 'ultima' : '' ?> calendario-aula"
                                          data-periodo="<?= $periodoAula ?>"
                                          style="top: <?= $top ?>px; height: <?= $altura ?>px; background: <?= $corFundo ?>; border-left-color: <?= $corBorda ?>; position: absolute; left: 2px; right: 2px; z-index: 10; overflow: hidden; box-sizing: border-box; display: block !important;"
                                          onclick="verDetalhesAula(<?= $aula['id'] ?>)"
@@ -6924,6 +6961,9 @@ function updateTurmaHeaderName(newName) {
                                          data-inicio-minutos="<?= $evento['inicio'] ?>"
                                          data-fim-minutos="<?= $evento['fim'] ?>"
                                          data-top-original="<?= $top ?>"
+                                         data-data="<?= $data ?>"
+                                         data-hora-inicio="<?= $horaInicioStr ?>"
+                                         data-hora-fim="<?= $horaFimStr ?>"
                                          title="<?= $tooltipLabel ?>">
                                         <div style="font-weight: 500; margin-bottom: 2px; font-size: 12px; color: #202124;">
                                             <?= htmlspecialchars($nomeDisciplina) ?>
@@ -6955,7 +6995,7 @@ function updateTurmaHeaderName(newName) {
                                         }
                                         // REMOVIDO: Verificação de colapso para slot final
                                     ?>
-                                    <div class="timeline-slot vazio slot-intervalo" 
+                                    <div class="timeline-slot vazio slot-intervalo calendario-slot-vazio" 
                                          data-periodo="<?= $periodoSlotFinal ?>"
                                          style="top: <?= $top ?>px; height: <?= $altura ?>px; position: absolute; left: 2px; right: 2px; z-index: 5; pointer-events: none;"
                                          onclick="agendarNoSlot('<?= $data ?>', '<?= $horaSlot ?>')"
@@ -7005,7 +7045,7 @@ function updateTurmaHeaderName(newName) {
                                             $onclickSlot = $dataForaPeriodo ? '' : "onclick=\"agendarNoSlot('{$data}', '{$horaSlot}')\"";
                                             $titleSlot = $dataForaPeriodo ? 'Data fora do período da turma' : "Clique para agendar aula às {$horaSlot}";
                                     ?>
-                                    <div class="timeline-slot vazio <?= $classeSlot ?>" 
+                                    <div class="timeline-slot vazio <?= $classeSlot ?> calendario-slot-vazio" 
                                          data-periodo="<?= $periodoSlot ?>"
                                          data-data="<?= $data ?>"
                                          data-hora-inicio="<?= $horaSlot ?>"
@@ -7662,6 +7702,11 @@ function carregarSemanaPorIndice(indice, opcoes = {}) {
                                 window.reexecutarPosRender();
                             }
                         }, 33);
+
+                        const metaScroll = config.scrollMeta || window.__calendarioScrollMeta;
+                        if (metaScroll) {
+                            setTimeout(() => window.focarCalendarioNoAgendamento(metaScroll), 160);
+                        }
                     }
                 } else {
                     window.location.href = url.toString().replace('&ajax=1', '');
@@ -7676,6 +7721,11 @@ function carregarSemanaPorIndice(indice, opcoes = {}) {
         } else {
             if (typeof window.reexecutarPosRender === 'function') {
                 setTimeout(() => window.reexecutarPosRender(), 33);
+            }
+
+            const metaScroll = config.scrollMeta || window.__calendarioScrollMeta;
+            if (metaScroll) {
+                setTimeout(() => window.focarCalendarioNoAgendamento(metaScroll), 160);
             }
         }
     }
@@ -7701,6 +7751,245 @@ function mudarSemana(direcao) {
 if (typeof window.calendarioSemanaInicializado === 'undefined') {
     window.calendarioSemanaInicializado = false;
 }
+
+if (typeof window.__calendarioScrollMeta === 'undefined') {
+    window.__calendarioScrollMeta = null;
+}
+
+function normalizarDataParaISOCalendario(valor) {
+    if (!valor) {
+        return '';
+    }
+
+    if (valor instanceof Date) {
+        return valor.toISOString().split('T')[0];
+    }
+
+    let texto = String(valor).trim();
+    if (!texto) {
+        return '';
+    }
+
+    if (texto.includes('T')) {
+        texto = texto.split('T')[0];
+    }
+
+    if (texto.includes('-')) {
+        const partes = texto.split('-');
+        if (partes.length >= 3) {
+            const ano = partes[0].padStart(4, '0');
+            const mes = partes[1].padStart(2, '0');
+            const dia = partes[2].padStart(2, '0');
+            return `${ano}-${mes}-${dia}`;
+        }
+    }
+
+    if (texto.includes('/')) {
+        const partes = texto.split('/');
+        if (partes.length === 3) {
+            const [dia, mes, ano] = partes;
+            if (ano && ano.length === 4) {
+                return `${ano.padStart(4, '0')}-${mes.padStart(2, '0')}-${dia.padStart(2, '0')}`;
+            }
+        }
+    }
+
+    return texto;
+}
+
+function normalizarHoraCalendario(valor) {
+    if (!valor) {
+        return '';
+    }
+
+    let texto = String(valor).trim();
+    if (!texto) {
+        return '';
+    }
+
+    if (texto.includes('T')) {
+        const partes = texto.split('T')[1] || '';
+        texto = partes;
+    }
+
+    if (texto.includes(':')) {
+        const partes = texto.split(':');
+        const hora = (partes[0] || '00').padStart(2, '0').substring(0, 2);
+        const minuto = (partes[1] || '00').padStart(2, '0').substring(0, 2);
+        return `${hora}:${minuto}`;
+    }
+
+    if (texto.length === 4) {
+        return `${texto.substring(0, 2)}:${texto.substring(2, 4)}`;
+    }
+
+    if (texto.length === 3) {
+        return `0${texto.substring(0, 1)}:${texto.substring(1, 3)}`;
+    }
+
+    if (texto.length >= 2) {
+        const hora = texto.substring(0, 2).padStart(2, '0');
+        const minutos = texto.substring(2, 4) || '00';
+        return `${hora}:${minutos.padEnd(2, '0').substring(0, 2)}`;
+    }
+
+    return texto;
+}
+
+function executarScrollCalendario(meta, tentativa = 0) {
+    if (!meta) {
+        return;
+    }
+
+    if (!meta.__id) {
+        meta.__id = `meta-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    }
+    window.__calendarioScrollMeta = meta;
+
+    const MAX_TENTATIVAS = 8;
+    const tentativaAtual = tentativa + 1;
+    console.debug('[Calendario][Scroll] Tentativa', tentativaAtual, 'meta:', meta);
+    const container = document.querySelector('.timeline-calendar');
+
+    if (!container) {
+        console.debug('[Calendario][Scroll] Container .timeline-calendar não encontrado.');
+        if (tentativa < MAX_TENTATIVAS) {
+            setTimeout(() => executarScrollCalendario(meta, tentativa + 1), 200);
+        }
+        return;
+    }
+
+    const escapeSelector = (typeof CSS !== 'undefined' && typeof CSS.escape === 'function')
+        ? CSS.escape
+        : function(str) {
+            return String(str).replace(/([ #;?%&,.+*~':"!^$[\]()=>|\/@])/g, '\\$1');
+        };
+
+    const aulaIds = Array.isArray(meta.aulaIds) ? meta.aulaIds.map(id => String(id)).filter(Boolean) : [];
+    const aulasDestacadas = [];
+
+    aulaIds.forEach(id => {
+        const elemento = container.querySelector(`.calendario-aula[data-aula-id="${escapeSelector(id)}"]`);
+        if (elemento) {
+            console.debug('[Calendario][Scroll] Aula encontrada por ID:', id, elemento);
+            aulasDestacadas.push(elemento);
+        }
+    });
+
+    let alvo = null;
+
+    if (aulasDestacadas.length) {
+        aulasDestacadas.forEach(elemento => elemento.classList.add('calendario-aula--destaque'));
+        alvo = aulasDestacadas.reduce((menor, elemento) => {
+            if (!menor) {
+                console.debug('[Calendario][Scroll] Utilizando primeira aula destacada como alvo', elemento);
+                return elemento;
+            }
+            return elemento.offsetTop < menor.offsetTop ? elemento : menor;
+        }, null);
+    }
+
+    const dataISO = normalizarDataParaISOCalendario(meta.data);
+    const horaPadronizada = normalizarHoraCalendario(meta.horaInicio || meta.hora);
+    console.debug('[Calendario][Scroll] Dados normalizados -> data:', dataISO, 'hora:', horaPadronizada);
+
+    let slotDestacado = null;
+
+    if (!alvo && dataISO && horaPadronizada) {
+        const seletorAula = `.calendario-aula[data-data="${dataISO}"][data-hora-inicio="${horaPadronizada}"]`;
+        const aulaDireta = container.querySelector(seletorAula);
+        if (aulaDireta) {
+            console.debug('[Calendario][Scroll] Aula encontrada via data/hora selector:', seletorAula, aulaDireta);
+            aulaDireta.classList.add('calendario-aula--destaque');
+            aulasDestacadas.push(aulaDireta);
+            alvo = aulaDireta;
+        } else {
+            const seletorSlot = `.calendario-slot-vazio[data-data="${dataISO}"][data-hora-inicio="${horaPadronizada}"], .calendario-slot-vazio[data-data="${dataISO}"][data-hora="${horaPadronizada}"]`;
+            slotDestacado = container.querySelector(seletorSlot);
+            if (slotDestacado) {
+                console.debug('[Calendario][Scroll] Slot encontrado via selector:', seletorSlot, slotDestacado);
+                slotDestacado.classList.add('calendario-slot--destaque');
+                alvo = slotDestacado;
+            }
+        }
+    }
+
+    if (!alvo) {
+        console.debug('[Calendario][Scroll] Nenhum alvo encontrado na tentativa', tentativaAtual);
+        if (tentativa < MAX_TENTATIVAS) {
+            setTimeout(() => executarScrollCalendario(meta, tentativa + 1), 200);
+        } else {
+            console.warn('[Calendario][Scroll] Falha ao localizar alvo após', MAX_TENTATIVAS, 'tentativas.', meta);
+            window.__calendarioScrollMeta = null;
+        }
+        return;
+    }
+
+    const containerRect = container.getBoundingClientRect();
+    const alvoRect = alvo.getBoundingClientRect();
+    const offsetTop = (alvoRect.top - containerRect.top) + container.scrollTop;
+    const targetScrollTop = Math.max(offsetTop - (container.clientHeight / 2) + (alvoRect.height / 2), 0);
+    meta.__targetScrollTop = targetScrollTop;
+    console.debug('[Calendario][Scroll] Calculando scroll -> offsetTop:', offsetTop, 'scrollTop desejado:', targetScrollTop);
+
+    function aplicarScroll(forceSmooth = true) {
+        if (!window.__calendarioScrollMeta || window.__calendarioScrollMeta.__id !== meta.__id) {
+            return;
+        }
+        const behavior = forceSmooth ? 'smooth' : 'auto';
+        if (typeof container.scrollTo === 'function') {
+            container.scrollTo({ top: targetScrollTop, behavior });
+        } else {
+            container.scrollTop = targetScrollTop;
+        }
+    }
+
+    aplicarScroll(true);
+
+    const enforceAttempts = 20;
+    const enforceDelay = 200;
+    let enforceCount = 0;
+
+    function reforcarScroll() {
+        if (!window.__calendarioScrollMeta || window.__calendarioScrollMeta.__id !== meta.__id) {
+            return;
+        }
+        const difference = Math.abs(container.scrollTop - targetScrollTop);
+        if (difference > 8) {
+            console.debug('[Calendario][Scroll] Reforçando posicionamento. Atual:', container.scrollTop, 'Alvo:', targetScrollTop);
+            aplicarScroll(false);
+        }
+        if (enforceCount < enforceAttempts) {
+            enforceCount += 1;
+            setTimeout(reforcarScroll, enforceDelay);
+        }
+    }
+
+    setTimeout(reforcarScroll, enforceDelay);
+
+    setTimeout(() => {
+        aulasDestacadas.forEach(elemento => elemento.classList.remove('calendario-aula--destaque'));
+        if (slotDestacado) {
+            slotDestacado.classList.remove('calendario-slot--destaque');
+        }
+    }, 4000);
+
+    if (window.__calendarioScrollReleaseTimer) {
+        clearTimeout(window.__calendarioScrollReleaseTimer);
+    }
+    window.__calendarioScrollReleaseTimer = setTimeout(() => {
+        if (window.__calendarioScrollMeta && window.__calendarioScrollMeta.__id === meta.__id) {
+            window.__calendarioScrollMeta = null;
+        }
+    }, enforceAttempts * enforceDelay + 400);
+}
+
+window.focarCalendarioNoAgendamento = function(meta) {
+    const metaAplicavel = meta || window.__calendarioScrollMeta;
+    if (metaAplicavel) {
+        executarScrollCalendario(metaAplicavel);
+    }
+};
 
 window.inicializarCalendarioSemana = function inicializarCalendarioSemana(opcoes = {}) {
     const { forceFetch = false, remeasure = false } = opcoes;
@@ -7742,9 +8031,15 @@ window.recarregarCalendario = function recarregarCalendario(opcoes = {}) {
     const indiceAtual = parseInt(indiceAtualInput.value, 10);
     const indiceSeguro = Number.isNaN(indiceAtual) ? 0 : indiceAtual;
 
+    const metaScroll = opcoes.scrollMeta || window.__calendarioScrollMeta || null;
+    if (metaScroll) {
+        window.__calendarioScrollMeta = metaScroll;
+    }
+
     const configuracoes = {
         forcarRecarregamento: true,
-        ...opcoes
+        ...opcoes,
+        scrollMeta: metaScroll
     };
 
     carregarSemanaPorIndice(indiceSeguro, configuracoes);
@@ -7925,6 +8220,9 @@ function atualizarCalendarioSemana(novoIndice) {
                 divAula.className = 'calendario-aula';
                 divAula.setAttribute('data-aula-id', aula.id);
                 divAula.setAttribute('data-disciplina-id', aula.disciplina_id);
+                divAula.setAttribute('data-data', data);
+                divAula.setAttribute('data-hora-inicio', (aula.hora_inicio || '').substring(0, 5));
+                divAula.setAttribute('data-hora-fim', (aula.hora_fim || '').substring(0, 5));
                 divAula.style.cssText = `background: ${corDisciplina}; color: white; padding: 6px; border-radius: 4px; font-size: 0.75rem; cursor: pointer; ${ehUltima ? 'border: 2px solid #fff; box-shadow: 0 0 0 2px ' + corDisciplina + ';' : ''}`;
                 divAula.onclick = () => verDetalhesAula(aula.id);
                 divAula.title = `${nomeDisciplina} ${agendadasTooltip}/${obrigatoriasTooltip} (${aula.hora_inicio} - ${aula.hora_fim})`;
@@ -8343,6 +8641,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 garantirAlinhamentoHeaderBody();
             });
             window.timelineResizeObserver.observe(timelineBody);
+        }
+
+        if (window.__calendarioScrollMeta) {
+            setTimeout(() => window.focarCalendarioNoAgendamento(window.__calendarioScrollMeta), 150);
         }
     };
     
@@ -12383,6 +12685,221 @@ function fecharModalInserirAlunos() {
     }
 }
 
+const TURMA_ID_DETALHES = <?= $turmaId ?>;
+
+// Utilitários para manipulação de alunos matriculados e aptos
+function escapeHtml(value) {
+    if (value === null || value === undefined) {
+        return '';
+    }
+    return value
+        .toString()
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+function obterIniciais(nome) {
+    if (!nome) return '';
+    const partes = nome.trim().split(/\s+/).slice(0, 2);
+    return partes.map(parte => parte[0] ? parte[0].toUpperCase() : '').join('');
+}
+
+function formatarDataHoraBrasileira(dataIso) {
+    const data = dataIso ? new Date(dataIso) : new Date();
+    if (Number.isNaN(data.getTime())) {
+        return { data: '--/--/----', hora: '--:--' };
+    }
+    return {
+        data: data.toLocaleDateString('pt-BR'),
+        hora: data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    };
+}
+
+function gerarStatusBadge(statusRaw) {
+    const status = (statusRaw || '').toLowerCase();
+    const classes = ['status-badge'];
+    let statusIcon = 'fas fa-question-circle';
+    let statusText = statusRaw ? statusRaw.charAt(0).toUpperCase() + statusRaw.slice(1) : 'Matriculado';
+
+    switch (status) {
+        case 'matriculado':
+            classes.push('status-matriculado');
+            statusIcon = 'fas fa-user-check';
+            statusText = 'Matriculado';
+            break;
+        case 'cursando':
+            classes.push('status-cursando');
+            statusIcon = 'fas fa-graduation-cap';
+            statusText = 'Cursando';
+            break;
+        case 'evadido':
+            classes.push('status-matriculado');
+            statusIcon = 'fas fa-user-check';
+            statusText = 'Matriculado';
+            break;
+        case 'transferido':
+            classes.push('status-transferido');
+            statusIcon = 'fas fa-exchange-alt';
+            statusText = 'Transferido';
+            break;
+        case 'concluido':
+            classes.push('status-concluido');
+            statusIcon = 'fas fa-check-circle';
+            statusText = 'Concluído';
+            break;
+        default:
+            break;
+    }
+
+    return `
+        <span class="${classes.join(' ')}">
+            <i class="${statusIcon}"></i>
+            ${statusText}
+        </span>
+    `;
+}
+
+function gerarMarkupTabelaBase() {
+    return `
+        <div style="overflow-x: auto;">
+            <table class="alunos-table" id="tabela-alunos-matriculados">
+                <thead>
+                    <tr>
+                        <th>Nome</th>
+                        <th>CPF</th>
+                        <th>Categoria</th>
+                        <th>CFC</th>
+                        <th style="text-align: center;">Status</th>
+                        <th>Data Matrícula</th>
+                        <th style="text-align: center;">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-alunos-matriculados-body"></tbody>
+            </table>
+        </div>
+    `;
+}
+
+function gerarMarkupEstadoVazio() {
+    return `
+        <div style="text-align: center; padding: 40px 20px; color: #6c757d;" data-empty-state-alunos>
+            <i class="fas fa-users" style="font-size: 3rem; margin-bottom: 15px; opacity: 0.5;"></i>
+            <h5 style="margin-bottom: 10px; color: #495057;">Nenhum aluno matriculado</h5>
+            <p style="margin-bottom: 20px;">Esta turma ainda não possui alunos matriculados.</p>
+            <button onclick="abrirModalInserirAlunos()" class="btn-primary" style="padding: 10px 20px; background: #28a745; color: white; border: none; border-radius: 8px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-weight: 500; transition: all 0.3s;">
+                <i class="fas fa-user-plus"></i>
+                Matricular Primeiro Aluno
+            </button>
+        </div>
+    `;
+}
+
+function garantirEstruturaTabelaAlunos() {
+    const wrapper = document.getElementById('lista-alunos-matriculados');
+    if (!wrapper) {
+        return null;
+    }
+
+    let tabela = document.getElementById('tabela-alunos-matriculados');
+    let tbody = document.getElementById('tabela-alunos-matriculados-body');
+
+    if (!tabela || !tbody) {
+        wrapper.innerHTML = gerarMarkupTabelaBase();
+        tabela = document.getElementById('tabela-alunos-matriculados');
+        tbody = document.getElementById('tabela-alunos-matriculados-body');
+    }
+
+    return { wrapper, tabela, tbody };
+}
+
+function gerarLinhaAlunoMatriculado(alunoInfo, matriculaInfo) {
+    const iniciais = escapeHtml(obterIniciais(alunoInfo.nome));
+    const dataFormatada = formatarDataHoraBrasileira(matriculaInfo?.data_matricula);
+
+    return `
+        <tr data-aluno-id="${alunoInfo.id}">
+            <td>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <div class="aluno-avatar">
+                        ${iniciais}
+                    </div>
+                    <div>
+                        <div style="font-weight: 600; color: #2c3e50; margin-bottom: 2px;">${escapeHtml(alunoInfo.nome)}</div>
+                        ${alunoInfo.email ? `<div style="font-size: 0.8rem; color: #6c757d;"><i class="fas fa-envelope me-1"></i>${escapeHtml(alunoInfo.email)}</div>` : ''}
+                        ${alunoInfo.telefone ? `<div style="font-size: 0.8rem; color: #6c757d;"><i class="fas fa-phone me-1"></i>${escapeHtml(alunoInfo.telefone)}</div>` : ''}
+                    </div>
+                </div>
+            </td>
+            <td style="font-family: monospace; font-size: 0.9rem;">
+                ${escapeHtml(alunoInfo.cpf || '')}
+            </td>
+            <td>
+                <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
+                    ${escapeHtml(alunoInfo.categoria_cnh || '--')}
+                </span>
+            </td>
+            <td>
+                <span style="color: #495057; font-size: 0.9rem;">
+                    ${escapeHtml(alunoInfo.cfc_nome || '--')}
+                </span>
+            </td>
+            <td style="text-align: center;">
+                ${gerarStatusBadge(matriculaInfo?.status || alunoInfo.status || 'matriculado')}
+            </td>
+            <td style="font-size: 0.9rem; color: #6c757d;">
+                <i class="fas fa-calendar-alt me-1"></i>
+                ${dataFormatada.data}
+                <div style="font-size: 0.8rem; color: #adb5bd;">
+                    ${dataFormatada.hora}
+                </div>
+            </td>
+            <td style="text-align: center;">
+                <div class="action-buttons">
+                    <button class="action-btn action-btn-outline-danger" data-role="remover-matricula" title="Remover da Turma">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `;
+}
+
+function adicionarAlunoMatriculadoNaTabela(alunoInfo, matriculaInfo) {
+    const estrutura = garantirEstruturaTabelaAlunos();
+    if (!estrutura || !estrutura.tbody) {
+        return;
+    }
+
+    const emptyState = estrutura.wrapper.querySelector('[data-empty-state-alunos]');
+    if (emptyState) {
+        emptyState.remove();
+        estrutura.wrapper.innerHTML = gerarMarkupTabelaBase();
+        estrutura.tabela = document.getElementById('tabela-alunos-matriculados');
+        estrutura.tbody = document.getElementById('tabela-alunos-matriculados-body');
+    }
+
+    estrutura.tbody.insertAdjacentHTML('afterbegin', gerarLinhaAlunoMatriculado(alunoInfo, matriculaInfo));
+
+    const novaLinha = estrutura.tbody.querySelector(`tr[data-aluno-id="${alunoInfo.id}"]`);
+    if (novaLinha) {
+        const removerBtn = novaLinha.querySelector('[data-role="remover-matricula"]');
+        if (removerBtn) {
+            removerBtn.addEventListener('click', () => removerMatricula(alunoInfo.id, alunoInfo.nome));
+        }
+    }
+}
+
+function renderizarEstadoAlunosVazio() {
+    const wrapper = document.getElementById('lista-alunos-matriculados');
+    if (!wrapper) {
+        return;
+    }
+    wrapper.innerHTML = gerarMarkupEstadoVazio();
+}
+
 // Função para carregar alunos aptos
 function carregarAlunosAptos(turmaId) {
     const container = document.getElementById('listaAlunosAptos');
@@ -12469,10 +12986,10 @@ function exibirAlunosAptos(alunos, turmaId, debugInfo = null) {
             ${alunos.map(aluno => `
                 <div class="aluno-card" data-aluno-id="${aluno.id}">
                     <div class="aluno-info">
-                        <h4>${aluno.nome}</h4>
-                        <p><strong>CPF:</strong> ${aluno.cpf}</p>
-                        <p><strong>Categoria:</strong> ${aluno.categoria_cnh}</p>
-                        <p><strong>CFC:</strong> ${aluno.cfc_nome}</p>
+                        <h4>${escapeHtml(aluno.nome)}</h4>
+                        <p><strong>CPF:</strong> ${escapeHtml(aluno.cpf || '')}</p>
+                        <p><strong>Categoria:</strong> ${escapeHtml(aluno.categoria_cnh || '')}</p>
+                        <p><strong>CFC:</strong> ${escapeHtml(aluno.cfc_nome || '')}</p>
                     </div>
                     <div class="exames-status">
                         <div class="exame-status apto">
@@ -12485,7 +13002,7 @@ function exibirAlunosAptos(alunos, turmaId, debugInfo = null) {
                         </div>
                     </div>
                     <div class="aluno-actions">
-                        <button class="btn btn-success btn-sm" onclick="matricularAluno(${aluno.id}, ${turmaId})">
+                        <button class="btn btn-success btn-sm" data-role="matricular-aluno" onclick="matricularAluno(${aluno.id}, ${turmaId}, this)">
                             <i class="fas fa-user-plus"></i>
                             Matricular
                         </button>
@@ -12496,23 +13013,50 @@ function exibirAlunosAptos(alunos, turmaId, debugInfo = null) {
     `;
     
     container.innerHTML = html;
+
+    // Persistir dados do aluno no botão para uso após matrícula
+    container.querySelectorAll('.aluno-card').forEach(card => {
+        const id = Number(card.dataset.alunoId);
+        const aluno = alunos.find(item => Number(item.id) === id);
+        if (!aluno) {
+            return;
+        }
+        const button = card.querySelector('[data-role="matricular-aluno"]');
+        if (button) {
+            button.dataset.nome = aluno.nome || '';
+            button.dataset.cpf = aluno.cpf || '';
+            button.dataset.categoria = aluno.categoria_cnh || '';
+            button.dataset.cfc = aluno.cfc_nome || '';
+            button.dataset.email = aluno.email || '';
+            button.dataset.telefone = aluno.telefone || '';
+            button.dataset.status = aluno.status_matricula || 'matriculado';
+        }
+    });
 }
 
 // Função para matricular aluno
-function matricularAluno(alunoId, turmaId) {
+function matricularAluno(alunoId, turmaId, buttonEl) {
     if (!confirm('Deseja realmente matricular este aluno na turma?')) {
         return;
     }
     
-    const button = event.target;
-    const originalText = button.innerHTML;
-    button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Matriculando...';
-    button.disabled = true;
+    const button = buttonEl || (typeof event !== 'undefined' ? (event.currentTarget || event.target) : null);
+    
+    if (!button) {
+        console.warn('Botão de matrícula não encontrado no evento.');
+    }
+    
+    const originalText = button ? button.innerHTML : null;
+    if (button) {
+        button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Matriculando...';
+        button.disabled = true;
+    }
     
     fetch('api/matricular-aluno-turma.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
+            'Accept': 'application/json',
         },
         credentials: 'same-origin', // Incluir cookies de sessão
         body: JSON.stringify({
@@ -12520,36 +13064,92 @@ function matricularAluno(alunoId, turmaId) {
             turma_id: turmaId
         })
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.sucesso) {
-            // Remover aluno da lista
-            const alunoCard = document.querySelector(`[data-aluno-id="${alunoId}"]`);
-            if (alunoCard) {
-                alunoCard.remove();
-            }
-            
-            // Mostrar mensagem de sucesso
-            mostrarMensagem('success', data.mensagem);
-            
-            // Atualizar contador de alunos na página principal
-            atualizarContadorAlunos();
-            
-        } else {
-            mostrarMensagem('error', data.mensagem);
+    .then(async response => {
+        const data = await response.json().catch(() => null);
+        if (!response.ok || !data) {
+            const mensagemErro = data?.mensagem || 'Erro ao processar a resposta da matrícula.';
+            throw { tipo: 'api', mensagem: mensagemErro };
         }
+        return data;
+    })
+    .then(data => {
+        if (!data.sucesso) {
+            mostrarMensagem('error', data.mensagem || 'Não foi possível matricular o aluno.');
+            return;
+        }
+
+        const listaAptos = document.getElementById('listaAlunosAptos');
+        const alunoCard = listaAptos ? listaAptos.querySelector(`[data-aluno-id="${alunoId}"]`) : null;
+        const alunoDataset = (button || alunoCard)?.dataset || {};
+
+        // Remover aluno da lista de aptos
+        if (alunoCard) {
+            alunoCard.remove();
+        }
+
+        // Preparar dados para tabela
+        const alunoInfo = {
+            id: data?.dados?.aluno?.id ?? alunoId,
+            nome: alunoDataset.nome || data?.dados?.aluno?.nome || '',
+            cpf: alunoDataset.cpf || data?.dados?.aluno?.cpf || '',
+            categoria_cnh: alunoDataset.categoria || data?.dados?.aluno?.categoria_cnh || '',
+            cfc_nome: alunoDataset.cfc || data?.dados?.aluno?.cfc_nome || '',
+            email: alunoDataset.email || data?.dados?.aluno?.email || '',
+            telefone: alunoDataset.telefone || data?.dados?.aluno?.telefone || '',
+            status: alunoDataset.status || data?.dados?.matricula?.status || 'matriculado'
+        };
+
+        const matriculaInfo = {
+            id: data?.dados?.matricula?.id,
+            status: data?.dados?.matricula?.status || 'matriculado',
+            data_matricula: data?.dados?.matricula?.data_matricula || new Date().toISOString()
+        };
+
+        adicionarAlunoMatriculadoNaTabela(alunoInfo, matriculaInfo);
+
+        const totalMatriculados = data?.dados?.turma?.alunos_matriculados;
+        if (typeof totalMatriculados === 'number') {
+            atualizarContadorAlunos(totalMatriculados);
+        } else {
+            atualizarContadorAlunos();
+        }
+
+        mostrarMensagem('success', data.mensagem);
     })
     .catch(error => {
-        mostrarMensagem('error', 'Erro ao matricular aluno: ' + error.message);
+        if (error?.tipo === 'api') {
+            mostrarMensagem('error', error.mensagem);
+            return;
+        }
+        const mensagem = error?.message || 'Erro desconhecido ao matricular aluno.';
+        mostrarMensagem('error', 'Erro ao matricular aluno: ' + mensagem);
     })
     .finally(() => {
-        button.innerHTML = originalText;
-        button.disabled = false;
+        if (button) {
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
     });
 }
 
 // Função para mostrar mensagens
-function mostrarMensagem(mensagem, tipo) {
+function mostrarMensagem(param1, param2) {
+    const tiposValidos = ['success', 'error', 'info', 'warning'];
+    
+    let tipo;
+    let mensagem;
+    
+    if (tiposValidos.includes((param1 || '').toLowerCase())) {
+        tipo = param1.toLowerCase();
+        mensagem = param2;
+    } else if (tiposValidos.includes((param2 || '').toLowerCase())) {
+        tipo = param2.toLowerCase();
+        mensagem = param1;
+    } else {
+        tipo = 'info';
+        mensagem = param1 || param2 || 'Operação realizada.';
+    }
+    
     const alertClass = tipo === 'success' ? 'alert-success' : 
                      tipo === 'error' ? 'alert-danger' : 
                      tipo === 'info' ? 'alert-info' : 'alert-warning';
@@ -12578,11 +13178,31 @@ function mostrarMensagem(mensagem, tipo) {
 }
 
 // Função para atualizar contador de alunos na página principal
-function atualizarContadorAlunos() {
-    // Recarregar a página para atualizar os dados
-    setTimeout(() => {
-        window.location.reload();
-    }, 2000);
+function atualizarContadorAlunos(total) {
+    let quantidade = typeof total === 'number' && !Number.isNaN(total) ? total : null;
+
+    if (quantidade === null) {
+        const tbody = document.getElementById('tabela-alunos-matriculados-body');
+        if (tbody) {
+            quantidade = tbody.querySelectorAll('tr').length;
+        }
+    }
+
+    if (quantidade === null) {
+        return;
+    }
+
+    const badge = document.getElementById('total-alunos-matriculados-badge');
+    if (badge) {
+        badge.innerHTML = `<i class="fas fa-user-check me-1"></i>${quantidade} aluno(s)`;
+        badge.dataset.quantidade = quantidade;
+    }
+
+    document.querySelectorAll('[data-total-alunos-label]').forEach(element => {
+        if (element !== badge) {
+            element.textContent = `${quantidade} aluno(s)`;
+        }
+    });
 }
 
 // Funções para ações dos alunos matriculados
@@ -12602,38 +13222,51 @@ function removerMatricula(matriculaId, nomeAluno) {
         mostrarMensagem('Removendo aluno da turma...', 'info');
         
         // Criar dados para enviar
-        const formData = new FormData();
-        formData.append('acao', 'remover_aluno');
-        formData.append('aluno_id', matriculaId);
-        formData.append('ajax', 'true');
-        
-        // Fazer requisição AJAX
-        fetch(window.location.href, {
+        const payload = {
+            turma_id: typeof TURMA_ID_DETALHES !== 'undefined' ? Number(TURMA_ID_DETALHES) : <?= $turmaId ?>,
+            aluno_id: Number(matriculaId)
+        };
+
+        fetch('api/remover-matricula-turma.php', {
             method: 'POST',
             headers: {
-                'X-Requested-With': 'XMLHttpRequest'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
-            body: formData
+            credentials: 'same-origin',
+            body: JSON.stringify(payload)
         })
-        .then(response => response.json())
+        .then(async response => {
+            const contentType = response.headers.get('Content-Type') || '';
+            if (contentType.includes('application/json')) {
+                return response.json();
+            }
+            const text = await response.text();
+            throw new Error(text.trim().substring(0, 200) || 'Resposta inválida do servidor');
+        })
         .then(data => {
             if (data.sucesso) {
                 // Mostrar mensagem de sucesso
                 mostrarMensagem(data.mensagem, 'success');
                 
                 // Remover a linha da tabela
-                const linha = document.querySelector(`button[onclick*="${matriculaId}"]`).closest('tr');
+                const linha = document.querySelector(`tr[data-aluno-id="${matriculaId}"]`);
                 if (linha) {
                     linha.remove();
                 }
-                
-                // Atualizar contador de alunos se existir
-                const contadorAlunos = document.querySelector('.btn-primary');
-                if (contadorAlunos) {
-                    const textoAtual = contadorAlunos.textContent;
-                    const numeroAtual = parseInt(textoAtual.match(/\d+/)[0]);
-                    contadorAlunos.textContent = textoAtual.replace(/\d+/, numeroAtual - 1);
+
+                const totalLinhas = typeof data?.dados?.alunos_matriculados === 'number'
+                    ? data.dados.alunos_matriculados
+                    : (() => {
+                        const tbody = document.getElementById('tabela-alunos-matriculados-body');
+                        return tbody ? tbody.querySelectorAll('tr').length : 0;
+                    })();
+
+                if (totalLinhas === 0) {
+                    renderizarEstadoAlunosVazio();
                 }
+
+                atualizarContadorAlunos(totalLinhas);
             } else {
                 // Mostrar mensagem de erro
                 mostrarMensagem(data.mensagem, 'error');
@@ -14055,6 +14688,26 @@ function enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao)
             }
             mostrarMensagemModal(mensagem, 'success');
             
+            const aulasAgendadasResposta = Array.isArray(data.aulas_agendadas)
+                ? data.aulas_agendadas.map(id => String(id))
+                : [];
+            const quantidadeAulasForm = parseInt(formData.get('quantidade_aulas') || '1', 10) || 1;
+            const metaScroll = {
+                aulaIds: aulasAgendadasResposta,
+                data: formData.get('data_aula'),
+                horaInicio: formData.get('hora_inicio'),
+                quantidadeAulas: quantidadeAulasForm
+            };
+
+            if (!metaScroll.aulaIds.length) {
+                const aulaIdForm = formData.get('aula_id') || formData.get('modal_aula_id') || formData.get('id_aula');
+                if (aulaIdForm) {
+                    metaScroll.aulaIds = [String(aulaIdForm)];
+                }
+            }
+
+            window.__calendarioScrollMeta = metaScroll;
+            
             const disciplinaId = formData.get('disciplina');
             
             console.log('📋 [DEBUG] Pós-salvamento - disciplinaId:', disciplinaId, 'ultimaDisciplinaAberta:', window.ultimaDisciplinaAberta);
@@ -14079,7 +14732,7 @@ function enviarDadosAgendamento(formData, btnAgendar, btnAgendarTexto, isEdicao)
                 
                 // Atualizar calendário se a função existir
                 if (typeof recarregarCalendario === 'function') {
-                    recarregarCalendario();
+                    recarregarCalendario({ scrollMeta: window.__calendarioScrollMeta, remeasure: true });
                 }
             } else {
                 // Fallback: usar interceptação de reload
@@ -14886,13 +15539,22 @@ function ajustarAlturaCalendario() {
         });
         
         // Scroll automático para a última aula após ajuste
-        setTimeout(() => {
-            const ultimaAula = document.querySelector(`.timeline-slot.aula[data-aula-id="${ultimaAulaId}"]`);
-            if (ultimaAula && ultimaAulaId !== 'N/A') {
-                ultimaAula.scrollIntoView({ behavior: 'smooth', block: 'end' });
-                console.log('📍 Scroll automático para última aula:', ultimaAulaId);
-            }
-        }, 500);
+        if (!window.__calendarioScrollMeta) {
+            setTimeout(() => {
+                const ultimaAula = document.querySelector(`.timeline-slot.aula[data-aula-id="${ultimaAulaId}"]`);
+                if (ultimaAula && ultimaAulaId !== 'N/A') {
+                    ultimaAula.scrollIntoView({ behavior: 'smooth', block: 'end' });
+                    console.log('📍 Scroll automático para última aula:', ultimaAulaId);
+                }
+            }, 500);
+        } else {
+            console.debug('📍 Scroll automático para última aula ignorado (há meta de foco ativa).');
+            setTimeout(() => {
+                if (window.__calendarioScrollMeta) {
+                    window.focarCalendarioNoAgendamento(window.__calendarioScrollMeta);
+                }
+            }, 60);
+        }
     }
 }
 

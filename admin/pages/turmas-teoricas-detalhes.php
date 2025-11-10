@@ -79,7 +79,7 @@ $totalHoras = round($totalMinutos / 60, 1);
 // Obter alunos matriculados (se a tabela existir)
 try {
     $alunosMatriculados = $db->fetchAll(
-        "SELECT COUNT(*) as total FROM turma_alunos WHERE turma_id = ?",
+        "SELECT COUNT(*) as total FROM turma_matriculas WHERE turma_id = ? AND status IN ('matriculado', 'cursando')",
         [$turmaId]
     );
     $totalAlunos = $alunosMatriculados[0]['total'] ?? 0;

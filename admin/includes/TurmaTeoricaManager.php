@@ -1890,50 +1890,102 @@ class TurmaTeoricaManager {
      */
     public function removerAluno($turmaId, $alunoId) {
         try {
-            $this->db->beginTransaction();
-            
-            // Verificar se a matrícula existe
+            // Verificar se a matrícula existe (qualquer status)
             $matricula = $this->db->fetch(
-                "SELECT * FROM turma_alunos WHERE turma_id = ? AND aluno_id = ?",
+                "SELECT * FROM turma_matriculas WHERE turma_id = ? AND aluno_id = ?",
                 [$turmaId, $alunoId]
             );
-            
+
             if (!$matricula) {
+                // Verificar estrutura antiga (turma_alunos)
+                $matriculaAntiga = $this->db->fetch(
+                    "SELECT * FROM turma_alunos WHERE turma_id = ? AND aluno_id = ?",
+                    [$turmaId, $alunoId]
+                );
+
+                if ($matriculaAntiga) {
+                    $this->db->beginTransaction();
+
+                    $tabelaPresencasExiste = $this->db->fetch("SHOW TABLES LIKE 'turma_presencas'");
+                    if ($tabelaPresencasExiste) {
+                        $this->db->delete('turma_presencas', 'turma_id = ? AND aluno_id = ?', [$turmaId, $alunoId]);
+                    }
+
+                    $this->db->delete('turma_alunos', 'turma_id = ? AND aluno_id = ?', [$turmaId, $alunoId]);
+
+                    $this->registrarLog(
+                        $turmaId,
+                        'aluno_removido',
+                        "Aluno ID {$alunoId} removido da turma (estrutura antiga)",
+                        $matriculaAntiga,
+                        ['aluno_id' => $alunoId, 'estrutura' => 'turma_alunos'],
+                        $_SESSION['user_id'] ?? 1
+                    );
+
+                    $this->db->commit();
+
+                    return [
+                        'sucesso' => true,
+                        'mensagem' => '✅ Aluno removido da turma com sucesso!'
+                    ];
+                }
+
                 return [
                     'sucesso' => false,
                     'mensagem' => '❌ Aluno não encontrado nesta turma.'
                 ];
             }
-            
-            // Remover todas as presenças do aluno nas aulas desta turma
-            $this->db->execute(
-                "DELETE FROM turma_presencas WHERE turma_id = ? AND aluno_id = ?",
-                [$turmaId, $alunoId]
-            );
-            
-            // Remover a matrícula
-            $this->db->execute(
-                "DELETE FROM turma_alunos WHERE turma_id = ? AND aluno_id = ?",
-                [$turmaId, $alunoId]
-            );
-            
+
+            if (in_array($matricula['status'], ['evadido', 'cancelado'], true)) {
+                return [
+                    'sucesso' => true,
+                    'mensagem' => '✅ Aluno já estava removido da turma.'
+                ];
+            }
+
+            $this->db->beginTransaction();
+
+            // Remover presenças associadas (se tabela existir)
+            $tabelaPresencasExiste = $this->db->fetch("SHOW TABLES LIKE 'turma_presencas'");
+            if ($tabelaPresencasExiste) {
+                $this->db->delete('turma_presencas', 'turma_id = ? AND aluno_id = ?', [$turmaId, $alunoId]);
+            }
+
+            // Atualizar a matrícula para indicar remoção
+            $observacaoRemocao = 'Matrícula removida manualmente em ' . date('d/m/Y H:i') . ' pelo usuário ' . ($_SESSION['nome'] ?? 'Sistema');
+
+            $dadosAtualizacao = [
+                'status' => 'evadido',
+                'observacoes' => $matricula['observacoes']
+                    ? ($matricula['observacoes'] . "\n" . $observacaoRemocao)
+                    : $observacaoRemocao,
+                'atualizado_em' => date('Y-m-d H:i:s')
+            ];
+
+            $this->db->update('turma_matriculas', $dadosAtualizacao, 'id = ?', [$matricula['id']]);
+
             // Log da remoção
             $this->registrarLog(
-                $turmaId, 
-                'aluno_removido', 
-                "Aluno ID {$alunoId} removido da turma", 
-                null, 
-                ['aluno_id' => $alunoId], 
+                $turmaId,
+                'aluno_removido',
+                "Aluno ID {$alunoId} removido da turma",
+                $matricula,
+                [
+                    'aluno_id' => $alunoId,
+                    'status_anterior' => $matricula['status'],
+                    'status_novo' => 'evadido',
+                    'observacao_adicionada' => $observacaoRemocao
+                ],
                 $_SESSION['user_id'] ?? 1
             );
-            
+
             $this->db->commit();
-            
+
             return [
                 'sucesso' => true,
                 'mensagem' => '✅ Aluno removido da turma com sucesso!'
             ];
-            
+
         } catch (Exception $e) {
             $this->db->rollback();
             return [

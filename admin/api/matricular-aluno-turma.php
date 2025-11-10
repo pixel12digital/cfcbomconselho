@@ -31,7 +31,8 @@ if (!isLoggedIn()) {
 }
 
 // Verificar permissões - usar dados da sessão diretamente
-$userType = $_SESSION['tipo'] ?? $_SESSION['user_type'] ?? null;
+$userTypeRaw = $_SESSION['tipo'] ?? $_SESSION['user_type'] ?? null;
+$userType = is_string($userTypeRaw) ? strtolower($userTypeRaw) : null;
 if (!in_array($userType, ['admin', 'instrutor'])) {
     http_response_code(403);
     echo json_encode(['sucesso' => false, 'mensagem' => 'Permissão negada']);
@@ -40,7 +41,9 @@ if (!in_array($userType, ['admin', 'instrutor'])) {
 
 // Obter dados do usuário
 $user = getCurrentUser();
-$cfcId = $user['cfc_id'] ?? 1;
+$sessionCfcId = $_SESSION['cfc_id'] ?? $_SESSION['user_cfc_id'] ?? null;
+$userCfcId = $user['cfc_id'] ?? null;
+$cfcId = $sessionCfcId ?? $userCfcId;
 $userId = $user['id'] ?? null;
 
 // Obter dados da requisição
@@ -67,11 +70,16 @@ try {
     $turma = $db->fetch("
         SELECT id, nome, cfc_id, max_alunos, status
         FROM turmas_teoricas 
-        WHERE id = ? AND cfc_id = ?
-    ", [$turmaId, $cfcId]);
+        WHERE id = ?
+    ", [$turmaId]);
     
     if (!$turma) {
         throw new Exception('Turma não encontrada');
+    }
+
+    // Se ainda não sabemos o CFC em uso, assumir o da turma
+    if (!$cfcId) {
+        $cfcId = (int)$turma['cfc_id'];
     }
     
     // Verificar se a turma está em status que permite matrícula
@@ -89,15 +97,75 @@ try {
         throw new Exception('Turma sem vagas disponíveis');
     }
     
-    // Verificar se o aluno existe e pertence ao CFC
+    // Buscar dados do aluno
     $aluno = $db->fetch("
-        SELECT id, nome, cpf, cfc_id, status
-        FROM alunos 
-        WHERE id = ? AND cfc_id = ?
-    ", [$alunoId, $cfcId]);
+        SELECT 
+            a.id,
+            a.nome,
+            a.cpf,
+            a.cfc_id,
+            a.status,
+            a.categoria_cnh,
+            a.email,
+            a.telefone,
+            c.nome AS cfc_nome
+        FROM alunos a
+        LEFT JOIN cfcs c ON a.cfc_id = c.id
+        WHERE a.id = ?
+    ", [$alunoId]);
     
     if (!$aluno) {
         throw new Exception('Aluno não encontrado');
+    }
+    
+    // Garantir que o CFC da turma exista; se não existir e o usuário for admin, alinhar com CFC válido
+    $cfcTurmaExiste = $db->fetchColumn("SELECT COUNT(*) FROM cfcs WHERE id = ?", [$turma['cfc_id']]);
+    if (!$cfcTurmaExiste) {
+        if ($userType === 'admin') {
+            $cfcCandidato = null;
+            
+            if ($cfcId && $db->fetchColumn("SELECT COUNT(*) FROM cfcs WHERE id = ?", [$cfcId])) {
+                $cfcCandidato = $cfcId;
+            } elseif (!empty($aluno['cfc_id']) && $db->fetchColumn("SELECT COUNT(*) FROM cfcs WHERE id = ?", [$aluno['cfc_id']])) {
+                $cfcCandidato = $aluno['cfc_id'];
+            }
+            
+            if ($cfcCandidato) {
+                $db->update('turmas_teoricas', ['cfc_id' => $cfcCandidato], 'id = ?', [$turmaId]);
+                $turma['cfc_id'] = $cfcCandidato;
+            } else {
+                throw new Exception('CFC da turma inválido e não foi possível determinar um CFC válido para ajuste.');
+            }
+        } else {
+            throw new Exception('CFC da turma inválido. Ajuste o cadastro da turma antes de matricular alunos.');
+        }
+    }
+
+    // Garantir que o usuário tenha permissão sobre o CFC da turma
+    if ($userType !== 'admin' && (int)$turma['cfc_id'] !== (int)$cfcId) {
+        throw new Exception('Você não tem permissão para matricular alunos nesta turma');
+    }
+    
+    $podeGerenciarTodosCfc = ($userType === 'admin');
+    if (function_exists('hasPermission')) {
+        $podeGerenciarTodosCfc = $podeGerenciarTodosCfc || hasPermission('admin');
+    }
+    if ((int)$aluno['cfc_id'] !== (int)$turma['cfc_id']) {
+        if ($podeGerenciarTodosCfc) {
+            $cfcAnterior = $aluno['cfc_id'];
+            $db->update('alunos', ['cfc_id' => $turma['cfc_id']], 'id = ?', [$alunoId]);
+            $aluno['cfc_id'] = $turma['cfc_id'];
+            $aluno['cfc_nome'] = $db->fetchColumn("SELECT nome FROM cfcs WHERE id = ?", [$turma['cfc_id']]) ?: $aluno['cfc_nome'];
+            
+            error_log(sprintf(
+                'API matricular-aluno-turma: Admin transferiu aluno %d do CFC %d para CFC %d antes da matrícula',
+                $alunoId,
+                $cfcAnterior,
+                $turma['cfc_id']
+            ));
+        } else {
+            throw new Exception('Aluno pertence a outro CFC');
+        }
     }
     
     if ($aluno['status'] !== 'ativo') {
@@ -180,6 +248,12 @@ try {
         }
     }
     
+    $matricula = $db->fetch("
+        SELECT id, turma_id, aluno_id, status, data_matricula
+        FROM turma_matriculas
+        WHERE id = ?
+    ", [$matriculaId]);
+    
     // Registrar log da operação
     if (AUDIT_ENABLED) {
         $db->log($userId, 'matricular_aluno_turma', 'turma_matriculas', $matriculaId, null, [
@@ -202,7 +276,16 @@ try {
             'aluno' => [
                 'id' => $aluno['id'],
                 'nome' => $aluno['nome'],
-                'cpf' => $aluno['cpf']
+                'cpf' => $aluno['cpf'],
+                'categoria_cnh' => $aluno['categoria_cnh'] ?? null,
+                'cfc_nome' => $aluno['cfc_nome'] ?? null,
+                'email' => $aluno['email'] ?? null,
+                'telefone' => $aluno['telefone'] ?? null,
+            ],
+            'matricula' => [
+                'id' => $matricula['id'] ?? $matriculaId,
+                'status' => $matricula['status'] ?? 'matriculado',
+                'data_matricula' => $matricula['data_matricula'] ?? date('Y-m-d H:i:s')
             ],
             'turma' => [
                 'id' => $turma['id'],
