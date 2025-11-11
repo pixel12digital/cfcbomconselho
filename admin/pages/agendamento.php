@@ -83,30 +83,33 @@ try {
 }
 ?>
 
-<!-- Header da Página -->
-<div class="page-header">
-    <div class="header-content">
-        <h1 class="page-title">Sistema de Agendamento</h1>
-        <p class="page-subtitle">Gerencie aulas, instrutores e veículos</p>
-    </div>
-    <div class="page-actions">
-        <button class="btn btn-primary" onclick="abrirModalNovaAula()">
-            <i class="fas fa-plus"></i>
-            Nova Aula
-        </button>
-        <button class="btn btn-success" onclick="abrirModalDisponibilidade()">
-            <i class="fas fa-calendar-check"></i>
-            Verificar Disponibilidade
-        </button>
-        <button class="btn btn-info" onclick="exportarAgenda()">
-            <i class="fas fa-download"></i>
-            Exportar Agenda
-        </button>
-    </div>
-</div>
-
-<!-- Filtros de Agendamento -->
-<div class="filters-section">
+<div class="agendamento-wrapper">
+    <div class="turma-wizard">
+        <div class="wizard-header">
+            <h2 class="d-flex align-items-center justify-content-center text-white" style="gap: 12px;">
+                <i class="fas fa-calendar-alt icon icon-24" aria-hidden="true"></i>
+                Sistema de Agendamento
+            </h2>
+        </div>
+        <div class="wizard-content">
+            <div class="agendamento-hero-bar">
+                <p>Gerencie aulas, instrutores e veículos seguindo o mesmo padrão visual das turmas teóricas.</p>
+                <div class="agendamento-actions-row">
+                    <button type="button" class="btn btn-primary" onclick="abrirModalNovaAula()">
+                        <i class="fas fa-plus"></i>
+                        Nova Aula
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="abrirModalDisponibilidade()">
+                        <i class="fas fa-calendar-check"></i>
+                        Verificar Disponibilidade
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="exportarAgenda()">
+                        <i class="fas fa-download"></i>
+                        Exportar Agenda
+                    </button>
+                </div>
+            </div>
+            <section class="filters-section">
     <div class="filters-grid">
         <div class="filter-group">
             <label for="filter-cfc">CFC:</label>
@@ -116,10 +119,6 @@ try {
                     <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
                 <?php endforeach; ?>
             </select>
-            <script>
-                console.log('CFCs carregados:', <?php echo json_encode($cfcs ?? []); ?>);
-                console.log('Dropdown CFC:', document.getElementById('filter-cfc'));
-            </script>
         </div>
         
         <div class="filter-group">
@@ -172,10 +171,10 @@ try {
             </select>
         </div>
     </div>
-</div>
+</section>
 
 <!-- Legenda Visual -->
-<div class="legend-section">
+<section class="legend-section">
     <div class="legend-title">
         <i class="fas fa-info-circle me-2"></i>
         Legenda dos Eventos
@@ -274,6 +273,8 @@ try {
                 <div class="stat-value" id="instrutores-disponiveis">0</div>
                 <div class="stat-label">Instrutores Disponíveis</div>
             </div>
+        </div>
+    </div>
         </div>
     </div>
 </div>
@@ -624,6 +625,81 @@ try {
 
 <!-- CSS específico para o modal de agendamento -->
 <style>
+    .turma-wizard {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        overflow: hidden;
+        margin-bottom: 24px;
+    }
+
+    .wizard-header {
+        background: linear-gradient(135deg, #023A8D 0%, #1a4fa0 100%);
+        color: white;
+        padding: 20px;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+    }
+
+.wizard-header h2 {
+    margin: 0;
+    font-size: 1.875rem;
+    font-weight: 700;
+}
+
+    .wizard-content {
+        padding: 30px;
+    }
+
+    .icon-24 {
+        font-size: 1.4rem;
+    }
+
+    .agendamento-hero-bar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-bottom: 20px;
+    }
+
+    .agendamento-hero-bar p {
+        margin: 0;
+        color: var(--gray-600);
+        font-size: 0.95rem;
+    }
+
+    .agendamento-actions-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+
+    .agendamento-actions-row .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .agendamento-actions-row .btn i {
+        font-size: 0.95rem;
+    }
+
+    @media (max-width: 768px) {
+        .agendamento-actions-row {
+            width: 100%;
+        }
+
+        .agendamento-actions-row .btn {
+            flex: 1 1 auto;
+            justify-content: center;
+        }
+    }
+
     /* Modal maior para agendamento */
     .modal-large {
         max-width: 800px;
@@ -646,15 +722,15 @@ try {
     }
     
     .custom-radio .form-check-input:checked {
-        background-color: #007bff;
-        border-color: #007bff;
-        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        background-color: var(--primary-dark);
+        border-color: var(--primary-dark);
+        box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.25);
         transform: scale(1.1);
     }
     
     .custom-radio .form-check-input:focus {
-        box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
-        border-color: #007bff;
+        box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.25);
+        border-color: var(--primary-dark);
     }
     
     .custom-radio .form-check-label {
@@ -682,23 +758,23 @@ try {
     }
     
     .custom-radio .form-check-input:checked + .form-check-label .radio-text strong {
-        color: #007bff;
+        color: var(--primary-dark);
         font-weight: 600;
     }
     
     /* Hover effects */
     .custom-radio:hover .form-check-input:not(:checked) {
-        border-color: #adb5bd;
+        border-color: var(--gray-300);
         transform: scale(1.05);
     }
     
     /* Form section */
     .form-section {
-        background: #f8f9fa;
+        background: var(--gray-50);
         padding: 20px;
         border-radius: 10px;
         margin-bottom: 20px;
-        border-left: 4px solid #007bff;
+        border-left: 4px solid var(--primary-dark);
     }
     
     /* Estilos para o calendário */
@@ -712,7 +788,7 @@ try {
     .calendar-title {
         font-size: 1.5rem;
         font-weight: 600;
-        color: #2c3e50;
+        color: var(--primary-dark);
         margin: 0;
     }
     
@@ -741,15 +817,15 @@ try {
     
     /* Estilos específicos por tipo de aula */
     .event-teorica {
-        background: linear-gradient(135deg, #6c7ce7, #5a6fd8) !important;
-        border-left: 3px solid #5a6fd8 !important;
-        box-shadow: 0 2px 4px rgba(108, 124, 231, 0.2) !important;
+        background: var(--info-color) !important;
+        border-left: 3px solid var(--info-color) !important;
+        box-shadow: none !important;
     }
     
     .event-pratica {
-        background: linear-gradient(135deg, #4a90e2, #3a7bd5) !important;
-        border-left: 3px solid #3a7bd5 !important;
-        box-shadow: 0 2px 4px rgba(74, 144, 226, 0.2) !important;
+        background: var(--success-color) !important;
+        border-left: 3px solid var(--success-color) !important;
+        box-shadow: none !important;
     }
     
     /* Estilos específicos por status */
@@ -759,15 +835,17 @@ try {
     }
     
     .event-concluida {
-        opacity: 0.8 !important;
-        background: linear-gradient(135deg, #27ae60, #229954) !important;
-        box-shadow: 0 2px 4px rgba(39, 174, 96, 0.2) !important;
+        opacity: 0.9 !important;
+        background: var(--success-color) !important;
+        border-left: 3px solid var(--success-color) !important;
+        box-shadow: none !important;
     }
     
     .event-em_andamento {
-        background: linear-gradient(135deg, #f39c12, #e67e22) !important;
+        background: var(--warning-color) !important;
+        border-left: 3px solid var(--warning-color) !important;
         animation: none !important;
-        box-shadow: 0 2px 4px rgba(243, 156, 18, 0.2) !important;
+        box-shadow: none !important;
     }
     
     @keyframes pulse {
@@ -790,13 +868,13 @@ try {
     }
     
     .fc-day-today {
-        background-color: #fff3cd !important;
-        border: 2px solid #ffc107 !important;
+        background-color: var(--blue-100) !important;
+        border: 2px solid var(--primary-dark) !important;
     }
     
     .fc-day-today .fc-daygrid-day-number {
-        background-color: #ffc107;
-        color: white;
+        background-color: var(--primary-dark);
+        color: var(--white);
         border-radius: 50%;
         width: 28px;
         height: 28px;
@@ -885,7 +963,7 @@ try {
         z-index: 10 !important;
         box-shadow: 0 4px 12px rgba(0,0,0,0.15) !important;
         background-color: #fff !important;
-        border: 2px solid #007bff !important;
+        border: 2px solid var(--primary-dark) !important;
         border-radius: 8px !important;
     }
     
@@ -1246,22 +1324,22 @@ try {
     }
     
     .status-agendada {
-        color: #ffc107;
+        color: var(--primary-dark);
         font-weight: 600;
     }
     
     .status-concluida {
-        color: #28a745;
+        color: var(--success-color);
         font-weight: 600;
     }
     
     .status-em_andamento {
-        color: #17a2b8;
+        color: var(--warning-color);
         font-weight: 600;
     }
     
     .status-cancelada {
-        color: #dc3545;
+        color: var(--danger-color);
         font-weight: 600;
     }
     
@@ -1271,13 +1349,13 @@ try {
         border-radius: 10px;
         padding: 15px 20px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        border-left: 4px solid #007bff;
+        box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+        border-left: 4px solid var(--primary-dark);
     }
     
     .legend-title {
         font-weight: 600;
-        color: #495057;
+        color: var(--primary-dark);
         margin-bottom: 12px;
         font-size: 0.9rem;
     }
@@ -1293,7 +1371,7 @@ try {
         align-items: center;
         gap: 8px;
         font-size: 0.85rem;
-        color: #6c757d;
+        color: var(--gray-600);
     }
     
     .legend-color {
@@ -1304,27 +1382,27 @@ try {
     }
     
     .legend-color.teorica {
-        background: linear-gradient(135deg, #6c7ce7, #5a6fd8);
+        background: var(--info-color);
     }
     
     .legend-color.pratica {
-        background: linear-gradient(135deg, #4a90e2, #3a7bd5);
+        background: var(--success-color);
     }
     
     .legend-color.agendada {
-        background: linear-gradient(135deg, #7b8a8b, #6c7d7d);
+        background: var(--primary-dark);
     }
     
     .legend-color.concluida {
-        background: linear-gradient(135deg, #27ae60, #229954);
+        background: var(--success-color);
     }
     
     .legend-color.em_andamento {
-        background: linear-gradient(135deg, #f39c12, #e67e22);
+        background: var(--warning-color);
     }
     
     .legend-color.cancelada {
-        background: linear-gradient(135deg, #bdc3c7, #95a5a6);
+        background: var(--danger-color);
     }
     
     /* Melhorar aparência dos filtros */
@@ -1333,7 +1411,8 @@ try {
         border-radius: 10px;
         padding: 20px;
         margin-bottom: 20px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        box-shadow: var(--shadow-sm);
+        border: 1px solid var(--gray-200);
     }
     
     .filter-group {
@@ -1342,7 +1421,7 @@ try {
     
     .filter-group label {
         font-weight: 600;
-        color: #495057;
+        color: var(--gray-700);
         margin-bottom: 5px;
         display: block;
     }
@@ -1350,16 +1429,32 @@ try {
     .filter-group select {
         width: 100%;
         padding: 8px 12px;
-        border: 1px solid #ced4da;
+        border: 1px solid var(--gray-300);
         border-radius: 6px;
         background-color: white;
         transition: border-color 0.2s ease;
     }
     
     .filter-group select:focus {
-        border-color: #007bff;
+        border-color: var(--primary-dark);
         outline: none;
-        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+        box-shadow: 0 0 0 2px rgba(30, 64, 175, 0.25);
+    }
+
+    @media (max-width: 768px) {
+        .masthead-top {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .masthead-actions {
+            width: 100%;
+        }
+
+        .masthead-actions .action-btn {
+            width: 100%;
+            justify-content: center;
+        }
     }
 </style>
 
@@ -3154,3 +3249,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+

@@ -798,6 +798,16 @@ body.modal-open {
     color: white;
     padding: 20px;
     text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 80px;
+}
+
+.wizard-header h2 {
+    margin: 0;
+    font-size: 1.875rem;
+    font-weight: 700;
 }
 
 /* CSS do wizard-steps removido - não é mais necessário */
