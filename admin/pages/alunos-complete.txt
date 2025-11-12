@@ -1,0 +1,187 @@
+
+function gerarTimelineItemAgenda(item, proximaId) {
+    const tipo = (item.tipo || 'pratica').toLowerCase();
+    const status = (item.status || 'agendada').toLowerCase().replace(/\s+/g, '_');
+    const isProxima = proximaId && item.id && Number(item.id) === Number(proximaId);
+    const dataLabel = formatarDataAgenda(item.data);
+    const horaInicio = formatarHoraAgenda(item.hora_inicio);
+    const horaFim = formatarHoraAgenda(item.hora_fim);
+    const horaLabel = horaInicio ? `${horaInicio}${horaFim ? ' - ' + horaFim : ''}` : '';
+    const descricao = item.descricao ? escapeHtml(item.descricao) : '';
+    const detalhes = item.detalhes || {};
+    const chips = [];
+
+    if (tipo === 'pratica') {
+        if (detalhes.instrutor) chips.push(`<span class="agenda-timeline-tag"><i class="fas fa-user-tie"></i>${escapeHtml(detalhes.instrutor)}</span>`);
+        if (detalhes.veiculo) chips.push(`<span class="agenda-timeline-tag"><i class="fas fa-car-side"></i>${escapeHtml(detalhes.veiculo)}</span>`);
+    } else {
+        if (detalhes.disciplina) chips.push(`<span class="agenda-timeline-tag"><i class="fas fa-book"></i>${escapeHtml(detalhes.disciplina)}</span>`);
+        if (detalhes.turma) chips.push(`<span class="agenda-timeline-tag"><i class="fas fa-users"></i>${escapeHtml(detalhes.turma)}</span>`);
+    }
+
+    if (detalhes.observacoes) {
+        chips.push(`<span class="agenda-timeline-tag"><i class="fas fa-sticky-note"></i>${escapeHtml(detalhes.observacoes)}</span>`);
+    }
+
+    const statusLabel = labelStatusAgenda(status);
+
+    return `
+        <div class="agenda-timeline-item ${tipo} agenda-status-${status} ${isProxima ? 'proxima' : ''}">
+            <div class="agenda-timeline-marker ${tipo}">
+                <i class="${tipo === 'pratica' ? 'fas fa-car-side' : 'fas fa-chalkboard-teacher'}"></i>
+            </div>
+            <div class="agenda-timeline-content">
+                <div class="agenda-timeline-meta">
+                    <span class="agenda-timeline-date">${dataLabel}</span>
+                    ${horaLabel ? `<span class="agenda-timeline-time"><i class="fas fa-clock"></i>${horaLabel}</span>` : ''}
+                    <span class="agenda-status-pill agenda-status-${status}">${escapeHtml(statusLabel)}</span>
+                </div>
+                <h6 class="agenda-timeline-title">${escapeHtml(item.titulo || (tipo === 'pratica' ? 'Aula Prática' : 'Aula Teórica'))}</h6>
+                ${descricao ? `<p class="agenda-timeline-description">${descricao}</p>` : ''}
+                ${chips.length ? `<div class="agenda-timeline-tags">${chips.join('')}</div>` : ''}
+            </div>
+        </div>
+    `;
+}
+
+function carregarAgendaAluno(alunoId) {
+    const resumoEl = document.getElementById('agendaResumo');
+    const timelineEl = document.getElementById('agendaTimeline');
+
+    if (!resumoEl || !timelineEl) {
+        return;
+    }
+
+    resumoEl.innerHTML = `
+        <div class="agenda-summary-loading">
+            <i class="fas fa-spinner fa-spin"></i>
+            <span>Carregando resumo da agenda...</span>
+        </div>
+    `;
+
+    timelineEl.classList.remove('empty');
+    timelineEl.innerHTML = `
+        <div class="agenda-timeline-loader">
+            <i class="fas fa-calendar-alt fa-spin"></i>
+            <span>Buscando aulas agendadas...</span>
+        </div>
+    `;
+
+    if (!alunoId) {
+        resumoEl.innerHTML = `
+            <div class="agenda-summary-loading text-danger">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>ID do aluno não informado</span>
+            </div>
+        `;
+        timelineEl.classList.add('empty');
+        timelineEl.innerHTML = `
+            <div class="agenda-timeline-empty">
+                <i class="fas fa-info-circle"></i>
+                <span>Não foi possível carregar as aulas deste aluno.</span>
+            </div>
+        `;
+        return;
+    }
+
+    fetch(`api/aluno-agenda.php?aluno_id=${alunoId}`, { cache: 'no-store' })
+        .then(response => response.json())
+        .then(data => {
+            if (!data.success) {
+                throw new Error(data.message || 'Não foi possível carregar a agenda do aluno.');
+            }
+
+            const praticasResumo = data.resumo?.praticas || {};
+            const total = Number(praticasResumo.total ?? 0);
+            const concluidas = Number(praticasResumo.concluidas ?? 0);
+            const progressoPercentual = Math.min(100, Math.max(0, Number(praticasResumo.progresso_percentual ?? 0)));
+            const proxima = praticasResumo.proxima || null;
+            const timeline = Array.isArray(data.timeline) ? data.timeline : [];
+
+            resumoEl.innerHTML = `
+                <div class="agenda-summary-card progress">
+                    <span class="agenda-summary-title"><i class="fas fa-route"></i>Progresso prático</span>
+                    <div>
+                        <div class="agenda-progress-value">${progressoPercentual.toFixed(1)}%</div>
+                        <div class="agenda-progress-subtitle">${concluidas} de ${total} aulas concluídas</div>
+                    </div>
+                    <div class="agenda-progress-bar">
+                        <div class="agenda-progress-bar-fill" style="width: ${progressoPercentual}%"></div>
+                    </div>
+                </div>
+                <div class="agenda-summary-card">
+                    <span class="agenda-summary-title"><i class="fas fa-clock"></i>Próxima prática</span>
+                    <div class="agenda-next-content">
+                        ${proxima ? `
+                            <div class="agenda-next-when">${formatarDataAgenda(proxima.data, { weekday: 'long', day: '2-digit', month: 'long' })} • ${formatarHoraAgenda(proxima.hora_inicio)}</div>
+                            <div class="agenda-next-meta">
+                                ${proxima.instrutor ? `<span><i class="fas fa-user-tie me-1"></i>${escapeHtml(proxima.instrutor)}</span>` : ''}
+                                ${proxima.veiculo ? `<span><i class="fas fa-car-side me-1"></i>${escapeHtml(proxima.veiculo)}</span>` : ''}
+                            </div>
+                        ` : '<p class="agenda-next-empty">Nenhuma prática futura agendada.</p>'}
+                    </div>
+                </div>
+                <div class="agenda-summary-card">
+                    <span class="agenda-summary-title"><i class="fas fa-link"></i>Atalhos</span>
+                    <div class="agenda-actions">
+                        <button type="button" class="btn btn-primary" id="agendaBtnAgendar">
+                            <i class="fas fa-calendar-plus"></i>Agendar prática
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" id="agendaBtnReagendar" ${proxima ? '' : 'disabled'}>
+                            <i class="fas fa-sync-alt"></i>Reagendar próxima
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            const btnAgendar = document.getElementById('agendaBtnAgendar');
+            if (btnAgendar) {
+                btnAgendar.addEventListener('click', () => abrirAgendamentoAgenda(alunoId));
+            }
+
+            const btnReagendar = document.getElementById('agendaBtnReagendar');
+            if (btnReagendar) {
+                if (proxima && proxima.id) {
+                    btnReagendar.disabled = false;
+                    btnReagendar.addEventListener('click', () => abrirAgendamentoAgenda(alunoId, proxima.id));
+                } else {
+                    btnReagendar.disabled = true;
+                }
+            }
+
+            if (!timeline.length) {
+                timelineEl.classList.add('empty');
+                timelineEl.innerHTML = `
+                    <div class="agenda-timeline-empty">
+                        <i class="fas fa-calendar-times"></i>
+                        <span>Nenhuma aula registrada na agenda ainda.</span>
+                    </div>
+                `;
+                return;
+            }
+
+            timelineEl.classList.remove('empty');
+            timelineEl.innerHTML = timeline
+                .map(item => gerarTimelineItemAgenda(item, proxima ? proxima.id : null))
+                .join('');
+        })
+        .catch(error => {
+            console.error('Erro ao carregar agenda do aluno:', error);
+            resumoEl.innerHTML = `
+                <div class="agenda-summary-loading text-danger">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>${escapeHtml(error.message || 'Falha ao carregar agenda do aluno.')}</span>
+                </div>
+            `;
+            timelineEl.classList.add('empty');
+            timelineEl.innerHTML = `
+                <div class="agenda-timeline-empty">
+                    <i class="fas fa-calendar-times"></i>
+                    <span>Não foi possível carregar as aulas deste aluno.</span>
+                </div>
+            `;
+        });
+}
+
+function carregarDadosAba(abaId, alunoId) {
+

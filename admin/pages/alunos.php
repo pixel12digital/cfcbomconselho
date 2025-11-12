@@ -1689,6 +1689,7 @@ input.form-control.invalid {
 }
 </style>
 
+<<<<<<< HEAD
 <div class="turma-wizard">
     <div class="wizard-header">
         <h2 class="d-flex align-items-center justify-content-center text-white" style="gap: 12px;">
@@ -1711,6 +1712,23 @@ input.form-control.invalid {
                 <button type="button" class="btn btn-outline-primary" onclick="imprimirAlunos()">
                     <i class="fas fa-print"></i>
                     Imprimir
+=======
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-user-graduate me-2"></i>Gestão de Alunos
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportarAlunos()">
+                <i class="fas fa-download me-1"></i>Exportar
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirAlunos()">
+                <i class="fas fa-print me-1"></i>Imprimir
+            </button>
+    </div>
+                <button type="button" class="btn btn-primary" onclick="abrirModalAluno()">
+            <i class="fas fa-plus me-1"></i>Novo Aluno
+>>>>>>> 6d197f0 (layout header agendamento prático)
                 </button>
             </div>
         </div>
@@ -1722,6 +1740,7 @@ input.form-control.invalid {
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
         <?php endif; ?>
+<<<<<<< HEAD
 
         <!-- Filtros e Busca Avançada -->
         <div class="alunos-filter-card">
@@ -1771,6 +1790,76 @@ input.form-control.invalid {
                         <button type="button" class="btn btn-outline-primary" onclick="exportarFiltros()">
                             Exportar
                         </button>
+=======
+
+<!-- Filtros e Busca Avançada -->
+<div class="row mb-4">
+    <div class="col-md-3">
+                    <div class="input-group">
+                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control" id="buscaAluno" placeholder="Buscar aluno..." data-validate="minLength:2">
+                    </div>
+                </div>
+    <div class="col-md-2">
+        <select class="form-select" id="filtroStatus">
+                        <option value="">Todos os Status</option>
+                        <option value="ativo">Ativo</option>
+                        <option value="inativo">Inativo</option>
+            <option value="concluido">Concluído</option>
+                        <option value="pendente">Pendente</option>
+                    </select>
+                </div>
+    <div class="col-md-2">
+        <select class="form-select" id="filtroCFC">
+                        <option value="">Todos os CFCs</option>
+                        <?php foreach ($cfcs as $cfc): ?>
+                            <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+    <div class="col-md-2">
+        <select class="form-select" id="filtroCategoria">
+                        <option value="">Todas as Categorias</option>
+                        <option value="A">Categoria A</option>
+                        <option value="B">Categoria B</option>
+                        <option value="C">Categoria C</option>
+                        <option value="D">Categoria D</option>
+                        <option value="E">Categoria E</option>
+                        <option value="AB">Categoria AB</option>
+                        <option value="AC">Categoria AC</option>
+                        <option value="AD">Categoria AD</option>
+                        <option value="AE">Categoria AE</option>
+                    </select>
+                </div>
+    <div class="col-md-3">
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-info" onclick="limparFiltros()">
+                            Limpar
+                        </button>
+            <button type="button" class="btn btn-outline-success" onclick="exportarFiltros()">
+                            Exportar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+<!-- Cards de Estatísticas -->
+<div class="row mb-4">
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card border-left-primary shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
+                            Total de Alunos
+        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalAlunos">
+                            <?php echo count($alunos); ?>
+    </div>
+    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-user-graduate fa-2x text-gray-300"></i>
+>>>>>>> 6d197f0 (layout header agendamento prático)
                     </div>
                 </div>
             </div>
@@ -1950,6 +2039,7 @@ input.form-control.invalid {
                                 </button>
                                 <?php endif; ?>
 
+<<<<<<< HEAD
                                 <button type="button" class="aluno-action-btn" onclick="historicoAluno(<?php echo $aluno['id']; ?>)" title="Histórico de aulas">
                                     <i class="fas fa-history"></i>
                                 </button>
@@ -2113,6 +2203,270 @@ input.form-control.invalid {
             </div>
             <?php endforeach; ?>
         <?php endif; ?>
+=======
+<!-- Tabela de Alunos -->
+<div class="card shadow">
+    <div class="card-header bg-dark">
+        <h5 class="mb-0" style="color: #6c757d !important;"><i class="fas fa-list me-2"></i>Lista de Alunos</h5>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive table-container">
+            <table class="table table-striped table-hover" id="tabelaAlunos">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ID</th>
+                        <th>Nome</th>
+                        <th>Categoria</th>
+                        <th>Status</th>
+                        <th>Ações</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php if (empty($alunos)): ?>
+                <tr>
+                        <td colspan="5" class="text-center text-muted py-4">
+                        <i class="fas fa-inbox fa-3x mb-3"></i>
+                        <p>Nenhum aluno cadastrado ainda.</p>
+                        <button class="btn btn-primary" onclick="abrirModalAluno()">
+                            <i class="fas fa-plus me-1"></i>Cadastrar Primeiro Aluno
+                        </button>
+                    </td>
+                </tr>
+                <?php else: ?>
+                    <?php foreach ($alunos as $aluno): ?>
+                        <tr data-aluno-id="<?php echo $aluno['id']; ?>">
+                            <td><?php echo $aluno['id']; ?></td>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div>
+                                        <strong><?php echo htmlspecialchars($aluno['nome']); ?></strong>
+                                        <?php if ($aluno['email']): ?>
+                                        <br><small class="text-muted"><?php echo htmlspecialchars($aluno['email']); ?></small>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                    <?php
+                                // Mostrar operações dinâmicas em vez de categoria única
+                                $operacoes = $aluno['operacoes'];
+                        if (is_string($operacoes)) {
+                            $operacoes = json_decode($operacoes, true);
+                        }
+                        
+                                if (!empty($operacoes) && is_array($operacoes)) {
+                                    foreach ($operacoes as $index => $operacao) {
+                                        $badgeClass = '';
+                                        $tipoText = '';
+                                        
+                                        $tipo = $operacao['tipo'] ?? 'desconhecido';
+                                        $categoria = $operacao['categoria'] ?? $operacao['categoria_cnh'] ?? 'N/A';
+                                        
+                                        switch ($tipo) {
+                                            case 'primeira_habilitacao':
+                                                $badgeClass = 'bg-primary';
+                                                $tipoText = '';
+                                                break;
+                                            case 'adicao':
+                                                $badgeClass = 'badge-status-ativo';
+                                                $tipoText = '';
+                                                break;
+                                            case 'mudanca':
+                                                $badgeClass = 'badge-status-pendente';
+                                                $tipoText = '';
+                                                break;
+                                            case 'aula_avulsa':
+                                                $badgeClass = 'bg-info';
+                                                $tipoText = '';
+                                                break;
+                                            default:
+                                                $badgeClass = 'badge-status-inativo';
+                                                $tipoText = '';
+                                        }
+                                        
+                                        if ($index > 0) echo '<br>';
+                                        echo '<span class="badge ' . $badgeClass . ' me-1" title="' . ucfirst(str_replace('_', ' ', $tipo)) . '">' . 
+                                             htmlspecialchars($categoria) . '</span>';
+                                    }
+                                } else {
+                                    // Fallback para categoria antiga se não houver operações
+                                    echo '<span class="badge bg-secondary">' . htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A') . '</span>';
+                                }
+                                ?>
+                            </td>
+                            <td>
+                                <?php
+                                $statusClass = [
+                                    'ativo' => 'success',
+                                    'inativo' => 'danger',
+                                    'concluido' => 'info'
+                                ];
+                                $statusText = [
+                                    'ativo' => 'Ativo',
+                                    'inativo' => 'Inativo',
+                                    'concluido' => 'Concluído'
+                                ];
+                                ?>
+                                <span class="badge bg-<?php echo $statusClass[$aluno['status']] ?? 'secondary'; ?>">
+                                    <?php echo $statusText[$aluno['status']] ?? ucfirst($aluno['status']); ?>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="action-buttons-compact">
+                                    <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
+                                    <button type="button" class="btn btn-sm btn-secondary-action btn-edit action-icon-btn" 
+                                            onclick="editarAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Editar dados do aluno" data-tooltip="Editar dados do aluno"
+                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
+                                        <i class="fas fa-edit" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                    
+                                    <button type="button" class="btn btn-sm btn-secondary-action btn-view action-icon-btn" 
+                                            onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Ver detalhes completos do aluno" data-tooltip="Ver detalhes completos do aluno"
+                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
+                                        <i class="fas fa-eye" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
+                                    </button>
+                                    
+                                    <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
+                                    <button type="button" class="btn btn-sm btn-primary-action btn-add action-icon-btn" 
+                                            onclick="agendarAula(<?php echo $aluno['id']; ?>)" 
+                                            title="Agendar nova aula para este aluno" data-tooltip="Agendar nova aula para este aluno"
+                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
+                                        <i class="fas fa-calendar-plus" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                    
+                                    <button type="button" class="btn btn-sm btn-secondary-action btn-history action-icon-btn" 
+                                            onclick="historicoAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Visualizar histórico de aulas e progresso" data-tooltip="Visualizar histórico de aulas e progresso"
+                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
+                                        <i class="fas fa-history" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
+                                    </button>
+                                    
+                                    <?php if (defined('FINANCEIRO_ENABLED') && FINANCEIRO_ENABLED && ($isAdmin || $user['tipo'] === 'secretaria')): ?>
+                                    <button type="button" class="btn btn-sm btn-secondary-action btn-financial action-icon-btn" 
+                                            onclick="abrirFinanceiroAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Ver faturas e pagamentos do aluno" data-tooltip="Ver faturas e pagamentos do aluno"
+                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
+                                        <i class="fas fa-dollar-sign" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
+                                    </button>
+                                    <?php endif; ?>
+                                    <?php if ($aluno['status'] === 'ativo'): ?>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary action-icon-btn" 
+                                            onclick="desativarAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Desativar aluno (não poderá agendar aulas)" data-bs-toggle="tooltip">
+                                        <i class="fas fa-ban"></i>
+                                    </button>
+                                    <?php else: ?>
+                                    <button type="button" class="btn btn-sm btn-outline-success action-icon-btn" 
+                                            onclick="ativarAluno(<?php echo $aluno['id']; ?>)" 
+                                            title="Reativar aluno para agendamento de aulas" data-bs-toggle="tooltip">
+                                        <i class="fas fa-check"></i>
+                                    </button>
+                                    <?php endif; ?>
+                            </div>
+                        </td>
+                        </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Layout em cards para mobile -->
+        <div class="mobile-aluno-cards" style="display: none;">
+            <?php if (!empty($alunos)): ?>
+                <?php foreach ($alunos as $aluno): ?>
+                <div class="mobile-aluno-card" data-aluno-id="<?php echo $aluno['id']; ?>">
+                    <div class="mobile-aluno-header">
+                        <div class="mobile-aluno-info">
+                            <div class="mobile-aluno-title">
+                                <strong><?php echo htmlspecialchars($aluno['nome']); ?></strong>
+                                <span class="mobile-aluno-id">#<?php echo $aluno['id']; ?></span>
+                            </div>
+                            <?php if ($aluno['email']): ?>
+                            <div class="mobile-aluno-email"><?php echo htmlspecialchars($aluno['email']); ?></div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="mobile-aluno-status">
+                            <?php
+                            $statusClass = [
+                                'ativo' => 'success',
+                                'inativo' => 'danger',
+                                'concluido' => 'info'
+                            ];
+                            $statusText = [
+                                'ativo' => 'Ativo',
+                                'inativo' => 'Inativo',
+                                'concluido' => 'Concluído'
+                            ];
+                            ?>
+                            <span class="badge bg-<?php echo $statusClass[$aluno['status']] ?? 'secondary'; ?>">
+                                <?php echo $statusText[$aluno['status']] ?? ucfirst($aluno['status']); ?>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="mobile-aluno-body">
+                        <div class="mobile-aluno-field">
+                            <span class="mobile-aluno-label">Categoria</span>
+                            <span class="mobile-aluno-value">
+                                <?php 
+                                if (!empty($aluno['operacoes'])) {
+                                    // Verificar se operacoes é string JSON e converter para array
+                                    $operacoes = $aluno['operacoes'];
+                                    if (is_string($operacoes)) {
+                                        $operacoes = json_decode($operacoes, true);
+                                    }
+                                    
+                                    if (is_array($operacoes) && !empty($operacoes)) {
+                                        $categorias = array_column($operacoes, 'categoria');
+                                        echo implode(', ', array_unique($categorias));
+                                    } else {
+                                        echo htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A');
+                                    }
+                                } else {
+                                    echo htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A');
+                                }
+                                ?>
+                            </span>
+                        </div>
+                    </div>
+                    
+                    <div class="mobile-aluno-actions">
+                        <button type="button" class="btn btn-sm btn-primary" onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" title="Ver detalhes">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                        <button type="button" class="btn btn-sm btn-warning" onclick="editarAluno(<?php echo $aluno['id']; ?>)" title="Editar aluno">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                        <button type="button" class="btn btn-sm btn-info" onclick="agendarAula(<?php echo $aluno['id']; ?>)" title="Agendar aula">
+                            <i class="fas fa-calendar-plus"></i>
+                                </button>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="historicoAluno(<?php echo $aluno['id']; ?>)" title="Histórico de aulas">
+                            <i class="fas fa-history"></i>
+                        </button>
+                        <?php if ($aluno['status'] === 'ativo'): ?>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="desativarAluno(<?php echo $aluno['id']; ?>)" title="Desativar aluno">
+                            <i class="fas fa-ban"></i>
+                        </button>
+                        <?php else: ?>
+                        <button type="button" class="btn btn-sm btn-outline-success" onclick="ativarAluno(<?php echo $aluno['id']; ?>)" title="Ativar aluno">
+                            <i class="fas fa-check"></i>
+                        </button>
+                        <?php endif; ?>
+                        <!-- Botão de excluir desativado por segurança -->
+                        <!-- <button type="button" class="btn btn-sm btn-danger" onclick="excluirAluno(<?php echo $aluno['id']; ?>)">
+                            <i class="fas fa-trash"></i>
+                        </button> -->
+                            </div>
+                </div>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+        </div>
+>>>>>>> 6d197f0 (layout header agendamento prático)
     </div>
 </div>
 <!-- Modal Customizado para Cadastro/Edição de Aluno -->
@@ -2188,7 +2542,7 @@ input.form-control.invalid {
                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
                                     <i class="fas fa-user me-1"></i>Informações Pessoais
                                 </h6>
-                            </div>
+                                </div>
                             
                             <!-- Campo de Foto -->
                             <div class="col-12 mb-3">
@@ -2199,7 +2553,7 @@ input.form-control.invalid {
                                             <input type="file" class="form-control" id="foto" name="foto" accept="image/*" 
                                                    style="padding: 0.4rem; font-size: 0.85rem;" onchange="previewFotoAluno(this)">
                                             <small class="text-muted" style="font-size: 0.75rem;">📷 JPG, PNG, GIF, WebP até 2MB</small>
-                                        </div>
+                                    </div>
                                     </div>
                                     <div class="col-md-8">
                                         <div class="text-center">
@@ -2210,12 +2564,12 @@ input.form-control.invalid {
                                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerFotoAluno()">
                                                         <i class="fas fa-trash"></i> Remover
                                                     </button>
-                                                </div>
-                                            </div>
+                                </div>
+                            </div>
                                             <div id="placeholder-foto-aluno" class="text-muted" style="font-size: 0.8rem;">
                                                 <i class="fas fa-user-circle fa-3x"></i><br>
                                                 Nenhuma foto selecionada
-                                            </div>
+                                    </div>
                                         </div>
                                     </div>
                                 </div>
@@ -2225,7 +2579,7 @@ input.form-control.invalid {
                                     <label for="nome" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nome Completo *</label>
                                     <input type="text" class="form-control" id="nome" name="nome" required 
                                            placeholder="Nome completo do aluno" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
+                        </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="mb-1">
@@ -2354,8 +2708,8 @@ input.form-control.invalid {
                                     <label for="telefone" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Telefone</label>
                                     <input type="text" class="form-control" id="telefone" name="telefone" 
                                            placeholder="(00) 00000-0000" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
                             </div>
+                        </div>
                         </div>
                         
                         <!-- Seção 2: CFC -->
@@ -2829,7 +3183,7 @@ input.form-control.invalid {
                 </button>
             </div>
         </form>
-    </div>
+</div>
 </div>
 </div>
 
@@ -2918,55 +3272,55 @@ function inicializarMascarasAluno() {
     // Máscara para CPF
     if (typeof IMask !== 'undefined') {
         new IMask(document.getElementById('cpf'), {
-            mask: '000.000.000-00'
-        });
+                mask: '000.000.000-00'
+            });
         
         // RG sem máscara - aceita todos os formatos dos estados brasileiros
         // (alguns estados usam letras e formatos variados)
         
         // Máscara para telefone
         new IMask(document.getElementById('telefone'), {
-            mask: '(00) 00000-0000'
-        });
+                mask: '(00) 00000-0000'
+            });
         
         // Máscara para CEP
         new IMask(document.getElementById('cep'), {
-            mask: '00000-000'
-        });
+                mask: '00000-000'
+            });
     }
     
     // Busca de CEP
     document.getElementById('cep').addEventListener('blur', function() {
-        const cep = this.value.replace(/\D/g, '');
-        if (cep.length === 8) {
-            buscarCEP(cep);
-        }
-    });
-    
-    // Busca de CEP ao pressionar Enter
-    document.getElementById('cep').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            e.preventDefault();
             const cep = this.value.replace(/\D/g, '');
+            if (cep.length === 8) {
+                buscarCEP(cep);
+            }
+        });
+        
+        // Busca de CEP ao pressionar Enter
+    document.getElementById('cep').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const cep = this.value.replace(/\D/g, '');
+                if (cep.length === 8) {
+                    buscarCEP(cep);
+                } else {
+                    mostrarFeedbackCEP('warning', 'CEP deve ter 8 dígitos. Exemplo: 12345-678');
+                }
+            }
+        });
+    
+    // Botão de busca manual
+    document.getElementById('btnBuscarCEP').addEventListener('click', function() {
+            const cepInput = document.getElementById('cep');
+            const cep = cepInput.value.replace(/\D/g, '');
             if (cep.length === 8) {
                 buscarCEP(cep);
             } else {
                 mostrarFeedbackCEP('warning', 'CEP deve ter 8 dígitos. Exemplo: 12345-678');
+                cepInput.focus();
             }
-        }
-    });
-    
-    // Botão de busca manual
-    document.getElementById('btnBuscarCEP').addEventListener('click', function() {
-        const cepInput = document.getElementById('cep');
-        const cep = cepInput.value.replace(/\D/g, '');
-        if (cep.length === 8) {
-            buscarCEP(cep);
-        } else {
-            mostrarFeedbackCEP('warning', 'CEP deve ter 8 dígitos. Exemplo: 12345-678');
-            cepInput.focus();
-        }
-    });
+        });
     
     // Botão de busca por rua agora é um link direto para os Correios
     
@@ -2985,11 +3339,11 @@ function inicializarMascarasAluno() {
             municipioSelect.disabled = true;
             atualizarNaturalidade();
         }
-    });
+        });
     
     document.getElementById('naturalidade_municipio').addEventListener('change', function() {
-        atualizarNaturalidade();
-    });
+            atualizarNaturalidade();
+        });
     
     document.getElementById('btnLimparNaturalidade').addEventListener('click', function() {
         document.getElementById('naturalidade_estado').value = '';

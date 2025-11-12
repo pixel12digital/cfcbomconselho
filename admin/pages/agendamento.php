@@ -83,6 +83,7 @@ try {
 }
 ?>
 
+<<<<<<< HEAD
 <div class="agendamento-wrapper">
     <div class="turma-wizard">
         <div class="wizard-header">
@@ -119,59 +120,638 @@ try {
                     <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
                 <?php endforeach; ?>
             </select>
+=======
+<!-- Header da Página -->
+<style>
+    .agenda-top-wrapper {
+        background: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        padding: 24px;
+        margin-bottom: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+    }
+
+    .agenda-top-row {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .agenda-header-left h2 {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin: 0;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .agenda-header-left h2 i {
+        font-size: 1.4rem;
+        color: #0f7aed;
+    }
+
+    .agenda-period-controls {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .period-selector {
+        display: inline-flex;
+        gap: 8px;
+        padding: 4px;
+        border-radius: 12px;
+        background: #f1f5f9;
+        width: fit-content;
+    }
+
+    .period-option {
+        border: none;
+        background: transparent;
+        color: #0f172a;
+        font-weight: 600;
+        padding: 7px 14px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .period-option:hover {
+        background: rgba(15, 122, 237, 0.12);
+    }
+
+    .period-option.active {
+        background: #0f7aed;
+        color: #ffffff;
+        box-shadow: 0 8px 18px rgba(15, 122, 237, 0.25);
+    }
+
+    .period-option:focus-visible {
+        outline: 3px solid rgba(15, 122, 237, 0.35);
+        outline-offset: 2px;
+    }
+
+    .period-custom {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .period-custom label {
+        font-weight: 600;
+        color: #475569;
+    }
+
+    .period-custom input[type="date"] {
+        border: 1px solid #cbd5f5;
+        border-radius: 8px;
+        padding: 5px 10px;
+        font-size: 0.95rem;
+        color: #0f172a;
+    }
+
+    .period-custom input[type="date"]:focus-visible {
+        outline: 3px solid rgba(15, 122, 237, 0.35);
+    }
+
+    .kpi-actions-row {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        flex-wrap: wrap;
+    }
+
+    .kpi-bar {
+        display: inline-flex;
+        align-items: center;
+        gap: 18px;
+        background: #f8fafc;
+        border-radius: 10px;
+        padding: 10px 14px;
+        min-height: 48px;
+    }
+
+    .kpi-item {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        border: none;
+        background: transparent;
+        cursor: pointer;
+        padding: 6px 8px;
+        border-radius: 8px;
+        transition: background 0.2s ease, transform 0.2s ease;
+        overflow: hidden;
+    }
+
+    .kpi-item:hover {
+        background: rgba(15, 122, 237, 0.08);
+    }
+
+    .kpi-item.active {
+        background: rgba(15, 122, 237, 0.12);
+    }
+
+    .kpi-item:focus-visible {
+        outline: 3px solid rgba(15, 122, 237, 0.35);
+        outline-offset: 2px;
+    }
+
+    .kpi-icon {
+        display: inline-flex;
+        width: 24px;
+        height: 24px;
+        align-items: center;
+        justify-content: center;
+        color: #0f7aed;
+        font-size: 1.2rem;
+    }
+
+    .kpi-content {
+        display: inline-flex;
+        align-items: baseline;
+        gap: 6px;
+    }
+
+    .kpi-value {
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .kpi-interval {
+        font-size: 0.85rem;
+        color: #64748b;
+    }
+
+    .kpi-item.is-loading .kpi-value,
+    .kpi-item.is-loading .kpi-interval {
+        color: transparent;
+    }
+
+    .kpi-item.is-loading::after {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: 8px;
+        background: linear-gradient(90deg, rgba(226, 232, 240, 0.7) 25%, rgba(148, 163, 184, 0.5) 50%, rgba(226, 232, 240, 0.7) 75%);
+        animation: shimmer 1.4s infinite;
+        pointer-events: none;
+        z-index: 1;
+    }
+
+    @keyframes shimmer {
+        0% {
+            background-position: -200px 0;
+        }
+        100% {
+            background-position: 200px 0;
+        }
+    }
+
+    .agenda-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-left: auto;
+    }
+
+    .agenda-actions .btn {
+        min-width: 150px;
+        font-weight: 600;
+        border-radius: 8px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .agenda-actions .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 12px 20px rgba(15, 23, 42, 0.12);
+    }
+
+    .filters-section {
+        background: none;
+        padding: 0;
+        margin-bottom: 0;
+    }
+
+    .filters-header-mobile {
+        display: none;
+    }
+
+    .filters-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 16px;
+    }
+
+    .filters-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 14px;
+        background: #0f172a;
+        color: #ffffff;
+        border: none;
+        border-radius: 10px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+    .filters-toggle i {
+        font-size: 1rem;
+    }
+
+    .filters-toggle:focus-visible {
+        outline: 3px solid rgba(15, 122, 237, 0.35);
+        outline-offset: 2px;
+    }
+
+    .filter-group label {
+        font-weight: 600;
+        color: #0f172a;
+        margin-bottom: 6px;
+    }
+
+    .filter-group select {
+        border-radius: 10px;
+        border: 1px solid #cbd5f5;
+        padding: 10px 12px;
+        font-size: 0.95rem;
+        color: #0f172a;
+    }
+
+    .filter-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        min-height: 4px;
+        margin-top: 8px;
+    }
+
+    .filter-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: #e2e8f0;
+        color: #0f172a;
+        border: none;
+        border-radius: 999px;
+        padding: 6px 14px;
+        font-size: 0.9rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+
+    .filter-chip:hover {
+        background: #cbd5f5;
+    }
+
+    @media (max-width: 1200px) {
+        .filters-grid {
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 992px) {
+        .kpi-actions-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .agenda-actions {
+            margin-left: 0;
+        }
+        .filters-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .filters-header-mobile {
+            display: flex;
+            justify-content: space-between;
+        }
+        .filters-grid {
+            display: none;
+            grid-template-columns: 1fr;
+        }
+        .filters-grid.is-open {
+            display: grid;
+        }
+    }
+
+    @media (max-width: 640px) {
+        .agenda-top-wrapper {
+            padding: 20px;
+        }
+        .kpi-bar {
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+    }
+
+    .metrics-note {
+        font-size: 0.9rem;
+        color: #475569;
+        font-style: italic;
+    }
+
+    .tooltip-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        padding-bottom: 6px;
+        border-bottom: 1px solid rgba(255,255,255,0.2);
+    }
+    
+    .tooltip-type {
+        background: rgba(255,255,255,0.2);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 0.75rem;
+    }
+    
+    .tooltip-content {
+        margin-bottom: 8px;
+    }
+    
+    .tooltip-row {
+        margin-bottom: 4px;
+        display: flex;
+        align-items: flex-start;
+    }
+    
+    .tooltip-row strong {
+        min-width: 70px;
+        margin-right: 8px;
+        color: #f8f9fa;
+    }
+    
+    .tooltip-footer {
+        padding-top: 6px;
+        border-top: 1px solid rgba(255,255,255,0.2);
+        text-align: center;
+        color: #adb5bd;
+    }
+    
+    .status-agendada {
+        color: #ffc107;
+        font-weight: 600;
+    }
+    
+    .status-concluida {
+        color: #28a745;
+        font-weight: 600;
+    }
+    
+    .status-em_andamento {
+        color: #17a2b8;
+        font-weight: 600;
+    }
+    
+    .status-cancelada {
+        color: #dc3545;
+        font-weight: 600;
+    }
+    
+    /* Estilos para legenda */
+    .legend-section {
+        background: white;
+        border-radius: 10px;
+        padding: 15px 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        border-left: 4px solid #007bff;
+    }
+    
+    .legend-title {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 12px;
+        font-size: 0.9rem;
+    }
+    
+    .legend-items {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 2px solid rgba(0,0,0,0.1);
+    }
+    
+    .legend-color.teorica {
+        background: linear-gradient(135deg, #6c7ce7, #5a6fd8);
+    }
+    
+    .legend-color.pratica {
+        background: linear-gradient(135deg, #4a90e2, #3a7bd5);
+    }
+    
+    .legend-color.agendada {
+        background: linear-gradient(135deg, #7b8a8b, #6c7d7d);
+    }
+    
+    .legend-color.concluida {
+        background: linear-gradient(135deg, #27ae60, #229954);
+    }
+    
+    .legend-color.em_andamento {
+        background: linear-gradient(135deg, #f39c12, #e67e22);
+    }
+    
+    .legend-color.cancelada {
+        background: linear-gradient(135deg, #bdc3c7, #95a5a6);
+    }
+    
+    /* Melhorar aparência dos filtros */
+    .filters-section {
+        background: white;
+        border-radius: 10px;
+        padding: 20px;
+        margin-bottom: 20px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    
+    .filter-group {
+        margin-bottom: 15px;
+    }
+    
+    .filter-group label {
+        font-weight: 600;
+        color: #495057;
+        margin-bottom: 5px;
+        display: block;
+    }
+    
+    .filter-group select {
+        width: 100%;
+        padding: 8px 12px;
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        background-color: white;
+        transition: border-color 0.2s ease;
+    }
+    
+    .filter-group select:focus {
+        border-color: #007bff;
+        outline: none;
+        box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+    }
+</style>
+
+<div class="agenda-top-wrapper" id="agenda-top-wrapper">
+    <div class="agenda-top-row">
+        <div class="agenda-header-left">
+            <h2>
+                <i class="fas fa-graduation-cap" aria-hidden="true"></i>
+                Agenda de Aulas
+            </h2>
+>>>>>>> 6d197f0 (layout header agendamento prático)
         </div>
-        
-        <div class="filter-group">
-            <label for="filter-instrutor">Instrutor:</label>
-            <select id="filter-instrutor" onchange="filtrarAgenda()">
-                <option value="">Todos os Instrutores</option>
-                <?php foreach ($instrutores as $instrutor): ?>
-                    <option value="<?php echo $instrutor['id']; ?>"><?php echo htmlspecialchars($instrutor['nome']); ?></option>
-                <?php endforeach; ?>
-            </select>
+        <div class="agenda-period-controls">
+            <div class="period-selector" role="group" aria-label="Selecionar período">
+                <button type="button" class="period-option active" data-periodo="hoje" id="period-btn-today">Hoje</button>
+                <button type="button" class="period-option" data-periodo="semana" id="period-btn-week">Semana</button>
+                <button type="button" class="period-option" data-periodo="personalizado" id="period-btn-custom">Personalizado</button>
+            </div>
+            <div class="period-custom" id="period-custom-controls" hidden>
+                <label for="period-start">Início</label>
+                <input type="date" id="period-start" name="period-start" aria-label="Data inicial do período">
+                <span class="text-muted">até</span>
+                <input type="date" id="period-end" name="period-end" aria-label="Data final do período">
+            </div>
         </div>
-        
-        <div class="filter-group">
-            <label for="filter-tipo">Tipo de Aula:</label>
-            <select id="filter-tipo" onchange="filtrarAgenda()">
-                <option value="">Todas as Aulas</option>
-                <option value="teorica">Teórica</option>
-                <option value="pratica">Prática</option>
-            </select>
-        </div>
-        
-        <div class="filter-group">
-            <label for="filter-status">Status:</label>
-            <select id="filter-status" onchange="filtrarAgenda()">
-                <option value="">Todos os Status</option>
-                <option value="agendada">Agendada</option>
-                <option value="em_andamento">Em Andamento</option>
-                <option value="concluida">Concluída</option>
-                <option value="cancelada">Cancelada</option>
-            </select>
-        </div>
-        
-        <div class="filter-group">
-            <label for="filter-veiculo">Veículo:</label>
-            <select id="filter-veiculo" onchange="filtrarAgenda()">
-                <option value="">Todos os Veículos</option>
-                <?php foreach ($veiculos as $veiculo): ?>
-                    <option value="<?php echo $veiculo['id']; ?>"><?php echo htmlspecialchars($veiculo['placa'] . ' - ' . $veiculo['modelo']); ?></option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        
-        <div class="filter-group">
-            <label for="filter-aluno">Aluno:</label>
-            <select id="filter-aluno" onchange="filtrarAgenda()">
-                <option value="">Todos os Alunos</option>
-                <?php foreach ($alunos as $aluno): ?>
-                    <option value="<?php echo $aluno['id']; ?>"><?php echo htmlspecialchars($aluno['nome']); ?></option>
-                <?php endforeach; ?>
-            </select>
+        <div class="kpi-actions-row">
+            <div class="kpi-bar" role="group" aria-label="Indicadores de aulas">
+                <button type="button" class="kpi-item is-loading" data-period-target="hoje" id="metric-card-today" aria-label="Aulas de hoje: carregando">
+                    <span class="kpi-icon" aria-hidden="true"><i class="fas fa-calendar-day"></i></span>
+                    <span class="kpi-content">
+                        <span class="kpi-label">Hoje</span>
+                        <span class="kpi-value" id="metric-value-today" aria-live="polite">0</span>
+                    </span>
+                </button>
+                <button type="button" class="kpi-item is-loading" data-period-target="semana" id="metric-card-week" aria-label="Aulas da semana: carregando">
+                    <span class="kpi-icon" aria-hidden="true"><i class="fas fa-calendar-week"></i></span>
+                    <span class="kpi-content">
+                        <span class="kpi-label">Semana</span>
+                        <span class="kpi-value" id="metric-value-week" aria-live="polite">0</span>
+                    </span>
+                </button>
+                <button type="button" class="kpi-item is-loading" data-period-target="personalizado" id="metric-card-period" aria-label="Aulas no período: carregando">
+                    <span class="kpi-icon" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>
+                    <span class="kpi-content">
+                        <span class="kpi-label">Período</span>
+                        <span class="kpi-value" id="metric-value-period" aria-live="polite">0</span>
+                        <span class="kpi-interval" id="metric-period-label">--</span>
+                    </span>
+                </button>
+            </div>
+            <div class="agenda-actions">
+                <button class="btn btn-primary" type="button" onclick="abrirModalNovaAula()" title="Abrir o formulário de nova aula usando filtros atuais">
+                    <i class="fas fa-plus me-2" aria-hidden="true"></i>
+                    Nova Aula
+                </button>
+                <button class="btn btn-success" type="button" onclick="verificarDisponibilidade()" title="Usa os filtros e período selecionados">
+                    <i class="fas fa-calendar-check me-2" aria-hidden="true"></i>
+                    Verificar Disponibilidade
+                </button>
+                <button class="btn btn-info" type="button" onclick="exportarAgenda()" title="Usa os filtros e período selecionados">
+                    <i class="fas fa-download me-2" aria-hidden="true"></i>
+                    Exportar Agenda
+                </button>
+            </div>
         </div>
     </div>
+<<<<<<< HEAD
 </section>
+=======
+
+    <div class="filters-section" id="filters-section">
+        <div class="filters-header-mobile">
+            <button type="button" class="filters-toggle" id="filters-toggle" aria-expanded="true" aria-controls="filters-grid">
+                <i class="fas fa-sliders-h" aria-hidden="true"></i>
+                <span class="filters-toggle-label">Ocultar filtros</span>
+            </button>
+        </div>
+        <div class="filters-grid" id="filters-grid">
+            <div class="filter-group">
+                <label for="filter-cfc">CFC:</label>
+                <select id="filter-cfc" onchange="filtrarAgenda()">
+                    <option value="">Todos os CFCs</option>
+                    <?php foreach ($cfcs ?? [] as $cfc): ?>
+                        <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-instrutor">Instrutor:</label>
+                <select id="filter-instrutor" onchange="filtrarAgenda()">
+                    <option value="">Todos os Instrutores</option>
+                    <?php foreach ($instrutores as $instrutor): ?>
+                        <option value="<?php echo $instrutor['id']; ?>"><?php echo htmlspecialchars($instrutor['nome']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-veiculo">Veículo:</label>
+                <select id="filter-veiculo" onchange="filtrarAgenda()">
+                    <option value="">Todos os Veículos</option>
+                    <?php foreach ($veiculos as $veiculo): ?>
+                        <option value="<?php echo $veiculo['id']; ?>"><?php echo htmlspecialchars($veiculo['placa'] . ' - ' . $veiculo['modelo']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-status">Status:</label>
+                <select id="filter-status" onchange="filtrarAgenda()">
+                    <option value="">Todos os Status</option>
+                    <option value="agendada">Agendada</option>
+                    <option value="confirmada">Confirmada</option>
+                    <option value="executavel">Executável</option>
+                    <option value="em_andamento">Em Andamento</option>
+                    <option value="concluida">Concluída</option>
+                    <option value="cancelada">Cancelada</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label for="filter-aluno">Aluno:</label>
+                <select id="filter-aluno" onchange="filtrarAgenda()">
+                    <option value="">Todos os Alunos</option>
+                    <?php foreach ($alunos as $aluno): ?>
+                        <option value="<?php echo $aluno['id']; ?>"><?php echo htmlspecialchars($aluno['nome']); ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+    </div>
+
+    <div class="filter-chips" id="filter-chips" aria-live="polite"></div>
+</div>
+>>>>>>> 6d197f0 (layout header agendamento prático)
 
 <!-- Legenda Visual -->
 <section class="legend-section">
@@ -180,10 +760,6 @@ try {
         Legenda dos Eventos
     </div>
     <div class="legend-items">
-        <div class="legend-item">
-            <div class="legend-color teorica"></div>
-            <span>Aula Teórica</span>
-        </div>
         <div class="legend-item">
             <div class="legend-color pratica"></div>
             <span>Aula Prática</span>
@@ -197,13 +773,10 @@ try {
             <span>Concluída</span>
         </div>
         <div class="legend-item">
-            <div class="legend-color em_andamento"></div>
-            <span>Em Andamento</span>
-        </div>
-        <div class="legend-item">
             <div class="legend-color cancelada"></div>
             <span>Cancelada</span>
         </div>
+    </div>
 </div>
 
 <!-- Calendário Principal -->
@@ -232,6 +805,7 @@ try {
     <div id="calendar" class="calendar-container"></div>
 </div>
 
+<<<<<<< HEAD
 <!-- Estatísticas Rápidas -->
 <div class="stats-section">
     <div class="stats-grid">
@@ -279,6 +853,8 @@ try {
     </div>
 </div>
 
+=======
+>>>>>>> 6d197f0 (layout header agendamento prático)
 <!-- Modal Nova Aula -->
 <div id="modal-nova-aula" class="modal-overlay" style="display: none;">
     <div class="modal-content modal-large">
@@ -1473,6 +2049,112 @@ const veiculosData = <?php echo json_encode($veiculos); ?>;
 const alunosData = <?php echo json_encode($alunos); ?>;
 const cfcsData = <?php echo json_encode($cfcs); ?>;
 
+const METRIC_ALLOWED_STATUSES = ['agendada', 'confirmada', 'executavel'];
+const METRIC_LABELS = {
+    today: 'Aulas de hoje',
+    week: 'Aulas da semana',
+    period: 'Aulas no período'
+};
+const METRIC_SKELETON_MIN = 220;
+let metricsLoadingStart = 0;
+let metricsLoadingActive = false;
+let agendaRefreshTimeout = null;
+const agendaState = {
+    period: 'hoje',
+    range: null,
+    customRange: null
+};
+
+window.filtrosAtivos = {
+    cfc: '',
+    instrutor: '',
+    status: '',
+    veiculo: '',
+    aluno: ''
+};
+
+function startMetricsLoading() {
+    metricsLoadingActive = true;
+    metricsLoadingStart = Date.now();
+    ['today', 'week', 'period'].forEach(key => {
+        const card = document.getElementById(`metric-card-${key}`);
+        const valueEl = document.getElementById(`metric-value-${key}`);
+        const subtitleEl = document.getElementById(`metric-subtitle-${key}`) || (key === 'period' ? document.getElementById('metric-period-label') : null);
+        if (card) {
+            card.classList.add('is-loading');
+            card.setAttribute('aria-label', `${METRIC_LABELS[key]}: carregando`);
+        }
+        if (valueEl) {
+            valueEl.textContent = '--';
+        }
+        if (subtitleEl) {
+            subtitleEl.textContent = '--';
+        }
+    });
+}
+
+function finishMetricsLoading(renderFn) {
+    if (!metricsLoadingActive) {
+        renderFn();
+        return;
+    }
+    const elapsed = Date.now() - metricsLoadingStart;
+    const delay = Math.max(METRIC_SKELETON_MIN - elapsed, 0);
+    setTimeout(() => {
+        metricsLoadingActive = false;
+        renderFn();
+    }, delay);
+}
+
+function scheduleAgendaRefresh(options = {}) {
+    startMetricsLoading();
+    if (agendaRefreshTimeout) {
+        clearTimeout(agendaRefreshTimeout);
+    }
+    agendaRefreshTimeout = setTimeout(() => {
+        updateAgendaMetrics();
+        if (options.refetchCalendar !== false && window.calendar) {
+            window.calendar.refetchEvents();
+        }
+    }, 250);
+}
+
+function setupFiltersAccordion() {
+    const toggle = document.getElementById('filters-toggle');
+    const grid = document.getElementById('filters-grid');
+    if (!toggle || !grid) return;
+
+    const labelEl = toggle.querySelector('.filters-toggle-label');
+    const applyState = expanded => {
+        toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        grid.classList.toggle('is-open', expanded);
+        if (labelEl) {
+            labelEl.textContent = expanded ? 'Ocultar filtros' : 'Exibir filtros';
+        }
+    };
+
+    toggle.addEventListener('click', () => {
+        const expanded = toggle.getAttribute('aria-expanded') === 'true';
+        applyState(!expanded);
+    });
+
+    const mq = window.matchMedia('(max-width: 768px)');
+    const handleMqChange = event => {
+        if (event.matches) {
+            applyState(false);
+        } else {
+            applyState(true);
+        }
+    };
+
+    handleMqChange(mq);
+    if (mq.addEventListener) {
+        mq.addEventListener('change', handleMqChange);
+    } else {
+        mq.addListener(handleMqChange);
+    }
+}
+
 // Debug: verificar dados carregados
 console.log('=== DEBUG AGENDAMENTO ===');
 console.log('Total de aulas carregadas:', aulasData.length);
@@ -1483,10 +2165,407 @@ console.log('Total de alunos:', alunosData.length);
 
 // Inicializar calendário quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
-    preencherFiltros();
-    inicializarCalendario();
-    atualizarEstatisticas();
+    initializeAgendaPage();
 });
+
+function initializeAgendaPage() {
+    agendaState.range = getTodayRange();
+    setupPeriodControls();
+    setupKpiInteractions();
+    setupFilterChips();
+    setupFiltersAccordion();
+    preencherFiltros();
+    syncFiltersFromControls();
+    updatePeriodUI();
+    updateFilterChips();
+    inicializarCalendario();
+    startMetricsLoading();
+    updateAgendaMetrics();
+}
+
+function setupPeriodControls() {
+    const buttons = document.querySelectorAll('.period-option');
+    buttons.forEach(button => {
+        button.addEventListener('click', () => setPeriod(button.dataset.periodo));
+    });
+
+    const startInput = document.getElementById('period-start');
+    const endInput = document.getElementById('period-end');
+
+    if (startInput) {
+        startInput.addEventListener('change', handleCustomRangeChange);
+    }
+    if (endInput) {
+        endInput.addEventListener('change', handleCustomRangeChange);
+    }
+
+    updatePeriodUI();
+}
+
+function setupKpiInteractions() {
+    document.querySelectorAll('.kpi-item').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const target = btn.dataset.periodTarget;
+            if (target) {
+                setPeriod(target);
+            }
+        });
+    });
+}
+
+function setupFilterChips() {
+    const chipsContainer = document.getElementById('filter-chips');
+    if (!chipsContainer) return;
+    chipsContainer.addEventListener('click', event => {
+        const chip = event.target.closest('.filter-chip');
+        if (!chip) return;
+        const key = chip.dataset.filter;
+        const select = document.getElementById(`filter-${key}`);
+        if (!select) return;
+        select.value = '';
+        filtrarAgenda();
+    });
+}
+
+function setPeriod(type) {
+    if (!type) return;
+    agendaState.period = type;
+
+    if (type === 'hoje') {
+        agendaState.range = getTodayRange();
+    } else if (type === 'semana') {
+        agendaState.range = getCurrentWeekRange();
+    } else {
+        const startInput = document.getElementById('period-start');
+        const endInput = document.getElementById('period-end');
+        const today = new Date();
+
+        if (!agendaState.customRange) {
+            agendaState.customRange = { start: today, end: today };
+        }
+
+        const startDate = startInput?.value ? new Date(startInput.value) : agendaState.customRange.start || today;
+        let endDate = endInput?.value ? new Date(endInput.value) : agendaState.customRange.end || startDate;
+
+        if (endDate < startDate) {
+            endDate = new Date(startDate);
+            if (endInput) {
+                endInput.value = formatDateForInput(endDate);
+            }
+        }
+
+        agendaState.customRange = { start: startDate, end: endDate };
+        agendaState.range = {
+            start: getStartOfDay(startDate),
+            end: getEndOfDay(endDate)
+        };
+    }
+
+    updatePeriodUI();
+    scheduleAgendaRefresh();
+}
+
+function updatePeriodUI() {
+    const buttons = document.querySelectorAll('.period-option');
+    buttons.forEach(button => {
+        const isActive = button.dataset.periodo === agendaState.period;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+    });
+
+    const kpis = document.querySelectorAll('.kpi-item');
+    kpis.forEach(btn => {
+        const target = btn.dataset.periodTarget;
+        const isActive = target === agendaState.period;
+        btn.classList.toggle('active', isActive);
+    });
+
+    const customControls = document.getElementById('period-custom-controls');
+    const isCustom = agendaState.period === 'personalizado';
+    if (customControls) {
+        customControls.hidden = !isCustom;
+        if (isCustom && agendaState.range) {
+            const startInput = document.getElementById('period-start');
+            const endInput = document.getElementById('period-end');
+            if (startInput) {
+                startInput.value = formatDateForInput(agendaState.range.start);
+            }
+            if (endInput) {
+                endInput.value = formatDateForInput(agendaState.range.end);
+            }
+        }
+    }
+}
+
+function handleCustomRangeChange() {
+    if (agendaState.period !== 'personalizado') return;
+    const startInput = document.getElementById('period-start');
+    const endInput = document.getElementById('period-end');
+    if (!startInput || !endInput || !startInput.value || !endInput.value) return;
+
+    const startDate = new Date(startInput.value);
+    let endDate = new Date(endInput.value);
+
+    if (endDate < startDate) {
+        endDate = new Date(startDate);
+        endInput.value = formatDateForInput(endDate);
+    }
+
+    agendaState.customRange = { start: startDate, end: endDate };
+    agendaState.range = {
+        start: getStartOfDay(startDate),
+        end: getEndOfDay(endDate)
+    };
+
+    scheduleAgendaRefresh({ refetchCalendar: false });
+}
+
+function getTodayRange() {
+    const today = new Date();
+    return {
+        start: getStartOfDay(today),
+        end: getEndOfDay(today)
+    };
+}
+
+function getCurrentWeekRange() {
+    const now = new Date();
+    const day = now.getDay();
+    const diffToMonday = day === 0 ? -6 : (1 - day);
+    const monday = new Date(now);
+    monday.setDate(now.getDate() + diffToMonday);
+
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+
+    return {
+        start: getStartOfDay(monday),
+        end: getEndOfDay(sunday)
+    };
+}
+
+function getStartOfDay(date) {
+    const result = new Date(date);
+    result.setHours(0, 0, 0, 0);
+    return result;
+}
+
+function getEndOfDay(date) {
+    const result = new Date(date);
+    result.setHours(23, 59, 59, 999);
+    return result;
+}
+
+function formatDateForInput(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+function normalizeStatus(status) {
+    return (status || '')
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase();
+}
+
+function getAulaStartDate(aula) {
+    if (!aula || !aula.data_aula) return null;
+    const horaInicio = aula.hora_inicio ? aula.hora_inicio.substring(0, 5) : '00:00';
+    const isoString = `${aula.data_aula}T${horaInicio}`;
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) {
+        return new Date(aula.data_aula + 'T00:00');
+    }
+    return date;
+}
+
+function matchesFilters(aula, filters) {
+    if (!aula) return false;
+    if (filters.cfc && String(aula.cfc_id) !== String(filters.cfc)) return false;
+    if (filters.instrutor && String(aula.instrutor_id) !== String(filters.instrutor)) return false;
+    if (filters.veiculo && String(aula.veiculo_id) !== String(filters.veiculo)) return false;
+    if (filters.aluno && String(aula.aluno_id) !== String(filters.aluno)) return false;
+
+    if (filters.status) {
+        return normalizeStatus(aula.status) === normalizeStatus(filters.status);
+    }
+
+    return true;
+}
+
+function filterAulasForRange(range, filters, options = {}) {
+    const { enforceStatusRule = true } = options;
+    return aulasData.filter(aula => {
+        const status = normalizeStatus(aula.status);
+        if (enforceStatusRule && !METRIC_ALLOWED_STATUSES.includes(status)) return false;
+
+        const inicioAula = getAulaStartDate(aula);
+        if (!inicioAula) return false;
+
+        if (inicioAula < range.start || inicioAula > range.end) return false;
+
+        return matchesFilters(aula, filters);
+    });
+}
+
+function countAulasInRange(range, filters) {
+    return filterAulasForRange(range, filters, { enforceStatusRule: true }).length;
+}
+
+function setMetricsLoading(isLoading) {
+    const labels = METRIC_LABELS;
+    ['today', 'week', 'period'].forEach(key => {
+        const card = document.getElementById(`metric-card-${key}`);
+        const valueEl = document.getElementById(`metric-value-${key}`);
+        if (!card || !valueEl) return;
+        card.classList.toggle('is-loading', isLoading);
+        if (isLoading) {
+            valueEl.textContent = '--';
+            card.setAttribute('aria-label', `${labels[key]}: carregando`);
+        }
+    });
+    if (isLoading) {
+        const subtitleEl = document.getElementById('metric-period-label');
+        if (subtitleEl) subtitleEl.textContent = '--';
+    }
+}
+
+function updateMetricCard(key, value, subtitle) {
+    const labels = METRIC_LABELS;
+    const card = document.getElementById(`metric-card-${key}`);
+    const valueEl = document.getElementById(`metric-value-${key}`);
+    if (!card || !valueEl) return;
+
+    const subtitleEl = key === 'period'
+        ? document.getElementById('metric-period-label')
+        : document.getElementById(`metric-subtitle-${key}`);
+
+    card.classList.remove('is-loading');
+    valueEl.textContent = value;
+    if (subtitleEl && subtitle !== undefined) {
+        subtitleEl.textContent = subtitle;
+    }
+
+    const ariaParts = [`${labels[key]}: ${value}`];
+    if (subtitle) {
+        ariaParts.push(`(${subtitle})`);
+    }
+    card.setAttribute('aria-label', ariaParts.join(' '));
+}
+
+function formatShortMonth(date) {
+    const formatter = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
+    const formatted = formatter.format(date).replace('.', '').replace('de', '').trim();
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+}
+
+function formatDayMonth(date) {
+    return `${String(date.getDate()).padStart(2, '0')} ${formatShortMonth(date)}`;
+}
+
+function formatRangeLabel(start, end) {
+    if (start.toDateString() === end.toDateString()) {
+        return formatDayMonth(start);
+    }
+
+    if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
+        return `${String(start.getDate()).padStart(2, '0')}–${String(end.getDate()).padStart(2, '0')} ${formatShortMonth(end)}`;
+    }
+
+    return `${formatDayMonth(start)} – ${formatDayMonth(end)}`;
+}
+
+function updateAgendaMetrics() {
+    if (!agendaState.range) {
+        agendaState.range = getTodayRange();
+    }
+
+    const context = getAgendaContext();
+    const filters = context.filters;
+
+    const todayRange = getTodayRange();
+    const weekRange = getCurrentWeekRange();
+    const periodRange = context.range;
+
+    const aulasHoje = countAulasInRange(todayRange, filters);
+    const aulasSemana = countAulasInRange(weekRange, filters);
+    const aulasPeriodo = countAulasInRange(periodRange, filters);
+
+    const subtitleToday = formatDayMonth(todayRange.start);
+    const subtitleWeek = formatRangeLabel(weekRange.start, weekRange.end);
+    let subtitlePeriod = formatRangeLabel(periodRange.start, periodRange.end);
+
+    if (agendaState.period === 'hoje') {
+        subtitlePeriod = formatDayMonth(periodRange.start);
+    } else if (agendaState.period === 'semana') {
+        subtitlePeriod = formatRangeLabel(periodRange.start, periodRange.end);
+    }
+
+    finishMetricsLoading(() => {
+        updateMetricCard('today', aulasHoje, subtitleToday);
+        updateMetricCard('week', aulasSemana, subtitleWeek);
+        updateMetricCard('period', aulasPeriodo, subtitlePeriod);
+    });
+}
+
+function getAgendaContext() {
+    const range = agendaState.range || getTodayRange();
+    return {
+        period: agendaState.period,
+        range: {
+            start: new Date(range.start.getTime()),
+            end: new Date(range.end.getTime())
+        },
+        filters: { ...window.filtrosAtivos }
+    };
+}
+
+function syncFiltersFromControls() {
+    const cfc = document.getElementById('filter-cfc');
+    const instrutor = document.getElementById('filter-instrutor');
+    const status = document.getElementById('filter-status');
+    const veiculo = document.getElementById('filter-veiculo');
+    const aluno = document.getElementById('filter-aluno');
+
+    window.filtrosAtivos = {
+        cfc: cfc ? cfc.value : '',
+        instrutor: instrutor ? instrutor.value : '',
+        status: status ? status.value : '',
+        veiculo: veiculo ? veiculo.value : '',
+        aluno: aluno ? aluno.value : ''
+    };
+}
+
+function updateFilterChips() {
+    const chipsContainer = document.getElementById('filter-chips');
+    if (!chipsContainer) return;
+
+    chipsContainer.innerHTML = '';
+
+    const filtersMeta = [
+        { key: 'cfc', label: 'CFC', element: document.getElementById('filter-cfc') },
+        { key: 'instrutor', label: 'Instrutor', element: document.getElementById('filter-instrutor') },
+        { key: 'veiculo', label: 'Veículo', element: document.getElementById('filter-veiculo') },
+        { key: 'status', label: 'Status', element: document.getElementById('filter-status') },
+        { key: 'aluno', label: 'Aluno', element: document.getElementById('filter-aluno') }
+    ];
+
+    filtersMeta.forEach(({ key, label, element }) => {
+        const value = window.filtrosAtivos[key];
+        if (!value) return;
+        const optionText = element ? element.options[element.selectedIndex]?.text || value : value;
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'filter-chip';
+        chip.dataset.filter = key;
+        chip.innerHTML = `<span class="chip-label">${label}: ${optionText}</span><span aria-hidden="true">&times;</span>`;
+        chip.setAttribute('aria-label', `Remover filtro ${label}: ${optionText}`);
+        chipsContainer.appendChild(chip);
+    });
+}
 
 function preencherFiltros() {
     console.log('Preenchendo filtros...');
@@ -1768,12 +2847,10 @@ function inicializarCalendario() {
                     eventosFiltrados = eventosFiltrados.filter(aula => aula.instrutor_id == filtros.instrutor);
                 }
                 
-                if (filtros.tipo) {
-                    eventosFiltrados = eventosFiltrados.filter(aula => aula.tipo_aula === filtros.tipo);
-                }
-                
                 if (filtros.status) {
-                    eventosFiltrados = eventosFiltrados.filter(aula => aula.status === filtros.status);
+                    eventosFiltrados = eventosFiltrados.filter(aula => normalizeStatus(aula.status) === normalizeStatus(filtros.status));
+                } else {
+                    eventosFiltrados = eventosFiltrados.filter(aula => normalizeStatus(aula.status) !== 'cancelada');
                 }
                 
                 if (filtros.veiculo) {
@@ -1787,7 +2864,7 @@ function inicializarCalendario() {
                 console.log('Eventos após aplicar filtros:', eventosFiltrados.length);
             } else {
                 // Se não há filtros ativos, mostrar apenas aulas não canceladas por padrão
-                eventosFiltrados = eventosFiltrados.filter(aula => aula.status !== 'cancelada');
+                eventosFiltrados = eventosFiltrados.filter(aula => normalizeStatus(aula.status) !== 'cancelada');
                 console.log('Eventos filtrados (apenas ativos por padrão):', eventosFiltrados.length);
             }
             
@@ -2156,7 +3233,12 @@ function atualizarAula(event) {
     });
 }
 
-        function abrirModalDisponibilidade() {
+        function abrirModalDisponibilidade(contexto = getAgendaContext()) {
+            const filtrosContexto = contexto?.filters || {};
+            const dataPadrao = formatDateForInput(contexto?.range?.start || new Date());
+            const periodoRotulo = contexto?.range ? formatRangeLabel(contexto.range.start, contexto.range.end) : '';
+            const instrutorSelecionado = filtrosContexto.instrutor || '';
+
             // Remover modal existente se houver
             const modalExistente = document.getElementById('modalDisponibilidade');
             if (modalExistente) {
@@ -2174,6 +3256,7 @@ function atualizarAula(event) {
                             <button class="modal-close" onclick="fecharModalDisponibilidade()">×</button>
                         </div>
                         <div class="modal-body">
+                            ${periodoRotulo ? `<p class="text-muted mb-3"><i class="fas fa-calendar-alt me-2"></i>Período atual: <strong>${periodoRotulo}</strong></p>` : ''}
                             <!-- Seção de Filtros -->
                             <div class="row">
                                 <div class="col-md-6">
@@ -2182,14 +3265,14 @@ function atualizarAula(event) {
                                     </h6>
                                     <div class="mb-3">
                                         <label for="disp-data" class="form-label fw-bold">Data da Aula:</label>
-                                        <input type="date" class="form-control" id="disp-data" value="${new Date().toISOString().split('T')[0]}">
+                                        <input type="date" class="form-control" id="disp-data" value="${dataPadrao}">
                                     </div>
                                     <div class="mb-3">
                                         <label for="disp-instrutor" class="form-label fw-bold">Instrutor:</label>
                                         <select class="form-select" id="disp-instrutor">
                                             <option value="">Todos os Instrutores</option>
                                             ${instrutoresData.map(instrutor => 
-                                                `<option value="${instrutor.id}">${instrutor.nome}</option>`
+                                                `<option value="${instrutor.id}" ${String(instrutor.id) === String(instrutorSelecionado) ? 'selected' : ''}>${instrutor.nome}</option>`
                                             ).join('')}
                                         </select>
                                     </div>
@@ -2201,9 +3284,7 @@ function atualizarAula(event) {
                                     <div class="mb-3">
                                         <label for="disp-tipo" class="form-label fw-bold">Tipo de Aula:</label>
                                         <select class="form-select" id="disp-tipo">
-                                            <option value="">Todos os Tipos</option>
-                                            <option value="teorica">Teórica</option>
-                                            <option value="pratica">Prática</option>
+                                            <option value="pratica" selected>Prática</option>
                                         </select>
                                     </div>
                                     <div class="mb-3">
@@ -2239,7 +3320,6 @@ function atualizarAula(event) {
                 </div>
             `;
             
-            // Adicionar modal ao body
             document.body.insertAdjacentHTML('beforeend', modalHtml);
         }
 
@@ -2603,15 +3683,16 @@ function exibirResultadosGerais(aulasPorInstrutor, data) {
 }
 
 function verificarDisponibilidade() {
-    abrirModalDisponibilidade();
+    const contexto = getAgendaContext();
+    abrirModalDisponibilidade(contexto);
 }
 
 function verificarDisponibilidadeInstrutor() {
-    abrirModalDisponibilidade();
+    verificarDisponibilidade();
 }
 
 function verificarDisponibilidadeVeiculo() {
-    abrirModalDisponibilidade();
+    verificarDisponibilidade();
 }
 
 // Função auxiliar para converter hora HH:MM para minutos
@@ -2621,60 +3702,7 @@ function converterHoraParaMinutos(hora) {
 }
 
 function atualizarEstatisticas() {
-    // Implementar atualização das estatísticas
-    const hoje = new Date();
-    const inicioSemana = new Date(hoje);
-    inicioSemana.setDate(hoje.getDate() - hoje.getDay());
-    
-    // Verificar se há filtro de status ativo
-    const filtroStatus = window.filtrosAtivos?.status;
-    
-    // Contar aulas de hoje
-    const aulasHoje = aulasData.filter(aula => {
-        const dataAula = new Date(aula.data_aula);
-        const hojeMatch = dataAula.toDateString() === hoje.toDateString();
-        
-        if (filtroStatus) {
-            return hojeMatch && aula.status === filtroStatus;
-        } else {
-            return hojeMatch && aula.status !== 'cancelada';
-        }
-    }).length;
-    
-    // Contar aulas da semana
-    const aulasSemana = aulasData.filter(aula => {
-        const dataAula = new Date(aula.data_aula);
-        const semanaMatch = dataAula >= inicioSemana && dataAula <= hoje;
-        
-        if (filtroStatus) {
-            return semanaMatch && aula.status === filtroStatus;
-        } else {
-            return semanaMatch && aula.status !== 'cancelada';
-        }
-    }).length;
-    
-    // Contar aulas pendentes (apenas agendadas)
-    const aulasPendentes = aulasData.filter(aula => {
-        if (filtroStatus) {
-            return aula.status === filtroStatus;
-        } else {
-            return aula.status === 'agendada';
-        }
-    }).length;
-    
-    // Contar instrutores disponíveis
-    const instrutoresDisponiveis = instrutoresData.filter(instrutor => instrutor.ativo == 1).length;
-    
-    // Atualizar elementos na página
-    const aulasHojeEl = document.getElementById('aulas-hoje');
-    const aulasSemanaEl = document.getElementById('aulas-semana');
-    const aulasPendentesEl = document.getElementById('aulas-pendentes');
-    const instrutoresDisponiveisEl = document.getElementById('instrutores-disponiveis');
-    
-    if (aulasHojeEl) aulasHojeEl.textContent = aulasHoje;
-    if (aulasSemanaEl) aulasSemanaEl.textContent = aulasSemana;
-    if (aulasPendentesEl) aulasPendentesEl.textContent = aulasPendentes;
-    if (instrutoresDisponiveisEl) instrutoresDisponiveisEl.textContent = instrutoresDisponiveis;
+    updateAgendaMetrics();
 }
 
 function calcularHoraFim() {
@@ -2689,42 +3717,9 @@ function calcularHoraFim() {
 }
 
 function filtrarAgenda() {
-    // Obter valores dos filtros
-    const cfcId = document.getElementById('filter-cfc').value;
-    const instrutorId = document.getElementById('filter-instrutor').value;
-    const tipoAula = document.getElementById('filter-tipo').value;
-    const status = document.getElementById('filter-status').value;
-    const veiculoId = document.getElementById('filter-veiculo').value;
-    const alunoId = document.getElementById('filter-aluno').value;
-    
-    console.log('Aplicando filtros:', {
-        cfc: cfcId,
-        instrutor: instrutorId,
-        tipo: tipoAula,
-        status: status,
-        veiculo: veiculoId,
-        aluno: alunoId
-    });
-    
-    // Armazenar filtros globalmente para uso na função de eventos
-    window.filtrosAtivos = {
-        cfc: cfcId,
-        instrutor: instrutorId,
-        tipo: tipoAula,
-        status: status,
-        veiculo: veiculoId,
-        aluno: alunoId
-    };
-    
-    // Recarregar calendário para aplicar filtros
-    if (window.calendar) {
-        window.calendar.refetchEvents();
-    }
-    
-    // Atualizar estatísticas com base nos filtros
-    atualizarEstatisticas();
-    
-    console.log('Filtros aplicados e calendário recarregado');
+    syncFiltersFromControls();
+    updateFilterChips();
+    scheduleAgendaRefresh();
 }
 
 function navegarCalendario(direcao) {
@@ -3048,8 +4043,24 @@ function cancelarAula(aulaId) {
 }
 
 function exportarAgenda() {
-    // Implementar exportação da agenda
-    alert('Exportando agenda...');
+    const context = getAgendaContext();
+    const aulasSelecionadas = filterAulasForRange(context.range, context.filters, { enforceStatusRule: false });
+
+    if (!aulasSelecionadas.length) {
+        alert('Não há aulas no período e filtros selecionados para exportar.');
+        return;
+    }
+
+    const csvConteudo = gerarCsvDaAgenda(aulasSelecionadas, context);
+    const blob = new Blob([csvConteudo], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `agenda_aulas_${formatDateForFilename(new Date())}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
 }
 
 // Funções específicas para o modal de agendamento avançado
@@ -3248,5 +4259,84 @@ document.addEventListener('DOMContentLoaded', function() {
         editHoraInicio.addEventListener('change', calcularHoraFimEdicao);
     }
 });
+
+function gerarCsvDaAgenda(aulas, context) {
+    const separador = ';';
+    const linhas = [];
+    linhas.push('Agenda de Aulas');
+    linhas.push(['Período', formatRangeLabel(context.range.start, context.range.end)].join(separador));
+
+    const filtrosDescricao = construirDescricaoFiltros(context.filters);
+    if (filtrosDescricao) {
+        linhas.push(['Filtros aplicados', filtrosDescricao].join(separador));
+    }
+
+    linhas.push('');
+    linhas.push(['Data', 'Hora Início', 'Hora Fim', 'Instrutor', 'Aluno', 'Veículo', 'Status'].join(separador));
+
+    aulas.forEach(aula => {
+        const dataFormatada = formatarDataCurta(aula.data_aula);
+        const instrutor = aula.instrutor_nome || aula.instrutor || '';
+        const aluno = aula.aluno_nome || aula.aluno || '';
+        const veiculo = aula.placa ? `${aula.placa} ${aula.modelo || ''}`.trim() : (aula.veiculo || '');
+        const status = (aula.status || '').toUpperCase();
+
+        const linha = [
+            dataFormatada,
+            aula.hora_inicio ? aula.hora_inicio.substring(0, 5) : '',
+            aula.hora_fim ? aula.hora_fim.substring(0, 5) : '',
+            instrutor,
+            aluno,
+            veiculo,
+            status
+        ].map(valor => `"${valor.replace(/"/g, '""')}"`).join(separador);
+        linhas.push(linha);
+    });
+
+    return linhas.join('\r\n');
+}
+
+function construirDescricaoFiltros(filtros) {
+    const partes = [];
+    const mapa = [
+        { key: 'cfc', id: 'filter-cfc', label: 'CFC' },
+        { key: 'instrutor', id: 'filter-instrutor', label: 'Instrutor' },
+        { key: 'veiculo', id: 'filter-veiculo', label: 'Veículo' },
+        { key: 'status', id: 'filter-status', label: 'Status' },
+        { key: 'aluno', id: 'filter-aluno', label: 'Aluno' }
+    ];
+
+    mapa.forEach(({ key, id, label }) => {
+        if (!filtros[key]) return;
+        const texto = obterTextoDoSelect(id, filtros[key]);
+        partes.push(`${label}: ${texto}`);
+    });
+
+    return partes.join(' | ');
+}
+
+function obterTextoDoSelect(id, valor) {
+    const select = document.getElementById(id);
+    if (!select) return valor;
+    const option = Array.from(select.options).find(opt => String(opt.value) === String(valor));
+    return option ? option.text : valor;
+}
+
+function formatarDataCurta(dataIso) {
+    if (!dataIso) return '';
+    const data = new Date(dataIso + 'T00:00');
+    if (isNaN(data.getTime())) return dataIso;
+    return data.toLocaleDateString('pt-BR');
+}
+
+function formatDateForFilename(date) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${year}${month}${day}_${hours}${minutes}`;
+}
+
 </script>
 
