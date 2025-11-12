@@ -27,223 +27,6 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
    ESTILOS PARA OTIMIZAÇÃO DE ESPAÇO DESKTOP
    ===================================================== */
 
-.turma-wizard {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-    overflow: hidden;
-    margin-bottom: 24px;
-}
-
-.wizard-header {
-    background: linear-gradient(135deg, #023A8D 0%, #1a4fa0 100%);
-    color: white;
-    padding: 20px;
-    text-align: center;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 80px;
-}
-
-.wizard-header h2 {
-    margin: 0;
-    font-size: 1.875rem;
-    font-weight: 700;
-}
-
-.wizard-content {
-    padding: 30px;
-}
-
-.icon-24 {
-    font-size: 1.4rem;
-}
-
-.alunos-hero-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-    margin-bottom: 20px;
-}
-
-.alunos-hero-bar p {
-    margin: 0;
-    color: var(--gray-600, #475569);
-    font-size: 0.95rem;
-}
-
-.alunos-actions-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-}
-
-.alunos-actions-row .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.alunos-actions-row .btn i {
-    font-size: 0.95rem;
-}
-
-@media (max-width: 768px) {
-    .alunos-actions-row {
-        width: 100%;
-    }
-
-    .alunos-actions-row .btn {
-        flex: 1 1 auto;
-        justify-content: center;
-    }
-}
-
-.alunos-filter-card {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    padding: 16px;
-    margin-bottom: 24px;
-}
-
-.alunos-filter-card .filter-control {
-    border: 1px solid #d1d5db;
-    border-radius: 10px;
-    font-size: 0.95rem;
-    padding: 0.6rem 0.75rem;
-    background: #ffffff;
-}
-
-.alunos-filter-card .input-group {
-    border: 1px solid #d1d5db;
-    border-radius: 10px;
-    background: #ffffff;
-    overflow: hidden;
-}
-
-.alunos-filter-card .input-group-text {
-    background: transparent;
-    border: none;
-    color: #64748b;
-}
-
-.alunos-filter-card .input-group .filter-control {
-    border: none;
-    box-shadow: none;
-}
-
-.alunos-filter-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    justify-content: flex-end;
-}
-
-@media (max-width: 768px) {
-    .alunos-filter-actions {
-        justify-content: stretch;
-        flex-direction: column;
-    }
-
-    .alunos-filter-actions .btn {
-        width: 100%;
-    }
-}
-
-.alunos-stats-wrapper {
-    margin-bottom: 24px;
-}
-
-.alunos-stats-container {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 16px;
-    align-items: stretch;
-}
-
-.alunos-stats-card {
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    gap: 10px;
-    padding: 18px 20px;
-    min-height: 110px;
-    background: #ffffff;
-    border: 1px solid #E1E6EE;
-    border-radius: 12px;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
-}
-
-.alunos-stats-card:hover,
-.alunos-stats-card:focus-within {
-    border-color: rgba(2, 58, 141, 0.2);
-    box-shadow: 0 2px 6px rgba(2, 58, 141, 0.08);
-}
-
-.alunos-stats-card:focus-within {
-    outline: none;
-}
-
-.alunos-stats-header {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.alunos-stats-icon {
-    width: 50px;
-    height: 50px;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 999px;
-    color: #ffffff;
-    font-size: 22px;
-    background: var(--primary-dark, #023A8D);
-    box-shadow: 0 0 0 1px rgba(2, 58, 141, 0.2), 0 1px 2px rgba(2, 58, 141, 0.15);
-    transition: background 0.2s ease, box-shadow 0.2s ease;
-}
-
-.alunos-stats-card:hover .alunos-stats-icon {
-    box-shadow: 0 4px 10px rgba(2, 58, 141, 0.18);
-}
-
-.alunos-stats-value {
-    font-size: 28px;
-    font-weight: 700;
-    color: #101828;
-    line-height: 1.1;
-}
-
-.alunos-stats-label {
-    font-size: 12px;
-    font-weight: 600;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-    color: #475467;
-}
-
-.alunos-stats-icon.icon-success {
-    background: #0f9d58;
-}
-
-.alunos-stats-icon.icon-warning {
-    background: #f4b400;
-}
-
-.alunos-stats-icon.icon-info {
-    background: #1a73e8;
-}
-
-@media (max-width: 768px) {
-    .alunos-stats-container {
-        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    }
-}
-
 /* MODAL FECHADO POR PADRÃO - MAS PERMITIR ABERTURA */
 #modalAluno {
     display: none;
@@ -342,240 +125,6 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     z-index: 1 !important;
 }
 
-.alunos-table-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 12px;
-    box-shadow: 0 3px 8px rgba(15, 23, 42, 0.04);
-    margin-top: 24px;
-    padding: 32px 24px 24px;
-}
-
-.alunos-table-card::before {
-    content: '';
-    display: block;
-    height: 8px;
-}
-
-.alunos-table-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 16px;
-    padding: 0;
-    background: transparent;
-    border-bottom: none;
-}
-
-.alunos-table-title {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    color: #023A8D;
-    font-weight: 700;
-    font-size: 1.125rem;
-}
-
-.alunos-count-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    background: #e3f2fd;
-    color: #1976d2;
-    font-weight: 600;
-    font-size: 0.9rem;
-    padding: 6px 14px;
-    border-radius: 999px;
-}
-
-.alunos-table-wrapper {
-    padding: 0;
-    overflow-x: auto;
-}
-
-.alunos-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 0;
-}
-
-.alunos-table thead th {
-    background: #f8f9fa;
-    border-bottom: 2px solid #dee2e6;
-    padding: 12px 16px;
-    font-weight: 600;
-    color: #495057;
-    text-transform: none;
-    font-size: 0.92rem;
-}
-
-.alunos-table thead th + th {
-    border-left: 1px solid #dee2e6;
-}
-
-.alunos-table tbody td {
-    padding: 14px 16px;
-    border-bottom: 1px solid #e6ebf1;
-    border-left: 1px solid #f1f5f9;
-    vertical-align: middle;
-    color: #475569;
-    font-size: 0.95rem;
-}
-
-.alunos-table tbody td:first-child,
-.alunos-table thead th:first-child {
-    border-left: none;
-}
-
-.alunos-table tbody tr:hover {
-    background-color: #f8fafc;
-}
-
-.aluno-info {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-.aluno-avatar {
-    width: 42px;
-    height: 42px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 50%;
-    color: #fff;
-    font-weight: 600;
-    font-size: 0.95rem;
-    display: none;
-}
-
-.aluno-nome {
-    font-weight: 600;
-    color: #1f2937;
-    margin-bottom: 2px;
-    font-size: 1rem;
-}
-
-.aluno-meta {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    font-size: 0.85rem;
-    color: #64748b;
-    line-height: 1.4;
-}
-
-.aluno-meta i {
-    font-size: 0.78rem;
-    color: #94a3b8;
-}
-
-.aluno-cpf {
-    font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
-    font-size: 0.92rem;
-    color: #334155;
-}
-
-.aluno-categorias {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.categoria-badge {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 4px 10px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    background: rgba(46, 125, 50, 0.12);
-    color: #2e7d32;
-    text-transform: uppercase;
-    letter-spacing: 0.02em;
-}
-
-.status-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 6px 14px;
-    border-radius: 999px;
-    font-size: 0.8rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    text-transform: uppercase;
-}
-
-.status-badge i {
-    font-size: 0.8rem;
-}
-
-.status-badge.status-ativo {
-    background: rgba(22, 163, 74, 0.16);
-    color: #166534;
-}
-
-.status-badge.status-inativo {
-    background: rgba(239, 68, 68, 0.14);
-    color: #b91c1c;
-}
-
-.status-badge.status-concluido {
-    background: rgba(59, 130, 246, 0.16);
-    color: #1d4ed8;
-}
-
-.aluno-actions,
-.mobile-aluno-actions {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.aluno-action-btn {
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    border: 1px solid rgba(2, 58, 141, 0.18);
-    background: #ffffff;
-    color: #1e3a8a;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s ease;
-    font-size: 0.85rem;
-}
-
-.aluno-action-btn:hover {
-    border-color: rgba(2, 58, 141, 0.32);
-    color: #0f172a;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.12);
-}
-
-.aluno-action-btn.danger {
-    border-color: rgba(239, 68, 68, 0.35);
-    color: #b91c1c;
-}
-
-.aluno-action-btn.danger:hover {
-    border-color: rgba(239, 68, 68, 0.5);
-    color: #7f1d1d;
-    box-shadow: 0 2px 6px rgba(239, 68, 68, 0.2);
-}
-
-.mobile-aluno-meta i {
-    color: #94a3b8;
-}
-
-.mobile-aluno-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    margin-top: 6px;
-}
 /* Garantir que todos os botões de ação sejam visíveis */
 .btn-history,
 .btn-financial,
@@ -623,6 +172,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
         font-size: 0.75rem;
     }
 }
+
 /* =====================================================
    CSS RESPONSIVO PARA MOBILE - ALUNOS
    ===================================================== */
@@ -765,13 +315,6 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
         font-size: 14px !important;
         border-radius: 6px !important;
     }
-    
-    .mobile-aluno-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-        margin-top: 6px;
-    }
 }
 
 /* =====================================================
@@ -820,6 +363,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     font-size: 1.25rem;
     font-weight: 600;
 }
+
 .modal-close {
     background: none;
     border: none;
@@ -878,6 +422,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     font-size: 0.9rem;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
+
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
@@ -885,9 +430,11 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     border-color: #0d6efd;
     box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
 }
+
 .custom-radio {
     position: relative;
 }
+
 .custom-radio input[type="radio"] {
     position: absolute;
     opacity: 0;
@@ -914,6 +461,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     color: #495057;
     margin-bottom: 0.25rem;
 }
+
 .custom-radio .radio-text small {
     color: #6c757d;
     font-size: 0.8rem;
@@ -927,6 +475,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     padding-top: 1rem;
     border-top: 1px solid #e9ecef;
 }
+
 .form-actions .btn {
     padding: 0.75rem 1.5rem;
     font-weight: 500;
@@ -1016,6 +565,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
         padding: 0.75rem 1rem !important;
     }
 }
+
 @media (max-width: 576px) {
     .modal#modalAluno .modal-header {
         padding: 0.5rem 0.75rem !important;
@@ -1027,28 +577,14 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     font-weight: 600 !important;
     font-size: 1.5rem !important;
 }
+
 /* Responsividade do modal-title */
 @media (max-width: 768px) {
     .modal#modalAluno .modal-title {
         font-size: 1.25rem !important;
     }
 }
-@media (max-width: 768px) {
-    .alunos-table-wrapper {
-        display: none;
-    }
 
-    .mobile-aluno-cards {
-        display: block !important;
-        padding: 20px 24px 24px;
-    }
-}
-
-@media (min-width: 769px) {
-    .mobile-aluno-cards {
-        display: none !important;
-    }
-}
 @media (max-width: 576px) {
     .modal#modalAluno .modal-title {
         font-size: 1.1rem !important;
@@ -1216,6 +752,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
         padding: 0.5rem !important;
     }
 }
+
 @media (max-width: 480px) {
     /* Abas em uma coluna para telas muito pequenas */
     .modal#modalAluno .nav-tabs .nav-link {
@@ -1274,6 +811,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     height: 6px !important;
     border-radius: 3px !important;
 }
+
 .modal#modalAluno .form-range::-webkit-slider-thumb {
     background: #0d6efd !important;
     border-radius: 50% !important;
@@ -1410,6 +948,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
         max-width: 50% !important;
     }
 }
+
 @media (max-width: 768px) {
     .modal#modalAluno .modal-body {
         padding: 1rem !important;
@@ -1523,6 +1062,7 @@ body.modal-open #modalAluno .modal-dialog {
     margin: 0 !important;
     padding: 0 !important;
 }
+
 .modal#modalVisualizarAluno .modal-content {
     height: 100vh !important;
     border-radius: 0 !important;
@@ -1535,17 +1075,20 @@ body.modal-open #modalAluno .modal-dialog {
     padding: 2rem !important;
     background-color: #f8f9fa !important;
 }
+
 .modal#modalVisualizarAluno .modal-header {
     background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%) !important;
     color: white !important;
     border-bottom: none !important;
     padding: 1.5rem 2rem !important;
 }
+
 .modal#modalVisualizarAluno .modal-title {
     color: white !important;
     font-weight: 600 !important;
     font-size: 1.5rem !important;
 }
+
 .modal#modalVisualizarAluno .btn-close {
     filter: invert(1) !important;
 }
@@ -1559,6 +1102,7 @@ body.modal-open #modalAluno .modal-dialog {
 .modal#modalVisualizarAluno {
     z-index: 1055 !important;
 }
+
 .modal#modalVisualizarAluno .modal-dialog {
     position: fixed !important;
     top: 0 !important;
@@ -1605,6 +1149,7 @@ body.modal-open #modalAluno .modal-dialog {
     opacity: 1 !important;
     visibility: visible !important;
 }
+
 .cpf-validation-feedback.invalid {
     background-color: #f8d7da !important;
     color: #721c24 !important;
@@ -1623,6 +1168,7 @@ body.modal-open #modalAluno .modal-dialog {
     content: "✗ ";
     font-weight: bold;
 }
+
 /* Manter contorno verde visível mesmo sem mensagem */
 input[type="text"].valid, 
 input.form-control.valid {
@@ -1689,30 +1235,6 @@ input.form-control.invalid {
 }
 </style>
 
-<<<<<<< HEAD
-<div class="turma-wizard">
-    <div class="wizard-header">
-        <h2 class="d-flex align-items-center justify-content-center text-white" style="gap: 12px;">
-            <i class="fas fa-user-graduate icon icon-24" aria-hidden="true"></i>
-            Gestão de Alunos
-        </h2>
-    </div>
-    <div class="wizard-content">
-        <div class="alunos-hero-bar">
-            <p>Gerencie matrículas, cadastros e documentação dos alunos em um só lugar.</p>
-            <div class="alunos-actions-row">
-                <button type="button" class="btn btn-primary" onclick="abrirModalAluno()">
-                    <i class="fas fa-plus"></i>
-                    Novo Aluno
-                </button>
-                <button type="button" class="btn btn-outline-primary" onclick="exportarAlunos()">
-                    <i class="fas fa-download"></i>
-                    Exportar
-                </button>
-                <button type="button" class="btn btn-outline-primary" onclick="imprimirAlunos()">
-                    <i class="fas fa-print"></i>
-                    Imprimir
-=======
 <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
     <h1 class="h2">
         <i class="fas fa-user-graduate me-2"></i>Gestão de Alunos
@@ -1725,123 +1247,71 @@ input.form-control.invalid {
             <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirAlunos()">
                 <i class="fas fa-print me-1"></i>Imprimir
             </button>
-    </div>
-                <button type="button" class="btn btn-primary" onclick="abrirModalAluno()">
+        </div>
+        <button type="button" class="btn btn-primary" onclick="abrirModalAluno()">
             <i class="fas fa-plus me-1"></i>Novo Aluno
->>>>>>> 6d197f0 (layout header agendamento prático)
-                </button>
-            </div>
-        </div>
+        </button>
+    </div>
+</div>
 
-        <!-- Mensagens de Feedback -->
-        <?php if (!empty($mensagem)): ?>
-        <div class="alert alert-<?php echo $tipo_mensagem; ?> alert-dismissible fade show" role="alert">
-            <?php echo htmlspecialchars($mensagem); ?>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <?php endif; ?>
-<<<<<<< HEAD
-
-        <!-- Filtros e Busca Avançada -->
-        <div class="alunos-filter-card">
-            <div class="row gy-2 gx-3 align-items-center">
-                <div class="col-lg-3 col-md-4">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
-                        <input type="text" class="form-control filter-control" id="buscaAluno" placeholder="Buscar aluno..." data-validate="minLength:2">
-                    </div>
-                </div>
-                <div class="col-lg-2 col-md-4">
-                    <select class="form-select filter-control" id="filtroStatus">
-                        <option value="">Todos os Status</option>
-                        <option value="ativo">Ativo</option>
-                        <option value="inativo">Inativo</option>
-                        <option value="concluido">Concluído</option>
-                        <option value="pendente">Pendente</option>
-                    </select>
-                </div>
-                <div class="col-lg-2 col-md-4">
-                    <select class="form-select filter-control" id="filtroCFC">
-                        <option value="">Todos os CFCs</option>
-                        <?php foreach ($cfcs as $cfc): ?>
-                            <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="col-lg-2 col-md-4">
-                    <select class="form-select filter-control" id="filtroCategoria">
-                        <option value="">Todas as Categorias</option>
-                        <option value="A">Categoria A</option>
-                        <option value="B">Categoria B</option>
-                        <option value="C">Categoria C</option>
-                        <option value="D">Categoria D</option>
-                        <option value="E">Categoria E</option>
-                        <option value="AB">Categoria AB</option>
-                        <option value="AC">Categoria AC</option>
-                        <option value="AD">Categoria AD</option>
-                        <option value="AE">Categoria AE</option>
-                    </select>
-                </div>
-                <div class="col-lg-3 col-md-4">
-                    <div class="alunos-filter-actions">
-                        <button type="button" class="btn btn-outline-primary" onclick="limparFiltros()">
-                            Limpar
-                        </button>
-                        <button type="button" class="btn btn-outline-primary" onclick="exportarFiltros()">
-                            Exportar
-                        </button>
-=======
+<!-- Mensagens de Feedback -->
+<?php if (!empty($mensagem)): ?>
+<div class="alert alert-<?php echo $tipo_mensagem; ?> alert-dismissible fade show" role="alert">
+    <?php echo htmlspecialchars($mensagem); ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
 
 <!-- Filtros e Busca Avançada -->
 <div class="row mb-4">
     <div class="col-md-3">
-                    <div class="input-group">
-                        <span class="input-group-text"><i class="fas fa-search"></i></span>
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
             <input type="text" class="form-control" id="buscaAluno" placeholder="Buscar aluno..." data-validate="minLength:2">
-                    </div>
-                </div>
+        </div>
+    </div>
     <div class="col-md-2">
         <select class="form-select" id="filtroStatus">
-                        <option value="">Todos os Status</option>
-                        <option value="ativo">Ativo</option>
-                        <option value="inativo">Inativo</option>
+            <option value="">Todos os Status</option>
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
             <option value="concluido">Concluído</option>
-                        <option value="pendente">Pendente</option>
-                    </select>
-                </div>
+            <option value="pendente">Pendente</option>
+        </select>
+    </div>
     <div class="col-md-2">
         <select class="form-select" id="filtroCFC">
-                        <option value="">Todos os CFCs</option>
-                        <?php foreach ($cfcs as $cfc): ?>
-                            <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+            <option value="">Todos os CFCs</option>
+            <?php foreach ($cfcs as $cfc): ?>
+                <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
     <div class="col-md-2">
         <select class="form-select" id="filtroCategoria">
-                        <option value="">Todas as Categorias</option>
-                        <option value="A">Categoria A</option>
-                        <option value="B">Categoria B</option>
-                        <option value="C">Categoria C</option>
-                        <option value="D">Categoria D</option>
-                        <option value="E">Categoria E</option>
-                        <option value="AB">Categoria AB</option>
-                        <option value="AC">Categoria AC</option>
-                        <option value="AD">Categoria AD</option>
-                        <option value="AE">Categoria AE</option>
-                    </select>
-                </div>
+            <option value="">Todas as Categorias</option>
+            <option value="A">Categoria A</option>
+            <option value="B">Categoria B</option>
+            <option value="C">Categoria C</option>
+            <option value="D">Categoria D</option>
+            <option value="E">Categoria E</option>
+            <option value="AB">Categoria AB</option>
+            <option value="AC">Categoria AC</option>
+            <option value="AD">Categoria AD</option>
+            <option value="AE">Categoria AE</option>
+        </select>
+    </div>
     <div class="col-md-3">
         <div class="d-flex gap-2">
             <button type="button" class="btn btn-outline-info" onclick="limparFiltros()">
-                            Limpar
-                        </button>
+                Limpar
+            </button>
             <button type="button" class="btn btn-outline-success" onclick="exportarFiltros()">
-                            Exportar
-                        </button>
-                    </div>
-                </div>
-            </div>
+                Exportar
+            </button>
+        </div>
+    </div>
+</div>
 
 <!-- Cards de Estatísticas -->
 <div class="row mb-4">
@@ -1852,358 +1322,80 @@ input.form-control.invalid {
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
                             Total de Alunos
-        </div>
+                        </div>
                         <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalAlunos">
                             <?php echo count($alunos); ?>
-    </div>
-    </div>
+                        </div>
+                    </div>
                     <div class="col-auto">
                         <i class="fas fa-user-graduate fa-2x text-gray-300"></i>
->>>>>>> 6d197f0 (layout header agendamento prático)
                     </div>
                 </div>
             </div>
         </div>
     </div>
-<div class="alunos-table-card card shadow border-0">
-    <div class="alunos-table-header">
-        <h5 class="alunos-table-title mb-0">
-            <i class="fas fa-users me-2"></i>Lista de Alunos
-        </h5>
-        <span class="alunos-count-badge">
-            <i class="fas fa-user-graduate me-1"></i>
-            <?php echo isset($alunos) ? count($alunos) : 0; ?> aluno(s)
-        </span>
-    </div>
-    <div class="alunos-table-wrapper">
-        <table class="alunos-table" id="tabelaAlunos">
-            <thead>
-                <tr>
-                    <th>Aluno</th>
-                    <th style="width: 140px;">Categoria</th>
-                    <th style="text-align: center; width: 150px;">Status</th>
-                    <th style="text-align: center; width: 300px;">Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($alunos)): ?>
-                <tr>
-                    <td colspan="4" class="text-center text-muted py-4">
-                        <i class="fas fa-inbox fa-3x mb-3"></i>
-                        <p>Nenhum aluno cadastrado ainda.</p>
-                        <button class="btn btn-primary" onclick="abrirModalAluno()">
-                            <i class="fas fa-plus me-1"></i>Cadastrar Primeiro Aluno
-                        </button>
-                    </td>
-                </tr>
-                <?php else: ?>
-                    <?php
-                        $statusClasses = [
-                            'ativo' => 'status-ativo',
-                            'inativo' => 'status-inativo',
-                            'concluido' => 'status-concluido'
-                        ];
-                        $statusLabels = [
-                            'ativo' => 'Ativo',
-                            'inativo' => 'Inativo',
-                            'concluido' => 'Concluído'
-                        ];
-                        $statusIcons = [
-                            'ativo' => 'fas fa-user-check',
-                            'inativo' => 'fas fa-user-slash',
-                            'concluido' => 'fas fa-check-circle'
-                        ];
-                    ?>
-                    <?php foreach ($alunos as $aluno): ?>
-                    <?php
-                        $nomeAluno = $aluno['nome'] ?? '';
-                        $iniciais = '';
-                        if (!empty($nomeAluno)) {
-                            $partesNome = preg_split('/\s+/', trim($nomeAluno));
-                            if (!empty($partesNome)) {
-                                $iniciais .= mb_substr($partesNome[0], 0, 1, 'UTF-8');
-                                if (isset($partesNome[1])) {
-                                    $iniciais .= mb_substr($partesNome[1], 0, 1, 'UTF-8');
-                                }
-                            }
-                        }
-                        if ($iniciais === '') {
-                            $iniciais = mb_substr($nomeAluno, 0, 2, 'UTF-8');
-                        }
-                        $iniciais = strtoupper($iniciais);
-                        $cpfAluno = $aluno['cpf'] ?? '';
-                        $telefoneAluno = $aluno['telefone'] ?? ($aluno['celular'] ?? '');
-                        $emailAluno = $aluno['email'] ?? '';
-                        $cfcNome = $aluno['cfc_nome'] ?? ($aluno['cfc'] ?? '');
-                        $dataCadastroRaw = $aluno['data_cadastro'] ?? $aluno['created_at'] ?? $aluno['data_registro'] ?? $aluno['data_criacao'] ?? null;
-                        $dataCadastro = null;
-                        $horaCadastro = null;
-                        if (!empty($dataCadastroRaw) && $dataCadastroRaw !== '0000-00-00' && $dataCadastroRaw !== '0000-00-00 00:00:00') {
-                            $timestampCadastro = strtotime($dataCadastroRaw);
-                            if ($timestampCadastro) {
-                                $dataCadastro = date('d/m/Y', $timestampCadastro);
-                                $horaCadastro = date('H:i', $timestampCadastro);
-                            }
-                        }
-                        $operacoes = $aluno['operacoes'] ?? [];
-                        if (is_string($operacoes)) {
-                            $operacoes = json_decode($operacoes, true);
-                        }
-                    ?>
-                    <tr data-aluno-id="<?php echo $aluno['id']; ?>">
-                        <td style="width: 140px;">
-                            <div class="aluno-info">
-                                <div class="aluno-avatar"><?php echo htmlspecialchars($iniciais); ?></div>
-                                <div>
-                                    <div class="aluno-nome"><?php echo htmlspecialchars($nomeAluno); ?></div>
-                                    <?php if (!empty($cpfAluno)): ?>
-                                    <div class="aluno-meta">
-                                        <i class="fas fa-id-card"></i>
-                                        <?php echo htmlspecialchars($cpfAluno); ?>
-                                    </div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($emailAluno)): ?>
-                                    <div class="aluno-meta">
-                                        <i class="fas fa-envelope"></i>
-                                        <?php echo htmlspecialchars($emailAluno); ?>
-                                    </div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($telefoneAluno)): ?>
-                                    <div class="aluno-meta">
-                                        <i class="fas fa-phone"></i>
-                                        <?php echo htmlspecialchars($telefoneAluno); ?>
-                                    </div>
-                                    <?php endif; ?>
-                                    <?php if (!empty($cfcNome)): ?>
-                                    <div class="aluno-meta">
-                                        <i class="fas fa-building"></i>
-                                        <?php echo htmlspecialchars($cfcNome); ?>
-                                    </div>
-                                    <?php endif; ?>
-                                    <?php if ($dataCadastro): ?>
-                                    <div class="aluno-meta">
-                                        <i class="fas fa-calendar-alt"></i>
-                                        <?php echo $dataCadastro; ?><?php echo $horaCadastro ? ' • ' . $horaCadastro : ''; ?>
-                                    </div>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
-                        </td>
-                        <td>
-                            <div class="aluno-categorias">
-                                <?php
-                                $categoriasExibidas = [];
-                                if (!empty($operacoes) && is_array($operacoes)) {
-                                    foreach ($operacoes as $operacao) {
-                                        $categoria = $operacao['categoria'] ?? $operacao['categoria_cnh'] ?? null;
-                                        if ($categoria && !in_array($categoria, $categoriasExibidas, true)) {
-                                            $categoriasExibidas[] = $categoria;
-                                            echo '<span class="categoria-badge">' . htmlspecialchars($categoria) . '</span>';
-                                        }
-                                    }
-                                }
-                                if (empty($categoriasExibidas)) {
-                                    $categoriaFallback = $aluno['categoria_cnh'] ?? null;
-                                    echo '<span class="categoria-badge">' . htmlspecialchars($categoriaFallback ?: 'N/A') . '</span>';
-                                }
-                                ?>
-                            </div>
-                        </td>
-                        <td>
-                            <?php
-                                $statusAtual = $aluno['status'] ?? 'ativo';
-                                $classeStatus = $statusClasses[$statusAtual] ?? 'status-ativo';
-                                $labelStatus = $statusLabels[$statusAtual] ?? ucfirst($statusAtual);
-                                $iconeStatus = $statusIcons[$statusAtual] ?? 'fas fa-user';
-                            ?>
-                            <span class="status-badge <?php echo $classeStatus; ?>">
-                                <i class="<?php echo $iconeStatus; ?>"></i>
-                                <?php echo $labelStatus; ?>
-                            </span>
-                        </td>
-                        <td style="text-align: center; width: 300px;">
-                            <div class="aluno-actions">
-                                <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
-                                <button type="button" class="aluno-action-btn" onclick="editarAluno(<?php echo $aluno['id']; ?>)" title="Editar dados do aluno">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <?php endif; ?>
 
-                                <button type="button" class="aluno-action-btn" onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" title="Ver detalhes completos do aluno">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-
-                                <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
-                                <button type="button" class="aluno-action-btn" onclick="agendarAula(<?php echo $aluno['id']; ?>)" title="Agendar nova aula">
-                                    <i class="fas fa-calendar-plus"></i>
-                                </button>
-                                <?php endif; ?>
-
-<<<<<<< HEAD
-                                <button type="button" class="aluno-action-btn" onclick="historicoAluno(<?php echo $aluno['id']; ?>)" title="Histórico de aulas">
-                                    <i class="fas fa-history"></i>
-                                </button>
-
-                                <?php if (defined('FINANCEIRO_ENABLED') && FINANCEIRO_ENABLED && ($isAdmin || $user['tipo'] === 'secretaria')): ?>
-                                <button type="button" class="aluno-action-btn" onclick="abrirFinanceiroAluno(<?php echo $aluno['id']; ?>)" title="Financeiro do aluno">
-                                    <i class="fas fa-dollar-sign"></i>
-                                </button>
-                                <?php endif; ?>
-
-                                <?php if (($aluno['status'] ?? 'ativo') === 'ativo'): ?>
-                                <button type="button" class="aluno-action-btn danger" onclick="desativarAluno(<?php echo $aluno['id']; ?>)" title="Desativar aluno">
-                                    <i class="fas fa-ban"></i>
-                                </button>
-                                <?php else: ?>
-                                <button type="button" class="aluno-action-btn" onclick="ativarAluno(<?php echo $aluno['id']; ?>)" title="Reativar aluno">
-                                    <i class="fas fa-check"></i>
-                                </button>
-                                <?php endif; ?>
-                            </div>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </tbody>
-        </table>
-    </div>
-    <!-- Layout em cards para mobile -->
-    <div class="mobile-aluno-cards" style="display: none;">
-        <?php if (!empty($alunos)): ?>
-            <?php
-                $statusClasses = $statusClasses ?? [
-                    'ativo' => 'status-ativo',
-                    'inativo' => 'status-inativo',
-                    'concluido' => 'status-concluido'
-                ];
-                $statusLabels = $statusLabels ?? [
-                    'ativo' => 'Ativo',
-                    'inativo' => 'Inativo',
-                    'concluido' => 'Concluído'
-                ];
-                $statusIcons = $statusIcons ?? [
-                    'ativo' => 'fas fa-user-check',
-                    'inativo' => 'fas fa-user-slash',
-                    'concluido' => 'fas fa-check-circle'
-                ];
-            ?>
-            <?php foreach ($alunos as $aluno): ?>
-            <?php
-                $nomeAlunoMobile = $aluno['nome'] ?? '';
-                $cpfAlunoMobile = $aluno['cpf'] ?? '';
-                $emailAlunoMobile = $aluno['email'] ?? '';
-                $telefoneAlunoMobile = $aluno['telefone'] ?? ($aluno['celular'] ?? '');
-                $cfcMobile = $aluno['cfc_nome'] ?? ($aluno['cfc'] ?? '');
-                $dataCadastroRaw = $aluno['data_cadastro'] ?? $aluno['created_at'] ?? $aluno['data_registro'] ?? $aluno['data_criacao'] ?? null;
-                $dataCadastroMobile = null;
-                $horaCadastroMobile = null;
-                if (!empty($dataCadastroRaw) && $dataCadastroRaw !== '0000-00-00' && $dataCadastroRaw !== '0000-00-00 00:00:00') {
-                    $timestampCadastroMobile = strtotime($dataCadastroRaw);
-                    if ($timestampCadastroMobile) {
-                        $dataCadastroMobile = date('d/m/Y', $timestampCadastroMobile);
-                        $horaCadastroMobile = date('H:i', $timestampCadastroMobile);
-                    }
-                }
-                $operacoesMobile = $aluno['operacoes'] ?? [];
-                if (is_string($operacoesMobile)) {
-                    $operacoesMobile = json_decode($operacoesMobile, true);
-                }
-                $categoriasMobile = [];
-                if (!empty($operacoesMobile) && is_array($operacoesMobile)) {
-                    foreach ($operacoesMobile as $operacaoMobile) {
-                        $categoriaMobile = $operacaoMobile['categoria'] ?? $operacaoMobile['categoria_cnh'] ?? null;
-                        if ($categoriaMobile && !in_array($categoriaMobile, $categoriasMobile, true)) {
-                            $categoriasMobile[] = $categoriaMobile;
-                        }
-                    }
-                }
-                if (empty($categoriasMobile)) {
-                    $categoriaFallbackMobile = $aluno['categoria_cnh'] ?? null;
-                    if ($categoriaFallbackMobile) {
-                        $categoriasMobile[] = $categoriaFallbackMobile;
-                    }
-                }
-            ?>
-            <div class="mobile-aluno-card" data-aluno-id="<?php echo $aluno['id']; ?>">
-                <div class="mobile-aluno-header">
-                    <div class="mobile-aluno-info">
-                        <div class="mobile-aluno-title">
-                            <strong><?php echo htmlspecialchars($nomeAlunoMobile); ?></strong>
-                            <span class="mobile-aluno-id">#<?php echo $aluno['id']; ?></span>
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card border-left-success shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
+                            Alunos Ativos
                         </div>
-                        <?php if (!empty($cpfAlunoMobile)): ?>
-                        <div class="mobile-aluno-meta"><i class="fas fa-id-card"></i><?php echo htmlspecialchars($cpfAlunoMobile); ?></div>
-                        <?php endif; ?>
-                        <?php if (!empty($emailAlunoMobile)): ?>
-                        <div class="mobile-aluno-meta"><i class="fas fa-envelope"></i><?php echo htmlspecialchars($emailAlunoMobile); ?></div>
-                        <?php endif; ?>
-                        <?php if (!empty($telefoneAlunoMobile)): ?>
-                        <div class="mobile-aluno-meta"><i class="fas fa-phone"></i><?php echo htmlspecialchars($telefoneAlunoMobile); ?></div>
-                        <?php endif; ?>
-                        <?php if (!empty($categoriasMobile)): ?>
-                        <div class="mobile-aluno-tags">
-                            <?php foreach ($categoriasMobile as $categoriaMobile): ?>
-                            <span class="categoria-badge"><?php echo htmlspecialchars($categoriaMobile); ?></span>
-                            <?php endforeach; ?>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="alunosAtivos">
+                            <?php echo count(array_filter($alunos, function($a) { return $a['status'] === 'ativo'; })); ?>
                         </div>
-                        <?php endif; ?>
-                        <?php if (!empty($cfcMobile)): ?>
-                        <div class="mobile-aluno-meta"><i class="fas fa-building"></i><?php echo htmlspecialchars($cfcMobile); ?></div>
-                        <?php endif; ?>
-                        <?php if ($dataCadastroMobile): ?>
-                        <div class="mobile-aluno-meta"><i class="fas fa-calendar-alt"></i><?php echo $dataCadastroMobile; ?><?php echo $horaCadastroMobile ? ' • ' . $horaCadastroMobile : ''; ?></div>
-                        <?php endif; ?>
                     </div>
-                    <div class="mobile-aluno-status">
-                        <?php
-                        $statusAtual = $aluno['status'] ?? 'ativo';
-                        $classeStatus = $statusClasses[$statusAtual] ?? 'status-ativo';
-                        $labelStatus = $statusLabels[$statusAtual] ?? ucfirst($statusAtual);
-                        $iconeStatus = $statusIcons[$statusAtual] ?? 'fas fa-user';
-                        ?>
-                        <span class="status-badge <?php echo $classeStatus; ?>">
-                            <i class="<?php echo $iconeStatus; ?>"></i>
-                            <?php echo $labelStatus; ?>
-                        </span>
+                    <div class="col-auto">
+                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
                     </div>
-                </div>
-
-                <div class="mobile-aluno-actions">
-                    <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
-                    <button type="button" class="aluno-action-btn" onclick="editarAluno(<?php echo $aluno['id']; ?>)" title="Editar dados do aluno">
-                        <i class="fas fa-edit"></i>
-                    </button>
-                    <?php endif; ?>
-                    <button type="button" class="aluno-action-btn" onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" title="Ver detalhes">
-                        <i class="fas fa-eye"></i>
-                    </button>
-                    <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
-                    <button type="button" class="aluno-action-btn" onclick="agendarAula(<?php echo $aluno['id']; ?>)" title="Agendar aula">
-                        <i class="fas fa-calendar-plus"></i>
-                    </button>
-                    <?php endif; ?>
-                    <button type="button" class="aluno-action-btn" onclick="historicoAluno(<?php echo $aluno['id']; ?>)" title="Histórico de aulas">
-                        <i class="fas fa-history"></i>
-                    </button>
-                    <?php if (defined('FINANCEIRO_ENABLED') && FINANCEIRO_ENABLED && ($isAdmin || $user['tipo'] === 'secretaria')): ?>
-                    <button type="button" class="aluno-action-btn" onclick="abrirFinanceiroAluno(<?php echo $aluno['id']; ?>)" title="Financeiro">
-                        <i class="fas fa-dollar-sign"></i>
-                    </button>
-                    <?php endif; ?>
-                    <?php if (($aluno['status'] ?? 'ativo') === 'ativo'): ?>
-                    <button type="button" class="aluno-action-btn danger" onclick="desativarAluno(<?php echo $aluno['id']; ?>)" title="Desativar aluno">
-                        <i class="fas fa-ban"></i>
-                    </button>
-                    <?php else: ?>
-                    <button type="button" class="aluno-action-btn" onclick="ativarAluno(<?php echo $aluno['id']; ?>)" title="Reativar aluno">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <?php endif; ?>
                 </div>
             </div>
-            <?php endforeach; ?>
-        <?php endif; ?>
-=======
+        </div>
+    </div>
+
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card border-left-warning shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
+                            Em Formação
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="emFormacao">
+                            <?php echo count(array_filter($alunos, function($a) { return $a['status'] === 'ativo'; })); ?>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-clock fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
+        <div class="card border-left-info shadow h-100 py-2">
+            <div class="card-body">
+                <div class="row no-gutters align-items-center">
+                    <div class="col mr-2">
+                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
+                            Concluídos
+                        </div>
+                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="concluidos">
+                            <?php echo count(array_filter($alunos, function($a) { return $a['status'] === 'concluido'; })); ?>
+                        </div>
+                    </div>
+                    <div class="col-auto">
+                        <i class="fas fa-graduation-cap fa-2x text-gray-300"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Tabela de Alunos -->
 <div class="card shadow">
     <div class="card-header bg-dark">
@@ -2219,21 +1411,21 @@ input.form-control.invalid {
                         <th>Categoria</th>
                         <th>Status</th>
                         <th>Ações</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php if (empty($alunos)): ?>
-                <tr>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($alunos)): ?>
+                    <tr>
                         <td colspan="5" class="text-center text-muted py-4">
-                        <i class="fas fa-inbox fa-3x mb-3"></i>
-                        <p>Nenhum aluno cadastrado ainda.</p>
-                        <button class="btn btn-primary" onclick="abrirModalAluno()">
-                            <i class="fas fa-plus me-1"></i>Cadastrar Primeiro Aluno
-                        </button>
-                    </td>
-                </tr>
-                <?php else: ?>
-                    <?php foreach ($alunos as $aluno): ?>
+                            <i class="fas fa-inbox fa-3x mb-3"></i>
+                            <p>Nenhum aluno cadastrado ainda.</p>
+                            <button class="btn btn-primary" onclick="abrirModalAluno()">
+                                <i class="fas fa-plus me-1"></i>Cadastrar Primeiro Aluno
+                            </button>
+                        </td>
+                    </tr>
+                    <?php else: ?>
+                        <?php foreach ($alunos as $aluno): ?>
                         <tr data-aluno-id="<?php echo $aluno['id']; ?>">
                             <td><?php echo $aluno['id']; ?></td>
                             <td>
@@ -2247,13 +1439,13 @@ input.form-control.invalid {
                                 </div>
                             </td>
                             <td>
-                    <?php
+                                <?php 
                                 // Mostrar operações dinâmicas em vez de categoria única
                                 $operacoes = $aluno['operacoes'];
-                        if (is_string($operacoes)) {
-                            $operacoes = json_decode($operacoes, true);
-                        }
-                        
+                                if (is_string($operacoes)) {
+                                    $operacoes = json_decode($operacoes, true);
+                                }
+                                
                                 if (!empty($operacoes) && is_array($operacoes)) {
                                     foreach ($operacoes as $index => $operacao) {
                                         $badgeClass = '';
@@ -2366,11 +1558,11 @@ input.form-control.invalid {
                                         <i class="fas fa-check"></i>
                                     </button>
                                     <?php endif; ?>
-                            </div>
-                        </td>
+                                </div>
+                            </td>
                         </tr>
-                                <?php endforeach; ?>
-                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
@@ -2437,14 +1629,14 @@ input.form-control.invalid {
                     
                     <div class="mobile-aluno-actions">
                         <button type="button" class="btn btn-sm btn-primary" onclick="visualizarAluno(<?php echo $aluno['id']; ?>)" title="Ver detalhes">
-                                    <i class="fas fa-eye"></i>
-                                </button>
+                            <i class="fas fa-eye"></i>
+                        </button>
                         <button type="button" class="btn btn-sm btn-warning" onclick="editarAluno(<?php echo $aluno['id']; ?>)" title="Editar aluno">
-                                    <i class="fas fa-edit"></i>
-                                </button>
+                            <i class="fas fa-edit"></i>
+                        </button>
                         <button type="button" class="btn btn-sm btn-info" onclick="agendarAula(<?php echo $aluno['id']; ?>)" title="Agendar aula">
                             <i class="fas fa-calendar-plus"></i>
-                                </button>
+                        </button>
                         <button type="button" class="btn btn-sm btn-secondary" onclick="historicoAluno(<?php echo $aluno['id']; ?>)" title="Histórico de aulas">
                             <i class="fas fa-history"></i>
                         </button>
@@ -2461,14 +1653,14 @@ input.form-control.invalid {
                         <!-- <button type="button" class="btn btn-sm btn-danger" onclick="excluirAluno(<?php echo $aluno['id']; ?>)">
                             <i class="fas fa-trash"></i>
                         </button> -->
-                            </div>
+                    </div>
                 </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+                <?php endforeach; ?>
+            <?php endif; ?>
         </div>
->>>>>>> 6d197f0 (layout header agendamento prático)
     </div>
 </div>
+
 <!-- Modal Customizado para Cadastro/Edição de Aluno -->
 <div id="modalAluno" class="custom-modal" style="display: none !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999;">
     <div class="custom-modal-dialog" style="position: fixed; top: 1rem; left: 1rem; right: 1rem; bottom: 1rem; width: auto; height: auto; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center;">
@@ -2542,7 +1734,7 @@ input.form-control.invalid {
                                 <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
                                     <i class="fas fa-user me-1"></i>Informações Pessoais
                                 </h6>
-                                </div>
+                            </div>
                             
                             <!-- Campo de Foto -->
                             <div class="col-12 mb-3">
@@ -2553,7 +1745,7 @@ input.form-control.invalid {
                                             <input type="file" class="form-control" id="foto" name="foto" accept="image/*" 
                                                    style="padding: 0.4rem; font-size: 0.85rem;" onchange="previewFotoAluno(this)">
                                             <small class="text-muted" style="font-size: 0.75rem;">📷 JPG, PNG, GIF, WebP até 2MB</small>
-                                    </div>
+                                        </div>
                                     </div>
                                     <div class="col-md-8">
                                         <div class="text-center">
@@ -2564,12 +1756,12 @@ input.form-control.invalid {
                                                     <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerFotoAluno()">
                                                         <i class="fas fa-trash"></i> Remover
                                                     </button>
-                                </div>
-                            </div>
+                                                </div>
+                                            </div>
                                             <div id="placeholder-foto-aluno" class="text-muted" style="font-size: 0.8rem;">
                                                 <i class="fas fa-user-circle fa-3x"></i><br>
                                                 Nenhuma foto selecionada
-                                    </div>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -2579,7 +1771,7 @@ input.form-control.invalid {
                                     <label for="nome" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nome Completo *</label>
                                     <input type="text" class="form-control" id="nome" name="nome" required 
                                            placeholder="Nome completo do aluno" style="padding: 0.4rem; font-size: 0.85rem;">
-                        </div>
+                                </div>
                             </div>
                             <div class="col-md-2">
                                 <div class="mb-1">
@@ -2633,6 +1825,7 @@ input.form-control.invalid {
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="row mb-2">
                             <div class="col-md-3">
                                 <div class="mb-1">
@@ -2695,6 +1888,7 @@ input.form-control.invalid {
                                 </div>
                             </div>
                         </div>
+                        
                         <div class="row mb-2">
                             <div class="col-md-4">
                                 <div class="mb-1">
@@ -2708,8 +1902,8 @@ input.form-control.invalid {
                                     <label for="telefone" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Telefone</label>
                                     <input type="text" class="form-control" id="telefone" name="telefone" 
                                            placeholder="(00) 00000-0000" style="padding: 0.4rem; font-size: 0.85rem;">
+                                </div>
                             </div>
-                        </div>
                         </div>
                         
                         <!-- Seção 2: CFC -->
@@ -3016,6 +2210,7 @@ input.form-control.invalid {
         </div>
     </div>
 </div>
+
 <!-- Modal Nova Aula -->
 <div id="modal-nova-aula" class="modal-overlay" style="display: none;">
     <div class="modal-content modal-large">
@@ -3183,8 +2378,7 @@ input.form-control.invalid {
                 </button>
             </div>
         </form>
-</div>
-</div>
+    </div>
 </div>
 
 <!-- Scripts específicos para Alunos -->
@@ -3213,6 +2407,7 @@ const categoriasPorTipo = {
         { value: 'E', text: 'E - Combinação de Veículos', desc: 'Aula avulsa para categoria E (combinação de veículos - carreta, bitrem)' }
     ]
 };
+
 document.addEventListener('DOMContentLoaded', function() {
         // CORREÇÃO DE DUPLICAÇÃO - Temporariamente desabilitada para teste
         /*
@@ -3268,59 +2463,60 @@ inicializarModalAluno();
         });
     }
 });
+
 function inicializarMascarasAluno() {
     // Máscara para CPF
     if (typeof IMask !== 'undefined') {
         new IMask(document.getElementById('cpf'), {
-                mask: '000.000.000-00'
-            });
+            mask: '000.000.000-00'
+        });
         
         // RG sem máscara - aceita todos os formatos dos estados brasileiros
         // (alguns estados usam letras e formatos variados)
         
         // Máscara para telefone
         new IMask(document.getElementById('telefone'), {
-                mask: '(00) 00000-0000'
-            });
+            mask: '(00) 00000-0000'
+        });
         
         // Máscara para CEP
         new IMask(document.getElementById('cep'), {
-                mask: '00000-000'
-            });
+            mask: '00000-000'
+        });
     }
     
     // Busca de CEP
     document.getElementById('cep').addEventListener('blur', function() {
-            const cep = this.value.replace(/\D/g, '');
-            if (cep.length === 8) {
-                buscarCEP(cep);
-            }
-        });
-        
-        // Busca de CEP ao pressionar Enter
-    document.getElementById('cep').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                e.preventDefault();
-                const cep = this.value.replace(/\D/g, '');
-                if (cep.length === 8) {
-                    buscarCEP(cep);
-                } else {
-                    mostrarFeedbackCEP('warning', 'CEP deve ter 8 dígitos. Exemplo: 12345-678');
-                }
-            }
-        });
+        const cep = this.value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            buscarCEP(cep);
+        }
+    });
     
-    // Botão de busca manual
-    document.getElementById('btnBuscarCEP').addEventListener('click', function() {
-            const cepInput = document.getElementById('cep');
-            const cep = cepInput.value.replace(/\D/g, '');
+    // Busca de CEP ao pressionar Enter
+    document.getElementById('cep').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            const cep = this.value.replace(/\D/g, '');
             if (cep.length === 8) {
                 buscarCEP(cep);
             } else {
                 mostrarFeedbackCEP('warning', 'CEP deve ter 8 dígitos. Exemplo: 12345-678');
-                cepInput.focus();
             }
-        });
+        }
+    });
+    
+    // Botão de busca manual
+    document.getElementById('btnBuscarCEP').addEventListener('click', function() {
+        const cepInput = document.getElementById('cep');
+        const cep = cepInput.value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            buscarCEP(cep);
+        } else {
+            mostrarFeedbackCEP('warning', 'CEP deve ter 8 dígitos. Exemplo: 12345-678');
+            cepInput.focus();
+        }
+    });
     
     // Botão de busca por rua agora é um link direto para os Correios
     
@@ -3339,11 +2535,11 @@ function inicializarMascarasAluno() {
             municipioSelect.disabled = true;
             atualizarNaturalidade();
         }
-        });
+    });
     
     document.getElementById('naturalidade_municipio').addEventListener('change', function() {
-            atualizarNaturalidade();
-        });
+        atualizarNaturalidade();
+    });
     
     document.getElementById('btnLimparNaturalidade').addEventListener('click', function() {
         document.getElementById('naturalidade_estado').value = '';
@@ -3352,6 +2548,7 @@ function inicializarMascarasAluno() {
         document.getElementById('naturalidade').value = '';
     });
 }
+
 function buscarCEP(cep) {
     // Mostrar indicador de carregamento
     const cepInput = document.getElementById('cep');
@@ -3364,6 +2561,7 @@ function buscarCEP(cep) {
     loadingIcon.innerHTML = ' <i class="fas fa-spinner fa-spin text-primary"></i>';
     loadingIcon.id = 'cep-loading';
     cepInput.parentNode.appendChild(loadingIcon);
+    
     fetch(`https://viacep.com.br/ws/${cep}/json/`)
         .then(response => {
             if (!response.ok) {
@@ -3561,6 +2759,7 @@ function atualizarNaturalidade() {
         console.log('Naturalidade limpa'); // Debug
     }
 }
+
 function extrairEstadoNaturalidade(naturalidade) {
     console.log('🔍 extrairEstadoNaturalidade - Input:', naturalidade);
     if (!naturalidade) return '';
@@ -3588,6 +2787,7 @@ function extrairMunicipioNaturalidade(naturalidade) {
     console.log('🔍 extrairMunicipioNaturalidade - Município trim:', municipio.trim());
     return municipio.trim();
 }
+
 // Lista estática de municípios por estado (principais municípios)
 function getMunicipiosPorEstado(estado) {
     console.log('Buscando municípios para estado:', estado); // Debug
@@ -3657,18 +2857,18 @@ function getMunicipiosPorEstado(estado) {
             'Itapororoca', 'Itatuba', 'Jacaraú', 'Jericó', 'Joca Claudino', 'Juarez Távora',
             'Juazeirinho', 'Junco do Seridó', 'Juripiranga', 'Juru', 'Lagoa', 'Lagoa de Dentro',
             'Lagoa do Mato', 'Lastro', 'Livramento', 'Logradouro', 'Lucena', 'Mãe d\'Água',
-            'Malta', 'Manaíra', 'Marcação', 'Mari', 'Marizópolis', 'Mataréia', 'Miguel Pereira',
-            'Monte Horebe', 'Nazarezinho', 'Nova Floresta', 'Nova Olinda', 'Nova Palmeira',
+            'Malta', 'Manaíra', 'Marcação', 'Mari', 'Marizópolis', 'Maturéia', 'Mogeiro',
+            'Montadas', 'Monte Horebe', 'Nazarezinho', 'Nova Floresta', 'Nova Olinda', 'Nova Palmeira',
             'Olho d\'Água', 'Olivedos', 'Ouro Velho', 'Parari', 'Passagem', 'Paulista',
             'Pedra Branca', 'Pedra Lavrada', 'Pedras de Fogo', 'Pedro Régis', 'Piancó', 'Pilar',
             'Pilõezinhos', 'Pirpirituba', 'Pitimbu', 'Pocinhos', 'Poço Dantas', 'Poço de José de Moura',
             'Pombal', 'Prata', 'Princesa Isabel', 'Puxinanã', 'Queimadas', 'Quixabá',
             'Remígio', 'Riachão', 'Riachão do Bacamarte', 'Riachão do Poço', 'Riacho de Santo Antônio',
             'Riacho dos Cavalos', 'Ribeira', 'Rio Tinto', 'Salgadinho', 'Salgado de São Félix',
-            'Santa Cecília', 'Santa Helena', 'Santa Inês', 'Santa Luzia', 'Santa Teresinha',
-            'Santana de Mangueira', 'Santana dos Garrotes', 'São Bentinho', 'São Bento',
-            'São Domingos', 'São Domingos do Cariri', 'São Francisco', 'São João do Cariri',
-            'São João do Rio do Peixe', 'São João do Tigre', 'São José da Lagoa Tapada',
+            'Santa Cecília', 'Santa Cruz', 'Santa Helena', 'Santa Inês', 'Santa Luzia',
+            'Santa Teresinha', 'Santana de Mangueira', 'Santana dos Garrotes', 'Santo André',
+            'São Bentinho', 'São Bento', 'São Domingos', 'São Domingos do Cariri', 'São Francisco',
+            'São João do Cariri', 'São João do Rio do Peixe', 'São João do Tigre', 'São José da Lagoa Tapada',
             'São José de Caiana', 'São José de Espinharas', 'São José de Piranhas', 'São José de Princesa',
             'São José do Bonfim', 'São José do Brejo do Cruz', 'São José do Sabugi', 'São José dos Cordeiros',
             'São José dos Ramos', 'São Mamede', 'São Miguel de Taipu', 'São Sebastião de Lagoa de Roça',
@@ -3773,7 +2973,7 @@ function getMunicipiosPorEstado(estado) {
             'Bonito', 'Jardim', 'Amambai', 'Pedro Gomes', 'Miranda', 'Anastácio',
             'Bandeirantes', 'Bela Vista', 'Caarapó', 'Cassilândia', 'Chapadão do Sul',
             'Eldorâdo', 'Guia Lopes da Laguna', 'Icaraíma', 'Inocência', 'Itaporã',
-            'Ivinhema', 'Lado Pinto', 'Mundo Novo', 'Nioaque', 'Nova Alvorada do Sul',
+            'Ivinhema', 'Ladário', 'Lodo Pinto', 'Mundo Novo', 'Nioaque', 'Nova Alvorada do Sul',
             'Nova Esperança do Sul', 'Porto Murtinho', 'Ribas do Rio Pardo', 'Rio Negro'
         ],
         'PA': [
@@ -3933,6 +3133,7 @@ function inicializarModalAluno() {
         }
     });
 }
+
 function abrirModalEdicao() {
     console.log('🚀 Abrindo modal para edição...');
     const modal = document.getElementById('modalAluno');
@@ -3959,6 +3160,7 @@ function abrirModalEdicao() {
         console.log('📝 Formulário mantido para edição');
     }
 }
+
 window.editarAluno = function(id) {
     console.log('🚀 editarAluno chamada com ID:', id);
     
@@ -4091,6 +3293,7 @@ window.editarAluno = function(id) {
             mostrarAlerta('Erro ao carregar dados do aluno: ' + error.message, 'danger');
         });
 }
+
 function preencherFormularioAluno(aluno) {
     console.log('📝 Preenchendo formulário para aluno:', aluno);
     console.log('📝 Dados específicos do aluno:');
@@ -4406,6 +3609,7 @@ function preencherFormularioAluno(aluno) {
         console.warn('⚠️ Campo observacoes não encontrado no DOM');
     }
 }
+
 function visualizarAluno(id) {
     console.log('🚀 visualizandoAluno chamada com ID:', id);
 
@@ -4568,6 +3772,7 @@ function preencherModalVisualizacao(aluno) {
             };
         }
     }
+    
     const html = `
         <div class="row">
             <div class="col-md-8">
@@ -4681,6 +3886,7 @@ function agendarAula(id) {
         preencherAlunoSelecionado(id);
     }, 500); // Aumentei para 500ms para dar mais tempo
 }
+
 function preencherAlunoSelecionado(id) {
     console.log('🔧 Preenchendo aluno selecionado:', id);
     
@@ -4729,6 +3935,7 @@ function preencherAlunoSelecionado(id) {
     } else {
         console.warn('⚠️ Nenhuma opção encontrada no select de aluno');
     }
+    
     // Método mais simples e seguro
     try {
         // Tentar definir o valor diretamente
@@ -4924,6 +4131,7 @@ function alterarStatusAluno(id, status) {
         });
     }
 }
+
 function limparFiltros() {
     document.getElementById('filtroStatus').value = '';
     document.getElementById('filtroCFC').value = '';
@@ -5019,6 +4227,7 @@ function exportarFiltros() {
         }
     }, 1500);
 }
+
 // Função para mostrar alertas usando o sistema de notificações
 function mostrarAlerta(mensagem, tipo) {
     // Criar um toast moderno e elegante
@@ -5100,6 +4309,7 @@ function criarToastContainer() {
     document.body.appendChild(container);
     return container;
 }
+
 // Função para formatar mensagens de erro específicas
 function formatarMensagemErro(mensagem) {
     // Mapear mensagens de erro para versões mais amigáveis
@@ -5272,6 +4482,7 @@ function atualizarOpcoesAgendamento(tipo) {
     // Atualizar horários calculados se existir o elemento
     atualizarHorariosCalculados();
 }
+
 function atualizarHorariosCalculados() {
     const tipoAgendamento = document.querySelector('input[name="tipo_agendamento"]:checked');
     const posicaoIntervalo = document.querySelector('input[name="posicao_intervalo"]:checked');
@@ -5356,6 +4567,7 @@ function atualizarHorariosCalculados() {
             }
             break;
     }
+    
     console.log('🕐 Horários calculados:', horarios);
     
     // Atualizar elementos HTML se existirem
@@ -5408,6 +4620,7 @@ function fecharModalNovaAula() {
         console.log('✅ Modal de nova aula fechado e formulário limpo!');
     }
 }
+
 function carregarInstrutoresDisponiveis() {
     console.log('🔧 Carregando instrutores disponíveis...');
     
@@ -5701,6 +4914,7 @@ function salvarNovaAula(event) {
         btnSalvar.disabled = false;
     });
 }
+
 // Fechar modal ao clicar fora dele
 document.addEventListener('click', function(e) {
     const modal = document.getElementById('modal-nova-aula');
@@ -5823,6 +5037,7 @@ function fecharModalAluno() {
         console.log('✅ Modal customizado fechado!');
     }
 }
+
 // Função para resetar o formulário de alunos
 function resetFormulario() {
     console.log('🔄 Resetando formulário de alunos...');
@@ -5908,6 +5123,7 @@ function aplicarCorrecaoZIconsAction(acao) {
         console.log('🔺 z-index dos ícones restaurado ao normal');
     }
 }
+
 // FUNÇÃO GLOBAL PARA LIMPEZA DE CONFLITOS ENTRE MODAIS
 function limparTodosModais() {
     console.log('🧹 Limpando todos os modais conflitantes...');
@@ -6008,8 +5224,10 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 });
+
 // Função para carregar categorias CNH dinamicamente
 // Removido: função carregarCategoriasCNH() - não é mais necessária
+
 // Função para salvar aluno via AJAX
 function salvarAluno() {
     const form = document.getElementById('formAluno');
@@ -6179,6 +5397,7 @@ function salvarAluno() {
         btnSalvar.disabled = false;
     });
 }
+
 // Sistema de Operações de Habilitação
 let contadorOperacoes = 0;
 
@@ -6318,6 +5537,7 @@ function coletarDadosOperacoes() {
     
     return operacoes;
 }
+
 // Função para carregar operações existentes ao editar aluno
 function carregarOperacoesExistentes(operacoes) {
     console.log('🔄 Carregando operações existentes:', operacoes);
@@ -6343,6 +5563,7 @@ function carregarOperacoesExistentes(operacoes) {
         adicionarOperacao();
         return;
     }
+    
     // Adicionar cada operação existente
     console.log(`🔄 Iniciando processamento de ${operacoes.length} operações`);
     console.log(`🔄 Contador inicial: ${contadorOperacoes}`);
@@ -6545,6 +5766,7 @@ function carregarDocumentos(alunoId) {
             `;
         });
 }
+
 // Função para carregar dados de uma aba específica
 function carregarDadosAba(abaId, alunoId) {
     console.log(`📊 Carregando dados da aba: ${abaId} para aluno: ${alunoId}`);
@@ -6658,12 +5880,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
 // =====================================================
 // CONTROLE DE LAYOUT RESPONSIVO PARA ALUNOS
 // =====================================================
 
 console.log('🔧 SCRIPT ALUNOS CARREGADO - Verificando dados PHP');
-console.log('🔧 Total de alunos:', <?php echo isset($alunos) ? count($alunos) : 0; ?>);
+console.log('🔧 Total de alunos:', <?php echo count($alunos ?? []); ?>);
 console.log('🔧 Alunos data:', <?php echo json_encode($alunos ?? []); ?>);
 
 // Verificar se há parâmetros na URL que podem causar abertura automática do modal
@@ -6688,6 +5911,7 @@ if (modal) {
         console.log('✅ Modal está fechado corretamente');
     }
 }
+
 function toggleMobileLayoutAlunos() {
     console.log('🔧 toggleMobileLayoutAlunos executado - viewport:', window.innerWidth);
     const viewportWidth = window.innerWidth;
@@ -6863,6 +6087,7 @@ function aplicarMascaraCPF(input) {
     let valorFormatado = valor.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
     input.value = valorFormatado;
 }
+
 function mostrarFeedbackCPF(input, isValid) {
     const feedback = input.parentNode.querySelector('.cpf-validation-feedback');
     
@@ -6977,6 +6202,7 @@ function validarCampoCPFAutomaticamente() {
         console.log('⚠️ CPF não tem 14 caracteres, não validando automaticamente');
     }
 }
+
 console.log('✅ Validação de CPF inicializada');
 
 // =====================================================
@@ -6998,6 +6224,7 @@ function aplicarMascaraRenach(input) {
     
     input.value = valor;
 }
+
 // Aplicar máscara de Renach quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
     const renachInput = document.getElementById('renach');
@@ -7061,6 +6288,7 @@ function previewFotoAluno(input) {
         reader.readAsDataURL(file);
     }
 }
+
 /**
  * Remover foto selecionada
  */

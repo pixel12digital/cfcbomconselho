@@ -83,259 +83,64 @@ try {
 }
 ?>
 
-<<<<<<< HEAD
-<div class="agendamento-wrapper">
-    <div class="turma-wizard">
-        <div class="wizard-header">
-            <h2 class="d-flex align-items-center justify-content-center text-white" style="gap: 12px;">
-                <i class="fas fa-calendar-alt icon icon-24" aria-hidden="true"></i>
-                Sistema de Agendamento
-            </h2>
-        </div>
-        <div class="wizard-content">
-            <div class="agendamento-hero-bar">
-                <p>Gerencie aulas, instrutores e veículos seguindo o mesmo padrão visual das turmas teóricas.</p>
-                <div class="agendamento-actions-row">
-                    <button type="button" class="btn btn-primary" onclick="abrirModalNovaAula()">
-                        <i class="fas fa-plus"></i>
-                        Nova Aula
-                    </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="abrirModalDisponibilidade()">
-                        <i class="fas fa-calendar-check"></i>
-                        Verificar Disponibilidade
-                    </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="exportarAgenda()">
-                        <i class="fas fa-download"></i>
-                        Exportar Agenda
-                    </button>
-                </div>
-            </div>
-            <section class="filters-section">
-    <div class="filters-grid">
-        <div class="filter-group">
-            <label for="filter-cfc">CFC:</label>
-            <select id="filter-cfc" onchange="filtrarAgenda()">
-                <option value="">Todos os CFCs</option>
-                <?php foreach ($cfcs ?? [] as $cfc): ?>
-                    <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
-                <?php endforeach; ?>
-            </select>
-=======
 <!-- Header da Página -->
 <style>
     .agenda-top-wrapper {
         background: #ffffff;
         border-radius: 12px;
         box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
-        padding: 24px;
-        margin-bottom: 20px;
+        padding: 20px 24px;
         display: flex;
         flex-direction: column;
-        gap: 20px;
+        gap: 12px;
     }
 
-    .agenda-top-row {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-    }
-
-    .agenda-header-left h2 {
+    .agenda-header {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+    }
+
+    .agenda-title {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
         margin: 0;
-        font-size: 1.8rem;
+        font-size: 1.65rem;
         font-weight: 700;
         color: #0f172a;
     }
 
-    .agenda-header-left h2 i {
+    .agenda-title i {
         font-size: 1.4rem;
         color: #0f7aed;
     }
 
-    .agenda-period-controls {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    .period-selector {
-        display: inline-flex;
-        gap: 8px;
-        padding: 4px;
-        border-radius: 12px;
-        background: #f1f5f9;
-        width: fit-content;
-    }
-
-    .period-option {
-        border: none;
-        background: transparent;
-        color: #0f172a;
-        font-weight: 600;
-        padding: 7px 14px;
-        border-radius: 8px;
-        cursor: pointer;
-        transition: all 0.2s ease;
-    }
-
-    .period-option:hover {
-        background: rgba(15, 122, 237, 0.12);
-    }
-
-    .period-option.active {
-        background: #0f7aed;
-        color: #ffffff;
-        box-shadow: 0 8px 18px rgba(15, 122, 237, 0.25);
-    }
-
-    .period-option:focus-visible {
-        outline: 3px solid rgba(15, 122, 237, 0.35);
-        outline-offset: 2px;
-    }
-
-    .period-custom {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 10px;
-        align-items: center;
-    }
-
-    .period-custom label {
-        font-weight: 600;
-        color: #475569;
-    }
-
-    .period-custom input[type="date"] {
-        border: 1px solid #cbd5f5;
-        border-radius: 8px;
-        padding: 5px 10px;
-        font-size: 0.95rem;
-        color: #0f172a;
-    }
-
-    .period-custom input[type="date"]:focus-visible {
-        outline: 3px solid rgba(15, 122, 237, 0.35);
-    }
-
-    .kpi-actions-row {
-        display: flex;
-        align-items: center;
-        gap: 18px;
-        flex-wrap: wrap;
-    }
-
-    .kpi-bar {
-        display: inline-flex;
-        align-items: center;
-        gap: 18px;
-        background: #f8fafc;
-        border-radius: 10px;
-        padding: 10px 14px;
-        min-height: 48px;
-    }
-
-    .kpi-item {
-        position: relative;
-        display: inline-flex;
-        align-items: center;
-        gap: 10px;
-        border: none;
-        background: transparent;
-        cursor: pointer;
-        padding: 6px 8px;
-        border-radius: 8px;
-        transition: background 0.2s ease, transform 0.2s ease;
-        overflow: hidden;
-    }
-
-    .kpi-item:hover {
-        background: rgba(15, 122, 237, 0.08);
-    }
-
-    .kpi-item.active {
-        background: rgba(15, 122, 237, 0.12);
-    }
-
-    .kpi-item:focus-visible {
-        outline: 3px solid rgba(15, 122, 237, 0.35);
-        outline-offset: 2px;
-    }
-
-    .kpi-icon {
-        display: inline-flex;
-        width: 24px;
-        height: 24px;
-        align-items: center;
-        justify-content: center;
-        color: #0f7aed;
-        font-size: 1.2rem;
-    }
-
-    .kpi-content {
-        display: inline-flex;
-        align-items: baseline;
-        gap: 6px;
-    }
-
-    .kpi-value {
-        font-size: 1.5rem;
-        font-weight: 700;
-        color: #0f172a;
-    }
-
-    .kpi-interval {
-        font-size: 0.85rem;
-        color: #64748b;
-    }
-
-    .kpi-item.is-loading .kpi-value,
-    .kpi-item.is-loading .kpi-interval {
-        color: transparent;
-    }
-
-    .kpi-item.is-loading::after {
-        content: '';
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        border-radius: 8px;
-        background: linear-gradient(90deg, rgba(226, 232, 240, 0.7) 25%, rgba(148, 163, 184, 0.5) 50%, rgba(226, 232, 240, 0.7) 75%);
-        animation: shimmer 1.4s infinite;
-        pointer-events: none;
-        z-index: 1;
-    }
-
-    @keyframes shimmer {
-        0% {
-            background-position: -200px 0;
-        }
-        100% {
-            background-position: 200px 0;
-        }
-    }
-
     .agenda-actions {
-        display: flex;
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
         flex-wrap: wrap;
-        gap: 12px;
         margin-left: auto;
     }
 
     .agenda-actions .btn {
-        min-width: 150px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
         font-weight: 600;
-        border-radius: 8px;
+        padding: 9px 16px;
+        border-radius: 10px;
+        box-shadow: 0 4px 12px rgba(15, 122, 237, 0.1);
         transition: transform 0.2s ease, box-shadow 0.2s ease;
     }
 
     .agenda-actions .btn:hover {
         transform: translateY(-1px);
-        box-shadow: 0 12px 20px rgba(15, 23, 42, 0.12);
+        box-shadow: 0 8px 18px rgba(15, 122, 237, 0.16);
     }
 
     .filters-section {
@@ -423,11 +228,6 @@ try {
     }
 
     @media (max-width: 992px) {
-        .kpi-actions-row {
-            flex-direction: column;
-            align-items: flex-start;
-            gap: 12px;
-        }
         .agenda-actions {
             margin-left: 0;
         }
@@ -454,16 +254,6 @@ try {
         .agenda-top-wrapper {
             padding: 20px;
         }
-        .kpi-bar {
-            flex-wrap: wrap;
-            gap: 12px;
-        }
-    }
-
-    .metrics-note {
-        font-size: 0.9rem;
-        color: #475569;
-        font-style: italic;
     }
 
     .tooltip-header {
@@ -533,6 +323,8 @@ try {
         margin-bottom: 20px;
         box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         border-left: 4px solid #007bff;
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .legend-title {
@@ -621,55 +413,270 @@ try {
         outline: none;
         box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
     }
+
+    @media (max-width: 768px) {
+        .masthead-top {
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .masthead-actions {
+            width: 100%;
+        }
+
+        .masthead-actions .action-btn {
+            width: 100%;
+            justify-content: center;
+        }
+    }
+
+    /* Estilização dos slots do calendário prático para quick add */
+    .fc .fc-timegrid-slot-lane {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .fc .fc-timegrid-slot.fc-timegrid-slot-label .fc-timegrid-slot-lane,
+    .fc .fc-timegrid-slot.fc-timegrid-slot-label .fc-timegrid-slot-lane::after,
+    .fc .fc-timegrid-slot.fc-timegrid-slot-lane.fc-timegrid-slot-minor.fc-timegrid-slot-label::after,
+    .fc .fc-timegrid-allday .fc-timegrid-slot-lane::after {
+        content: none;
+        cursor: default;
+    }
+
+    .fc .fc-timegrid-slot-lane::after {
+        content: '+';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.1rem;
+        color: rgba(15, 122, 237, 0.25);
+        pointer-events: none;
+        transition: color 0.2s ease;
+    }
+
+    .fc .fc-timegrid-slot:hover .fc-timegrid-slot-lane::after {
+        color: rgba(15, 122, 237, 0.55);
+    }
+
+    .fc .fc-timegrid-slot.fc-timegrid-slot-label .fc-timegrid-slot-lane,
+    .fc .fc-timegrid-slot.fc-timegrid-slot-label .fc-timegrid-slot-lane::after,
+    .fc .fc-timegrid-slot.fc-timegrid-slot-lane.fc-timegrid-slot-minor.fc-timegrid-slot-label::after,
+    .fc .fc-timegrid-allday .fc-timegrid-slot-lane::after {
+        content: none;
+        cursor: default;
+    }
+
+    .fc .fc-daygrid-day {
+        cursor: pointer;
+    }
+
+    .fc .fc-daygrid-day-frame {
+        position: relative;
+    }
+
+    .fc .fc-daygrid-day-frame::after {
+        content: '+';
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        font-size: 1rem;
+        color: rgba(15, 122, 237, 0.25);
+        pointer-events: none;
+        transition: color 0.2s ease;
+    }
+
+    .fc .fc-daygrid-day-frame:hover::after {
+        color: rgba(15, 122, 237, 0.55);
+    }
+
+    .agenda-page-container {
+        width: 100%;
+        max-width: 1200px;
+        margin: 0 auto 28px;
+        padding: 0 24px 28px;
+        box-sizing: border-box;
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+
+    .agenda-page-container > * {
+        width: 100%;
+    }
+
+    .agenda-page-container .agenda-top-wrapper {
+        margin-bottom: 0;
+    }
+
+    .calendar-wrap {
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .calendar-section {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 16px;
+        flex-wrap: wrap;
+    }
+
+    .calendar-header > * {
+        flex: 1 1 auto;
+    }
+
+    .calendar-navigation {
+        display: inline-flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .calendar-title {
+        margin: 0;
+        font-size: 1.5rem;
+        font-weight: 700;
+        color: #0f172a;
+    }
+
+    .calendar-legend {
+        display: inline-flex;
+        gap: 12px;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .calendar-legend .legend-item {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.9rem;
+        color: #475569;
+    }
+
+    .calendar-legend .legend-color {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+    }
+
+    .calendar-views {
+        display: inline-flex;
+        gap: 8px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+
+    .calendar-view {
+        width: 100%;
+        box-sizing: border-box;
+        overflow-x: hidden;
+    }
+
+    .calendar-container {
+        min-height: 600px;
+        width: 100% !important;
+        background: transparent;
+        border-radius: 0;
+        padding: 0;
+        border: none;
+        box-shadow: none;
+    }
+
+    .calendar-wrap,
+    .calendar-wrap .fc,
+    .calendar-wrap .fc-view-harness,
+    .calendar-wrap .fc-scrollgrid {
+        width: 100% !important;
+        max-width: 100%;
+        box-sizing: border-box;
+    }
+
+    .calendar-wrap .fc-view-harness {
+        overflow: hidden;
+    }
+
+    .calendar-wrap .fc-scrollgrid-sync-table {
+        width: 100% !important;
+    }
+
+    .calendar-wrap,
+    .calendar-wrap .fc-scroller {
+        overflow-x: hidden;
+    }
+
+    .calendar-wrap .fc {
+        margin: 0;
+    }
+
+    @media (max-width: 768px) {
+        .filters-header-mobile {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+        .filters-toggle {
+            appearance: none;
+            border: none;
+            background: #0f7aed;
+            color: #ffffff;
+            font-weight: 600;
+            padding: 8px 14px;
+            border-radius: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .filters-grid {
+            display: none;
+        }
+        .filters-grid.is-open {
+            display: grid;
+        }
+        .agenda-actions {
+            width: 100%;
+            justify-content: flex-start;
+        }
+        .agenda-actions .btn {
+            flex: 1 1 100%;
+            justify-content: center;
+        }
+        .calendar-header {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .calendar-legend {
+            width: 100%;
+            justify-content: flex-start;
+        }
+        .calendar-views {
+            width: 100%;
+            justify-content: flex-start;
+        }
+    }
 </style>
 
-<div class="agenda-top-wrapper" id="agenda-top-wrapper">
-    <div class="agenda-top-row">
-        <div class="agenda-header-left">
-            <h2>
+<div class="agenda-page-container">
+    <div class="agenda-top-wrapper" id="agenda-top-wrapper">
+        <div class="agenda-header">
+            <h2 class="agenda-title">
                 <i class="fas fa-graduation-cap" aria-hidden="true"></i>
                 Agenda de Aulas
             </h2>
->>>>>>> 6d197f0 (layout header agendamento prático)
-        </div>
-        <div class="agenda-period-controls">
-            <div class="period-selector" role="group" aria-label="Selecionar período">
-                <button type="button" class="period-option active" data-periodo="hoje" id="period-btn-today">Hoje</button>
-                <button type="button" class="period-option" data-periodo="semana" id="period-btn-week">Semana</button>
-                <button type="button" class="period-option" data-periodo="personalizado" id="period-btn-custom">Personalizado</button>
-            </div>
-            <div class="period-custom" id="period-custom-controls" hidden>
-                <label for="period-start">Início</label>
-                <input type="date" id="period-start" name="period-start" aria-label="Data inicial do período">
-                <span class="text-muted">até</span>
-                <input type="date" id="period-end" name="period-end" aria-label="Data final do período">
-            </div>
-        </div>
-        <div class="kpi-actions-row">
-            <div class="kpi-bar" role="group" aria-label="Indicadores de aulas">
-                <button type="button" class="kpi-item is-loading" data-period-target="hoje" id="metric-card-today" aria-label="Aulas de hoje: carregando">
-                    <span class="kpi-icon" aria-hidden="true"><i class="fas fa-calendar-day"></i></span>
-                    <span class="kpi-content">
-                        <span class="kpi-label">Hoje</span>
-                        <span class="kpi-value" id="metric-value-today" aria-live="polite">0</span>
-                    </span>
-                </button>
-                <button type="button" class="kpi-item is-loading" data-period-target="semana" id="metric-card-week" aria-label="Aulas da semana: carregando">
-                    <span class="kpi-icon" aria-hidden="true"><i class="fas fa-calendar-week"></i></span>
-                    <span class="kpi-content">
-                        <span class="kpi-label">Semana</span>
-                        <span class="kpi-value" id="metric-value-week" aria-live="polite">0</span>
-                    </span>
-                </button>
-                <button type="button" class="kpi-item is-loading" data-period-target="personalizado" id="metric-card-period" aria-label="Aulas no período: carregando">
-                    <span class="kpi-icon" aria-hidden="true"><i class="fas fa-calendar-alt"></i></span>
-                    <span class="kpi-content">
-                        <span class="kpi-label">Período</span>
-                        <span class="kpi-value" id="metric-value-period" aria-live="polite">0</span>
-                        <span class="kpi-interval" id="metric-period-label">--</span>
-                    </span>
-                </button>
-            </div>
             <div class="agenda-actions">
                 <button class="btn btn-primary" type="button" onclick="abrirModalNovaAula()" title="Abrir o formulário de nova aula usando filtros atuais">
                     <i class="fas fa-plus me-2" aria-hidden="true"></i>
@@ -686,9 +693,6 @@ try {
             </div>
         </div>
     </div>
-<<<<<<< HEAD
-</section>
-=======
 
     <div class="filters-section" id="filters-section">
         <div class="filters-header-mobile">
@@ -750,111 +754,43 @@ try {
     </div>
 
     <div class="filter-chips" id="filter-chips" aria-live="polite"></div>
-</div>
->>>>>>> 6d197f0 (layout header agendamento prático)
 
-<!-- Legenda Visual -->
-<section class="legend-section">
-    <div class="legend-title">
-        <i class="fas fa-info-circle me-2"></i>
-        Legenda dos Eventos
-    </div>
-    <div class="legend-items">
-        <div class="legend-item">
-            <div class="legend-color pratica"></div>
-            <span>Aula Prática</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color agendada"></div>
-            <span>Agendada</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color concluida"></div>
-            <span>Concluída</span>
-        </div>
-        <div class="legend-item">
-            <div class="legend-color cancelada"></div>
-            <span>Cancelada</span>
-        </div>
-    </div>
-</div>
+    <div class="calendar-wrap">
+        <div class="calendar-section">
+            <div class="calendar-header">
+                <div class="calendar-navigation">
+                    <button class="btn btn-outline-secondary" onclick="navegarCalendario('previous')">
+                        <i class="fas fa-chevron-left"></i>
+                        Anterior
+                    </button>
+                    <h3 id="calendar-title" class="calendar-title">Calendário de Aulas</h3>
+                    <button class="btn btn-outline-secondary" onclick="navegarCalendario('next')">
+                        Próximo
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
 
-<!-- Calendário Principal -->
-<div class="calendar-section">
-    <div class="calendar-header">
-        <div class="calendar-navigation">
-            <button class="btn btn-outline-secondary" onclick="navegarCalendario('previous')">
-                <i class="fas fa-chevron-left"></i>
-                Anterior
-            </button>
-            <h3 id="calendar-title" class="calendar-title">Calendário de Aulas</h3>
-            <button class="btn btn-outline-secondary" onclick="navegarCalendario('next')">
-                Próximo
-                <i class="fas fa-chevron-right"></i>
-            </button>
-        </div>
-        
-        <div class="calendar-views">
-            <button class="btn btn-sm btn-outline-primary active" onclick="mudarVisualizacao('dayGridMonth')">Mês</button>
-            <button class="btn btn-sm btn-outline-primary" onclick="mudarVisualizacao('timeGridWeek')">Semana</button>
-            <button class="btn btn-sm btn-outline-primary" onclick="mudarVisualizacao('timeGridDay')">Dia</button>
-            <button class="btn btn-sm btn-outline-primary" onclick="mudarVisualizacao('listWeek')">Lista</button>
-        </div>
-    </div>
-    
-    <div id="calendar" class="calendar-container"></div>
-</div>
+                <div class="calendar-legend">
+                    <div class="legend-item"><span class="legend-color agendada"></span>Agendada</div>
+                    <div class="legend-item"><span class="legend-color concluida"></span>Concluída</div>
+                    <div class="legend-item"><span class="legend-color cancelada"></span>Cancelada</div>
+                </div>
 
-<<<<<<< HEAD
-<!-- Estatísticas Rápidas -->
-<div class="stats-section">
-    <div class="stats-grid">
-        <div class="stat-card primary">
-            <div class="stat-icon">
-                <i class="fas fa-calendar-day"></i>
+                <div class="calendar-views">
+                    <button class="btn btn-sm btn-outline-primary active" onclick="mudarVisualizacao('dayGridMonth', this)">Mês</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="mudarVisualizacao('timeGridWeek', this)">Semana</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="mudarVisualizacao('timeGridDay', this)">Dia</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="mudarVisualizacao('listWeek', this)">Lista</button>
+                </div>
             </div>
-            <div class="stat-content">
-                <div class="stat-value" id="aulas-hoje">0</div>
-                <div class="stat-label">Aulas Hoje</div>
+
+            <div class="calendar-view">
+                <div id="calendar" class="calendar-container"></div>
             </div>
-        </div>
-        
-        <div class="stat-card success">
-            <div class="stat-icon">
-                <i class="fas fa-calendar-week"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-value" id="aulas-semana">0</div>
-                <div class="stat-label">Aulas Esta Semana</div>
-            </div>
-        </div>
-        
-        <div class="stat-card warning">
-            <div class="stat-icon">
-                <i class="fas fa-clock"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-value" id="aulas-pendentes">0</div>
-                <div class="stat-label">Aulas Pendentes</div>
-            </div>
-        </div>
-        
-        <div class="stat-card info">
-            <div class="stat-icon">
-                <i class="fas fa-users"></i>
-            </div>
-            <div class="stat-content">
-                <div class="stat-value" id="instrutores-disponiveis">0</div>
-                <div class="stat-label">Instrutores Disponíveis</div>
-            </div>
-        </div>
-    </div>
         </div>
     </div>
 </div>
 
-=======
->>>>>>> 6d197f0 (layout header agendamento prático)
 <!-- Modal Nova Aula -->
 <div id="modal-nova-aula" class="modal-overlay" style="display: none;">
     <div class="modal-content modal-large">
@@ -1927,6 +1863,8 @@ try {
         margin-bottom: 20px;
         box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
         border-left: 4px solid var(--primary-dark);
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .legend-title {
@@ -2032,6 +1970,67 @@ try {
             justify-content: center;
         }
     }
+
+    /* Estilização dos slots do calendário prático para quick add */
+    .fc .fc-timegrid-slot-lane {
+        position: relative;
+        cursor: pointer;
+    }
+
+    .fc .fc-timegrid-slot.fc-timegrid-slot-label .fc-timegrid-slot-lane,
+    .fc .fc-timegrid-slot.fc-timegrid-slot-label .fc-timegrid-slot-lane::after,
+    .fc .fc-timegrid-slot.fc-timegrid-slot-lane.fc-timegrid-slot-minor.fc-timegrid-slot-label::after,
+    .fc .fc-timegrid-allday .fc-timegrid-slot-lane::after {
+        content: none;
+        cursor: default;
+    }
+
+    .fc .fc-timegrid-slot-lane::after {
+        content: '+';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        font-size: 1.1rem;
+        color: rgba(15, 122, 237, 0.25);
+        pointer-events: none;
+        transition: color 0.2s ease;
+    }
+
+    .fc .fc-timegrid-slot:hover .fc-timegrid-slot-lane::after {
+        color: rgba(15, 122, 237, 0.55);
+    }
+
+    .fc .fc-timegrid-slot.fc-timegrid-slot-label .fc-timegrid-slot-lane,
+    .fc .fc-timegrid-slot.fc-timegrid-slot-label .fc-timegrid-slot-lane::after,
+    .fc .fc-timegrid-slot.fc-timegrid-slot-lane.fc-timegrid-slot-minor.fc-timegrid-slot-label::after,
+    .fc .fc-timegrid-allday .fc-timegrid-slot-lane::after {
+        content: none;
+        cursor: default;
+    }
+
+    .fc .fc-daygrid-day {
+        cursor: pointer;
+    }
+
+    .fc .fc-daygrid-day-frame {
+        position: relative;
+    }
+
+    .fc .fc-daygrid-day-frame::after {
+        content: '+';
+        position: absolute;
+        top: 8px;
+        right: 10px;
+        font-size: 1rem;
+        color: rgba(15, 122, 237, 0.25);
+        pointer-events: none;
+        transition: color 0.2s ease;
+    }
+
+    .fc .fc-daygrid-day-frame:hover::after {
+        color: rgba(15, 122, 237, 0.55);
+    }
 </style>
 
 <!-- Incluir FullCalendar -->
@@ -2049,21 +2048,8 @@ const veiculosData = <?php echo json_encode($veiculos); ?>;
 const alunosData = <?php echo json_encode($alunos); ?>;
 const cfcsData = <?php echo json_encode($cfcs); ?>;
 
-const METRIC_ALLOWED_STATUSES = ['agendada', 'confirmada', 'executavel'];
-const METRIC_LABELS = {
-    today: 'Aulas de hoje',
-    week: 'Aulas da semana',
-    period: 'Aulas no período'
-};
-const METRIC_SKELETON_MIN = 220;
-let metricsLoadingStart = 0;
-let metricsLoadingActive = false;
+const ALLOWED_STATUSES_FOR_RANGE = ['agendada', 'confirmada', 'executavel'];
 let agendaRefreshTimeout = null;
-const agendaState = {
-    period: 'hoje',
-    range: null,
-    customRange: null
-};
 
 window.filtrosAtivos = {
     cfc: '',
@@ -2073,50 +2059,15 @@ window.filtrosAtivos = {
     aluno: ''
 };
 
-function startMetricsLoading() {
-    metricsLoadingActive = true;
-    metricsLoadingStart = Date.now();
-    ['today', 'week', 'period'].forEach(key => {
-        const card = document.getElementById(`metric-card-${key}`);
-        const valueEl = document.getElementById(`metric-value-${key}`);
-        const subtitleEl = document.getElementById(`metric-subtitle-${key}`) || (key === 'period' ? document.getElementById('metric-period-label') : null);
-        if (card) {
-            card.classList.add('is-loading');
-            card.setAttribute('aria-label', `${METRIC_LABELS[key]}: carregando`);
-        }
-        if (valueEl) {
-            valueEl.textContent = '--';
-        }
-        if (subtitleEl) {
-            subtitleEl.textContent = '--';
-        }
-    });
-}
-
-function finishMetricsLoading(renderFn) {
-    if (!metricsLoadingActive) {
-        renderFn();
-        return;
-    }
-    const elapsed = Date.now() - metricsLoadingStart;
-    const delay = Math.max(METRIC_SKELETON_MIN - elapsed, 0);
-    setTimeout(() => {
-        metricsLoadingActive = false;
-        renderFn();
-    }, delay);
-}
-
 function scheduleAgendaRefresh(options = {}) {
-    startMetricsLoading();
     if (agendaRefreshTimeout) {
         clearTimeout(agendaRefreshTimeout);
     }
     agendaRefreshTimeout = setTimeout(() => {
-        updateAgendaMetrics();
-        if (options.refetchCalendar !== false && window.calendar) {
+        if (window.calendar && options.refetchCalendar !== false) {
             window.calendar.refetchEvents();
         }
-    }, 250);
+    }, 200);
 }
 
 function setupFiltersAccordion() {
@@ -2169,48 +2120,12 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeAgendaPage() {
-    agendaState.range = getTodayRange();
-    setupPeriodControls();
-    setupKpiInteractions();
     setupFilterChips();
     setupFiltersAccordion();
     preencherFiltros();
     syncFiltersFromControls();
-    updatePeriodUI();
     updateFilterChips();
     inicializarCalendario();
-    startMetricsLoading();
-    updateAgendaMetrics();
-}
-
-function setupPeriodControls() {
-    const buttons = document.querySelectorAll('.period-option');
-    buttons.forEach(button => {
-        button.addEventListener('click', () => setPeriod(button.dataset.periodo));
-    });
-
-    const startInput = document.getElementById('period-start');
-    const endInput = document.getElementById('period-end');
-
-    if (startInput) {
-        startInput.addEventListener('change', handleCustomRangeChange);
-    }
-    if (endInput) {
-        endInput.addEventListener('change', handleCustomRangeChange);
-    }
-
-    updatePeriodUI();
-}
-
-function setupKpiInteractions() {
-    document.querySelectorAll('.kpi-item').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const target = btn.dataset.periodTarget;
-            if (target) {
-                setPeriod(target);
-            }
-        });
-    });
 }
 
 function setupFilterChips() {
@@ -2227,120 +2142,11 @@ function setupFilterChips() {
     });
 }
 
-function setPeriod(type) {
-    if (!type) return;
-    agendaState.period = type;
-
-    if (type === 'hoje') {
-        agendaState.range = getTodayRange();
-    } else if (type === 'semana') {
-        agendaState.range = getCurrentWeekRange();
-    } else {
-        const startInput = document.getElementById('period-start');
-        const endInput = document.getElementById('period-end');
-        const today = new Date();
-
-        if (!agendaState.customRange) {
-            agendaState.customRange = { start: today, end: today };
-        }
-
-        const startDate = startInput?.value ? new Date(startInput.value) : agendaState.customRange.start || today;
-        let endDate = endInput?.value ? new Date(endInput.value) : agendaState.customRange.end || startDate;
-
-        if (endDate < startDate) {
-            endDate = new Date(startDate);
-            if (endInput) {
-                endInput.value = formatDateForInput(endDate);
-            }
-        }
-
-        agendaState.customRange = { start: startDate, end: endDate };
-        agendaState.range = {
-            start: getStartOfDay(startDate),
-            end: getEndOfDay(endDate)
-        };
-    }
-
-    updatePeriodUI();
-    scheduleAgendaRefresh();
-}
-
-function updatePeriodUI() {
-    const buttons = document.querySelectorAll('.period-option');
-    buttons.forEach(button => {
-        const isActive = button.dataset.periodo === agendaState.period;
-        button.classList.toggle('active', isActive);
-        button.setAttribute('aria-pressed', isActive ? 'true' : 'false');
-    });
-
-    const kpis = document.querySelectorAll('.kpi-item');
-    kpis.forEach(btn => {
-        const target = btn.dataset.periodTarget;
-        const isActive = target === agendaState.period;
-        btn.classList.toggle('active', isActive);
-    });
-
-    const customControls = document.getElementById('period-custom-controls');
-    const isCustom = agendaState.period === 'personalizado';
-    if (customControls) {
-        customControls.hidden = !isCustom;
-        if (isCustom && agendaState.range) {
-            const startInput = document.getElementById('period-start');
-            const endInput = document.getElementById('period-end');
-            if (startInput) {
-                startInput.value = formatDateForInput(agendaState.range.start);
-            }
-            if (endInput) {
-                endInput.value = formatDateForInput(agendaState.range.end);
-            }
-        }
-    }
-}
-
-function handleCustomRangeChange() {
-    if (agendaState.period !== 'personalizado') return;
-    const startInput = document.getElementById('period-start');
-    const endInput = document.getElementById('period-end');
-    if (!startInput || !endInput || !startInput.value || !endInput.value) return;
-
-    const startDate = new Date(startInput.value);
-    let endDate = new Date(endInput.value);
-
-    if (endDate < startDate) {
-        endDate = new Date(startDate);
-        endInput.value = formatDateForInput(endDate);
-    }
-
-    agendaState.customRange = { start: startDate, end: endDate };
-    agendaState.range = {
-        start: getStartOfDay(startDate),
-        end: getEndOfDay(endDate)
-    };
-
-    scheduleAgendaRefresh({ refetchCalendar: false });
-}
-
 function getTodayRange() {
     const today = new Date();
     return {
         start: getStartOfDay(today),
         end: getEndOfDay(today)
-    };
-}
-
-function getCurrentWeekRange() {
-    const now = new Date();
-    const day = now.getDay();
-    const diffToMonday = day === 0 ? -6 : (1 - day);
-    const monday = new Date(now);
-    monday.setDate(now.getDate() + diffToMonday);
-
-    const sunday = new Date(monday);
-    sunday.setDate(monday.getDate() + 6);
-
-    return {
-        start: getStartOfDay(monday),
-        end: getEndOfDay(sunday)
     };
 }
 
@@ -2356,11 +2162,45 @@ function getEndOfDay(date) {
     return result;
 }
 
+function getCalendarRange() {
+    if (window.calendar && window.calendar.view) {
+        const view = window.calendar.view;
+        const currentStart = view.currentStart || view.activeStart;
+        const currentEnd = view.currentEnd || view.activeEnd;
+        const fallback = getTodayRange();
+
+        const start = currentStart
+            ? getStartOfDay(new Date(currentStart.getTime()))
+            : fallback.start;
+
+        let endBoundary = currentEnd
+            ? new Date(currentEnd.getTime())
+            : new Date(fallback.end);
+
+        if (currentEnd) {
+            endBoundary = new Date(endBoundary.getTime() - 1);
+        }
+
+        return {
+            start,
+            end: getEndOfDay(endBoundary)
+        };
+    }
+
+    return getTodayRange();
+}
+
 function formatDateForInput(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+}
+
+function formatTimeForInput(date) {
+    const hours = String(date.getHours()).padStart(2, '0');
+    const minutes = String(date.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
 }
 
 function normalizeStatus(status) {
@@ -2400,7 +2240,7 @@ function filterAulasForRange(range, filters, options = {}) {
     const { enforceStatusRule = true } = options;
     return aulasData.filter(aula => {
         const status = normalizeStatus(aula.status);
-        if (enforceStatusRule && !METRIC_ALLOWED_STATUSES.includes(status)) return false;
+        if (enforceStatusRule && !ALLOWED_STATUSES_FOR_RANGE.includes(status)) return false;
 
         const inicioAula = getAulaStartDate(aula);
         if (!inicioAula) return false;
@@ -2411,110 +2251,10 @@ function filterAulasForRange(range, filters, options = {}) {
     });
 }
 
-function countAulasInRange(range, filters) {
-    return filterAulasForRange(range, filters, { enforceStatusRule: true }).length;
-}
-
-function setMetricsLoading(isLoading) {
-    const labels = METRIC_LABELS;
-    ['today', 'week', 'period'].forEach(key => {
-        const card = document.getElementById(`metric-card-${key}`);
-        const valueEl = document.getElementById(`metric-value-${key}`);
-        if (!card || !valueEl) return;
-        card.classList.toggle('is-loading', isLoading);
-        if (isLoading) {
-            valueEl.textContent = '--';
-            card.setAttribute('aria-label', `${labels[key]}: carregando`);
-        }
-    });
-    if (isLoading) {
-        const subtitleEl = document.getElementById('metric-period-label');
-        if (subtitleEl) subtitleEl.textContent = '--';
-    }
-}
-
-function updateMetricCard(key, value, subtitle) {
-    const labels = METRIC_LABELS;
-    const card = document.getElementById(`metric-card-${key}`);
-    const valueEl = document.getElementById(`metric-value-${key}`);
-    if (!card || !valueEl) return;
-
-    const subtitleEl = key === 'period'
-        ? document.getElementById('metric-period-label')
-        : document.getElementById(`metric-subtitle-${key}`);
-
-    card.classList.remove('is-loading');
-    valueEl.textContent = value;
-    if (subtitleEl && subtitle !== undefined) {
-        subtitleEl.textContent = subtitle;
-    }
-
-    const ariaParts = [`${labels[key]}: ${value}`];
-    if (subtitle) {
-        ariaParts.push(`(${subtitle})`);
-    }
-    card.setAttribute('aria-label', ariaParts.join(' '));
-}
-
-function formatShortMonth(date) {
-    const formatter = new Intl.DateTimeFormat('pt-BR', { month: 'short' });
-    const formatted = formatter.format(date).replace('.', '').replace('de', '').trim();
-    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
-}
-
-function formatDayMonth(date) {
-    return `${String(date.getDate()).padStart(2, '0')} ${formatShortMonth(date)}`;
-}
-
-function formatRangeLabel(start, end) {
-    if (start.toDateString() === end.toDateString()) {
-        return formatDayMonth(start);
-    }
-
-    if (start.getMonth() === end.getMonth() && start.getFullYear() === end.getFullYear()) {
-        return `${String(start.getDate()).padStart(2, '0')}–${String(end.getDate()).padStart(2, '0')} ${formatShortMonth(end)}`;
-    }
-
-    return `${formatDayMonth(start)} – ${formatDayMonth(end)}`;
-}
-
-function updateAgendaMetrics() {
-    if (!agendaState.range) {
-        agendaState.range = getTodayRange();
-    }
-
-    const context = getAgendaContext();
-    const filters = context.filters;
-
-    const todayRange = getTodayRange();
-    const weekRange = getCurrentWeekRange();
-    const periodRange = context.range;
-
-    const aulasHoje = countAulasInRange(todayRange, filters);
-    const aulasSemana = countAulasInRange(weekRange, filters);
-    const aulasPeriodo = countAulasInRange(periodRange, filters);
-
-    const subtitleToday = formatDayMonth(todayRange.start);
-    const subtitleWeek = formatRangeLabel(weekRange.start, weekRange.end);
-    let subtitlePeriod = formatRangeLabel(periodRange.start, periodRange.end);
-
-    if (agendaState.period === 'hoje') {
-        subtitlePeriod = formatDayMonth(periodRange.start);
-    } else if (agendaState.period === 'semana') {
-        subtitlePeriod = formatRangeLabel(periodRange.start, periodRange.end);
-    }
-
-    finishMetricsLoading(() => {
-        updateMetricCard('today', aulasHoje, subtitleToday);
-        updateMetricCard('week', aulasSemana, subtitleWeek);
-        updateMetricCard('period', aulasPeriodo, subtitlePeriod);
-    });
-}
-
 function getAgendaContext() {
-    const range = agendaState.range || getTodayRange();
+    const range = getCalendarRange();
     return {
-        period: agendaState.period,
+        period: window.calendar ? window.calendar.view.type : 'custom',
         range: {
             start: new Date(range.start.getTime()),
             end: new Date(range.end.getTime())
@@ -2784,6 +2524,10 @@ function inicializarCalendario() {
         selectable: true,
         selectMirror: true,
         editable: false, // Desabilitar edição por drag & drop por enquanto
+        slotDuration: '00:30:00',
+        slotLabelInterval: '01:00',
+        slotMinTime: '06:00:00',
+        slotMaxTime: '22:00:00',
         eventTimeFormat: {
             hour: '2-digit',
             minute: '2-digit',
@@ -2876,7 +2620,11 @@ function inicializarCalendario() {
         },
         select: (info) => {
             console.log('Data selecionada:', info.startStr);
-            abrirModalNovaAula(info.startStr);
+            abrirModalNovaAula(info.start, { setTime: info.allDay === false });
+        },
+        dateClick: (info) => {
+            console.log('Clique em data:', info.dateStr, info);
+            abrirModalNovaAula(info.date, { setTime: info.allDay === false });
         },
         eventClick: (info) => {
             console.log('Evento clicado:', info.event.id);
@@ -2948,9 +2696,31 @@ function formatarEvento(aula) {
     };
 }
 
-function abrirModalNovaAula() {
-    document.getElementById('modal-nova-aula').style.display = 'flex';
+function abrirModalNovaAula(startDateTime = null, options = {}) {
     limparFormularioNovaAula();
+
+    const modal = document.getElementById('modal-nova-aula');
+    if (modal) {
+        modal.style.display = 'flex';
+    }
+
+    if (startDateTime) {
+        const dateObj = typeof startDateTime === 'string' ? new Date(startDateTime) : startDateTime;
+        if (!Number.isNaN(dateObj?.getTime?.())) {
+            const dataInput = document.getElementById('data_aula');
+            const horaInput = document.getElementById('hora_inicio');
+            const shouldSetTime = options.setTime !== false;
+
+            if (dataInput) {
+                dataInput.value = formatDateForInput(dateObj);
+            }
+            if (horaInput && shouldSetTime) {
+                horaInput.value = formatTimeForInput(dateObj);
+            }
+
+            modalCalcularHorarios();
+        }
+    }
 }
 
 function fecharModalNovaAula() {
@@ -3701,10 +3471,6 @@ function converterHoraParaMinutos(hora) {
     return horas * 60 + minutos;
 }
 
-function atualizarEstatisticas() {
-    updateAgendaMetrics();
-}
-
 function calcularHoraFim() {
     const horaInicio = document.getElementById('hora_inicio').value;
     if (horaInicio) {
@@ -3731,6 +3497,7 @@ function navegarCalendario(direcao) {
         }
         // Atualizar título após navegação
         atualizarTituloCalendario();
+        scheduleAgendaRefresh();
     }
 }
 
@@ -3771,18 +3538,21 @@ function atualizarTituloCalendario() {
     }
 }
 
-function mudarVisualizacao(view) {
+function mudarVisualizacao(view, button) {
     // Atualizar botões ativos
     document.querySelectorAll('.calendar-views .btn').forEach(btn => {
         btn.classList.remove('active');
     });
-    event.target.classList.add('active');
+    if (button) {
+        button.classList.add('active');
+    }
 
     // Mudar visualização
     if (window.calendar) {
         window.calendar.changeView(view);
         // Atualizar título após mudança de visualização
         atualizarTituloCalendario();
+        scheduleAgendaRefresh();
     }
     
     console.log('Mudando para visualização:', view);
