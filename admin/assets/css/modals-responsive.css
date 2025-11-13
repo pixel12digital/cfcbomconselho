@@ -280,9 +280,64 @@ html body #modalAgendarExame .modal-dialog {
     max-width: 1200px !important;
 }
 
+#modalAluno.custom-modal {
+    --aluno-modal-height: clamp(640px, 78vh, 780px);
+}
+
+#modalAluno .custom-modal-dialog {
+    height: var(--aluno-modal-height) !important;
+    max-height: var(--aluno-modal-height) !important;
+    min-height: var(--aluno-modal-height) !important;
+    width: min(94vw, 1200px) !important;
+    display: flex !important;
+    align-items: stretch !important;
+    justify-content: center !important;
+}
+
+#modalAluno .custom-modal-content {
+    height: 100% !important;
+    min-height: var(--aluno-modal-height) !important;
+    max-height: var(--aluno-modal-height) !important;
+    display: flex !important;
+    flex-direction: column !important;
+    --aluno-modal-header-h: 56px;
+    --aluno-modal-tabs-h: 60px;
+    --aluno-modal-footer-h: 64px;
+    --aluno-modal-body-h: max(360px, calc(var(--aluno-modal-height) - (var(--aluno-modal-header-h) + var(--aluno-modal-tabs-h) + var(--aluno-modal-footer-h))));
+}
+
+#modalAluno .custom-modal-content .modal-body.aluno-modal-body {
+    flex: 1 1 auto !important;
+    padding: 0 !important;
+    background: #f8fafc !important;
+    min-height: var(--aluno-modal-body-h) !important;
+    max-height: var(--aluno-modal-body-h) !important;
+    overflow-y: auto !important;
+}
+
+#modalAluno .aluno-modal-body {
+    flex: 1 1 auto !important;
+    padding: 0 !important;
+    background: #f8fafc !important;
+    min-height: var(--aluno-modal-body-h) !important;
+    max-height: var(--aluno-modal-body-h) !important;
+    overflow-y: auto !important;
+}
+
+#modalAluno .aluno-modal-panel {
+    height: var(--aluno-modal-body-h) !important;
+    min-height: var(--aluno-modal-body-h) !important;
+    max-height: var(--aluno-modal-body-h) !important;
+    overflow-y: auto !important;
+}
+
 @media (max-width: 1200px) {
     #modalAluno .custom-modal-content {
         max-width: 95vw !important;
+    }
+    
+    #modalAluno.custom-modal {
+        --aluno-modal-height: clamp(560px, 90vh, 720px);
     }
 }
 
@@ -298,6 +353,16 @@ html body #modalAgendarExame .modal-dialog {
     #modalAluno .nav-tabs .nav-link {
         font-size: 0.9rem !important;
         padding: 0.5rem 0.75rem !important;
+    }
+    
+    #modalAluno.custom-modal {
+        --aluno-modal-height: clamp(540px, 92vh, 700px);
+    }
+}
+
+@media (max-width: 576px) {
+    #modalAluno.custom-modal {
+        --aluno-modal-height: clamp(520px, 94vh, 660px);
     }
 }
 

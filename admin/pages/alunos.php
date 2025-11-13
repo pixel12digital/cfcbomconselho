@@ -146,26 +146,12 @@ body.visualizar-aluno-open {
 
 /* Modal de edição/novo aluno */
 #modalAluno {
-    z-index: 1060 !important;
     display: none;
     visibility: hidden;
 }
 
-#modalAluno.show {
-    display: none;
-    visibility: hidden;
-}
-
-/* Permitir abertura quando definido via JavaScript */
-#modalAluno[style*="display: block"],
-#modalAluno[style*="display: flex"] {
-    display: block !important;
-    visibility: visible !important;
-}
-
-/* Garantir que modal seja visível quando aberto */
 #modalAluno[data-opened="true"] {
-    display: block !important;
+    display: flex !important;
     visibility: visible !important;
 }
 
@@ -919,23 +905,13 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
 }
 
 .modal#modalAluno .modal-body {
-    max-height: calc(100% - 120px) !important;
-    overflow-y: auto !important;
-    padding: 1.5rem !important;
+    flex: 1 1 auto !important;
+    height: 100% !important;
+    max-height: 100% !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+    padding: 0 !important;
     background-color: #f8f9fa !important;
-}
-
-/* Responsividade do modal-body */
-@media (max-width: 768px) {
-    .modal#modalAluno .modal-body {
-        padding: 1rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .modal#modalAluno .modal-body {
-        padding: 0.75rem !important;
-    }
 }
 
 .modal#modalAluno .modal-header {
@@ -1557,16 +1533,22 @@ input.form-control.invalid {
    NOVO LAYOUT DO MODAL DE CADASTRO/EDIÇÃO DE ALUNOS
    ===================================================== */
 
-#modalAluno.custom-modal {
+#modalAluno {
     display: none;
+}
+
+#modalAluno.custom-modal {
     position: fixed;
     inset: 0;
+    width: 100vw;
     min-height: 100vh;
     background: rgba(15, 23, 42, 0.55);
     z-index: 9999;
-    padding: clamp(16px, 3vh, 32px);
+    padding: clamp(16px, 4vw, 48px);
+    display: flex;
     align-items: center;
     justify-content: center;
+    box-sizing: border-box;
 }
 
 #modalAluno.custom-modal[data-opened="true"],
@@ -1576,17 +1558,63 @@ input.form-control.invalid {
 }
 
 #modalAluno .custom-modal-dialog {
-    width: min(94vw, 1200px);
-    max-height: 88vh;
+    --aluno-modal-height: clamp(640px, 78vh, 780px);
+    width: min(95vw, 1080px);
+    max-width: 1080px;
+    height: var(--aluno-modal-height);
+    min-height: var(--aluno-modal-height);
+    max-height: var(--aluno-modal-height);
+    position: relative;
+    margin: 0;
     display: flex;
     justify-content: center;
     align-items: stretch;
+}
+
+#modalVisualizarAluno.custom-modal,
+#modalVisualizarAluno {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    min-height: 100vh;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 10000;
+    padding: clamp(16px, 4vw, 48px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+}
+
+#modalVisualizarAluno.custom-modal[data-opened="true"],
+#modalVisualizarAluno.custom-modal[style*="display: block"],
+#modalVisualizarAluno.custom-modal[style*="display:block"],
+#modalVisualizarAluno[data-opened="true"],
+#modalVisualizarAluno[style*="display: block"],
+#modalVisualizarAluno[style*="display:block"] {
+    display: flex !important;
+}
+
+#modalVisualizarAluno .custom-modal-dialog {
+    width: min(94vw, 1120px);
+    max-width: 1120px;
+    position: relative;
+    left: 50%;
+    transform: translateX(-50%);
     margin: 0;
+}
+
+#modalVisualizarAluno .custom-modal-content {
+    width: 100%;
+    border-radius: 16px;
+    overflow: hidden;
 }
 
 #modalAluno .custom-modal-content {
     width: 100%;
-    max-height: 88vh;
+    height: 100%;
+    min-height: var(--aluno-modal-height);
+    max-height: var(--aluno-modal-height);
     border-radius: 12px;
     border: 1px solid #e2e8f0;
     box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
@@ -1595,6 +1623,8 @@ input.form-control.invalid {
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    --aluno-modal-max-h: var(--aluno-modal-height);
+    --aluno-modal-body-h: max(360px, calc(var(--aluno-modal-max-h) - (var(--aluno-modal-header-h) + var(--aluno-modal-tabs-h) + var(--aluno-modal-footer-h))));
 }
 
 .aluno-modal-form {
@@ -1657,14 +1687,16 @@ input.form-control.invalid {
     font-weight: 300;
 }
 
-.aluno-modal-body {
+#modalAluno .aluno-modal-body {
     display: flex;
     flex-direction: column;
     gap: 0;
     padding: 0;
     background: #f8fafc;
-    flex: 1;
+    flex: 1 1 auto;
     min-height: 0;
+    height: 100%;
+    max-height: 100%;
 }
 
 .aluno-modal-tabs {
@@ -1729,59 +1761,93 @@ input.form-control.invalid {
     border-radius: 999px;
 }
 
-.aluno-modal-body {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
-}
-
 #modalAluno .custom-modal-content {
-    --aluno-modal-max-h: 88vh;
     --aluno-modal-header-h: 56px;
     --aluno-modal-tabs-h: 60px;
     --aluno-modal-footer-h: 64px;
 }
 
-.aluno-modal-panel {
-    flex: 1;
-    --aluno-panel-available: calc(var(--aluno-modal-max-h) - (var(--aluno-modal-header-h) + var(--aluno-modal-tabs-h) + var(--aluno-modal-footer-h)));
-    min-height: min(600px, max(480px, var(--aluno-panel-available)));
-    max-height: max(320px, var(--aluno-panel-available));
+#modalAluno .aluno-modal-panel {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    height: 100%;
     padding: 20px;
-    overflow: auto;
     background: #f8fafc;
+    gap: 0;
     scrollbar-width: thin;
 }
 
-.aluno-modal-panel::-webkit-scrollbar {
+#modalAluno .aluno-modal-panel > .tab-content::-webkit-scrollbar {
     width: 8px;
 }
 
-.aluno-modal-panel::-webkit-scrollbar-track {
+#modalAluno .aluno-modal-panel > .tab-content::-webkit-scrollbar-track {
     background: #edf2f7;
     border-radius: 4px;
 }
 
-.aluno-modal-panel::-webkit-scrollbar-thumb {
+#modalAluno .aluno-modal-panel > .tab-content::-webkit-scrollbar-thumb {
     background: #94a3b8;
     border-radius: 4px;
 }
 
-.aluno-modal-panel::-webkit-scrollbar-thumb:hover {
+#modalAluno .aluno-modal-panel > .tab-content::-webkit-scrollbar-thumb:hover {
     background: #64748b;
 }
 
-.aluno-tab-content .tab-pane {
+#modalAluno .aluno-modal-panel > .tab-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
     padding: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
 }
 
-.aluno-modal-panel .row {
+#modalAluno .aluno-modal-panel > .tab-content > .tab-pane {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+#modalAluno .aluno-modal-panel > .tab-content > .tab-pane.active {
+    display: flex !important;
+}
+
+#modalAluno .aluno-tab-pane-inner {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 0 4px 24px 4px;
+}
+
+#modalAluno .aluno-modal-panel .row {
     --bs-gutter-x: 1rem;
     --bs-gutter-y: 1rem;
 }
 
-.aluno-modal-panel h6 {
+#modalAluno .aluno-tab-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+
+#modalAluno .aluno-tab-content .tab-pane {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+#modalAluno .aluno-modal-panel h6 {
     font-size: 0.88rem !important;
     font-weight: 600 !important;
     color: #1e293b !important;
@@ -1868,23 +1934,24 @@ input.form-control.invalid {
 }
 @media (max-width: 1024px) {
     #modalAluno .custom-modal-dialog {
+        --aluno-modal-height: clamp(600px, 82vh, 760px);
         width: min(95vw, 1024px);
+        max-width: 1024px;
     }
 
-    .aluno-modal-panel {
+    #modalAluno .aluno-modal-panel {
         padding: 20px;
     }
 }
 
 @media (max-width: 768px) {
     #modalAluno .custom-modal-dialog {
+        --aluno-modal-height: clamp(520px, 90vh, 700px);
         width: 100%;
-        max-height: 90vh;
     }
 
     #modalAluno .custom-modal-content {
         border-radius: 10px;
-        --aluno-modal-max-h: 90vh;
     }
 
     .aluno-modal-header {
@@ -1905,7 +1972,7 @@ input.form-control.invalid {
         white-space: nowrap;
     }
 
-    .aluno-modal-panel {
+    #modalAluno .aluno-modal-panel {
         padding: 18px;
     }
 }
@@ -1920,7 +1987,7 @@ input.form-control.invalid {
         padding: 14px 16px;
     }
 
-    .aluno-modal-panel {
+    #modalAluno .aluno-modal-panel {
         padding: 16px;
     }
 
@@ -3864,8 +3931,66 @@ function inicializarFiltrosResponsivos() {
     }
 }
 
+function reforcarEstruturaModalAluno() {
+    const modal = document.getElementById('modalAluno');
+    if (!modal) return;
+
+    const formAluno = modal.querySelector('#formAluno');
+    if (!formAluno) return;
+
+    const modalBody = formAluno.querySelector('.aluno-modal-body') || formAluno.querySelector('.modal-body');
+    if (modalBody) {
+        modalBody.classList.add('aluno-modal-body');
+        modalBody.style.minHeight = '0';
+    }
+
+    let painel = formAluno.querySelector('.aluno-modal-panel');
+    if (painel) {
+        painel.classList.add('aluno-modal-panel');
+    }
+
+    const tabContent = formAluno.querySelector('#alunoTabsContent');
+
+    if (tabContent) {
+        if (!painel) {
+            painel = document.createElement('div');
+            painel.className = 'aluno-modal-panel';
+            const parent = tabContent.parentNode;
+            parent.insertBefore(painel, tabContent);
+        }
+
+        if (!painel.contains(tabContent)) {
+            painel.appendChild(tabContent);
+        }
+    }
+
+    normalizarEstruturaAbasModalAluno();
+}
+
+function normalizarEstruturaAbasModalAluno() {
+    const modal = document.getElementById('modalAluno');
+    if (!modal) return;
+
+    const panes = modal.querySelectorAll('#alunoTabsContent .tab-pane');
+    panes.forEach((pane) => {
+        if (!pane) return;
+
+        let inner = pane.querySelector('.aluno-tab-pane-inner');
+        if (!inner) {
+            inner = document.createElement('div');
+            inner.className = 'aluno-tab-pane-inner';
+            while (pane.firstChild) {
+                inner.appendChild(pane.firstChild);
+            }
+            pane.appendChild(inner);
+        }
+    });
+}
+
 // Função para inicializar controles do modal
 function inicializarModalAluno() {
+    reforcarEstruturaModalAluno();
+
     // Event listeners para o modal
     const modal = document.getElementById('modalAluno');
     if (modal) {
@@ -3892,11 +4017,39 @@ function abrirModalEdicao() {
     console.log('🚀 Abrindo modal para edição...');
     const modal = document.getElementById('modalAluno');
     if (modal) {
+        if (modal.parentNode !== document.body) {
+            document.body.appendChild(modal);
+            console.log('📦 modalAluno realocado diretamente no body.');
+        }
+
+        modal.classList.add('custom-modal');
         // FORÇAR abertura do modal para edição
-        modal.style.setProperty('display', 'block', 'important');
-        modal.style.setProperty('visibility', 'visible', 'important');
+        modal.setAttribute('data-opened', 'true'); // Marcar como aberto intencionalmente
+        modal.style.removeProperty('display');
+        modal.style.removeProperty('visibility');
+        modal.style.setProperty('display', 'flex', 'important');
+        modal.style.setProperty('align-items', 'center', 'important');
+        modal.style.setProperty('justify-content', 'center', 'important');
         modal.setAttribute('data-opened', 'true'); // Marcar como aberto intencionalmente
         document.body.style.overflow = 'hidden'; // Prevenir scroll do body
+        reforcarEstruturaModalAluno();
+
+        const dialog = modal.querySelector('.custom-modal-dialog');
+        if (dialog) {
+            ['left', 'right', 'transform', 'margin', 'position', 'width', 'max-width', 'display', 'justify-content', 'align-items'].forEach(prop => dialog.style.removeProperty(prop));
+            dialog.style.setProperty('width', 'min(95vw, 1080px)', 'important');
+            dialog.style.setProperty('max-width', '1080px', 'important');
+        }
+
+        requestAnimationFrame(() => {
+            const overlayRect = modal.getBoundingClientRect();
+            const dialogRect = dialog ? dialog.getBoundingClientRect() : null;
+            const gapLeft = dialogRect ? Math.round(dialogRect.left - overlayRect.left) : null;
+            const gapRight = dialogRect ? Math.round(overlayRect.right - dialogRect.right) : null;
+            console.log('[modalAluno debug] overlay:', overlayRect);
+            console.log('[modalAluno debug] dialog :', dialogRect);
+            console.log('[modalAluno debug] gaps   -> esquerda:', gapLeft, 'direita:', gapRight);
+        });
         
         // Configurar para edição
         const acaoAluno = document.getElementById('acaoAluno');
@@ -4000,13 +4153,14 @@ window.editarAluno = function(id) {
                             const form = document.getElementById('formAluno');
                             const estadoSelect = document.getElementById('naturalidade_estado');
                             
-                            if (modal && modal.style.display === 'block' && 
+                            const modalVisible = modal ? window.getComputedStyle(modal).display !== 'none' : false;
+                            if (modal && modalVisible && 
                                 form && estadoSelect) {
                                 console.log('✅ Modal totalmente carregado e pronto');
                                 resolve();
                             } else {
                                 console.log('⏳ Aguardando modal carregar...', {
-                                    modalVisible: modal?.style.display === 'block',
+                                    modalVisible,
                                     formExists: !!form,
                                     estadoExists: !!estadoSelect
                                 });
@@ -4061,7 +4215,8 @@ function preencherFormularioAluno(aluno) {
     
     // Verificar se o modal está aberto
     const modal = document.getElementById('modalAluno');
-    console.log('🔍 Modal status:', modal ? (modal.style.display === 'block' ? '✅ Aberto' : '❌ Fechado') : '❌ Não encontrado');
+    const modalDisplay = modal ? window.getComputedStyle(modal).display : 'none';
+    console.log('🔍 Modal status:', modal ? (modalDisplay !== 'none' ? '✅ Aberto' : '❌ Fechado') : '❌ Não encontrado');
     
     // Definir ID do aluno para edição
     const alunoIdField = document.getElementById('aluno_id_hidden');
@@ -4499,12 +4654,23 @@ function preencherModalVisualizacao(aluno) {
         }
     }
     
+    const fotoUrl = (() => {
+        if (!aluno.foto || aluno.foto === 'Array') return '';
+        if (typeof aluno.foto === 'string' && aluno.foto.match(/^https?:\/\//i)) {
+            return aluno.foto;
+        }
+        const basePathParts = window.location.pathname.split('/');
+        const projectPath = basePathParts.slice(0, -2).join('/');
+        const normalizedFoto = aluno.foto.replace(/^\/+/, '');
+        return `${window.location.origin}${projectPath}/${normalizedFoto}`;
+    })();
+
     const html = `
         <div class="row">
             <div class="col-md-8">
                 <div class="d-flex align-items-center">
-                    ${aluno.foto && aluno.foto !== 'Array' ? `
-                        <img src="${aluno.foto.startsWith('http') ? aluno.foto : window.location.origin + window.location.pathname.split('/').slice(0, -2).join('/') + '/' + aluno.foto}" 
+                    ${fotoUrl ? `
+                        <img src="${fotoUrl}" 
                              alt="Foto do aluno" class="rounded-circle me-3" 
                              style="width: 60px; height: 60px; object-fit: cover; border: 2px solid #dee2e6;">
                     ` : `
@@ -5795,6 +5961,7 @@ function abrirModalAluno() {
         modal.style.setProperty('visibility', 'visible', 'important');
         modal.setAttribute('data-opened', 'true'); // Marcar como aberto intencionalmente
         document.body.style.overflow = 'hidden'; // Prevenir scroll do body
+        reforcarEstruturaModalAluno();
         
         // CORREÇÃO: Diminuir z-index dos ícones de ação quando modal de edição abrir
         aplicarCorrecaoZIconsAction('open');
@@ -5853,10 +6020,15 @@ function fecharModalAluno() {
     const modal = document.getElementById('modalAluno');
     if (modal) {
         // FORÇAR fechamento do modal
-        modal.style.setProperty('display', 'none', 'important');
-        modal.style.setProperty('visibility', 'hidden', 'important');
+        const propsToClear = ['display', 'visibility', 'position', 'inset', 'width', 'min-height', 'background', 'z-index', 'padding', 'align-items', 'justify-content', 'box-sizing'];
+        propsToClear.forEach(prop => modal.style.removeProperty(prop));
         modal.removeAttribute('data-opened'); // Remover marcação de aberto
         document.body.style.overflow = 'auto'; // Restaurar scroll do body
+
+        const dialog = modal.querySelector('.custom-modal-dialog');
+        if (dialog) {
+            ['position', 'left', 'transform', 'margin', 'width'].forEach(prop => dialog.style.removeProperty(prop));
+        }
         
         // CORREÇÃO: Restaurar z-index dos ícones de ação quando modal de edição fechar
         aplicarCorrecaoZIconsAction('close');
@@ -6625,6 +6797,9 @@ function carregarMatriculas(alunoId) {
                     Erro ao carregar matrículas
                 </div>
             `;
+        })
+        .finally(() => {
+            reforcarEstruturaModalAluno();
         });
 }
 // Função para carregar documentos da aba Documentos
@@ -6678,6 +6853,9 @@ function carregarDocumentos(alunoId) {
                     Erro ao carregar documentos
                 </div>
             `;
+        })
+        .finally(() => {
+            reforcarEstruturaModalAluno();
         });
 }
 
@@ -6712,6 +6890,8 @@ function carregarDadosAba(abaId, alunoId) {
             carregarHistorico(alunoId);
             break;
     }
+    
+    reforcarEstruturaModalAluno();
 }
 
 // Função para carregar histórico
@@ -6751,6 +6931,9 @@ function carregarHistorico(alunoId) {
                     Erro ao carregar histórico
                 </div>
             `;
+        })
+        .finally(() => {
+            reforcarEstruturaModalAluno();
         });
 }
 
@@ -6787,6 +6970,11 @@ document.addEventListener('DOMContentLoaded', function() {
         button.addEventListener('shown.bs.tab', function(event) {
             const targetTab = event.target.getAttribute('data-bs-target').replace('#', '');
             const alunoId = document.getElementById('aluno_id_hidden').value;
+            reforcarEstruturaModalAluno();
+            const tabScroller = document.getElementById('alunoTabsContent');
+            if (tabScroller) {
+                tabScroller.scrollTop = 0;
+            }
             
             if (alunoId) {
                 carregarDadosAba(targetTab, alunoId);
@@ -6906,7 +7094,6 @@ function ajustarModalResponsivo() {
 
 // Listener para redimensionamento da janela
 window.addEventListener('resize', ajustarModalResponsivo);
-
 // Ajustar quando modais são abertos
 document.addEventListener('shown.bs.modal', ajustarModalResponsivo);
 
@@ -6929,24 +7116,35 @@ console.log('🔧 Sistema de modais responsivos inicializado');
 // =====================================================
 
 // Função utilitária para aplicar validação em todos os CPF da página
+function garantirFeedbackCPF(input) {
+    if (!input || !input.parentNode) return null;
+    let feedback = input.parentNode.querySelector('.cpf-validation-feedback');
+    if (!feedback) {
+        feedback = document.createElement('div');
+        feedback.className = 'cpf-validation-feedback';
+        feedback.style.display = 'none';
+        feedback.style.opacity = '0';
+        feedback.style.visibility = 'hidden';
+        input.parentNode.appendChild(feedback);
+    }
+    return feedback;
+}
+
 function aplicarValidacaoCPFFormulario() {
     const formulariosComCPF = document.querySelectorAll('form input[name="cpf"], #cpf');
-    
     formulariosComCPF.forEach(input => {
-        // Primeiro, limpar qualquer feedback anterior
-        const feedbackExistente = input.parentNode.querySelector('.cpf-validation-feedback');
-        if (feedbackExistente && feedbackExistente.classList.contains('valid')) {
-            feedbackExistente.remove();
-        }
-        
+        const feedback = garantirFeedbackCPF(input);
+        if (!feedback) return;
+
         if (input.value.length === 14) {
             const cpfLimpo = input.value.replace(/\D/g, '');
-            const isValid = validarCPF(cpfLimpo);
-            
-            if (isValid) {
-                // Re-aplicar validação correta com timer de ocultação
+            if (validarCPF(cpfLimpo)) {
                 mostrarFeedbackCPF(input, true);
+            } else {
+                mostrarFeedbackCPF(input, false);
             }
+        } else {
+            ocultarFeedbackCPF(input);
         }
     });
 }
@@ -6990,7 +7188,8 @@ function aplicarMascaraCPF(input) {
 
 function mostrarFeedbackCPF(input, isValid) {
     if (!input || !input.parentNode) return;
-    const feedback = input.parentNode.querySelector('.cpf-validation-feedback');
+
+    const feedback = garantirFeedbackCPF(input);
     if (!feedback) return;
     
     if (isValid) {
@@ -7026,50 +7225,48 @@ function mostrarFeedbackCPF(input, isValid) {
 
 function ocultarFeedbackCPF(input) {
     if (!input || !input.parentNode) return;
-    const feedback = input.parentNode.querySelector('.cpf-validation-feedback');
-    if (feedback) {
-        input.classList.remove('valid', 'invalid');
-        feedback.style.display = 'none';
-        feedback.className = 'cpf-validation-feedback';
-        feedback.textContent = ''; // Limpar conteúdo
-    }
+    const feedback = garantirFeedbackCPF(input);
+    if (!feedback) return;
+
+    input.classList.remove('valid', 'invalid');
+    feedback.style.display = 'none';
+    feedback.style.opacity = '0';
+    feedback.style.visibility = 'hidden';
+    feedback.textContent = '';
+    feedback.className = 'cpf-validation-feedback';
 }
 
 // Aplicar validação de CPF quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
     const cpfInput = document.getElementById('cpf');
-    
-    if (cpfInput) {
-        // Aplicar máscara enquanto digita
-        cpfInput.addEventListener('input', function() {
-            aplicarMascaraCPF(this);
-            
-            // Validar CPF quando tiver 14 caracteres (com máscara)
-            if (this.value.length === 14) {
-                const cpfLimpo = this.value.replace(/\D/g, '');
-                const isValid = validarCPF(cpfLimpo);
-                mostrarFeedbackCPF(this, isValid);
-            } else if (this.value.length < 14) {
-                ocultarFeedbackCPF(this);
-            }
-        });
-        
-        // Validar ao sair do campo
-        cpfInput.addEventListener('blur', function() {
-            if (this.value.length === 14) {
-                const cpfLimpo = this.value.replace(/\D/g, '');
-                const isValid = validarCPF(cpfLimpo);
-                mostrarFeedbackCPF(this, isValid);
-            }
-        });
-        
-        // Limpar validação ao focar
-        cpfInput.addEventListener('focus', function() {
-            if (this.value.length < 14) {
-                ocultarFeedbackCPF(this);
-            }
-        });
-    }
+    if (!cpfInput) return;
+    garantirFeedbackCPF(cpfInput);
+
+    cpfInput.addEventListener('input', function() {
+        aplicarMascaraCPF(this);
+
+        if (this.value.length === 14) {
+            const cpfLimpo = this.value.replace(/\D/g, '');
+            const isValid = validarCPF(cpfLimpo);
+            mostrarFeedbackCPF(this, isValid);
+        } else if (this.value.length < 14) {
+            ocultarFeedbackCPF(this);
+        }
+    });
+
+    cpfInput.addEventListener('blur', function() {
+        if (this.value.length === 14) {
+            const cpfLimpo = this.value.replace(/\D/g, '');
+            const isValid = validarCPF(cpfLimpo);
+            mostrarFeedbackCPF(this, isValid);
+        }
+    });
+
+    cpfInput.addEventListener('focus', function() {
+        if (this.value.length < 14) {
+            ocultarFeedbackCPF(this);
+        }
+    });
 });
 
 // Função para validar CPF antes do envio do formulário
@@ -7088,6 +7285,8 @@ function validarCampoCPFAutomaticamente() {
     const cpfInput = document.getElementById('cpf');
     
     if (cpfInput && cpfInput.value.length === 14) {
+        garantirFeedbackCPF(cpfInput);
+
         const cpfLimpo = cpfInput.value.replace(/\D/g, '');
         const isValid = validarCPF(cpfLimpo);
         
@@ -7106,7 +7305,6 @@ function validarCampoCPFAutomaticamente() {
     }
 }
 console.log('✅ Validação de CPF inicializada');
-
 // =====================================================
 // MÁSCARA DE RENACH
 // =====================================================
