@@ -8,10 +8,10 @@
    ===================================================== */
 
 /* Modal responsivo base */
-.modal-dialog {
-    max-width: 90vw !important;
-    width: 90vw !important;
-    margin: 1rem auto !important;
+#modalVisualizarAluno.is-open .visualizar-dialog {
+    max-width: 90vw;
+    width: 90vw;
+    margin: 1rem auto;
 }
 
 /* MODAL DE EXAMES - LARGURA RESPONSIVA */
@@ -64,11 +64,11 @@ html body #modalAgendarExame .modal-dialog {
 
 /* Modal responsivo para telas pequenas */
 @media (max-width: 768px) {
-    .modal-dialog {
-        max-width: 95vw !important;
-        width: 95vw !important;
-        margin: 0.5rem auto !important;
-        max-height: 95vh !important;
+    #modalVisualizarAluno.is-open .visualizar-dialog {
+        max-width: 95vw;
+        width: 95vw;
+        margin: 0.5rem auto;
+        max-height: 95vh;
     }
     
     /* Mobile para modal de exames */
@@ -86,34 +86,34 @@ html body #modalAgendarExame .modal-dialog {
         max-height: calc(90vh - 120px) !important;
     }
     
-    .modal-content {
+    #modalVisualizarAluno .visualizar-dialog {
         max-height: 95vh !important;
         overflow-y: auto !important;
     }
     
-    .modal-body {
+    #modalVisualizarAluno .visualizar-body {
         max-height: calc(95vh - 120px) !important;
         overflow-y: auto !important;
         padding: 1rem !important;
     }
     
-    .modal-header {
+    #modalVisualizarAluno .visualizar-header {
         padding: 0.75rem 1rem !important;
         flex-wrap: wrap !important;
     }
     
-    .modal-title {
+    #modalVisualizarAluno .visualizar-title {
         font-size: 1.1rem !important;
         margin-right: 0.5rem !important;
     }
     
-    .modal-footer {
+    #modalVisualizarAluno .visualizar-footer {
         padding: 0.75rem 1rem !important;
         flex-wrap: wrap !important;
         gap: 0.5rem !important;
     }
     
-    .modal-footer .btn {
+    #modalVisualizarAluno .visualizar-footer .btn {
         flex: 1 !important;
         min-width: 120px !important;
         margin: 0.25rem !important;
@@ -319,12 +319,12 @@ html body #modalAgendarExame .modal-dialog {
 }
 
 /* Modal de Visualização de Aluno */
-#modalVisualizarAluno .modal-dialog {
+#modalVisualizarAluno .visualizar-dialog {
     max-width: 800px !important;
 }
 
 @media (max-width: 768px) {
-    #modalVisualizarAluno .modal-dialog {
+    #modalVisualizarAluno .visualizar-dialog {
         max-width: 95vw !important;
     }
 }

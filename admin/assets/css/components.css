@@ -464,11 +464,7 @@
     background: var(--white);
     border-radius: var(--border-radius-xl);
     box-shadow: var(--shadow-xl);
-    max-width: 500px;
-    width: 100%;
-    max-height: 90vh;
-    overflow-y: auto;
-    position: relative;
+    /* Removido: max-width / width / overflow para não conflitar com modais Bootstrap */
 }
 
 /* EXCEÇÃO: Modal de exames não deve ter limitação de largura */

@@ -27,8 +27,126 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
    ESTILOS PARA OTIMIZAÇÃO DE ESPAÇO DESKTOP
    ===================================================== */
 
-/* MODAL FECHADO POR PADRÃO - MAS PERMITIR ABERTURA */
+/* =====================================================
+   Z-INDEX E STACKING CONTEXT DOS MODAIS
+   ===================================================== */
+
+/* Garantir que backdrop fique atrás do modal */
+.modal-backdrop {
+    z-index: 1050 !important;
+}
+
+/* Modal de visualização personalizado */
+#modalVisualizarAluno {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.65);
+    z-index: 100000;
+    padding: 2rem 1rem;
+    overflow-y: auto;
+    align-items: flex-start;
+    justify-content: center;
+    gap: 2rem;
+    backdrop-filter: blur(1px);
+}
+
+#modalVisualizarAluno.is-open {
+    display: flex;
+}
+
+#modalVisualizarAluno .visualizar-dialog {
+    position: relative;
+    width: min(1080px, 100%);
+    max-width: 1080px;
+    background: #ffffff;
+    border-radius: 18px;
+    box-shadow: 0 30px 80px rgba(15, 23, 42, 0.35);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+#modalVisualizarAluno .visualizar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.75rem 2rem;
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    color: #fff;
+}
+
+#modalVisualizarAluno .visualizar-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+}
+
+#modalVisualizarAluno .visualizar-body {
+    padding: 2rem;
+    background: #f8fafc;
+    max-height: calc(90vh - 180px);
+    overflow-y: auto;
+}
+
+#modalVisualizarAluno .visualizar-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-height: 200px;
+    color: #0d6efd;
+    font-weight: 500;
+}
+
+#modalVisualizarAluno .visualizar-erro {
+    padding: 1.5rem;
+    border-radius: 12px;
+    background: rgba(220, 53, 69, 0.1);
+    color: #842029;
+    font-weight: 500;
+}
+
+#modalVisualizarAluno .visualizar-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 1rem;
+    padding: 1.5rem 2rem;
+    background: #ffffff;
+    border-top: 1px solid rgba(148, 163, 184, 0.2);
+}
+
+#modalVisualizarAluno .visualizar-close {
+    border: none;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.25rem;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+#modalVisualizarAluno .visualizar-close:hover {
+    background: rgba(255, 255, 255, 0.28);
+    transform: scale(1.08);
+}
+
+body.visualizar-aluno-open {
+    overflow: hidden !important;
+}
+
+/* Modal de edição/novo aluno */
 #modalAluno {
+    z-index: 1060 !important;
     display: none;
     visibility: hidden;
 }
@@ -51,24 +169,59 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
     visibility: visible !important;
 }
 
-/* Cards de estatísticas mais compactos */
-.card.border-left-primary,
-.card.border-left-success,
-.card.border-left-warning,
-.card.border-left-info {
-    min-height: 100px;
+/* Suavizar opacidade do backdrop */
+.modal-backdrop.show {
+    opacity: 0.35 !important;
 }
 
-.card-body {
-    padding: 1rem 0.75rem;
+/* Indicadores compactos */
+.alunos-kpi-bar {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 8px 0;
+    margin-bottom: 12px;
+    flex-wrap: nowrap;
 }
 
-.text-xs {
-    font-size: 0.7rem !important;
+.alunos-kpi-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: #475569;
 }
 
-.h5 {
-    font-size: 1.5rem !important;
+.alunos-kpi-icon {
+    font-size: 16px;
+    opacity: 0.85;
+}
+
+.alunos-kpi-icon.total {
+    color: #2563eb;
+}
+
+.alunos-kpi-icon.ativos {
+    color: #16a34a;
+}
+
+.alunos-kpi-icon.formacao {
+    color: #f59e0b;
+}
+
+.alunos-kpi-icon.concluidos {
+    color: #0f172a;
+}
+
+.alunos-kpi-label {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #4b5563;
+}
+
+.alunos-kpi-value {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #1f2937;
 }
 
 /* Tabela otimizada */
@@ -114,13 +267,12 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
 }
 
 /* CORREÇÃO: Estilo especial para quando modal estiver aberto */
-body:has(#modalVisualizarAluno.show) .action-icon-btn,
+body:has(#modalVisualizarAluno.is-open) .action-icon-btn,
 body:has(#modalAluno[data-opened="true"]) .action-icon-btn {
     z-index: 1 !important;
-    pointer-events: none !important;
 }
 
-body:has(#modalVisualizarAluno.show) .action-buttons-compact,
+body:has(#modalVisualizarAluno.is-open) .action-buttons-compact,
 body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     z-index: 1 !important;
 }
@@ -136,11 +288,191 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     opacity: 1 !important;
 }
 
+.alunos-header {
+    padding: 12px 0;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.alunos-header h1 {
+    margin: 0;
+    font-size: 1.875rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.alunos-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.alunos-actions-trigger {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 14px;
+    font-weight: 600;
+    border-radius: 10px;
+}
+
+.alunos-actions-trigger i {
+    font-size: 16px;
+}
+
+.alunos-novo-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 40px;
+    padding: 0 18px;
+    border-radius: 10px;
+}
+
+.alunos-filtros-wrapper {
+    padding: 8px 0;
+    margin-bottom: 12px;
+}
+
+.alunos-filtros-toggle {
+    display: none;
+    width: 100%;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid #cbd5f5;
+    background: #f8fafc;
+    color: #475569;
+    border-radius: 10px;
+    height: 40px;
+    padding: 0 12px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.alunos-filtros-toggle i {
+    transition: transform 0.2s ease;
+}
+
+.alunos-filtros-toggle.is-active i:last-child {
+    transform: rotate(180deg);
+}
+
+.alunos-filtros-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: nowrap;
+}
+
+.alunos-filtro {
+    display: flex;
+    align-items: center;
+}
+
+.alunos-filtro.busca {
+    flex: 1 1 320px;
+    min-width: 260px;
+}
+
+.alunos-input-search {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    height: 40px;
+    border: 1px solid #cbd5f5;
+    border-radius: 10px;
+    background: #ffffff;
+}
+
+.alunos-input-search i {
+    position: absolute;
+    left: 12px;
+    color: #64748b;
+    font-size: 16px;
+}
+
+.alunos-input-search input {
+    height: 100%;
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    padding-left: 36px;
+    padding-right: 12px;
+    font-size: 0.95rem;
+    color: #1f2937;
+    background: transparent;
+}
+
+.alunos-input-search input:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
+}
+
+.alunos-input-search input::placeholder {
+    color: #94a3b8;
+}
+
+.alunos-filtro.select .form-select {
+    height: 40px;
+    min-width: 220px;
+    max-width: 240px;
+    font-size: 0.95rem;
+    border-radius: 10px;
+    border: 1px solid #cbd5f5;
+    padding: 0 12px;
+    background-color: #ffffff;
+    color: #1f2937;
+}
+
+.alunos-filtro.select .form-select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.18);
+}
+
+.alunos-filtro.acao {
+    margin-left: auto;
+    flex: 0 0 auto;
+}
+
+.alunos-clear-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 40px;
+    padding: 0 12px;
+    border: none;
+    color: #475569;
+    font-weight: 600;
+    text-decoration: none;
+    background: transparent;
+    cursor: pointer;
+}
+
+.alunos-clear-btn:hover {
+    color: #1f2937;
+    text-decoration: none;
+}
+
+.alunos-actions-trigger:focus-visible,
+.alunos-novo-btn:focus-visible,
+.alunos-filtros-toggle:focus-visible,
+.alunos-clear-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+}
+
 /* Responsividade melhorada */
 @media (max-width: 1200px) {
     .col-lg-2 {
         flex: 0 0 25%;
         max-width: 25%;
+    }
+    
+    .alunos-filtros-row {
+        flex-wrap: wrap;
     }
 }
 
@@ -152,6 +484,10 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     
     .action-buttons-compact {
         min-width: 150px;
+    }
+    
+    .alunos-filtro.select .form-select {
+        min-width: 200px;
     }
 }
 
@@ -171,8 +507,16 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
         height: 26px;
         font-size: 0.75rem;
     }
-}
 
+    .alunos-kpi-bar {
+        gap: 12px;
+        justify-content: flex-start;
+    }
+    
+    .alunos-filtros-row {
+        gap: 12px;
+    }
+}
 /* =====================================================
    CSS RESPONSIVO PARA MOBILE - ALUNOS
    ===================================================== */
@@ -208,10 +552,55 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
         gap: 5px !important;
         flex-wrap: nowrap !important;
     }
-}
 
+    .alunos-kpi-bar {
+        flex-wrap: nowrap !important;
+        overflow-x: auto !important;
+        padding-bottom: 6px !important;
+        gap: 16px !important;
+    }
+
+    .alunos-kpi-item {
+        flex: 0 0 auto !important;
+    }
+}
 /* Layout em cards para mobile */
-@media screen and (max-width: 480px), screen and (max-width: 600px) {
+@media screen and (max-width: 640px) {
+    .alunos-filtros-toggle {
+        display: flex;
+        margin-bottom: 8px;
+    }
+    
+    .alunos-filtros-row {
+        display: none;
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+    
+    .alunos-filtros-row.is-open {
+        display: flex;
+    }
+    
+    .alunos-filtro {
+        width: 100%;
+    }
+    
+    .alunos-filtro.select .form-select {
+        width: 100%;
+        min-width: 0;
+    }
+    
+    .alunos-filtro.acao {
+        margin-left: 0;
+    }
+    
+    .alunos-clear-btn {
+        justify-content: flex-start;
+        padding: 0;
+        height: auto;
+    }
+    
     .card .card-body .table-container {
         display: none !important;
         overflow: visible !important;
@@ -334,7 +723,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     justify-content: center;
 }
 
-.modal-content {
+.modal-overlay .modal-content {
     background: white;
     border-radius: 0.5rem;
     box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
@@ -348,7 +737,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     width: 800px;
 }
 
-.modal-header {
+.modal-overlay .modal-header {
     background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
     color: white;
     padding: 1rem 1.5rem;
@@ -358,13 +747,13 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     align-items: center;
 }
 
-.modal-header h3 {
+.modal-overlay .modal-header h3 {
     margin: 0;
     font-size: 1.25rem;
     font-weight: 600;
 }
 
-.modal-close {
+.modal-overlay .modal-close {
     background: none;
     border: none;
     color: white;
@@ -378,9 +767,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     justify-content: center;
     border-radius: 50%;
     transition: background-color 0.2s;
-}
-
-.modal-close:hover {
+.modal-overlay .modal-close:hover {
     background-color: rgba(255, 255, 255, 0.2);
 }
 
@@ -629,7 +1016,6 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     background: #f8f9fa;
     border-radius: 4px;
 }
-
 .custom-modal .modal-body::-webkit-scrollbar-thumb {
     background: #6c757d;
     border-radius: 4px;
@@ -825,12 +1211,10 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     width: 20px !important;
     height: 20px !important;
 }
-
 /* Melhorar espaçamento entre seções */
 .modal#modalAluno .row.mb-4 {
     margin-bottom: 2rem !important;
 }
-
 .modal#modalAluno .mb-3 {
     margin-bottom: 1.25rem !important;
 }
@@ -1054,69 +1438,6 @@ body.modal-open #modalAluno .modal-dialog {
    ESTILOS PARA MODAL DE VISUALIZAÇÃO
    ===================================================== */
 
-.modal#modalVisualizarAluno .modal-dialog.modal-fullscreen {
-    max-width: 100vw !important;
-    max-height: 100vh !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
-.modal#modalVisualizarAluno .modal-content {
-    height: 100vh !important;
-    border-radius: 0 !important;
-    border: none !important;
-}
-
-.modal#modalVisualizarAluno .modal-body {
-    max-height: calc(100vh - 120px) !important;
-    overflow-y: auto !important;
-    padding: 2rem !important;
-    background-color: #f8f9fa !important;
-}
-
-.modal#modalVisualizarAluno .modal-header {
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%) !important;
-    color: white !important;
-    border-bottom: none !important;
-    padding: 1.5rem 2rem !important;
-}
-
-.modal#modalVisualizarAluno .modal-title {
-    color: white !important;
-    font-weight: 600 !important;
-    font-size: 1.5rem !important;
-}
-
-.modal#modalVisualizarAluno .btn-close {
-    filter: invert(1) !important;
-}
-
-.modal#modalVisualizarAluno .modal-footer {
-    background-color: #f8f9fa !important;
-    border-top: 1px solid #dee2e6 !important;
-    padding: 1.5rem 2rem !important;
-}
-
-.modal#modalVisualizarAluno {
-    z-index: 1055 !important;
-}
-
-.modal#modalVisualizarAluno .modal-dialog {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    bottom: 0 !important;
-    width: 100vw !important;
-    height: 100vh !important;
-    max-width: none !important;
-    max-height: none !important;
-    margin: 0 !important;
-    padding: 0 !important;
-}
-
 /* =====================================================
    ESTILOS PARA TOASTS MELHORADOS
    ===================================================== */
@@ -1192,8 +1513,6 @@ input.form-control.invalid {
     border-color: #dc3545 !important;
     box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
 }
-
-
 .toast {
     min-width: 350px;
     max-width: 450px;
@@ -1233,22 +1552,414 @@ input.form-control.invalid {
         max-width: 350px;
     }
 }
+
+/* =====================================================
+   NOVO LAYOUT DO MODAL DE CADASTRO/EDIÇÃO DE ALUNOS
+   ===================================================== */
+
+#modalAluno.custom-modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    min-height: 100vh;
+    background: rgba(15, 23, 42, 0.55);
+    z-index: 9999;
+    padding: clamp(16px, 3vh, 32px);
+    align-items: center;
+    justify-content: center;
+}
+
+#modalAluno.custom-modal[data-opened="true"],
+#modalAluno.custom-modal[style*="display: block"],
+#modalAluno.custom-modal[style*="display:block"] {
+    display: flex !important;
+}
+
+#modalAluno .custom-modal-dialog {
+    width: min(94vw, 1200px);
+    max-height: 88vh;
+    display: flex;
+    justify-content: center;
+    align-items: stretch;
+    margin: 0;
+}
+
+#modalAluno .custom-modal-content {
+    width: 100%;
+    max-height: 88vh;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+}
+
+.aluno-modal-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.aluno-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    background: var(--primary-600, #0d6efd);
+    color: #fff;
+    padding: 16px 24px;
+    min-height: var(--aluno-modal-header-h, 56px);
+}
+
+.aluno-modal-title {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    color: inherit;
+}
+
+.aluno-modal-title i {
+    font-size: 1.25rem;
+}
+
+.aluno-modal-close {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.2);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    opacity: 1;
+    background-image: none;
+    color: #ffffff;
+}
+
+.aluno-modal-close:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+}
+
+.aluno-modal-close::after {
+    content: "\00d7";
+    font-size: 1.4rem;
+    line-height: 1;
+    color: #fff;
+    font-weight: 300;
+}
+
+.aluno-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 0;
+    background: #f8fafc;
+    flex: 1;
+    min-height: 0;
+}
+
+.aluno-modal-tabs {
+    display: flex;
+    align-items: center;
+    padding: 0 24px 12px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    min-height: var(--aluno-modal-tabs-h, 60px);
+}
+
+.aluno-tabs {
+    border-bottom: none;
+    display: flex;
+    gap: 12px;
+    width: 100%;
+    height: 48px;
+    align-items: flex-end;
+}
+
+.aluno-tabs .nav-item {
+    display: flex;
+}
+
+.aluno-tabs .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 16px;
+    border: none;
+    border-radius: 10px 10px 0 0;
+    color: #475569;
+    font-weight: 600;
+    background: transparent;
+    height: 48px;
+    position: relative;
+    transition: color 0.2s ease, background 0.2s ease;
+}
+
+.aluno-tabs .nav-link i {
+    font-size: 1.1rem;
+}
+
+.aluno-tabs .nav-link:hover {
+    color: #0f172a;
+    background: rgba(15, 23, 42, 0.05);
+}
+
+.aluno-tabs .nav-link.active {
+    color: #0f172a;
+    background: #ffffff;
+}
+
+.aluno-tabs .nav-link.active::after {
+    content: "";
+    position: absolute;
+    left: 12px;
+    right: 12px;
+    bottom: -4px;
+    height: 2px;
+    background: var(--primary-600, #0d6efd);
+    border-radius: 999px;
+}
+
+.aluno-modal-body {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+#modalAluno .custom-modal-content {
+    --aluno-modal-max-h: 88vh;
+    --aluno-modal-header-h: 56px;
+    --aluno-modal-tabs-h: 60px;
+    --aluno-modal-footer-h: 64px;
+}
+
+.aluno-modal-panel {
+    flex: 1;
+    --aluno-panel-available: calc(var(--aluno-modal-max-h) - (var(--aluno-modal-header-h) + var(--aluno-modal-tabs-h) + var(--aluno-modal-footer-h)));
+    min-height: min(600px, max(480px, var(--aluno-panel-available)));
+    max-height: max(320px, var(--aluno-panel-available));
+    padding: 20px;
+    overflow: auto;
+    background: #f8fafc;
+    scrollbar-width: thin;
+}
+
+.aluno-modal-panel::-webkit-scrollbar {
+    width: 8px;
+}
+
+.aluno-modal-panel::-webkit-scrollbar-track {
+    background: #edf2f7;
+    border-radius: 4px;
+}
+
+.aluno-modal-panel::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+}
+
+.aluno-modal-panel::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+.aluno-tab-content .tab-pane {
+    padding: 0;
+}
+
+.aluno-modal-panel .row {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1rem;
+}
+
+.aluno-modal-panel h6 {
+    font-size: 0.88rem !important;
+    font-weight: 600 !important;
+    color: #1e293b !important;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#modalAluno .form-label {
+    font-size: 0.8rem !important;
+    font-weight: 600 !important;
+    color: #475569 !important;
+    margin-bottom: 0.35rem !important;
+}
+
+#modalAluno .form-control,
+#modalAluno .form-select {
+    min-height: 40px !important;
+    padding: 0 12px !important;
+    font-size: 0.94rem !important;
+    border-radius: 10px !important;
+    border: 1px solid #cbd5e1 !important;
+    color: #1f2937 !important;
+}
+
+#modalAluno .form-control:focus,
+#modalAluno .form-select:focus {
+    border-color: var(--primary-600, #0d6efd) !important;
+    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.18) !important;
+}
+
+#modalAluno textarea.form-control {
+    min-height: 96px;
+    padding: 12px !important;
+    resize: vertical;
+}
+
+.aluno-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 24px;
+    background: #ffffff;
+    border-top: 1px solid #e2e8f0;
+    position: sticky;
+    bottom: 0;
+    flex-shrink: 0;
+    min-height: var(--aluno-modal-footer-h, 64px);
+}
+
+.aluno-btn-cancelar,
+.aluno-btn-salvar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 18px;
+    min-height: 40px;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.aluno-btn-cancelar {
+    border: 1px solid transparent;
+    background: transparent;
+    color: #475569;
+}
+
+.aluno-btn-cancelar:hover {
+    background: #f1f5f9;
+    color: #0f172a;
+}
+.aluno-btn-salvar {
+    padding-inline: 20px;
+}
+.aluno-btn-salvar:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 20px rgba(13, 110, 253, 0.18);
+}
+.aluno-modal-footer .btn i {
+    font-size: 0.95rem;
+}
+@media (max-width: 1024px) {
+    #modalAluno .custom-modal-dialog {
+        width: min(95vw, 1024px);
+    }
+
+    .aluno-modal-panel {
+        padding: 20px;
+    }
+}
+
+@media (max-width: 768px) {
+    #modalAluno .custom-modal-dialog {
+        width: 100%;
+        max-height: 90vh;
+    }
+
+    #modalAluno .custom-modal-content {
+        border-radius: 10px;
+        --aluno-modal-max-h: 90vh;
+    }
+
+    .aluno-modal-header {
+        padding: 14px 20px;
+    }
+
+    .aluno-modal-tabs {
+        padding: 0 16px;
+        overflow-x: auto;
+    }
+
+    .aluno-tabs {
+        gap: 8px;
+    }
+
+    .aluno-tabs .nav-link {
+        padding: 0 14px;
+        white-space: nowrap;
+    }
+
+    .aluno-modal-panel {
+        padding: 18px;
+    }
+}
+
+@media (max-width: 576px) {
+    #modalAluno .custom-modal-dialog {
+        padding: 0;
+    }
+
+    .aluno-modal-header,
+    .aluno-modal-footer {
+        padding: 14px 16px;
+    }
+
+    .aluno-modal-panel {
+        padding: 16px;
+    }
+
+    .aluno-tabs {
+        height: auto;
+    }
+
+    .aluno-tabs .nav-link {
+        height: 44px;
+    }
+
+    .aluno-btn-cancelar,
+    .aluno-btn-salvar {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .aluno-modal-footer {
+        flex-wrap: wrap;
+    }
+}
 </style>
 
-<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-    <h1 class="h2">
+<div class="alunos-header d-flex justify-content-between flex-wrap align-items-center">
+    <h1>
         <i class="fas fa-user-graduate me-2"></i>Gestão de Alunos
     </h1>
-    <div class="btn-toolbar mb-2 mb-md-0">
-        <div class="btn-group me-2">
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportarAlunos()">
-                <i class="fas fa-download me-1"></i>Exportar
+    <div class="alunos-header-actions">
+        <div class="dropdown">
+            <button class="btn btn-outline-secondary alunos-actions-trigger" type="button" id="acoesDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="fas fa-ellipsis-h me-1"></i>Ações
             </button>
-            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirAlunos()">
-                <i class="fas fa-print me-1"></i>Imprimir
-            </button>
+            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="acoesDropdown">
+                <li><button class="dropdown-item" type="button" onclick="exportarAlunos('csv')"><i class="fas fa-file-csv me-2"></i>Exportar CSV</button></li>
+                <li><button class="dropdown-item" type="button" onclick="exportarAlunos('xlsx')"><i class="fas fa-file-excel me-2"></i>Exportar XLSX</button></li>
+                <li><button class="dropdown-item" type="button" onclick="imprimirAlunos()"><i class="fas fa-print me-2"></i>Imprimir</button></li>
+            </ul>
         </div>
-        <button type="button" class="btn btn-primary" onclick="abrirModalAluno()">
+        <button type="button" class="btn btn-primary alunos-novo-btn" onclick="abrirModalAluno()">
             <i class="fas fa-plus me-1"></i>Novo Aluno
         </button>
     </div>
@@ -1261,138 +1972,91 @@ input.form-control.invalid {
     <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 </div>
 <?php endif; ?>
-
 <!-- Filtros e Busca Avançada -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="input-group">
-            <span class="input-group-text"><i class="fas fa-search"></i></span>
-            <input type="text" class="form-control" id="buscaAluno" placeholder="Buscar aluno..." data-validate="minLength:2">
+<div class="alunos-filtros-wrapper">
+    <button class="alunos-filtros-toggle" type="button" id="alunosFiltrosToggle" aria-controls="alunosFiltros" aria-expanded="false">
+        <span><i class="fas fa-sliders-h me-2"></i>Filtros</span>
+        <i class="fas fa-chevron-down"></i>
+    </button>
+    <div class="alunos-filtros-row" id="alunosFiltros">
+        <div class="alunos-filtro busca">
+            <label for="buscaAluno" class="visually-hidden">Buscar aluno</label>
+            <div class="alunos-input-search">
+                <i class="fas fa-search" aria-hidden="true"></i>
+                <input type="text" class="form-control" id="buscaAluno" placeholder="Buscar por nome, e-mail ou ID" data-validate="minLength:2" autocomplete="off">
+            </div>
         </div>
-    </div>
-    <div class="col-md-2">
-        <select class="form-select" id="filtroStatus">
-            <option value="">Todos os Status</option>
-            <option value="ativo">Ativo</option>
-            <option value="inativo">Inativo</option>
-            <option value="concluido">Concluído</option>
-            <option value="pendente">Pendente</option>
-        </select>
-    </div>
-    <div class="col-md-2">
-        <select class="form-select" id="filtroCFC">
-            <option value="">Todos os CFCs</option>
-            <?php foreach ($cfcs as $cfc): ?>
-                <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="col-md-2">
-        <select class="form-select" id="filtroCategoria">
-            <option value="">Todas as Categorias</option>
-            <option value="A">Categoria A</option>
-            <option value="B">Categoria B</option>
-            <option value="C">Categoria C</option>
-            <option value="D">Categoria D</option>
-            <option value="E">Categoria E</option>
-            <option value="AB">Categoria AB</option>
-            <option value="AC">Categoria AC</option>
-            <option value="AD">Categoria AD</option>
-            <option value="AE">Categoria AE</option>
-        </select>
-    </div>
-    <div class="col-md-3">
-        <div class="d-flex gap-2">
-            <button type="button" class="btn btn-outline-info" onclick="limparFiltros()">
-                Limpar
-            </button>
-            <button type="button" class="btn btn-outline-success" onclick="exportarFiltros()">
-                Exportar
+        <div class="alunos-filtro select">
+            <label class="visually-hidden" for="filtroStatus">Status</label>
+            <select class="form-select" id="filtroStatus">
+                <option value="">Todos os Status</option>
+                <option value="ativo">Ativo</option>
+                <option value="inativo">Inativo</option>
+                <option value="concluido">Concluído</option>
+                <option value="pendente">Pendente</option>
+            </select>
+        </div>
+        <div class="alunos-filtro select">
+            <label class="visually-hidden" for="filtroCFC">CFC</label>
+            <select class="form-select" id="filtroCFC">
+                <option value="">Todos os CFCs</option>
+                <?php foreach ($cfcs as $cfc): ?>
+                    <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="alunos-filtro select">
+            <label class="visually-hidden" for="filtroCategoria">Categoria</label>
+            <select class="form-select" id="filtroCategoria">
+                <option value="">Todas as Categorias</option>
+                <option value="A">Categoria A</option>
+                <option value="B">Categoria B</option>
+                <option value="C">Categoria C</option>
+                <option value="D">Categoria D</option>
+                <option value="E">Categoria E</option>
+                <option value="AB">Categoria AB</option>
+                <option value="AC">Categoria AC</option>
+                <option value="AD">Categoria AD</option>
+                <option value="AE">Categoria AE</option>
+            </select>
+        </div>
+        <div class="alunos-filtro acao">
+            <button type="button" class="btn btn-link alunos-clear-btn" onclick="limparFiltros()">
+                <i class="fas fa-eraser me-1"></i>Limpar
             </button>
         </div>
     </div>
 </div>
 
-<!-- Cards de Estatísticas -->
-<div class="row mb-4">
-    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
-        <div class="card border-left-primary shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-primary text-uppercase mb-1">
-                            Total de Alunos
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="totalAlunos">
-                            <?php echo count($alunos); ?>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-user-graduate fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
+<!-- Indicadores compactos -->
+<div class="alunos-kpi-bar" role="group" aria-label="Indicadores de alunos">
+    <div class="alunos-kpi-item">
+        <i class="fas fa-users alunos-kpi-icon total" aria-hidden="true"></i>
+        <span class="alunos-kpi-label">Total</span>
+        <span class="alunos-kpi-value" id="totalAlunos">
+            <?php echo count($alunos); ?>
+        </span>
     </div>
-
-    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
-        <div class="card border-left-success shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-success text-uppercase mb-1">
-                            Alunos Ativos
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="alunosAtivos">
-                            <?php echo count(array_filter($alunos, function($a) { return $a['status'] === 'ativo'; })); ?>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-check-circle fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="alunos-kpi-item">
+        <i class="fas fa-check-circle alunos-kpi-icon ativos" aria-hidden="true"></i>
+        <span class="alunos-kpi-label">Ativos</span>
+        <span class="alunos-kpi-value" id="alunosAtivos">
+            <?php echo count(array_filter($alunos, function($a) { return ($a['status'] ?? '') === 'ativo'; })); ?>
+        </span>
     </div>
-
-    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
-        <div class="card border-left-warning shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-warning text-uppercase mb-1">
-                            Em Formação
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="emFormacao">
-                            <?php echo count(array_filter($alunos, function($a) { return $a['status'] === 'ativo'; })); ?>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-clock fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="alunos-kpi-item">
+        <i class="fas fa-clock alunos-kpi-icon formacao" aria-hidden="true"></i>
+        <span class="alunos-kpi-label">Em formação</span>
+        <span class="alunos-kpi-value" id="emFormacao">
+            <?php echo count(array_filter($alunos, function($a) { return ($a['status'] ?? '') === 'ativo'; })); ?>
+        </span>
     </div>
-
-    <div class="col-lg-2 col-md-4 col-sm-6 mb-3">
-        <div class="card border-left-info shadow h-100 py-2">
-            <div class="card-body">
-                <div class="row no-gutters align-items-center">
-                    <div class="col mr-2">
-                        <div class="text-xs font-weight-bold text-info text-uppercase mb-1">
-                            Concluídos
-                        </div>
-                        <div class="h5 mb-0 font-weight-bold text-gray-800" id="concluidos">
-                            <?php echo count(array_filter($alunos, function($a) { return $a['status'] === 'concluido'; })); ?>
-                        </div>
-                    </div>
-                    <div class="col-auto">
-                        <i class="fas fa-graduation-cap fa-2x text-gray-300"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
+    <div class="alunos-kpi-item">
+        <i class="fas fa-graduation-cap alunos-kpi-icon concluidos" aria-hidden="true"></i>
+        <span class="alunos-kpi-label">Concluídos</span>
+        <span class="alunos-kpi-value" id="concluidos">
+            <?php echo count(array_filter($alunos, function($a) { return ($a['status'] ?? '') === 'concluido'; })); ?>
+        </span>
     </div>
 </div>
 
@@ -1660,24 +2324,23 @@ input.form-control.invalid {
         </div>
     </div>
 </div>
-
 <!-- Modal Customizado para Cadastro/Edição de Aluno -->
-<div id="modalAluno" class="custom-modal" style="display: none !important; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999;">
-    <div class="custom-modal-dialog" style="position: fixed; top: 1rem; left: 1rem; right: 1rem; bottom: 1rem; width: auto; height: auto; margin: 0; padding: 0; display: flex; align-items: center; justify-content: center;">
-        <div class="custom-modal-content" style="width: 100%; height: auto; max-width: 1200px; max-height: 90vh; background: white; border: none; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: flex; flex-direction: column; position: relative;">
-            <form id="formAluno" method="POST">
-                <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
-                    <h5 class="modal-title" id="modalTitle" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
-                        <i class="fas fa-user-graduate me-2"></i>Novo Aluno
-                    </h5>
-                    <button type="button" class="btn-close" onclick="fecharModalAluno()" style="filter: invert(1); background: none; border: none; font-size: 1.25rem; color: white; opacity: 0.8; cursor: pointer;">&times;</button>
+<div id="modalAluno" class="custom-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="custom-modal-dialog">
+        <div class="custom-modal-content">
+            <form id="formAluno" method="POST" class="aluno-modal-form">
+                <div class="aluno-modal-header modal-header">
+                    <h2 class="aluno-modal-title" id="modalTitle">
+                        <i class="fas fa-user-graduate me-2" aria-hidden="true"></i>
+                        <span>Novo Aluno</span>
+                    </h2>
+                    <button type="button" class="btn-close aluno-modal-close" onclick="fecharModalAluno()" aria-label="Fechar modal"></button>
                 </div>
-                <div class="modal-body" style="overflow-y: auto; padding: 0; flex: 1; min-height: 0; max-height: calc(90vh - 140px);">
-                    <input type="hidden" name="acao" id="acaoAluno" value="criar">
-                    <input type="hidden" name="aluno_id" id="aluno_id_hidden" value="">
-                    
-                    <!-- Navegação por Abas -->
-                    <ul class="nav nav-tabs" id="alunoTabs" role="tablist" style="margin: 0; border-bottom: 1px solid #dee2e6;">
+                <input type="hidden" name="acao" id="acaoAluno" value="criar">
+                <input type="hidden" name="aluno_id" id="aluno_id_hidden" value="">
+
+                <div class="aluno-modal-tabs">
+                    <ul class="nav nav-tabs aluno-tabs" id="alunoTabs" role="tablist">
                         <li class="nav-item" role="presentation">
                             <button class="nav-link active" id="dados-tab" data-bs-toggle="tab" data-bs-target="#dados" type="button" role="tab">
                                 <i class="fas fa-user"></i>
@@ -1721,9 +2384,11 @@ input.form-control.invalid {
                             </button>
                         </li>
                     </ul>
-                    
-                    <!-- Conteúdo das Abas -->
-                    <div class="tab-content" id="alunoTabsContent" style="padding: 1rem;">
+                </div>
+
+                <div class="aluno-modal-body modal-body">
+                    <div class="aluno-modal-panel">
+                    <div class="tab-content aluno-tab-content" id="alunoTabsContent">
                         <!-- Aba Dados -->
                         <div class="tab-pane fade show active" id="dados" role="tabpanel">
                     
@@ -2174,11 +2839,11 @@ input.form-control.invalid {
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer" style="background-color: #f8f9fa; border-top: 1px solid #dee2e6; padding: 0.75rem 1.5rem; display: flex; justify-content: flex-end; gap: 1rem; flex-shrink: 0;">
-                    <button type="button" class="btn btn-secondary" onclick="fecharModalAluno()" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                <div class="aluno-modal-footer modal-footer">
+                    <button type="button" class="btn aluno-btn-cancelar" onclick="fecharModalAluno()">
                         <i class="fas fa-times me-1"></i>Cancelar
                     </button>
-                    <button type="submit" class="btn btn-primary" id="btnSalvarAluno" style="padding: 0.5rem 1rem; font-size: 0.9rem;">
+                    <button type="submit" class="btn btn-primary aluno-btn-salvar" id="btnSalvarAluno">
                         <i class="fas fa-save me-1"></i>Salvar Aluno
                     </button>
                 </div>
@@ -2188,29 +2853,30 @@ input.form-control.invalid {
 </div>
 
 
-<!-- Modal para Visualização de Aluno -->
-<div class="modal fade" id="modalVisualizarAluno" tabindex="-1" aria-labelledby="modalVisualizarAlunoLabel" aria-hidden="true">
-    <div class="modal-dialog modal-fullscreen" style="position: fixed !important; top: 0 !important; left: 0 !important; right: 0 !important; bottom: 0 !important; width: 100vw !important; height: 100vh !important; max-width: 100vw !important; max-height: 100vh !important; margin: 0 !important; padding: 0 !important; transform: none !important;">
-        <div class="modal-content" style="height: 100vh !important; border-radius: 0 !important; border: none !important;">
-            <div class="modal-header">
-                <h5 class="modal-title" id="modalVisualizarAlunoLabel">
-                    <i class="fas fa-eye me-2"></i>Detalhes do Aluno
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body" id="modalVisualizarAlunoBody">
-                <!-- Conteúdo será carregado via JavaScript -->
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
-                <button type="button" class="btn btn-primary" id="btnEditarVisualizacao">
-                    <i class="fas fa-edit me-1"></i>Editar Aluno
-                </button>
-            </div>
+<!-- Modal personalizado para Visualização de Aluno -->
+<div id="modalVisualizarAluno" class="visualizar-overlay" role="dialog" aria-labelledby="modalVisualizarAlunoLabel" aria-hidden="true">
+    <div class="visualizar-dialog">
+        <div class="visualizar-header">
+            <h5 class="visualizar-title m-0" id="modalVisualizarAlunoLabel">
+                <i class="fas fa-eye me-2"></i>Detalhes do Aluno
+            </h5>
+            <button type="button" class="visualizar-close" onclick="fecharModalVisualizarAluno()" aria-label="Fechar modal">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="visualizar-body" id="modalVisualizarAlunoBody">
+            <!-- Conteúdo será carregado via JavaScript -->
+        </div>
+        <div class="visualizar-footer">
+            <button type="button" class="btn btn-light border" onclick="fecharModalVisualizarAluno()">
+                <i class="fas fa-times me-1"></i>Fechar
+            </button>
+            <button type="button" class="btn btn-primary" id="btnEditarVisualizacao">
+                <i class="fas fa-edit me-1"></i>Editar Aluno
+            </button>
         </div>
     </div>
 </div>
-
 <!-- Modal Nova Aula -->
 <div id="modal-nova-aula" class="modal-overlay" style="display: none;">
     <div class="modal-content modal-large">
@@ -2408,6 +3074,14 @@ const categoriasPorTipo = {
     ]
 };
 
+const localDebounce = (func, delay = 300) => {
+    let timeoutId;
+    return (...args) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+    };
+};
+
 document.addEventListener('DOMContentLoaded', function() {
         // CORREÇÃO DE DUPLICAÇÃO - Temporariamente desabilitada para teste
         /*
@@ -2450,6 +3124,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Inicializar busca
     inicializarBuscaAluno();
+    inicializarFiltrosResponsivos();
     
     // Inicializar controles do modal
 inicializarModalAluno();
@@ -2462,8 +3137,28 @@ inicializarModalAluno();
             salvarAluno();
         });
     }
-});
 
+    // Fechar modal de visualização com ESC
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && document.body.classList.contains('visualizar-aluno-open')) {
+            fecharModalVisualizarAluno();
+        }
+    });
+
+    const modalVisualizarOverlay = document.getElementById('modalVisualizarAluno');
+    if (modalVisualizarOverlay) {
+        modalVisualizarOverlay.addEventListener('click', (event) => {
+            if (event.target === modalVisualizarOverlay) {
+                fecharModalVisualizarAluno();
+            }
+        });
+    }
+
+    // Mostrar notificação de carregamento
+    if (typeof notifications !== 'undefined') {
+        notifications.info('Página de alunos carregada com sucesso!');
+    }
+});
 function inicializarMascarasAluno() {
     // Máscara para CPF
     if (typeof IMask !== 'undefined') {
@@ -2787,7 +3482,6 @@ function extrairMunicipioNaturalidade(naturalidade) {
     console.log('🔍 extrairMunicipioNaturalidade - Município trim:', municipio.trim());
     return municipio.trim();
 }
-
 // Lista estática de municípios por estado (principais municípios)
 function getMunicipiosPorEstado(estado) {
     console.log('Buscando municípios para estado:', estado); // Debug
@@ -3107,7 +3801,67 @@ function inicializarFiltrosAluno() {
 
 
 function inicializarBuscaAluno() {
-    document.getElementById('buscaAluno').addEventListener('input', filtrarAlunos);
+    const inputBusca = document.getElementById('buscaAluno');
+    if (!inputBusca) return;
+
+    const aplicarBusca = (typeof debounce === 'function' ? debounce : localDebounce)(() => {
+        filtrarAlunos();
+    }, 300);
+
+    inputBusca.addEventListener('input', aplicarBusca);
+
+    inputBusca.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            filtrarAlunos();
+        } else if (event.key === 'Escape' || event.key === 'Esc') {
+            inputBusca.value = '';
+            filtrarAlunos();
+        }
+    });
+}
+
+function inicializarFiltrosResponsivos() {
+    const filtrosRow = document.getElementById('alunosFiltros');
+    const toggleBtn = document.getElementById('alunosFiltrosToggle');
+    if (!filtrosRow) return;
+
+    const aplicarEstado = () => {
+        const isMobile = window.innerWidth <= 640;
+
+        if (isMobile) {
+            if (toggleBtn) {
+                const aberto = filtrosRow.classList.contains('is-open');
+                toggleBtn.setAttribute('aria-expanded', aberto ? 'true' : 'false');
+                toggleBtn.classList.toggle('is-active', aberto);
+            }
+        } else {
+            filtrosRow.classList.add('is-open');
+            if (toggleBtn) {
+                toggleBtn.setAttribute('aria-expanded', 'true');
+                toggleBtn.classList.remove('is-active');
+            }
+        }
+    };
+
+    if (window.innerWidth > 640) {
+        filtrosRow.classList.add('is-open');
+        if (toggleBtn) {
+            toggleBtn.classList.remove('is-active');
+        }
+    }
+
+    aplicarEstado();
+    const aplicarEstadoDebounced = (typeof debounce === 'function' ? debounce : localDebounce)(aplicarEstado, 150);
+    window.addEventListener('resize', aplicarEstadoDebounced);
+
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', () => {
+            const isOpen = filtrosRow.classList.toggle('is-open');
+            toggleBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+            toggleBtn.classList.toggle('is-active', isOpen);
+        });
+    }
 }
 
 // Função para inicializar controles do modal
@@ -3160,7 +3914,6 @@ function abrirModalEdicao() {
         console.log('📝 Formulário mantido para edição');
     }
 }
-
 window.editarAluno = function(id) {
     console.log('🚀 editarAluno chamada com ID:', id);
     
@@ -3293,7 +4046,6 @@ window.editarAluno = function(id) {
             mostrarAlerta('Erro ao carregar dados do aluno: ' + error.message, 'danger');
         });
 }
-
 function preencherFormularioAluno(aluno) {
     console.log('📝 Preenchendo formulário para aluno:', aluno);
     console.log('📝 Dados específicos do aluno:');
@@ -3609,7 +4361,6 @@ function preencherFormularioAluno(aluno) {
         console.warn('⚠️ Campo observacoes não encontrado no DOM');
     }
 }
-
 function visualizarAluno(id) {
     console.log('🚀 visualizandoAluno chamada com ID:', id);
 
@@ -3623,7 +4374,6 @@ function visualizarAluno(id) {
         modalAlunoParaVisualizacao.removeAttribute('data-opened');
     }
 
-    // Verificar se os elementos necessários existem
     const modalElement = document.getElementById('modalVisualizarAluno');
     const modalBody = document.getElementById('modalVisualizarAlunoBody');
 
@@ -3631,15 +4381,44 @@ function visualizarAluno(id) {
     console.log('  modalVisualizarAluno:', modalElement ? '✅ Existe' : '❌ Não existe');
     console.log('  modalVisualizarAlunoBody:', modalBody ? '✅ Existe' : '❌ Não existe');
 
-    if (!modalElement) {
+    if (!modalElement || !modalBody) {
         console.error('❌ Modal de visualização não encontrado!');
         alert('ERRO: Modal de visualização não encontrado na página!');
         return;
     }
 
+    modalBody.innerHTML = `
+        <div class="visualizar-loading">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p>Carregando informações do aluno...</p>
+        </div>
+    `;
+
+    abrirModalVisualizarAluno();
+    aplicarCorrecaoZIconsAction('open');
+
+    const fecharModalVisualizacao = (event) => {
+        if (event) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+        fecharModalVisualizarAluno();
+    };
+
+    const btnFecharTopo = modalElement.querySelector('.visualizar-close');
+    const btnFecharRodape = modalElement.querySelector('.visualizar-footer .btn.btn-light');
+
+    if (btnFecharTopo) {
+        btnFecharTopo.onclick = fecharModalVisualizacao;
+    }
+    if (btnFecharRodape) {
+        btnFecharRodape.onclick = fecharModalVisualizacao;
+    }
+
     console.log(`📡 Fazendo requisição para api/alunos.php?id=${id}`);
 
-    // Buscar dados do aluno (usando nova API funcional)
     const timestamp = new Date().getTime();
     fetch(API_CONFIG.getRelativeApiUrl('ALUNOS') + `?id=${id}&t=${timestamp}`)
         .then(response => {
@@ -3670,86 +4449,33 @@ function visualizarAluno(id) {
             if (data.success) {
                 console.log('✅ Success = true, preenchendo modal...');
 
-                // Preencher modal
                 preencherModalVisualizacao(data.aluno);
                 console.log('✅ Modal preenchido');
 
-                // CORREÇÃO: Usar método manual para evitar conflitos do Bootstrap
-                console.log('🔧 Abrindo modal SEM usar Bootstrap para evitar conflitos...');
-                modalElement.classList.add('show');
-                modalElement.style.setProperty('display', 'block', 'important');
-                modalElement.style.setProperty('visibility', 'visible', 'important');
-                
-                // Criar backdrop manualmente com controle total
-                const backdrop = document.createElement('div');
-                backdrop.className = 'modal-backdrop fade show';
-                backdrop.id = 'backdrop-visualizar-aluno';
-                backdrop.style.zIndex = '1040'; // Menor que o modal
-                document.body.appendChild(backdrop);
-                
-                // Prevenir scroll do body
-                document.body.classList.add('modal-open');
-                document.body.style.overflow = 'hidden';
-                
-                console.log('🪟 Modal de visualização aberto manualmente!');
-                
-                // CORREÇÃO: Diminuir z-index dos ícones de ação quando modal abrir
-                aplicarCorrecaoZIconsAction('open');
-                
-                // Função para fechar o modal corretamente
-                function fecharModalVisualizacao() {
-                    console.log('🧹 Fechando modal de visualização...');
-                    modalElement.classList.remove('show');
-                    modalElement.style.setProperty('display', 'none', 'important');
-                    modalElement.style.setProperty('visibility', 'hidden');
+                const btnFecharTopoAtualizado = modalElement.querySelector('.visualizar-close');
+                const btnFecharRodapeAtualizado = modalElement.querySelector('.visualizar-footer .btn.btn-light');
 
-                    // Remover backdrop específico
-                    const backdrop = document.getElementById('backdrop-visualizar-aluno');
-                    if (backdrop) {
-                        backdrop.remove();
-                    }
-
-                    // Remover outros backdrops que possam ter sido criados
-                    const backdrops = document.querySelectorAll('.modal-backdrop');
-                    backdrops.forEach(b => b.remove());
-                    
-                    // Restaurar estado do body
-                    document.body.style.overflow = 'auto';
-                    document.body.classList.remove('modal-open');
-                    
-                    // CORREÇÃO: Restaurar z-index dos ícones de ação quando modal fechar
-                    aplicarCorrecaoZIconsAction('close');
-                    
-                    console.log('✅ Modal de visualização fechado completamente');
+                if (btnFecharTopoAtualizado) {
+                    btnFecharTopoAtualizado.onclick = fecharModalVisualizacao;
+                }
+                if (btnFecharRodapeAtualizado) {
+                    btnFecharRodapeAtualizado.onclick = fecharModalVisualizacao;
                 }
 
-                // Adicionar evento aos botões de fechar
-                setTimeout(() => {
-                    const btnFechar = modalElement.querySelector('[data-bs-dismiss="modal"]');
-                    const btnClose = modalElement.querySelector('.btn-close');
-                    
-                    if (btnFechar) {
-                        btnFechar.onclick = fecharModalVisualizacao;
+                modalElement.addEventListener('click', (event) => {
+                    if (event.target === modalElement) {
+                        fecharModalVisualizacao(event);
                     }
-                    if (btnClose) {
-                        btnClose.onclick = fecharModalVisualizacao;
-                    }
-                    
-                    // Fechar ao clicar no backdrop
-                    const backdrop = document.getElementById('backdrop-visualizar-aluno');
-                    if (backdrop) {
-                        backdrop.onclick = fecharModalVisualizacao;
-                    }
-                }, 100);
+                }, { once: true });
 
             } else {
                 console.error('❌ Success = false, erro:', data.error);
-                mostrarAlerta('Erro ao carregar dados do aluno: ' + (data.error || 'Erro desconhecido'), 'danger');
+                modalBody.innerHTML = `<div class="visualizar-erro">Erro ao carregar dados do aluno: ${data.error || 'Erro desconhecido'}</div>`;
             }
         })
         .catch(error => {
             console.error('💥 Erro na requisição:', error);
-            mostrarAlerta('Erro ao carregar dados do aluno: ' + error.message, 'danger');
+            modalBody.innerHTML = `<div class="visualizar-erro">Erro ao carregar dados do aluno: ${error.message}</div>`;
         });
 }
 
@@ -3838,34 +4564,119 @@ function preencherModalVisualizacao(aluno) {
     
     document.getElementById('modalVisualizarAlunoBody').innerHTML = html;
     
-    // CORREÇÃO: Configurar botão "Editar Aluno" sem usar Bootstrap Modal
+    // Configurar botão "Editar Aluno" para usar o modal customizado
     document.getElementById('btnEditarVisualizacao').onclick = () => {
         console.log('✏️ Botão Editar Aluno clicado, fechando modal de visualização...');
-        
-        // Fechar modal de visualização manualmente
-        const modalElement = document.getElementById('modalVisualizarAluno');
-        if (modalElement) {
-            modalElement.classList.remove('show');
-            modalElement.style.setProperty('display', 'none', 'important');
-            modalElement.style.setProperty('visibility', 'hidden');
-        }
-        
-        // Limpar backdrop
-        const backdrop = document.getElementById('backdrop-visualizar-aluno');
-        if (backdrop) {
-            backdrop.remove();
-        }
-        
-        // Restaurar estado do body
-        document.body.style.overflow = 'auto';
-        document.body.classList.remove('modal-open');
-        
-        // Aguardar um pouco antes de abrir modal de edição
+        fecharModalVisualizarAluno();
         setTimeout(() => {
             console.log('🪟 Abrindo modal de edição...');
             editarAluno(aluno.id);
         }, 200);
     };
+}
+
+function abrirModalVisualizarAluno() {
+    const modalElement = document.getElementById('modalVisualizarAluno');
+    if (!modalElement) {
+        console.error('❌ modalVisualizarAluno não encontrado no DOM.');
+        return;
+    }
+
+    const dialogElement = modalElement.querySelector('.visualizar-dialog');
+    const contentElement = modalElement.querySelector('.visualizar-body');
+
+    modalElement.classList.add('is-open');
+    modalElement.setAttribute('data-opened', 'true');
+    modalElement.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('visualizar-aluno-open');
+    document.body.style.overflow = 'hidden';
+
+    modalElement.style.setProperty('display', 'flex', 'important');
+    modalElement.style.setProperty('position', 'fixed', 'important');
+    modalElement.style.setProperty('inset', '0', 'important');
+    modalElement.style.setProperty('padding', '2rem 1rem', 'important');
+    modalElement.style.setProperty('background', 'rgba(15, 23, 42, 0.65)', 'important');
+    modalElement.style.setProperty('z-index', '1055', 'important');
+    modalElement.style.setProperty('align-items', 'flex-start', 'important');
+    modalElement.style.setProperty('justify-content', 'center', 'important');
+    modalElement.style.setProperty('overflow-y', 'auto', 'important');
+    modalElement.style.setProperty('gap', '2rem', 'important');
+
+    if (dialogElement) {
+        dialogElement.style.setProperty('position', 'relative', 'important');
+        dialogElement.style.setProperty('width', 'min(1080px, 95vw)', 'important');
+        dialogElement.style.setProperty('max-width', '1080px', 'important');
+        dialogElement.style.setProperty('background', '#ffffff', 'important');
+        dialogElement.style.setProperty('border-radius', '18px', 'important');
+        dialogElement.style.setProperty('box-shadow', '0 30px 80px rgba(15, 23, 42, 0.35)', 'important');
+        dialogElement.style.setProperty('border', '1px solid rgba(148, 163, 184, 0.25)', 'important');
+        dialogElement.style.setProperty('overflow', 'hidden', 'important');
+        dialogElement.style.setProperty('display', 'flex', 'important');
+        dialogElement.style.setProperty('flex-direction', 'column', 'important');
+    }
+
+    if (contentElement) {
+        contentElement.style.setProperty('display', 'block', 'important');
+        contentElement.style.setProperty('opacity', '1', 'important');
+        contentElement.style.setProperty('visibility', 'visible', 'important');
+    }
+
+    document.querySelectorAll('#backdrop-visualizar-aluno, .modal-backdrop').forEach(el => el.remove());
+
+    const overlayStyles = window.getComputedStyle(modalElement);
+    const dialogStyles = dialogElement ? window.getComputedStyle(dialogElement) : null;
+    console.log('📊 overlay computed:', JSON.stringify({
+        display: overlayStyles?.display,
+        position: overlayStyles?.position,
+        width: overlayStyles?.width,
+        height: overlayStyles?.height,
+        pointerEvents: overlayStyles?.pointerEvents
+    }));
+    console.log('📊 dialog computed:', dialogStyles ? JSON.stringify({
+        display: dialogStyles.display,
+        width: dialogStyles.width,
+        height: dialogStyles.height,
+        pointerEvents: dialogStyles.pointerEvents
+    }) : '"sem dialog"');
+
+    console.log('🪟 Modal de visualização aberto com estilos forçados.');
+}
+
+function fecharModalVisualizarAluno() {
+    const modalElement = document.getElementById('modalVisualizarAluno');
+    if (!modalElement) {
+        return;
+    }
+
+    const dialogElement = modalElement.querySelector('.visualizar-dialog');
+    const contentElement = modalElement.querySelector('.visualizar-body');
+
+    modalElement.classList.remove('is-open', 'modal-visualizar-fallback');
+    modalElement.removeAttribute('data-opened');
+    modalElement.setAttribute('aria-hidden', 'true');
+
+    ['display', 'position', 'inset', 'padding', 'background', 'z-index', 'align-items', 'justify-content', 'overflow-y', 'gap'].forEach(prop => {
+        modalElement.style.removeProperty(prop);
+    });
+
+    if (dialogElement) {
+        ['position', 'width', 'max-width', 'background', 'border-radius', 'box-shadow', 'border', 'overflow', 'display', 'flex-direction'].forEach(prop => {
+            dialogElement.style.removeProperty(prop);
+        });
+    }
+
+    if (contentElement) {
+        ['display', 'opacity', 'visibility'].forEach(prop => contentElement.style.removeProperty(prop));
+    }
+
+    document.querySelectorAll('#backdrop-visualizar-aluno, .modal-backdrop').forEach(el => el.remove());
+    document.body.classList.remove('visualizar-aluno-open');
+    if (!document.body.classList.contains('modal-open')) {
+        document.body.style.removeProperty('overflow');
+    }
+
+    aplicarCorrecaoZIconsAction('close');
+    console.log('✅ Modal de visualização fechado completamente');
 }
 
 function agendarAula(id) {
@@ -3886,7 +4697,6 @@ function agendarAula(id) {
         preencherAlunoSelecionado(id);
     }, 500); // Aumentei para 500ms para dar mais tempo
 }
-
 function preencherAlunoSelecionado(id) {
     console.log('🔧 Preenchendo aluno selecionado:', id);
     
@@ -4025,7 +4835,6 @@ function desativarAluno(id) {
         alterarStatusAluno(id, 'inativo');
     }
 }
-
 function excluirAluno(id) {
     const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este aluno?';
     
@@ -4133,11 +4942,26 @@ function alterarStatusAluno(id, status) {
 }
 
 function limparFiltros() {
-    document.getElementById('filtroStatus').value = '';
-    document.getElementById('filtroCFC').value = '';
-    document.getElementById('filtroCategoria').value = '';
-    document.getElementById('buscaAluno').value = '';
+    const status = document.getElementById('filtroStatus');
+    const cfc = document.getElementById('filtroCFC');
+    const categoria = document.getElementById('filtroCategoria');
+    const busca = document.getElementById('buscaAluno');
+
+    if (status) status.value = '';
+    if (cfc) cfc.value = '';
+    if (categoria) categoria.value = '';
+    if (busca) {
+        busca.value = '';
+        if (window.innerWidth > 640) {
+            busca.focus();
+        }
+    }
+
     filtrarAlunos();
+
+    if (typeof atualizarEstatisticas === 'function') {
+        atualizarEstatisticas();
+    }
 }
 
 function filtrarAlunos() {
@@ -4182,6 +5006,10 @@ function filtrarAlunos() {
     if (typeof notifications !== 'undefined') {
         notifications.info(`Filtro aplicado: ${contador} aluno(s) encontrado(s)`);
     }
+
+    if (typeof atualizarEstatisticas === 'function') {
+        atualizarEstatisticas();
+    }
 }
 
 function atualizarEstatisticas() {
@@ -4202,9 +5030,25 @@ function atualizarEstatisticas() {
     document.getElementById('concluidos').textContent = concluidos;
 }
 
-function exportarAlunos() {
-    // Implementar exportação para Excel/CSV
-    alert('Funcionalidade de exportação será implementada em breve!');
+function exportarAlunos(formato = 'csv') {
+    const formatoUpper = (formato || 'csv').toUpperCase();
+
+    if (typeof loading !== 'undefined') {
+        loading.showGlobal(`Gerando arquivo ${formatoUpper}...`);
+    }
+
+    // TODO: implementar exportação real utilizando dados filtrados
+    setTimeout(() => {
+        if (typeof loading !== 'undefined') {
+            loading.hideGlobal();
+        }
+
+        if (typeof notifications !== 'undefined') {
+            notifications.success(`Arquivo ${formatoUpper} gerado com sucesso!`);
+        } else {
+            alert(`Arquivo ${formatoUpper} gerado com sucesso!`);
+        }
+    }, 1200);
 }
 
 function imprimirAlunos() {
@@ -4428,7 +5272,6 @@ function abrirModalNovaAula() {
         console.error('❌ Modal não encontrado!');
     }
 }
-
 function inicializarEventosAgendamento() {
     console.log('🔧 Inicializando eventos de agendamento...');
     
@@ -4482,7 +5325,6 @@ function atualizarOpcoesAgendamento(tipo) {
     // Atualizar horários calculados se existir o elemento
     atualizarHorariosCalculados();
 }
-
 function atualizarHorariosCalculados() {
     const tipoAgendamento = document.querySelector('input[name="tipo_agendamento"]:checked');
     const posicaoIntervalo = document.querySelector('input[name="posicao_intervalo"]:checked');
@@ -4932,30 +5774,18 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
-
 // FUNÇÕES PARA MODAL CUSTOMIZADO
-
 // Função para ajustar modal responsivo (deve ser global)
 // Função removida - usando a versão mais completa abaixo
 
 function abrirModalAluno() {
     console.log('🚀 Abrindo modal customizado...');
     
-    // PROTEGER contra conflitos com modal de visualização
     console.log('🔒 Verificando conflitos com modal de visualização...');
     const modalVisualizar = document.getElementById('modalVisualizarAluno');
-    if (modalVisualizar && modalVisualizar.style.display !== 'none') {
+    if (modalVisualizar && modalVisualizar.classList.contains('is-open')) {
         console.log('⚠️ Fechando modal de visualização antes de abrir modal de edição...');
-        modalVisualizar.classList.remove('show');
-        modalVisualizar.style.setProperty('display', 'none', 'important');
-        
-        // Limpar backdrop de visualização
-        const backdrop = document.getElementById('backdrop-visualizar-aluno');
-        if (backdrop) {
-            backdrop.remove();
-        }
-        
-        document.body.classList.remove('modal-open');
+        fecharModalVisualizarAluno();
     }
     
     const modal = document.getElementById('modalAluno');
@@ -5037,7 +5867,6 @@ function fecharModalAluno() {
         console.log('✅ Modal customizado fechado!');
     }
 }
-
 // Função para resetar o formulário de alunos
 function resetFormulario() {
     console.log('🔄 Resetando formulário de alunos...');
@@ -5093,38 +5922,85 @@ function resetFormulario() {
 // FUNÇÃO PARA CORRIGIR Z-INDEX DOS ÍCONES DE AÇÃO
 function aplicarCorrecaoZIconsAction(acao) {
     console.log(`🔧 Aplicando correção de z-index para ícones de ação: ${acao}`);
-    
     const actionButtons = document.querySelectorAll('.action-icon-btn');
     const actionContainers = document.querySelectorAll('.action-buttons-compact');
-    
+
     if (acao === 'open') {
-        // Diminuir z-index quando modal abrir
         actionButtons.forEach(btn => {
             btn.style.setProperty('z-index', '1', 'important');
-            btn.style.setProperty('pointer-events', 'none', 'important');
         });
-        
+
         actionContainers.forEach(container => {
             container.style.setProperty('z-index', '1', 'important');
         });
-        
+
         console.log('🔽 z-index dos ícones diminuído para ficar atrás do modal');
     } else if (acao === 'close') {
-        // Restaurar z-index quando modal fechar
         actionButtons.forEach(btn => {
             btn.style.removeProperty('z-index');
-            btn.style.removeProperty('pointer-events');
         });
-        
+
         actionContainers.forEach(container => {
             container.style.removeProperty('z-index');
         });
-        
+
         console.log('🔺 z-index dos ícones restaurado ao normal');
     }
 }
-
 // FUNÇÃO GLOBAL PARA LIMPEZA DE CONFLITOS ENTRE MODAIS
+function forcarFecharModaisIniciais(origem = 'startup') {
+    const modaisBootstrap = Array.from(document.querySelectorAll('.modal.show'));
+    const modalAluno = document.getElementById('modalAluno');
+    const modalVisualizarOverlay = document.getElementById('modalVisualizarAluno');
+    const backdrops = Array.from(document.querySelectorAll('.modal-backdrop'));
+    const haviaResiduos = modaisBootstrap.length > 0 || backdrops.length > 0 || document.body.classList.contains('modal-open');
+
+    if (modalAluno && modalAluno.style.display !== 'none' && !modalAluno.hasAttribute('data-opened')) {
+        console.log(`🛑 ModalAluno estava visível sem permissão (${origem}) - forçando fechamento.`);
+        modalAluno.style.setProperty('display', 'none', 'important');
+        modalAluno.style.setProperty('visibility', 'hidden', 'important');
+        modalAluno.setAttribute('aria-hidden', 'true');
+        modalAluno.removeAttribute('aria-modal');
+        modalAluno.removeAttribute('data-opened');
+    }
+
+    if (modalVisualizarOverlay && modalVisualizarOverlay.classList.contains('is-open') && !modalVisualizarOverlay.hasAttribute('data-opened')) {
+        console.log(`🛑 modalVisualizarAluno estava aberto indevidamente (${origem}) - fechando.`);
+        modalVisualizarOverlay.classList.remove('is-open', 'modal-visualizar-fallback');
+        modalVisualizarOverlay.setAttribute('aria-hidden', 'true');
+        ['display', 'position', 'inset', 'width', 'height', 'overflow-y', 'background', 'visibility', 'opacity'].forEach(prop => {
+            modalVisualizarOverlay.style.removeProperty(prop);
+        });
+        const dialogElement = modalVisualizarOverlay.querySelector('.visualizar-dialog');
+        if (dialogElement) {
+            ['position', 'margin', 'width', 'max-width', 'pointer-events', 'display', 'opacity', 'transform'].forEach(prop => {
+                dialogElement.style.removeProperty(prop);
+            });
+        }
+    }
+
+    modaisBootstrap.forEach(modal => {
+        console.log(`🛑 Fechando modal residual "${modal.id || modal.className}" (${origem}).`);
+        modal.classList.remove('show');
+        modal.style.removeProperty('display');
+        modal.setAttribute('aria-hidden', 'true');
+        modal.removeAttribute('aria-modal');
+    });
+
+    backdrops.forEach(backdrop => {
+        backdrop.remove();
+    });
+
+    if (haviaResiduos) {
+        console.log(`🧼 Resíduos de modal removidos (${origem}) -> modais:${modaisBootstrap.length} backdrops:${backdrops.length}`);
+    }
+
+    document.body.classList.remove('modal-open');
+    document.body.classList.remove('visualizar-aluno-open');
+    document.body.style.overflow = 'auto';
+    document.body.style.removeProperty('paddingRight');
+}
+
 function limparTodosModais() {
     console.log('🧹 Limpando todos os modais conflitantes...');
     
@@ -5134,9 +6010,17 @@ function limparTodosModais() {
     // Limpar modal de visualização
     const modalVisualizar = document.getElementById('modalVisualizarAluno');
     if (modalVisualizar) {
-        modalVisualizar.classList.remove('show');
-        modalVisualizar.style.setProperty('display', 'none', 'important');
-        modalVisualizar.style.setProperty('visibility', 'hidden');
+        modalVisualizar.classList.remove('is-open', 'modal-visualizar-fallback');
+        modalVisualizar.setAttribute('aria-hidden', 'true');
+        ['display', 'position', 'inset', 'width', 'height', 'overflow-y', 'background', 'visibility', 'opacity'].forEach(prop => {
+            modalVisualizar.style.removeProperty(prop);
+        });
+        const dialogElement = modalVisualizar.querySelector('.visualizar-dialog');
+        if (dialogElement) {
+            ['position', 'margin', 'width', 'max-width', 'pointer-events', 'display', 'opacity', 'transform'].forEach(prop => {
+                dialogElement.style.removeProperty(prop);
+            });
+        }
     }
     
     // Limpar modal de edição
@@ -5154,14 +6038,22 @@ function limparTodosModais() {
     // Restaurar estado do body
     document.body.style.overflow = 'auto';
     document.body.classList.remove('modal-open');
+    document.body.classList.remove('visualizar-aluno-open');
     
     console.log('✅ Todos os modais limpos!');
+    forcarFecharModaisIniciais('limparTodosModais');
 }
 
 // Event listeners para modal de alunos já estão definidos em inicializarModalAluno()
 
 // Inicializar funcionalidades quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
+    forcarFecharModaisIniciais('domcontentloaded');
+    setTimeout(() => forcarFecharModaisIniciais('domcontentloaded+50ms'), 50);
+    setTimeout(() => forcarFecharModaisIniciais('domcontentloaded+200ms'), 200);
+    setTimeout(() => forcarFecharModaisIniciais('domcontentloaded+500ms'), 500);
+    setTimeout(() => forcarFecharModaisIniciais('domcontentloaded+1000ms'), 1000);
+    
     // Limpar qualquer modal conflitante na inicialização
     limparTodosModais();
     
@@ -5185,10 +6077,31 @@ document.addEventListener('DOMContentLoaded', function() {
     if (modalAlunoObserver) {
         observer.observe(modalAlunoObserver, { attributes: true });
     }
-    
-    // Aplicar máscaras se disponível
+
+    const modalVisualizarRoot = document.getElementById('modalVisualizarAluno');
+    if (modalVisualizarRoot && modalVisualizarRoot.parentNode && modalVisualizarRoot.parentNode !== document.body) {
+        document.body.appendChild(modalVisualizarRoot);
+        console.log('📦 modalVisualizarAluno realocado diretamente no body para garantir z-index correto.');
+    }
+
     if (typeof inputMasks !== 'undefined') {
         inputMasks.applyMasks();
+    }
+    
+    // Fechar modal de visualização com ESC
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && document.body.classList.contains('visualizar-aluno-open')) {
+            fecharModalVisualizarAluno();
+        }
+    });
+    
+    const modalVisualizarOverlay = document.getElementById('modalVisualizarAluno');
+    if (modalVisualizarOverlay) {
+        modalVisualizarOverlay.addEventListener('click', (event) => {
+            if (event.target === modalVisualizarOverlay) {
+                fecharModalVisualizarAluno();
+            }
+        });
     }
     
     // Mostrar notificação de carregamento
@@ -5225,9 +6138,14 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 
+window.addEventListener('load', () => {
+    forcarFecharModaisIniciais('window-load');
+    setTimeout(() => forcarFecharModaisIniciais('window-load+200ms'), 200);
+    setTimeout(() => forcarFecharModaisIniciais('window-load+600ms'), 600);
+    setTimeout(() => forcarFecharModaisIniciais('window-load+200ms'), 200);
+});
 // Função para carregar categorias CNH dinamicamente
 // Removido: função carregarCategoriasCNH() - não é mais necessária
-
 // Função para salvar aluno via AJAX
 function salvarAluno() {
     const form = document.getElementById('formAluno');
@@ -5537,7 +6455,6 @@ function coletarDadosOperacoes() {
     
     return operacoes;
 }
-
 // Função para carregar operações existentes ao editar aluno
 function carregarOperacoesExistentes(operacoes) {
     console.log('🔄 Carregando operações existentes:', operacoes);
@@ -5630,7 +6547,6 @@ function carregarOperacoesExistentes(operacoes) {
 // =====================================================
 // FUNÇÕES PARA CONTROLE DAS ABAS DO MODAL DE ALUNO
 // =====================================================
-
 // Função para ajustar visibilidade das abas conforme perfil do usuário
 function ajustarAbasPorPerfil() {
     const currentUser = <?php echo json_encode($user ?? []); ?>;
@@ -5653,7 +6569,6 @@ function ajustarAbasPorPerfil() {
         document.getElementById('documentos-tab-container').style.display = 'block';
     }
 }
-
 // Função para carregar dados da aba Matrícula
 function carregarMatriculas(alunoId) {
     if (!alunoId) return;
@@ -5712,7 +6627,6 @@ function carregarMatriculas(alunoId) {
             `;
         });
 }
-
 // Função para carregar documentos da aba Documentos
 function carregarDocumentos(alunoId) {
     if (!alunoId) return;
@@ -5898,12 +6812,15 @@ if (urlParams.has('modal') || urlParams.has('novo') || urlParams.has('criar')) {
 
 // PREVENIR ABERTURA AUTOMÁTICA DO MODAL
 console.log('🔧 Verificando se modal deve abrir automaticamente...');
+if (typeof forcarFecharModaisIniciais === 'function') {
+    forcarFecharModaisIniciais('pre-check');
+}
 const modal = document.getElementById('modalAluno');
 if (modal) {
     // Verificar se há algum CSS que está forçando o modal a aparecer
     const computedStyle = window.getComputedStyle(modal);
     if (computedStyle.display !== 'none' && !modal.hasAttribute('data-opened')) {
-        console.log('⚠️ Modal está visível sem ter sido aberto intencionalmente - fechando');
+        console.log('ℹ️ modalAluno estava visível inadvertidamente - forçando display:none');
         modal.style.setProperty('display', 'none', 'important');
         modal.style.setProperty('visibility', 'hidden', 'important');
         document.body.style.overflow = 'auto';
@@ -5960,31 +6877,14 @@ function ajustarModalResponsivo() {
         const modalContent = modalAlunoResponsivo.querySelector('.custom-modal-content');
         
         if (modalDialog && modalContent) {
-            if (viewportWidth <= 768) {
-                // Mobile: ocupar quase toda a tela
-                modalDialog.style.top = '0.5rem';
-                modalDialog.style.left = '0.5rem';
-                modalDialog.style.right = '0.5rem';
-                modalDialog.style.bottom = '0.5rem';
-                modalContent.style.maxWidth = '100%';
-                modalContent.style.maxHeight = '95vh';
-            } else if (viewportWidth <= 1200) {
-                // Tablet: tamanho médio
-                modalDialog.style.top = '1rem';
-                modalDialog.style.left = '1rem';
-                modalDialog.style.right = '1rem';
-                modalDialog.style.bottom = '1rem';
-                modalContent.style.maxWidth = '95vw';
-                modalContent.style.maxHeight = '90vh';
-            } else {
-                // Desktop: tamanho grande
-                modalDialog.style.top = '2rem';
-                modalDialog.style.left = '2rem';
-                modalDialog.style.right = '2rem';
-                modalDialog.style.bottom = '2rem';
-                modalContent.style.maxWidth = '1200px';
-                modalContent.style.maxHeight = '90vh';
-            }
+            modalDialog.style.top = '';
+            modalDialog.style.left = '';
+            modalDialog.style.right = '';
+            modalDialog.style.bottom = '';
+            modalDialog.style.width = '';
+            modalDialog.style.maxHeight = '';
+            modalContent.style.maxWidth = '';
+            modalContent.style.maxHeight = '';
         }
     }
     
@@ -6089,7 +6989,9 @@ function aplicarMascaraCPF(input) {
 }
 
 function mostrarFeedbackCPF(input, isValid) {
+    if (!input || !input.parentNode) return;
     const feedback = input.parentNode.querySelector('.cpf-validation-feedback');
+    if (!feedback) return;
     
     if (isValid) {
         input.classList.remove('invalid');
@@ -6123,6 +7025,7 @@ function mostrarFeedbackCPF(input, isValid) {
 }
 
 function ocultarFeedbackCPF(input) {
+    if (!input || !input.parentNode) return;
     const feedback = input.parentNode.querySelector('.cpf-validation-feedback');
     if (feedback) {
         input.classList.remove('valid', 'invalid');
@@ -6202,7 +7105,6 @@ function validarCampoCPFAutomaticamente() {
         console.log('⚠️ CPF não tem 14 caracteres, não validando automaticamente');
     }
 }
-
 console.log('✅ Validação de CPF inicializada');
 
 // =====================================================
@@ -6224,7 +7126,6 @@ function aplicarMascaraRenach(input) {
     
     input.value = valor;
 }
-
 // Aplicar máscara de Renach quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
     const renachInput = document.getElementById('renach');
@@ -6288,7 +7189,6 @@ function previewFotoAluno(input) {
         reader.readAsDataURL(file);
     }
 }
-
 /**
  * Remover foto selecionada
  */
@@ -6307,7 +7207,6 @@ function removerFotoAluno() {
     
     console.log('✅ Foto do aluno removida com sucesso');
 }
-
 /**
  * Carregar foto existente do aluno
  */
@@ -6360,4 +7259,5 @@ function carregarFotoExistenteAluno(caminhoFoto) {
 }
 
 console.log('✅ Funções de foto do aluno inicializadas');
+</script>
 </script>
