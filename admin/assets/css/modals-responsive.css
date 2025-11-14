@@ -1,3 +1,40 @@
+#modalAluno.layout-debug,
+#modalAluno.layout-debug-on {
+    outline: 4px solid rgba(148, 163, 184, 0.65);
+    box-shadow: 0 0 0 6px rgba(148, 163, 184, 0.25);
+}
+
+#modalAluno.layout-debug .custom-modal-content,
+#modalAluno.layout-debug-on .custom-modal-content {
+    outline: 4px solid rgba(148, 163, 184, 0.8);
+    box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.35) inset;
+    background: rgba(255, 255, 255, 0.95);
+}
+
+#modalAluno.layout-debug .aluno-modal-header,
+#modalAluno.layout-debug-on .aluno-modal-header {
+    background: rgba(220, 38, 38, 0.35) !important;
+    outline: 3px solid rgba(220, 38, 38, 0.75);
+}
+
+#modalAluno.layout-debug .aluno-modal-tabs,
+#modalAluno.layout-debug-on .aluno-modal-tabs {
+    background: rgba(34, 197, 94, 0.35) !important;
+    outline: 3px solid rgba(34, 197, 94, 0.75);
+}
+
+#modalAluno.layout-debug .aluno-modal-body,
+#modalAluno.layout-debug-on .aluno-modal-body {
+    background: rgba(59, 130, 246, 0.25) !important;
+    outline: 3px dashed rgba(59, 130, 246, 0.9);
+}
+
+#modalAluno.layout-debug .aluno-modal-footer,
+#modalAluno.layout-debug-on .aluno-modal-footer {
+    background: rgba(251, 191, 36, 0.4) !important;
+    outline: 3px solid rgba(251, 191, 36, 0.9);
+}
+
 /* =====================================================
    MODAIS RESPONSIVOS - SISTEMA CFC BOM CONSELHO
    CSS para tornar todos os modais responsivos em mobile
@@ -161,6 +198,8 @@ html body #modalAgendarExame .modal-dialog {
    MODAIS CUSTOMIZADOS (custom-modal)
    ===================================================== */
 
+/* REGRAS DE VISIBILIDADE REMOVIDAS - usar apenas .custom-modal[data-opened="true"] em modal-form.css */
+/*
 .custom-modal {
     position: fixed !important;
     top: 0 !important;
@@ -174,7 +213,11 @@ html body #modalAgendarExame .modal-dialog {
     justify-content: center !important;
     padding: 1rem !important;
 }
+*/
 
+/* REGRAS DE POSICIONAMENTO REMOVIDAS - usar apenas .custom-modal-dialog em modal-form.css */
+/* Centralização controlada por .custom-modal (flex) + .custom-modal-dialog (margin: 0 auto) */
+/*
 .custom-modal-dialog {
     width: 100% !important;
     max-width: 90vw !important;
@@ -184,6 +227,7 @@ html body #modalAgendarExame .modal-dialog {
     align-items: center !important;
     justify-content: center !important;
 }
+*/
 
 .custom-modal-content {
     width: 100% !important;
@@ -280,55 +324,113 @@ html body #modalAgendarExame .modal-dialog {
     max-width: 1200px !important;
 }
 
-#modalAluno.custom-modal {
-    --aluno-modal-height: clamp(640px, 78vh, 780px);
-}
-
+/* REGRAS DE POSICIONAMENTO REMOVIDAS - usar apenas .custom-modal-dialog em modal-form.css */
+/* justify-content: center removido - centralização feita por .custom-modal (flex) + .custom-modal-dialog (margin: 0 auto) */
 #modalAluno .custom-modal-dialog {
-    height: var(--aluno-modal-height) !important;
-    max-height: var(--aluno-modal-height) !important;
-    min-height: var(--aluno-modal-height) !important;
     width: min(94vw, 1200px) !important;
     display: flex !important;
     align-items: stretch !important;
-    justify-content: center !important;
+    /* justify-content: center !important; REMOVIDO - causa desalinhamento */
+    height: min(760px, calc(100vh - (clamp(16px, 4vw, 48px) * 2))) !important;
+    min-height: min(480px, calc(100vh - (clamp(16px, 4vw, 48px) * 2))) !important;
+    max-height: calc(100vh - (clamp(16px, 4vw, 48px) * 2)) !important;
 }
 
 #modalAluno .custom-modal-content {
     height: 100% !important;
-    min-height: var(--aluno-modal-height) !important;
-    max-height: var(--aluno-modal-height) !important;
+    min-height: 0 !important;
+    max-height: 100% !important;
     display: flex !important;
     flex-direction: column !important;
+    align-items: stretch !important;
+    overflow: hidden !important;
     --aluno-modal-header-h: 56px;
     --aluno-modal-tabs-h: 60px;
-    --aluno-modal-footer-h: 64px;
-    --aluno-modal-body-h: max(360px, calc(var(--aluno-modal-height) - (var(--aluno-modal-header-h) + var(--aluno-modal-tabs-h) + var(--aluno-modal-footer-h))));
+    --aluno-modal-footer-h: 44px;
 }
 
 #modalAluno .custom-modal-content .modal-body.aluno-modal-body {
     flex: 1 1 auto !important;
-    padding: 0 !important;
-    background: #f8fafc !important;
-    min-height: var(--aluno-modal-body-h) !important;
-    max-height: var(--aluno-modal-body-h) !important;
+    padding: 24px 32px !important;
+    background: #ffffff !important;
+    min-height: 0 !important;
     overflow-y: auto !important;
 }
 
 #modalAluno .aluno-modal-body {
     flex: 1 1 auto !important;
-    padding: 0 !important;
-    background: #f8fafc !important;
-    min-height: var(--aluno-modal-body-h) !important;
-    max-height: var(--aluno-modal-body-h) !important;
+    padding: 24px 32px !important;
+    background: #ffffff !important;
+    min-height: 0 !important;
     overflow-y: auto !important;
 }
 
 #modalAluno .aluno-modal-panel {
-    height: var(--aluno-modal-body-h) !important;
-    min-height: var(--aluno-modal-body-h) !important;
-    max-height: var(--aluno-modal-body-h) !important;
-    overflow-y: auto !important;
+    height: auto !important;
+    min-height: unset !important;
+    max-height: none !important;
+    padding: 0 !important;
+    background: transparent !important;
+    box-sizing: border-box !important;
+}
+
+#modalAluno .aluno-modal-panel > .tab-content {
+    padding: 0 !important;
+    background: transparent !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+}
+
+#modalAluno .aluno-modal-panel > .tab-content > .tab-pane {
+    overflow: visible !important;
+}
+
+#modalAluno .aluno-tab-pane-inner {
+    padding: 0 !important;
+    overflow: visible !important;
+}
+
+#modalAluno .aluno-modal-panel .row {
+    --bs-gutter-y: 1.35rem !important;
+}
+
+#modalAluno .aluno-modal-panel .container-fluid > .row {
+    margin-bottom: 1.5rem !important;
+}
+
+#modalAluno .aluno-modal-panel .container-fluid > .row:last-child {
+    margin-bottom: 0 !important;
+}
+
+@media (max-width: 1024px) {
+    #modalAluno .custom-modal-content {
+        --aluno-modal-footer-h: 44px;
+    }
+
+    #modalAluno .aluno-modal-body {
+        padding: 20px 24px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    #modalAluno .custom-modal-content {
+        --aluno-modal-footer-h: 40px;
+    }
+
+    #modalAluno .aluno-modal-body {
+        padding: 18px 18px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    #modalAluno .custom-modal-content {
+        --aluno-modal-footer-h: 36px;
+    }
+
+    #modalAluno .aluno-modal-body {
+        padding: 16px 16px !important;
+    }
 }
 
 @media (max-width: 1200px) {
@@ -336,8 +438,9 @@ html body #modalAgendarExame .modal-dialog {
         max-width: 95vw !important;
     }
     
-    #modalAluno.custom-modal {
-        --aluno-modal-height: clamp(560px, 90vh, 720px);
+    #modalAluno .custom-modal-dialog {
+        height: min(700px, calc(100vh - (clamp(16px, 4vw, 48px) * 2))) !important;
+        max-height: calc(100vh - (clamp(16px, 4vw, 48px) * 2)) !important;
     }
 }
 
@@ -355,14 +458,16 @@ html body #modalAgendarExame .modal-dialog {
         padding: 0.5rem 0.75rem !important;
     }
     
-    #modalAluno.custom-modal {
-        --aluno-modal-height: clamp(540px, 92vh, 700px);
+    #modalAluno .custom-modal-dialog {
+        height: min(640px, calc(100vh - (clamp(16px, 4vw, 48px) * 2))) !important;
+        max-height: calc(100vh - (clamp(16px, 4vw, 48px) * 2)) !important;
     }
 }
 
 @media (max-width: 576px) {
-    #modalAluno.custom-modal {
-        --aluno-modal-height: clamp(520px, 94vh, 660px);
+    #modalAluno .custom-modal-dialog {
+        height: min(600px, calc(100vh - (clamp(16px, 4vw, 48px) * 2))) !important;
+        max-height: calc(100vh - (clamp(16px, 4vw, 48px) * 2)) !important;
     }
 }
 

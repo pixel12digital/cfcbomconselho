@@ -437,6 +437,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <!-- CSS para Modais Popup -->
     <link href="assets/css/popup-reference.css?v=<?php echo time(); ?>" rel="stylesheet">
     
+    <!-- CSS para Modais de Formulário Longo (Padrão) -->
+    <link href="assets/css/modal-form.css?v=<?php echo time(); ?>" rel="stylesheet">
+    
     <!-- CSS para Sistema de Modal Singleton -->
     <style>
         /* Modal Root - Sistema Singleton */

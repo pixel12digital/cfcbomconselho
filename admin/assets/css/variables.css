@@ -5,6 +5,11 @@
 
 :root {
     /* Cores Principais do Logo */
+    --cfc-primary: #0F1E4A;          /* Cor principal do CFC Bom Conselho */
+    --cfc-primary-soft: #E7ECF7;     /* Fundo suave relacionado ao primary */
+    --cfc-surface: #FFFFFF;          /* Fundos principais de cards/modais */
+    --cfc-surface-muted: #F3F4F6;    /* Fundo do footer / áreas neutras */
+    --cfc-border-subtle: #E5E7EB;    /* Bordas leves */
     --primary-color: #1e3a8a;        /* Azul Marinho */
     --primary-light: #3b82f6;        /* Azul Claro */
     --primary-dark: #1e40af;         /* Azul Escuro */

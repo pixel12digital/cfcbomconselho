@@ -115,53 +115,80 @@ async function fetchAPIAlunos(endpoint = '', options = {}) {
     }
 }
 
-// Função para abrir modal de aluno
-window.abrirModalAluno = function() {
-    console.log('🚀 Abrindo modal de aluno...');
-    
-    const modal = document.getElementById('modalAluno');
-    if (!modal) {
-        console.error('❌ Modal não encontrado!');
-        alert('Erro: Modal não encontrado na página!');
-        return;
-    }
-    
-    // Verificar se está em modo de edição
-    const acaoAluno = document.getElementById('acaoAluno');
-    const isEditing = acaoAluno && acaoAluno.value === 'editar';
-    
-    console.log('📋 Modo de edição:', isEditing);
-    
-    // Limpar formulário apenas se não estiver editando
-    const form = document.getElementById('formAluno');
-    if (form && !isEditing) {
-        console.log('🧹 Limpando formulário para novo aluno');
-        form.reset();
-        document.getElementById('acaoAluno').value = 'criar';
-        document.getElementById('aluno_id').value = '';
-        document.getElementById('modalTitle').textContent = 'Novo Aluno';
-    } else if (isEditing) {
-        console.log('✏️ Mantendo dados do formulário para edição');
-    }
-    
-    // Mostrar modal
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-    
-    console.log('✅ Modal aberto com sucesso!');
-};
+// =====================================================
+// CONTROLE DE VISIBILIDADE DO MODAL - PADRÃO ÚNICO
+// =====================================================
 
-// Função para fechar modal de aluno
-window.fecharModalAluno = function() {
-    console.log('🚪 Fechando modal de aluno...');
-    
-    const modal = document.getElementById('modalAluno');
-    if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        console.log('✅ Modal fechado!');
+function abrirModalAluno(modo = 'novo', alunoId = null) {
+  const modal = document.getElementById('modalAluno');
+  if (!modal) {
+    console.warn('[modalAluno] Elemento #modalAluno não encontrado.');
+    return;
+  }
+
+  // visibilidade e centralização (sempre igual, independente do modo)
+  modal.dataset.opened = 'true';
+  document.body.style.overflow = 'hidden';
+
+  // garante que o conteúdo do modal começa no topo
+  const bodyEl = modal.querySelector('.aluno-modal-body');
+  if (bodyEl) {
+    bodyEl.scrollTop = 0;
+  }
+
+  // lógica de modo (apenas título/campos, sem mexer em posição)
+  const tituloEl = modal.querySelector('.aluno-modal-title');
+  if (tituloEl) {
+    if (modo === 'editar') {
+      tituloEl.innerHTML = '<i class="fas fa-user-edit me-2"></i>Editar Aluno';
+    } else {
+      tituloEl.innerHTML = '<i class="fas fa-user-plus me-2"></i>Novo Aluno';
     }
-};
+  }
+
+  // Configurar campos hidden se necessário
+  const acaoEl = document.getElementById('acaoAluno');
+  const alunoIdEl = document.getElementById('aluno_id_hidden');
+  if (acaoEl) {
+    acaoEl.value = (modo === 'editar') ? 'editar' : 'criar';
+  }
+  if (alunoIdEl && alunoId) {
+    alunoIdEl.value = alunoId;
+  }
+
+  // Debug: verificar centralização
+  const dialog = modal.querySelector('.custom-modal-dialog');
+  if (dialog) {
+    const rect = dialog.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const leftGap = rect.left;
+    const rightGap = viewportWidth - rect.right;
+    console.log('[modalAluno]', modo, { viewportWidth, leftGap, rightGap, diff: Math.abs(leftGap - rightGap) });
+  }
+
+  console.log('[modalAluno] abrirModalAluno chamado, modo:', modo, 'alunoId:', alunoId, 'data-opened=true');
+}
+
+function fecharModalAluno() {
+  const modal = document.getElementById('modalAluno');
+  if (!modal) {
+    console.warn('[modalAluno] Elemento #modalAluno não encontrado (fechar).');
+    return;
+  }
+
+  modal.dataset.opened = 'false';
+
+  // libera o scroll do fundo
+  document.body.style.overflow = '';
+
+  console.log('[modalAluno] fecharModalAluno chamado, data-opened=false');
+}
+
+// expõe explicitamente no escopo global
+window.abrirModalAluno = abrirModalAluno;
+window.fecharModalAluno = fecharModalAluno;
+
+console.log('[modalAluno] funções abrir/fechar registradas no window.');
 
 // Função para salvar aluno
 window.salvarAluno = async function() {
@@ -311,20 +338,9 @@ window.editarAluno = async function(id) {
                 throw new Error('Dados do aluno não encontrados na resposta da API');
             }
             
-            // Configurar modal para edição ANTES de abrir
-            document.getElementById('modalTitle').textContent = 'Editar Aluno';
-            document.getElementById('acaoAluno').value = 'editar';
-            document.getElementById('aluno_id').value = id;
-            
-            // Abrir modal SEM limpar formulário
-            const modal = document.getElementById('modalAluno');
-            if (!modal) {
-                throw new Error('Modal não encontrado');
-            }
-            
-            // Mostrar modal
-            modal.style.display = 'block';
-            document.body.style.overflow = 'hidden';
+            // Abrir modal usando padrão único (centralização e visibilidade)
+            // A função abrirModalAluno já configura título e campos hidden
+            abrirModalAluno('editar', id);
             
             console.log('✅ Modal aberto para edição');
             
@@ -564,7 +580,7 @@ document.addEventListener('DOMContentLoaded', function() {
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
             const modal = document.getElementById('modalAluno');
-            if (modal && modal.style.display === 'block') {
+            if (modal && modal.dataset.opened === 'true') {
                 fecharModalAluno();
             }
         }

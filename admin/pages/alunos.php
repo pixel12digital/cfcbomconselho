@@ -37,6 +37,11 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
 }
 
 /* Modal de visualização personalizado */
+/* CSS ANTIGO DO MODAL DE VISUALIZAÇÃO - REMOVIDO
+   Agora usa o mesmo padrão do #modalAluno (.custom-modal, .custom-modal-dialog, etc.)
+   Regras específicas estão em admin/assets/css/modal-form.css
+*/
+/*
 #modalVisualizarAluno {
     display: none;
     position: fixed;
@@ -137,6 +142,7 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
 
 #modalVisualizarAluno .visualizar-close:hover {
     background: rgba(255, 255, 255, 0.28);
+*/
     transform: scale(1.08);
 }
 
@@ -144,16 +150,8 @@ body.visualizar-aluno-open {
     overflow: hidden !important;
 }
 
-/* Modal de edição/novo aluno */
-#modalAluno {
-    display: none;
-    visibility: hidden;
-}
-
-#modalAluno[data-opened="true"] {
-    display: flex !important;
-    visibility: visible !important;
-}
+/* NOTA: Controle de visibilidade do modal está em modal-form.css */
+/* Regras removidas - usar apenas .custom-modal[data-opened="true"] */
 
 /* Suavizar opacidade do backdrop */
 .modal-backdrop.show {
@@ -872,271 +870,14 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
 }
 
 /* =====================================================
-   ESTILOS PERSONALIZADOS PARA MODAL DE ALUNOS
-   Sobrescrevendo Bootstrap com especificidade máxima
+   ESTILOS DO MODAL DE ALUNOS
+   =====================================================
+   NOTA: As regras estruturais principais do modal foram
+   movidas para admin/assets/css/modal-form.css
+   
+   Mantendo aqui apenas regras específicas que não são
+   parte do padrão estrutural.
    ===================================================== */
-
-/* Modal quase fullscreen com margens pequenas */
-.modal#modalAluno .modal-dialog {
-    max-width: calc(100vw - 2rem) !important;
-    max-height: calc(100vh - 2rem) !important;
-    width: calc(100vw - 2rem) !important;
-    height: calc(100vh - 2rem) !important;
-    margin: 1rem !important;
-    padding: 0 !important;
-}
-
-/* Para telas muito pequenas, usar margens menores */
-@media (max-width: 576px) {
-    .modal#modalAluno .modal-dialog {
-        max-width: calc(100vw - 0.5rem) !important;
-        max-height: calc(100vh - 0.5rem) !important;
-        width: calc(100vw - 0.5rem) !important;
-        height: calc(100vh - 0.5rem) !important;
-        margin: 0.25rem !important;
-    }
-}
-
-.modal#modalAluno .modal-content {
-    height: 100% !important;
-    border-radius: 0.5rem !important;
-    border: none !important;
-    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
-}
-
-.modal#modalAluno .modal-body {
-    flex: 1 1 auto !important;
-    height: 100% !important;
-    max-height: 100% !important;
-    min-height: 0 !important;
-    overflow: hidden !important;
-    padding: 0 !important;
-    background-color: #f8f9fa !important;
-}
-
-.modal#modalAluno .modal-header {
-    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%) !important;
-    color: white !important;
-    border-bottom: none !important;
-    padding: 1rem 1.5rem !important;
-    border-radius: 0.5rem 0.5rem 0 0 !important;
-}
-
-/* Responsividade do modal-header */
-@media (max-width: 768px) {
-    .modal#modalAluno .modal-header {
-        padding: 0.75rem 1rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .modal#modalAluno .modal-header {
-        padding: 0.5rem 0.75rem !important;
-    }
-}
-
-.modal#modalAluno .modal-title {
-    color: white !important;
-    font-weight: 600 !important;
-    font-size: 1.5rem !important;
-}
-
-/* Responsividade do modal-title */
-@media (max-width: 768px) {
-    .modal#modalAluno .modal-title {
-        font-size: 1.25rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .modal#modalAluno .modal-title {
-        font-size: 1.1rem !important;
-    }
-}
-
-.modal#modalAluno .btn-close {
-    filter: invert(1) !important;
-}
-
-.modal#modalAluno .modal-footer {
-    background-color: #f8f9fa !important;
-    border-top: 1px solid #dee2e6 !important;
-    padding: 1rem 1.5rem !important;
-    border-radius: 0 0 0.5rem 0.5rem !important;
-}
-
-/* Responsividade do modal-footer */
-@media (max-width: 768px) {
-    .modal#modalAluno .modal-footer {
-        padding: 0.75rem 1rem !important;
-    }
-}
-
-@media (max-width: 576px) {
-    .modal#modalAluno .modal-footer {
-        padding: 0.5rem 0.75rem !important;
-    }
-}
-
-/* Melhorias para scroll do modal */
-.custom-modal .modal-body {
-    scrollbar-width: thin;
-    scrollbar-color: #6c757d #f8f9fa;
-}
-
-.custom-modal .modal-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.custom-modal .modal-body::-webkit-scrollbar-track {
-    background: #f8f9fa;
-    border-radius: 4px;
-}
-.custom-modal .modal-body::-webkit-scrollbar-thumb {
-    background: #6c757d;
-    border-radius: 4px;
-}
-
-.custom-modal .modal-body::-webkit-scrollbar-thumb:hover {
-    background: #495057;
-}
-
-/* Garantir que os botões sejam sempre visíveis */
-.custom-modal .modal-footer {
-    position: sticky !important;
-    bottom: 0 !important;
-    background-color: #f8f9fa !important;
-    border-top: 1px solid #dee2e6 !important;
-    z-index: 10 !important;
-}
-
-/* Responsividade para telas menores */
-@media (max-height: 768px) {
-    .custom-modal-content {
-        max-height: 85vh !important;
-    }
-    
-    .custom-modal .modal-body {
-        max-height: calc(85vh - 140px) !important;
-    }
-}
-
-@media (max-height: 600px) {
-    .custom-modal-content {
-        max-height: 80vh !important;
-    }
-    
-    .custom-modal .modal-body {
-        max-height: calc(80vh - 140px) !important;
-    }
-}
-
-/* =====================================================
-   RESPONSIVIDADE PARA ABAS DO MODAL - MOBILE
-   ===================================================== */
-
-@media (max-width: 768px) {
-    /* Garantir que modal seja visível no mobile */
-    #modalAluno[data-opened="true"] {
-        z-index: 99999 !important;
-        position: fixed !important;
-        top: 0 !important;
-        left: 0 !important;
-        width: 100vw !important;
-        height: 100vh !important;
-        background: rgba(0,0,0,0.5) !important;
-    }
-    
-    /* Abas do modal - Mobile */
-    .modal#modalAluno .nav-tabs {
-        flex-wrap: wrap !important;
-        gap: 0.25rem !important;
-        padding: 0.5rem !important;
-        background-color: #f8f9fa !important;
-        border-radius: 0.5rem !important;
-        margin-bottom: 1rem !important;
-        border: none !important;
-    }
-    
-    .modal#modalAluno .nav-tabs .nav-link {
-        flex: 1 1 calc(50% - 0.125rem) !important;
-        min-width: calc(50% - 0.125rem) !important;
-        max-width: calc(50% - 0.125rem) !important;
-        padding: 0.5rem 0.25rem !important;
-        font-size: 0.75rem !important;
-        text-align: center !important;
-        border-radius: 0.375rem !important;
-        margin: 0 !important;
-        border: 1px solid #dee2e6 !important;
-        background-color: white !important;
-        color: #6c757d !important;
-        transition: all 0.2s ease !important;
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        min-height: 60px !important;
-    }
-    
-    .modal#modalAluno .nav-tabs .nav-link:hover {
-        background-color: #e9ecef !important;
-        color: #495057 !important;
-        transform: translateY(-1px) !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-    }
-    
-    .modal#modalAluno .nav-tabs .nav-link.active {
-        background-color: #0d6efd !important;
-        color: white !important;
-        border-color: #0d6efd !important;
-        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3) !important;
-    }
-    
-    .modal#modalAluno .nav-tabs .nav-link i {
-        display: block !important;
-        font-size: 1.1rem !important;
-        margin-bottom: 0.25rem !important;
-    }
-    
-    .modal#modalAluno .nav-tabs .nav-link span {
-        display: block !important;
-        font-weight: 500 !important;
-        line-height: 1.2 !important;
-        font-size: 0.7rem !important;
-    }
-    
-    /* Conteúdo das abas - Mobile */
-    .modal#modalAluno .tab-content {
-        padding: 0.5rem !important;
-    }
-    
-    .modal#modalAluno .tab-pane {
-        padding: 0.5rem !important;
-    }
-}
-
-@media (max-width: 480px) {
-    /* Abas em uma coluna para telas muito pequenas */
-    .modal#modalAluno .nav-tabs .nav-link {
-        flex: 1 1 100% !important;
-        min-width: 100% !important;
-        max-width: 100% !important;
-        margin-bottom: 0.25rem !important;
-        min-height: 50px !important;
-    }
-    
-    .modal#modalAluno .nav-tabs .nav-link:last-child {
-        margin-bottom: 0 !important;
-    }
-    
-    .modal#modalAluno .nav-tabs .nav-link i {
-        font-size: 1rem !important;
-    }
-    
-    .modal#modalAluno .nav-tabs .nav-link span {
-        font-size: 0.65rem !important;
-    }
-}
 
 /* Estilos dos formulários */
 .modal#modalAluno .form-label {
@@ -1157,12 +898,12 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
 
 .modal#modalAluno .form-control:focus,
 .modal#modalAluno .form-select:focus {
-    border-color: #0d6efd !important;
-    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+    border-color: var(--cfc-primary, #0F1E4A) !important;
+    box-shadow: 0 0 0 0.2rem rgba(15, 30, 74, 0.25) !important;
 }
 
 .modal#modalAluno .text-primary {
-    color: #0d6efd !important;
+    color: var(--cfc-primary, #0F1E4A) !important;
 }
 
 .modal#modalAluno .border-bottom {
@@ -1175,14 +916,14 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
 }
 
 .modal#modalAluno .form-range::-webkit-slider-thumb {
-    background: #0d6efd !important;
+    background: var(--cfc-primary, #0F1E4A) !important;
     border-radius: 50% !important;
     width: 20px !important;
     height: 20px !important;
 }
 
 .modal#modalAluno .form-range::-moz-range-thumb {
-    background: #0d6efd !important;
+    background: var(--cfc-primary, #0F1E4A) !important;
     border-radius: 50% !important;
     width: 20px !important;
     height: 20px !important;
@@ -1245,7 +986,7 @@ body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
     padding: 0.75rem 1rem !important;
     border-radius: 0.375rem !important;
     margin-bottom: 1.5rem !important;
-    border-left: 4px solid #0d6efd !important;
+    border-left: 4px solid var(--cfc-primary, #0F1E4A) !important;
     font-weight: 600 !important;
     color: #495057 !important;
 }
@@ -1533,44 +1274,13 @@ input.form-control.invalid {
    NOVO LAYOUT DO MODAL DE CADASTRO/EDIÇÃO DE ALUNOS
    ===================================================== */
 
-#modalAluno {
-    display: none;
-}
+/* NOTA: Regras estruturais do modal estão em modal-form.css */
 
-#modalAluno.custom-modal {
-    position: fixed;
-    inset: 0;
-    width: 100vw;
-    min-height: 100vh;
-    background: rgba(15, 23, 42, 0.55);
-    z-index: 9999;
-    padding: clamp(16px, 4vw, 48px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-sizing: border-box;
-}
-
-#modalAluno.custom-modal[data-opened="true"],
-#modalAluno.custom-modal[style*="display: block"],
-#modalAluno.custom-modal[style*="display:block"] {
-    display: flex !important;
-}
-
-#modalAluno .custom-modal-dialog {
-    --aluno-modal-height: clamp(640px, 78vh, 780px);
-    width: min(95vw, 1080px);
-    max-width: 1080px;
-    height: var(--aluno-modal-height);
-    min-height: var(--aluno-modal-height);
-    max-height: var(--aluno-modal-height);
-    position: relative;
-    margin: 0;
-    display: flex;
-    justify-content: center;
-    align-items: stretch;
-}
-
+/* CSS ANTIGO DO MODAL DE VISUALIZAÇÃO - REMOVIDO
+   Agora usa o mesmo padrão do #modalAluno (.custom-modal, .custom-modal-dialog, etc.)
+   Regras específicas estão em admin/assets/css/modal-form.css
+*/
+/*
 #modalVisualizarAluno.custom-modal,
 #modalVisualizarAluno {
     position: fixed;
@@ -1603,412 +1313,68 @@ input.form-control.invalid {
     transform: translateX(-50%);
     margin: 0;
 }
+*/
 
+/* CSS ANTIGO DO MODAL DE VISUALIZAÇÃO - REMOVIDO
+   Agora usa o mesmo padrão do #modalAluno (.custom-modal, .custom-modal-dialog, etc.)
+   Regras específicas estão em admin/assets/css/modal-form.css
+*/
+/*
 #modalVisualizarAluno .custom-modal-content {
     width: 100%;
     border-radius: 16px;
     overflow: hidden;
 }
+*/
 
-#modalAluno .custom-modal-content {
-    width: 100%;
-    height: 100%;
-    min-height: var(--aluno-modal-height);
-    max-height: var(--aluno-modal-height);
-    border-radius: 12px;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
-    background: #ffffff;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-    position: relative;
-    --aluno-modal-max-h: var(--aluno-modal-height);
-    --aluno-modal-body-h: max(360px, calc(var(--aluno-modal-max-h) - (var(--aluno-modal-header-h) + var(--aluno-modal-tabs-h) + var(--aluno-modal-footer-h))));
+/* NOTA: Regras estruturais do modal estão em modal-form.css */
+
+/* =====================================================
+   DEBUG VISUAL - DESATIVADO POR PADRÃO
+   Para ativar, adicione a classe `layout-debug` em #modalAluno
+   ===================================================== */
+/*
+#modalAluno.layout-debug,
+#modalAluno.layout-debug-on {
+    outline: 4px solid rgba(148, 163, 184, 0.65);
+    box-shadow: 0 0 0 6px rgba(148, 163, 184, 0.25);
 }
 
-.aluno-modal-form {
-    display: flex;
-    flex-direction: column;
-    flex: 1;
-    min-height: 0;
+#modalAluno.layout-debug .custom-modal-content,
+#modalAluno.layout-debug-on .custom-modal-content {
+    outline: 4px solid rgba(148, 163, 184, 0.8);
+    box-shadow: 0 0 0 4px rgba(148, 163, 184, 0.35) inset;
+    background: rgba(255, 255, 255, 0.95);
 }
 
-.aluno-modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-    background: var(--primary-600, #0d6efd);
-    color: #fff;
-    padding: 16px 24px;
-    min-height: var(--aluno-modal-header-h, 56px);
+#modalAluno.layout-debug .aluno-modal-header,
+#modalAluno.layout-debug-on .aluno-modal-header {
+    background: rgba(220, 38, 38, 0.35) !important;
+    outline: 3px solid rgba(220, 38, 38, 0.75);
 }
 
-.aluno-modal-title {
-    margin: 0;
-    font-size: 1.35rem;
-    font-weight: 600;
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    color: inherit;
+#modalAluno.layout-debug .aluno-modal-tabs,
+#modalAluno.layout-debug-on .aluno-modal-tabs {
+    background: rgba(34, 197, 94, 0.35) !important;
+    outline: 3px solid rgba(34, 197, 94, 0.75);
 }
 
-.aluno-modal-title i {
-    font-size: 1.25rem;
+#modalAluno.layout-debug .aluno-modal-body,
+#modalAluno.layout-debug-on .aluno-modal-body {
+    background: rgba(59, 130, 246, 0.25) !important;
+    outline: 3px dashed rgba(59, 130, 246, 0.9);
 }
 
-.aluno-modal-close {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: rgba(255, 255, 255, 0.2);
-    border: none;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 0;
-    opacity: 1;
-    background-image: none;
-    color: #ffffff;
+#modalAluno.layout-debug .aluno-modal-footer,
+#modalAluno.layout-debug-on .aluno-modal-footer {
+    background: rgba(251, 191, 36, 0.4) !important;
+    outline: 3px solid rgba(251, 191, 36, 0.9);
 }
+*/
 
-.aluno-modal-close:focus-visible {
-    outline: none;
-    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
-}
+/* NOTA: Regras de formulário estão em modal-form.css */
 
-.aluno-modal-close::after {
-    content: "\00d7";
-    font-size: 1.4rem;
-    line-height: 1;
-    color: #fff;
-    font-weight: 300;
-}
-
-#modalAluno .aluno-modal-body {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-    padding: 0;
-    background: #f8fafc;
-    flex: 1 1 auto;
-    min-height: 0;
-    height: 100%;
-    max-height: 100%;
-}
-
-.aluno-modal-tabs {
-    display: flex;
-    align-items: center;
-    padding: 0 24px 12px;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    min-height: var(--aluno-modal-tabs-h, 60px);
-}
-
-.aluno-tabs {
-    border-bottom: none;
-    display: flex;
-    gap: 12px;
-    width: 100%;
-    height: 48px;
-    align-items: flex-end;
-}
-
-.aluno-tabs .nav-item {
-    display: flex;
-}
-
-.aluno-tabs .nav-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 0 16px;
-    border: none;
-    border-radius: 10px 10px 0 0;
-    color: #475569;
-    font-weight: 600;
-    background: transparent;
-    height: 48px;
-    position: relative;
-    transition: color 0.2s ease, background 0.2s ease;
-}
-
-.aluno-tabs .nav-link i {
-    font-size: 1.1rem;
-}
-
-.aluno-tabs .nav-link:hover {
-    color: #0f172a;
-    background: rgba(15, 23, 42, 0.05);
-}
-
-.aluno-tabs .nav-link.active {
-    color: #0f172a;
-    background: #ffffff;
-}
-
-.aluno-tabs .nav-link.active::after {
-    content: "";
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    bottom: -4px;
-    height: 2px;
-    background: var(--primary-600, #0d6efd);
-    border-radius: 999px;
-}
-
-#modalAluno .custom-modal-content {
-    --aluno-modal-header-h: 56px;
-    --aluno-modal-tabs-h: 60px;
-    --aluno-modal-footer-h: 64px;
-}
-
-#modalAluno .aluno-modal-panel {
-    flex: 1 1 auto;
-    display: flex;
-    flex-direction: column;
-    min-height: 0;
-    height: 100%;
-    padding: 20px;
-    background: #f8fafc;
-    gap: 0;
-    scrollbar-width: thin;
-}
-
-#modalAluno .aluno-modal-panel > .tab-content::-webkit-scrollbar {
-    width: 8px;
-}
-
-#modalAluno .aluno-modal-panel > .tab-content::-webkit-scrollbar-track {
-    background: #edf2f7;
-    border-radius: 4px;
-}
-
-#modalAluno .aluno-modal-panel > .tab-content::-webkit-scrollbar-thumb {
-    background: #94a3b8;
-    border-radius: 4px;
-}
-
-#modalAluno .aluno-modal-panel > .tab-content::-webkit-scrollbar-thumb:hover {
-    background: #64748b;
-}
-
-#modalAluno .aluno-modal-panel > .tab-content {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow: auto;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-#modalAluno .aluno-modal-panel > .tab-content > .tab-pane {
-    flex: 1 1 auto;
-    min-height: 0;
-    padding: 0;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-}
-
-#modalAluno .aluno-modal-panel > .tab-content > .tab-pane.active {
-    display: flex !important;
-}
-
-#modalAluno .aluno-tab-pane-inner {
-    flex: 1 1 auto;
-    min-height: 0;
-    overflow-y: auto;
-    padding: 0 4px 24px 4px;
-}
-
-#modalAluno .aluno-modal-panel .row {
-    --bs-gutter-x: 1rem;
-    --bs-gutter-y: 1rem;
-}
-
-#modalAluno .aluno-tab-content {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-}
-
-#modalAluno .aluno-tab-content .tab-pane {
-    flex: 1 1 auto;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-#modalAluno .aluno-modal-panel h6 {
-    font-size: 0.88rem !important;
-    font-weight: 600 !important;
-    color: #1e293b !important;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-#modalAluno .form-label {
-    font-size: 0.8rem !important;
-    font-weight: 600 !important;
-    color: #475569 !important;
-    margin-bottom: 0.35rem !important;
-}
-
-#modalAluno .form-control,
-#modalAluno .form-select {
-    min-height: 40px !important;
-    padding: 0 12px !important;
-    font-size: 0.94rem !important;
-    border-radius: 10px !important;
-    border: 1px solid #cbd5e1 !important;
-    color: #1f2937 !important;
-}
-
-#modalAluno .form-control:focus,
-#modalAluno .form-select:focus {
-    border-color: var(--primary-600, #0d6efd) !important;
-    box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.18) !important;
-}
-
-#modalAluno textarea.form-control {
-    min-height: 96px;
-    padding: 12px !important;
-    resize: vertical;
-}
-
-.aluno-modal-footer {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 12px;
-    padding: 16px 24px;
-    background: #ffffff;
-    border-top: 1px solid #e2e8f0;
-    position: sticky;
-    bottom: 0;
-    flex-shrink: 0;
-    min-height: var(--aluno-modal-footer-h, 64px);
-}
-
-.aluno-btn-cancelar,
-.aluno-btn-salvar {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    padding: 0 18px;
-    min-height: 40px;
-    font-weight: 600;
-    border-radius: 10px;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-}
-
-.aluno-btn-cancelar {
-    border: 1px solid transparent;
-    background: transparent;
-    color: #475569;
-}
-
-.aluno-btn-cancelar:hover {
-    background: #f1f5f9;
-    color: #0f172a;
-}
-.aluno-btn-salvar {
-    padding-inline: 20px;
-}
-.aluno-btn-salvar:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 10px 20px rgba(13, 110, 253, 0.18);
-}
-.aluno-modal-footer .btn i {
-    font-size: 0.95rem;
-}
-@media (max-width: 1024px) {
-    #modalAluno .custom-modal-dialog {
-        --aluno-modal-height: clamp(600px, 82vh, 760px);
-        width: min(95vw, 1024px);
-        max-width: 1024px;
-    }
-
-    #modalAluno .aluno-modal-panel {
-        padding: 20px;
-    }
-}
-
-@media (max-width: 768px) {
-    #modalAluno .custom-modal-dialog {
-        --aluno-modal-height: clamp(520px, 90vh, 700px);
-        width: 100%;
-    }
-
-    #modalAluno .custom-modal-content {
-        border-radius: 10px;
-    }
-
-    .aluno-modal-header {
-        padding: 14px 20px;
-    }
-
-    .aluno-modal-tabs {
-        padding: 0 16px;
-        overflow-x: auto;
-    }
-
-    .aluno-tabs {
-        gap: 8px;
-    }
-
-    .aluno-tabs .nav-link {
-        padding: 0 14px;
-        white-space: nowrap;
-    }
-
-    #modalAluno .aluno-modal-panel {
-        padding: 18px;
-    }
-}
-
-@media (max-width: 576px) {
-    #modalAluno .custom-modal-dialog {
-        padding: 0;
-    }
-
-    .aluno-modal-header,
-    .aluno-modal-footer {
-        padding: 14px 16px;
-    }
-
-    #modalAluno .aluno-modal-panel {
-        padding: 16px;
-    }
-
-    .aluno-tabs {
-        height: auto;
-    }
-
-    .aluno-tabs .nav-link {
-        height: 44px;
-    }
-
-    .aluno-btn-cancelar,
-    .aluno-btn-salvar {
-        flex: 1 1 auto;
-        justify-content: center;
-    }
-
-    .aluno-modal-footer {
-        flex-wrap: wrap;
-    }
-}
+/* NOTA: Regras estruturais do footer e responsividade estão em modal-form.css */
 </style>
 
 <div class="alunos-header d-flex justify-content-between flex-wrap align-items-center">
@@ -2391,558 +1757,480 @@ input.form-control.invalid {
         </div>
     </div>
 </div>
-<!-- Modal Customizado para Cadastro/Edição de Aluno -->
-<div id="modalAluno" class="custom-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-    <div class="custom-modal-dialog">
-        <div class="custom-modal-content">
-            <form id="formAluno" method="POST" class="aluno-modal-form">
-                <div class="aluno-modal-header modal-header">
-                    <h2 class="aluno-modal-title" id="modalTitle">
-                        <i class="fas fa-user-graduate me-2" aria-hidden="true"></i>
-                        <span>Novo Aluno</span>
-                    </h2>
-                    <button type="button" class="btn-close aluno-modal-close" onclick="fecharModalAluno()" aria-label="Fechar modal"></button>
-                </div>
-                <input type="hidden" name="acao" id="acaoAluno" value="criar">
-                <input type="hidden" name="aluno_id" id="aluno_id_hidden" value="">
-
-                <div class="aluno-modal-tabs">
-                    <ul class="nav nav-tabs aluno-tabs" id="alunoTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="dados-tab" data-bs-toggle="tab" data-bs-target="#dados" type="button" role="tab">
-                                <i class="fas fa-user"></i>
-                                <span>Dados</span>
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="matricula-tab" data-bs-toggle="tab" data-bs-target="#matricula" type="button" role="tab">
-                                <i class="fas fa-graduation-cap"></i>
-                                <span>Matrícula</span>
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation" id="financeiro-tab-container" style="display: none;">
-                            <button class="nav-link" id="financeiro-tab" data-bs-toggle="tab" data-bs-target="#financeiro" type="button" role="tab">
-                                <i class="fas fa-dollar-sign"></i>
-                                <span>Financeiro</span>
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation" id="documentos-tab-container" style="display: none;">
-                            <button class="nav-link" id="documentos-tab" data-bs-toggle="tab" data-bs-target="#documentos" type="button" role="tab">
-                                <i class="fas fa-file-alt"></i>
-                                <span>Documentos</span>
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="agenda-tab" data-bs-toggle="tab" data-bs-target="#agenda" type="button" role="tab">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span>Agenda</span>
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="teorico-tab" data-bs-toggle="tab" data-bs-target="#teorico" type="button" role="tab">
-                                <i class="fas fa-chalkboard-teacher"></i>
-                                <span>Teórico</span>
-                            </button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="historico-tab" data-bs-toggle="tab" data-bs-target="#historico" type="button" role="tab">
-                                <i class="fas fa-history"></i>
-                                <span>Histórico</span>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-
-                <div class="aluno-modal-body modal-body">
-                    <div class="aluno-modal-panel">
-                    <div class="tab-content aluno-tab-content" id="alunoTabsContent">
-                        <!-- Aba Dados -->
-                        <div class="tab-pane fade show active" id="dados" role="tabpanel">
-                    
-                    <div class="container-fluid" style="padding: 0;">
-                        <!-- Seção 1: Informações Pessoais -->
-                        <div class="row mb-2">
-                            <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                                    <i class="fas fa-user me-1"></i>Informações Pessoais
-                                </h6>
-                            </div>
-                            
-                            <!-- Campo de Foto -->
-                            <div class="col-12 mb-3">
-                                <div class="row">
-                                    <div class="col-md-4">
-                                        <div class="mb-2">
-                                            <label for="foto" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Foto (Opcional)</label>
-                                            <input type="file" class="form-control" id="foto" name="foto" accept="image/*" 
-                                                   style="padding: 0.4rem; font-size: 0.85rem;" onchange="previewFotoAluno(this)">
-                                            <small class="text-muted" style="font-size: 0.75rem;">📷 JPG, PNG, GIF, WebP até 2MB</small>
-                                        </div>
-                                    </div>
-                                    <div class="col-md-8">
-                                        <div class="text-center">
-                                            <div id="preview-container-aluno" style="display: none;">
-                                                <img id="foto-preview-aluno" src="" alt="Preview da foto" 
-                                                     style="max-width: 150px; max-height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dee2e6;">
-                                                <div class="mt-2">
-                                                    <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerFotoAluno()">
-                                                        <i class="fas fa-trash"></i> Remover
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div id="placeholder-foto-aluno" class="text-muted" style="font-size: 0.8rem;">
-                                                <i class="fas fa-user-circle fa-3x"></i><br>
-                                                Nenhuma foto selecionada
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1">
-                                    <label for="nome" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nome Completo *</label>
-                                    <input type="text" class="form-control" id="nome" name="nome" required 
-                                           placeholder="Nome completo do aluno" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="mb-1">
-                                    <label for="cpf" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CPF *</label>
-                                    <input type="text" class="form-control" id="cpf" name="cpf" required 
-                                           placeholder="000.000.000-00" style="padding: 0.4rem; font-size: 0.85rem;"
-                                           data-mask="cpf" data-validate="required|cpf" maxlength="14">
-                                    <div class="cpf-validation-feedback" style="font-size: 0.75rem; margin-top: 0.25rem; display: none;"></div>
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="mb-1">
-                                    <label for="rg" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">RG</label>
-                                    <input type="text" class="form-control" id="rg" name="rg" 
-                                           placeholder="Digite o RG (aceita letras)" maxlength="30" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="mb-1">
-                                    <label for="renach" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Renach *</label>
-                                    <input type="text" class="form-control" id="renach" name="renach" required 
-                                           placeholder="PE000000000" maxlength="11" style="padding: 0.4rem; font-size: 0.85rem;"
-                                           data-mask="renach">
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="mb-1">
-                                    <label for="data_nascimento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Data Nasc. *</label>
-                                    <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="mb-1">
-                                    <label for="status" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status</label>
-                                    <select class="form-select" id="status" name="status" style="padding: 0.4rem; font-size: 0.85rem;">
-                                        <option value="ativo">Ativo</option>
-                                        <option value="inativo">Inativo</option>
-                                        <option value="concluido">Concluído</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1">
-                                    <label for="atividade_remunerada" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Atividade Remunerada</label>
-                                    <div class="form-check mt-2">
-                                        <input class="form-check-input" type="checkbox" id="atividade_remunerada" name="atividade_remunerada" value="1" style="font-size: 0.9rem;">
-                                        <label class="form-check-label" for="atividade_remunerada" style="font-size: 0.85rem;">
-                                            <i class="fas fa-briefcase me-1"></i>CNH com atividade remunerada
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-2">
-                            <div class="col-md-3">
-                                <div class="mb-1">
-                                    <label for="naturalidade_estado" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Estado</label>
-                                    <select class="form-select" id="naturalidade_estado" name="naturalidade_estado" style="padding: 0.4rem; font-size: 0.85rem;">
-                                        <option value="">Selecione o estado...</option>
-                                        <option value="AC">Acre</option>
-                                        <option value="AL">Alagoas</option>
-                                        <option value="AP">Amapá</option>
-                                        <option value="AM">Amazonas</option>
-                                        <option value="BA">Bahia</option>
-                                        <option value="CE">Ceará</option>
-                                        <option value="DF">Distrito Federal</option>
-                                        <option value="ES">Espírito Santo</option>
-                                        <option value="GO">Goiás</option>
-                                        <option value="MA">Maranhão</option>
-                                        <option value="MT">Mato Grosso</option>
-                                        <option value="MS">Mato Grosso do Sul</option>
-                                        <option value="MG">Minas Gerais</option>
-                                        <option value="PA">Pará</option>
-                                        <option value="PB">Paraíba</option>
-                                        <option value="PR">Paraná</option>
-                                        <option value="PE">Pernambuco</option>
-                                        <option value="PI">Piauí</option>
-                                        <option value="RJ">Rio de Janeiro</option>
-                                        <option value="RN">Rio Grande do Norte</option>
-                                        <option value="RS">Rio Grande do Sul</option>
-                                        <option value="RO">Rondônia</option>
-                                        <option value="RR">Roraima</option>
-                                        <option value="SC">Santa Catarina</option>
-                                        <option value="SP">São Paulo</option>
-                                        <option value="SE">Sergipe</option>
-                                        <option value="TO">Tocantins</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-1">
-                                    <label for="naturalidade_municipio" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Município</label>
-                                    <select class="form-select" id="naturalidade_municipio" name="naturalidade_municipio" style="padding: 0.4rem; font-size: 0.85rem;" disabled>
-                                        <option value="">Primeiro selecione o estado</option>
-                                    </select>
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1">
-                                    <label for="nacionalidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nacionalidade</label>
-                                    <input type="text" class="form-control" id="nacionalidade" name="nacionalidade" 
-                                           placeholder="Brasileira" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <div class="col-md-2">
-                                <div class="mb-1">
-                                    <label class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">&nbsp;</label>
-                                    <input type="hidden" id="naturalidade" name="naturalidade">
-                                    <button type="button" class="btn btn-outline-secondary w-100" id="btnLimparNaturalidade" 
-                                            style="padding: 0.4rem; font-size: 0.8rem;" title="Limpar seleção">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-2">
-                            <div class="col-md-4">
-                                <div class="mb-1">
-                                    <label for="email" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">E-mail</label>
-                                    <input type="email" class="form-control" id="email" name="email" 
-                                           placeholder="aluno@email.com" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="mb-1">
-                                    <label for="telefone" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Telefone</label>
-                                    <input type="text" class="form-control" id="telefone" name="telefone" 
-                                           placeholder="(00) 00000-0000" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Seção 2: CFC -->
-                        <div class="row mb-2">
-                            <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                                    <i class="fas fa-graduation-cap me-1"></i>CFC
-                                </h6>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-1">
-                                    <label for="cfc_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CFC *</label>
-                                    <select class="form-select" id="cfc_id" name="cfc_id" required style="padding: 0.4rem; font-size: 0.85rem;">
-                                        <option value="">Selecione um CFC...</option>
-                                        <?php if (isset($cfcs) && is_array($cfcs)): ?>
-                                            <?php foreach ($cfcs as $cfc): ?>
-                                                <option value="<?php echo $cfc['id']; ?>">
-                                                    <?php echo htmlspecialchars($cfc['nome']); ?>
-                                                </option>
-                                            <?php endforeach; ?>
-                                        <?php endif; ?>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Seção 3: Tipo de Serviço -->
-                        <div class="row mb-2">
-                            <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                                    <i class="fas fa-tasks me-1"></i>Tipo de Serviço
-                                </h6>
-                            </div>
-                            <div class="col-12">
-                                <div class="mb-2">
-                                    <div id="operacoes-container">
-                                        <!-- Operações existentes serão carregadas aqui -->
-                                    </div>
-                                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="adicionarOperacao()" style="font-size: 0.8rem;">
-                                        <i class="fas fa-plus me-1"></i>Adicionar Tipo de Serviço
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Seção 4: Endereço -->
-                        <div class="row mb-2">
-                            <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                                    <i class="fas fa-map-marker-alt me-1"></i>Endereço
-                                </h6>
-                            </div>
-                            
-                            <!-- Primeira linha: CEP e Logradouro -->
-                            <div class="col-md-3">
-                                <div class="mb-1">
-                                    <label for="cep" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CEP</label>
-                                    <div class="input-group">
-                                    <input type="text" class="form-control" id="cep" name="cep" 
-                                               placeholder="00000-000" style="padding: 0.4rem; font-size: 0.85rem;"
-                                               maxlength="9">
-                                        <button type="button" class="btn btn-outline-primary" id="btnBuscarCEP" 
-                                                style="padding: 0.4rem 0.6rem; font-size: 0.8rem;"
-                                                title="Buscar endereço pelo CEP">
-                                            <i class="fas fa-search"></i>
-                                        </button>
-                                        <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" 
-                                           target="_blank" 
-                                           class="btn btn-outline-success" 
-                                           style="padding: 0.4rem 0.6rem; font-size: 0.8rem;"
-                                           title="Buscar CEP no site dos Correios">
-                                            <i class="fas fa-external-link-alt"></i>
-                                        </a>
-                                </div>
-                            </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="mb-1">
-                                    <label for="logradouro" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Logradouro</label>
-                                    <input type="text" class="form-control" id="logradouro" name="logradouro" 
-                                           placeholder="Rua, Avenida, etc." style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1">
-                                    <label for="numero" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Número</label>
-                                    <input type="text" class="form-control" id="numero" name="numero" 
-                                           placeholder="123" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            
-                            <!-- Segunda linha: Bairro, Cidade e UF -->
-                            <div class="col-md-4">
-                                <div class="mb-1">
-                                    <label for="bairro" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Bairro</label>
-                                    <input type="text" class="form-control" id="bairro" name="bairro" 
-                                           placeholder="Centro, Jardim, etc." style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <div class="col-md-5">
-                                <div class="mb-1">
-                                    <label for="cidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Cidade</label>
-                                    <input type="text" class="form-control" id="cidade" name="cidade" 
-                                           placeholder="Nome da cidade" style="padding: 0.4rem; font-size: 0.85rem;">
-                                </div>
-                            </div>
-                            <div class="col-md-3">
-                                <div class="mb-1">
-                                    <label for="uf" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">UF</label>
-                                    <select class="form-select" id="uf" name="uf" style="padding: 0.4rem; font-size: 0.85rem;">
-                                        <option value="">Selecione...</option>
-                                        <option value="AC">Acre</option>
-                                        <option value="AL">Alagoas</option>
-                                        <option value="AP">Amapá</option>
-                                        <option value="AM">Amazonas</option>
-                                        <option value="BA">Bahia</option>
-                                        <option value="CE">Ceará</option>
-                                        <option value="DF">Distrito Federal</option>
-                                        <option value="ES">Espírito Santo</option>
-                                        <option value="GO">Goiás</option>
-                                        <option value="MA">Maranhão</option>
-                                        <option value="MT">Mato Grosso</option>
-                                        <option value="MS">Mato Grosso do Sul</option>
-                                        <option value="MG">Minas Gerais</option>
-                                        <option value="PA">Pará</option>
-                                        <option value="PB">Paraíba</option>
-                                        <option value="PR">Paraná</option>
-                                        <option value="PE">Pernambuco</option>
-                                        <option value="PI">Piauí</option>
-                                        <option value="RJ">Rio de Janeiro</option>
-                                        <option value="RN">Rio Grande do Norte</option>
-                                        <option value="RS">Rio Grande do Sul</option>
-                                        <option value="RO">Rondônia</option>
-                                        <option value="RR">Roraima</option>
-                                        <option value="SC">Santa Catarina</option>
-                                        <option value="SP">São Paulo</option>
-                                        <option value="SE">Sergipe</option>
-                                        <option value="TO">Tocantins</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Seção 4: Observações -->
-                        <div class="row">
-                            <div class="col-12">
-                                <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                                    <i class="fas fa-sticky-note me-1"></i>Observações
-                                </h6>
-                                <div class="mb-1">
-                                    <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Observações</label>
-                                    <textarea class="form-control" id="observacoes" name="observacoes" rows="1" 
-                                              placeholder="Informações adicionais sobre o aluno..." style="padding: 0.4rem; font-size: 0.85rem; resize: vertical;"></textarea>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                        </div>
-                        
-                        <!-- Aba Matrícula/Serviço -->
-                        <div class="tab-pane fade" id="matricula" role="tabpanel">
-                            <div class="row">
-                                <div class="col-12">
-                                    <h6 class="text-primary border-bottom pb-1 mb-3">
-                                        <i class="fas fa-graduation-cap me-1"></i>Matrículas do Aluno
-                                    </h6>
-                                    <div id="matriculas-container">
-                                        <div class="text-center text-muted py-4">
-                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
-                                            <p>Carregando matrículas...</p>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <button type="button" class="btn btn-sm btn-primary" onclick="adicionarMatricula()">
-                                            <i class="fas fa-plus me-1"></i>Nova Matrícula
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Aba Financeiro -->
-                        <div class="tab-pane fade" id="financeiro" role="tabpanel">
-                            <div class="row">
-                                <div class="col-12">
-                                    <h6 class="text-primary border-bottom pb-1 mb-3">
-                                        <i class="fas fa-dollar-sign me-1"></i>Informações Financeiras
-                                    </h6>
-                                    <div class="alert alert-info">
-                                        <i class="fas fa-info-circle me-2"></i>
-                                        Sistema financeiro em desenvolvimento. Esta funcionalidade será implementada em breve.
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Aba Documentos -->
-                        <div class="tab-pane fade" id="documentos" role="tabpanel">
-                            <div class="row">
-                                <div class="col-12">
-                                    <h6 class="text-primary border-bottom pb-1 mb-3">
-                                        <i class="fas fa-file-alt me-1"></i>Documentos do Aluno
-                                    </h6>
-                                    <div id="documentos-container">
-                                        <div class="text-center text-muted py-4">
-                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
-                                            <p>Carregando documentos...</p>
-                                        </div>
-                                    </div>
-                                    <div class="mt-3">
-                                        <button type="button" class="btn btn-sm btn-primary" onclick="adicionarDocumento()">
-                                            <i class="fas fa-plus me-1"></i>Adicionar Documento
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Aba Agenda/Aulas -->
-                        <div class="tab-pane fade" id="agenda" role="tabpanel">
-                            <div class="row">
-                                <div class="col-12">
-                                    <h6 class="text-primary border-bottom pb-1 mb-3">
-                                        <i class="fas fa-calendar-alt me-1"></i>Aulas Agendadas
-                                    </h6>
-                                    <div id="aulas-container">
-                                        <div class="text-center text-muted py-4">
-                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
-                                            <p>Carregando aulas...</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Aba Teórico -->
-                        <div class="tab-pane fade" id="teorico" role="tabpanel">
-                            <div class="row">
-                                <div class="col-12">
-                                    <h6 class="text-primary border-bottom pb-1 mb-3">
-                                        <i class="fas fa-chalkboard-teacher me-1"></i>Turma Teórica
-                                    </h6>
-                                    <div id="turma-container">
-                                        <div class="text-center text-muted py-4">
-                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
-                                            <p>Carregando informações da turma...</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Aba Histórico & Auditoria -->
-                        <div class="tab-pane fade" id="historico" role="tabpanel">
-                            <div class="row">
-                                <div class="col-12">
-                                    <h6 class="text-primary border-bottom pb-1 mb-3">
-                                        <i class="fas fa-history me-1"></i>Histórico Completo
-                                    </h6>
-                                    <div id="historico-container">
-                                        <div class="text-center text-muted py-4">
-                                            <i class="fas fa-spinner fa-spin fa-2x mb-2"></i>
-                                            <p>Carregando histórico...</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="aluno-modal-footer modal-footer">
-                    <button type="button" class="btn aluno-btn-cancelar" onclick="fecharModalAluno()">
-                        <i class="fas fa-times me-1"></i>Cancelar
-                    </button>
-                    <button type="submit" class="btn btn-primary aluno-btn-salvar" id="btnSalvarAluno">
-                        <i class="fas fa-save me-1"></i>Salvar Aluno
-                    </button>
-                </div>
-            </form>
+<!-- Modal Customizado para Cadastro/Edição de Aluno - BASE LIMPA -->
+<div id="modalAluno" class="custom-modal">
+  <div class="custom-modal-dialog">
+    <div class="custom-modal-content">
+      <form id="formAluno" method="POST" class="modal-form aluno-modal-form">
+        <input type="hidden" name="acao" id="acaoAluno" value="criar">
+        <input type="hidden" name="aluno_id" id="aluno_id_hidden" value="">
+        
+        <div class="modal-form-header aluno-modal-header">
+          <h2 class="aluno-modal-title" id="modalTitle">Editar Aluno</h2>
+          <button type="button" class="btn-close aluno-modal-close" onclick="fecharModalAluno()"></button>
         </div>
+
+        <div class="modal-form-tabs aluno-modal-tabs">
+          <ul class="nav nav-tabs aluno-tabs" id="alunoTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="dados-tab" data-bs-toggle="tab" data-bs-target="#dados" type="button" role="tab" aria-controls="dados" aria-selected="true">
+                <i class="fas fa-user"></i>
+                <span>Dados</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="matricula-tab" data-bs-toggle="tab" data-bs-target="#matricula" type="button" role="tab" aria-controls="matricula" aria-selected="false">
+                <i class="fas fa-graduation-cap"></i>
+                <span>Matrícula</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation" id="financeiro-tab-container" style="display: none;">
+              <button class="nav-link" id="financeiro-tab" data-bs-toggle="tab" data-bs-target="#financeiro" type="button" role="tab" aria-controls="financeiro" aria-selected="false">
+                <i class="fas fa-dollar-sign"></i>
+                <span>Financeiro</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation" id="documentos-tab-container" style="display: none;">
+              <button class="nav-link" id="documentos-tab" data-bs-toggle="tab" data-bs-target="#documentos" type="button" role="tab" aria-controls="documentos" aria-selected="false">
+                <i class="fas fa-file-alt"></i>
+                <span>Documentos</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="agenda-tab" data-bs-toggle="tab" data-bs-target="#agenda" type="button" role="tab" aria-controls="agenda" aria-selected="false">
+                <i class="fas fa-calendar-alt"></i>
+                <span>Agenda</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="teorico-tab" data-bs-toggle="tab" data-bs-target="#teorico" type="button" role="tab" aria-controls="teorico" aria-selected="false">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <span>Teórico</span>
+              </button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="historico-tab" data-bs-toggle="tab" data-bs-target="#historico" type="button" role="tab" aria-controls="historico" aria-selected="false">
+                <i class="fas fa-history"></i>
+                <span>Histórico</span>
+              </button>
+            </li>
+          </ul>
+        </div>
+
+        <div class="modal-form-body aluno-modal-body">
+          <div class="modal-form-panel aluno-modal-panel">
+            <div class="tab-content aluno-tab-content" id="alunoTabsContent">
+              <!-- Aba Dados (real) -->
+              <div class="tab-pane fade show active modal-tab-pane" id="dados" role="tabpanel" aria-labelledby="dados-tab">
+                <div class="container-fluid" style="padding: 0;">
+                  <!-- Seção 1: Informações Pessoais -->
+                  <div class="row mb-2 mt-0">
+                    <div class="col-12">
+                      <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                        <i class="fas fa-user me-1"></i>Informações Pessoais
+                      </h6>
+                    </div>
+                    
+                    <!-- Campo de Foto -->
+                    <div class="col-12 mb-3">
+                      <div class="row">
+                        <div class="col-md-4">
+                          <div class="mb-2">
+                            <label for="foto" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Foto (Opcional)</label>
+                            <input type="file" class="form-control" id="foto" name="foto" accept="image/*" 
+                                   style="padding: 0.4rem; font-size: 0.85rem;" onchange="previewFotoAluno(this)">
+                            <small class="text-muted" style="font-size: 0.75rem;">📷 JPG, PNG, GIF, WebP até 2MB</small>
+                          </div>
+                        </div>
+                        <div class="col-md-8">
+                          <div class="text-center">
+                            <div id="preview-container-aluno" style="display: none;">
+                              <img id="foto-preview-aluno" src="" alt="Preview da foto" 
+                                   style="max-width: 150px; max-height: 150px; border-radius: 50%; object-fit: cover; border: 3px solid #dee2e6;">
+                              <div class="mt-2">
+                                <button type="button" class="btn btn-sm btn-outline-danger" onclick="removerFotoAluno()">
+                                  <i class="fas fa-trash"></i> Remover
+                                </button>
+                              </div>
+                            </div>
+                            <div id="placeholder-foto-aluno" class="text-muted" style="font-size: 0.8rem;">
+                              <i class="fas fa-user-circle fa-3x"></i><br>
+                              Nenhuma foto selecionada
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div class="col-md-3">
+                      <div class="mb-1">
+                        <label for="nome" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nome Completo *</label>
+                        <input type="text" class="form-control" id="nome" name="nome" required 
+                               placeholder="Nome completo do aluno" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="mb-1">
+                        <label for="cpf" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CPF *</label>
+                        <input type="text" class="form-control" id="cpf" name="cpf" required 
+                               placeholder="000.000.000-00" style="padding: 0.4rem; font-size: 0.85rem;"
+                               data-mask="cpf" data-validate="required|cpf" maxlength="14">
+                        <div class="cpf-validation-feedback" style="font-size: 0.75rem; margin-top: 0.25rem; display: none;"></div>
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="mb-1">
+                        <label for="rg" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">RG</label>
+                        <input type="text" class="form-control" id="rg" name="rg" 
+                               placeholder="Digite o RG (aceita letras)" maxlength="30" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="mb-1">
+                        <label for="renach" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Renach *</label>
+                        <input type="text" class="form-control" id="renach" name="renach" required 
+                               placeholder="PE000000000" maxlength="11" style="padding: 0.4rem; font-size: 0.85rem;"
+                               data-mask="renach">
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="mb-1">
+                        <label for="data_nascimento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Data Nasc. *</label>
+                        <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="mb-1">
+                        <label for="status" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status</label>
+                        <select class="form-select" id="status" name="status" style="padding: 0.4rem; font-size: 0.85rem;">
+                          <option value="ativo">Ativo</option>
+                          <option value="inativo">Inativo</option>
+                          <option value="concluido">Concluído</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-1">
+                        <label for="atividade_remunerada" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Atividade Remunerada</label>
+                        <div class="form-check mt-2">
+                          <input class="form-check-input" type="checkbox" id="atividade_remunerada" name="atividade_remunerada" value="1" style="font-size: 0.9rem;">
+                          <label class="form-check-label" for="atividade_remunerada" style="font-size: 0.85rem;">
+                            <i class="fas fa-briefcase me-1"></i>CNH com atividade remunerada
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="row mb-2">
+                    <div class="col-md-3">
+                      <div class="mb-1">
+                        <label for="naturalidade_estado" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Estado</label>
+                        <select class="form-select" id="naturalidade_estado" name="naturalidade_estado" style="padding: 0.4rem; font-size: 0.85rem;">
+                          <option value="">Selecione o estado...</option>
+                          <option value="AC">Acre</option>
+                          <option value="AL">Alagoas</option>
+                          <option value="AP">Amapá</option>
+                          <option value="AM">Amazonas</option>
+                          <option value="BA">Bahia</option>
+                          <option value="CE">Ceará</option>
+                          <option value="DF">Distrito Federal</option>
+                          <option value="ES">Espírito Santo</option>
+                          <option value="GO">Goiás</option>
+                          <option value="MA">Maranhão</option>
+                          <option value="MT">Mato Grosso</option>
+                          <option value="MS">Mato Grosso do Sul</option>
+                          <option value="MG">Minas Gerais</option>
+                          <option value="PA">Pará</option>
+                          <option value="PB">Paraíba</option>
+                          <option value="PR">Paraná</option>
+                          <option value="PE">Pernambuco</option>
+                          <option value="PI">Piauí</option>
+                          <option value="RJ">Rio de Janeiro</option>
+                          <option value="RN">Rio Grande do Norte</option>
+                          <option value="RS">Rio Grande do Sul</option>
+                          <option value="RO">Rondônia</option>
+                          <option value="RR">Roraima</option>
+                          <option value="SC">Santa Catarina</option>
+                          <option value="SP">São Paulo</option>
+                          <option value="SE">Sergipe</option>
+                          <option value="TO">Tocantins</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="mb-1">
+                        <label for="naturalidade_municipio" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Município</label>
+                        <select class="form-select" id="naturalidade_municipio" name="naturalidade_municipio" style="padding: 0.4rem; font-size: 0.85rem;" disabled>
+                          <option value="">Primeiro selecione o estado</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-1">
+                        <label for="nacionalidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Nacionalidade</label>
+                        <input type="text" class="form-control" id="nacionalidade" name="nacionalidade" 
+                               placeholder="Brasileira" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="mb-1">
+                        <label class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">&nbsp;</label>
+                        <input type="hidden" id="naturalidade" name="naturalidade">
+                        <button type="button" class="btn btn-outline-secondary w-100" id="btnLimparNaturalidade" 
+                                style="padding: 0.4rem; font-size: 0.8rem;" title="Limpar seleção">
+                          <i class="fas fa-times"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="row mb-2">
+                    <div class="col-md-4">
+                      <div class="mb-1">
+                        <label for="email" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               placeholder="aluno@email.com" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="mb-1">
+                        <label for="telefone" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Telefone</label>
+                        <input type="text" class="form-control" id="telefone" name="telefone" 
+                               placeholder="(00) 00000-0000" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Seção 2: CFC -->
+                  <div class="row mb-2">
+                    <div class="col-12">
+                      <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                        <i class="fas fa-graduation-cap me-1"></i>CFC
+                      </h6>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="mb-1">
+                        <label for="cfc_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CFC *</label>
+                        <select class="form-select" id="cfc_id" name="cfc_id" required style="padding: 0.4rem; font-size: 0.85rem;">
+                          <option value="">Selecione um CFC...</option>
+                          <?php if (isset($cfcs) && is_array($cfcs)): ?>
+                            <?php foreach ($cfcs as $cfc): ?>
+                              <option value="<?php echo $cfc['id']; ?>">
+                                <?php echo htmlspecialchars($cfc['nome']); ?>
+                              </option>
+                            <?php endforeach; ?>
+                          <?php endif; ?>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Seção 3: Tipo de Serviço -->
+                  <div class="row mb-2">
+                    <div class="col-12">
+                      <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                        <i class="fas fa-tasks me-1"></i>Tipo de Serviço
+                      </h6>
+                    </div>
+                    <div class="col-12">
+                      <div class="mb-2">
+                        <div id="operacoes-container">
+                          <!-- Operações existentes serão carregadas aqui -->
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="adicionarOperacao()" style="font-size: 0.8rem;">
+                          <i class="fas fa-plus me-1"></i>Adicionar Tipo de Serviço
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Seção 4: Endereço -->
+                  <div class="row mb-2">
+                    <div class="col-12">
+                      <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                        <i class="fas fa-map-marker-alt me-1"></i>Endereço
+                      </h6>
+                    </div>
+                    
+                    <!-- Primeira linha: CEP e Logradouro -->
+                    <div class="col-md-3">
+                      <div class="mb-1">
+                        <label for="cep" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CEP</label>
+                        <div class="input-group">
+                          <input type="text" class="form-control" id="cep" name="cep" 
+                                 placeholder="00000-000" style="padding: 0.4rem; font-size: 0.85rem;"
+                                 maxlength="9">
+                          <button type="button" class="btn btn-outline-primary" id="btnBuscarCEP" 
+                                  style="padding: 0.4rem 0.6rem; font-size: 0.8rem;"
+                                  title="Buscar endereço pelo CEP">
+                            <i class="fas fa-search"></i>
+                          </button>
+                          <a href="https://buscacepinter.correios.com.br/app/endereco/index.php" 
+                             target="_blank" 
+                             class="btn btn-outline-success" 
+                             style="padding: 0.4rem 0.6rem; font-size: 0.8rem;"
+                             title="Buscar CEP no site dos Correios">
+                            <i class="fas fa-external-link-alt"></i>
+                          </a>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="mb-1">
+                        <label for="logradouro" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Logradouro</label>
+                        <input type="text" class="form-control" id="logradouro" name="logradouro" 
+                               placeholder="Rua, Avenida, etc." style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-1">
+                        <label for="numero" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Número</label>
+                        <input type="text" class="form-control" id="numero" name="numero" 
+                               placeholder="123" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    
+                    <!-- Segunda linha: Bairro, Cidade e UF -->
+                    <div class="col-md-4">
+                      <div class="mb-1">
+                        <label for="bairro" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Bairro</label>
+                        <input type="text" class="form-control" id="bairro" name="bairro" 
+                               placeholder="Centro, Jardim, etc." style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-5">
+                      <div class="mb-1">
+                        <label for="cidade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Cidade</label>
+                        <input type="text" class="form-control" id="cidade" name="cidade" 
+                               placeholder="Nome da cidade" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-1">
+                        <label for="uf" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">UF</label>
+                        <select class="form-select" id="uf" name="uf" style="padding: 0.4rem; font-size: 0.85rem;">
+                          <option value="">Selecione...</option>
+                          <option value="AC">Acre</option>
+                          <option value="AL">Alagoas</option>
+                          <option value="AP">Amapá</option>
+                          <option value="AM">Amazonas</option>
+                          <option value="BA">Bahia</option>
+                          <option value="CE">Ceará</option>
+                          <option value="DF">Distrito Federal</option>
+                          <option value="ES">Espírito Santo</option>
+                          <option value="GO">Goiás</option>
+                          <option value="MA">Maranhão</option>
+                          <option value="MT">Mato Grosso</option>
+                          <option value="MS">Mato Grosso do Sul</option>
+                          <option value="MG">Minas Gerais</option>
+                          <option value="PA">Pará</option>
+                          <option value="PB">Paraíba</option>
+                          <option value="PR">Paraná</option>
+                          <option value="PE">Pernambuco</option>
+                          <option value="PI">Piauí</option>
+                          <option value="RJ">Rio de Janeiro</option>
+                          <option value="RN">Rio Grande do Norte</option>
+                          <option value="RS">Rio Grande do Sul</option>
+                          <option value="RO">Rondônia</option>
+                          <option value="RR">Roraima</option>
+                          <option value="SC">Santa Catarina</option>
+                          <option value="SP">São Paulo</option>
+                          <option value="SE">Sergipe</option>
+                          <option value="TO">Tocantins</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Seção 5: Observações -->
+                  <div class="row">
+                    <div class="col-12">
+                      <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                        <i class="fas fa-sticky-note me-1"></i>Observações
+                      </h6>
+                      <div class="mb-1">
+                        <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Observações</label>
+                        <textarea class="form-control" id="observacoes" name="observacoes" rows="1" 
+                                  placeholder="Informações adicionais sobre o aluno..." style="padding: 0.4rem; font-size: 0.85rem; resize: vertical;"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <!-- Aba Matrícula (placeholder) -->
+              <div class="tab-pane fade modal-tab-pane" id="matricula" role="tabpanel" aria-labelledby="matricula-tab">
+                <p>Conteúdo da aba Matrícula será reintroduzido depois.</p>
+              </div>
+              
+              <!-- Aba Financeiro (placeholder) -->
+              <div class="tab-pane fade modal-tab-pane" id="financeiro" role="tabpanel" aria-labelledby="financeiro-tab">
+                <p>Conteúdo da aba Financeiro será reintroduzido depois.</p>
+              </div>
+              
+              <!-- Aba Documentos (placeholder) -->
+              <div class="tab-pane fade modal-tab-pane" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">
+                <p>Conteúdo da aba Documentos será reintroduzido depois.</p>
+              </div>
+              
+              <!-- Aba Agenda (placeholder) -->
+              <div class="tab-pane fade modal-tab-pane" id="agenda" role="tabpanel" aria-labelledby="agenda-tab">
+                <p>Conteúdo da aba Agenda será reintroduzido depois.</p>
+              </div>
+              
+              <!-- Aba Teórico (placeholder) -->
+              <div class="tab-pane fade modal-tab-pane" id="teorico" role="tabpanel" aria-labelledby="teorico-tab">
+                <p>Conteúdo da aba Teórico será reintroduzido depois.</p>
+              </div>
+              
+              <!-- Aba Histórico (placeholder) -->
+              <div class="tab-pane fade modal-tab-pane" id="historico" role="tabpanel" aria-labelledby="historico-tab">
+                <p>Conteúdo da aba Histórico será reintroduzido depois.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-form-footer aluno-modal-footer">
+          <button type="button" class="btn btn-outline-secondary aluno-btn-cancelar" onclick="fecharModalAluno()">
+            <i class="fas fa-times me-1"></i>Cancelar
+          </button>
+          <button type="submit" class="btn btn-primary aluno-btn-salvar" id="btnSalvarAluno">
+            <i class="fas fa-save me-1"></i>Salvar Aluno
+          </button>
+        </div>
+      </form>
     </div>
+  </div>
 </div>
 
 
-<!-- Modal personalizado para Visualização de Aluno -->
-<div id="modalVisualizarAluno" class="visualizar-overlay" role="dialog" aria-labelledby="modalVisualizarAlunoLabel" aria-hidden="true">
-    <div class="visualizar-dialog">
-        <div class="visualizar-header">
-            <h5 class="visualizar-title m-0" id="modalVisualizarAlunoLabel">
-                <i class="fas fa-eye me-2"></i>Detalhes do Aluno
-            </h5>
-            <button type="button" class="visualizar-close" onclick="fecharModalVisualizarAluno()" aria-label="Fechar modal">
-                <i class="fas fa-times"></i>
-            </button>
-        </div>
-        <div class="visualizar-body" id="modalVisualizarAlunoBody">
-            <!-- Conteúdo será carregado via JavaScript -->
-        </div>
-        <div class="visualizar-footer">
-            <button type="button" class="btn btn-light border" onclick="fecharModalVisualizarAluno()">
-                <i class="fas fa-times me-1"></i>Fechar
-            </button>
-            <button type="button" class="btn btn-primary" id="btnEditarVisualizacao">
-                <i class="fas fa-edit me-1"></i>Editar Aluno
-            </button>
-        </div>
+<!-- Modal personalizado para Visualização de Aluno - Padronizado com #modalAluno -->
+<div id="modalVisualizarAluno" class="custom-modal modal-visualizar-aluno">
+  <div class="custom-modal-dialog">
+    <div class="custom-modal-content">
+      <div class="modal-form-header visualizar-modal-header">
+        <h2 class="visualizar-modal-title">
+          <i class="fas fa-eye me-2"></i>Detalhes do Aluno
+        </h2>
+        <button type="button" class="btn-close" onclick="fecharModalVisualizarAluno()" aria-label="Fechar modal"></button>
+      </div>
+
+      <div class="modal-form-body visualizar-modal-body" id="modalVisualizarAlunoBody">
+        <!-- Conteúdo será carregado via JavaScript -->
+      </div>
+
+      <div class="modal-form-footer visualizar-modal-footer">
+        <button type="button" class="btn btn-outline-secondary me-2" onclick="fecharModalVisualizarAluno()">
+          <i class="fas fa-times me-1"></i>Fechar
+        </button>
+        <button type="button" class="btn btn-primary" id="btnEditarVisualizacao">
+          <i class="fas fa-edit me-1"></i>Editar Aluno
+        </button>
+      </div>
     </div>
+  </div>
 </div>
 <!-- Modal Nova Aula -->
 <div id="modal-nova-aula" class="modal-overlay" style="display: none;">
@@ -4551,7 +3839,7 @@ function visualizarAluno(id) {
         </div>
     `;
 
-    abrirModalVisualizarAluno();
+    abrirModalVisualizarAluno(id);
     aplicarCorrecaoZIconsAction('open');
 
     const fecharModalVisualizacao = (event) => {
@@ -4562,8 +3850,8 @@ function visualizarAluno(id) {
         fecharModalVisualizarAluno();
     };
 
-    const btnFecharTopo = modalElement.querySelector('.visualizar-close');
-    const btnFecharRodape = modalElement.querySelector('.visualizar-footer .btn.btn-light');
+    const btnFecharTopo = modalElement.querySelector('.btn-close');
+    const btnFecharRodape = modalElement.querySelector('.visualizar-modal-footer .btn-outline-secondary');
 
     if (btnFecharTopo) {
         btnFecharTopo.onclick = fecharModalVisualizacao;
@@ -4607,8 +3895,8 @@ function visualizarAluno(id) {
                 preencherModalVisualizacao(data.aluno);
                 console.log('✅ Modal preenchido');
 
-                const btnFecharTopoAtualizado = modalElement.querySelector('.visualizar-close');
-                const btnFecharRodapeAtualizado = modalElement.querySelector('.visualizar-footer .btn.btn-light');
+                const btnFecharTopoAtualizado = modalElement.querySelector('.btn-close');
+                const btnFecharRodapeAtualizado = modalElement.querySelector('.visualizar-modal-footer .btn-outline-secondary');
 
                 if (btnFecharTopoAtualizado) {
                     btnFecharTopoAtualizado.onclick = fecharModalVisualizacao;
@@ -4731,119 +4019,65 @@ function preencherModalVisualizacao(aluno) {
     document.getElementById('modalVisualizarAlunoBody').innerHTML = html;
     
     // Configurar botão "Editar Aluno" para usar o modal customizado
-    document.getElementById('btnEditarVisualizacao').onclick = () => {
-        console.log('✏️ Botão Editar Aluno clicado, fechando modal de visualização...');
-        fecharModalVisualizarAluno();
-        setTimeout(() => {
-            console.log('🪟 Abrindo modal de edição...');
-            editarAluno(aluno.id);
-        }, 200);
-    };
+    const btnEditar = document.getElementById('btnEditarVisualizacao');
+    if (btnEditar) {
+        btnEditar.onclick = () => {
+            console.log('✏️ Botão Editar Aluno clicado, fechando modal de visualização...');
+            fecharModalVisualizarAluno();
+            setTimeout(() => {
+                console.log('🪟 Abrindo modal de edição...');
+                abrirModalAluno('editar', aluno.id);
+                // Carregar dados do aluno após abrir o modal
+                setTimeout(() => {
+                    editarAluno(aluno.id);
+                }, 100);
+            }, 200);
+        };
+    }
 }
 
-function abrirModalVisualizarAluno() {
-    const modalElement = document.getElementById('modalVisualizarAluno');
-    if (!modalElement) {
-        console.error('❌ modalVisualizarAluno não encontrado no DOM.');
-        return;
-    }
+// =====================================================
+// CONTROLE DE VISIBILIDADE DO MODAL DE VISUALIZAÇÃO - PADRÃO ÚNICO
+// =====================================================
 
-    const dialogElement = modalElement.querySelector('.visualizar-dialog');
-    const contentElement = modalElement.querySelector('.visualizar-body');
+function abrirModalVisualizarAluno(alunoId) {
+  const modal = document.getElementById('modalVisualizarAluno');
+  if (!modal) {
+    console.warn('[modalVisualizarAluno] Elemento #modalVisualizarAluno não encontrado.');
+    return;
+  }
 
-    modalElement.classList.add('is-open');
-    modalElement.setAttribute('data-opened', 'true');
-    modalElement.setAttribute('aria-hidden', 'false');
-    document.body.classList.add('visualizar-aluno-open');
-    document.body.style.overflow = 'hidden';
+  // visibilidade e centralização (mesmo padrão do #modalAluno)
+  modal.dataset.opened = 'true';
+  document.body.style.overflow = 'hidden';
 
-    modalElement.style.setProperty('display', 'flex', 'important');
-    modalElement.style.setProperty('position', 'fixed', 'important');
-    modalElement.style.setProperty('inset', '0', 'important');
-    modalElement.style.setProperty('padding', '2rem 1rem', 'important');
-    modalElement.style.setProperty('background', 'rgba(15, 23, 42, 0.65)', 'important');
-    modalElement.style.setProperty('z-index', '1055', 'important');
-    modalElement.style.setProperty('align-items', 'flex-start', 'important');
-    modalElement.style.setProperty('justify-content', 'center', 'important');
-    modalElement.style.setProperty('overflow-y', 'auto', 'important');
-    modalElement.style.setProperty('gap', '2rem', 'important');
+  // garante que o conteúdo do modal começa no topo
+  const bodyEl = modal.querySelector('.visualizar-modal-body');
+  if (bodyEl) {
+    bodyEl.scrollTop = 0;
+  }
 
-    if (dialogElement) {
-        dialogElement.style.setProperty('position', 'relative', 'important');
-        dialogElement.style.setProperty('width', 'min(1080px, 95vw)', 'important');
-        dialogElement.style.setProperty('max-width', '1080px', 'important');
-        dialogElement.style.setProperty('background', '#ffffff', 'important');
-        dialogElement.style.setProperty('border-radius', '18px', 'important');
-        dialogElement.style.setProperty('box-shadow', '0 30px 80px rgba(15, 23, 42, 0.35)', 'important');
-        dialogElement.style.setProperty('border', '1px solid rgba(148, 163, 184, 0.25)', 'important');
-        dialogElement.style.setProperty('overflow', 'hidden', 'important');
-        dialogElement.style.setProperty('display', 'flex', 'important');
-        dialogElement.style.setProperty('flex-direction', 'column', 'important');
-    }
-
-    if (contentElement) {
-        contentElement.style.setProperty('display', 'block', 'important');
-        contentElement.style.setProperty('opacity', '1', 'important');
-        contentElement.style.setProperty('visibility', 'visible', 'important');
-    }
-
-    document.querySelectorAll('#backdrop-visualizar-aluno, .modal-backdrop').forEach(el => el.remove());
-
-    const overlayStyles = window.getComputedStyle(modalElement);
-    const dialogStyles = dialogElement ? window.getComputedStyle(dialogElement) : null;
-    console.log('📊 overlay computed:', JSON.stringify({
-        display: overlayStyles?.display,
-        position: overlayStyles?.position,
-        width: overlayStyles?.width,
-        height: overlayStyles?.height,
-        pointerEvents: overlayStyles?.pointerEvents
-    }));
-    console.log('📊 dialog computed:', dialogStyles ? JSON.stringify({
-        display: dialogStyles.display,
-        width: dialogStyles.width,
-        height: dialogStyles.height,
-        pointerEvents: dialogStyles.pointerEvents
-    }) : '"sem dialog"');
-
-    console.log('🪟 Modal de visualização aberto com estilos forçados.');
+  console.log('[modalVisualizarAluno] abrir', { alunoId });
 }
 
 function fecharModalVisualizarAluno() {
-    const modalElement = document.getElementById('modalVisualizarAluno');
-    if (!modalElement) {
-        return;
-    }
+  const modal = document.getElementById('modalVisualizarAluno');
+  if (!modal) {
+    console.warn('[modalVisualizarAluno] Elemento #modalVisualizarAluno não encontrado (fechar).');
+    return;
+  }
 
-    const dialogElement = modalElement.querySelector('.visualizar-dialog');
-    const contentElement = modalElement.querySelector('.visualizar-body');
+  modal.dataset.opened = 'false';
+  document.body.style.overflow = '';
 
-    modalElement.classList.remove('is-open', 'modal-visualizar-fallback');
-    modalElement.removeAttribute('data-opened');
-    modalElement.setAttribute('aria-hidden', 'true');
-
-    ['display', 'position', 'inset', 'padding', 'background', 'z-index', 'align-items', 'justify-content', 'overflow-y', 'gap'].forEach(prop => {
-        modalElement.style.removeProperty(prop);
-    });
-
-    if (dialogElement) {
-        ['position', 'width', 'max-width', 'background', 'border-radius', 'box-shadow', 'border', 'overflow', 'display', 'flex-direction'].forEach(prop => {
-            dialogElement.style.removeProperty(prop);
-        });
-    }
-
-    if (contentElement) {
-        ['display', 'opacity', 'visibility'].forEach(prop => contentElement.style.removeProperty(prop));
-    }
-
-    document.querySelectorAll('#backdrop-visualizar-aluno, .modal-backdrop').forEach(el => el.remove());
-    document.body.classList.remove('visualizar-aluno-open');
-    if (!document.body.classList.contains('modal-open')) {
-        document.body.style.removeProperty('overflow');
-    }
-
-    aplicarCorrecaoZIconsAction('close');
-    console.log('✅ Modal de visualização fechado completamente');
+  console.log('[modalVisualizarAluno] fechar');
 }
+
+// expõe explicitamente no escopo global
+window.abrirModalVisualizarAluno = abrirModalVisualizarAluno;
+window.fecharModalVisualizarAluno = fecharModalVisualizarAluno;
+
+console.log('[modalVisualizarAluno] funções abrir/fechar registradas no window.');
 
 function agendarAula(id) {
     console.log('🚀 agendarAula chamada com ID:', id);
@@ -6143,7 +5377,7 @@ function forcarFecharModaisIniciais(origem = 'startup') {
         ['display', 'position', 'inset', 'width', 'height', 'overflow-y', 'background', 'visibility', 'opacity'].forEach(prop => {
             modalVisualizarOverlay.style.removeProperty(prop);
         });
-        const dialogElement = modalVisualizarOverlay.querySelector('.visualizar-dialog');
+        const dialogElement = modalVisualizarOverlay.querySelector('.custom-modal-dialog');
         if (dialogElement) {
             ['position', 'margin', 'width', 'max-width', 'pointer-events', 'display', 'opacity', 'transform'].forEach(prop => {
                 dialogElement.style.removeProperty(prop);
@@ -6187,7 +5421,7 @@ function limparTodosModais() {
         ['display', 'position', 'inset', 'width', 'height', 'overflow-y', 'background', 'visibility', 'opacity'].forEach(prop => {
             modalVisualizar.style.removeProperty(prop);
         });
-        const dialogElement = modalVisualizar.querySelector('.visualizar-dialog');
+        const dialogElement = modalVisualizar.querySelector('.custom-modal-dialog');
         if (dialogElement) {
             ['position', 'margin', 'width', 'max-width', 'pointer-events', 'display', 'opacity', 'transform'].forEach(prop => {
                 dialogElement.style.removeProperty(prop);
@@ -7065,6 +6299,7 @@ function ajustarModalResponsivo() {
         const modalContent = modalAlunoResponsivo.querySelector('.custom-modal-content');
         
         if (modalDialog && modalContent) {
+            // Limpar estilos inline que possam interferir no layout flex
             modalDialog.style.top = '';
             modalDialog.style.left = '';
             modalDialog.style.right = '';
@@ -7073,6 +6308,7 @@ function ajustarModalResponsivo() {
             modalDialog.style.maxHeight = '';
             modalContent.style.maxWidth = '';
             modalContent.style.maxHeight = '';
+            // Não forçar height - deixar CSS fazer o trabalho
         }
     }
     
@@ -7105,8 +6341,82 @@ const originalAbrirModalAluno = window.abrirModalAluno;
 if (originalAbrirModalAluno) {
     window.abrirModalAluno = function() {
         originalAbrirModalAluno();
-        setTimeout(ajustarModalResponsivo, 100);
+        setTimeout(() => {
+            ajustarModalResponsivo();
+            validarLayoutModalAluno(); // Validar layout após abrir
+        }, 100);
     };
+}
+
+// =====================================================
+// VALIDAÇÃO DE LAYOUT DO MODAL DE ALUNO
+// =====================================================
+
+function validarLayoutModalAluno() {
+    const modal = document.getElementById('modalAluno');
+    if (!modal || modal.style.display === 'none') return;
+    
+    const dialog = modal.querySelector('.custom-modal-dialog');
+    const content = modal.querySelector('.custom-modal-content');
+    const body = modal.querySelector('.aluno-modal-body');
+    const footer = modal.querySelector('.aluno-modal-footer');
+    
+    if (!dialog || !content || !body || !footer) {
+        console.warn('⚠️ Estrutura do modal incompleta');
+        return;
+    }
+    
+    // Validar altura e posição do dialog
+    const dialogRect = dialog.getBoundingClientRect();
+    console.log('📐 Dialog:', {
+        width: dialogRect.width,
+        height: dialogRect.height,
+        top: dialogRect.top,
+        left: dialogRect.left
+    });
+    
+    // Validar scroll do body
+    const bodyScrollHeight = body.scrollHeight;
+    const bodyClientHeight = body.clientHeight;
+    const temScroll = bodyScrollHeight > bodyClientHeight;
+    
+    console.log('📜 Body scroll:', {
+        scrollHeight: bodyScrollHeight,
+        clientHeight: bodyClientHeight,
+        temScroll: temScroll,
+        scrollTop: body.scrollTop
+    });
+    
+    // Validar footer visível
+    const footerRect = footer.getBoundingClientRect();
+    const contentRect = content.getBoundingClientRect();
+    const footerVisivel = footerRect.top >= contentRect.top && 
+                          footerRect.bottom <= contentRect.bottom;
+    
+    console.log('👣 Footer:', {
+        top: footerRect.top,
+        bottom: footerRect.bottom,
+        contentTop: contentRect.top,
+        contentBottom: contentRect.bottom,
+        visivel: footerVisivel
+    });
+    
+    // Validar estrutura flex
+    const form = modal.querySelector('#formAluno');
+    if (form) {
+        const formStyle = window.getComputedStyle(form);
+        console.log('📋 Form flex:', {
+            display: formStyle.display,
+            flexDirection: formStyle.flexDirection,
+            height: formStyle.height
+        });
+    }
+    
+    if (temScroll && footerVisivel) {
+        console.log('✅ Layout do modal validado com sucesso!');
+    } else {
+        console.warn('⚠️ Possíveis problemas no layout do modal');
+    }
 }
 
 console.log('🔧 Sistema de modais responsivos inicializado');
