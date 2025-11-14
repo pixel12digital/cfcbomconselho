@@ -1784,30 +1784,39 @@ input.form-control.invalid {
                 <span>Matrícula</span>
               </button>
             </li>
+            <!-- ABA FINANCEIRO (removida do modal, mantida apenas como histórico) -->
+            <!--
             <li class="nav-item" role="presentation" id="financeiro-tab-container" style="display: none;">
               <button class="nav-link" id="financeiro-tab" data-bs-toggle="tab" data-bs-target="#financeiro" type="button" role="tab" aria-controls="financeiro" aria-selected="false">
                 <i class="fas fa-dollar-sign"></i>
                 <span>Financeiro</span>
               </button>
             </li>
-            <li class="nav-item" role="presentation" id="documentos-tab-container" style="display: none;">
+            -->
+            <li class="nav-item" role="presentation">
               <button class="nav-link" id="documentos-tab" data-bs-toggle="tab" data-bs-target="#documentos" type="button" role="tab" aria-controls="documentos" aria-selected="false">
                 <i class="fas fa-file-alt"></i>
                 <span>Documentos</span>
               </button>
             </li>
+            <!-- ABA AGENDA (removida do modal, mantida apenas como histórico) -->
+            <!--
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="agenda-tab" data-bs-toggle="tab" data-bs-target="#agenda" type="button" role="tab" aria-controls="agenda" aria-selected="false">
                 <i class="fas fa-calendar-alt"></i>
                 <span>Agenda</span>
               </button>
             </li>
+            -->
+            <!-- ABA TEÓRICO (removida do modal, mantida apenas como histórico) -->
+            <!--
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="teorico-tab" data-bs-toggle="tab" data-bs-target="#teorico" type="button" role="tab" aria-controls="teorico" aria-selected="false">
                 <i class="fas fa-chalkboard-teacher"></i>
                 <span>Teórico</span>
               </button>
             </li>
+            -->
             <li class="nav-item" role="presentation">
               <button class="nav-link" id="historico-tab" data-bs-toggle="tab" data-bs-target="#historico" type="button" role="tab" aria-controls="historico" aria-selected="false">
                 <i class="fas fa-history"></i>
@@ -2164,29 +2173,128 @@ input.form-control.invalid {
                 <p>Conteúdo da aba Matrícula será reintroduzido depois.</p>
               </div>
               
-              <!-- Aba Financeiro (placeholder) -->
+              <!-- ABA FINANCEIRO DO ALUNO (desativada no modal; será reusada futuramente em outra tela/resumo) -->
+              <!--
               <div class="tab-pane fade modal-tab-pane" id="financeiro" role="tabpanel" aria-labelledby="financeiro-tab">
                 <p>Conteúdo da aba Financeiro será reintroduzido depois.</p>
               </div>
+              -->
               
               <!-- Aba Documentos (placeholder) -->
               <div class="tab-pane fade modal-tab-pane" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">
                 <p>Conteúdo da aba Documentos será reintroduzido depois.</p>
               </div>
               
-              <!-- Aba Agenda (placeholder) -->
+              <!-- ABA AGENDA DO ALUNO (desativada no modal; será reusada futuramente em outra tela/resumo) -->
+              <!--
               <div class="tab-pane fade modal-tab-pane" id="agenda" role="tabpanel" aria-labelledby="agenda-tab">
                 <p>Conteúdo da aba Agenda será reintroduzido depois.</p>
               </div>
+              -->
               
-              <!-- Aba Teórico (placeholder) -->
+              <!-- ABA TEÓRICO DO ALUNO (desativada no modal; será reusada futuramente em outra tela/resumo) -->
+              <!--
               <div class="tab-pane fade modal-tab-pane" id="teorico" role="tabpanel" aria-labelledby="teorico-tab">
                 <p>Conteúdo da aba Teórico será reintroduzido depois.</p>
               </div>
+              -->
               
-              <!-- Aba Histórico (placeholder) -->
+              <!-- Aba Histórico -->
               <div class="tab-pane fade modal-tab-pane" id="historico" role="tabpanel" aria-labelledby="historico-tab">
-                <p>Conteúdo da aba Histórico será reintroduzido depois.</p>
+                <div class="container-fluid" style="padding: 0;">
+                  <!-- Título da aba -->
+                  <div class="row mb-3">
+                    <div class="col-12">
+                      <h5 class="text-primary mb-0">
+                        <i class="fas fa-history me-2"></i>Jornada do Aluno
+                      </h5>
+                      <p class="text-muted small mb-0">Visão completa da trajetória do aluno no CFC</p>
+                    </div>
+                  </div>
+                  
+                  <!-- Bloco de resumo superior -->
+                  <div class="row mb-4">
+                    <div class="col-md-3 col-sm-6 mb-3">
+                      <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                          <i class="fas fa-clipboard-check fa-2x text-primary mb-2"></i>
+                          <h6 class="card-title mb-1">Situação do Processo</h6>
+                          <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                      <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                          <i class="fas fa-chalkboard-teacher fa-2x text-info mb-2"></i>
+                          <h6 class="card-title mb-1">Progresso Teórico</h6>
+                          <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                      <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                          <i class="fas fa-car fa-2x text-success mb-2"></i>
+                          <h6 class="card-title mb-1">Progresso Prático</h6>
+                          <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                      <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                          <i class="fas fa-dollar-sign fa-2x text-warning mb-2"></i>
+                          <h6 class="card-title mb-1">Situação Financeira</h6>
+                          <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Área de timeline -->
+                  <div class="row mb-4">
+                    <div class="col-12">
+                      <div class="card border-0 shadow-sm">
+                        <div class="card-header bg-white border-bottom">
+                          <h6 class="mb-0">
+                            <i class="fas fa-clock me-2"></i>Linha do Tempo
+                          </h6>
+                        </div>
+                        <div class="card-body">
+                          <div id="historico-container" class="text-center text-muted py-4">
+                            <i class="fas fa-history fa-2x mb-2"></i>
+                            <p class="mb-0">Os eventos mais recentes do aluno aparecerão aqui.</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- Atalhos -->
+                  <div class="row">
+                    <div class="col-12">
+                      <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                          <h6 class="card-title mb-3">
+                            <i class="fas fa-link me-2"></i>Atalhos Rápidos
+                          </h6>
+                          <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnAbrirAgendaCompleta" onclick="abrirAgendaCompleta()">
+                              <i class="fas fa-calendar-alt me-1"></i>Abrir Agenda Completa
+                            </button>
+                            <button type="button" class="btn btn-outline-warning btn-sm" id="btnVerFinanceiro" onclick="abrirFinanceiroAlunoDoHistorico()">
+                              <i class="fas fa-dollar-sign me-1"></i>Ver Financeiro do Aluno
+                            </button>
+                            <button type="button" class="btn btn-outline-info btn-sm" id="btnVerTurmaTeorica" onclick="abrirTurmaTeorica()">
+                              <i class="fas fa-chalkboard-teacher me-1"></i>Ver Turma Teórica
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
@@ -2404,6 +2512,16 @@ input.form-control.invalid {
 
 <!-- Scripts específicos para Alunos -->
 <script>
+// =====================================================
+// FLAG DE DEBUG PARA MODAL DE ALUNO
+// =====================================================
+const DEBUG_MODAL_ALUNO = false;
+
+function logModalAluno(...args) {
+    if (!DEBUG_MODAL_ALUNO) return;
+    console.log(...args);
+}
+
 // Definir categorias por tipo de serviço (GLOBAL)
 const categoriasPorTipo = {
     'primeira_habilitacao': [
@@ -3302,12 +3420,12 @@ function inicializarModalAluno() {
 }
 
 function abrirModalEdicao() {
-    console.log('🚀 Abrindo modal para edição...');
+    logModalAluno('🚀 Abrindo modal para edição...');
     const modal = document.getElementById('modalAluno');
     if (modal) {
         if (modal.parentNode !== document.body) {
             document.body.appendChild(modal);
-            console.log('📦 modalAluno realocado diretamente no body.');
+            logModalAluno('📦 modalAluno realocado diretamente no body.');
         }
 
         modal.classList.add('custom-modal');
@@ -3334,16 +3452,16 @@ function abrirModalEdicao() {
             const dialogRect = dialog ? dialog.getBoundingClientRect() : null;
             const gapLeft = dialogRect ? Math.round(dialogRect.left - overlayRect.left) : null;
             const gapRight = dialogRect ? Math.round(overlayRect.right - dialogRect.right) : null;
-            console.log('[modalAluno debug] overlay:', overlayRect);
-            console.log('[modalAluno debug] dialog :', dialogRect);
-            console.log('[modalAluno debug] gaps   -> esquerda:', gapLeft, 'direita:', gapRight);
+            logModalAluno('[modalAluno debug] overlay:', overlayRect);
+            logModalAluno('[modalAluno debug] dialog :', dialogRect);
+            logModalAluno('[modalAluno debug] gaps   -> esquerda:', gapLeft, 'direita:', gapRight);
         });
         
         // Configurar para edição
         const acaoAluno = document.getElementById('acaoAluno');
         if (acaoAluno) {
             acaoAluno.value = 'editar';
-            console.log('✅ Campo acaoAluno definido como: editar');
+            logModalAluno('✅ Campo acaoAluno definido como: editar');
         }
         
         const modalTitle = document.getElementById('modalTitle');
@@ -3351,12 +3469,12 @@ function abrirModalEdicao() {
             modalTitle.innerHTML = '<i class="fas fa-user-edit me-2"></i>Editar Aluno';
         }
         
-        console.log('🔍 Modal aberto - Editando? true');
-        console.log('📝 Formulário mantido para edição');
+        logModalAluno('🔍 Modal aberto - Editando? true');
+        logModalAluno('📝 Formulário mantido para edição');
     }
 }
 window.editarAluno = function(id) {
-    console.log('🚀 editarAluno chamada com ID:', id);
+    logModalAluno('🚀 editarAluno chamada com ID:', id);
     
     // Verificar se os elementos necessários existem
     const modalElement = document.getElementById('modalAluno');
@@ -3364,11 +3482,11 @@ window.editarAluno = function(id) {
     const acaoAluno = document.getElementById('acaoAluno');
     const alunoId = document.getElementById('aluno_id_hidden');
     
-    console.log('🔍 Verificando elementos do DOM:');
-    console.log('  modalAluno:', modalElement ? '✅ Existe' : '❌ Não existe');
-    console.log('  modalTitle:', modalTitle ? '✅ Existe' : '❌ Não existe');
-    console.log('  acaoAluno:', acaoAluno ? '✅ Existe' : '❌ Não existe');
-    console.log('  aluno_id:', alunoId ? '✅ Existe' : '❌ Não existe');
+    logModalAluno('🔍 Verificando elementos do DOM:');
+    logModalAluno('  modalAluno:', modalElement ? '✅ Existe' : '❌ Não existe');
+    logModalAluno('  modalTitle:', modalTitle ? '✅ Existe' : '❌ Não existe');
+    logModalAluno('  acaoAluno:', acaoAluno ? '✅ Existe' : '❌ Não existe');
+    logModalAluno('  aluno_id:', alunoId ? '✅ Existe' : '❌ Não existe');
     
     if (!modalElement) {
         console.error('❌ Modal não encontrado!');
@@ -3376,13 +3494,13 @@ window.editarAluno = function(id) {
         return;
     }
     
-    console.log(`📡 Fazendo requisição para api/alunos.php?id=${id}`);
-    console.log(`📡 URL completa: ${API_CONFIG.getRelativeApiUrl('ALUNOS')}?id=${id}`);
+    logModalAluno(`📡 Fazendo requisição para api/alunos.php?id=${id}`);
+    logModalAluno(`📡 URL completa: ${API_CONFIG.getRelativeApiUrl('ALUNOS')}?id=${id}`);
     
     // Buscar dados do aluno (usando nova API funcional)
     const timestamp = new Date().getTime();
     const url = API_CONFIG.getRelativeApiUrl('ALUNOS') + `?id=${id}&t=${timestamp}`;
-    console.log(`📡 URL final da requisição: ${url}`);
+    logModalAluno(`📡 URL final da requisição: ${url}`);
     
     fetch(url)
         .then(response => {
@@ -3410,28 +3528,28 @@ window.editarAluno = function(id) {
         })
         .then(data => {
             console.log('📄 Dados recebidos:', data);
-            console.log('📄 Dados do aluno:', data.aluno);
-            console.log('📄 Naturalidade do aluno:', data.aluno?.naturalidade);
-            console.log('📄 Todos os campos do aluno:', Object.keys(data.aluno || {}));
-            console.log('📄 Estrutura completa do aluno:', JSON.stringify(data.aluno, null, 2));
+            logModalAluno('📄 Dados do aluno:', data.aluno);
+            logModalAluno('📄 Naturalidade do aluno:', data.aluno?.naturalidade);
+            logModalAluno('📄 Todos os campos do aluno:', Object.keys(data.aluno || {}));
+            logModalAluno('📄 Estrutura completa do aluno:', JSON.stringify(data.aluno, null, 2));
             
             if (data.success) {
-                console.log('✅ Success = true, configurando modal...');
+                logModalAluno('✅ Success = true, configurando modal...');
                 
                 // Configurar modal PRIMEIRO
                 if (modalTitle) modalTitle.textContent = 'Editar Aluno';
                 if (acaoAluno) {
                     acaoAluno.value = 'editar';
-                    console.log('✅ Campo acaoAluno definido como: editar');
+                    logModalAluno('✅ Campo acaoAluno definido como: editar');
                 }
                 if (alunoId) {
                     alunoId.value = id;
-                    console.log('✅ Campo aluno_id definido como:', id);
+                    logModalAluno('✅ Campo aluno_id definido como:', id);
                 }
                 
                 // Abrir modal customizado para edição
                 abrirModalEdicao();
-                console.log('🪟 Modal de edição aberto!');
+                logModalAluno('🪟 Modal de edição aberto!');
                 
                 // Função melhorada para garantir que o modal esteja totalmente carregado
                 function esperarModalPronto() {
@@ -3444,10 +3562,10 @@ window.editarAluno = function(id) {
                             const modalVisible = modal ? window.getComputedStyle(modal).display !== 'none' : false;
                             if (modal && modalVisible && 
                                 form && estadoSelect) {
-                                console.log('✅ Modal totalmente carregado e pronto');
+                                logModalAluno('✅ Modal totalmente carregado e pronto');
                                 resolve();
                             } else {
-                                console.log('⏳ Aguardando modal carregar...', {
+                                logModalAluno('⏳ Aguardando modal carregar...', {
                                     modalVisible,
                                     formExists: !!form,
                                     estadoExists: !!estadoSelect
@@ -3461,11 +3579,11 @@ window.editarAluno = function(id) {
                 
                 // Aguardar modal estar pronto, então preencher
                 esperarModalPronto().then(() => {
-                    console.log('🔄 Callando preencherFormularioAluno com dados:', data.aluno);
-                    console.log('🔄 Naturalidade disponível:', data.aluno.naturalidade);
-                    console.log('🔄 Timestamp:', new Date().toISOString());
+                    logModalAluno('🔄 Callando preencherFormularioAluno com dados:', data.aluno);
+                    logModalAluno('🔄 Naturalidade disponível:', data.aluno.naturalidade);
+                    logModalAluno('🔄 Timestamp:', new Date().toISOString());
                     preencherFormularioAluno(data.aluno);
-                    console.log('✅ Formulário preenchido - função executada');
+                    logModalAluno('✅ Formulário preenchido - função executada');
                     
                     // Aplicar validação automática após preenchimento
                     setTimeout(() => {
@@ -3489,22 +3607,22 @@ window.editarAluno = function(id) {
         });
 }
 function preencherFormularioAluno(aluno) {
-    console.log('📝 Preenchendo formulário para aluno:', aluno);
-    console.log('📝 Dados específicos do aluno:');
-    console.log('  - ID:', aluno.id);
-    console.log('  - Nome:', aluno.nome);
-    console.log('  - CPF:', aluno.cpf);
-    console.log('  - Email:', aluno.email);
-    console.log('  - Telefone:', aluno.telefone);
-    console.log('  - CFC ID:', aluno.cfc_id);
-    console.log('  - Naturalidade:', aluno.naturalidade);
-    console.log('  - Nacionalidade:', aluno.nacionalidade);
+    logModalAluno('📝 Preenchendo formulário para aluno:', aluno);
+    logModalAluno('📝 Dados específicos do aluno:');
+    logModalAluno('  - ID:', aluno.id);
+    logModalAluno('  - Nome:', aluno.nome);
+    logModalAluno('  - CPF:', aluno.cpf);
+    logModalAluno('  - Email:', aluno.email);
+    logModalAluno('  - Telefone:', aluno.telefone);
+    logModalAluno('  - CFC ID:', aluno.cfc_id);
+    logModalAluno('  - Naturalidade:', aluno.naturalidade);
+    logModalAluno('  - Nacionalidade:', aluno.nacionalidade);
     
     
     // Verificar se o modal está aberto
     const modal = document.getElementById('modalAluno');
     const modalDisplay = modal ? window.getComputedStyle(modal).display : 'none';
-    console.log('🔍 Modal status:', modal ? (modalDisplay !== 'none' ? '✅ Aberto' : '❌ Fechado') : '❌ Não encontrado');
+    logModalAluno('🔍 Modal status:', modal ? (modalDisplay !== 'none' ? '✅ Aberto' : '❌ Fechado') : '❌ Não encontrado');
     
     // Definir ID do aluno para edição
     const alunoIdField = document.getElementById('aluno_id_hidden');
@@ -3537,8 +3655,8 @@ function preencherFormularioAluno(aluno) {
     
     // Preencher cada campo se ele existir (exceto naturalidade que será tratada separadamente)
     console.log('🔍 Verificando elementos do formulário...');
-    console.log('🔍 Modal visível?', document.getElementById('modalAluno')?.style.display);
-    console.log('🔍 Formulário existe?', document.getElementById('formAluno') ? 'Sim' : 'Não');
+    logModalAluno('🔍 Modal visível?', document.getElementById('modalAluno')?.style.display);
+    logModalAluno('🔍 Formulário existe?', document.getElementById('formAluno') ? 'Sim' : 'Não');
     
     Object.keys(campos).forEach(campoId => {
         // Pular campos de naturalidade que serão tratados separadamente
@@ -3821,8 +3939,8 @@ function visualizarAluno(id) {
     const modalBody = document.getElementById('modalVisualizarAlunoBody');
 
     console.log('🔍 Verificando elementos do DOM:');
-    console.log('  modalVisualizarAluno:', modalElement ? '✅ Existe' : '❌ Não existe');
-    console.log('  modalVisualizarAlunoBody:', modalBody ? '✅ Existe' : '❌ Não existe');
+    logModalAluno('  modalVisualizarAluno:', modalElement ? '✅ Existe' : '❌ Não existe');
+    logModalAluno('  modalVisualizarAlunoBody:', modalBody ? '✅ Existe' : '❌ Não existe');
 
     if (!modalElement || !modalBody) {
         console.error('❌ Modal de visualização não encontrado!');
@@ -4022,10 +4140,10 @@ function preencherModalVisualizacao(aluno) {
     const btnEditar = document.getElementById('btnEditarVisualizacao');
     if (btnEditar) {
         btnEditar.onclick = () => {
-            console.log('✏️ Botão Editar Aluno clicado, fechando modal de visualização...');
+            logModalAluno('✏️ Botão Editar Aluno clicado, fechando modal de visualização...');
             fecharModalVisualizarAluno();
             setTimeout(() => {
-                console.log('🪟 Abrindo modal de edição...');
+                logModalAluno('🪟 Abrindo modal de edição...');
                 abrirModalAluno('editar', aluno.id);
                 // Carregar dados do aluno após abrir o modal
                 setTimeout(() => {
@@ -4043,7 +4161,7 @@ function preencherModalVisualizacao(aluno) {
 function abrirModalVisualizarAluno(alunoId) {
   const modal = document.getElementById('modalVisualizarAluno');
   if (!modal) {
-    console.warn('[modalVisualizarAluno] Elemento #modalVisualizarAluno não encontrado.');
+    logModalAluno('[modalVisualizarAluno] Elemento #modalVisualizarAluno não encontrado.');
     return;
   }
 
@@ -4057,27 +4175,27 @@ function abrirModalVisualizarAluno(alunoId) {
     bodyEl.scrollTop = 0;
   }
 
-  console.log('[modalVisualizarAluno] abrir', { alunoId });
+  logModalAluno('[modalVisualizarAluno] abrir', { alunoId });
 }
 
 function fecharModalVisualizarAluno() {
   const modal = document.getElementById('modalVisualizarAluno');
   if (!modal) {
-    console.warn('[modalVisualizarAluno] Elemento #modalVisualizarAluno não encontrado (fechar).');
+    logModalAluno('[modalVisualizarAluno] Elemento #modalVisualizarAluno não encontrado (fechar).');
     return;
   }
 
   modal.dataset.opened = 'false';
   document.body.style.overflow = '';
 
-  console.log('[modalVisualizarAluno] fechar');
+  logModalAluno('[modalVisualizarAluno] fechar');
 }
 
 // expõe explicitamente no escopo global
 window.abrirModalVisualizarAluno = abrirModalVisualizarAluno;
 window.fecharModalVisualizarAluno = fecharModalVisualizarAluno;
 
-console.log('[modalVisualizarAluno] funções abrir/fechar registradas no window.');
+logModalAluno('[modalVisualizarAluno] funções abrir/fechar registradas no window.');
 
 function agendarAula(id) {
     console.log('🚀 agendarAula chamada com ID:', id);
@@ -5179,12 +5297,12 @@ document.addEventListener('keydown', function(e) {
 // Função removida - usando a versão mais completa abaixo
 
 function abrirModalAluno() {
-    console.log('🚀 Abrindo modal customizado...');
+    logModalAluno('🚀 Abrindo modal customizado...');
     
-    console.log('🔒 Verificando conflitos com modal de visualização...');
+    logModalAluno('🔒 Verificando conflitos com modal de visualização...');
     const modalVisualizar = document.getElementById('modalVisualizarAluno');
     if (modalVisualizar && modalVisualizar.classList.contains('is-open')) {
-        console.log('⚠️ Fechando modal de visualização antes de abrir modal de edição...');
+        logModalAluno('⚠️ Fechando modal de visualização antes de abrir modal de edição...');
         fecharModalVisualizarAluno();
     }
     
@@ -5200,22 +5318,22 @@ function abrirModalAluno() {
         // CORREÇÃO: Diminuir z-index dos ícones de ação quando modal de edição abrir
         aplicarCorrecaoZIconsAction('open');
         
-        console.log('✅ Modal de edição aberto com sucesso');
+        logModalAluno('✅ Modal de edição aberto com sucesso');
         
         // SEMPRE definir como criar novo aluno quando esta função é chamada
         const acaoAluno = document.getElementById('acaoAluno');
         if (acaoAluno) {
             acaoAluno.value = 'criar';
-            console.log('✅ Campo acaoAluno definido como: criar');
+            logModalAluno('✅ Campo acaoAluno definido como: criar');
         }
         
-        console.log('🔍 Modal aberto - Editando? false (sempre criar novo)');
+        logModalAluno('🔍 Modal aberto - Editando? false (sempre criar novo)');
         
         // SEMPRE limpar formulário para novo aluno
         const formAluno = document.getElementById('formAluno');
         if (formAluno) {
             formAluno.reset();
-            console.log('🧹 Formulário limpo para novo aluno');
+            logModalAluno('🧹 Formulário limpo para novo aluno');
         }
         
         // Resetar campos específicos que não são tratados pelo reset padrão
@@ -5231,7 +5349,7 @@ function abrirModalAluno() {
         if (operacoesContainer) {
             operacoesContainer.innerHTML = '';
             contadorOperacoes = 0;
-            console.log('🧹 Seção de operações limpa');
+            logModalAluno('🧹 Seção de operações limpa');
             
             // Adicionar operação padrão automaticamente
             adicionarOperacao();
@@ -5245,12 +5363,12 @@ function abrirModalAluno() {
             ajustarModalResponsivo();
         }, 10);
         
-        console.log('✅ Modal customizado aberto!');
+        logModalAluno('✅ Modal customizado aberto!');
     }
 }
 
 function fecharModalAluno() {
-    console.log('🚪 Fechando modal customizado...');
+    logModalAluno('🚪 Fechando modal customizado...');
     const modal = document.getElementById('modalAluno');
     if (modal) {
         // FORÇAR fechamento do modal
@@ -5270,12 +5388,12 @@ function fecharModalAluno() {
         // Resetar campos de naturalidade para evitar problemas
         resetFormulario();
         
-        console.log('✅ Modal customizado fechado!');
+        logModalAluno('✅ Modal customizado fechado!');
     }
 }
 // Função para resetar o formulário de alunos
 function resetFormulario() {
-    console.log('🔄 Resetando formulário de alunos...');
+    logModalAluno('🔄 Resetando formulário de alunos...');
     
     // Resetar campos de naturalidade
     const estadoSelect = document.getElementById('naturalidade_estado');
@@ -5327,7 +5445,7 @@ function resetFormulario() {
 
 // FUNÇÃO PARA CORRIGIR Z-INDEX DOS ÍCONES DE AÇÃO
 function aplicarCorrecaoZIconsAction(acao) {
-    console.log(`🔧 Aplicando correção de z-index para ícones de ação: ${acao}`);
+        logModalAluno(`🔧 Aplicando correção de z-index para ícones de ação: ${acao}`);
     const actionButtons = document.querySelectorAll('.action-icon-btn');
     const actionContainers = document.querySelectorAll('.action-buttons-compact');
 
@@ -5340,7 +5458,7 @@ function aplicarCorrecaoZIconsAction(acao) {
             container.style.setProperty('z-index', '1', 'important');
         });
 
-        console.log('🔽 z-index dos ícones diminuído para ficar atrás do modal');
+        logModalAluno('🔽 z-index dos ícones diminuído para ficar atrás do modal');
     } else if (acao === 'close') {
         actionButtons.forEach(btn => {
             btn.style.removeProperty('z-index');
@@ -5362,7 +5480,7 @@ function forcarFecharModaisIniciais(origem = 'startup') {
     const haviaResiduos = modaisBootstrap.length > 0 || backdrops.length > 0 || document.body.classList.contains('modal-open');
 
     if (modalAluno && modalAluno.style.display !== 'none' && !modalAluno.hasAttribute('data-opened')) {
-        console.log(`🛑 ModalAluno estava visível sem permissão (${origem}) - forçando fechamento.`);
+        logModalAluno(`🛑 ModalAluno estava visível sem permissão (${origem}) - forçando fechamento.`);
         modalAluno.style.setProperty('display', 'none', 'important');
         modalAluno.style.setProperty('visibility', 'hidden', 'important');
         modalAluno.setAttribute('aria-hidden', 'true');
@@ -5371,7 +5489,7 @@ function forcarFecharModaisIniciais(origem = 'startup') {
     }
 
     if (modalVisualizarOverlay && modalVisualizarOverlay.classList.contains('is-open') && !modalVisualizarOverlay.hasAttribute('data-opened')) {
-        console.log(`🛑 modalVisualizarAluno estava aberto indevidamente (${origem}) - fechando.`);
+        logModalAluno(`🛑 modalVisualizarAluno estava aberto indevidamente (${origem}) - fechando.`);
         modalVisualizarOverlay.classList.remove('is-open', 'modal-visualizar-fallback');
         modalVisualizarOverlay.setAttribute('aria-hidden', 'true');
         ['display', 'position', 'inset', 'width', 'height', 'overflow-y', 'background', 'visibility', 'opacity'].forEach(prop => {
@@ -5386,7 +5504,7 @@ function forcarFecharModaisIniciais(origem = 'startup') {
     }
 
     modaisBootstrap.forEach(modal => {
-        console.log(`🛑 Fechando modal residual "${modal.id || modal.className}" (${origem}).`);
+        logModalAluno(`🛑 Fechando modal residual "${modal.id || modal.className}" (${origem}).`);
         modal.classList.remove('show');
         modal.style.removeProperty('display');
         modal.setAttribute('aria-hidden', 'true');
@@ -5398,7 +5516,7 @@ function forcarFecharModaisIniciais(origem = 'startup') {
     });
 
     if (haviaResiduos) {
-        console.log(`🧼 Resíduos de modal removidos (${origem}) -> modais:${modaisBootstrap.length} backdrops:${backdrops.length}`);
+        logModalAluno(`🧼 Resíduos de modal removidos (${origem}) -> modais:${modaisBootstrap.length} backdrops:${backdrops.length}`);
     }
 
     document.body.classList.remove('modal-open');
@@ -5408,7 +5526,7 @@ function forcarFecharModaisIniciais(origem = 'startup') {
 }
 
 function limparTodosModais() {
-    console.log('🧹 Limpando todos os modais conflitantes...');
+    logModalAluno('🧹 Limpando todos os modais conflitantes...');
     
     // Aplicar correção aos ícones
     aplicarCorrecaoZIconsAction('close');
@@ -5487,7 +5605,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const modalVisualizarRoot = document.getElementById('modalVisualizarAluno');
     if (modalVisualizarRoot && modalVisualizarRoot.parentNode && modalVisualizarRoot.parentNode !== document.body) {
         document.body.appendChild(modalVisualizarRoot);
-        console.log('📦 modalVisualizarAluno realocado diretamente no body para garantir z-index correto.');
+        logModalAluno('📦 modalVisualizarAluno realocado diretamente no body para garantir z-index correto.');
     }
 
     if (typeof inputMasks !== 'undefined') {
@@ -5638,9 +5756,9 @@ function salvarAluno() {
     
     if (isEditing && alunoIdHidden && alunoIdHidden.value) {
         dadosFormData.append('id', alunoIdHidden.value);
-        console.log('📝 Enviando ID do aluno para edição:', alunoIdHidden.value);
+        logModalAluno('📝 Enviando ID do aluno para edição:', alunoIdHidden.value);
     } else {
-        console.log('📝 Criando novo aluno (sem ID)');
+        logModalAluno('📝 Criando novo aluno (sem ID)');
     }
     
     // Adicionar foto se houver
@@ -5664,7 +5782,7 @@ function salvarAluno() {
     console.log('📤 Enviando dados para API via FormData');
     console.log('📤 Operações coletadas:', operacoes);
     console.log('📤 Ação:', acao);
-    console.log('📤 Aluno ID:', alunoId);
+    logModalAluno('📤 Aluno ID:', alunoId);
     
     // Debug FormData
     console.log('📤 FormData contents:');
@@ -5955,34 +6073,46 @@ function carregarOperacoesExistentes(operacoes) {
 // =====================================================
 // Função para ajustar visibilidade das abas conforme perfil do usuário
 function ajustarAbasPorPerfil() {
+    // NOTA: As abas Financeiro, Agenda e Teórico foram removidas do modal
+    // A aba Documentos agora está sempre visível (não precisa mais de controle por perfil)
+    // Esta função foi simplificada pois não há mais abas condicionais
+    
+    logModalAluno('👤 Ajustando abas por perfil (simplificado - todas as abas visíveis)');
+    
+    // Aba Documentos sempre visível - não precisa mais de controle
+    // As abas removidas (Financeiro, Agenda, Teórico) foram comentadas no HTML
+    
+    // Código antigo (comentado - não mais necessário):
+    /*
     const currentUser = <?php echo json_encode($user ?? []); ?>;
     const userType = currentUser.tipo || 'instrutor';
     
-    console.log('👤 Ajustando abas para perfil:', userType);
-    
-    // Mostrar/ocultar abas conforme perfil
     if (userType === 'instrutor') {
-        // Instrutor: apenas Teórico, Agenda/Aulas, Histórico
         document.getElementById('financeiro-tab-container').style.display = 'none';
         document.getElementById('documentos-tab-container').style.display = 'none';
     } else if (userType === 'secretaria') {
-        // Secretaria: todas exceto gestão de Usuários (já controlado no menu)
         document.getElementById('financeiro-tab-container').style.display = 'block';
         document.getElementById('documentos-tab-container').style.display = 'block';
     } else if (userType === 'admin') {
-        // Admin: todas as abas
         document.getElementById('financeiro-tab-container').style.display = 'block';
         document.getElementById('documentos-tab-container').style.display = 'block';
     }
+    */
 }
 // Função para carregar dados da aba Matrícula
 function carregarMatriculas(alunoId) {
     if (!alunoId) return;
     
+    // Verificar se o container existe (aba pode estar em modo placeholder)
+    const container = document.getElementById('matriculas-container');
+    if (!container) {
+        logModalAluno('[Matrículas] Container não encontrado no modal do aluno (aba está em placeholder). Cancelando carregamento para evitar erro.');
+        return;
+    }
+    
     fetch(`api/matriculas.php?aluno_id=${alunoId}`)
         .then(response => response.json())
         .then(data => {
-            const container = document.getElementById('matriculas-container');
             if (data.success && data.matriculas.length > 0) {
                 container.innerHTML = `
                     <div class="table-responsive">
@@ -6025,12 +6155,14 @@ function carregarMatriculas(alunoId) {
         })
         .catch(error => {
             console.error('Erro ao carregar matrículas:', error);
-            document.getElementById('matriculas-container').innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Erro ao carregar matrículas
-                </div>
-            `;
+            if (container) {
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro ao carregar matrículas
+                    </div>
+                `;
+            }
         })
         .finally(() => {
             reforcarEstruturaModalAluno();
@@ -6040,10 +6172,16 @@ function carregarMatriculas(alunoId) {
 function carregarDocumentos(alunoId) {
     if (!alunoId) return;
     
+    // Verificar se o container existe (aba pode estar em modo placeholder)
+    const container = document.getElementById('documentos-container');
+    if (!container) {
+        logModalAluno('[Documentos] Container não encontrado no modal do aluno (aba está em placeholder). Cancelando carregamento para evitar erro.');
+        return;
+    }
+    
     fetch(`api/aluno-documentos.php?aluno_id=${alunoId}`)
         .then(response => response.json())
         .then(data => {
-            const container = document.getElementById('documentos-container');
             if (data.success && data.documentos.length > 0) {
                 container.innerHTML = `
                     <div class="row">
@@ -6081,12 +6219,14 @@ function carregarDocumentos(alunoId) {
         })
         .catch(error => {
             console.error('Erro ao carregar documentos:', error);
-            document.getElementById('documentos-container').innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Erro ao carregar documentos
-                </div>
-            `;
+            if (container) {
+                container.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Erro ao carregar documentos
+                    </div>
+                `;
+            }
         })
         .finally(() => {
             reforcarEstruturaModalAluno();
@@ -6095,7 +6235,7 @@ function carregarDocumentos(alunoId) {
 
 // Função para carregar dados de uma aba específica
 function carregarDadosAba(abaId, alunoId) {
-    console.log(`📊 Carregando dados da aba: ${abaId} para aluno: ${alunoId}`);
+    logModalAluno(`📊 Carregando dados da aba: ${abaId} para aluno: ${alunoId}`);
     
     switch(abaId) {
         case 'matricula':
@@ -6104,6 +6244,8 @@ function carregarDadosAba(abaId, alunoId) {
         case 'documentos':
             carregarDocumentos(alunoId);
             break;
+        // ABA AGENDA (removida do modal; código mantido como histórico)
+        /*
         case 'agenda':
             document.getElementById('aulas-container').innerHTML = `
                 <div class="text-center text-muted py-4">
@@ -6112,6 +6254,9 @@ function carregarDadosAba(abaId, alunoId) {
                 </div>
             `;
             break;
+        */
+        // ABA TEÓRICO (removida do modal; código mantido como histórico)
+        /*
         case 'teorico':
             document.getElementById('turma-container').innerHTML = `
                 <div class="text-center text-muted py-4">
@@ -6120,6 +6265,7 @@ function carregarDadosAba(abaId, alunoId) {
                 </div>
             `;
             break;
+        */
         case 'historico':
             carregarHistorico(alunoId);
             break;
@@ -6130,8 +6276,17 @@ function carregarDadosAba(abaId, alunoId) {
 
 // Função para carregar histórico
 function carregarHistorico(alunoId) {
-    if (!alunoId) return;
+    if (!alunoId) {
+        // Se não houver alunoId, apenas manter o placeholder
+        return;
+    }
     
+    // Por enquanto, apenas manter o placeholder
+    // A implementação completa será feita na próxima etapa
+    logModalAluno('[Histórico] Carregando histórico para aluno:', alunoId);
+    
+    // TODO: Conectar com endpoint unificado de timeline na próxima etapa
+    /*
     fetch(`api/historico.php?tipo=aluno&id=${alunoId}`)
         .then(response => response.json())
         .then(data => {
@@ -6169,6 +6324,45 @@ function carregarHistorico(alunoId) {
         .finally(() => {
             reforcarEstruturaModalAluno();
         });
+    */
+}
+
+// Funções de atalhos da aba Histórico
+function abrirAgendaCompleta() {
+    const alunoId = document.getElementById('aluno_id_hidden').value;
+    if (!alunoId) {
+        logModalAluno('[Atalhos] ID do aluno não encontrado');
+        return;
+    }
+    // Redireciona para página de agendamento com filtro do aluno
+    window.location.href = `index.php?page=agendar-aula&aluno_id=${alunoId}`;
+}
+
+// Função de atalho para financeiro (sobrescreve a função existente quando chamada da aba Histórico)
+// Nota: Já existe uma função abrirFinanceiroAluno(id) no código, mas esta versão busca o ID do modal
+function abrirFinanceiroAlunoDoHistorico() {
+    const alunoId = document.getElementById('aluno_id_hidden').value;
+    if (!alunoId) {
+        logModalAluno('[Atalhos] ID do aluno não encontrado');
+        return;
+    }
+    // Usa a função existente com o ID do aluno
+    if (typeof abrirFinanceiroAluno === 'function') {
+        abrirFinanceiroAluno(alunoId);
+    } else {
+        // Fallback: redireciona diretamente
+        window.location.href = `index.php?page=financeiro-faturas&aluno_id=${alunoId}`;
+    }
+}
+
+function abrirTurmaTeorica() {
+    const alunoId = document.getElementById('aluno_id_hidden').value;
+    if (!alunoId) {
+        logModalAluno('[Atalhos] ID do aluno não encontrado');
+        return;
+    }
+    // Redireciona para página de turmas teóricas (pode precisar ajuste conforme estrutura)
+    window.location.href = `index.php?page=turmas-teoricas&aluno_id=${alunoId}`;
 }
 
 // Função para adicionar nova matrícula
@@ -6193,28 +6387,54 @@ function adicionarDocumento() {
     mostrarAlerta('Funcionalidade de upload de documentos em desenvolvimento', 'info');
 }
 
+// =====================================================
+// INICIALIZAÇÃO DO MODAL DE ALUNO
+// =====================================================
 // Event listener para mudança de abas
 document.addEventListener('DOMContentLoaded', function() {
     // Ajustar abas por perfil
     ajustarAbasPorPerfil();
     
-    // Event listener para mudança de abas
-    const tabButtons = document.querySelectorAll('#alunoTabs button[data-bs-toggle="tab"]');
-    tabButtons.forEach(button => {
-        button.addEventListener('shown.bs.tab', function(event) {
-            const targetTab = event.target.getAttribute('data-bs-target').replace('#', '');
-            const alunoId = document.getElementById('aluno_id_hidden').value;
-            reforcarEstruturaModalAluno();
-            const tabScroller = document.getElementById('alunoTabsContent');
-            if (tabScroller) {
-                tabScroller.scrollTop = 0;
-            }
+    // Event listener para mudança de abas - RESETAR SCROLL AO TROCAR DE ABA
+    const modalAluno = document.getElementById('modalAluno');
+    if (modalAluno) {
+        const tabButtons = modalAluno.querySelectorAll('#alunoTabs button[data-bs-toggle="tab"]');
+        
+        // Garantir que o listener seja registrado apenas uma vez
+        if (tabButtons.length > 0 && !modalAluno.dataset.tabListenersAttached) {
+            modalAluno.dataset.tabListenersAttached = 'true';
             
-            if (alunoId) {
-                carregarDadosAba(targetTab, alunoId);
-            }
-        });
-    });
+            tabButtons.forEach(button => {
+                button.addEventListener('shown.bs.tab', function(event) {
+                    const targetTab = event.target.getAttribute('data-bs-target').replace('#', '');
+                    logModalAluno('[DEBUG aluno-modal] aba trocada para:', targetTab);
+                    
+                    // Resetar scroll do corpo do modal para o topo
+                    const modalBody = modalAluno.querySelector('.aluno-modal-body');
+                    if (modalBody) {
+                        const scrollAntes = modalBody.scrollTop;
+                        modalBody.scrollTop = 0;
+                        logModalAluno('[DEBUG aluno-modal] Scroll resetado:', scrollAntes, '→', modalBody.scrollTop);
+                        logModalAluno('[DEBUG aluno-modal] Elemento .aluno-modal-body encontrado:', modalBody);
+                    } else {
+                        console.error('[DEBUG aluno-modal] ERRO: .aluno-modal-body NÃO ENCONTRADO!');
+                    }
+                    
+                    // Carregar dados da aba se necessário
+                    const alunoId = document.getElementById('aluno_id_hidden')?.value;
+                    
+                    if (alunoId) {
+                        carregarDadosAba(targetTab, alunoId);
+                    }
+                    
+                    // Reforçar estrutura do modal
+                    reforcarEstruturaModalAluno();
+                });
+            });
+            
+            logModalAluno('[Modal Aluno] Listeners de abas registrados');
+        }
+    }
 });
 
 // =====================================================

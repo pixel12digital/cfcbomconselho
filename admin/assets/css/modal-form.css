@@ -324,41 +324,44 @@
 #modalAluno .aluno-tab-content {
     flex: 1 1 auto;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+    /* Remover display flex para evitar centralização vertical */
+    display: block !important;
+    flex-direction: unset;
+    height: auto;
+    /* Garantir fluxo natural de cima para baixo */
+    align-items: unset;
+    justify-content: unset;
 }
 
 #modalAluno .aluno-tab-content .tab-pane {
-    flex: 1 1 auto;
+    /* Remover flex que pode causar expansão vertical indesejada */
+    flex: none;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
+    /* NÃO forçar display aqui - deixar Bootstrap controlar (display: none para inativas, display: block para .active) */
+    height: auto;
 }
 
 #modalAluno .aluno-modal-panel > .tab-content {
     flex: 1 1 auto;
     min-height: 0;
-    display: flex;
-    flex-direction: column;
-    height: 100%;
+    /* NÃO forçar display aqui - deixar Bootstrap controlar */
+    height: auto;
     padding: 0;
     overflow: visible;
     background: transparent;
 }
 
 #modalAluno .aluno-modal-panel > .tab-content > .tab-pane {
-    flex: 1 1 auto;
+    /* Remover flex que pode causar expansão vertical indesejada */
+    flex: none;
     min-height: 0;
     padding: 0;
-    display: flex;
-    flex-direction: column;
+    /* NÃO forçar display aqui - deixar Bootstrap controlar (display: none para inativas, display: block para .active) */
     overflow: visible;
+    height: auto;
 }
 
-#modalAluno .aluno-modal-panel > .tab-content > .tab-pane.active {
-    display: flex !important;
-}
+/* Remover regra de .active - Bootstrap já controla isso */
 
 /* Scrollbar customizada */
 #modalAluno .aluno-modal-body::-webkit-scrollbar {
@@ -509,12 +512,17 @@
    ===================================================== */
 
 /* Classe padrão para todas as tab-pane do modal de Aluno
-   Garante que o conteúdo comece logo abaixo das abas (máximo 24px) */
+   Garante que o conteúdo comece logo abaixo das abas com espaçamento moderado
+   IMPORTANTE: NÃO forçar display aqui - Bootstrap controla (display: none para inativas, display: block para .active) */
 #modalAluno .modal-tab-pane {
-    padding-top: 20px;
+    padding-top: 1rem; /* 16px - espaçamento confortável mas compacto */
     padding-left: 0;
     padding-right: 0;
     padding-bottom: 0;
+    
+    /* DEBUG VISUAL - BORDA COLORIDA PARA VERIFICAR SE CSS ESTÁ ATIVO */
+    border: 2px solid magenta !important;
+    box-sizing: border-box;
 }
 
 /* Zerar margens superiores de elementos no topo das abas */
@@ -561,6 +569,71 @@
 #modalAluno .modal-tab-pane .text-center.text-muted:first-child {
     margin-top: 0;
     padding-top: 0;
+}
+
+/* Normalizar espaçamento do container-fluid na aba Histórico e outras */
+#modalAluno .modal-tab-pane .container-fluid {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+/* Garantir que a primeira row dentro de container-fluid não tenha margin-top */
+#modalAluno .modal-tab-pane .container-fluid > .row:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Título da aba Histórico - sem margin-top excessivo */
+#modalAluno .modal-tab-pane .container-fluid > .row:first-child > .col-12:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* H5 e parágrafos no topo das abas - espaçamento mínimo */
+#modalAluno .modal-tab-pane h5,
+#modalAluno .modal-tab-pane .container-fluid h5 {
+    margin-top: 0 !important;
+    margin-bottom: 0.75rem !important;
+    padding-top: 0 !important;
+}
+
+#modalAluno .modal-tab-pane p.text-muted.small,
+#modalAluno .modal-tab-pane .container-fluid p.text-muted.small {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Placeholders das abas Matrícula e Documentos - sem espaçamento excessivo */
+#modalAluno .modal-tab-pane > p:first-child,
+#modalAluno .modal-tab-pane > p:only-child {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Garantir que elementos diretos dentro de tab-pane não tenham margin-top */
+#modalAluno .modal-tab-pane > *:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Garantir que parágrafos diretos (placeholders) não tenham espaçamento excessivo */
+#modalAluno .modal-tab-pane > p:first-child,
+#modalAluno .modal-tab-pane > p:only-child {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Remover qualquer height: 100% ou min-height grande que possa causar centralização */
+#modalAluno .modal-tab-pane,
+#modalAluno .modal-tab-pane .container-fluid {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
 }
 
 /* Classe auxiliar para cabeçalhos de seção (mantida para compatibilidade) */
@@ -804,5 +877,46 @@
     .aluno-modal-footer {
         flex-wrap: wrap;
     }
+}
+
+/* ============================================================
+ * Correção definitiva de espaçamento das abas do modalAluno
+ * Garante que o conteúdo das abas comece logo abaixo das tabs
+ * removendo margens/paddings/alturas herdadas dos wrappers.
+ * ============================================================ */
+
+/* Zerar margens/paddings dos wrappers internos do modalAluno
+   IMPORTANTE: NÃO forçar display em .tab-pane aqui - Bootstrap controla */
+#modalAluno .aluno-modal-body,
+#modalAluno .aluno-modal-panel,
+#modalAluno .aluno-tab-content,
+#modalAluno .tab-content,
+#modalAluno .tab-pane .container-fluid {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+/* Regra padrão para o conteúdo de cada aba do aluno
+   IMPORTANTE: NÃO forçar display aqui - Bootstrap controla (display: none para inativas, display: block para .active) */
+#modalAluno .modal-tab-pane {
+    margin-top: 0 !important;
+    padding-top: 1rem !important; /* ~16px de respiro abaixo das tabs */
+    padding-bottom: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+
+    /* DEBUG VISUAL já existente: borda magenta para enxergar limites */
+    border: 2px solid magenta !important;
+    box-sizing: border-box;
+}
+
+/* Garantir que parágrafos/headers não tenham margens gigantes no topo */
+#modalAluno .modal-tab-pane > h1,
+#modalAluno .modal-tab-pane > h2,
+#modalAluno .modal-tab-pane > h3,
+#modalAluno .modal-tab-pane > p {
+    margin-top: 0.5rem !important;
 }
 
