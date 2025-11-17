@@ -146,9 +146,14 @@ try {
             CREATE TABLE IF NOT EXISTS exames (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 aluno_id INT NOT NULL,
-                tipo ENUM('medico', 'psicotecnico') NOT NULL,
+                -- NOTA: A tabela exames agora também é usada para provas teóricas e práticas
+                -- tipo: 'medico', 'psicotecnico' (exames pré-requisitos)
+                --       'teorico', 'pratico' (provas de direção do DETRAN)
+                tipo ENUM('medico', 'psicotecnico', 'teorico', 'pratico') NOT NULL,
                 status ENUM('agendado', 'concluido', 'cancelado') DEFAULT 'agendado',
-                resultado ENUM('apto', 'inapto', 'inapto_temporario', 'pendente') DEFAULT 'pendente',
+                -- NOTA: resultado inclui valores para exames ('apto', 'inapto', etc.) 
+                --       e para provas ('aprovado', 'reprovado')
+                resultado ENUM('apto', 'inapto', 'inapto_temporario', 'pendente', 'aprovado', 'reprovado') DEFAULT 'pendente',
                 clinica_nome VARCHAR(200),
                 protocolo VARCHAR(100),
                 data_agendada DATE NOT NULL,
@@ -162,6 +167,123 @@ try {
                 FOREIGN KEY (aluno_id) REFERENCES alunos(id),
                 FOREIGN KEY (criado_por) REFERENCES usuarios(id),
                 FOREIGN KEY (atualizado_por) REFERENCES usuarios(id)
+            )
+        ",
+        // =====================================================
+        // TABELAS ADICIONADAS NA FASE 1 (2025-01-27)
+        // Para alinhar install.php com a estrutura real usada pelo sistema
+        // =====================================================
+        
+        // Tabela matriculas – adicionada na Fase 1 para alinhar com migrations
+        'matriculas' => "
+            CREATE TABLE IF NOT EXISTS matriculas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                aluno_id INT NOT NULL,
+                categoria_cnh ENUM('A', 'B', 'C', 'D', 'E', 'AB', 'AC', 'AD', 'AE') NOT NULL,
+                tipo_servico VARCHAR(100) NOT NULL,
+                status ENUM('ativa', 'concluida', 'trancada', 'cancelada') DEFAULT 'ativa',
+                data_inicio DATE NOT NULL,
+                data_fim DATE DEFAULT NULL,
+                valor_total DECIMAL(10, 2) DEFAULT NULL,
+                forma_pagamento VARCHAR(50) DEFAULT NULL,
+                observacoes TEXT DEFAULT NULL,
+                renach VARCHAR(50) DEFAULT NULL,
+                processo_numero VARCHAR(100) DEFAULT NULL,
+                processo_numero_detran VARCHAR(100) DEFAULT NULL,
+                processo_situacao VARCHAR(100) DEFAULT NULL,
+                status_financeiro ENUM('regular', 'inadimplente', 'quitado') DEFAULT 'regular',
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_aluno (aluno_id),
+                INDEX idx_status (status),
+                INDEX idx_categoria_tipo (categoria_cnh, tipo_servico),
+                INDEX idx_status_financeiro (status_financeiro),
+                FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE
+            )
+        ",
+        // Tabela financeiro_faturas – adicionada na Fase 1 para alinhar com migrations
+        'financeiro_faturas' => "
+            CREATE TABLE IF NOT EXISTS financeiro_faturas (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                aluno_id INT NOT NULL,
+                matricula_id INT DEFAULT NULL,
+                titulo VARCHAR(200) NOT NULL,
+                descricao TEXT DEFAULT NULL,
+                valor DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                valor_total DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+                data_vencimento DATE NOT NULL,
+                vencimento DATE DEFAULT NULL,
+                status ENUM('aberta', 'paga', 'vencida', 'parcial', 'cancelada') DEFAULT 'aberta',
+                forma_pagamento ENUM('avista', 'boleto', 'pix', 'cartao', 'transferencia', 'dinheiro') DEFAULT 'avista',
+                parcelas INT DEFAULT 1,
+                observacoes TEXT DEFAULT NULL,
+                reteste BOOLEAN DEFAULT FALSE,
+                criado_por INT DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_aluno (aluno_id),
+                INDEX idx_matricula (matricula_id),
+                INDEX idx_status (status),
+                INDEX idx_vencimento (data_vencimento),
+                INDEX idx_status_vencimento (status, data_vencimento),
+                FOREIGN KEY (aluno_id) REFERENCES alunos(id) ON DELETE CASCADE,
+                FOREIGN KEY (matricula_id) REFERENCES matriculas(id) ON DELETE SET NULL,
+                FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL
+            )
+        ",
+        // Tabela pagamentos – adicionada na Fase 1 para alinhar com migrations
+        'pagamentos' => "
+            CREATE TABLE IF NOT EXISTS pagamentos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                fatura_id INT NOT NULL,
+                data_pagamento DATE NOT NULL,
+                valor_pago DECIMAL(10, 2) NOT NULL,
+                metodo ENUM('pix', 'boleto', 'cartao', 'dinheiro', 'transferencia', 'outros') DEFAULT 'pix',
+                comprovante_url VARCHAR(500) DEFAULT NULL,
+                obs TEXT DEFAULT NULL,
+                criado_por INT DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_fatura (fatura_id),
+                INDEX idx_data_pagamento (data_pagamento),
+                FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL
+            )
+        ",
+        // Tabela financeiro_pagamentos (despesas) – adicionada na Fase 1 para alinhar com migrations
+        'financeiro_pagamentos' => "
+            CREATE TABLE IF NOT EXISTS financeiro_pagamentos (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                fornecedor VARCHAR(200) NOT NULL,
+                descricao TEXT DEFAULT NULL,
+                categoria ENUM('combustivel', 'manutencao', 'salarios', 'aluguel', 'energia', 'agua', 'telefone', 'internet', 'outros') DEFAULT 'outros',
+                valor DECIMAL(10, 2) NOT NULL,
+                status ENUM('pendente', 'pago', 'cancelado') DEFAULT 'pendente',
+                vencimento DATE NOT NULL,
+                data_pagamento DATE DEFAULT NULL,
+                forma_pagamento ENUM('pix', 'boleto', 'cartao', 'dinheiro', 'transferencia') DEFAULT 'pix',
+                comprovante_url VARCHAR(500) DEFAULT NULL,
+                observacoes TEXT DEFAULT NULL,
+                criado_por INT DEFAULT NULL,
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_status (status),
+                INDEX idx_vencimento (vencimento),
+                INDEX idx_categoria (categoria),
+                INDEX idx_status_vencimento (status, vencimento),
+                FOREIGN KEY (criado_por) REFERENCES usuarios(id) ON DELETE SET NULL
+            )
+        ",
+        // Tabela financeiro_configuracoes – adicionada na Fase 2 para configurações do módulo financeiro
+        'financeiro_configuracoes' => "
+            CREATE TABLE IF NOT EXISTS financeiro_configuracoes (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                chave VARCHAR(100) NOT NULL UNIQUE,
+                valor VARCHAR(255) NOT NULL,
+                descricao VARCHAR(255) DEFAULT NULL,
+                tipo ENUM('texto', 'numero', 'booleano', 'data') DEFAULT 'texto',
+                criado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                atualizado_em TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_chave (chave)
             )
         "
     ];
@@ -206,6 +328,22 @@ try {
         echo "<p>ℹ️ CFC padrão já existe</p>";
     }
     
+    // Inserir configuração padrão de financeiro (Fase 2)
+    try {
+        $configExists = $db->fetch("SELECT id FROM financeiro_configuracoes WHERE chave = 'dias_inadimplencia'");
+        if (!$configExists) {
+            $sql = "INSERT INTO financeiro_configuracoes (chave, valor, descricao, tipo) VALUES 
+                    ('dias_inadimplencia', '30', 'Número de dias após vencimento para considerar inadimplente', 'numero')";
+            $db->query($sql);
+            echo "<p>✅ Configuração financeira padrão criada com sucesso</p>";
+        } else {
+            echo "<p>ℹ️ Configuração financeira padrão já existe</p>";
+        }
+    } catch (Exception $e) {
+        // Ignorar se tabela não existir ainda (será criada na próxima execução)
+        echo "<p>⚠️ Não foi possível inserir configuração financeira (tabela pode não existir ainda): " . $e->getMessage() . "</p>";
+    }
+    
     // Criar índices para performance
     $indexes = [
         "CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email)",
@@ -214,7 +352,14 @@ try {
         "CREATE INDEX IF NOT EXISTS idx_aulas_data ON aulas(data_aula)",
         "CREATE INDEX IF NOT EXISTS idx_aulas_status ON aulas(status)",
         "CREATE INDEX IF NOT EXISTS idx_sessoes_token ON sessoes(token)",
-        "CREATE INDEX IF NOT EXISTS idx_sessoes_expira ON sessoes(expira_em)"
+        "CREATE INDEX IF NOT EXISTS idx_sessoes_expira ON sessoes(expira_em)",
+        // Índices adicionados na Fase 1
+        "CREATE INDEX IF NOT EXISTS idx_matriculas_aluno ON matriculas(aluno_id)",
+        "CREATE INDEX IF NOT EXISTS idx_matriculas_status ON matriculas(status)",
+        "CREATE INDEX IF NOT EXISTS idx_financeiro_faturas_aluno ON financeiro_faturas(aluno_id)",
+        "CREATE INDEX IF NOT EXISTS idx_financeiro_faturas_status ON financeiro_faturas(status)",
+        "CREATE INDEX IF NOT EXISTS idx_pagamentos_fatura ON pagamentos(fatura_id)",
+        "CREATE INDEX IF NOT EXISTS idx_financeiro_pagamentos_status ON financeiro_pagamentos(status)"
     ];
     
     foreach ($indexes as $index) {

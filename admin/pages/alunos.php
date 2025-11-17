@@ -12,6 +12,41 @@ if (!isset($cfcs)) $cfcs = [];
 if (!isset($mensagem)) $mensagem = '';
 if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 
+// Ler filtro de status atual
+$statusFiltroAtual = isset($_GET['status']) ? trim($_GET['status']) : null;
+$statusPermitidos = ['em_formacao', 'em_exame', 'concluido'];
+if (!in_array($statusFiltroAtual, $statusPermitidos)) {
+    $statusFiltroAtual = null;
+}
+
+// Estatísticas globais (se não vierem do index.php, calcular aqui)
+if (!isset($stats['total_alunos'])) {
+    try {
+        require_once __DIR__ . '/../includes/database.php';
+        $db = Database::getInstance();
+        $resultTotal = $db->fetch("SELECT COUNT(*) as total FROM alunos");
+        $stats['total_alunos'] = $resultTotal['total'] ?? count($alunos);
+        
+        $resultAtivos = $db->fetch("SELECT COUNT(*) as total FROM alunos WHERE status = 'ativo'");
+        $stats['total_ativos'] = $resultAtivos['total'] ?? 0;
+        
+        $resultConcluidos = $db->fetch("SELECT COUNT(*) as total FROM alunos WHERE status = 'concluido'");
+        $stats['total_concluidos'] = $resultConcluidos['total'] ?? 0;
+        
+        $resultEmExame = $db->fetch("
+            SELECT COUNT(DISTINCT aluno_id) as total
+            FROM exames
+            WHERE status = 'agendado'
+        ");
+        $stats['total_em_exame'] = $resultEmExame['total'] ?? 0;
+    } catch (Exception $e) {
+        $stats['total_alunos'] = count($alunos);
+        $stats['total_ativos'] = 0;
+        $stats['total_concluidos'] = 0;
+        $stats['total_em_exame'] = 0;
+    }
+}
+
 // Headers para evitar cache em produção - removidos pois já há saída HTML
 // header("Cache-Control: no-cache, no-store, must-revalidate");
 // header("Pragma: no-cache");
@@ -173,6 +208,21 @@ body.visualizar-aluno-open {
     align-items: center;
     gap: 6px;
     color: #475569;
+    cursor: pointer;
+    padding: 6px 12px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+.alunos-kpi-item:hover {
+    background: rgba(0, 123, 255, 0.1);
+    transform: translateY(-1px);
+}
+
+.alunos-kpi-item.active {
+    background: rgba(0, 123, 255, 0.15);
+    font-weight: 600;
+    border-bottom: 2px solid #007bff;
 }
 
 .alunos-kpi-icon {
@@ -1461,36 +1511,43 @@ input.form-control.invalid {
     </div>
 </div>
 
-<!-- Indicadores compactos -->
+<!-- Indicadores compactos (clicáveis) -->
 <div class="alunos-kpi-bar" role="group" aria-label="Indicadores de alunos">
-    <div class="alunos-kpi-item">
+    <a href="index.php?page=alunos" class="alunos-kpi-item <?php echo $statusFiltroAtual === null ? 'active' : ''; ?>" style="text-decoration: none; color: inherit;">
         <i class="fas fa-users alunos-kpi-icon total" aria-hidden="true"></i>
         <span class="alunos-kpi-label">Total</span>
         <span class="alunos-kpi-value" id="totalAlunos">
-            <?php echo count($alunos); ?>
+            <?php echo $stats['total_alunos'] ?? count($alunos); ?>
         </span>
-    </div>
-    <div class="alunos-kpi-item">
+    </a>
+    <a href="index.php?page=alunos&status=em_formacao" class="alunos-kpi-item <?php echo $statusFiltroAtual === 'em_formacao' ? 'active' : ''; ?>" style="text-decoration: none; color: inherit;">
         <i class="fas fa-check-circle alunos-kpi-icon ativos" aria-hidden="true"></i>
         <span class="alunos-kpi-label">Ativos</span>
         <span class="alunos-kpi-value" id="alunosAtivos">
-            <?php echo count(array_filter($alunos, function($a) { return ($a['status'] ?? '') === 'ativo'; })); ?>
+            <?php echo $stats['total_ativos'] ?? count(array_filter($alunos, function($a) { return ($a['status'] ?? '') === 'ativo'; })); ?>
         </span>
-    </div>
-    <div class="alunos-kpi-item">
+    </a>
+    <a href="index.php?page=alunos&status=em_formacao" class="alunos-kpi-item <?php echo $statusFiltroAtual === 'em_formacao' ? 'active' : ''; ?>" style="text-decoration: none; color: inherit;">
         <i class="fas fa-clock alunos-kpi-icon formacao" aria-hidden="true"></i>
         <span class="alunos-kpi-label">Em formação</span>
         <span class="alunos-kpi-value" id="emFormacao">
-            <?php echo count(array_filter($alunos, function($a) { return ($a['status'] ?? '') === 'ativo'; })); ?>
+            <?php echo $stats['total_ativos'] ?? count(array_filter($alunos, function($a) { return ($a['status'] ?? '') === 'ativo'; })); ?>
         </span>
-    </div>
-    <div class="alunos-kpi-item">
+    </a>
+    <a href="index.php?page=alunos&status=em_exame" class="alunos-kpi-item <?php echo $statusFiltroAtual === 'em_exame' ? 'active' : ''; ?>" style="text-decoration: none; color: inherit;">
+        <i class="fas fa-clipboard-check alunos-kpi-icon" aria-hidden="true" style="color: #dc3545;"></i>
+        <span class="alunos-kpi-label">Em exame</span>
+        <span class="alunos-kpi-value" id="emExame">
+            <?php echo $stats['total_em_exame'] ?? 0; ?>
+        </span>
+    </a>
+    <a href="index.php?page=alunos&status=concluido" class="alunos-kpi-item <?php echo $statusFiltroAtual === 'concluido' ? 'active' : ''; ?>" style="text-decoration: none; color: inherit;">
         <i class="fas fa-graduation-cap alunos-kpi-icon concluidos" aria-hidden="true"></i>
         <span class="alunos-kpi-label">Concluídos</span>
         <span class="alunos-kpi-value" id="concluidos">
-            <?php echo count(array_filter($alunos, function($a) { return ($a['status'] ?? '') === 'concluido'; })); ?>
+            <?php echo $stats['total_concluidos'] ?? count(array_filter($alunos, function($a) { return ($a['status'] ?? '') === 'concluido'; })); ?>
         </span>
-    </div>
+    </a>
 </div>
 
 <!-- Tabela de Alunos -->
@@ -1832,7 +1889,7 @@ input.form-control.invalid {
               <!-- Aba Dados (real) -->
               <div class="tab-pane fade show active modal-tab-pane" id="dados" role="tabpanel" aria-labelledby="dados-tab">
                 <div class="container-fluid" style="padding: 0;">
-                  <!-- Seção 1: Informações Pessoais -->
+                  <!-- DADOS: Seção 1 - Informações Pessoais -->
                   <div class="row mb-2 mt-0">
                     <div class="col-12">
                       <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
@@ -1896,26 +1953,8 @@ input.form-control.invalid {
                     </div>
                     <div class="col-md-2">
                       <div class="mb-1">
-                        <label for="renach" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Renach *</label>
-                        <input type="text" class="form-control" id="renach" name="renach" required 
-                               placeholder="PE000000000" maxlength="11" style="padding: 0.4rem; font-size: 0.85rem;"
-                               data-mask="renach">
-                      </div>
-                    </div>
-                    <div class="col-md-2">
-                      <div class="mb-1">
                         <label for="data_nascimento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Data Nasc. *</label>
                         <input type="date" class="form-control" id="data_nascimento" name="data_nascimento" required style="padding: 0.4rem; font-size: 0.85rem;">
-                      </div>
-                    </div>
-                    <div class="col-md-2">
-                      <div class="mb-1">
-                        <label for="status" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status</label>
-                        <select class="form-select" id="status" name="status" style="padding: 0.4rem; font-size: 0.85rem;">
-                          <option value="ativo">Ativo</option>
-                          <option value="inativo">Inativo</option>
-                          <option value="concluido">Concluído</option>
-                        </select>
                       </div>
                     </div>
                     <div class="col-md-3">
@@ -1931,10 +1970,104 @@ input.form-control.invalid {
                     </div>
                   </div>
                   
+                  <!-- Campos complementares do RG -->
+                  <div class="row mb-2">
+                    <div class="col-md-2">
+                      <div class="mb-1">
+                        <label for="rg_orgao_emissor" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Órgão Emissor</label>
+                        <input type="text" class="form-control" id="rg_orgao_emissor" name="rg_orgao_emissor" 
+                               placeholder="Ex.: SSP" maxlength="10" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="mb-1">
+                        <label for="rg_uf" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">UF do RG</label>
+                        <select class="form-select" id="rg_uf" name="rg_uf" style="padding: 0.4rem; font-size: 0.85rem;">
+                          <option value="">Selecione...</option>
+                          <option value="AC">AC</option>
+                          <option value="AL">AL</option>
+                          <option value="AP">AP</option>
+                          <option value="AM">AM</option>
+                          <option value="BA">BA</option>
+                          <option value="CE">CE</option>
+                          <option value="DF">DF</option>
+                          <option value="ES">ES</option>
+                          <option value="GO">GO</option>
+                          <option value="MA">MA</option>
+                          <option value="MT">MT</option>
+                          <option value="MS">MS</option>
+                          <option value="MG">MG</option>
+                          <option value="PA">PA</option>
+                          <option value="PB">PB</option>
+                          <option value="PR">PR</option>
+                          <option value="PE">PE</option>
+                          <option value="PI">PI</option>
+                          <option value="RJ">RJ</option>
+                          <option value="RN">RN</option>
+                          <option value="RS">RS</option>
+                          <option value="RO">RO</option>
+                          <option value="RR">RR</option>
+                          <option value="SC">SC</option>
+                          <option value="SP">SP</option>
+                          <option value="SE">SE</option>
+                          <option value="TO">TO</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-2">
+                      <div class="mb-1">
+                        <label for="rg_data_emissao" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Data Emissão RG</label>
+                        <input type="date" class="form-control" id="rg_data_emissao" name="rg_data_emissao" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-6"></div>
+                  </div>
+                  
+                  <!-- Estado Civil, Profissão, Escolaridade -->
                   <div class="row mb-2">
                     <div class="col-md-3">
                       <div class="mb-1">
-                        <label for="naturalidade_estado" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Estado</label>
+                        <label for="estado_civil" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Estado Civil</label>
+                        <select class="form-select" id="estado_civil" name="estado_civil" style="padding: 0.4rem; font-size: 0.85rem;">
+                          <option value="">Selecione...</option>
+                          <option value="solteiro">Solteiro(a)</option>
+                          <option value="casado">Casado(a)</option>
+                          <option value="divorciado">Divorciado(a)</option>
+                          <option value="viuvo">Viúvo(a)</option>
+                          <option value="uniao_estavel">União estável</option>
+                          <option value="outro">Outro</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="mb-1">
+                        <label for="profissao" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Profissão</label>
+                        <input type="text" class="form-control" id="profissao" name="profissao" 
+                               placeholder="Digite a profissão" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-5">
+                      <div class="mb-1">
+                        <label for="escolaridade" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Escolaridade</label>
+                        <select class="form-select" id="escolaridade" name="escolaridade" style="padding: 0.4rem; font-size: 0.85rem;">
+                          <option value="">Selecione...</option>
+                          <option value="fundamental_incompleto">Fundamental incompleto</option>
+                          <option value="fundamental_completo">Fundamental completo</option>
+                          <option value="medio_incompleto">Médio incompleto</option>
+                          <option value="medio_completo">Médio completo</option>
+                          <option value="superior_incompleto">Superior incompleto</option>
+                          <option value="superior_completo">Superior completo</option>
+                          <option value="pos_graduacao">Pós-graduação</option>
+                          <option value="outro">Outro</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div class="row mb-2">
+                    <div class="col-md-3">
+                      <div class="mb-1">
+                        <label for="naturalidade_estado" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Estado (Naturalidade)</label>
                         <select class="form-select" id="naturalidade_estado" name="naturalidade_estado" style="padding: 0.4rem; font-size: 0.85rem;">
                           <option value="">Selecione o estado...</option>
                           <option value="AC">Acre</option>
@@ -1969,7 +2102,7 @@ input.form-control.invalid {
                     </div>
                     <div class="col-md-4">
                       <div class="mb-1">
-                        <label for="naturalidade_municipio" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Município</label>
+                        <label for="naturalidade_municipio" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Município (Naturalidade)</label>
                         <select class="form-select" id="naturalidade_municipio" name="naturalidade_municipio" style="padding: 0.4rem; font-size: 0.85rem;" disabled>
                           <option value="">Primeiro selecione o estado</option>
                         </select>
@@ -1994,14 +2127,14 @@ input.form-control.invalid {
                     </div>
                   </div>
                   
+                  <!-- DADOS: Seção 2 - Contatos -->
                   <div class="row mb-2">
-                    <div class="col-md-4">
-                      <div class="mb-1">
-                        <label for="email" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">E-mail</label>
-                        <input type="email" class="form-control" id="email" name="email" 
-                               placeholder="aluno@email.com" style="padding: 0.4rem; font-size: 0.85rem;">
-                      </div>
+                    <div class="col-12">
+                      <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                        <i class="fas fa-phone me-1"></i>Contatos
+                      </h6>
                     </div>
+                    <!-- Linha 1: Telefone principal, Telefone secundário, E-mail -->
                     <div class="col-md-4">
                       <div class="mb-1">
                         <label for="telefone" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Telefone</label>
@@ -2009,52 +2142,42 @@ input.form-control.invalid {
                                placeholder="(00) 00000-0000" style="padding: 0.4rem; font-size: 0.85rem;">
                       </div>
                     </div>
-                  </div>
-                  
-                  <!-- Seção 2: CFC -->
-                  <div class="row mb-2">
-                    <div class="col-12">
-                      <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                        <i class="fas fa-graduation-cap me-1"></i>CFC
-                      </h6>
-                    </div>
-                    <div class="col-md-6">
+                    <div class="col-md-4">
                       <div class="mb-1">
-                        <label for="cfc_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CFC *</label>
-                        <select class="form-select" id="cfc_id" name="cfc_id" required style="padding: 0.4rem; font-size: 0.85rem;">
-                          <option value="">Selecione um CFC...</option>
-                          <?php if (isset($cfcs) && is_array($cfcs)): ?>
-                            <?php foreach ($cfcs as $cfc): ?>
-                              <option value="<?php echo $cfc['id']; ?>">
-                                <?php echo htmlspecialchars($cfc['nome']); ?>
-                              </option>
-                            <?php endforeach; ?>
-                          <?php endif; ?>
-                        </select>
+                        <label for="telefone_secundario" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Telefone Secundário</label>
+                        <input type="text" class="form-control" id="telefone_secundario" name="telefone_secundario" 
+                               placeholder="(00) 00000-0000" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-4">
+                      <div class="mb-1">
+                        <label for="email" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">E-mail</label>
+                        <input type="email" class="form-control" id="email" name="email" 
+                               placeholder="aluno@email.com" style="padding: 0.4rem; font-size: 0.85rem;">
                       </div>
                     </div>
                   </div>
                   
-                  <!-- Seção 3: Tipo de Serviço -->
+                  <!-- Linha 2: Contato de Emergência -->
                   <div class="row mb-2">
-                    <div class="col-12">
-                      <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                        <i class="fas fa-tasks me-1"></i>Tipo de Serviço
-                      </h6>
-                    </div>
-                    <div class="col-12">
-                      <div class="mb-2">
-                        <div id="operacoes-container">
-                          <!-- Operações existentes serão carregadas aqui -->
-                        </div>
-                        <button type="button" class="btn btn-outline-primary btn-sm" onclick="adicionarOperacao()" style="font-size: 0.8rem;">
-                          <i class="fas fa-plus me-1"></i>Adicionar Tipo de Serviço
-                        </button>
+                    <div class="col-md-5">
+                      <div class="mb-1">
+                        <label for="contato_emergencia_nome" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Contato de Emergência (Nome)</label>
+                        <input type="text" class="form-control" id="contato_emergencia_nome" name="contato_emergencia_nome" 
+                               placeholder="Nome do contato de emergência" style="padding: 0.4rem; font-size: 0.85rem;">
                       </div>
                     </div>
+                    <div class="col-md-4">
+                      <div class="mb-1">
+                        <label for="contato_emergencia_telefone" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Telefone de Emergência</label>
+                        <input type="text" class="form-control" id="contato_emergencia_telefone" name="contato_emergencia_telefone" 
+                               placeholder="(00) 00000-0000" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-3"></div>
                   </div>
                   
-                  <!-- Seção 4: Endereço -->
+                  <!-- DADOS: Seção 3 - Endereço -->
                   <div class="row mb-2">
                     <div class="col-12">
                       <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
@@ -2092,11 +2215,18 @@ input.form-control.invalid {
                                placeholder="Rua, Avenida, etc." style="padding: 0.4rem; font-size: 0.85rem;">
                       </div>
                     </div>
-                    <div class="col-md-3">
+                    <div class="col-md-2">
                       <div class="mb-1">
                         <label for="numero" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Número</label>
                         <input type="text" class="form-control" id="numero" name="numero" 
                                placeholder="123" style="padding: 0.4rem; font-size: 0.85rem;">
+                      </div>
+                    </div>
+                    <div class="col-md-1">
+                      <div class="mb-1">
+                        <label for="complemento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Complemento</label>
+                        <input type="text" class="form-control" id="complemento" name="complemento" 
+                               placeholder="Apto, Bloco, etc." style="padding: 0.4rem; font-size: 0.85rem;">
                       </div>
                     </div>
                     
@@ -2152,11 +2282,66 @@ input.form-control.invalid {
                     </div>
                   </div>
                   
-                  <!-- Seção 5: Observações -->
+                  <!-- DADOS: Seção 4 - Configurações Gerais -->
+                  <div class="row mb-2">
+                    <div class="col-12">
+                      <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                        <i class="fas fa-cog me-1"></i>Configurações Gerais
+                      </h6>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="mb-1">
+                        <label for="cfc_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">CFC *</label>
+                        <select class="form-select" id="cfc_id" name="cfc_id" required style="padding: 0.4rem; font-size: 0.85rem;">
+                          <option value="">Selecione um CFC...</option>
+                          <?php if (isset($cfcs) && is_array($cfcs)): ?>
+                            <?php foreach ($cfcs as $cfc): ?>
+                              <option value="<?php echo $cfc['id']; ?>">
+                                <?php echo htmlspecialchars($cfc['nome']); ?>
+                              </option>
+                            <?php endforeach; ?>
+                          <?php endif; ?>
+                        </select>
+                      </div>
+                    </div>
+                    <div class="col-md-3">
+                      <div class="mb-1">
+                        <label for="status" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status do Aluno</label>
+                        <select class="form-select" id="status" name="status" style="padding: 0.4rem; font-size: 0.85rem;">
+                          <option value="ativo">Ativo</option>
+                          <option value="inativo">Inativo</option>
+                          <option value="concluido">Concluído</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <!-- LGPD -->
+                  <div class="row mb-2 aluno-lgpd-group">
+                    <div class="col-12">
+                      <div class="mb-2">
+                        <div class="form-check">
+                          <input class="form-check-input" type="checkbox" id="lgpd_consentimento" name="lgpd_consentimento" value="1" style="font-size: 0.9rem;">
+                          <label class="form-check-label" for="lgpd_consentimento" style="font-size: 0.85rem;">
+                            Autorizo o CFC a utilizar meus dados para contato e registro do processo de habilitação, conforme LGPD.
+                          </label>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <div class="mb-1">
+                        <label for="lgpd_consentimento_em" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Data/Hora do Consentimento</label>
+                        <input type="text" class="form-control" id="lgpd_consentimento_em" name="lgpd_consentimento_em" 
+                               readonly placeholder="Será preenchido automaticamente quando o fluxo de LGPD estiver ativo." 
+                               style="padding: 0.4rem; font-size: 0.85rem; background-color: #f8f9fa;">
+                      </div>
+                    </div>
+                  </div>
+                  
                   <div class="row">
                     <div class="col-12">
                       <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                        <i class="fas fa-sticky-note me-1"></i>Observações
+                        <i class="fas fa-sticky-note me-1"></i>Observações Gerais
                       </h6>
                       <div class="mb-1">
                         <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Observações</label>
@@ -2168,9 +2353,294 @@ input.form-control.invalid {
                 </div>
               </div>
               
-              <!-- Aba Matrícula (placeholder) -->
+              <!-- Aba Matrícula -->
               <div class="tab-pane fade modal-tab-pane" id="matricula" role="tabpanel" aria-labelledby="matricula-tab">
-                <p>Conteúdo da aba Matrícula será reintroduzido depois.</p>
+                <div class="aluno-tab-pane-inner">
+                  <div class="container-fluid" style="padding: 0;">
+                    <!-- Cabeçalho da aba Matrícula -->
+                    <div class="row mb-2">
+                      <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-1 mb-2">
+                          Matrícula do Aluno
+                        </h6>
+                        <p class="text-muted mb-0">
+                          Resumo das turmas e do status de matrícula do aluno.
+                        </p>
+                      </div>
+                    </div>
+
+                    <!-- MATRÍCULA: Seção 1 - Dados da Matrícula -->
+                    <div class="row mb-2">
+                      <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                          <i class="fas fa-clipboard-list me-1"></i>Dados da Matrícula
+                        </h6>
+                      </div>
+                      <div class="col-12">
+                        <div class="mb-2">
+                          <div id="operacoes-container">
+                            <!-- Operações existentes serão carregadas aqui -->
+                          </div>
+                          <button type="button" class="btn btn-outline-primary btn-sm" onclick="adicionarOperacao()" style="font-size: 0.8rem;">
+                            <i class="fas fa-plus me-1"></i>Adicionar Tipo de Serviço
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Linha 1 - Datas da matrícula -->
+                    <div class="row mb-2">
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="data_matricula" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Data da Matrícula</label>
+                          <input type="date" class="form-control" id="data_matricula" name="data_matricula" style="padding: 0.4rem; font-size: 0.85rem;">
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="previsao_conclusao" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Previsão de Conclusão</label>
+                          <input type="date" class="form-control" id="previsao_conclusao" name="previsao_conclusao" style="padding: 0.4rem; font-size: 0.85rem;">
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="data_conclusao" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Data de Conclusão</label>
+                          <input type="date" class="form-control" id="data_conclusao" name="data_conclusao" style="padding: 0.4rem; font-size: 0.85rem;">
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Linha 2 - Status da matrícula -->
+                    <div class="row mb-2">
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="status_matricula" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status da Matrícula</label>
+                          <select class="form-select" id="status_matricula" name="status_matricula" style="padding: 0.4rem; font-size: 0.85rem;">
+                            <option value="">Selecione...</option>
+                            <option value="em_analise">Em análise</option>
+                            <option value="ativa">Ativa</option>
+                            <option value="em_formacao">Em formação</option>
+                            <option value="em_exame">Em exame</option>
+                            <option value="concluida">Concluída</option>
+                            <option value="trancada">Trancada</option>
+                            <option value="cancelada">Cancelada</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- MATRÍCULA: Seção 2 - Processo DETRAN -->
+                    <div class="row mb-2">
+                      <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                          <i class="fas fa-file-alt me-1"></i>Processo DETRAN
+                        </h6>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="renach" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">RENACH *</label>
+                          <input type="text" class="form-control" id="renach" name="renach" required 
+                                 placeholder="PE000000000" maxlength="11" style="padding: 0.4rem; font-size: 0.85rem;"
+                                 data-mask="renach">
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Linha 2 - Número do processo, DETRAN e situação -->
+                    <div class="row mb-2">
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="processo_numero" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Número do Processo</label>
+                          <input type="text" class="form-control" id="processo_numero" name="processo_numero" 
+                                 placeholder="Digite o número do processo" style="padding: 0.4rem; font-size: 0.85rem;">
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="processo_numero_detran" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Número DETRAN / Protocolo</label>
+                          <input type="text" class="form-control" id="processo_numero_detran" name="processo_numero_detran" 
+                                 placeholder="Ex.: protocolo DETRAN" style="padding: 0.4rem; font-size: 0.85rem;">
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="processo_situacao" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Situação do Processo</label>
+                          <select class="form-select" id="processo_situacao" name="processo_situacao" style="padding: 0.4rem; font-size: 0.85rem;">
+                            <option value="">Selecione...</option>
+                            <option value="nao_informado">Não informado</option>
+                            <option value="em_analise">Em análise</option>
+                            <option value="em_andamento">Em andamento</option>
+                            <option value="aguardando_exame">Aguardando exame</option>
+                            <option value="aprovado">Aprovado</option>
+                            <option value="reprovado">Reprovado</option>
+                            <option value="arquivado">Arquivado</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- MATRÍCULA: Seção 3 - Vinculação Teórica -->
+                    <div class="row mb-2">
+                      <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                          <i class="fas fa-book me-1"></i>Vinculação Teórica
+                        </h6>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="mb-1">
+                          <label for="turma_teorica_atual_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Turma Teórica Atual</label>
+                          <select class="form-select" id="turma_teorica_atual_id" name="turma_teorica_atual_id" style="padding: 0.4rem; font-size: 0.85rem;">
+                            <option value="">Selecione...</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="col-md-6">
+                        <div class="mb-1">
+                          <label for="situacao_teorica" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Situação das Aulas Teóricas</label>
+                          <input type="text" class="form-control" id="situacao_teorica" name="situacao_teorica" readonly
+                                 placeholder="Será preenchido automaticamente (Não iniciada / Em andamento / Concluída)" 
+                                 style="padding: 0.4rem; font-size: 0.85rem; background-color: #f8f9fa;">
+                        </div>
+                      </div>
+                      <div class="col-12">
+                        <small class="text-muted" style="font-size: 0.75rem;">
+                          Essas informações serão atualizadas automaticamente pela tela de turmas teóricas no futuro.
+                        </small>
+                      </div>
+                    </div>
+                    
+                    <!-- MATRÍCULA: Seção 4 - Vinculação Prática -->
+                    <div class="row mb-2">
+                      <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                          <i class="fas fa-car me-1"></i>Vinculação Prática
+                        </h6>
+                      </div>
+                      <!-- Linha 1 - Quantidades e instrutor -->
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="aulas_praticas_contratadas" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Aulas Práticas Contratadas</label>
+                          <input type="number" class="form-control" id="aulas_praticas_contratadas" name="aulas_praticas_contratadas" min="0" style="padding: 0.4rem; font-size: 0.85rem;">
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="aulas_praticas_extras" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Aulas Extras</label>
+                          <input type="number" class="form-control" id="aulas_praticas_extras" name="aulas_praticas_extras" min="0" style="padding: 0.4rem; font-size: 0.85rem;">
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="instrutor_principal_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Instrutor Principal</label>
+                          <select class="form-select" id="instrutor_principal_id" name="instrutor_principal_id" style="padding: 0.4rem; font-size: 0.85rem;">
+                            <option value="">Selecione...</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Linha 2 - Situação das práticas -->
+                    <div class="row mb-2">
+                      <div class="col-md-6">
+                        <div class="mb-1">
+                          <label for="situacao_pratica" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Situação das Aulas Práticas</label>
+                          <input type="text" class="form-control" id="situacao_pratica" name="situacao_pratica" readonly
+                                 placeholder="Será preenchido automaticamente (Não iniciada / Em andamento / Concluída)" 
+                                 style="padding: 0.4rem; font-size: 0.85rem; background-color: #f8f9fa;">
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- MATRÍCULA: Seção 5 - Provas -->
+                    <hr class="my-3">
+                    <div class="row mb-2">
+                      <div class="col-12">
+                        <h6 class="text-uppercase text-muted small mb-2">
+                          <i class="fas fa-file-signature me-1"></i> Provas
+                        </h6>
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <label class="form-label">Prova Teórica</label>
+                        <input type="text"
+                               class="form-control"
+                               name="prova_teorica_resumo"
+                               id="prova_teorica_resumo"
+                               placeholder="Sem informação"
+                               readonly
+                               style="padding: 0.4rem; font-size: 0.85rem; background-color: #f8f9fa;">
+                        <small class="text-muted d-block mt-1" id="prova_teorica_detalhes"></small>
+                      </div>
+                      <div class="col-md-6 mb-3">
+                        <label class="form-label">Prova Prática</label>
+                        <input type="text"
+                               class="form-control"
+                               name="prova_pratica_resumo"
+                               id="prova_pratica_resumo"
+                               placeholder="Sem informação"
+                               readonly
+                               style="padding: 0.4rem; font-size: 0.85rem; background-color: #f8f9fa;">
+                        <small class="text-muted d-block mt-1" id="prova_pratica_detalhes"></small>
+                      </div>
+                    </div>
+                    
+                    <!-- MATRÍCULA: Seção 6 - Financeiro da Matrícula -->
+                    <div class="row mb-2">
+                      <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                          <i class="fas fa-money-bill-wave me-1"></i>Financeiro da Matrícula
+                        </h6>
+                      </div>
+                      <!-- Linha 1 - Dados básicos -->
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="valor_curso" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Valor do Curso</label>
+                          <input type="text" class="form-control" id="valor_curso" name="valor_curso" 
+                                 placeholder="Ex.: 1.500,00" style="padding: 0.4rem; font-size: 0.85rem;">
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="forma_pagamento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Forma de Pagamento</label>
+                          <select class="form-select" id="forma_pagamento" name="forma_pagamento" style="padding: 0.4rem; font-size: 0.85rem;">
+                            <option value="">Selecione...</option>
+                            <option value="nao_informado">Não informado</option>
+                            <option value="a_vista">À vista</option>
+                            <option value="cartao_credito">Cartão de crédito</option>
+                            <option value="boleto">Boleto</option>
+                            <option value="pix">PIX</option>
+                            <option value="carne_parcelado">Carnê / Parcelado</option>
+                            <option value="outro">Outro</option>
+                          </select>
+                        </div>
+                      </div>
+                      <div class="col-md-4">
+                        <div class="mb-1">
+                          <label for="status_pagamento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status de Pagamento</label>
+                          <select class="form-select" id="status_pagamento" name="status_pagamento" style="padding: 0.4rem; font-size: 0.85rem;">
+                            <option value="">Selecione...</option>
+                            <option value="nao_lancado">Não lançado</option>
+                            <option value="em_aberto">Em aberto</option>
+                            <option value="em_dia">Em dia</option>
+                            <option value="em_atraso">Em atraso</option>
+                            <option value="quitado">Quitado</option>
+                            <option value="cancelado">Cancelado</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <!-- Linha 2 - Atalho -->
+                    <div class="row mb-2">
+                      <div class="col-12">
+                        <button type="button" class="btn btn-link p-0 aluno-btn-financeiro" disabled style="font-size: 0.85rem; text-decoration: none;">
+                          Ver Financeiro do Aluno
+                        </button>
+                      </div>
+                    </div>
+                    
+                    <!-- TODO: integrar campos de matrícula no backend -->
+                  </div>
+                </div>
               </div>
               
               <!-- ABA FINANCEIRO DO ALUNO (desativada no modal; será reusada futuramente em outra tela/resumo) -->
@@ -2180,9 +2650,22 @@ input.form-control.invalid {
               </div>
               -->
               
-              <!-- Aba Documentos (placeholder) -->
+              <!-- Aba Documentos -->
               <div class="tab-pane fade modal-tab-pane" id="documentos" role="tabpanel" aria-labelledby="documentos-tab">
-                <p>Conteúdo da aba Documentos será reintroduzido depois.</p>
+                <div class="aluno-tab-pane-inner">
+                  <div class="container-fluid" id="documentos-container">
+                    <h6 class="text-primary border-bottom pb-1 mb-2">Documentos do Aluno</h6>
+                    <p class="text-muted mb-3">
+                      Envie e acompanhe aqui os documentos do aluno.
+                    </p>
+
+                    <!-- Lista dinâmica de documentos -->
+                    <div id="documentos-list">
+                      <!-- JS vai preencher aqui.
+                           Quando não houver dados, mostrar o empty-state aqui dentro. -->
+                    </div>
+                  </div>
+                </div>
               </div>
               
               <!-- ABA AGENDA DO ALUNO (desativada no modal; será reusada futuramente em outra tela/resumo) -->
@@ -2202,9 +2685,9 @@ input.form-control.invalid {
               <!-- Aba Histórico -->
               <div class="tab-pane fade modal-tab-pane" id="historico" role="tabpanel" aria-labelledby="historico-tab">
                 <div class="container-fluid" style="padding: 0;">
-                  <!-- Título da aba -->
+                  <!-- HISTÓRICO: Cabeçalho da Jornada -->
                   <div class="row mb-3">
-                    <div class="col-12">
+                    <div class="col-12 border-bottom pb-2">
                       <h5 class="text-primary mb-0">
                         <i class="fas fa-history me-2"></i>Jornada do Aluno
                       </h5>
@@ -2212,14 +2695,16 @@ input.form-control.invalid {
                     </div>
                   </div>
                   
-                  <!-- Bloco de resumo superior -->
-                  <div class="row mb-4">
+                  <!-- HISTÓRICO: Seção Cards de Resumo -->
+                  <div class="aluno-historico-cards row mb-4">
                     <div class="col-md-3 col-sm-6 mb-3">
                       <div class="card border-0 shadow-sm h-100">
                         <div class="card-body text-center">
                           <i class="fas fa-clipboard-check fa-2x text-primary mb-2"></i>
                           <h6 class="card-title mb-1">Situação do Processo</h6>
-                          <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                          <div class="aluno-card-valor" data-field="processo_status_resumo">
+                            <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2228,7 +2713,9 @@ input.form-control.invalid {
                         <div class="card-body text-center">
                           <i class="fas fa-chalkboard-teacher fa-2x text-info mb-2"></i>
                           <h6 class="card-title mb-1">Progresso Teórico</h6>
-                          <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                          <div class="aluno-card-valor" data-field="teorico_resumo">
+                            <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2237,7 +2724,9 @@ input.form-control.invalid {
                         <div class="card-body text-center">
                           <i class="fas fa-car fa-2x text-success mb-2"></i>
                           <h6 class="card-title mb-1">Progresso Prático</h6>
-                          <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                          <div class="aluno-card-valor" data-field="pratico_resumo">
+                            <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                          </div>
                         </div>
                       </div>
                     </div>
@@ -2246,51 +2735,63 @@ input.form-control.invalid {
                         <div class="card-body text-center">
                           <i class="fas fa-dollar-sign fa-2x text-warning mb-2"></i>
                           <h6 class="card-title mb-1">Situação Financeira</h6>
-                          <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                          <div class="aluno-card-valor" data-field="financeiro_resumo">
+                            <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div class="col-md-3 col-sm-6 mb-3">
+                      <div class="card border-0 shadow-sm h-100">
+                        <div class="card-body text-center">
+                          <i class="fas fa-file-signature fa-2x text-danger mb-2"></i>
+                          <h6 class="card-title mb-1">Provas</h6>
+                          <div class="aluno-card-valor" data-field="provas_resumo">
+                            <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
                   
-                  <!-- Área de timeline -->
+                  <!-- HISTÓRICO: Seção Linha do Tempo -->
                   <div class="row mb-4">
                     <div class="col-12">
-                      <div class="card border-0 shadow-sm">
-                        <div class="card-header bg-white border-bottom">
-                          <h6 class="mb-0">
-                            <i class="fas fa-clock me-2"></i>Linha do Tempo
-                          </h6>
-                        </div>
-                        <div class="card-body">
-                          <div id="historico-container" class="text-center text-muted py-4">
-                            <i class="fas fa-history fa-2x mb-2"></i>
-                            <p class="mb-0">Os eventos mais recentes do aluno aparecerão aqui.</p>
-                          </div>
-                        </div>
+                      <h6 class="text-primary border-bottom pb-1 mb-3" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                        <i class="fas fa-clock me-1"></i>Linha do Tempo
+                      </h6>
+                      <div id="historico-container">
+                        <ul class="aluno-timeline-list">
+                          <!-- Placeholder enquanto não houver eventos -->
+                          <li class="aluno-timeline-empty">
+                            <div class="aluno-timeline-empty-icon">
+                              <i class="fas fa-history fa-2x text-muted"></i>
+                            </div>
+                            <p class="text-muted mb-0">
+                              Os eventos mais recentes do aluno aparecerão aqui.
+                            </p>
+                          </li>
+                        </ul>
                       </div>
                     </div>
                   </div>
                   
-                  <!-- Atalhos -->
-                  <div class="row">
+                  <!-- HISTÓRICO: Seção Atalhos Rápidos -->
+                  <div class="aluno-atalhos-rapidos row">
                     <div class="col-12">
-                      <div class="card border-0 shadow-sm">
-                        <div class="card-body">
-                          <h6 class="card-title mb-3">
-                            <i class="fas fa-link me-2"></i>Atalhos Rápidos
-                          </h6>
-                          <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnAbrirAgendaCompleta" onclick="abrirAgendaCompleta()">
-                              <i class="fas fa-calendar-alt me-1"></i>Abrir Agenda Completa
-                            </button>
-                            <button type="button" class="btn btn-outline-warning btn-sm" id="btnVerFinanceiro" onclick="abrirFinanceiroAlunoDoHistorico()">
-                              <i class="fas fa-dollar-sign me-1"></i>Ver Financeiro do Aluno
-                            </button>
-                            <button type="button" class="btn btn-outline-info btn-sm" id="btnVerTurmaTeorica" onclick="abrirTurmaTeorica()">
-                              <i class="fas fa-chalkboard-teacher me-1"></i>Ver Turma Teórica
-                            </button>
-                          </div>
-                        </div>
+                      <h6 class="text-primary border-bottom pb-1 mb-3" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                        <i class="fas fa-link me-1"></i>Atalhos Rápidos
+                      </h6>
+                      <div class="d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-link aluno-atalho" data-acao="abrir-agenda-aluno" disabled>
+                          <i class="fas fa-calendar-alt me-1"></i>Abrir Agenda Completa
+                        </button>
+                        <button type="button" class="btn btn-link aluno-atalho" data-acao="ver-financeiro-aluno" disabled>
+                          <i class="fas fa-dollar-sign me-1"></i>Ver Financeiro do Aluno
+                        </button>
+                        <button type="button" class="btn btn-link aluno-atalho" data-acao="ver-turma-teorica" disabled>
+                          <i class="fas fa-chalkboard-teacher me-1"></i>Ver Turma Teórica
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -2515,6 +3016,18 @@ input.form-control.invalid {
 // =====================================================
 // FLAG DE DEBUG PARA MODAL DE ALUNO
 // =====================================================
+// ROTAS DE ATALHOS
+// Financeiro do aluno: index.php?page=financeiro-faturas&aluno_id={ID}
+// Agenda do aluno: index.php?page=agendamento (TODO: ajustar rota da agenda se for criada página específica para agenda do aluno)
+// Turma teórica: index.php?page=turmas-teoricas&acao=detalhes&turma_id={ID}
+
+// Contexto global do aluno atual (para atalhos)
+let contextoAlunoAtual = {
+    alunoId: null,
+    matriculaId: null,
+    turmaTeoricaId: null
+};
+
 const DEBUG_MODAL_ALUNO = false;
 
 function logModalAluno(...args) {
@@ -3476,6 +3989,11 @@ function abrirModalEdicao() {
 window.editarAluno = function(id) {
     logModalAluno('🚀 editarAluno chamada com ID:', id);
     
+    // Preencher contexto do aluno atual
+    contextoAlunoAtual.alunoId = id;
+    contextoAlunoAtual.matriculaId = null;
+    contextoAlunoAtual.turmaTeoricaId = null;
+    
     // Verificar se os elementos necessários existem
     const modalElement = document.getElementById('modalAluno');
     const modalTitle = document.getElementById('modalTitle');
@@ -3584,6 +4102,16 @@ window.editarAluno = function(id) {
                     logModalAluno('🔄 Timestamp:', new Date().toISOString());
                     preencherFormularioAluno(data.aluno);
                     logModalAluno('✅ Formulário preenchido - função executada');
+                    
+                    // Carregar matrícula principal após preencher formulário
+                    setTimeout(() => {
+                        carregarMatriculaPrincipal(id);
+                        
+                        // Carregar histórico do aluno
+                        setTimeout(() => {
+                            carregarHistoricoAluno(id);
+                        }, 600);
+                    }, 300);
                     
                     // Aplicar validação automática após preenchimento
                     setTimeout(() => {
@@ -3925,6 +4453,11 @@ function preencherFormularioAluno(aluno) {
 function visualizarAluno(id) {
     console.log('🚀 visualizandoAluno chamada com ID:', id);
 
+    // Preencher contexto do aluno atual
+    contextoAlunoAtual.alunoId = id;
+    contextoAlunoAtual.matriculaId = null;
+    contextoAlunoAtual.turmaTeoricaId = null;
+
     // GARANTIR que nenhum outro modal está aberto
     console.log('🔍 Verificando e fechando modais conflitantes...');
     const modalAlunoParaVisualizacao = document.getElementById('modalAluno');
@@ -4013,6 +4546,21 @@ function visualizarAluno(id) {
                 preencherModalVisualizacao(data.aluno);
                 console.log('✅ Modal preenchido');
 
+                // Carregar resumo da matrícula principal após preencher modal
+                setTimeout(() => {
+                    carregarResumoMatriculaParaVisualizacao(id);
+                    
+                    // Carregar histórico do aluno (modo visualização)
+                    setTimeout(() => {
+                        carregarHistoricoAluno(id, { modoVisualizacao: true });
+                    }, 600);
+                    
+                    // Registrar eventos dos atalhos após carregar dados
+                    setTimeout(() => {
+                        registrarEventosAtalhosAluno();
+                    }, 500);
+                }, 300);
+
                 const btnFecharTopoAtualizado = modalElement.querySelector('.btn-close');
                 const btnFecharRodapeAtualizado = modalElement.querySelector('.visualizar-modal-footer .btn-outline-secondary');
 
@@ -4071,67 +4619,227 @@ function preencherModalVisualizacao(aluno) {
         return `${window.location.origin}${projectPath}/${normalizedFoto}`;
     })();
 
+    // Extrair tipo de serviço e categoria (placeholder por enquanto)
+    let tipoServicoTexto = 'Primeira Habilitação B - Automóvel'; // TODO: extrair de operacoes quando disponível
+    if (aluno.operacoes) {
+        try {
+            const operacoes = typeof aluno.operacoes === 'string' ? JSON.parse(aluno.operacoes) : aluno.operacoes;
+            if (Array.isArray(operacoes) && operacoes.length > 0) {
+                const primeiraOp = operacoes[0];
+                const tipoServico = primeiraOp.tipo_servico || primeiraOp.tipo || 'Primeira Habilitação';
+                const categoria = primeiraOp.categoria_cnh || primeiraOp.categoria || 'B';
+                tipoServicoTexto = `${tipoServico} ${categoria} - Automóvel`;
+            }
+        } catch (e) {
+            // Manter placeholder se não conseguir parsear
+        }
+    }
+
     const html = `
-        <div class="row">
-            <div class="col-md-8">
+        <!-- VISUALIZAR ALUNO: Header com dados essenciais -->
+        <div class="row mb-4 pb-3 border-bottom">
+            <div class="col-12">
                 <div class="d-flex align-items-center">
                     ${fotoUrl ? `
                         <img src="${fotoUrl}" 
                              alt="Foto do aluno" class="rounded-circle me-3" 
-                             style="width: 60px; height: 60px; object-fit: cover; border: 2px solid #dee2e6;">
+                             style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #dee2e6;">
                     ` : `
                         <div class="rounded-circle me-3 d-flex align-items-center justify-content-center bg-light" 
-                             style="width: 60px; height: 60px; border: 2px solid #dee2e6;">
-                            <i class="fas fa-user text-muted"></i>
+                             style="width: 80px; height: 80px; border: 3px solid #dee2e6;">
+                            <i class="fas fa-user fa-2x text-muted"></i>
                         </div>
                     `}
-                    <div>
-                        <h4 class="mb-0">${aluno.nome}</h4>
-                        <p class="text-muted mb-0">CPF: ${aluno.cpf}</p>
+                    <div class="flex-grow-1">
+                        <h4 class="mb-1">${aluno.nome || 'Nome não informado'}</h4>
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                            <span class="text-muted">CPF: ${aluno.cpf || 'Não informado'}</span>
+                            <span class="badge bg-${aluno.status === 'ativo' ? 'success' : (aluno.status === 'concluido' ? 'info' : 'secondary')}">
+                                ${aluno.status === 'ativo' ? 'Ativo' : (aluno.status === 'concluido' ? 'Concluído' : 'Inativo')}
+                            </span>
+                        </div>
+                        <small class="text-muted">${tipoServicoTexto}</small>
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 text-end">
-                <span class="badge bg-${aluno.status === 'ativo' ? 'success' : (aluno.status === 'concluido' ? 'info' : 'danger')} fs-6">
-                    ${aluno.status === 'ativo' ? 'Ativo' : (aluno.status === 'concluido' ? 'Concluído' : 'Inativo')}
-                </span>
-            </div>
         </div>
-        
-        <hr>
-        
+
+        <!-- VISUALIZAR ALUNO: Corpo dividido em 2 colunas -->
         <div class="row">
+            <!-- VISUALIZAR ALUNO: Coluna Esquerda - Dados do Aluno -->
             <div class="col-md-6">
-                <h6><i class="fas fa-info-circle me-2"></i>Informações Pessoais</h6>
-                <p><strong>RG:</strong> ${aluno.rg || 'Não informado'}</p>
-                <p><strong>Renach:</strong> ${aluno.renach || 'Não informado'}</p>
-                <p><strong>Data de Nascimento:</strong> ${aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'Não informado'}</p>
-                <p><strong>Naturalidade:</strong> ${aluno.naturalidade || 'Não informado'}</p>
-                <p><strong>Nacionalidade:</strong> ${aluno.nacionalidade || 'Não informado'}</p>
-                <p><strong>E-mail:</strong> ${aluno.email || 'Não informado'}</p>
-                <p><strong>Telefone:</strong> ${aluno.telefone || 'Não informado'}</p>
-                <p><strong>Atividade Remunerada:</strong> ${aluno.atividade_remunerada == 1 ? '<span class="badge bg-success"><i class="fas fa-briefcase me-1"></i>Sim</span>' : '<span class="badge bg-secondary"><i class="fas fa-user me-1"></i>Não</span>'}</p>
+                <!-- Documento e Processo -->
+                <div class="mb-3">
+                    <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-id-card me-1"></i>Documento e Processo
+                    </h6>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>RG:</strong> ${aluno.rg || 'Não informado'}${aluno.rg_orgao_emissor ? ` / ${aluno.rg_orgao_emissor}` : ''}${aluno.rg_uf ? ` ${aluno.rg_uf}` : ''}</p>
+                    ${aluno.rg_data_emissao ? `<p class="mb-1" style="font-size: 0.85rem; color: #6c757d;">Data de Emissão: ${new Date(aluno.rg_data_emissao).toLocaleDateString('pt-BR')}</p>` : ''}
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>RENACH:</strong> ${aluno.renach || 'Não informado'}</p>
+                </div>
+
+                <!-- Dados Pessoais -->
+                <div class="mb-3">
+                    <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-user me-1"></i>Dados Pessoais
+                    </h6>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>Data de Nascimento:</strong> ${aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'Não informado'}</p>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>Naturalidade:</strong> ${aluno.naturalidade || 'Não informado'}</p>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>Nacionalidade:</strong> ${aluno.nacionalidade || 'Não informado'}</p>
+                    ${aluno.estado_civil ? `<p class="mb-1" style="font-size: 0.9rem;"><strong>Estado Civil:</strong> ${aluno.estado_civil}</p>` : ''}
+                    ${aluno.profissao ? `<p class="mb-1" style="font-size: 0.9rem;"><strong>Profissão:</strong> ${aluno.profissao}</p>` : ''}
+                    ${aluno.escolaridade ? `<p class="mb-1" style="font-size: 0.9rem;"><strong>Escolaridade:</strong> ${aluno.escolaridade}</p>` : ''}
+                    <p class="mb-1" style="font-size: 0.9rem;">
+                        <strong>Atividade Remunerada:</strong> 
+                        ${aluno.atividade_remunerada == 1 ? '<span class="badge bg-success"><i class="fas fa-briefcase me-1"></i>Sim</span>' : '<span class="badge bg-secondary"><i class="fas fa-user me-1"></i>Não</span>'}
+                    </p>
+                </div>
+
+                <!-- Contatos -->
+                <div class="mb-3">
+                    <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-phone me-1"></i>Contatos
+                    </h6>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>Telefone:</strong> ${aluno.telefone || 'Não informado'}</p>
+                    ${aluno.telefone_secundario ? `<p class="mb-1" style="font-size: 0.9rem;"><strong>Telefone Secundário:</strong> ${aluno.telefone_secundario}</p>` : ''}
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>E-mail:</strong> ${aluno.email || 'Não informado'}</p>
+                    ${aluno.contato_emergencia_nome ? `<p class="mb-1" style="font-size: 0.9rem;"><strong>Contato de Emergência:</strong> ${aluno.contato_emergencia_nome}${aluno.contato_emergencia_telefone ? ` - ${aluno.contato_emergencia_telefone}` : ''}</p>` : ''}
+                </div>
+
+                <!-- Endereço -->
+                ${endereco && (endereco.logradouro || endereco.cidade) ? `
+                <div class="mb-3">
+                    <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-map-marker-alt me-1"></i>Endereço
+                    </h6>
+                    <p class="mb-1" style="font-size: 0.9rem;">
+                        ${endereco.logradouro || ''}${endereco.numero ? `, ${endereco.numero}` : ''}${endereco.complemento ? `, ${endereco.complemento}` : ''}
+                    </p>
+                    <p class="mb-1" style="font-size: 0.9rem;">
+                        ${endereco.bairro || ''}${endereco.cidade ? ` - ${endereco.cidade}` : ''}${endereco.uf ? `/${endereco.uf}` : ''}
+                    </p>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>CEP:</strong> ${endereco.cep || 'Não informado'}</p>
+                </div>
+                ` : ''}
+
+                <!-- CFC -->
+                <div class="mb-3">
+                    <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-graduation-cap me-1"></i>CFC
+                    </h6>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>CFC:</strong> ${aluno.cfc_nome || 'Não informado'}</p>
+                </div>
+
+                <!-- Observações -->
+                ${aluno.observacoes ? `
+                <div class="mb-3">
+                    <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-sticky-note me-1"></i>Observações do Aluno
+                    </h6>
+                    <p class="mb-0" style="font-size: 0.9rem; white-space: pre-wrap;">${aluno.observacoes}</p>
+                </div>
+                ` : ''}
             </div>
+
+            <!-- VISUALIZAR ALUNO: Coluna Direita - Visão Rápida da Jornada -->
             <div class="col-md-6">
-                <h6><i class="fas fa-graduation-cap me-2"></i>CFC</h6>
-                <p><strong>CFC:</strong> ${aluno.cfc_nome || 'Não informado'}</p>
+                <!-- Mini-cards de resumo -->
+                <div class="aluno-historico-cards row mb-3">
+                    <div class="col-6 mb-2">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-2">
+                                <i class="fas fa-clipboard-check fa-lg text-primary mb-1"></i>
+                                <h6 class="card-title mb-1" style="font-size: 0.85rem;">Situação do Processo</h6>
+                                <div class="aluno-card-valor" data-field="processo_status_resumo" style="font-size: 0.8rem;">
+                                    <span class="text-muted">Em breve</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-2">
+                                <i class="fas fa-chalkboard-teacher fa-lg text-info mb-1"></i>
+                                <h6 class="card-title mb-1" style="font-size: 0.85rem;">Progresso Teórico</h6>
+                                <div class="aluno-card-valor" data-field="teorico_resumo" style="font-size: 0.8rem;">
+                                    <span class="text-muted">0%</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-2">
+                                <i class="fas fa-car fa-lg text-success mb-1"></i>
+                                <h6 class="card-title mb-1" style="font-size: 0.85rem;">Progresso Prático</h6>
+                                <div class="aluno-card-valor" data-field="pratico_resumo" style="font-size: 0.8rem;">
+                                    <span class="text-muted">Não iniciado</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-2">
+                                <i class="fas fa-dollar-sign fa-lg text-warning mb-1"></i>
+                                <h6 class="card-title mb-1" style="font-size: 0.85rem;">Situação Financeira</h6>
+                                <div class="aluno-card-valor" data-field="financeiro_resumo" style="font-size: 0.8rem;">
+                                    <span class="text-muted">Em aberto</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-6 mb-2">
+                        <div class="card border-0 shadow-sm h-100">
+                            <div class="card-body text-center p-2">
+                                <i class="fas fa-file-signature fa-lg text-danger mb-1"></i>
+                                <h6 class="card-title mb-1" style="font-size: 0.85rem;">Provas</h6>
+                                <div class="aluno-card-valor" data-field="provas_resumo" style="font-size: 0.8rem;">
+                                    <span class="text-muted">Não iniciado</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Timeline compacta -->
+                <div class="mb-3">
+                    <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-clock me-1"></i>Linha do Tempo
+                    </h6>
+                    <div id="visualizar-historico-container">
+                        <ul class="aluno-timeline-list">
+                            <li class="aluno-timeline-empty">
+                                <div class="aluno-timeline-empty-icon">
+                                    <i class="fas fa-history fa-lg text-muted"></i>
+                                </div>
+                                <p class="text-muted mb-0" style="font-size: 0.85rem;">
+                                    Os eventos mais recentes do aluno aparecerão aqui.
+                                </p>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Atalhos rápidos -->
+                <div class="aluno-atalhos-rapidos">
+                    <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-link me-1"></i>Atalhos Rápidos
+                    </h6>
+                    <div class="d-flex flex-column gap-1">
+                        <button type="button" class="btn btn-link aluno-atalho text-start p-0" data-acao="abrir-historico-aluno" disabled style="font-size: 0.85rem;">
+                            <i class="fas fa-history me-1"></i>Ver Histórico Completo
+                        </button>
+                        <button type="button" class="btn btn-link aluno-atalho text-start p-0" data-acao="abrir-agenda-aluno" disabled style="font-size: 0.85rem;">
+                            <i class="fas fa-calendar-alt me-1"></i>Abrir Agenda Completa
+                        </button>
+                        <button type="button" class="btn btn-link aluno-atalho text-start p-0" data-acao="ver-financeiro-aluno" disabled style="font-size: 0.85rem;">
+                            <i class="fas fa-dollar-sign me-1"></i>Ver Financeiro do Aluno
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
-        
-        ${endereco && (endereco.logradouro || endereco.cidade) ? `
-        <hr>
-        <h6><i class="fas fa-map-marker-alt me-2"></i>Endereço</h6>
-        <p>${endereco.logradouro || ''} ${endereco.numero || ''}</p>
-        <p>${endereco.bairro || ''}</p>
-        <p>${endereco.cidade || ''} - ${endereco.uf || ''}</p>
-        <p>CEP: ${endereco.cep || 'Não informado'}</p>
-        ` : ''}
-        
-        ${aluno.observacoes ? `
-        <hr>
-        <h6><i class="fas fa-sticky-note me-2"></i>Observações</h6>
-        <p>${aluno.observacoes}</p>
-        ` : ''}
     `;
     
     document.getElementById('modalVisualizarAlunoBody').innerHTML = html;
@@ -4187,6 +4895,9 @@ function fecharModalVisualizarAluno() {
 
   modal.dataset.opened = 'false';
   document.body.style.overflow = '';
+  
+  // Zerar contexto do aluno atual
+  contextoAlunoAtual = { alunoId: null, matriculaId: null, turmaTeoricaId: null };
 
   logModalAluno('[modalVisualizarAluno] fechar');
 }
@@ -5375,7 +6086,11 @@ function fecharModalAluno() {
         const propsToClear = ['display', 'visibility', 'position', 'inset', 'width', 'min-height', 'background', 'z-index', 'padding', 'align-items', 'justify-content', 'box-sizing'];
         propsToClear.forEach(prop => modal.style.removeProperty(prop));
         modal.removeAttribute('data-opened'); // Remover marcação de aberto
+        modal.removeAttribute('data-matricula-carregada'); // Resetar flag de matrícula carregada
         document.body.style.overflow = 'auto'; // Restaurar scroll do body
+        
+        // Zerar contexto do aluno atual
+        contextoAlunoAtual = { alunoId: null, matriculaId: null, turmaTeoricaId: null };
 
         const dialog = modal.querySelector('.custom-modal-dialog');
         if (dialog) {
@@ -5818,6 +6533,20 @@ function salvarAluno() {
         if (data.success) {
             // Sucesso
             alert(data.message || 'Aluno salvo com sucesso!');
+            
+            // Obter aluno_id da resposta (pode ser data.aluno_id ou data.id)
+            const alunoId = data.aluno_id || data.id || alunoIdHidden?.value;
+            
+            // Sincronizar matrícula principal após salvar aluno
+            if (alunoId) {
+                // Usar setTimeout para não bloquear o fluxo principal
+                setTimeout(() => {
+                    sincronizarMatriculaPrincipal(alunoId, dadosFormData);
+                }, 100);
+            } else {
+                console.warn('⚠️ Aluno ID não encontrado na resposta, não será possível sincronizar matrícula');
+            }
+            
             fecharModalAluno();
             
             // Recarregar a página para mostrar o novo aluno
@@ -5838,6 +6567,1287 @@ function salvarAluno() {
         btnSalvar.innerHTML = textoOriginal;
         btnSalvar.disabled = false;
     });
+}
+
+/**
+ * Sincroniza a matrícula principal do aluno com a tabela matriculas
+ * @param {number} alunoId - ID do aluno
+ * @param {FormData} formData - Dados do formulário (FormData original)
+ */
+async function sincronizarMatriculaPrincipal(alunoId, formData) {
+    try {
+        logModalAluno('🔄 Iniciando sincronização de matrícula principal para aluno:', alunoId);
+        
+        // Extrair primeira operação do formulário
+        const operacoes = coletarDadosOperacoes();
+        
+        if (!operacoes || operacoes.length === 0) {
+            logModalAluno('⚠️ Nenhuma operação encontrada, não será possível sincronizar matrícula');
+            return;
+        }
+        
+        const primeiraOperacao = operacoes[0];
+        const tipoServico = primeiraOperacao.tipo;
+        const categoriaCnh = primeiraOperacao.categoria;
+        
+        if (!tipoServico || !categoriaCnh) {
+            logModalAluno('⚠️ Primeira operação incompleta (tipo_servico ou categoria_cnh faltando), não será possível sincronizar matrícula');
+            return;
+        }
+        
+        // Extrair outros campos do formulário
+        const dataMatricula = formData.get('data_matricula') || '';
+        const dataConclusao = formData.get('data_conclusao') || null;
+        const statusMatricula = formData.get('status_matricula') || 'ativa';
+        const valorCurso = formData.get('valor_curso') || null;
+        const formaPagamento = formData.get('forma_pagamento') || null;
+        
+        // Verificar se já existe matrícula para este aluno
+        const responseGet = await fetch(`api/matriculas.php?aluno_id=${alunoId}`);
+        const dataGet = await responseGet.json();
+        
+        if (!dataGet.success) {
+            console.error('❌ Erro ao buscar matrículas existentes:', dataGet.error);
+            return;
+        }
+        
+        const matriculasExistentes = dataGet.matriculas || [];
+        const matriculaExistente = matriculasExistentes.length > 0 ? matriculasExistentes[0] : null;
+        
+        // Preparar dados para envio
+        const dadosMatricula = {
+            aluno_id: alunoId,
+            tipo_servico: tipoServico,
+            categoria_cnh: categoriaCnh,
+            data_inicio: dataMatricula || null,
+            data_fim: dataConclusao || null,
+            status: statusMatricula,
+            valor_total: valorCurso ? parseFloat(valorCurso.replace(/[^\d,.-]/g, '').replace(',', '.')) : null,
+            forma_pagamento: formaPagamento || null,
+            observacoes: 'Criado via formulário de aluno'
+        };
+        
+        // Remover campos null/undefined
+        Object.keys(dadosMatricula).forEach(key => {
+            if (dadosMatricula[key] === null || dadosMatricula[key] === undefined || dadosMatricula[key] === '') {
+                delete dadosMatricula[key];
+            }
+        });
+        
+        let response;
+        let data;
+        
+        if (matriculaExistente) {
+            // Atualizar matrícula existente
+            logModalAluno('📝 Atualizando matrícula existente ID:', matriculaExistente.id);
+            
+            response = await fetch(`api/matriculas.php?id=${matriculaExistente.id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dadosMatricula)
+            });
+            
+            data = await response.json();
+            
+            if (data.success) {
+                console.log('✅ Matrícula sincronizada (atualizada)', data);
+            } else {
+                console.error('❌ Erro ao atualizar matrícula:', data.error);
+            }
+        } else {
+            // Criar nova matrícula
+            logModalAluno('➕ Criando nova matrícula');
+            
+            response = await fetch('api/matriculas.php', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(dadosMatricula)
+            });
+            
+            data = await response.json();
+            
+            if (data.success) {
+                console.log('✅ Matrícula sincronizada (criada)', data);
+            } else {
+                console.error('❌ Erro ao criar matrícula:', data.error);
+            }
+        }
+        
+        // TODO: futuramente exibir feedback visual da matrícula (cards da aba Histórico e Detalhes do Aluno)
+        
+    } catch (error) {
+        console.error('❌ Erro ao sincronizar matrícula principal:', error);
+        // Não bloquear o fluxo - apenas logar o erro
+    }
+}
+
+/**
+ * Carrega APENAS o resumo da matrícula principal para atualizar cards de visualização
+ * Não mexe no formulário da aba Matrícula
+ * @param {number} alunoId - ID do aluno
+ */
+async function carregarResumoMatriculaParaVisualizacao(alunoId) {
+    try {
+        logModalAluno('📥 Carregando resumo de matrícula para visualização do aluno:', alunoId);
+        
+        const response = await fetch(`api/matriculas.php?aluno_id=${alunoId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.error('❌ Erro ao buscar matrículas (visualização):', data.error);
+            contextoAlunoAtual.matriculaId = null;
+            atualizarResumoProcessoHistorico(null);
+            atualizarResumoFinanceiroAluno(alunoId, null);
+            atualizarResumoTeoricoAluno(alunoId);
+            atualizarResumoPraticoAluno(alunoId);
+            
+            // Registrar eventos dos atalhos mesmo com erro
+            setTimeout(() => {
+                registrarEventosAtalhosAluno();
+            }, 500);
+            return;
+        }
+        
+        const matriculas = data.matriculas || [];
+        
+        if (matriculas.length === 0) {
+            logModalAluno('⚠️ Nenhuma matrícula encontrada para visualização do aluno:', alunoId);
+            contextoAlunoAtual.matriculaId = null;
+            atualizarResumoProcessoHistorico(null);
+            atualizarResumoFinanceiroAluno(alunoId, null);
+            atualizarResumoTeoricoAluno(alunoId);
+            atualizarResumoPraticoAluno(alunoId);
+            
+            // Registrar eventos dos atalhos mesmo sem matrícula
+            setTimeout(() => {
+                registrarEventosAtalhosAluno();
+            }, 500);
+            return;
+        }
+        
+        // Usar sempre a primeira matrícula (matrícula principal)
+        const matricula = matriculas[0];
+        logModalAluno('✅ Matrícula principal (visualização) encontrada:', matricula);
+        
+        // Preencher contexto com matrícula
+        contextoAlunoAtual.matriculaId = matricula.id || null;
+        
+        // Atualizar apenas o card de resumo (não mexe no formulário)
+        atualizarResumoProcessoHistorico(matricula);
+        
+        // Atualizar resumo financeiro
+        atualizarResumoFinanceiroAluno(alunoId, matricula);
+        
+        // Atualizar resumo teórico
+        atualizarResumoTeoricoAluno(alunoId);
+        
+        // Atualizar resumo prático
+        atualizarResumoPraticoAluno(alunoId);
+        
+        // Atualizar resumo de provas
+        atualizarResumoProvasAluno(alunoId);
+        
+        // Registrar eventos dos atalhos após carregar dados
+        setTimeout(() => {
+            registrarEventosAtalhosAluno();
+        }, 500);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar resumo de matrícula para visualização:', error);
+        atualizarResumoProcessoHistorico(null);
+        atualizarResumoFinanceiroAluno(alunoId, null);
+        atualizarResumoTeoricoAluno(alunoId);
+        atualizarResumoPraticoAluno(alunoId);
+        atualizarResumoProvasAluno(alunoId);
+        
+        // Registrar eventos dos atalhos mesmo com erro
+        setTimeout(() => {
+            registrarEventosAtalhosAluno();
+        }, 500);
+    }
+}
+
+/**
+ * Carrega a matrícula principal do aluno e preenche a aba Matrícula e atualiza o card de Histórico
+ * @param {number} alunoId - ID do aluno
+ */
+async function carregarMatriculaPrincipal(alunoId) {
+    try {
+        logModalAluno('📥 Carregando matrícula principal para aluno:', alunoId);
+        
+        const response = await fetch(`api/matriculas.php?aluno_id=${alunoId}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.error('❌ Erro ao buscar matrículas:', data.error);
+            // Se não houver matrícula, limpar campos
+            contextoAlunoAtual.matriculaId = null;
+            limparAbaMatricula();
+            atualizarResumoProcessoHistorico(null);
+            atualizarResumoTeoricoAluno(alunoId);
+            atualizarResumoPraticoAluno(alunoId);
+            atualizarResumoProvasAluno(alunoId);
+            
+            // Registrar eventos dos atalhos mesmo com erro
+            setTimeout(() => {
+                registrarEventosAtalhosAluno();
+            }, 500);
+            return;
+        }
+        
+        const matriculas = data.matriculas || [];
+        
+        if (matriculas.length === 0) {
+            logModalAluno('⚠️ Nenhuma matrícula encontrada para o aluno');
+            contextoAlunoAtual.matriculaId = null;
+            limparAbaMatricula();
+            atualizarResumoProcessoHistorico(null);
+            atualizarResumoTeoricoAluno(alunoId);
+            atualizarResumoPraticoAluno(alunoId);
+            atualizarResumoProvasAluno(alunoId);
+            
+            // Registrar eventos dos atalhos mesmo sem matrícula
+            setTimeout(() => {
+                registrarEventosAtalhosAluno();
+            }, 500);
+            return;
+        }
+        
+        // Usar sempre a primeira matrícula (matrícula principal)
+        const matricula = matriculas[0];
+        logModalAluno('✅ Matrícula principal encontrada:', matricula);
+        
+        // Preencher contexto com matrícula
+        contextoAlunoAtual.matriculaId = matricula.id || null;
+        
+        // Preencher aba Matrícula
+        preencherAbaMatriculaComDados(matricula);
+        
+        // Atualizar card de Histórico
+        atualizarResumoProcessoHistorico(matricula);
+        
+        // Atualizar resumo financeiro
+        atualizarResumoFinanceiroAluno(alunoId, matricula);
+        
+        // Atualizar resumo teórico
+        atualizarResumoTeoricoAluno(alunoId);
+        
+        // Atualizar resumo prático
+        atualizarResumoPraticoAluno(alunoId);
+        
+        // Atualizar resumo de provas
+        atualizarResumoProvasAluno(alunoId);
+        
+        // Registrar eventos dos atalhos após carregar dados
+        setTimeout(() => {
+            registrarEventosAtalhosAluno();
+        }, 500);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar matrícula principal:', error);
+        // Não bloquear o fluxo - apenas logar o erro
+        limparAbaMatricula();
+        atualizarResumoProcessoHistorico(null);
+        atualizarResumoFinanceiroAluno(alunoId, null);
+        atualizarResumoTeoricoAluno(alunoId);
+        atualizarResumoPraticoAluno(alunoId);
+        atualizarResumoProvasAluno(alunoId);
+    }
+}
+
+/**
+ * Preenche a aba Matrícula com os dados da matrícula
+ * @param {Object} matricula - Objeto com os dados da matrícula
+ */
+function preencherAbaMatriculaComDados(matricula) {
+    try {
+        logModalAluno('📝 Preenchendo aba Matrícula com dados:', matricula);
+        
+        // 1) Preencher operação principal
+        if (matricula.categoria_cnh && matricula.tipo_servico) {
+            // Limpar operações existentes
+            const operacoesContainer = document.getElementById('operacoes-container');
+            if (operacoesContainer) {
+                operacoesContainer.innerHTML = '';
+                contadorOperacoes = 0;
+                
+                // Adicionar uma nova operação
+                adicionarOperacao();
+                
+                // Aguardar um pouco para o DOM atualizar
+                setTimeout(() => {
+                    // Selecionar a primeira operação criada
+                    const primeiraOperacao = document.querySelector('.operacao-item[data-operacao-id]');
+                    if (primeiraOperacao) {
+                        const operacaoId = primeiraOperacao.getAttribute('data-operacao-id');
+                        const tipoSelect = document.querySelector(`select[name="operacao_tipo_${operacaoId}"]`);
+                        const categoriaSelect = document.querySelector(`select[name="operacao_categoria_${operacaoId}"]`);
+                        
+                        if (tipoSelect && categoriaSelect) {
+                            // Definir tipo de serviço
+                            tipoSelect.value = matricula.tipo_servico;
+                            
+                            // Carregar categorias baseado no tipo e selecionar a categoria
+                            carregarCategoriasOperacao(operacaoId, matricula.categoria_cnh, matricula.tipo_servico);
+                            
+                            logModalAluno('✅ Operação principal preenchida:', {
+                                tipo: matricula.tipo_servico,
+                                categoria: matricula.categoria_cnh
+                            });
+                        }
+                    }
+                }, 100);
+            }
+        }
+        
+        // 2) Preencher datas
+        if (matricula.data_inicio) {
+            const dataMatriculaInput = document.getElementById('data_matricula');
+            if (dataMatriculaInput) {
+                // Converter formato de data se necessário (YYYY-MM-DD já é compatível com input date)
+                dataMatriculaInput.value = matricula.data_inicio;
+                logModalAluno('✅ Data matrícula preenchida:', matricula.data_inicio);
+            }
+        }
+        
+        if (matricula.data_fim) {
+            const dataConclusaoInput = document.getElementById('data_conclusao');
+            if (dataConclusaoInput) {
+                dataConclusaoInput.value = matricula.data_fim;
+                logModalAluno('✅ Data conclusão preenchida:', matricula.data_fim);
+            }
+        }
+        
+        // previsao_conclusao não é alterado nesta etapa
+        
+        // 3) Preencher status
+        if (matricula.status) {
+            const statusSelect = document.getElementById('status_matricula');
+            if (statusSelect) {
+                // Mapear valores da API para opções do select
+                const statusMap = {
+                    'ativa': 'ativa',
+                    'em_formacao': 'em_formacao',
+                    'em_andamento': 'em_formacao',
+                    'concluida': 'concluida',
+                    'cancelada': 'cancelada',
+                    'trancada': 'trancada',
+                    'em_analise': 'em_analise',
+                    'em_exame': 'em_exame'
+                };
+                
+                const statusMapeado = statusMap[matricula.status] || matricula.status;
+                statusSelect.value = statusMapeado;
+                logModalAluno('✅ Status matrícula preenchido:', statusMapeado);
+            }
+        }
+        
+        // 4) Preencher financeiro
+        if (matricula.valor_total !== null && matricula.valor_total !== undefined) {
+            const valorCursoInput = document.getElementById('valor_curso');
+            if (valorCursoInput) {
+                // Formatar valor para exibição (converter de número para formato brasileiro se necessário)
+                const valorFormatado = typeof matricula.valor_total === 'number' 
+                    ? matricula.valor_total.toFixed(2).replace('.', ',')
+                    : matricula.valor_total.toString().replace('.', ',');
+                valorCursoInput.value = valorFormatado;
+                logModalAluno('✅ Valor curso preenchido:', valorFormatado);
+            }
+        }
+        
+        if (matricula.forma_pagamento) {
+            const formaPagamentoSelect = document.getElementById('forma_pagamento');
+            if (formaPagamentoSelect) {
+                formaPagamentoSelect.value = matricula.forma_pagamento;
+                logModalAluno('✅ Forma pagamento preenchida:', matricula.forma_pagamento);
+            }
+        }
+        
+        // status_pagamento não é alterado nesta etapa
+        
+        logModalAluno('✅ Aba Matrícula preenchida com sucesso');
+        
+    } catch (error) {
+        console.error('❌ Erro ao preencher aba Matrícula:', error);
+    }
+}
+
+/**
+ * Limpa os campos da aba Matrícula
+ */
+function limparAbaMatricula() {
+    try {
+        logModalAluno('🧹 Limpando aba Matrícula');
+        
+        // Limpar operações
+        const operacoesContainer = document.getElementById('operacoes-container');
+        if (operacoesContainer) {
+            operacoesContainer.innerHTML = '';
+            contadorOperacoes = 0;
+        }
+        
+        // Limpar campos de data
+        const dataMatriculaInput = document.getElementById('data_matricula');
+        if (dataMatriculaInput) dataMatriculaInput.value = '';
+        
+        const dataConclusaoInput = document.getElementById('data_conclusao');
+        if (dataConclusaoInput) dataConclusaoInput.value = '';
+        
+        // Limpar status
+        const statusSelect = document.getElementById('status_matricula');
+        if (statusSelect) statusSelect.value = '';
+        
+        // Limpar financeiro
+        const valorCursoInput = document.getElementById('valor_curso');
+        if (valorCursoInput) valorCursoInput.value = '';
+        
+        const formaPagamentoSelect = document.getElementById('forma_pagamento');
+        if (formaPagamentoSelect) formaPagamentoSelect.value = '';
+        
+        logModalAluno('✅ Aba Matrícula limpa');
+        
+    } catch (error) {
+        console.error('❌ Erro ao limpar aba Matrícula:', error);
+    }
+}
+
+/**
+ * Atualiza o card "Situação Financeira" na aba Histórico e no modal de visualização
+ * Atualiza TODOS os elementos com data-field="financeiro_resumo"
+ * @param {number} alunoId - ID do aluno
+ * @param {Object|null} matricula - Objeto da matrícula principal (opcional, para usar matricula_id se disponível)
+ */
+async function atualizarResumoFinanceiroAluno(alunoId, matricula = null) {
+    try {
+        logModalAluno('💰 Carregando resumo financeiro para aluno:', alunoId);
+        
+        // Montar URL da API de faturas
+        let url = `api/faturas.php?aluno_id=${alunoId}`;
+        if (matricula && matricula.id) {
+            url += `&matricula_id=${matricula.id}`;
+        }
+        
+        const response = await fetch(url);
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.error('❌ Erro ao buscar faturas (resumo financeiro):', data.error);
+            // Em caso de erro, usar texto padrão
+            atualizarCardsFinanceiroResumo('Não lançado');
+            return;
+        }
+        
+        const faturas = data.faturas || [];
+        
+        if (faturas.length === 0) {
+            logModalAluno('⚠️ Nenhuma fatura encontrada para o aluno');
+            atualizarCardsFinanceiroResumo('Não lançado');
+            return;
+        }
+        
+        // Calcular status geral seguindo a prioridade das regras de negócio
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        
+        let statusTexto = 'Não lançado';
+        
+        // Prioridade 1: Verificar se há faturas vencidas ou abertas com vencimento < hoje
+        const temVencida = faturas.some(f => {
+            if (f.status === 'vencida') return true;
+            if (f.status === 'aberta') {
+                // Tentar ambos os nomes de campo (vencimento ou data_vencimento)
+                const dataVenc = f.vencimento || f.data_vencimento;
+                if (dataVenc) {
+                    const dataVencimento = new Date(dataVenc);
+                    dataVencimento.setHours(0, 0, 0, 0);
+                    return dataVencimento < hoje;
+                }
+            }
+            return false;
+        });
+        
+        if (temVencida) {
+            statusTexto = 'Em atraso';
+        } else {
+            // Prioridade 2: Verificar se há faturas abertas com vencimento >= hoje
+            const temAberta = faturas.some(f => {
+                if (f.status === 'aberta') {
+                    // Tentar ambos os nomes de campo (vencimento ou data_vencimento)
+                    const dataVenc = f.vencimento || f.data_vencimento;
+                    if (dataVenc) {
+                        const dataVencimento = new Date(dataVenc);
+                        dataVencimento.setHours(0, 0, 0, 0);
+                        return dataVencimento >= hoje;
+                    }
+                }
+                return false;
+            });
+            
+            if (temAberta) {
+                statusTexto = 'Em aberto';
+            } else {
+                // Prioridade 3: Verificar se há faturas pagas
+                const temPaga = faturas.some(f => f.status === 'paga');
+                
+                if (temPaga) {
+                    statusTexto = 'Quitado';
+                } else {
+                    // Se não se enquadrar em nenhuma categoria, manter "Não lançado"
+                    statusTexto = 'Não lançado';
+                }
+            }
+        }
+        
+        logModalAluno('✅ Status financeiro calculado:', statusTexto, `(Total de faturas: ${faturas.length})`);
+        
+        // Atualizar todos os cards
+        atualizarCardsFinanceiroResumo(statusTexto);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar resumo financeiro:', error);
+        // Em caso de erro, usar texto padrão
+        atualizarCardsFinanceiroResumo('Não lançado');
+    }
+}
+
+/**
+ * Atualiza todos os elementos com data-field="financeiro_resumo" com o texto fornecido
+ * @param {string} texto - Texto a ser exibido no card
+ */
+function atualizarCardsFinanceiroResumo(texto) {
+    try {
+        const cardElements = document.querySelectorAll('[data-field="financeiro_resumo"]');
+        
+        if (cardElements.length === 0) {
+            logModalAluno('⚠️ Nenhum card financeiro_resumo encontrado');
+            return;
+        }
+        
+        // Atualizar todos os elementos encontrados
+        cardElements.forEach((cardElement, index) => {
+            cardElement.innerHTML = `<span class="text-muted">${texto}</span>`;
+            logModalAluno(`✅ Card financeiro_resumo [${index + 1}] atualizado:`, texto);
+        });
+        
+        logModalAluno(`✅ Total de ${cardElements.length} card(s) financeiro(s) atualizado(s) com: ${texto}`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar cards financeiro resumo:', error);
+    }
+}
+
+/**
+ * Atualiza todos os cards "Progresso Teórico"
+ * (tanto na aba Histórico quanto no modal de visualização)
+ * usando o atributo data-field="teorico_resumo"
+ * @param {string} texto - Texto a ser exibido no card
+ */
+function atualizarCardsTeoricoResumo(texto) {
+    try {
+        const elementos = document.querySelectorAll('[data-field="teorico_resumo"]');
+        
+        if (!elementos.length) {
+            logModalAluno('⚠️ Nenhum card teorico_resumo encontrado');
+            return;
+        }
+        
+        elementos.forEach((el, index) => {
+            el.innerHTML = `<span class="text-muted">${texto}</span>`;
+            logModalAluno(`✅ Card teorico_resumo [${index + 1}] atualizado:`, texto);
+        });
+        
+        logModalAluno(`✅ Total de ${elementos.length} card(s) teóricos atualizado(s) com: ${texto}`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar cards de Progresso Teórico:', error);
+    }
+}
+
+/**
+ * Atualiza a seção "Vinculação Teórica" na aba Matrícula
+ * usando os dados retornados pela API de progresso teórico.
+ * @param {Object|null} progresso - Objeto retornado em data.progresso ou null
+ * @param {string} textoResumo - Texto já formatado para o card (ex.: "Em andamento (80% de presença)")
+ */
+function atualizarVinculacaoTeoricaUI(progresso, textoResumo) {
+    try {
+        const selectTurma = document.querySelector('select[name="turma_teorica_atual_id"]');
+        const inputSituacao = document.querySelector('input[name="situacao_teorica"]');
+        
+        if (!selectTurma || !inputSituacao) {
+            logModalAluno('⚠️ Campos de vinculação teórica não encontrados no DOM');
+            return;
+        }
+        
+        // Limpar opções atuais do select
+        while (selectTurma.firstChild) {
+            selectTurma.removeChild(selectTurma.firstChild);
+        }
+        
+        let option = document.createElement('option');
+        
+        if (!progresso || !progresso.turma_id) {
+            // Sem turma vinculada
+            option.value = '';
+            option.textContent = 'Nenhuma turma teórica vinculada';
+            selectTurma.appendChild(option);
+            selectTurma.value = '';
+            inputSituacao.value = 'Não iniciado';
+        } else {
+            // Turma vinculada
+            option.value = progresso.turma_id;
+            const nomeTurma = progresso.turma_nome || 'Turma teórica';
+            option.textContent = nomeTurma;
+            selectTurma.appendChild(option);
+            selectTurma.value = progresso.turma_id;
+            
+            // Situação das aulas teóricas: usar o mesmo texto mostrado no card
+            inputSituacao.value = textoResumo || '';
+        }
+        
+        // Importante: deixar o select somente leitura (não editar por aqui)
+        selectTurma.disabled = true;
+        
+        logModalAluno('✅ Vinculação Teórica atualizada a partir do progresso teórico:', {
+            turma_id: progresso ? progresso.turma_id : null,
+            turma_nome: progresso ? progresso.turma_nome : null,
+            textoResumo
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar UI de Vinculação Teórica:', error);
+    }
+}
+
+/**
+ * Busca o progresso teórico do aluno na API e atualiza os cards de resumo
+ * @param {number} alunoId - ID do aluno
+ */
+async function atualizarResumoTeoricoAluno(alunoId) {
+    try {
+        logModalAluno('📘 Carregando Progresso Teórico do aluno:', alunoId);
+        
+        if (!alunoId) {
+            atualizarCardsTeoricoResumo('Não iniciado');
+            atualizarVinculacaoTeoricaUI(null, 'Não iniciado');
+            contextoAlunoAtual.turmaTeoricaId = null;
+            return;
+        }
+        
+        const response = await fetch(`api/progresso_teorico.php?aluno_id=${encodeURIComponent(alunoId)}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.error('❌ Erro na API de progresso_teorico:', data.error);
+            atualizarCardsTeoricoResumo('Não iniciado');
+            atualizarVinculacaoTeoricaUI(null, 'Não iniciado');
+            contextoAlunoAtual.turmaTeoricaId = null;
+            return;
+        }
+        
+        const progresso = data.progresso;
+        
+        if (!progresso) {
+            // Nenhuma matrícula teórica encontrada
+            atualizarCardsTeoricoResumo('Não iniciado');
+            atualizarVinculacaoTeoricaUI(null, 'Não iniciado');
+            contextoAlunoAtual.turmaTeoricaId = null;
+            return;
+        }
+        
+        const status = (progresso.status || '').toLowerCase();
+        const freq = typeof progresso.frequencia_percentual === 'number'
+            ? progresso.frequencia_percentual
+            : null;
+        
+        // Mapeamento de status brutos -> texto amigável
+        const statusMap = {
+            'matriculado': 'Matriculado',
+            'cursando': 'Em andamento',
+            'concluido': 'Concluído',
+            'evadido': 'Evadido',
+            'transferido': 'Transferido'
+        };
+        
+        let texto = statusMap[status] || 'Não iniciado';
+        
+        if (freq !== null && !isNaN(freq)) {
+            const freqFormatada = freq.toFixed(0); // 0 casas decimais basta pro card
+            texto += ` (${freqFormatada}% de presença)`;
+        }
+        
+        // Atualizar cards de resumo
+        atualizarCardsTeoricoResumo(texto);
+        
+        // Atualizar seção "Vinculação Teórica" na aba Matrícula
+        atualizarVinculacaoTeoricaUI(progresso, texto);
+        
+        // Preencher contexto com turma teórica
+        contextoAlunoAtual.turmaTeoricaId = progresso && progresso.turma_id ? progresso.turma_id : null;
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar Progresso Teórico do aluno:', error);
+        atualizarCardsTeoricoResumo('Não iniciado');
+        atualizarVinculacaoTeoricaUI(null, 'Não iniciado');
+        contextoAlunoAtual.turmaTeoricaId = null;
+    }
+}
+
+/**
+ * Atualiza todos os cards "Progresso Prático"
+ * (tanto na aba Histórico quanto no modal de visualização)
+ * usando o atributo data-field="pratico_resumo"
+ * @param {string} texto - Texto a ser exibido no card
+ */
+function atualizarCardsPraticoResumo(texto) {
+    try {
+        const elements = document.querySelectorAll('[data-field="pratico_resumo"]');
+        
+        if (!elements.length) {
+            logModalAluno('⚠️ Nenhum card pratico_resumo encontrado');
+            return;
+        }
+        
+        elements.forEach((el, idx) => {
+            el.innerHTML = `<span class="text-muted">${texto}</span>`;
+            logModalAluno(`✅ Card pratico_resumo [${idx + 1}] atualizado:`, texto);
+        });
+        
+        logModalAluno(`✅ Total de ${elements.length} card(s) de Progresso Prático atualizados`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar cards de Progresso Prático:', error);
+    }
+}
+
+/**
+ * Atualiza a seção "Vinculação Prática" na aba Matrícula
+ * usando os dados retornados pela API de progresso prático.
+ * Por enquanto, apenas preenche o campo de situação.
+ * @param {Object|null} progresso - Objeto retornado em data.progresso ou null
+ * @param {string} textoResumo - Texto já formatado para o card (ex.: "Em andamento (8 de 20 aulas)")
+ */
+function atualizarVinculacaoPraticaUI(progresso, textoResumo) {
+    try {
+        const situacaoInput = document.querySelector('input[name="situacao_pratica"]');
+        
+        if (!situacaoInput) {
+            logModalAluno('⚠️ Campo situacao_pratica não encontrado no DOM');
+            return;
+        }
+        
+        if (!progresso) {
+            // Sem progresso prático
+            situacaoInput.value = 'Não iniciado';
+        } else {
+            // Com progresso prático
+            situacaoInput.value = textoResumo || 'Não informado';
+        }
+        
+        logModalAluno('✅ Vinculação Prática atualizada a partir do progresso prático:', {
+            status: progresso ? progresso.status : null,
+            total_realizadas: progresso ? progresso.total_realizadas : null,
+            total_contratadas: progresso ? progresso.total_contratadas : null,
+            textoResumo
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar UI de Vinculação Prática:', error);
+    }
+}
+
+/**
+ * Busca o progresso prático do aluno na API e atualiza os cards de resumo
+ * @param {number} alunoId - ID do aluno
+ */
+async function atualizarResumoPraticoAluno(alunoId) {
+    try {
+        logModalAluno('📗 Carregando Progresso Prático do aluno:', alunoId);
+        
+        if (!alunoId) {
+            logModalAluno('⚠️ alunoId não fornecido para progresso prático');
+            atualizarCardsPraticoResumo('Não iniciado');
+            atualizarVinculacaoPraticaUI(null, 'Não iniciado');
+            return;
+        }
+        
+        const response = await fetch(`api/progresso_pratico.php?aluno_id=${encodeURIComponent(alunoId)}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.error('❌ Erro na API de progresso_pratico:', data.error);
+            atualizarCardsPraticoResumo('Não iniciado');
+            atualizarVinculacaoPraticaUI(null, 'Não iniciado');
+            return;
+        }
+        
+        const progresso = data.progresso;
+        
+        if (!progresso) {
+            // Nenhuma aula prática encontrada
+            atualizarCardsPraticoResumo('Não iniciado');
+            atualizarVinculacaoPraticaUI(null, 'Não iniciado');
+            return;
+        }
+        
+        // Mapeamento de status brutos -> texto amigável
+        const statusMap = {
+            'nao_iniciado': 'Não iniciado',
+            'em_andamento': 'Em andamento',
+            'concluido': 'Concluído'
+        };
+        
+        let texto = statusMap[progresso.status] || 'Não informado';
+        
+        // Complementar com informações de progresso
+        if (progresso.total_realizadas !== undefined && progresso.total_contratadas !== undefined && progresso.total_contratadas > 0) {
+            if (progresso.status === 'em_andamento') {
+                texto += ` (${progresso.total_realizadas} de ${progresso.total_contratadas} aulas)`;
+            } else if (progresso.status === 'concluido') {
+                texto += ` (${progresso.total_realizadas} de ${progresso.total_contratadas} aulas)`;
+            }
+        } else if (progresso.percentual_concluido !== undefined && progresso.percentual_concluido > 0) {
+            texto += ` (${progresso.percentual_concluido}% das aulas concluídas)`;
+        }
+        
+        // Atualizar cards de resumo
+        atualizarCardsPraticoResumo(texto);
+        
+        // Atualizar seção "Vinculação Prática" na aba Matrícula
+        atualizarVinculacaoPraticaUI(progresso, texto);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar Progresso Prático do aluno:', error);
+        atualizarCardsPraticoResumo('Não iniciado');
+        atualizarVinculacaoPraticaUI(null, 'Não iniciado');
+    }
+}
+
+/**
+ * Atualiza o card "Provas" (data-field="provas_resumo") em todos os contextos
+ * Usa a tabela EXAMES para buscar provas teóricas/práticas do aluno
+ * Também preenche a seção "Provas" na aba Matrícula
+ * @param {number} alunoId - ID do aluno
+ */
+async function atualizarResumoProvasAluno(alunoId) {
+    try {
+        if (!alunoId) {
+            logModalAluno('⚠️ alunoId não fornecido para resumo de provas');
+            atualizarCardsProvasResumo('Não iniciado');
+            atualizarSecaoProvasMatricula(null, null);
+            return;
+        }
+        
+        logModalAluno('📝 Carregando resumo de provas do aluno:', alunoId);
+        
+        // Buscar exames do aluno (todos os tipos)
+        const response = await fetch(`api/exames.php?aluno_id=${alunoId}`);
+        
+        if (!response.ok) {
+            console.error('❌ Erro HTTP ao buscar exames:', response.status);
+            atualizarCardsProvasResumo('Não iniciado');
+            atualizarSecaoProvasMatricula(null, null);
+            return;
+        }
+        
+        const data = await response.json();
+        
+        // A API de exames retorna { aluno, exames, can_write, exames_ok }
+        if (!data || !data.exames) {
+            console.error('❌ Erro ao buscar exames: resposta inválida');
+            atualizarCardsProvasResumo('Não iniciado');
+            atualizarSecaoProvasMatricula(null, null);
+            return;
+        }
+        
+        // Filtrar apenas provas (teórica e prática)
+        const provas = data.exames.filter(exame => 
+            exame.tipo === 'teorico' || exame.tipo === 'pratico'
+        );
+        
+        if (provas.length === 0) {
+            logModalAluno('⚠️ Nenhuma prova encontrada para o aluno');
+            atualizarCardsProvasResumo('Não iniciado');
+            atualizarSecaoProvasMatricula(null, null);
+            return;
+        }
+        
+        // Encontrar a última prova teórica e prática
+        let provaTeorica = null;
+        let provaPratica = null;
+        
+        provas.forEach(prova => {
+            // Determinar data de referência (data_resultado > data_agendada > ignorar)
+            const dataRef = prova.data_resultado || prova.data_agendada;
+            if (!dataRef) return;
+            
+            if (prova.tipo === 'teorico') {
+                if (!provaTeorica || new Date(dataRef) > new Date(provaTeorica.dataRef)) {
+                    provaTeorica = { ...prova, dataRef };
+                }
+            } else if (prova.tipo === 'pratico') {
+                if (!provaPratica || new Date(dataRef) > new Date(provaPratica.dataRef)) {
+                    provaPratica = { ...prova, dataRef };
+                }
+            }
+        });
+        
+        // Montar texto resumo para o card
+        let resumoTexto = '';
+        
+        // Se não existir nenhuma prova
+        if (!provaTeorica && !provaPratica) {
+            resumoTexto = 'Não iniciado';
+        }
+        // Se teórica aprovada e prática aprovada
+        else if (provaTeorica?.resultado === 'aprovado' && provaPratica?.resultado === 'aprovado') {
+            resumoTexto = 'Teórica e prática aprovadas';
+        }
+        // Se teórica aprovada e prática pendente
+        else if (provaTeorica?.resultado === 'aprovado' && (!provaPratica || provaPratica.status === 'agendado' || !provaPratica.resultado)) {
+            resumoTexto = 'Teórica aprovada, prática pendente';
+        }
+        // Se provas agendadas mas nenhuma concluída
+        else if (
+            (provaTeorica?.status === 'agendado' || provaPratica?.status === 'agendado') &&
+            (!provaTeorica?.resultado || provaTeorica.resultado === 'pendente') &&
+            (!provaPratica?.resultado || provaPratica.resultado === 'pendente')
+        ) {
+            resumoTexto = 'Provas agendadas';
+        }
+        // Se houver reprovação recente
+        else if (provaTeorica?.resultado === 'reprovado' || provaPratica?.resultado === 'reprovado') {
+            // Determinar qual foi a última reprovação
+            const teoricaReprovada = provaTeorica?.resultado === 'reprovado';
+            const praticaReprovada = provaPratica?.resultado === 'reprovado';
+            
+            if (teoricaReprovada && praticaReprovada) {
+                // Comparar datas para ver qual foi mais recente
+                const dataTeorica = provaTeorica.data_resultado || provaTeorica.data_agendada;
+                const dataPratica = provaPratica.data_resultado || provaPratica.data_agendada;
+                if (new Date(dataTeorica) > new Date(dataPratica)) {
+                    resumoTexto = 'Reprovação em prova teórica';
+                } else {
+                    resumoTexto = 'Reprovação em prova prática';
+                }
+            } else if (teoricaReprovada) {
+                resumoTexto = 'Reprovação em prova teórica';
+            } else {
+                resumoTexto = 'Reprovação em prova prática';
+            }
+        }
+        // Se tiver ao menos uma prova concluída mas não se encaixar nas regras acima
+        else {
+            resumoTexto = 'Provas em andamento';
+        }
+        
+        // Atualizar cards
+        atualizarCardsProvasResumo(resumoTexto);
+        
+        // Atualizar seção na aba Matrícula
+        atualizarSecaoProvasMatricula(provaTeorica, provaPratica);
+        
+        logModalAluno('✅ Resumo de provas atualizado:', {
+            resumoTexto,
+            temTeorica: !!provaTeorica,
+            temPratica: !!provaPratica
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar resumo de provas do aluno:', error);
+        atualizarCardsProvasResumo('Não iniciado');
+        atualizarSecaoProvasMatricula(null, null);
+    }
+}
+
+/**
+ * Atualiza todos os elementos com data-field="provas_resumo" com o texto fornecido
+ * @param {string} texto - Texto a ser exibido no card
+ */
+function atualizarCardsProvasResumo(texto) {
+    try {
+        const elementos = document.querySelectorAll('[data-field="provas_resumo"]');
+        
+        if (!elementos.length) {
+            logModalAluno('⚠️ Nenhum card provas_resumo encontrado');
+            return;
+        }
+        
+        elementos.forEach(el => {
+            el.innerHTML = `<span class="text-muted">${texto}</span>`;
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar cards de provas:', error);
+    }
+}
+
+/**
+ * Atualiza a seção "Provas" na aba Matrícula com os dados das provas
+ * @param {Object|null} provaTeorica - Último exame de prova teórica ou null
+ * @param {Object|null} provaPratica - Último exame de prova prática ou null
+ */
+function atualizarSecaoProvasMatricula(provaTeorica, provaPratica) {
+    try {
+        // Prova Teórica
+        const inputTeorica = document.getElementById('prova_teorica_resumo');
+        const detalhesTeorica = document.getElementById('prova_teorica_detalhes');
+        
+        if (inputTeorica) {
+            if (!provaTeorica) {
+                inputTeorica.value = '';
+                if (detalhesTeorica) {
+                    detalhesTeorica.textContent = 'Nenhuma prova registrada';
+                }
+            } else {
+                // Determinar status principal
+                let statusPrincipal = 'Não iniciado';
+                if (provaTeorica.resultado === 'aprovado') {
+                    statusPrincipal = 'Aprovado';
+                } else if (provaTeorica.resultado === 'reprovado') {
+                    statusPrincipal = 'Reprovado';
+                } else if (provaTeorica.status === 'agendado') {
+                    statusPrincipal = 'Agendado';
+                } else if (provaTeorica.status === 'concluido') {
+                    statusPrincipal = 'Concluído';
+                }
+                
+                inputTeorica.value = statusPrincipal;
+                
+                // Montar detalhes
+                if (detalhesTeorica) {
+                    const detalhes = [];
+                    const dataRef = provaTeorica.data_resultado || provaTeorica.data_agendada;
+                    if (dataRef) {
+                        const dataFormatada = new Date(dataRef).toLocaleDateString('pt-BR');
+                        detalhes.push(`Data: ${dataFormatada}`);
+                    }
+                    if (provaTeorica.resultado) {
+                        const resultadoTexto = provaTeorica.resultado === 'aprovado' ? 'Aprovado' : 
+                                               provaTeorica.resultado === 'reprovado' ? 'Reprovado' : 
+                                               provaTeorica.resultado;
+                        detalhes.push(`Resultado: ${resultadoTexto}`);
+                    }
+                    if (provaTeorica.protocolo) {
+                        detalhes.push(`protocolo ${provaTeorica.protocolo}`);
+                    }
+                    if (provaTeorica.clinica_nome) {
+                        detalhes.push(`local ${provaTeorica.clinica_nome}`);
+                    }
+                    
+                    detalhesTeorica.textContent = detalhes.length > 0 ? detalhes.join(' – ') : '';
+                }
+            }
+        }
+        
+        // Prova Prática
+        const inputPratica = document.getElementById('prova_pratica_resumo');
+        const detalhesPratica = document.getElementById('prova_pratica_detalhes');
+        
+        if (inputPratica) {
+            if (!provaPratica) {
+                inputPratica.value = '';
+                if (detalhesPratica) {
+                    detalhesPratica.textContent = 'Nenhuma prova registrada';
+                }
+            } else {
+                // Determinar status principal
+                let statusPrincipal = 'Não iniciado';
+                if (provaPratica.resultado === 'aprovado') {
+                    statusPrincipal = 'Aprovado';
+                } else if (provaPratica.resultado === 'reprovado') {
+                    statusPrincipal = 'Reprovado';
+                } else if (provaPratica.status === 'agendado') {
+                    statusPrincipal = 'Agendado';
+                } else if (provaPratica.status === 'concluido') {
+                    statusPrincipal = 'Concluído';
+                }
+                
+                inputPratica.value = statusPrincipal;
+                
+                // Montar detalhes
+                if (detalhesPratica) {
+                    const detalhes = [];
+                    const dataRef = provaPratica.data_resultado || provaPratica.data_agendada;
+                    if (dataRef) {
+                        const dataFormatada = new Date(dataRef).toLocaleDateString('pt-BR');
+                        detalhes.push(`Data: ${dataFormatada}`);
+                    }
+                    if (provaPratica.resultado) {
+                        const resultadoTexto = provaPratica.resultado === 'aprovado' ? 'Aprovado' : 
+                                               provaPratica.resultado === 'reprovado' ? 'Reprovado' : 
+                                               provaPratica.resultado;
+                        detalhes.push(`Resultado: ${resultadoTexto}`);
+                    }
+                    if (provaPratica.protocolo) {
+                        detalhes.push(`protocolo ${provaPratica.protocolo}`);
+                    }
+                    if (provaPratica.clinica_nome) {
+                        detalhes.push(`local ${provaPratica.clinica_nome}`);
+                    }
+                    
+                    detalhesPratica.textContent = detalhes.length > 0 ? detalhes.join(' – ') : '';
+                }
+            }
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar seção de provas na aba Matrícula:', error);
+    }
+}
+
+/**
+ * Registra eventos de clique nos atalhos rápidos do aluno
+ * (tanto na aba Histórico quanto no modal de visualização)
+ */
+function registrarEventosAtalhosAluno() {
+    try {
+        const atalhos = document.querySelectorAll('.aluno-atalho[data-acao]');
+        
+        if (!atalhos.length) {
+            logModalAluno('⚠️ Nenhum atalho de aluno encontrado para registrar eventos');
+        } else {
+            atalhos.forEach(atalho => {
+                atalho.classList.remove('disabled');
+                atalho.removeAttribute('disabled');
+                
+                // Remover listeners antigos para evitar duplicação
+                const novoAtalho = atalho.cloneNode(true);
+                atalho.parentNode.replaceChild(novoAtalho, atalho);
+                
+                novoAtalho.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    const acao = this.getAttribute('data-acao');
+                    abrirAtalhoAluno(acao);
+                });
+            });
+            
+            logModalAluno(`✅ Eventos registrados para ${atalhos.length} atalho(s) de aluno`);
+        }
+        
+        // Habilitar botão "Ver Financeiro do Aluno" na aba Matrícula
+        const btnFinanceiro = document.querySelector('.aluno-btn-financeiro');
+        if (btnFinanceiro) {
+            btnFinanceiro.classList.remove('disabled');
+            btnFinanceiro.removeAttribute('disabled');
+            
+            // Remover listener antigo para evitar duplicação
+            const novoBtn = btnFinanceiro.cloneNode(true);
+            btnFinanceiro.parentNode.replaceChild(novoBtn, btnFinanceiro);
+            
+            novoBtn.addEventListener('click', function (e) {
+                e.preventDefault();
+                abrirAtalhoAluno('ver-financeiro-aluno');
+            });
+            
+            logModalAluno('✅ Botão "Ver Financeiro do Aluno" habilitado');
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao registrar eventos dos atalhos do aluno:', error);
+    }
+}
+
+/**
+ * Abre o atalho correspondente à ação solicitada
+ * @param {string} acao - Ação do atalho (abrir-agenda-aluno, ver-financeiro-aluno, ver-turma-teorica)
+ */
+function abrirAtalhoAluno(acao) {
+    try {
+        const { alunoId, matriculaId, turmaTeoricaId } = contextoAlunoAtual;
+        
+        if (!alunoId) {
+            logModalAluno('⚠️ Não há alunoId no contexto atual, atalho ignorado');
+            return;
+        }
+        
+        let url = null;
+        
+        switch (acao) {
+            case 'abrir-agenda-aluno':
+                // TODO: ajustar rota da agenda se for criada página específica para agenda do aluno
+                url = `index.php?page=agendamento&aluno_id=${encodeURIComponent(alunoId)}`;
+                break;
+                
+            case 'ver-financeiro-aluno':
+                // A página de financeiro-faturas aceita apenas aluno_id como filtro
+                url = `index.php?page=financeiro-faturas&aluno_id=${encodeURIComponent(alunoId)}`;
+                break;
+                
+            case 'ver-turma-teorica':
+                if (!turmaTeoricaId) {
+                    logModalAluno('⚠️ Nenhuma turma teórica vinculada para este aluno');
+                    return;
+                }
+                url = `index.php?page=turmas-teoricas&acao=detalhes&turma_id=${encodeURIComponent(turmaTeoricaId)}`;
+                break;
+                
+            default:
+                logModalAluno('⚠️ Ação de atalho não reconhecida:', acao);
+                return;
+        }
+        
+        if (url) {
+            window.open(url, '_blank'); // abre em nova aba para não perder o modal
+            logModalAluno('🔗 Atalho aberto:', url);
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao abrir atalho do aluno:', error);
+    }
+}
+
+/**
+ * Atualiza o card "Situação do Processo" na aba Histórico e no modal de visualização
+ * Atualiza TODOS os elementos com data-field="processo_status_resumo"
+ * @param {Object|null} matricula - Objeto com os dados da matrícula ou null se não houver
+ */
+function atualizarResumoProcessoHistorico(matricula) {
+    try {
+        const cardElements = document.querySelectorAll('[data-field="processo_status_resumo"]');
+        
+        if (cardElements.length === 0) {
+            logModalAluno('⚠️ Nenhum card processo_status_resumo encontrado');
+            return;
+        }
+        
+        // Determinar texto a ser exibido
+        let statusTexto;
+        
+        if (!matricula || !matricula.status) {
+            // Não há matrícula ou status não informado
+            statusTexto = 'Não há matrícula cadastrada';
+        } else {
+            // Mapear status para texto amigável
+            const statusMap = {
+                'ativa': 'Em formação',
+                'em_formacao': 'Em formação',
+                'em_andamento': 'Em formação',
+                'concluida': 'Concluído',
+                'cancelada': 'Cancelado',
+                'trancada': 'Trancado',
+                'em_analise': 'Em análise',
+                'em_exame': 'Em exame'
+            };
+            
+            statusTexto = statusMap[matricula.status] || 'Não informado';
+        }
+        
+        // Atualizar todos os elementos encontrados
+        cardElements.forEach((cardElement, index) => {
+            cardElement.innerHTML = `<span class="text-muted">${statusTexto}</span>`;
+            logModalAluno(`✅ Card processo_status_resumo [${index + 1}] atualizado:`, statusTexto);
+        });
+        
+        logModalAluno(`✅ Total de ${cardElements.length} card(s) atualizado(s) com: ${statusTexto}`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar resumo processo histórico:', error);
+    }
 }
 
 // Sistema de Operações de Habilitação
@@ -6103,10 +8113,10 @@ function ajustarAbasPorPerfil() {
 function carregarMatriculas(alunoId) {
     if (!alunoId) return;
     
-    // Verificar se o container existe (aba pode estar em modo placeholder)
-    const container = document.getElementById('matriculas-container');
-    if (!container) {
-        logModalAluno('[Matrículas] Container não encontrado no modal do aluno (aba está em placeholder). Cancelando carregamento para evitar erro.');
+    // Verificar se a lista existe (aba deve ter estrutura correta)
+    const list = document.querySelector('#modalAluno #matriculas-list');
+    if (!list) {
+        logModalAluno('[Matrículas] #matriculas-list não encontrado dentro do container. Verificar HTML da aba.');
         return;
     }
     
@@ -6114,7 +8124,7 @@ function carregarMatriculas(alunoId) {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.matriculas.length > 0) {
-                container.innerHTML = `
+                list.innerHTML = `
                     <div class="table-responsive">
                         <table class="table table-sm">
                             <thead>
@@ -6145,18 +8155,18 @@ function carregarMatriculas(alunoId) {
                     </div>
                 `;
             } else {
-                container.innerHTML = `
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-graduation-cap fa-2x mb-2"></i>
-                        <p>Nenhuma matrícula encontrada</p>
+                list.innerHTML = `
+                    <div class="d-flex flex-column align-items-center justify-content-center py-5 text-muted">
+                        <i class="fas fa-graduation-cap fa-2x mb-3"></i>
+                        <p class="mb-0">Nenhuma matrícula encontrada</p>
                     </div>
                 `;
             }
         })
         .catch(error => {
             console.error('Erro ao carregar matrículas:', error);
-            if (container) {
-                container.innerHTML = `
+            if (list) {
+                list.innerHTML = `
                     <div class="alert alert-danger">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         Erro ao carregar matrículas
@@ -6172,10 +8182,10 @@ function carregarMatriculas(alunoId) {
 function carregarDocumentos(alunoId) {
     if (!alunoId) return;
     
-    // Verificar se o container existe (aba pode estar em modo placeholder)
-    const container = document.getElementById('documentos-container');
-    if (!container) {
-        logModalAluno('[Documentos] Container não encontrado no modal do aluno (aba está em placeholder). Cancelando carregamento para evitar erro.');
+    // Verificar se a lista existe (aba deve ter estrutura correta)
+    const list = document.querySelector('#modalAluno #documentos-list');
+    if (!list) {
+        logModalAluno('[Documentos] #documentos-list não encontrado dentro do container. Verificar HTML da aba.');
         return;
     }
     
@@ -6183,7 +8193,7 @@ function carregarDocumentos(alunoId) {
         .then(response => response.json())
         .then(data => {
             if (data.success && data.documentos.length > 0) {
-                container.innerHTML = `
+                list.innerHTML = `
                     <div class="row">
                         ${data.documentos.map(doc => `
                             <div class="col-md-6 mb-3">
@@ -6209,18 +8219,18 @@ function carregarDocumentos(alunoId) {
                     </div>
                 `;
             } else {
-                container.innerHTML = `
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-file-alt fa-2x mb-2"></i>
-                        <p>Nenhum documento encontrado</p>
+                list.innerHTML = `
+                    <div class="d-flex flex-column align-items-center justify-content-center py-5 text-muted">
+                        <i class="fas fa-file-alt fa-2x mb-3"></i>
+                        <p class="mb-0">Nenhum documento encontrado</p>
                     </div>
                 `;
             }
         })
         .catch(error => {
             console.error('Erro ao carregar documentos:', error);
-            if (container) {
-                container.innerHTML = `
+            if (list) {
+                list.innerHTML = `
                     <div class="alert alert-danger">
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         Erro ao carregar documentos
@@ -6236,6 +8246,16 @@ function carregarDocumentos(alunoId) {
 // Função para carregar dados de uma aba específica
 function carregarDadosAba(abaId, alunoId) {
     logModalAluno(`📊 Carregando dados da aba: ${abaId} para aluno: ${alunoId}`);
+    
+    // Carregar matrícula principal se necessário (para abas Matrícula e Histórico)
+    if ((abaId === 'matricula' || abaId === 'historico') && alunoId) {
+        // Verificar se já foi carregada (flag simples para evitar chamadas repetidas desnecessárias)
+        const modal = document.getElementById('modalAluno');
+        if (modal && !modal.dataset.matriculaCarregada) {
+            carregarMatriculaPrincipal(alunoId);
+            modal.dataset.matriculaCarregada = 'true';
+        }
+    }
     
     switch(abaId) {
         case 'matricula':
@@ -6267,64 +8287,176 @@ function carregarDadosAba(abaId, alunoId) {
             break;
         */
         case 'historico':
-            carregarHistorico(alunoId);
+            carregarHistoricoAluno(alunoId);
             break;
     }
     
     reforcarEstruturaModalAluno();
 }
-
-// Função para carregar histórico
-function carregarHistorico(alunoId) {
-    if (!alunoId) {
-        // Se não houver alunoId, apenas manter o placeholder
-        return;
-    }
     
-    // Por enquanto, apenas manter o placeholder
-    // A implementação completa será feita na próxima etapa
-    logModalAluno('[Histórico] Carregando histórico para aluno:', alunoId);
-    
-    // TODO: Conectar com endpoint unificado de timeline na próxima etapa
-    /*
-    fetch(`api/historico.php?tipo=aluno&id=${alunoId}`)
-        .then(response => response.json())
-        .then(data => {
-            const container = document.getElementById('historico-container');
-            if (data.success) {
-                container.innerHTML = `
-                    <div class="timeline">
-                        <div class="timeline-item">
-                            <div class="timeline-marker"></div>
-                            <div class="timeline-content">
-                                <h6>Cadastro do Aluno</h6>
-                                <p class="text-muted small">Aluno cadastrado no sistema</p>
-                            </div>
+/**
+ * Carrega a linha do tempo do aluno (eventos da jornada)
+ * @param {number} alunoId - ID do aluno
+ * @param {Object} options - Opções: { modoVisualizacao: false }
+ * 
+ * TODO: Adicionar eventos de aulas teóricas/práticas na timeline
+ * TODO: Adicionar eventos de exames na timeline
+ */
+async function carregarHistoricoAluno(alunoId, options = { modoVisualizacao: false }) {
+    try {
+        const containerId = options.modoVisualizacao 
+            ? '#visualizar-historico-container'
+            : '#historico-container';
+        
+        const container = document.querySelector(containerId);
+        
+        if (!container) {
+            logModalAluno('⚠️ Container de histórico não encontrado:', containerId);
+            return;
+        }
+        
+        if (!alunoId) {
+            logModalAluno('⚠️ alunoId não fornecido para histórico');
+            // Mostrar placeholder vazio
+            container.innerHTML = `
+                <ul class="aluno-timeline-list">
+                    <li class="aluno-timeline-empty">
+                        <div class="aluno-timeline-empty-icon">
+                            <i class="fas fa-history fa-2x text-muted"></i>
                         </div>
-                    </div>
-                `;
-            } else {
-                container.innerHTML = `
-                    <div class="text-center text-muted py-4">
-                        <i class="fas fa-history fa-2x mb-2"></i>
-                        <p>Nenhum histórico encontrado</p>
-                    </div>
-                `;
-            }
-        })
-        .catch(error => {
-            console.error('Erro ao carregar histórico:', error);
-            document.getElementById('historico-container').innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="fas fa-exclamation-triangle me-2"></i>
-                    Erro ao carregar histórico
-                </div>
+                        <p class="text-muted mb-0">
+                            Os eventos mais recentes do aluno aparecerão aqui.
+                        </p>
+                    </li>
+                </ul>
             `;
-        })
-        .finally(() => {
-            reforcarEstruturaModalAluno();
-        });
-    */
+            return;
+        }
+        
+        logModalAluno('📜 Carregando histórico do aluno:', alunoId);
+        
+        const response = await fetch(`api/historico_aluno.php?aluno_id=${encodeURIComponent(alunoId)}`);
+        const data = await response.json();
+        
+        if (!data.success) {
+            console.error('❌ Erro na API de historico_aluno:', data.error);
+            // Mostrar placeholder vazio
+            container.innerHTML = `
+                <ul class="aluno-timeline-list">
+                    <li class="aluno-timeline-empty">
+                        <div class="aluno-timeline-empty-icon">
+                            <i class="fas fa-history fa-2x text-muted"></i>
+                        </div>
+                        <p class="text-muted mb-0">
+                            Os eventos mais recentes do aluno aparecerão aqui.
+                        </p>
+                    </li>
+                </ul>
+            `;
+            return;
+        }
+        
+        const eventos = data.eventos || [];
+        
+        if (eventos.length === 0) {
+            // Mostrar placeholder vazio
+            container.innerHTML = `
+                <ul class="aluno-timeline-list">
+                    <li class="aluno-timeline-empty">
+                        <div class="aluno-timeline-empty-icon">
+                            <i class="fas fa-history fa-2x text-muted"></i>
+                        </div>
+                        <p class="text-muted mb-0">
+                            Os eventos mais recentes do aluno aparecerão aqui.
+                        </p>
+                    </li>
+                </ul>
+            `;
+            return;
+        }
+        
+        // Formatar eventos para HTML
+        const eventosHTML = eventos.map(evento => {
+            // Formatar data para formato brasileiro
+            const dataEvento = new Date(evento.data);
+            const dataFormatada = dataEvento.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            // Determinar tag baseado no tipo
+            let tagTexto = '';
+            let tagClass = 'bg-light text-muted';
+            
+            if (evento.tipo === 'aluno_cadastrado') {
+                tagTexto = 'Cadastro';
+                tagClass = 'bg-primary text-white';
+            } else if (evento.tipo.startsWith('matricula_')) {
+                tagTexto = 'Matrícula';
+                tagClass = 'bg-info text-white';
+            } else if (evento.tipo.startsWith('exame_')) {
+                tagTexto = 'Exame';
+                tagClass = 'bg-info text-white';
+            } else if (evento.tipo.startsWith('prova_teorica_') || evento.tipo.startsWith('prova_pratica_')) {
+                tagTexto = 'Prova';
+                tagClass = 'bg-warning text-dark';
+            } else if (evento.tipo.startsWith('aulas_teoricas_') || evento.tipo.startsWith('aulas_praticas_')) {
+                tagTexto = 'Aulas';
+                tagClass = 'bg-secondary text-white';
+            } else if (evento.tipo.startsWith('fatura_')) {
+                tagTexto = 'Financeiro';
+                if (evento.tipo === 'fatura_vencida') {
+                    tagClass = 'bg-danger text-white';
+                } else if (evento.tipo === 'fatura_paga') {
+                    tagClass = 'bg-success text-white';
+                } else {
+                    tagClass = 'bg-warning text-dark';
+                }
+            }
+            
+            return `
+                <li class="aluno-timeline-item">
+                    <div class="aluno-timeline-dot"></div>
+                    <div class="aluno-timeline-content">
+                        <div class="aluno-timeline-date">${dataFormatada}</div>
+                        <div class="aluno-timeline-title">${evento.titulo}</div>
+                        <div class="aluno-timeline-description">${evento.descricao}</div>
+                        ${tagTexto ? `<div class="aluno-timeline-tag badge ${tagClass}">${tagTexto}</div>` : ''}
+                    </div>
+                </li>
+            `;
+        }).join('');
+        
+        // Atualizar container
+        container.innerHTML = `<ul class="aluno-timeline-list">${eventosHTML}</ul>`;
+        
+        logModalAluno(`✅ Histórico carregado: ${eventos.length} evento(s)`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar histórico do aluno:', error);
+        // Mostrar placeholder vazio em caso de erro
+        const containerId = options.modoVisualizacao 
+            ? '#visualizar-historico-container'
+            : '#historico-container';
+        const container = document.querySelector(containerId);
+        if (container) {
+            container.innerHTML = `
+                <ul class="aluno-timeline-list">
+                    <li class="aluno-timeline-empty">
+                        <div class="aluno-timeline-empty-icon">
+                            <i class="fas fa-history fa-2x text-muted"></i>
+                        </div>
+                        <p class="text-muted mb-0">
+                            Os eventos mais recentes do aluno aparecerão aqui.
+                        </p>
+                    </li>
+                </ul>
+            `;
+        }
+    }
 }
 
 // Funções de atalhos da aba Histórico

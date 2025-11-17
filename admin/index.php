@@ -1506,11 +1506,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         </div>
                     </a>
                     <div class="nav-submenu" id="configuracoes">
-                        <!-- TODO: Verificar se configuracoes.php aceita action=dados-cfc ou criar página específica -->
-                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                        <a href="index.php?page=configuracoes&action=dados-cfc" class="nav-sublink <?php echo ($page === 'configuracoes' && ($_GET['action'] ?? '') === 'dados-cfc') ? 'active' : ''; ?>">
                             <i class="fas fa-building"></i>
                             <span>Dados do CFC</span>
-                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                         </a>
                         <a href="index.php?page=configuracoes-categorias" class="nav-sublink <?php echo $page === 'configuracoes-categorias' ? 'active' : ''; ?>">
                             <i class="fas fa-layer-group"></i>
@@ -1551,7 +1549,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 <!-- Sistema / Ajuda -->
                 <?php if ($isAdmin): ?>
                 <div class="nav-item nav-group">
-                    <a href="index.php?page=configuracoes-categorias" class="nav-link nav-toggle" data-group="sistema-ajuda" title="Sistema / Ajuda">
+                    <a href="index.php?page=faq" class="nav-link nav-toggle" data-group="sistema-ajuda" title="Sistema / Ajuda">
                         <div class="nav-icon">
                             <i class="fas fa-question-circle"></i>
                         </div>
@@ -1561,11 +1559,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         </div>
                     </a>
                     <div class="nav-submenu" id="sistema-ajuda">
-                        <!-- TODO: Criar página logs.php ou verificar se existe rota -->
-                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                        <a href="index.php?page=logs&action=list" class="nav-sublink <?php echo ($page === 'logs' && ($_GET['action'] ?? '') === 'list') ? 'active' : ''; ?>">
                             <i class="fas fa-file-alt"></i>
                             <span>Logs</span>
-                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                         </a>
                         <!-- TODO: Criar página faq.php -->
                         <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
@@ -1591,7 +1587,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 
                 <!-- Sair -->
                 <div class="nav-item">
-                    <a href="../logout.php" class="nav-link" title="Sair">
+                    <!-- logout.php está em admin/logout.php, então usar ./logout.php -->
+                    <a href="./logout.php" class="nav-link" title="Sair">
                         <div class="nav-icon">
                             <i class="fas fa-sign-out-alt"></i>
                         </div>
@@ -1629,29 +1626,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             </a>
                         </div>
                         
-                        <!-- Cadastros -->
+                        <!-- Alunos -->
                         <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
-                        <div class="mobile-nav-group">
+                        <div class="mobile-nav-group" data-group="alunos">
                             <div class="mobile-nav-group-header">
-                                <i class="fas fa-database"></i>
-                                <span>Cadastros</span>
+                                <i class="fas fa-graduation-cap"></i>
+                                <span>Alunos</span>
                                 <i class="fas fa-chevron-down mobile-nav-arrow"></i>
                             </div>
                             <div class="mobile-nav-submenu">
-                                <?php if ($isAdmin): ?>
-                                <a href="index.php?page=usuarios&action=list" class="mobile-nav-sublink <?php echo $page === 'usuarios' ? 'active' : ''; ?>">
-                                    <i class="fas fa-users"></i>
-                                    <span>Usuários</span>
-                                </a>
-                                <a href="index.php?page=cfcs&action=list" class="mobile-nav-sublink <?php echo $page === 'cfcs' ? 'active' : ''; ?>">
-                                    <i class="fas fa-building"></i>
-                                    <span>CFCs</span>
-                                </a>
-                                <?php endif; ?>
-                                <a href="index.php?page=alunos" class="mobile-nav-sublink <?php echo $page === 'alunos' ? 'active' : ''; ?>">
-                                    <i class="fas fa-graduation-cap"></i>
-                                    <span>Alunos</span>
+                                <a href="index.php?page=alunos" class="mobile-nav-sublink <?php echo ($page === 'alunos' && !isset($_GET['status'])) ? 'active' : ''; ?>">
+                                    <i class="fas fa-list"></i>
+                                    <span>Todos os Alunos</span>
                                     <span class="mobile-nav-badge"><?php echo $stats['total_alunos']; ?></span>
+                                </a>
+                                <a href="index.php?page=alunos&status=em_formacao" class="mobile-nav-sublink <?php echo ($page === 'alunos' && ($_GET['status'] ?? '') === 'em_formacao') ? 'active' : ''; ?>">
+                                    <i class="fas fa-user-check"></i>
+                                    <span>Alunos Ativos</span>
+                                </a>
+                                <a href="index.php?page=alunos&status=em_exame" class="mobile-nav-sublink <?php echo ($page === 'alunos' && ($_GET['status'] ?? '') === 'em_exame') ? 'active' : ''; ?>">
+                                    <i class="fas fa-clipboard-check"></i>
+                                    <span>Alunos em Exame</span>
+                                </a>
+                                <a href="index.php?page=alunos&status=concluido" class="mobile-nav-sublink <?php echo ($page === 'alunos' && ($_GET['status'] ?? '') === 'concluido') ? 'active' : ''; ?>">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Alunos Concluídos</span>
+                                </a>
+                            </div>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Acadêmico -->
+                        <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
+                        <div class="mobile-nav-group" data-group="academico">
+                            <div class="mobile-nav-group-header">
+                                <i class="fas fa-book-reader"></i>
+                                <span>Acadêmico</span>
+                                <i class="fas fa-chevron-down mobile-nav-arrow"></i>
+                            </div>
+                            <div class="mobile-nav-submenu">
+                                <a href="index.php?page=turmas-teoricas" class="mobile-nav-sublink <?php echo $page === 'turmas-teoricas' ? 'active' : ''; ?>">
+                                    <i class="fas fa-chalkboard-teacher"></i>
+                                    <span>Turmas Teóricas</span>
+                                </a>
+                                <!-- TODO: Criar página presencas-teoricas.php - por enquanto usar turma-chamada.php -->
+                                <a href="pages/turma-chamada.php" class="mobile-nav-sublink" onclick="return confirm('Esta página ainda está em desenvolvimento. Deseja continuar?');">
+                                    <i class="fas fa-check-square"></i>
+                                    <span>Presenças Teóricas</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Temporário)</small>
+                                </a>
+                                <!-- TODO: Criar página aulas-praticas.php - por enquanto usar listar-aulas.php -->
+                                <a href="pages/listar-aulas.php" class="mobile-nav-sublink">
+                                    <i class="fas fa-car-side"></i>
+                                    <span>Aulas Práticas</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Temporário)</small>
+                                </a>
+                                <a href="index.php?page=agendamento" class="mobile-nav-sublink <?php echo $page === 'agendamento' ? 'active' : ''; ?>">
+                                    <i class="fas fa-calendar-alt"></i>
+                                    <span>Agenda Geral</span>
+                                    <span class="mobile-nav-badge"><?php echo $stats['total_aulas']; ?></span>
                                 </a>
                                 <a href="index.php?page=instrutores" class="mobile-nav-sublink <?php echo $page === 'instrutores' ? 'active' : ''; ?>">
                                     <i class="fas fa-chalkboard-teacher"></i>
@@ -1663,41 +1696,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <span>Veículos</span>
                                     <span class="mobile-nav-badge"><?php echo $stats['total_veiculos']; ?></span>
                                 </a>
+                                <a href="index.php?page=configuracoes-salas" class="mobile-nav-sublink <?php echo $page === 'configuracoes-salas' ? 'active' : ''; ?>">
+                                    <i class="fas fa-door-open"></i>
+                                    <span>Salas</span>
+                                </a>
                             </div>
                         </div>
                         <?php endif; ?>
                         
-                        <!-- Operacional -->
-                        <div class="mobile-nav-group">
+                        <!-- Provas & Exames -->
+                        <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
+                        <div class="mobile-nav-group" data-group="provas-exames">
                             <div class="mobile-nav-group-header">
-                                <i class="fas fa-calendar-alt"></i>
-                                <span>Operacional</span>
+                                <i class="fas fa-clipboard-check"></i>
+                                <span>Provas & Exames</span>
                                 <i class="fas fa-chevron-down mobile-nav-arrow"></i>
                             </div>
                             <div class="mobile-nav-submenu">
-                                <a href="index.php?page=agendamento" class="mobile-nav-sublink <?php echo $page === 'agendamento' ? 'active' : ''; ?>">
-                                    <i class="fas fa-calendar-alt"></i>
-                                    <span>Agendamento</span>
-                                    <span class="mobile-nav-badge"><?php echo $stats['total_aulas']; ?></span>
-                                </a>
-                                <a href="index.php?page=exames" class="mobile-nav-sublink <?php echo $page === 'exames' ? 'active' : ''; ?>">
+                                <a href="index.php?page=exames&tipo=medico" class="mobile-nav-sublink <?php echo ($page === 'exames' && ($_GET['tipo'] ?? '') === 'medico') ? 'active' : ''; ?>">
                                     <i class="fas fa-stethoscope"></i>
-                                    <span>Exames Médicos</span>
+                                    <span>Exame Médico</span>
+                                </a>
+                                <a href="index.php?page=exames&tipo=psicotecnico" class="mobile-nav-sublink <?php echo ($page === 'exames' && ($_GET['tipo'] ?? '') === 'psicotecnico') ? 'active' : ''; ?>">
+                                    <i class="fas fa-brain"></i>
+                                    <span>Exame Psicotécnico</span>
+                                </a>
+                                <a href="index.php?page=exames&tipo=teorico" class="mobile-nav-sublink <?php echo ($page === 'exames' && ($_GET['tipo'] ?? '') === 'teorico') ? 'active' : ''; ?>">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>Prova Teórica</span>
+                                </a>
+                                <a href="index.php?page=exames&tipo=pratico" class="mobile-nav-sublink <?php echo ($page === 'exames' && ($_GET['tipo'] ?? '') === 'pratico') ? 'active' : ''; ?>">
+                                    <i class="fas fa-car"></i>
+                                    <span>Prova Prática</span>
                                 </a>
                             </div>
                         </div>
-                        
-                        <!-- Gestão de Turmas -->
-                        <div class="mobile-nav-item">
-                            <a href="?page=turmas-teoricas" class="mobile-nav-link <?php echo $page === 'turmas-teoricas' ? 'active' : ''; ?>">
-                                <i class="fas fa-graduation-cap"></i>
-                                <span>Gestão de Turmas</span>
-                            </a>
-                        </div>
+                        <?php endif; ?>
                         
                         <!-- Financeiro -->
                         <?php if (defined('FINANCEIRO_ENABLED') && FINANCEIRO_ENABLED && ($isAdmin || $user['tipo'] === 'secretaria')): ?>
-                        <div class="mobile-nav-group">
+                        <div class="mobile-nav-group" data-group="financeiro">
                             <div class="mobile-nav-group-header">
                                 <i class="fas fa-dollar-sign"></i>
                                 <span>Financeiro</span>
@@ -1706,108 +1744,148 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <div class="mobile-nav-submenu">
                                 <a href="index.php?page=financeiro-faturas" class="mobile-nav-sublink <?php echo $page === 'financeiro-faturas' ? 'active' : ''; ?>">
                                     <i class="fas fa-file-invoice"></i>
-                                    <span>Faturas (Receitas)</span>
+                                    <span>Faturas</span>
                                 </a>
+                                <!-- Corrigido: usar financeiro-despesas (página que existe) ao invés de financeiro-pagamentos -->
                                 <a href="index.php?page=financeiro-despesas" class="mobile-nav-sublink <?php echo $page === 'financeiro-despesas' ? 'active' : ''; ?>">
                                     <i class="fas fa-receipt"></i>
-                                    <span>Despesas (Pagamentos)</span>
+                                    <span>Pagamentos</span>
                                 </a>
                                 <a href="index.php?page=financeiro-relatorios" class="mobile-nav-sublink <?php echo $page === 'financeiro-relatorios' ? 'active' : ''; ?>">
                                     <i class="fas fa-chart-line"></i>
-                                    <span>Relatórios</span>
+                                    <span>Relatórios Financeiros</span>
+                                </a>
+                                <!-- TODO: Criar página financeiro-configuracoes.php -->
+                                <a href="#" class="mobile-nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="fas fa-cog"></i>
+                                    <span>Configurações Financeiras</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                                 </a>
                             </div>
                         </div>
                         <?php endif; ?>
                         
                         <!-- Relatórios -->
-                        <div class="mobile-nav-group">
+                        <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
+                        <div class="mobile-nav-group" data-group="relatorios">
                             <div class="mobile-nav-group-header">
                                 <i class="fas fa-chart-bar"></i>
                                 <span>Relatórios</span>
                                 <i class="fas fa-chevron-down mobile-nav-arrow"></i>
                             </div>
                             <div class="mobile-nav-submenu">
-                                <a href="index.php?page=relatorios" class="mobile-nav-sublink <?php echo $page === 'relatorios' ? 'active' : ''; ?>">
+                                <a href="pages/relatorio-frequencia.php" class="mobile-nav-sublink <?php echo ($page === 'relatorio-frequencia' || $page === 'relatorio-presencas') ? 'active' : ''; ?>">
                                     <i class="fas fa-chart-bar"></i>
-                                    <span>Relatórios Gerais</span>
+                                    <span>Frequência Teórica</span>
                                 </a>
-                                <a href="index.php?page=relatorios-aulas" class="mobile-nav-sublink <?php echo $page === 'relatorios-aulas' ? 'active' : ''; ?>">
-                                    <i class="fas fa-file-alt"></i>
-                                    <span>Relatórios de Aulas</span>
+                                <!-- TODO: Criar página relatorio-conclusao-pratica.php -->
+                                <a href="#" class="mobile-nav-sublink" onclick="alert('Relatório em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="fas fa-check-circle"></i>
+                                    <span>Conclusão Prática</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                                 </a>
-                                <a href="index.php?page=estatisticas" class="mobile-nav-sublink <?php echo $page === 'estatisticas' ? 'active' : ''; ?>">
-                                    <i class="fas fa-chart-line"></i>
-                                    <span>Estatísticas</span>
+                                <!-- TODO: Criar página relatorio-provas.php -->
+                                <a href="#" class="mobile-nav-sublink" onclick="alert('Relatório em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="fas fa-clipboard-check"></i>
+                                    <span>Provas (Taxa de Aprovação)</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                                </a>
+                                <a href="index.php?page=financeiro-relatorios&tipo=inadimplencia" class="mobile-nav-sublink <?php echo ($page === 'financeiro-relatorios' && ($_GET['tipo'] ?? '') === 'inadimplencia') ? 'active' : ''; ?>">
+                                    <i class="fas fa-exclamation-triangle"></i>
+                                    <span>Inadimplência</span>
                                 </a>
                             </div>
                         </div>
+                        <?php endif; ?>
                         
                         <!-- Configurações -->
                         <?php if ($isAdmin): ?>
-                        <div class="mobile-nav-group">
+                        <div class="mobile-nav-group" data-group="configuracoes">
                             <div class="mobile-nav-group-header">
                                 <i class="fas fa-cogs"></i>
                                 <span>Configurações</span>
                                 <i class="fas fa-chevron-down mobile-nav-arrow"></i>
                             </div>
                             <div class="mobile-nav-submenu">
+                                <a href="index.php?page=configuracoes&action=dados-cfc" class="mobile-nav-sublink <?php echo ($page === 'configuracoes' && ($_GET['action'] ?? '') === 'dados-cfc') ? 'active' : ''; ?>">
+                                    <i class="fas fa-building"></i>
+                                    <span>Dados do CFC</span>
+                                </a>
                                 <a href="index.php?page=configuracoes-categorias" class="mobile-nav-sublink <?php echo $page === 'configuracoes-categorias' ? 'active' : ''; ?>">
                                     <i class="fas fa-layer-group"></i>
-                                    <span>Categorias de Habilitação</span>
+                                    <span>Cursos / Categorias</span>
                                 </a>
-                                <a href="index.php?page=configuracoes-salas" class="mobile-nav-sublink <?php echo $page === 'configuracoes-salas' ? 'active' : ''; ?>">
-                                    <i class="fas fa-door-open"></i>
-                                    <span>Salas de Aula</span>
+                                <!-- TODO: Criar página configuracoes-horarios.php -->
+                                <a href="#" class="mobile-nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="fas fa-clock"></i>
+                                    <span>Tabela de Horários</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                                </a>
+                                <!-- TODO: Criar página configuracoes-bloqueios.php -->
+                                <a href="#" class="mobile-nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="fas fa-ban"></i>
+                                    <span>Regras de Bloqueio</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                                </a>
+                                <!-- TODO: Criar página configuracoes-documentos.php -->
+                                <a href="#" class="mobile-nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="fas fa-file-pdf"></i>
+                                    <span>Modelos de Documentos</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                                 </a>
                                 <a href="index.php?page=configuracoes-disciplinas" class="mobile-nav-sublink <?php echo $page === 'configuracoes-disciplinas' ? 'active' : ''; ?>">
                                     <i class="fas fa-book"></i>
                                     <span>Disciplinas</span>
                                 </a>
-                                <a href="index.php?page=configuracoes&action=geral" class="mobile-nav-sublink <?php echo $page === 'configuracoes' ? 'active' : ''; ?>">
+                                <!-- TODO: Verificar se configuracoes.php aceita action=geral ou criar página específica -->
+                                <a href="#" class="mobile-nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
                                     <i class="fas fa-sliders-h"></i>
                                     <span>Configurações Gerais</span>
-                                </a>
-                                <a href="index.php?page=logs&action=list" class="mobile-nav-sublink <?php echo $page === 'logs' ? 'active' : ''; ?>">
-                                    <i class="fas fa-file-alt"></i>
-                                    <span>Logs do Sistema</span>
-                                </a>
-                                <a href="index.php?page=backup" class="mobile-nav-sublink <?php echo $page === 'backup' ? 'active' : ''; ?>">
-                                    <i class="fas fa-download"></i>
-                                    <span>Backup</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                                 </a>
                             </div>
                         </div>
                         <?php endif; ?>
                         
-                        <!-- Ferramentas -->
+                        <!-- Sistema / Ajuda -->
                         <?php if ($isAdmin): ?>
-                        <div class="mobile-nav-group">
+                        <div class="mobile-nav-group" data-group="sistema-ajuda">
                             <div class="mobile-nav-group-header">
-                                <i class="fas fa-tools"></i>
-                                <span>Ferramentas</span>
+                                <i class="fas fa-question-circle"></i>
+                                <span>Sistema / Ajuda</span>
                                 <i class="fas fa-chevron-down mobile-nav-arrow"></i>
                             </div>
                             <div class="mobile-nav-submenu">
-                                <a href="index.php?page=ferramentas" class="mobile-nav-sublink <?php echo $page === 'ferramentas' ? 'active' : ''; ?>">
-                                    <i class="fas fa-tools"></i>
-                                    <span>Ferramentas Gerais</span>
+                                <a href="index.php?page=logs&action=list" class="mobile-nav-sublink <?php echo ($page === 'logs' && ($_GET['action'] ?? '') === 'list') ? 'active' : ''; ?>">
+                                    <i class="fas fa-file-alt"></i>
+                                    <span>Logs</span>
                                 </a>
-                                <a href="index.php?page=exportar" class="mobile-nav-sublink <?php echo $page === 'exportar' ? 'active' : ''; ?>">
+                                <!-- TODO: Criar página faq.php -->
+                                <a href="#" class="mobile-nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="fas fa-question"></i>
+                                    <span>FAQ</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                                </a>
+                                <!-- TODO: Criar página suporte.php -->
+                                <a href="#" class="mobile-nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                                    <i class="fas fa-headset"></i>
+                                    <span>Suporte</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                                </a>
+                                <!-- TODO: Criar página backup.php -->
+                                <a href="#" class="mobile-nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
                                     <i class="fas fa-download"></i>
-                                    <span>Exportar Dados</span>
-                                </a>
-                                <a href="index.php?page=importar" class="mobile-nav-sublink <?php echo $page === 'importar' ? 'active' : ''; ?>">
-                                    <i class="fas fa-upload"></i>
-                                    <span>Importar Dados</span>
+                                    <span>Backup</span>
+                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                                 </a>
                             </div>
                         </div>
                         <?php endif; ?>
                         
                         <!-- Sair -->
+                        <!-- logout.php está em admin/logout.php, então usar ./logout.php -->
                         <div class="mobile-nav-item mobile-nav-logout">
-                            <a href="logout.php" class="mobile-nav-link">
+                            <a href="./logout.php" class="mobile-nav-link">
                                 <i class="fas fa-sign-out-alt"></i>
                                 <span>Sair</span>
                             </a>
@@ -1830,13 +1908,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             // Carregar dados necessários baseado na página
             switch ($page) {
                 case 'alunos':
+                    // =====================================================
+                    // FILTROS DE STATUS PARA GESTÃO DE ALUNOS
+                    // =====================================================
+                    // Mapeamento de status da URL para critérios de filtro:
+                    // - em_formacao → alunos.status = 'ativo'
+                    // - em_exame → alunos que têm exames agendados (exames.status = 'agendado')
+                    // - concluido → alunos.status = 'concluido'
+                    // =====================================================
+                    
+                    // Ler parâmetro de status da URL
+                    $statusFiltro = isset($_GET['status']) ? trim($_GET['status']) : null;
+                    
+                    // Mapeamento de status válidos
+                    $statusPermitidos = [
+                        'em_formacao' => 'ativo',     // Alunos ativos em formação
+                        'em_exame'    => 'exame',     // Alunos com exames agendados (tratamento especial)
+                        'concluido'   => 'concluido'  // Alunos concluídos
+                    ];
+                    
+                    // Validar status
+                    $statusValido = null;
+                    if ($statusFiltro && isset($statusPermitidos[$statusFiltro])) {
+                        $statusValido = $statusFiltro;
+                    }
+                    
                     try {
+                        // Construir query base
+                        $sql = "
+                            SELECT DISTINCT a.id, a.nome, a.cpf, a.rg, a.data_nascimento, a.endereco, 
+                                   a.telefone, a.email, a.cfc_id, a.categoria_cnh, a.status, a.criado_em, a.operacoes
+                            FROM alunos a
+                        ";
+                        
+                        $params = [];
+                        $whereConditions = [];
+                        
+                        // Aplicar filtro de status se válido
+                        if ($statusValido) {
+                            if ($statusValido === 'em_exame') {
+                                // Alunos que têm exames agendados (usar EXISTS para evitar duplicatas)
+                                $whereConditions[] = "EXISTS (
+                                    SELECT 1 FROM exames e 
+                                    WHERE e.aluno_id = a.id 
+                                    AND e.status = 'agendado'
+                                )";
+                            } else {
+                                // Para em_formacao ou concluido, usar o status direto
+                                $whereConditions[] = "a.status = ?";
+                                $params[] = $statusPermitidos[$statusValido];
+                            }
+                        }
+                        
+                        // Adicionar condições WHERE se houver
+                        if (!empty($whereConditions)) {
+                            $sql .= " WHERE " . implode(' AND ', $whereConditions);
+                        }
+                        
+                        $sql .= " ORDER BY a.nome ASC";
+                        
                         // SOLUÇÃO DEFINITIVA v3.0 - Forçar eliminação de duplicatas
-                        $alunosRaw = $db->fetchAll("
-                            SELECT a.id, a.nome, a.cpf, a.rg, a.data_nascimento, a.endereco, a.telefone, a.email, a.cfc_id, a.categoria_cnh, a.status, a.criado_em, a.operacoes
-                            FROM alunos a 
-                            ORDER BY a.nome ASC
-                        ");
+                        $alunosRaw = $db->fetchAll($sql, $params);
                         
                         // FORÇAR eliminação de duplicatas por ID
                         $alunos = [];
@@ -1885,6 +2017,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     } catch (Exception $e) {
                         $cfcs = [];
                     }
+                    
+                    // Calcular contadores globais (independente do filtro atual)
+                    try {
+                        // Total de todos os alunos
+                        $resultTotal = $db->fetch("SELECT COUNT(*) as total FROM alunos");
+                        $stats['total_alunos'] = $resultTotal['total'] ?? count($alunos);
+                        
+                        // Total de alunos ativos (em formação)
+                        $resultAtivos = $db->fetch("SELECT COUNT(*) as total FROM alunos WHERE status = 'ativo'");
+                        $stats['total_ativos'] = $resultAtivos['total'] ?? 0;
+                        
+                        // Total de alunos concluídos
+                        $resultConcluidos = $db->fetch("SELECT COUNT(*) as total FROM alunos WHERE status = 'concluido'");
+                        $stats['total_concluidos'] = $resultConcluidos['total'] ?? 0;
+                        
+                        // Total de alunos em exame (com exames agendados)
+                        $resultEmExame = $db->fetch("
+                            SELECT COUNT(DISTINCT aluno_id) as total
+                            FROM exames
+                            WHERE status = 'agendado'
+                        ");
+                        $stats['total_em_exame'] = $resultEmExame['total'] ?? 0;
+                        
+                    } catch (Exception $e) {
+                        $stats['total_alunos'] = count($alunos);
+                        $stats['total_ativos'] = 0;
+                        $stats['total_concluidos'] = 0;
+                        $stats['total_em_exame'] = 0;
+                    }
+                    
                     break;
                     
                 case 'instrutores':

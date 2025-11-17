@@ -11,63 +11,61 @@ document.addEventListener('DOMContentLoaded', function() {
     // =====================================================
     
     const flyoutConfig = {
-        'cadastros': {
-            title: 'Cadastros',
+        'alunos': {
+            title: 'Alunos',
             items: [
-                { icon: 'fas fa-users', text: 'Usuários', href: '?page=usuarios' },
-                { icon: 'fas fa-building', text: 'CFCs', href: '?page=cfcs' },
-                { icon: 'fas fa-graduation-cap', text: 'Alunos', href: '?page=alunos' },
-                { icon: 'fas fa-chalkboard-teacher', text: 'Instrutores', href: '?page=instrutores' },
-                { icon: 'fas fa-car', text: 'Veículos', href: '?page=veiculos' }
+                { icon: 'fas fa-list', text: 'Todos os Alunos', href: 'index.php?page=alunos' },
+                { icon: 'fas fa-user-check', text: 'Alunos Ativos', href: 'index.php?page=alunos&status=em_formacao' },
+                { icon: 'fas fa-clipboard-check', text: 'Alunos em Exame', href: 'index.php?page=alunos&status=em_exame' },
+                { icon: 'fas fa-check-circle', text: 'Alunos Concluídos', href: 'index.php?page=alunos&status=concluido' }
             ]
         },
-        'operacional': {
-            title: 'Operacional',
+        'academico': {
+            title: 'Acadêmico',
             items: [
-                { icon: 'fas fa-calendar-alt', text: 'Agendamento', href: '?page=agendamento' },
-                { icon: 'fas fa-stethoscope', text: 'Exames Médicos', href: '?page=exames' }
+                { icon: 'fas fa-chalkboard-teacher', text: 'Turmas Teóricas', href: 'index.php?page=turmas-teoricas' },
+                { icon: 'fas fa-check-square', text: 'Presenças Teóricas (Temporário)', href: 'pages/turma-chamada.php', onclick: 'return confirm("Esta página ainda está em desenvolvimento. Deseja continuar?");' },
+                { icon: 'fas fa-car-side', text: 'Aulas Práticas (Temporário)', href: 'pages/listar-aulas.php' },
+                { icon: 'fas fa-calendar-alt', text: 'Agenda Geral', href: 'index.php?page=agendamento' },
+                { icon: 'fas fa-chalkboard-teacher', text: 'Instrutores', href: 'index.php?page=instrutores' },
+                { icon: 'fas fa-car', text: 'Veículos', href: 'index.php?page=veiculos' },
+                { icon: 'fas fa-door-open', text: 'Salas', href: 'index.php?page=configuracoes-salas' }
             ]
         },
-        'turmas': {
-            title: 'Turmas Teóricas',
+        'provas-exames': {
+            title: 'Provas & Exames',
             items: [
-                { icon: 'fas fa-plus', text: 'Nova Turma', href: '?page=turmas-teoricas&acao=nova&step=1' },
-                { icon: 'fas fa-list', text: 'Todas as Turmas', href: '?page=turmas-teoricas' },
-                { icon: 'fas fa-tachometer-alt', text: 'Dashboard', href: '?page=turma-dashboard' },
-                { icon: 'fas fa-calendar-alt', text: 'Calendário de Aulas', href: '?page=turma-calendario' },
-                { icon: 'fas fa-user-plus', text: 'Matrículas', href: '?page=turma-matriculas' },
-                { icon: 'fas fa-chart-bar', text: 'Relatórios', href: '?page=turma-relatorios' },
-                { icon: 'fas fa-cogs', text: 'Configurações', href: '?page=turma-configuracoes' },
-                { icon: 'fas fa-copy', text: 'Templates', href: '?page=turma-templates' },
-                { icon: 'fas fa-calendar-plus', text: 'Gerador de Grade', href: '?page=turma-grade-generator' }
+                { icon: 'fas fa-stethoscope', text: 'Exame Médico', href: 'index.php?page=exames&tipo=medico' },
+                { icon: 'fas fa-brain', text: 'Exame Psicotécnico', href: 'index.php?page=exames&tipo=psicotecnico' },
+                { icon: 'fas fa-file-alt', text: 'Prova Teórica', href: 'index.php?page=exames&tipo=teorico' },
+                { icon: 'fas fa-car', text: 'Prova Prática', href: 'index.php?page=exames&tipo=pratico' }
             ]
         },
         'financeiro': {
             title: 'Financeiro',
             items: [
-                { icon: 'fas fa-file-invoice', text: 'Faturas (Receitas)', href: '?page=financeiro-faturas' },
-                { icon: 'fas fa-receipt', text: 'Despesas (Pagamentos)', href: '?page=financeiro-despesas' },
-                { icon: 'fas fa-chart-line', text: 'Relatórios', href: '?page=financeiro-relatorios' }
+                { icon: 'fas fa-file-invoice', text: 'Faturas', href: 'index.php?page=financeiro-faturas' },
+                { icon: 'fas fa-receipt', text: 'Pagamentos', href: 'index.php?page=financeiro-despesas' },
+                { icon: 'fas fa-chart-line', text: 'Relatórios Financeiros', href: 'index.php?page=financeiro-relatorios' },
+                { icon: 'fas fa-cog', text: 'Configurações Financeiras', href: '#', onclick: 'alert("Página em desenvolvimento"); return false;' }
             ]
         },
         'relatorios': {
             title: 'Relatórios',
             items: [
-                { icon: 'fas fa-chart-bar', text: 'Relatórios Gerais', href: '?page=relatorios' },
-                { icon: 'fas fa-file-alt', text: 'Relatórios de Aulas', href: '?page=relatorios-aulas' },
-                { icon: 'fas fa-chart-line', text: 'Estatísticas', href: '?page=estatisticas' }
+                { icon: 'fas fa-chart-bar', text: 'Frequência Teórica', href: 'pages/relatorio-frequencia.php' },
+                { icon: 'fas fa-check-circle', text: 'Conclusão Prática', href: '#', onclick: 'alert("Relatório em desenvolvimento"); return false;' },
+                { icon: 'fas fa-clipboard-check', text: 'Provas (Taxa de Aprovação)', href: '#', onclick: 'alert("Relatório em desenvolvimento"); return false;' },
+                { icon: 'fas fa-exclamation-triangle', text: 'Inadimplência', href: 'index.php?page=financeiro-relatorios&tipo=inadimplencia' }
             ]
         },
         'configuracoes': {
             title: 'Configurações',
             items: [
-                { icon: 'fas fa-layer-group', text: 'Categorias de Habilitação', href: '?page=configuracoes-categorias' },
-                { icon: 'fas fa-door-open', text: 'Salas de Aula', href: '#', onclick: 'abrirModalSalasInterno()' },
-                { icon: 'fas fa-graduation-cap', text: 'Gerenciar Cursos', href: '#', onclick: 'abrirModalTiposCursoInterno()' },
-                { icon: 'fas fa-book', text: 'Gerenciar Disciplinas', href: '#', onclick: 'abrirModalDisciplinasInterno()' },
-                { icon: 'fas fa-cog', text: 'Configurações Gerais', href: '?page=configuracoes' },
-                { icon: 'fas fa-user-cog', text: 'Perfil', href: '?page=perfil' },
-                { icon: 'fas fa-shield-alt', text: 'Segurança', href: '?page=seguranca' }
+                { icon: 'fas fa-building', text: 'Dados do CFC', href: 'index.php?page=configuracoes&action=dados-cfc' },
+                { icon: 'fas fa-layer-group', text: 'Cursos / Categorias', href: 'index.php?page=configuracoes-categorias' },
+                { icon: 'fas fa-book', text: 'Disciplinas', href: 'index.php?page=configuracoes-disciplinas' },
+                { icon: 'fas fa-sliders-h', text: 'Configurações Gerais', href: '#', onclick: 'alert("Página em desenvolvimento"); return false;' }
             ]
         },
         'ferramentas': {
@@ -102,7 +100,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="flyout-title">${config.title}</div>
                     ${config.items.map(item => `
                         <a href="${item.href}" class="flyout-item" ${item.onclick ? `onclick="${item.onclick}"` : ''}>
-                            ${item.text}
+                            ${item.icon ? `<i class="${item.icon}"></i> ` : ''}${item.text}
                         </a>
                     `).join('')}
                 `;

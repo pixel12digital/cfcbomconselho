@@ -15,23 +15,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
-// Configurações diretas do banco
-define('DB_HOST', 'auth-db803.hstgr.io');
-define('DB_NAME', 'u502697186_cfcbomconselho');
-define('DB_USER', 'u502697186_cfcbomconselho');
-define('DB_PASS', 'Los@ngo#081081');
+// Credenciais removidas - usar includes/config.php
+require_once __DIR__ . '/../../includes/config.php';
+require_once __DIR__ . '/../../includes/database.php';
 
-// Função para conectar ao banco
+// Função para conectar ao banco usando Database::getInstance()
 function conectarBanco() {
     try {
-        $dsn = "mysql:host=" . DB_HOST . ";dbname=" . DB_NAME . ";charset=utf8mb4";
-        $pdo = new PDO($dsn, DB_USER, DB_PASS, [
-            PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-            PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-            PDO::ATTR_EMULATE_PREPARES => false
-        ]);
-        return $pdo;
-    } catch (PDOException $e) {
+        $db = Database::getInstance();
+        return $db->getConnection();
+    } catch (Exception $e) {
         return null;
     }
 }

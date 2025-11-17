@@ -10,66 +10,38 @@
 
 require_once __DIR__ . '/../database.php';
 require_once __DIR__ . '/../auth.php';
+require_once __DIR__ . '/../../admin/includes/ExamesRulesService.php';
 
 class AgendamentoGuards {
     private $db;
+    private $examesRules;
     
     public function __construct() {
         $this->db = db();
+        $this->examesRules = new ExamesRulesService();
     }
     
     /**
      * Verificar se aluno pode agendar aula teórica (exames OK)
+     * Usa ExamesRulesService::podeAgendarProvaTeorica() internamente
+     * 
      * @param int $alunoId ID do aluno
-     * @return array Resultado da validação
+     * @return array Resultado da validação (mantém formato legado para compatibilidade)
      */
     public function verificarExamesOK($alunoId) {
         try {
-            // Buscar exames do aluno
-            $sql = "SELECT exame_medico, exame_psicologico, data_exame_medico, data_exame_psicologico 
-                    FROM alunos WHERE id = ?";
-            $aluno = $this->db->fetch($sql, [$alunoId]);
+            // Usar service centralizado
+            $resultado = $this->examesRules->podeAgendarProvaTeorica($alunoId);
             
-            if (!$aluno) {
-                return [
-                    'permitido' => false,
-                    'motivo' => 'Aluno não encontrado',
-                    'tipo' => 'aluno_nao_encontrado'
-                ];
-            }
-            
-            // Verificar se exames estão OK
-            $exameMedicoOK = $aluno['exame_medico'] === 'aprovado' || $aluno['exame_medico'] === 'apto';
-            $examePsicologicoOK = $aluno['exame_psicologico'] === 'aprovado' || $aluno['exame_psicologico'] === 'apto';
-            
-            if (!$exameMedicoOK || !$examePsicologicoOK) {
-                $motivos = [];
-                if (!$exameMedicoOK) {
-                    $motivos[] = "Exame médico: " . ($aluno['exame_medico'] ?: 'não realizado');
-                }
-                if (!$examePsicologicoOK) {
-                    $motivos[] = "Exame psicológico: " . ($aluno['exame_psicologico'] ?: 'não realizado');
-                }
-                
-                return [
-                    'permitido' => false,
-                    'motivo' => 'Exames não aprovados: ' . implode(', ', $motivos),
-                    'tipo' => 'exames_nao_aprovados',
-                    'detalhes' => [
-                        'exame_medico' => $aluno['exame_medico'],
-                        'exame_psicologico' => $aluno['exame_psicologico']
-                    ]
-                ];
-            }
-            
+            // Converter formato do service para formato legado (compatibilidade)
             return [
-                'permitido' => true,
-                'motivo' => 'Exames aprovados - pode agendar aulas teóricas',
-                'tipo' => 'exames_ok'
+                'permitido' => $resultado['ok'],
+                'motivo' => $resultado['mensagem'],
+                'tipo' => $resultado['codigo']
             ];
             
         } catch (Exception $e) {
-            error_log("Erro ao verificar exames: " . $e->getMessage());
+            error_log("Erro ao verificar exames via service (aluno_id={$alunoId}): " . $e->getMessage());
             return [
                 'permitido' => false,
                 'motivo' => 'Erro ao verificar exames',
@@ -80,49 +52,25 @@ class AgendamentoGuards {
     
     /**
      * Verificar se aluno pode agendar aula prática (prova teórica aprovada)
+     * Usa ExamesRulesService::podeAgendarAulaPratica() internamente
+     * 
      * @param int $alunoId ID do aluno
-     * @return array Resultado da validação
+     * @return array Resultado da validação (mantém formato legado para compatibilidade)
      */
     public function verificarProvaTeoricaAprovada($alunoId) {
         try {
-            // Buscar resultado da prova teórica
-            $sql = "SELECT resultado_prova_teorica, data_prova_teorica 
-                    FROM alunos WHERE id = ?";
-            $aluno = $this->db->fetch($sql, [$alunoId]);
+            // Usar service centralizado
+            $resultado = $this->examesRules->podeAgendarAulaPratica($alunoId);
             
-            if (!$aluno) {
-                return [
-                    'permitido' => false,
-                    'motivo' => 'Aluno não encontrado',
-                    'tipo' => 'aluno_nao_encontrado'
-                ];
-            }
-            
-            // Verificar se prova teórica foi aprovada
-            $provaAprovada = $aluno['resultado_prova_teorica'] === 'aprovado' || 
-                           $aluno['resultado_prova_teorica'] === 'apto';
-            
-            if (!$provaAprovada) {
-                $statusProva = $aluno['resultado_prova_teorica'] ?: 'não realizada';
-                return [
-                    'permitido' => false,
-                    'motivo' => "Prova teórica não aprovada: {$statusProva}",
-                    'tipo' => 'prova_teorica_nao_aprovada',
-                    'detalhes' => [
-                        'resultado_prova_teorica' => $aluno['resultado_prova_teorica'],
-                        'data_prova_teorica' => $aluno['data_prova_teorica']
-                    ]
-                ];
-            }
-            
+            // Converter formato do service para formato legado (compatibilidade)
             return [
-                'permitido' => true,
-                'motivo' => 'Prova teórica aprovada - pode agendar aulas práticas',
-                'tipo' => 'prova_teorica_aprovada'
+                'permitido' => $resultado['ok'],
+                'motivo' => $resultado['mensagem'],
+                'tipo' => $resultado['codigo']
             ];
             
         } catch (Exception $e) {
-            error_log("Erro ao verificar prova teórica: " . $e->getMessage());
+            error_log("Erro ao verificar prova teórica via service (aluno_id={$alunoId}): " . $e->getMessage());
             return [
                 'permitido' => false,
                 'motivo' => 'Erro ao verificar prova teórica',
@@ -561,22 +509,27 @@ class AgendamentoGuards {
             }
             
             // 3. Verificar guardas específicas por tipo de aula
+            // Usa ExamesRulesService centralizado para validações de aptidão
             if ($tipoAula === 'teorica') {
+                // Validação de exames médico e psicotécnico (via service centralizado)
                 $exames = $this->verificarExamesOK($alunoId);
                 $resultado['validacoes']['exames'] = $exames;
                 if (!$exames['permitido']) {
                     $resultado['valido'] = false;
-                    $resultado['motivo'] = "Prática bloqueada: " . $exames['motivo'];
-                    $resultado['tipo'] = 'exames_nao_aprovados';
+                    // CORREÇÃO: mensagem corrigida (era "Prática bloqueada" incorretamente)
+                    $resultado['motivo'] = $exames['motivo']; // Mensagem já vem completa do service
+                    $resultado['tipo'] = $exames['tipo'] ?? 'exames_nao_aprovados';
                     return $resultado;
                 }
             } elseif ($tipoAula === 'pratica') {
+                // Validação de prova teórica aprovada (via service centralizado)
                 $provaTeorica = $this->verificarProvaTeoricaAprovada($alunoId);
                 $resultado['validacoes']['prova_teorica'] = $provaTeorica;
                 if (!$provaTeorica['permitido']) {
                     $resultado['valido'] = false;
+                    // Mensagem: "Prática bloqueada: [motivo]" mantida para compatibilidade com API atual
                     $resultado['motivo'] = "Prática bloqueada: " . $provaTeorica['motivo'];
-                    $resultado['tipo'] = 'prova_teorica_nao_aprovada';
+                    $resultado['tipo'] = $provaTeorica['tipo'] ?? 'prova_teorica_nao_aprovada';
                     return $resultado;
                 }
                 

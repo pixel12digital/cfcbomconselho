@@ -1,7 +1,10 @@
 <?php
 /**
  * API de Exames - Sistema CFC
- * Endpoints para gestão de exames médico e psicotécnico
+ * Endpoints para gestão de exames médico, psicotécnico e provas teóricas/práticas
+ * 
+ * NOTA: A tabela exames agora também suporta provas teóricas (tipo='teorico') 
+ *       e provas práticas (tipo='pratico'), além dos exames médico/psicotécnico.
  */
 
 // Configurar relatório de erros
@@ -251,9 +254,15 @@ function handlePost($db, $user) {
     }
     
     // Validar tipo
-    if (!in_array($data['tipo'], ['medico', 'psicotecnico'])) {
+    // NOTA: 'teorico' e 'pratico' representam provas de direção (prova teórica do DETRAN e exame prático de direção).
+    $tiposPermitidos = ['medico', 'psicotecnico', 'teorico', 'pratico'];
+    if (!in_array($data['tipo'], $tiposPermitidos, true)) {
         http_response_code(400);
-        returnJsonResponse(['error' => 'Tipo deve ser "medico" ou "psicotecnico"', 'code' => 'INVALID_TIPO']);
+        returnJsonResponse([
+            'success' => false,
+            'error' => 'Tipo de exame inválido. Tipos permitidos: ' . implode(', ', $tiposPermitidos),
+            'code' => 'INVALID_TIPO'
+        ]);
     }
     
     // Verificar se aluno existe
@@ -275,7 +284,14 @@ function handlePost($db, $user) {
         $resultadoTexto = $existing['resultado'] ? " (Resultado: {$existing['resultado']})" : '';
         
         // Retornar mensagem amigável em vez de erro 409
-        $tipoExameTexto = $data['tipo'] === 'medico' ? 'médico' : 'psicotécnico';
+        // NOTA: Ajustar texto conforme tipo (exames ou provas)
+        $tipoExameMap = [
+            'medico' => 'médico',
+            'psicotecnico' => 'psicotécnico',
+            'teorico' => 'prova teórica',
+            'pratico' => 'prova prática'
+        ];
+        $tipoExameTexto = $tipoExameMap[$data['tipo']] ?? $data['tipo'];
         
         returnJsonResponse([
             'success' => false,
@@ -365,9 +381,25 @@ function handlePut($db, $user) {
     }
     
     // Validações
-    if (isset($updateData['resultado']) && !in_array($updateData['resultado'], ['apto', 'inapto', 'inapto_temporario', 'pendente'])) {
+    // Validar resultado
+    // NOTA: 'aprovado' e 'reprovado' são usados para provas (teorico/pratico),
+    //       enquanto 'apto', 'inapto', etc. são usados para exames médico/psicotécnico.
+    // TODO: futuramente, validar combinações tipo + resultado (ex.: provas usam 'aprovado'/'reprovado', médico usa 'apto'/'inapto').
+    $resultadosPermitidos = [
+        'apto',
+        'inapto',
+        'inapto_temporario',
+        'pendente',
+        'aprovado',
+        'reprovado'
+    ];
+    if (isset($updateData['resultado']) && $updateData['resultado'] !== '' && !in_array($updateData['resultado'], $resultadosPermitidos, true)) {
         http_response_code(400);
-        returnJsonResponse(['error' => 'Resultado deve ser "apto", "inapto", "inapto_temporario" ou "pendente"', 'code' => 'INVALID_RESULTADO']);
+        returnJsonResponse([
+            'success' => false,
+            'error' => 'Resultado de exame inválido. Resultados permitidos: ' . implode(', ', $resultadosPermitidos),
+            'code' => 'INVALID_RESULTADO'
+        ]);
     }
     
     if (isset($updateData['status']) && !in_array($updateData['status'], ['agendado', 'concluido', 'cancelado', 'pendente'])) {
@@ -375,9 +407,17 @@ function handlePut($db, $user) {
         returnJsonResponse(['error' => 'Status deve ser "agendado", "concluido", "cancelado" ou "pendente"', 'code' => 'INVALID_STATUS']);
     }
     
-    if (isset($updateData['tipo']) && !in_array($updateData['tipo'], ['medico', 'psicotecnico'])) {
-        http_response_code(400);
-        returnJsonResponse(['error' => 'Tipo deve ser "medico" ou "psicotecnico"', 'code' => 'INVALID_TIPO']);
+    // Validar tipo (se estiver sendo atualizado)
+    if (isset($updateData['tipo'])) {
+        $tiposPermitidos = ['medico', 'psicotecnico', 'teorico', 'pratico'];
+        if (!in_array($updateData['tipo'], $tiposPermitidos, true)) {
+            http_response_code(400);
+            returnJsonResponse([
+                'success' => false,
+                'error' => 'Tipo de exame inválido. Tipos permitidos: ' . implode(', ', $tiposPermitidos),
+                'code' => 'INVALID_TIPO'
+            ]);
+        }
     }
     
     // Verificar se aluno existe (se foi alterado)

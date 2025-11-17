@@ -77,9 +77,10 @@ function handleGet($db, $currentUser) {
     if ($faturaId) {
         // Buscar pagamentos de uma fatura específica
         $pagamentos = $db->fetchAll("
-            SELECT p.*, f.numero as fatura_numero, f.descricao as fatura_descricao
+            SELECT p.*, f.titulo as fatura_titulo, f.valor_total as fatura_valor_total,
+                   f.data_vencimento as fatura_data_vencimento
             FROM pagamentos p
-            JOIN faturas f ON p.fatura_id = f.id
+            JOIN financeiro_faturas f ON p.fatura_id = f.id
             WHERE p.fatura_id = ?
             ORDER BY p.data_pagamento DESC
         ", [$faturaId]);
@@ -88,9 +89,10 @@ function handleGet($db, $currentUser) {
     } else {
         // Listar todos os pagamentos
         $pagamentos = $db->fetchAll("
-            SELECT p.*, f.numero as fatura_numero, f.descricao as fatura_descricao, a.nome as aluno_nome
+            SELECT p.*, f.titulo as fatura_titulo, f.valor_total as fatura_valor_total,
+                   f.data_vencimento as fatura_data_vencimento, a.nome as aluno_nome
             FROM pagamentos p
-            JOIN faturas f ON p.fatura_id = f.id
+            JOIN financeiro_faturas f ON p.fatura_id = f.id
             JOIN alunos a ON f.aluno_id = a.id
             ORDER BY p.data_pagamento DESC
             LIMIT 100
@@ -123,7 +125,7 @@ function handlePost($db, $currentUser) {
     }
     
     // Verificar se fatura existe
-    $fatura = $db->fetch("SELECT * FROM faturas WHERE id = ?", [$input['fatura_id']]);
+    $fatura = $db->fetch("SELECT * FROM financeiro_faturas WHERE id = ?", [$input['fatura_id']]);
     if (!$fatura) {
         http_response_code(404);
         echo json_encode(['success' => false, 'error' => 'Fatura não encontrada']);
@@ -197,7 +199,7 @@ function handleDelete($db, $currentUser) {
  */
 function recalcularStatusFatura($db, $faturaId) {
     // Buscar fatura
-    $fatura = $db->fetch("SELECT * FROM faturas WHERE id = ?", [$faturaId]);
+    $fatura = $db->fetch("SELECT * FROM financeiro_faturas WHERE id = ?", [$faturaId]);
     if (!$fatura) {
         return null;
     }
@@ -207,17 +209,18 @@ function recalcularStatusFatura($db, $faturaId) {
         SELECT COALESCE(SUM(valor_pago), 0) FROM pagamentos WHERE fatura_id = ?
     ", [$faturaId]);
     
-    $valorLiquido = (float)$fatura['valor_liquido'];
+    $valorTotal = (float)($fatura['valor_total'] ?? $fatura['valor'] ?? 0);
     $totalPago = (float)$totalPago;
     
     // Determinar novo status
-    if ($totalPago >= $valorLiquido) {
+    if ($totalPago >= $valorTotal) {
         $novoStatus = 'paga';
     } elseif ($totalPago > 0) {
         $novoStatus = 'parcial';
     } else {
-        // Verificar se está vencida
-        if ($fatura['vencimento'] < date('Y-m-d')) {
+        // Verificar se está vencida (usar data_vencimento com fallback para compatibilidade)
+        $dataVencimento = $fatura['data_vencimento'] ?? $fatura['vencimento'] ?? null;
+        if ($dataVencimento && $dataVencimento < date('Y-m-d')) {
             $novoStatus = 'vencida';
         } else {
             $novoStatus = 'aberta';
@@ -225,7 +228,7 @@ function recalcularStatusFatura($db, $faturaId) {
     }
     
     // Atualizar status da fatura
-    $db->update('faturas', ['status' => $novoStatus], 'id = ?', [$faturaId]);
+    $db->update('financeiro_faturas', ['status' => $novoStatus], 'id = ?', [$faturaId]);
     
     return $novoStatus;
 }

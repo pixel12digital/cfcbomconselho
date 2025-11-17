@@ -17,6 +17,65 @@ if (!isset($exames)) $exames = [];
 if (!isset($mensagem)) $mensagem = '';
 if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
 
+// =====================================================
+// LER E NORMALIZAR PARÂMETRO $tipo DA URL
+// =====================================================
+$tipo = isset($_GET['tipo']) ? trim($_GET['tipo']) : '';
+// Tipos válidos
+$tiposValidos = ['medico', 'psicotecnico', 'teorico', 'pratico'];
+// Normalizar: se vazio ou inválido, usar padrão 'medico'
+if (!in_array($tipo, $tiposValidos)) {
+    $tipo = 'medico';
+}
+
+// =====================================================
+// MAPEAR TÍTULO E SUBTÍTULO POR TIPO
+// =====================================================
+$titulosPorTipo = [
+    'medico' => [
+        'titulo' => 'Exames Médicos',
+        'subtitulo' => 'Gestão completa de exames médicos, com agenda, status e validação para início do processo.',
+        'icon' => 'stethoscope'
+    ],
+    'psicotecnico' => [
+        'titulo' => 'Exames Psicotécnicos',
+        'subtitulo' => 'Gestão de exames psicotécnicos, com acompanhamento de resultados e pendências.',
+        'icon' => 'brain'
+    ],
+    'teorico' => [
+        'titulo' => 'Prova Teórica',
+        'subtitulo' => 'Controle de agendamentos, resultados e aptidão para a prova teórica.',
+        'icon' => 'book'
+    ],
+    'pratico' => [
+        'titulo' => 'Prova Prática',
+        'subtitulo' => 'Gestão de provas práticas com agenda, resultado e validação para conclusão do processo.',
+        'icon' => 'car'
+    ]
+];
+
+$headerConfig = $titulosPorTipo[$tipo] ?? $titulosPorTipo['medico'];
+$pageTitle = $headerConfig['titulo'];
+$pageSubtitle = $headerConfig['subtitulo'];
+$pageIcon = $headerConfig['icon'];
+
+// Mapear rótulos de clínica/local por tipo (para o modal)
+$labelClinica = 'Clínica / Local';
+if ($tipo === 'pratico') {
+    $labelClinica = 'Local';
+} elseif ($tipo === 'teorico') {
+    $labelClinica = 'Local da Prova';
+}
+
+// Mapear texto do tipo para exibição no modal
+$tipoTextoMapa = [
+    'medico' => 'Exame Médico',
+    'psicotecnico' => 'Exame Psicotécnico',
+    'teorico' => 'Prova Teórica',
+    'pratico' => 'Prova Prática'
+];
+$tipoTexto = $tipoTextoMapa[$tipo] ?? 'Exame/Prova';
+
 // Verificar se usuário é admin usando a mesma função da API
 $isAdmin = false;
 $user = getCurrentUser();
@@ -39,17 +98,20 @@ try {
         ORDER BY a.nome
     ");
     
-    // Buscar exames recentes (últimos 30 dias e próximos 30 dias)
+    // Buscar exames recentes (últimos 30 dias e próximos 30 dias) FILTRADOS POR TIPO
+    // IMPORTANTE: O filtro por tipo vem da URL (?page=exames&tipo=medico, etc.)
+    // O tipo já foi normalizado anteriormente (linha 23-29)
     $exames = $db->fetchAll("
         SELECT e.*, a.nome as aluno_nome, a.cpf as aluno_cpf,
                c.nome as cfc_nome
         FROM exames e
         JOIN alunos a ON e.aluno_id = a.id
         JOIN cfcs c ON a.cfc_id = c.id
-        WHERE e.data_agendada >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-           OR e.data_agendada <= DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+        WHERE e.tipo = ?
+          AND (e.data_agendada >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+           OR e.data_agendada <= DATE_ADD(CURDATE(), INTERVAL 30 DAY))
         ORDER BY e.data_agendada DESC, e.tipo
-    ");
+    ", [$tipo]);
     
 } catch (Exception $e) {
     error_log("Erro ao carregar dados dos exames: " . $e->getMessage());
@@ -1303,8 +1365,8 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
 <div class="exames-container">
     <!-- Header -->
     <div class="exames-header">
-        <h1><i class="fas fa-stethoscope me-3"></i>Exames Médicos e Psicotécnicos</h1>
-        <p>Gestão completa de exames com calendário, status e validação para aulas teóricas</p>
+        <h1><i class="fas fa-<?php echo htmlspecialchars($pageIcon); ?> me-3"></i><?php echo htmlspecialchars($pageTitle); ?></h1>
+        <p><?php echo htmlspecialchars($pageSubtitle); ?></p>
         
     </div>
 
@@ -1359,12 +1421,15 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
             </div>
             
             <div class="form-group">
-                <label class="form-label">Filtrar por Tipo</label>
-                <select class="form-control" id="filtro-tipo">
+                <label class="form-label">Tipo Atual</label>
+                <select class="form-control" id="filtro-tipo" disabled title="O tipo é controlado pela URL (tipo=medico, tipo=teorico, etc.)">
                     <option value="">Todos os tipos</option>
-                    <option value="medico">Exame Médico</option>
-                    <option value="psicotecnico">Exame Psicotécnico</option>
+                    <option value="medico" <?php echo ($tipo === 'medico') ? 'selected' : ''; ?>>Exame Médico</option>
+                    <option value="psicotecnico" <?php echo ($tipo === 'psicotecnico') ? 'selected' : ''; ?>>Exame Psicotécnico</option>
+                    <option value="teorico" <?php echo ($tipo === 'teorico') ? 'selected' : ''; ?>>Prova Teórica</option>
+                    <option value="pratico" <?php echo ($tipo === 'pratico') ? 'selected' : ''; ?>>Prova Prática</option>
                 </select>
+                <small class="form-text text-muted">Tipo controlado pela URL: <strong><?php echo htmlspecialchars($tipo); ?></strong></small>
             </div>
             
             <div class="form-group">
@@ -1429,10 +1494,22 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                                     </div>
                                 </td>
                                 <td>
-                                    <span class="badge bg-<?php echo $exame['tipo'] === 'medico' ? 'primary' : 'info'; ?>">
-                                        <i class="fas fa-<?php echo $exame['tipo'] === 'medico' ? 'user-md' : 'brain'; ?> me-1"></i>
-                                        <?php echo $exame['tipo'] === 'medico' ? 'Médico' : 'Psicotécnico'; ?>
+                                    <?php
+                                    $tipoMap = [
+                                        'medico' => ['texto' => 'Exame Médico', 'badge' => 'primary', 'icon' => 'user-md', 'categoria' => 'Exame'],
+                                        'psicotecnico' => ['texto' => 'Exame Psicotécnico', 'badge' => 'info', 'icon' => 'brain', 'categoria' => 'Exame'],
+                                        'teorico' => ['texto' => 'Prova Teórica', 'badge' => 'warning', 'icon' => 'book', 'categoria' => 'Prova'],
+                                        'pratico' => ['texto' => 'Prova Prática', 'badge' => 'success', 'icon' => 'car', 'categoria' => 'Prova']
+                                    ];
+                                    $tipoInfo = $tipoMap[$exame['tipo']] ?? ['texto' => ucfirst($exame['tipo']), 'badge' => 'secondary', 'icon' => 'question', 'categoria' => ''];
+                                    ?>
+                                    <span class="badge bg-<?php echo $tipoInfo['badge']; ?>">
+                                        <i class="fas fa-<?php echo $tipoInfo['icon']; ?> me-1"></i>
+                                        <?php echo $tipoInfo['texto']; ?>
                                     </span>
+                                    <?php if ($tipoInfo['categoria']): ?>
+                                        <br><small class="text-muted"><?php echo $tipoInfo['categoria']; ?></small>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <i class="fas fa-calendar me-1"></i>
@@ -1462,6 +1539,12 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                                         </option>
                                         <option value="inapto_temporario" <?php echo $exame['resultado'] === 'inapto_temporario' ? 'selected' : ''; ?>>
                                             ⚠️ Inapto Temp.
+                                        </option>
+                                        <option value="aprovado" <?php echo $exame['resultado'] === 'aprovado' ? 'selected' : ''; ?>>
+                                            ✅ Aprovado
+                                        </option>
+                                        <option value="reprovado" <?php echo $exame['resultado'] === 'reprovado' ? 'selected' : ''; ?>>
+                                            ❌ Reprovado
                                         </option>
                                     </select>
                                 </td>
@@ -1517,9 +1600,18 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                                 <h4><?php echo htmlspecialchars($exame['aluno_nome']); ?></h4>
                                 <small><?php echo htmlspecialchars($exame['aluno_cpf']); ?></small>
                             </div>
+                            <?php
+                            $tipoMap = [
+                                'medico' => ['texto' => 'Exame Médico', 'icon' => 'user-md'],
+                                'psicotecnico' => ['texto' => 'Exame Psicotécnico', 'icon' => 'brain'],
+                                'teorico' => ['texto' => 'Prova Teórica', 'icon' => 'book'],
+                                'pratico' => ['texto' => 'Prova Prática', 'icon' => 'car']
+                            ];
+                            $tipoInfo = $tipoMap[$exame['tipo']] ?? ['texto' => ucfirst($exame['tipo']), 'icon' => 'question'];
+                            ?>
                             <div class="exam-type-badge exam-type-<?php echo $exame['tipo']; ?>">
-                                <i class="fas fa-<?php echo $exame['tipo'] === 'medico' ? 'user-md' : 'brain'; ?> me-1"></i>
-                                <?php echo $exame['tipo'] === 'medico' ? 'Médico' : 'Psicotécnico'; ?>
+                                <i class="fas fa-<?php echo $tipoInfo['icon']; ?> me-1"></i>
+                                <?php echo $tipoInfo['texto']; ?>
                             </div>
                         </div>
 
@@ -1573,6 +1665,12 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                                 </option>
                                 <option value="inapto_temporario" <?php echo $exame['resultado'] === 'inapto_temporario' ? 'selected' : ''; ?>>
                                     ⚠️ Inapto Temp.
+                                </option>
+                                <option value="aprovado" <?php echo $exame['resultado'] === 'aprovado' ? 'selected' : ''; ?>>
+                                    ✅ Aprovado
+                                </option>
+                                <option value="reprovado" <?php echo $exame['resultado'] === 'reprovado' ? 'selected' : ''; ?>>
+                                    ❌ Reprovado
                                 </option>
                             </select>
                         </div>
@@ -1634,14 +1732,14 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                             </label>
                         </div>
                         
+                        <!-- Campo hidden com o tipo atual (controlado pela URL) -->
+                        <input type="hidden" name="tipo" id="tipo_exame" value="<?php echo htmlspecialchars($tipo); ?>">
+                        
+                        <!-- Campo informativo mostrando o tipo atual (desabilitado) -->
                         <div class="form-floating">
-                            <select class="form-select" name="tipo" id="tipo_exame" required>
-                                <option value="">Selecione o tipo</option>
-                                <option value="medico">Exame Médico</option>
-                                <option value="psicotecnico">Exame Psicotécnico</option>
-                            </select>
-                            <label for="tipo_exame">
-                                <i class="fas fa-clipboard-list me-1"></i>Tipo de Exame *
+                            <input type="text" class="form-control" value="<?php echo htmlspecialchars($tipoTexto); ?>" disabled>
+                            <label for="tipo_exame_info">
+                                <i class="fas fa-clipboard-list me-1"></i>Tipo de Exame/Prova *
                             </label>
                         </div>
                         
@@ -1654,9 +1752,9 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                         
                         <!-- Segunda linha - 2 campos -->
                         <div class="form-floating">
-                            <input type="text" class="form-control" name="clinica_nome" id="clinica_nome" placeholder="Nome da clínica">
-                            <label for="clinica_nome">
-                                <i class="fas fa-hospital me-1"></i>Clínica
+                            <input type="text" class="form-control" name="clinica_nome" id="clinica_nome" placeholder="<?php echo htmlspecialchars($labelClinica); ?>">
+                            <label for="clinica_nome" id="label_clinica_nome">
+                                <i class="fas fa-<?php echo ($tipo === 'teorico' || $tipo === 'pratico') ? 'map-marker-alt' : 'hospital'; ?> me-1"></i><?php echo htmlspecialchars($labelClinica); ?>
                             </label>
                         </div>
                         
@@ -1718,9 +1816,12 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                         <label class="form-label">Resultado *</label>
                         <select class="form-control" name="resultado" required>
                             <option value="">Selecione o resultado</option>
+                            <option value="pendente">Pendente</option>
                             <option value="apto">Apto</option>
                             <option value="inapto">Inapto</option>
                             <option value="inapto_temporario">Inapto Temporário</option>
+                            <option value="aprovado">Aprovado</option>
+                            <option value="reprovado">Reprovado</option>
                         </select>
                     </div>
                     
@@ -1812,6 +1913,9 @@ class SistemaExames {
     
     aplicarFiltros() {
         const filtroAluno = document.getElementById('filtro-aluno').value;
+        // NOTA: O filtro de tipo na interface é ignorado aqui porque o tipo vem da URL
+        // A query SQL já filtra pelo tipo via $_GET['tipo']
+        // Este filtro JavaScript é mantido apenas para compatibilidade visual, mas não tem efeito
         const filtroTipo = document.getElementById('filtro-tipo').value;
         const filtroStatus = document.getElementById('filtro-status').value;
         
@@ -1826,7 +1930,8 @@ class SistemaExames {
                 let mostrar = true;
                 
                 if (filtroAluno && alunoId !== filtroAluno) mostrar = false;
-                if (filtroTipo && tipo !== filtroTipo) mostrar = false;
+                // O filtro de tipo é ignorado aqui porque todos os registros já são do tipo da URL
+                // if (filtroTipo && tipo !== filtroTipo) mostrar = false;
                 if (filtroStatus && status !== filtroStatus) mostrar = false;
                 
                 linha.style.display = mostrar ? '' : 'none';
@@ -1866,6 +1971,13 @@ function abrirModalAgendar() {
     const hiddenField = document.getElementById('exame_id_edicao');
     if (hiddenField) {
         hiddenField.remove();
+    }
+    
+    // Atualizar label de clínica baseado no tipo atual da URL
+    // O tipo já está no campo hidden #tipo_exame
+    const tipoAtual = document.getElementById('tipo_exame')?.value;
+    if (tipoAtual) {
+        atualizarLabelClinica(tipoAtual);
     }
     
     // CORREÇÃO RESPONSIVA: Ajustar largura baseada no viewport
@@ -2394,6 +2506,9 @@ function editarExame(exameId) {
             }
             hiddenField.value = exameId;
             
+            // Atualizar label de clinica_nome baseado no tipo
+            atualizarLabelClinica(exame.tipo);
+            
             // Forçar atualização dos labels flutuantes
             setTimeout(() => {
                 const formControls = document.querySelectorAll('#modalAgendarExame .form-floating > .form-control, #modalAgendarExame .form-floating > .form-select, #modalAgendarExame .form-floating > input[type="date"]');
@@ -2577,8 +2692,29 @@ function excluirExame(exameId) {
     });
 }
 
-// Inicializar sistema quando a página carregar
-document.addEventListener('DOMContentLoaded', function() {
-    new SistemaExames();
-});
+// Função para atualizar label de clinica_nome baseado no tipo
+function atualizarLabelClinica(tipo) {
+    const label = document.getElementById('label_clinica_nome');
+    const input = document.getElementById('clinica_nome');
+    if (!label || !input) return;
+    
+    // Determinar ícone e texto do label baseado no tipo
+    let iconClass = 'fas fa-hospital';
+    let labelTexto = 'Clínica / Local';
+    
+    if (tipo === 'pratico') {
+        iconClass = 'fas fa-map-marker-alt';
+        labelTexto = 'Local';
+    } else if (tipo === 'teorico') {
+        iconClass = 'fas fa-map-marker-alt';
+        labelTexto = 'Local da Prova';
+    }
+    
+    // Atualizar label
+    label.innerHTML = `<i class="${iconClass} me-1"></i>${labelTexto}`;
+    
+    // Atualizar placeholder do input
+    input.placeholder = labelTexto;
+}
+
 </script>

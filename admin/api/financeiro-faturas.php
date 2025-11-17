@@ -110,12 +110,12 @@ function handleGet($db, $user) {
     }
     
     if ($data_inicio) {
-        $where[] = 'f.vencimento >= ?';
+        $where[] = 'f.data_vencimento >= ?';
         $params[] = $data_inicio;
     }
     
     if ($data_fim) {
-        $where[] = 'f.vencimento <= ?';
+        $where[] = 'f.data_vencimento <= ?';
         $params[] = $data_fim;
     }
     
@@ -136,7 +136,7 @@ function handleGet($db, $user) {
         JOIN alunos a ON f.aluno_id = a.id
         LEFT JOIN matriculas m ON f.matricula_id = m.id
         WHERE $whereClause
-        ORDER BY f.vencimento DESC, f.criado_em DESC
+        ORDER BY f.data_vencimento DESC, f.criado_em DESC
         LIMIT $limit OFFSET $offset
     ", $params);
     
@@ -162,9 +162,14 @@ function handlePost($db, $user) {
     }
     
     // Validações obrigatórias
-    $required = ['aluno_id', 'titulo', 'valor_total', 'vencimento'];
+    $required = ['aluno_id', 'titulo', 'valor_total', 'data_vencimento'];
     foreach ($required as $field) {
-        if (empty($input[$field])) {
+        // Aceitar tanto data_vencimento quanto vencimento (compatibilidade)
+        if ($field === 'data_vencimento' && empty($input['data_vencimento']) && empty($input['vencimento'])) {
+            http_response_code(400);
+            echo json_encode(['error' => "Campo obrigatório: data_vencimento ou vencimento"]);
+            return;
+        } elseif ($field !== 'data_vencimento' && empty($input[$field])) {
             http_response_code(400);
             echo json_encode(['error' => "Campo obrigatório: $field"]);
             return;
@@ -179,14 +184,17 @@ function handlePost($db, $user) {
         return;
     }
     
-    // Criar fatura
+    // Criar fatura (usar data_vencimento como oficial, manter vencimento para compatibilidade)
+    $dataVencimento = $input['data_vencimento'] ?? $input['vencimento'] ?? null;
+    
     $faturaId = $db->insert('financeiro_faturas', [
         'aluno_id' => $input['aluno_id'],
         'matricula_id' => $input['matricula_id'] ?? null,
         'titulo' => $input['titulo'],
         'valor_total' => $input['valor_total'],
         'status' => $input['status'] ?? 'aberta',
-        'vencimento' => $input['vencimento'],
+        'data_vencimento' => $dataVencimento,
+        'vencimento' => $dataVencimento, // Manter para compatibilidade
         'forma_pagamento' => $input['forma_pagamento'] ?? 'avista',
         'parcelas' => $input['parcelas'] ?? 1,
         'observacoes' => $input['observacoes'] ?? null,
@@ -226,12 +234,20 @@ function handlePut($db, $user) {
         return;
     }
     
-    // Campos permitidos para atualização
-    $allowedFields = ['titulo', 'valor_total', 'status', 'vencimento', 'forma_pagamento', 'observacoes'];
+    // Campos permitidos para atualização (aceitar data_vencimento e vencimento para compatibilidade)
+    $allowedFields = ['titulo', 'valor_total', 'status', 'data_vencimento', 'vencimento', 'forma_pagamento', 'observacoes'];
     $updateData = [];
     
     foreach ($allowedFields as $field) {
-        if (isset($input[$field])) {
+        if ($field === 'data_vencimento' && isset($input['data_vencimento'])) {
+            $updateData['data_vencimento'] = $input['data_vencimento'];
+            // Manter vencimento em sync para compatibilidade
+            $updateData['vencimento'] = $input['data_vencimento'];
+        } elseif ($field === 'vencimento' && isset($input['vencimento']) && !isset($input['data_vencimento'])) {
+            // Se apenas vencimento for fornecido (sem data_vencimento), usar para ambos
+            $updateData['data_vencimento'] = $input['vencimento'];
+            $updateData['vencimento'] = $input['vencimento'];
+        } elseif ($field !== 'data_vencimento' && $field !== 'vencimento' && isset($input[$field])) {
             $updateData[$field] = $input[$field];
         }
     }
@@ -294,7 +310,7 @@ function exportCSV($db, $user) {
         SELECT f.*, a.nome as aluno_nome, a.cpf
         FROM financeiro_faturas f
         JOIN alunos a ON f.aluno_id = a.id
-        ORDER BY f.vencimento DESC
+        ORDER BY f.data_vencimento DESC, f.vencimento DESC
     ");
     
     header('Content-Type: text/csv; charset=utf-8');
@@ -320,7 +336,7 @@ function exportCSV($db, $user) {
             $fatura['titulo'],
             number_format($fatura['valor_total'], 2, ',', '.'),
             $fatura['status'],
-            date('d/m/Y', strtotime($fatura['vencimento'])),
+            date('d/m/Y', strtotime($fatura['data_vencimento'] ?? $fatura['vencimento'] ?? '')),
             $fatura['forma_pagamento'],
             $fatura['parcelas'],
             $fatura['observacoes'],
@@ -333,15 +349,21 @@ function exportCSV($db, $user) {
 
 function updateAlunoInadimplencia($db, $alunoId) {
     // Verificar se há faturas vencidas
-    $config = $db->fetch("SELECT valor FROM financeiro_configuracoes WHERE chave = 'dias_inadimplencia'");
-    $diasInadimplencia = $config ? (int)$config['valor'] : 30;
+    // Usar fallback seguro: se tabela não existir, usar 30 dias padrão
+    try {
+        $config = $db->fetch("SELECT valor FROM financeiro_configuracoes WHERE chave = 'dias_inadimplencia'");
+        $diasInadimplencia = $config ? (int)$config['valor'] : 30;
+    } catch (Exception $e) {
+        // Se tabela não existir, usar valor padrão
+        $diasInadimplencia = 30;
+    }
     
     $faturasVencidas = $db->fetchColumn("
         SELECT COUNT(*) 
         FROM financeiro_faturas 
         WHERE aluno_id = ? 
         AND status IN ('aberta', 'vencida') 
-        AND vencimento < DATE_SUB(NOW(), INTERVAL ? DAY)
+        AND data_vencimento < DATE_SUB(NOW(), INTERVAL ? DAY)
     ", [$alunoId, $diasInadimplencia]);
     
     $inadimplente = $faturasVencidas > 0;

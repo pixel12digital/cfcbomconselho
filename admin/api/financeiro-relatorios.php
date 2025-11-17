@@ -131,8 +131,14 @@ function getReceitasDespesas($db) {
 }
 
 function getInadimplencia($db) {
-    $config = $db->fetch("SELECT valor FROM financeiro_configuracoes WHERE chave = 'dias_inadimplencia'");
-    $diasInadimplencia = $config ? (int)$config['valor'] : 30;
+    // Usar fallback seguro: se tabela não existir, usar 30 dias padrão
+    try {
+        $config = $db->fetch("SELECT valor FROM financeiro_configuracoes WHERE chave = 'dias_inadimplencia'");
+        $diasInadimplencia = $config ? (int)$config['valor'] : 30;
+    } catch (Exception $e) {
+        // Se tabela não existir, usar valor padrão
+        $diasInadimplencia = 30;
+    }
     
     // Alunos inadimplentes
     $inadimplentes = $db->fetchAll("

@@ -4099,6 +4099,33 @@ function formatarDataCurta(dataIso) {
     return data.toLocaleDateString('pt-BR');
 }
 
+/**
+ * Formatar intervalo de datas (range) para exibição
+ * @param {Date|string} start Data de início
+ * @param {Date|string} end Data de fim
+ * @returns {string} String formatada no formato "DD/MM/YYYY a DD/MM/YYYY" ou "DD/MM/YYYY" se forem iguais
+ */
+function formatRangeLabel(start, end) {
+    if (!start || !end) return '';
+    
+    const startDate = start instanceof Date ? start : new Date(start);
+    const endDate = end instanceof Date ? end : new Date(end);
+    
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+        return '';
+    }
+    
+    const startFormatted = startDate.toLocaleDateString('pt-BR');
+    const endFormatted = endDate.toLocaleDateString('pt-BR');
+    
+    // Se as datas são iguais, retornar apenas uma
+    if (startFormatted === endFormatted) {
+        return startFormatted;
+    }
+    
+    return `${startFormatted} a ${endFormatted}`;
+}
+
 function formatDateForFilename(date) {
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, '0');
