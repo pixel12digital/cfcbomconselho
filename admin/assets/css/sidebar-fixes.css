@@ -34,9 +34,17 @@
     cursor: default !important;
 }
 
-.admin-sidebar .nav-toggle {
+/* Permitir cliques apenas quando .nav-toggle for um link <a> */
+.admin-sidebar .nav-toggle:not(a) {
     cursor: default !important;
     pointer-events: none !important;
+}
+
+/* Permitir cliques em links da sidebar */
+.admin-sidebar a.nav-link.nav-toggle {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    text-decoration: none !important;
 }
 
 /* =====================================================

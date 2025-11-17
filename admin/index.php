@@ -1301,33 +1301,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     </a>
                 </div>
                 
-                <!-- Cadastros -->
+                <!-- Alunos -->
                 <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="cadastros" title="Cadastros">
+                    <a href="index.php?page=alunos" class="nav-link nav-toggle" data-group="alunos" title="Alunos">
                         <div class="nav-icon">
-                            <i class="fas fa-database"></i>
+                            <i class="fas fa-graduation-cap"></i>
                         </div>
-                        <div class="nav-text">Cadastros</div>
+                        <div class="nav-text">Alunos</div>
                         <div class="nav-arrow">
                             <i class="fas fa-chevron-down"></i>
                         </div>
-                    </div>
-                    <div class="nav-submenu" id="cadastros">
-                        <?php if ($isAdmin): ?>
-                        <a href="index.php?page=usuarios&action=list" class="nav-sublink <?php echo $page === 'usuarios' ? 'active' : ''; ?>">
-                            <i class="fas fa-users"></i>
-                            <span>Usuários</span>
-                        </a>
-                        <a href="index.php?page=cfcs&action=list" class="nav-sublink <?php echo $page === 'cfcs' ? 'active' : ''; ?>">
-                            <i class="fas fa-building"></i>
-                            <span>CFCs</span>
-                        </a>
-                        <?php endif; ?>
-                        <a href="index.php?page=alunos" class="nav-sublink <?php echo $page === 'alunos' ? 'active' : ''; ?>">
-                            <i class="fas fa-graduation-cap"></i>
-                            <span>Alunos</span>
+                    </a>
+                    <div class="nav-submenu" id="alunos">
+                        <a href="index.php?page=alunos" class="nav-sublink <?php echo ($page === 'alunos' && !isset($_GET['status'])) ? 'active' : ''; ?>">
+                            <i class="fas fa-list"></i>
+                            <span>Todos os Alunos</span>
                             <div class="nav-badge"><?php echo $stats['total_alunos']; ?></div>
+                        </a>
+                        <a href="index.php?page=alunos&status=em_formacao" class="nav-sublink <?php echo ($page === 'alunos' && ($_GET['status'] ?? '') === 'em_formacao') ? 'active' : ''; ?>">
+                            <i class="fas fa-user-check"></i>
+                            <span>Alunos Ativos</span>
+                        </a>
+                        <a href="index.php?page=alunos&status=em_exame" class="nav-sublink <?php echo ($page === 'alunos' && ($_GET['status'] ?? '') === 'em_exame') ? 'active' : ''; ?>">
+                            <i class="fas fa-clipboard-check"></i>
+                            <span>Alunos em Exame</span>
+                        </a>
+                        <a href="index.php?page=alunos&status=concluido" class="nav-sublink <?php echo ($page === 'alunos' && ($_GET['status'] ?? '') === 'concluido') ? 'active' : ''; ?>">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Alunos Concluídos</span>
+                        </a>
+                    </div>
+                </div>
+                <?php endif; ?>
+                
+                <!-- Acadêmico -->
+                <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
+                <div class="nav-item nav-group">
+                    <a href="index.php?page=turmas-teoricas" class="nav-link nav-toggle" data-group="academico" title="Acadêmico">
+                        <div class="nav-icon">
+                            <i class="fas fa-book-reader"></i>
+                        </div>
+                        <div class="nav-text">Acadêmico</div>
+                        <div class="nav-arrow">
+                            <i class="fas fa-chevron-down"></i>
+                        </div>
+                    </a>
+                    <div class="nav-submenu" id="academico">
+                        <a href="index.php?page=turmas-teoricas" class="nav-sublink <?php echo $page === 'turmas-teoricas' ? 'active' : ''; ?>">
+                            <i class="fas fa-chalkboard-teacher"></i>
+                            <span>Turmas Teóricas</span>
+                        </a>
+                        <!-- TODO: Criar página presencas-teoricas.php - por enquanto usar turma-chamada.php -->
+                        <a href="pages/turma-chamada.php" class="nav-sublink" onclick="return confirm('Esta página ainda está em desenvolvimento. Deseja continuar?');">
+                            <i class="fas fa-check-square"></i>
+                            <span>Presenças Teóricas</span>
+                            <small style="color: #999; font-size: 0.7em;">(Temporário)</small>
+                        </a>
+                        <!-- TODO: Criar página aulas-praticas.php - por enquanto usar listar-aulas.php -->
+                        <a href="pages/listar-aulas.php" class="nav-sublink">
+                            <i class="fas fa-car-side"></i>
+                            <span>Aulas Práticas</span>
+                            <small style="color: #999; font-size: 0.7em;">(Temporário)</small>
+                        </a>
+                        <a href="index.php?page=agendamento" class="nav-sublink <?php echo $page === 'agendamento' ? 'active' : ''; ?>">
+                            <i class="fas fa-calendar-alt"></i>
+                            <span>Agenda Geral</span>
+                            <div class="nav-badge"><?php echo $stats['total_aulas']; ?></div>
                         </a>
                         <a href="index.php?page=instrutores" class="nav-sublink <?php echo $page === 'instrutores' ? 'active' : ''; ?>">
                             <i class="fas fa-chalkboard-teacher"></i>
@@ -1339,48 +1379,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <span>Veículos</span>
                             <div class="nav-badge"><?php echo $stats['total_veiculos']; ?></div>
                         </a>
+                        <a href="index.php?page=configuracoes-salas" class="nav-sublink <?php echo $page === 'configuracoes-salas' ? 'active' : ''; ?>">
+                            <i class="fas fa-door-open"></i>
+                            <span>Salas</span>
+                        </a>
                     </div>
                 </div>
                 <?php endif; ?>
                 
-                <!-- Operacional -->
+                <!-- Provas & Exames -->
+                <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="operacional" title="Operacional">
+                    <a href="index.php?page=exames&tipo=teorico" class="nav-link nav-toggle" data-group="provas-exames" title="Provas & Exames">
                         <div class="nav-icon">
-                            <i class="fas fa-calendar-alt"></i>
+                            <i class="fas fa-clipboard-check"></i>
                         </div>
-                        <div class="nav-text">Operacional</div>
+                        <div class="nav-text">Provas & Exames</div>
                         <div class="nav-arrow">
                             <i class="fas fa-chevron-down"></i>
                         </div>
-                    </div>
-                    <div class="nav-submenu" id="operacional">
-                        <a href="index.php?page=agendamento" class="nav-sublink <?php echo $page === 'agendamento' ? 'active' : ''; ?>">
-                            <i class="fas fa-calendar-alt"></i>
-                            <span>Agendamento</span>
-                            <div class="nav-badge"><?php echo $stats['total_aulas']; ?></div>
-                        </a>
-                        <a href="index.php?page=exames" class="nav-sublink <?php echo $page === 'exames' ? 'active' : ''; ?>">
-                            <i class="fas fa-stethoscope"></i>
-                            <span>Exames Médicos</span>
-                        </a>
-                    </div>
-                </div>
-                
-                <!-- Gestão de Turmas -->
-                <div class="nav-item">
-                    <a href="?page=turmas-teoricas" class="nav-link <?php echo $page === 'turmas-teoricas' ? 'active' : ''; ?>" title="Gestão de Turmas">
-                        <div class="nav-icon">
-                            <i class="fas fa-graduation-cap"></i>
-                        </div>
-                        <div class="nav-text">Gestão de Turmas</div>
                     </a>
+                    <div class="nav-submenu" id="provas-exames">
+                        <a href="index.php?page=exames&tipo=medico" class="nav-sublink <?php echo ($page === 'exames' && ($_GET['tipo'] ?? '') === 'medico') ? 'active' : ''; ?>">
+                            <i class="fas fa-stethoscope"></i>
+                            <span>Exame Médico</span>
+                        </a>
+                        <a href="index.php?page=exames&tipo=psicotecnico" class="nav-sublink <?php echo ($page === 'exames' && ($_GET['tipo'] ?? '') === 'psicotecnico') ? 'active' : ''; ?>">
+                            <i class="fas fa-brain"></i>
+                            <span>Exame Psicotécnico</span>
+                        </a>
+                        <a href="index.php?page=exames&tipo=teorico" class="nav-sublink <?php echo ($page === 'exames' && ($_GET['tipo'] ?? '') === 'teorico') ? 'active' : ''; ?>">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Prova Teórica</span>
+                        </a>
+                        <a href="index.php?page=exames&tipo=pratico" class="nav-sublink <?php echo ($page === 'exames' && ($_GET['tipo'] ?? '') === 'pratico') ? 'active' : ''; ?>">
+                            <i class="fas fa-car"></i>
+                            <span>Prova Prática</span>
+                        </a>
+                    </div>
                 </div>
+                <?php endif; ?>
                 
                 <!-- Financeiro -->
                 <?php if (defined('FINANCEIRO_ENABLED') && FINANCEIRO_ENABLED && ($isAdmin || $user['tipo'] === 'secretaria')): ?>
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="financeiro" title="Financeiro">
+                    <a href="index.php?page=financeiro-faturas" class="nav-link nav-toggle" data-group="financeiro" title="Financeiro">
                         <div class="nav-icon">
                             <i class="fas fa-dollar-sign"></i>
                         </div>
@@ -1388,56 +1431,63 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         <div class="nav-arrow">
                             <i class="fas fa-chevron-down"></i>
                         </div>
-                    </div>
+                    </a>
                     <div class="nav-submenu" id="financeiro">
-                        <a href="?page=financeiro-faturas" class="nav-sublink <?php echo $page === 'financeiro-faturas' ? 'active' : ''; ?>">
+                        <a href="index.php?page=financeiro-faturas" class="nav-sublink <?php echo $page === 'financeiro-faturas' ? 'active' : ''; ?>">
                             <i class="fas fa-file-invoice"></i>
-                            <span>Faturas (Receitas)</span>
+                            <span>Faturas</span>
                         </a>
-                        <a href="?page=financeiro-despesas" class="nav-sublink <?php echo $page === 'financeiro-despesas' ? 'active' : ''; ?>">
+                        <!-- Corrigido: usar financeiro-despesas (página que existe) ao invés de financeiro-pagamentos -->
+                        <a href="index.php?page=financeiro-despesas" class="nav-sublink <?php echo $page === 'financeiro-despesas' ? 'active' : ''; ?>">
                             <i class="fas fa-receipt"></i>
-                            <span>Despesas (Pagamentos)</span>
+                            <span>Pagamentos</span>
                         </a>
-                        <a href="?page=financeiro-relatorios" class="nav-sublink <?php echo $page === 'financeiro-relatorios' ? 'active' : ''; ?>">
+                        <a href="index.php?page=financeiro-relatorios" class="nav-sublink <?php echo $page === 'financeiro-relatorios' ? 'active' : ''; ?>">
                             <i class="fas fa-chart-line"></i>
-                            <span>Relatórios</span>
+                            <span>Relatórios Financeiros</span>
+                        </a>
+                        <!-- TODO: Criar página financeiro-configuracoes.php -->
+                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-cog"></i>
+                            <span>Configurações Financeiras</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                         </a>
                     </div>
                 </div>
                 <?php endif; ?>
                 
-                <!-- Relatórios Gerais -->
+                <!-- Relatórios -->
                 <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="relatorios" title="Relatórios Gerais">
+                    <a href="pages/relatorio-frequencia.php" class="nav-link nav-toggle" data-group="relatorios" title="Relatórios">
                         <div class="nav-icon">
                             <i class="fas fa-chart-bar"></i>
                         </div>
-                        <div class="nav-text">Relatórios Gerais</div>
+                        <div class="nav-text">Relatórios</div>
                         <div class="nav-arrow">
                             <i class="fas fa-chevron-down"></i>
                         </div>
-                    </div>
+                    </a>
                     <div class="nav-submenu" id="relatorios">
-                        <a href="pages/relatorio-matriculas.php" class="nav-sublink">
-                            <i class="fas fa-graduation-cap"></i>
-                            <span>Relatório de Matrículas</span>
+                        <a href="pages/relatorio-frequencia.php" class="nav-sublink <?php echo ($page === 'relatorio-frequencia' || $page === 'relatorio-presencas') ? 'active' : ''; ?>">
+                            <i class="fas fa-chart-bar"></i>
+                            <span>Frequência Teórica</span>
                         </a>
-                        <a href="pages/relatorio-frequencia.php" class="nav-sublink">
-                            <i class="fas fa-calendar-check"></i>
-                            <span>Relatório de Frequência</span>
+                        <!-- TODO: Criar página relatorio-conclusao-pratica.php -->
+                        <a href="#" class="nav-sublink" onclick="alert('Relatório em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-check-circle"></i>
+                            <span>Conclusão Prática</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                         </a>
-                        <a href="pages/relatorio-presencas.php" class="nav-sublink">
-                            <i class="fas fa-user-check"></i>
-                            <span>Relatório de Presenças</span>
+                        <!-- TODO: Criar página relatorio-provas.php -->
+                        <a href="#" class="nav-sublink" onclick="alert('Relatório em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-clipboard-check"></i>
+                            <span>Provas (Taxa de Aprovação)</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                         </a>
-                        <a href="pages/relatorio-ata.php" class="nav-sublink">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Relatório de ATA</span>
-                        </a>
-                        <a href="pages/vagas-candidatos.php" class="nav-sublink">
-                            <i class="fas fa-briefcase"></i>
-                            <span>Vagas e Candidatos</span>
+                        <a href="index.php?page=financeiro-relatorios&tipo=inadimplencia" class="nav-sublink <?php echo ($page === 'financeiro-relatorios' && ($_GET['tipo'] ?? '') === 'inadimplencia') ? 'active' : ''; ?>">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <span>Inadimplência</span>
                         </a>
                     </div>
                 </div>
@@ -1446,7 +1496,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 <!-- Configurações -->
                 <?php if ($isAdmin): ?>
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="configuracoes" title="Configurações">
+                    <a href="index.php?page=configuracoes-categorias" class="nav-link nav-toggle" data-group="configuracoes" title="Configurações">
                         <div class="nav-icon">
                             <i class="fas fa-cogs"></i>
                         </div>
@@ -1454,49 +1504,87 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         <div class="nav-arrow">
                             <i class="fas fa-chevron-down"></i>
                         </div>
-                    </div>
+                    </a>
                     <div class="nav-submenu" id="configuracoes">
+                        <!-- TODO: Verificar se configuracoes.php aceita action=dados-cfc ou criar página específica -->
+                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-building"></i>
+                            <span>Dados do CFC</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                        </a>
                         <a href="index.php?page=configuracoes-categorias" class="nav-sublink <?php echo $page === 'configuracoes-categorias' ? 'active' : ''; ?>">
                             <i class="fas fa-layer-group"></i>
-                            <span>Categorias de Habilitação</span>
+                            <span>Cursos / Categorias</span>
                         </a>
-                        <a href="index.php?page=configuracoes-salas" class="nav-sublink <?php echo $page === 'configuracoes-salas' ? 'active' : ''; ?>">
-                            <i class="fas fa-door-open"></i>
-                            <span>Salas de Aula</span>
+                        <!-- TODO: Criar página configuracoes-horarios.php -->
+                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-clock"></i>
+                            <span>Tabela de Horários</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                        </a>
+                        <!-- TODO: Criar página configuracoes-bloqueios.php -->
+                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-ban"></i>
+                            <span>Regras de Bloqueio</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                        </a>
+                        <!-- TODO: Criar página configuracoes-documentos.php -->
+                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-file-pdf"></i>
+                            <span>Modelos de Documentos</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                         </a>
                         <a href="index.php?page=configuracoes-disciplinas" class="nav-sublink <?php echo $page === 'configuracoes-disciplinas' ? 'active' : ''; ?>">
                             <i class="fas fa-book"></i>
                             <span>Disciplinas</span>
                         </a>
-                        <a href="index.php?page=configuracoes&action=geral" class="nav-sublink <?php echo $page === 'configuracoes' ? 'active' : ''; ?>">
+                        <!-- TODO: Verificar se configuracoes.php aceita action=geral ou criar página específica -->
+                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
                             <i class="fas fa-sliders-h"></i>
                             <span>Configurações Gerais</span>
-                        </a>
-                        <a href="index.php?page=logs&action=list" class="nav-sublink <?php echo $page === 'logs' ? 'active' : ''; ?>">
-                            <i class="fas fa-file-alt"></i>
-                            <span>Logs do Sistema</span>
-                        </a>
-                        <a href="index.php?page=backup" class="nav-sublink <?php echo $page === 'backup' ? 'active' : ''; ?>">
-                            <i class="fas fa-download"></i>
-                            <span>Backup</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
                         </a>
                     </div>
                 </div>
                 <?php endif; ?>
                 
-                <!-- Ferramentas de Desenvolvimento -->
+                <!-- Sistema / Ajuda -->
                 <?php if ($isAdmin): ?>
                 <div class="nav-item nav-group">
-                    <div class="nav-link nav-toggle" data-group="ferramentas" title="Ferramentas">
+                    <a href="index.php?page=configuracoes-categorias" class="nav-link nav-toggle" data-group="sistema-ajuda" title="Sistema / Ajuda">
                         <div class="nav-icon">
-                            <i class="fas fa-tools"></i>
+                            <i class="fas fa-question-circle"></i>
                         </div>
-                        <div class="nav-text">Ferramentas</div>
+                        <div class="nav-text">Sistema / Ajuda</div>
                         <div class="nav-arrow">
                             <i class="fas fa-chevron-down"></i>
                         </div>
-                    </div>
-                    <div class="nav-submenu" id="ferramentas">
+                    </a>
+                    <div class="nav-submenu" id="sistema-ajuda">
+                        <!-- TODO: Criar página logs.php ou verificar se existe rota -->
+                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-file-alt"></i>
+                            <span>Logs</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                        </a>
+                        <!-- TODO: Criar página faq.php -->
+                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-question"></i>
+                            <span>FAQ</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                        </a>
+                        <!-- TODO: Criar página suporte.php -->
+                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-headset"></i>
+                            <span>Suporte</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                        </a>
+                        <!-- TODO: Criar página backup.php -->
+                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
+                            <i class="fas fa-download"></i>
+                            <span>Backup</span>
+                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                        </a>
                     </div>
                 </div>
                 <?php endif; ?>

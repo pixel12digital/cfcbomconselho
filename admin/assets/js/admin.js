@@ -70,36 +70,72 @@ class AdminPanel {
 
     // Configurar toggle dos submenus
     setupSubmenuToggle() {
-        const navToggles = document.querySelectorAll('.nav-toggle');
+        // Usar delegation no container da sidebar para capturar cliques
+        const sidebar = document.querySelector('.admin-sidebar');
+        if (!sidebar) {
+            console.log('Sidebar não encontrada');
+            return;
+        }
         
-        navToggles.forEach(toggle => {
-            toggle.addEventListener('click', function(e) {
+        // Listener de clique usando delegation
+        sidebar.addEventListener('click', (e) => {
+            // Verificar se o clique foi em um link com .nav-link.nav-toggle
+            const link = e.target.closest('a.nav-link.nav-toggle');
+            if (!link) return;
+            
+            // Verificar se o clique foi na seta (.nav-arrow) ou em qualquer elemento dentro dela
+            const isArrow = e.target.closest('.nav-arrow');
+            
+            // Verificar se o link está desabilitado (has href="#" ou onclick com return false)
+            const href = link.getAttribute('href');
+            const onclickAttr = link.getAttribute('onclick');
+            const isDisabled = href === '#' || 
+                              (onclickAttr && onclickAttr.includes('return false')) ||
+                              link.classList.contains('is-disabled') ||
+                              link.dataset.disabled === 'true';
+            
+            // Se foi clique na seta OU link desabilitado, prevenir navegação e toggle do submenu
+            if (isArrow || isDisabled) {
                 e.preventDefault();
                 e.stopPropagation();
                 
-                const group = this.getAttribute('data-group');
-                const submenu = document.getElementById(group);
-                
-                if (submenu) {
-                    // Toggle do submenu
-                    const isVisible = submenu.style.display === 'block';
-                    
-                    // Fechar todos os outros submenus
-                    document.querySelectorAll('.nav-submenu').forEach(menu => {
-                        if (menu.id !== group) {
-                            menu.style.display = 'none';
-                        }
-                    });
-                    
-                    // Toggle do submenu atual
-                    submenu.style.display = isVisible ? 'none' : 'block';
-                    
-                    console.log('Submenu toggled:', group, 'Visible:', !isVisible);
+                const group = link.getAttribute('data-group');
+                if (group) {
+                    const submenu = document.getElementById(group);
+                    if (submenu) {
+                        // Toggle do submenu
+                        const isVisible = submenu.style.display === 'block';
+                        
+                        // Fechar todos os outros submenus
+                        document.querySelectorAll('.nav-submenu').forEach(menu => {
+                            if (menu.id !== group) {
+                                menu.style.display = 'none';
+                            }
+                        });
+                        
+                        // Toggle do submenu atual
+                        submenu.style.display = isVisible ? 'none' : 'block';
+                        
+                        console.log('Submenu toggled:', group, 'Visible:', !isVisible);
+                    }
                 }
-            });
+                
+                // Se for link desabilitado com onclick, executar o onclick
+                if (isDisabled && onclickAttr) {
+                    try {
+                        eval(onclickAttr);
+                    } catch (err) {
+                        console.error('Erro ao executar onclick:', err);
+                    }
+                }
+            } else {
+                // Caso contrário: NÃO prevenir navegação - deixar o navegador navegar normalmente
+                console.log('Navegando para:', link.href);
+                // Não chamar preventDefault() - permitir navegação natural
+            }
         });
         
-        console.log('Sistema de toggle de submenus configurado');
+        console.log('Sistema de toggle de submenus configurado com delegation');
     }
 
     // Toggle sidebar
