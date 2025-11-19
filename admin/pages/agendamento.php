@@ -933,11 +933,8 @@ try {
                 <div class="form-group">
                     <label for="tipo_aula">Tipo de Aula *</label>
                     <select id="tipo_aula" name="tipo_aula" required>
-                        <option value="">Selecione o tipo</option>
-                        <option value="teorica">Teórica</option>
-                        <option value="pratica">Prática</option>
+                        <option value="pratica" selected>Prática</option>
                         <option value="simulador">Simulador</option>
-                        <option value="avaliacao">Avaliação</option>
                     </select>
                 </div>
                 
@@ -1049,9 +1046,8 @@ try {
                 <div class="form-group">
                     <label for="edit_tipo_aula">Tipo de Aula *</label>
                     <select id="edit_tipo_aula" name="tipo_aula" required>
-                        <option value="">Selecione o tipo</option>
-                        <option value="teorica">Teórica</option>
                         <option value="pratica">Prática</option>
+                        <option value="simulador">Simulador</option>
                     </select>
                 </div>
                 
@@ -2790,25 +2786,48 @@ function salvarNovaAula(event) {
             return response.text().then(text => {
                 console.log('Resposta de erro 409:', text);
                 try {
+                    // JSON.parse já trata UTF-8 corretamente quando o backend usa JSON_UNESCAPED_UNICODE
                     const errorData = JSON.parse(text);
                     console.log('Dados de erro parseados:', errorData);
-                    throw new Error(`CONFLITO: ${errorData.mensagem || 'Conflito de agendamento detectado'}`);
+                    // Obter mensagem (pode vir em 'mensagem' ou 'motivo')
+                    const mensagemErro = errorData.mensagem || errorData.motivo || 'Conflito de agendamento detectado';
+                    throw new Error(`CONFLITO: ${mensagemErro}`);
                 } catch (e) {
                     console.error('Erro ao fazer parse do JSON de erro:', e);
                     console.error('Texto da resposta:', text);
                     // Se não conseguir fazer parse, extrair a mensagem do JSON manualmente
                     let mensagemErro = 'Veículo ou instrutor já possui aula agendada neste horário';
                     
-                    // Tentar extrair a mensagem do JSON manualmente
-                    const match = text.match(/"mensagem":"([^"]+)"/);
-                    if (match && match[1]) {
-                        mensagemErro = match[1];
+                    // Tentar extrair a mensagem do JSON manualmente (com suporte a caracteres especiais)
+                    const matchMensagem = text.match(/"mensagem":"([^"]+)"/) || text.match(/"mensagem":"(.+?)"/);
+                    const matchMotivo = text.match(/"motivo":"([^"]+)"/) || text.match(/"motivo":"(.+?)"/);
+                    
+                    if (matchMensagem && matchMensagem[1]) {
+                        // Decodificar escape sequences Unicode para caracteres especiais
+                        mensagemErro = matchMensagem[1]
+                            .replace(/\\u([0-9a-fA-F]{4})/g, (match, code) => String.fromCharCode(parseInt(code, 16)))
+                            .replace(/\\n/g, '\n')
+                            .replace(/\\"/g, '"')
+                            .replace(/\\\//g, '/');
+                    } else if (matchMotivo && matchMotivo[1]) {
+                        mensagemErro = matchMotivo[1]
+                            .replace(/\\u([0-9a-fA-F]{4})/g, (match, code) => String.fromCharCode(parseInt(code, 16)))
+                            .replace(/\\n/g, '\n')
+                            .replace(/\\"/g, '"')
+                            .replace(/\\\//g, '/');
                     } else if (text.includes('INSTRUTOR INDISPONÍVEL')) {
                         mensagemErro = text.replace(/.*INSTRUTOR INDISPONÍVEL: /, '👨‍🏫 INSTRUTOR INDISPONÍVEL: ').replace(/".*/, '');
                     } else if (text.includes('VEÍCULO INDISPONÍVEL')) {
                         mensagemErro = text.replace(/.*VEÍCULO INDISPONÍVEL: /, '🚗 VEÍCULO INDISPONÍVEL: ').replace(/".*/, '');
                     } else if (text.includes('LIMITE DE AULAS EXCEDIDO')) {
                         mensagemErro = text.replace(/.*LIMITE DE AULAS EXCEDIDO: /, '🚫 LIMITE DE AULAS EXCEDIDO: ').replace(/".*/, '');
+                    } else if (text.includes('Prática bloqueada')) {
+                        // Extrair mensagem completa de "Prática bloqueada"
+                        const matchBloqueada = text.match(/Prática bloqueada[^"]*"([^"]+)"/) || text.match(/Prática bloqueada: (.+?)(?:"|,|$)/);
+                        if (matchBloqueada && matchBloqueada[1]) {
+                            mensagemErro = 'Prática bloqueada: ' + matchBloqueada[1]
+                                .replace(/\\u([0-9a-fA-F]{4})/g, (match, code) => String.fromCharCode(parseInt(code, 16)));
+                        }
                     }
                     
                     throw new Error(`CONFLITO: ${mensagemErro}`);
@@ -2848,8 +2867,9 @@ function salvarNovaAula(event) {
                 window.location.reload();
             }, 1000);
         } else {
-            // Erro
-            alert('Erro ao agendar aula: ' + (data.mensagem || 'Erro desconhecido'));
+            // Erro - garantir que a mensagem seja exibida corretamente
+            const mensagemErro = (data.mensagem || data.motivo || 'Erro desconhecido');
+            alert('Erro ao agendar aula: ' + mensagemErro);
             
             // Reativar botão
             btnSubmit.innerHTML = textoOriginal;
@@ -2862,7 +2882,8 @@ function salvarNovaAula(event) {
         // Verificar se é erro de conflito específico
         if (error.message.startsWith('CONFLITO:')) {
             const mensagemConflito = error.message.replace('CONFLITO: ', '');
-            alert(`⚠️ ATENÇÃO: ${mensagemConflito}`);
+            // Usar concatenação simples ao invés de template literal para garantir caracteres especiais
+            alert('⚠️ ATENÇÃO: ' + mensagemConflito);
         } else {
             alert('Erro ao agendar aula. Tente novamente.');
         }
@@ -3966,16 +3987,33 @@ function limparFormularioNovaAula() {
     document.getElementById('modal_aula_unica').checked = true;
     document.getElementById('modal_intervalo_depois').checked = true;
     
-    // Desabilitar veículo por padrão
-    document.getElementById('veiculo_id').disabled = true;
-    document.getElementById('veiculo_id').required = false;
+    // Definir tipo de aula padrão como "Prática"
+    const tipoAula = document.getElementById('tipo_aula');
+    if (tipoAula) {
+        tipoAula.value = 'pratica';
+    }
+    
+    // Habilitar veículo (pois padrão é prática)
+    const veiculo = document.getElementById('veiculo_id');
+    if (veiculo) {
+        veiculo.disabled = false;
+        veiculo.required = true;
+    }
 }
 
 function preencherFormularioEdicao(aula) {
     document.getElementById('edit_aula_id').value = aula.id;
     document.getElementById('edit_aluno_id').value = aula.aluno_id;
     document.getElementById('edit_instrutor_id').value = aula.instrutor_id;
-    document.getElementById('edit_tipo_aula').value = aula.tipo_aula;
+    
+    // Definir tipo de aula com fallback para "pratica" se o tipo não for válido
+    const editTipoAula = document.getElementById('edit_tipo_aula');
+    const tiposValidos = ['pratica', 'simulador'];
+    const tipoAula = tiposValidos.includes(aula.tipo_aula) ? aula.tipo_aula : 'pratica';
+    if (editTipoAula) {
+        editTipoAula.value = tipoAula;
+    }
+    
     document.getElementById('edit_veiculo_id').value = aula.veiculo_id || '';
     document.getElementById('edit_data_aula').value = aula.data_aula;
     document.getElementById('edit_hora_inicio').value = aula.hora_inicio;

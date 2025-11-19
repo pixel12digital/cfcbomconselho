@@ -2369,11 +2369,11 @@ input.form-control.invalid {
                       </div>
                     </div>
 
-                    <!-- MATRÍCULA: Seção 1 - Dados da Matrícula -->
+                    <!-- MATRÍCULA: Seção 1 - Curso e Serviços -->
                     <div class="row mb-2">
                       <div class="col-12">
                         <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                          <i class="fas fa-clipboard-list me-1"></i>Dados da Matrícula
+                          <i class="fas fa-clipboard-list me-1"></i>Curso e Serviços
                         </h6>
                       </div>
                       <div class="col-12">

@@ -171,7 +171,11 @@ class InputMask {
         });
 
         // Valor - formato brasileiro com ponto automático
+        // Pular campos com data-skip-mask="true" para evitar conflitos com formatação customizada
         document.querySelectorAll('input[data-mask="valor"], input[name*="valor"], input[name*="preco"], input[name*="valor_aquisicao"]').forEach(input => {
+            if (input.getAttribute('data-skip-mask') === 'true') {
+                return; // Pular este campo
+            }
             this.maskValor(input);
         });
     }
@@ -228,39 +232,88 @@ class InputMask {
     }
 
     maskValor(input) {
+        // Verificar se o campo deve ser ignorado
+        if (input.getAttribute('data-skip-mask') === 'true') {
+            return;
+        }
+        
+        // Flag para prevenir loops
+        let isFormatting = false;
+        
         input.addEventListener('input', (e) => {
-            let value = e.target.value.replace(/[^\d]/g, '');
+            // Prevenir loops recursivos
+            if (isFormatting) {
+                return;
+            }
             
-            // Converter para número
-            let number = parseInt(value) / 100;
+            isFormatting = true;
             
-            // Formatar como moeda brasileira
-            let formatted = new Intl.NumberFormat('pt-BR', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(number);
-            
-            e.target.value = formatted;
+            try {
+                let value = e.target.value.replace(/[^\d]/g, '');
+                
+                // Converter para número
+                let number = parseInt(value) / 100;
+                
+                // Formatar como moeda brasileira
+                let formatted = new Intl.NumberFormat('pt-BR', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                }).format(number);
+                
+                e.target.value = formatted;
+            } finally {
+                isFormatting = false;
+            }
         });
 
-        // Aplicar máscara ao carregar
-        if (input.value) {
-            input.dispatchEvent(new Event('input'));
-        }
+        // Aplicar máscara ao carregar (apenas se houver valor)
+        // Removido: não disparar evento 'input' automaticamente ao carregar
+        // Isso pode causar loops quando há listeners de input registrados
+        // A máscara será aplicada naturalmente quando o usuário interagir com o campo
     }
 
     observeDOM() {
+        // Flag para prevenir reaplicação durante operações pesadas
+        let isApplyingMasks = false;
+        
         // Observer para elementos dinâmicos
         const observer = new MutationObserver((mutations) => {
+            // Prevenir múltiplas execuções simultâneas
+            if (isApplyingMasks) {
+                return;
+            }
+            
+            // Verificar se há mudanças relevantes (evitar reaplicar em mudanças triviais)
+            let hasRelevantChanges = false;
             mutations.forEach((mutation) => {
                 if (mutation.type === 'childList') {
                     mutation.addedNodes.forEach((node) => {
                         if (node.nodeType === 1) { // Element node
-                            this.applyMasks();
+                            // Ignorar mudanças em tabelas de parcelas (evitar loop)
+                            if (node.id === 'tabela-parcelas' || 
+                                node.closest && node.closest('#tabela-parcelas') ||
+                                (node.tagName && node.tagName.toLowerCase() === 'tr' && 
+                                 node.closest && node.closest('#tabela-parcelas')) {
+                                return; // Pular mudanças na tabela de parcelas
+                            }
+                            hasRelevantChanges = true;
                         }
                     });
                 }
             });
+            
+            // Só aplicar máscaras se houver mudanças relevantes
+            if (hasRelevantChanges) {
+                isApplyingMasks = true;
+                // Usar setTimeout para evitar bloquear o thread principal
+                setTimeout(() => {
+                    try {
+                        this.applyMasks();
+                    } finally {
+                        isApplyingMasks = false;
+                    }
+                }, 0);
+            }
         });
 
         observer.observe(document.body, {

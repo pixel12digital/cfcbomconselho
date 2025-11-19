@@ -11,14 +11,17 @@
 require_once __DIR__ . '/../database.php';
 require_once __DIR__ . '/../auth.php';
 require_once __DIR__ . '/../../admin/includes/ExamesRulesService.php';
+require_once __DIR__ . '/../../admin/includes/FinanceiroRulesService.php';
 
 class AgendamentoGuards {
     private $db;
     private $examesRules;
+    private $financeiroRules;
     
     public function __construct() {
         $this->db = db();
         $this->examesRules = new ExamesRulesService();
+        $this->financeiroRules = new FinanceiroRulesService();
     }
     
     /**
@@ -80,55 +83,31 @@ class AgendamentoGuards {
     }
     
     /**
-     * Verificar situação financeira do aluno (se flag ativa)
+     * Verificar situação financeira do aluno usando FinanceiroRulesService
      * @param int $alunoId ID do aluno
      * @param bool $flagAtiva Se a verificação financeira está ativa
      * @return array Resultado da validação
      */
     public function verificarSituacaoFinanceira($alunoId, $flagAtiva = true) {
-        try {
-            if (!$flagAtiva) {
-                return [
-                    'permitido' => true,
-                    'motivo' => 'Verificação financeira desabilitada',
-                    'tipo' => 'financeiro_desabilitado'
-                ];
-            }
-            
-            // Buscar faturas em aberto do aluno
-            $sql = "SELECT COUNT(*) as total_faturas, SUM(valor) as valor_total
-                    FROM faturas 
-                    WHERE aluno_id = ? AND status = 'pendente' AND data_vencimento < CURDATE()";
-            $faturas = $this->db->fetch($sql, [$alunoId]);
-            
-            if ($faturas['total_faturas'] > 0) {
-                return [
-                    'permitido' => false,
-                    'motivo' => "Aluno possui {$faturas['total_faturas']} fatura(s) vencida(s) no valor total de R$ " . 
-                               number_format($faturas['valor_total'], 2, ',', '.'),
-                    'tipo' => 'faturas_vencidas',
-                    'detalhes' => [
-                        'total_faturas' => $faturas['total_faturas'],
-                        'valor_total' => $faturas['valor_total']
-                    ]
-                ];
-            }
-            
+        if (!$flagAtiva) {
             return [
                 'permitido' => true,
-                'motivo' => 'Situação financeira regular',
-                'tipo' => 'financeiro_ok'
-            ];
-            
-        } catch (Exception $e) {
-            error_log("Erro ao verificar situação financeira: " . $e->getMessage());
-            return [
-                'permitido' => false,
-                'motivo' => 'Erro ao verificar situação financeira',
-                'tipo' => 'erro_sistema'
+                'motivo' => 'Verificação financeira desabilitada',
+                'tipo' => 'financeiro_desabilitado'
             ];
         }
+        
+        // Usar FinanceiroRulesService
+        $resultado = $this->financeiroRules->podeAgendar($alunoId);
+        
+        // Converter formato do service para formato legado (compatibilidade)
+        return [
+            'permitido' => $resultado['ok'],
+            'motivo' => $resultado['mensagem'],
+            'tipo' => $resultado['codigo']
+        ];
     }
+    
     
     /**
      * Verificar conflitos de horário (aluno, instrutor, veículo)

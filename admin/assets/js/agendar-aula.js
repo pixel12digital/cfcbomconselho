@@ -536,6 +536,18 @@
             
             if (error.message && error.message.startsWith('CONFLITO:')) {
                 mensagemErro = error.message.replace('CONFLITO: ', '');
+                
+                // Log para debug
+                console.log('[DEBUG financeiro] Mensagem de erro extraída:', mensagemErro);
+                
+                // Verificar se é erro financeiro específico
+                if (mensagemErro.includes('Financeiro') || 
+                    mensagemErro.includes('financeiro') ||
+                    mensagemErro.includes('não lançado') ||
+                    mensagemErro.includes('inadimplente') ||
+                    mensagemErro.includes('parcelas em atraso')) {
+                    console.log('[DEBUG financeiro] Erro financeiro detectado - tipo: regra_financeira');
+                }
             }
             
             mostrarErro(mensagemErro);

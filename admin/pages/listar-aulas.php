@@ -124,6 +124,212 @@ if (!isset($aulas_lista)) {
         margin-bottom: 20px;
         opacity: 0.5;
     }
+    
+    /* =====================================================
+       MODAL CANCELAMENTO - PADRÃO CUSTOM-MODAL
+       ===================================================== */
+    
+    /* Dialog específico para modal de cancelamento */
+    #modalCancelar .custom-modal-dialog {
+        width: min(700px, 90vw);
+        max-width: 700px;
+        height: auto;
+        max-height: 90vh;
+    }
+    
+    /* Content - container flex em coluna */
+    #modalCancelar .custom-modal-content {
+        width: 100%;
+        height: auto;
+        min-height: 0;
+        max-height: 90vh;
+        border-radius: 12px;
+        border: 1px solid #e2e8f0;
+        box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+        background: #ffffff;
+        display: flex;
+        flex-direction: column;
+        align-items: stretch;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    /* Header - fixo */
+    .cancelamento-modal-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 24px;
+        background-color: var(--cfc-surface, #FFFFFF);
+        border-bottom: 1px solid var(--cfc-border-subtle, #E5E7EB);
+        border-top-left-radius: 12px;
+        border-top-right-radius: 12px;
+        color: var(--cfc-primary, #0F1E4A);
+        min-height: 56px;
+        flex: 0 0 auto;
+        flex-shrink: 0;
+    }
+    
+    .cancelamento-modal-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--cfc-primary, #0F1E4A);
+    }
+    
+    .cancelamento-modal-title i {
+        font-size: 1.1rem;
+        color: #dc3545;
+    }
+    
+    .cancelamento-modal-close {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: var(--gray-300, #cbd5e1);
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0;
+        opacity: 1;
+        background-image: none;
+        color: var(--gray-700, #334155);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        font-size: 1.4rem;
+        line-height: 1;
+    }
+    
+    .cancelamento-modal-close::after {
+        content: "\00d7";
+        font-size: 1.4rem;
+        line-height: 1;
+        color: var(--gray-700, #334155);
+        font-weight: 300;
+    }
+    
+    .cancelamento-modal-close:hover {
+        background-color: var(--gray-400, #94a3b8);
+        color: var(--gray-800, #1e293b);
+    }
+    
+    .cancelamento-modal-close:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+    }
+    
+    /* Body - rolável */
+    .cancelamento-modal-body {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        padding: 24px 32px;
+        background-color: var(--cfc-surface, #FFFFFF);
+        flex: 1 1 auto;
+        min-height: 0;
+        overflow-y: auto;
+        overflow-x: hidden;
+        scrollbar-width: thin;
+        scrollbar-color: #94a3b8 #edf2f7;
+        box-sizing: border-box;
+    }
+    
+    /* Scrollbar customizada */
+    .cancelamento-modal-body::-webkit-scrollbar {
+        width: 8px;
+    }
+    
+    .cancelamento-modal-body::-webkit-scrollbar-track {
+        background: #edf2f7;
+        border-radius: 4px;
+    }
+    
+    .cancelamento-modal-body::-webkit-scrollbar-thumb {
+        background: #94a3b8;
+        border-radius: 4px;
+    }
+    
+    .cancelamento-modal-body::-webkit-scrollbar-thumb:hover {
+        background: #64748b;
+    }
+    
+    /* Footer - fixo */
+    .cancelamento-modal-footer {
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+        gap: 12px;
+        padding: 12px 24px;
+        background-color: var(--cfc-surface-muted, #F3F4F6);
+        border-top: 1px solid var(--cfc-border-subtle, #E5E7EB);
+        border-bottom-left-radius: 12px;
+        border-bottom-right-radius: 12px;
+        flex: 0 0 auto;
+        flex-shrink: 0;
+        min-height: auto;
+    }
+    
+    .cancelamento-modal-footer .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 0 18px;
+        min-height: 40px;
+        font-weight: 600;
+        border-radius: 10px;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        cursor: pointer;
+    }
+    
+    .cancelamento-modal-footer .btn-outline-secondary {
+        border: 1px solid var(--cfc-border-subtle, #E5E7EB);
+        background: var(--cfc-surface, #FFFFFF);
+        color: var(--gray-700, #334155);
+    }
+    
+    .cancelamento-modal-footer .btn-outline-secondary:hover {
+        background: var(--gray-100, #f1f5f9);
+        color: var(--gray-800, #1e293b);
+        border-color: var(--gray-300, #cbd5e1);
+    }
+    
+    .cancelamento-modal-footer .btn-danger {
+        background: #dc3545;
+        color: #ffffff;
+        border: none;
+        min-height: 40px;
+    }
+    
+    .cancelamento-modal-footer .btn-danger:hover {
+        background: #c82333;
+        transform: translateY(-1px);
+        box-shadow: 0 4px 12px rgba(220, 53, 69, 0.3);
+    }
+    
+    /* Responsividade */
+    @media (max-width: 768px) {
+        #modalCancelar .custom-modal-dialog {
+            width: 95vw;
+            max-width: 95vw;
+        }
+        
+        .cancelamento-modal-body {
+            padding: 16px 20px;
+        }
+        
+        .cancelamento-modal-header {
+            padding: 12px 20px;
+        }
+        
+        .cancelamento-modal-footer {
+            padding: 12px 20px;
+        }
+    }
 </style>
 
 <!-- Cabeçalho da Página -->
@@ -236,29 +442,85 @@ if (!isset($aulas_lista)) {
     <?php endif; ?>
 </div>
 
-<!-- Modal de Cancelamento -->
-<div class="modal fade" id="modalCancelar" tabindex="-1">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">
-                    <i class="fas fa-exclamation-triangle text-warning me-2"></i>
-                    Cancelar Aula
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+<!-- Modal de Cancelamento - Padronizado -->
+<div id="modalCancelar" class="custom-modal">
+    <div class="custom-modal-dialog">
+        <div class="custom-modal-content">
+            <div class="modal-form-header cancelamento-modal-header">
+                <h2 class="cancelamento-modal-title">
+                    <i class="fas fa-calendar-times me-2"></i>Cancelar Aula
+                </h2>
+                <button type="button" class="btn-close cancelamento-modal-close" onclick="fecharModalCancelar()"></button>
             </div>
-            <div class="modal-body">
-                <div class="alert alert-warning">
-                    <i class="fas fa-info-circle me-2"></i>
-                    <strong>Atenção:</strong> Esta ação não pode ser desfeita. A aula será cancelada permanentemente.
+            
+            <div class="modal-form-body cancelamento-modal-body">
+                <div class="alert alert-warning d-flex align-items-start mb-4">
+                    <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                    <div>
+                        <strong>Atenção:</strong> Esta ação não pode ser desfeita. A aula será cancelada permanentemente.
+                    </div>
                 </div>
                 
+                <!-- Resumo da Aula -->
+                <div class="aula-cancelamento-resumo mb-4 p-3 bg-light rounded">
+                    <h6 class="text-primary mb-3 border-bottom pb-2" style="font-size: 0.95rem; font-weight: 600;">
+                        <i class="fas fa-info-circle me-2"></i>Informações da Aula
+                    </h6>
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <strong><i class="fas fa-user me-1"></i>Aluno:</strong>
+                                <span id="resumo-aluno" class="ms-2">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-2">
+                                <strong><i class="fas fa-chalkboard-teacher me-1"></i>Instrutor:</strong>
+                                <span id="resumo-instrutor" class="ms-2">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-2">
+                                <strong><i class="fas fa-calendar me-1"></i>Data:</strong>
+                                <span id="resumo-data" class="ms-2">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-2">
+                                <strong><i class="fas fa-clock me-1"></i>Horário:</strong>
+                                <span id="resumo-horario" class="ms-2">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="mb-2">
+                                <strong><i class="fas fa-graduation-cap me-1"></i>Tipo:</strong>
+                                <span id="resumo-tipo" class="ms-2">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6" id="resumo-veiculo-container" style="display: none;">
+                            <div class="mb-2">
+                                <strong><i class="fas fa-car me-1"></i>Veículo:</strong>
+                                <span id="resumo-veiculo" class="ms-2">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6" id="resumo-disciplina-container" style="display: none;">
+                            <div class="mb-2">
+                                <strong><i class="fas fa-book me-1"></i>Disciplina:</strong>
+                                <span id="resumo-disciplina" class="ms-2">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Formulário de Cancelamento -->
                 <form id="formCancelar">
                     <input type="hidden" id="aula_id_cancelar" name="aula_id">
                     
                     <div class="mb-3">
-                        <label for="motivo_cancelamento" class="form-label">Motivo do Cancelamento *</label>
-                        <select class="form-select" id="motivo_cancelamento" name="motivo_cancelamento" required>
+                        <label for="motivo_cancelamento" class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            Motivo do Cancelamento <span class="text-danger">*</span>
+                        </label>
+                        <select class="form-select" id="motivo_cancelamento" name="motivo_cancelamento" required style="padding: 0.5rem; font-size: 0.9rem;">
                             <option value="">Selecione o motivo...</option>
                             <option value="aluno_ausente">Aluno ausente</option>
                             <option value="instrutor_indisponivel">Instrutor indisponível</option>
@@ -271,16 +533,21 @@ if (!isset($aulas_lista)) {
                     </div>
                     
                     <div class="mb-3">
-                        <label for="observacoes_cancelamento" class="form-label">Observações Adicionais</label>
-                        <textarea class="form-control" id="observacoes_cancelamento" name="observacoes_cancelamento" rows="3" placeholder="Detalhes adicionais sobre o cancelamento..."></textarea>
+                        <label for="observacoes_cancelamento" class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            Observações Adicionais
+                        </label>
+                        <textarea class="form-control" id="observacoes_cancelamento" name="observacoes_cancelamento" rows="3" 
+                                  placeholder="Detalhes adicionais sobre o cancelamento..." style="font-size: 0.9rem;"></textarea>
+                        <small class="text-muted" style="font-size: 0.8rem;">Informações complementares sobre o cancelamento (opcional)</small>
                     </div>
                 </form>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                    <i class="fas fa-times me-1"></i>Cancelar
+            
+            <div class="modal-form-footer cancelamento-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="fecharModalCancelar()">
+                    <i class="fas fa-times me-1"></i>Voltar
                 </button>
-                <button type="button" class="btn btn-danger" onclick="confirmarCancelamento()">
+                <button type="button" class="btn btn-danger" id="btnConfirmarCancelamento" onclick="confirmarCancelamento()">
                     <i class="fas fa-trash me-1"></i>Confirmar Cancelamento
                 </button>
             </div>
@@ -290,9 +557,108 @@ if (!isset($aulas_lista)) {
 
 <script>
     function cancelarAula(aulaId) {
+        // Buscar dados da aula do card
+        const aulaCard = document.querySelector(`[data-aula-id="${aulaId}"]`);
+        if (!aulaCard) {
+            console.error('Card da aula não encontrado');
+            return;
+        }
+        
+        // Extrair informações do card
+        const alunoNome = aulaCard.querySelector('.aula-header h5')?.textContent?.trim() || '-';
+        const dataHorario = aulaCard.querySelector('.aula-header p')?.textContent?.trim() || '';
+        
+        // Buscar instrutor (procurar por ícone de chalkboard-teacher)
+        let instrutorNome = '-';
+        const infoItems = aulaCard.querySelectorAll('.info-item');
+        infoItems.forEach(item => {
+            const icon = item.querySelector('.fa-chalkboard-teacher');
+            if (icon) {
+                const span = item.querySelector('span');
+                if (span) {
+                    instrutorNome = span.textContent.replace('Instrutor:', '').trim() || '-';
+                }
+            }
+        });
+        
+        // Buscar tipo (procurar por ícone de graduation-cap)
+        let tipoTexto = '-';
+        infoItems.forEach(item => {
+            const icon = item.querySelector('.fa-graduation-cap');
+            if (icon) {
+                const badge = item.querySelector('.badge');
+                if (badge) {
+                    tipoTexto = badge.textContent.trim() || '-';
+                }
+            }
+        });
+        
+        // Buscar veículo (procurar por ícone de car)
+        let veiculoTexto = '';
+        infoItems.forEach(item => {
+            const icon = item.querySelector('.fa-car');
+            if (icon) {
+                const span = item.querySelector('span');
+                if (span) {
+                    veiculoTexto = span.textContent.replace('Veículo:', '').trim() || '';
+                }
+            }
+        });
+        
+        // Buscar disciplina (procurar por ícone de book)
+        let disciplinaTexto = '';
+        infoItems.forEach(item => {
+            const icon = item.querySelector('.fa-book');
+            if (icon) {
+                const span = item.querySelector('span');
+                if (span) {
+                    disciplinaTexto = span.textContent.replace('Disciplina:', '').trim() || '';
+                }
+            }
+        });
+        
+        // Extrair data e horário
+        const dataMatch = dataHorario.match(/(\d{2}\/\d{2}\/\d{4})/);
+        const horarioMatch = dataHorario.match(/(\d{2}:\d{2})\s*-\s*(\d{2}:\d{2})/);
+        
+        // Preencher resumo
+        document.getElementById('resumo-aluno').textContent = alunoNome;
+        document.getElementById('resumo-instrutor').textContent = instrutorNome;
+        document.getElementById('resumo-data').textContent = dataMatch ? dataMatch[1] : '-';
+        document.getElementById('resumo-horario').textContent = horarioMatch ? `${horarioMatch[1]} - ${horarioMatch[2]}` : '-';
+        document.getElementById('resumo-tipo').textContent = tipoTexto;
+        
+        // Veículo (se existir)
+        if (veiculoTexto) {
+            document.getElementById('resumo-veiculo').textContent = veiculoTexto;
+            document.getElementById('resumo-veiculo-container').style.display = 'block';
+        } else {
+            document.getElementById('resumo-veiculo-container').style.display = 'none';
+        }
+        
+        // Disciplina (se existir)
+        if (disciplinaTexto) {
+            document.getElementById('resumo-disciplina').textContent = disciplinaTexto;
+            document.getElementById('resumo-disciplina-container').style.display = 'block';
+        } else {
+            document.getElementById('resumo-disciplina-container').style.display = 'none';
+        }
+        
+        // Definir ID da aula
         document.getElementById('aula_id_cancelar').value = aulaId;
-        const modal = new bootstrap.Modal(document.getElementById('modalCancelar'));
-        modal.show();
+        
+        // Limpar formulário
+        document.getElementById('motivo_cancelamento').value = '';
+        document.getElementById('observacoes_cancelamento').value = '';
+        
+        // Abrir modal usando padrão custom-modal
+        const modal = document.getElementById('modalCancelar');
+        modal.setAttribute('data-opened', 'true');
+    }
+    
+    function fecharModalCancelar() {
+        const modal = document.getElementById('modalCancelar');
+        modal.setAttribute('data-opened', 'false');
     }
     
     function confirmarCancelamento() {
@@ -312,25 +678,58 @@ if (!isset($aulas_lista)) {
         btnConfirmar.disabled = true;
         
         // Enviar requisição
-        fetch('../api/cancelar-aula.php', {
+        // Usar caminho absoluto baseado na estrutura do projeto
+        const apiUrl = window.location.pathname.includes('/admin/') 
+            ? 'api/cancelar-aula.php' 
+            : '../admin/api/cancelar-aula.php';
+        
+        // Ajustar nome do campo observacoes (o formulário usa observacoes_cancelamento)
+        const observacoes = formData.get('observacoes_cancelamento') || formData.get('observacoes') || '';
+        formData.set('observacoes', observacoes);
+        
+        console.log('Enviando requisição para:', apiUrl);
+        console.log('Dados do formulário:', {
+            aula_id: formData.get('aula_id'),
+            motivo: formData.get('motivo_cancelamento'),
+            observacoes: observacoes
+        });
+        
+        fetch(apiUrl, {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
+        .then(response => {
+            // Verificar se a resposta é JSON válido
+            if (!response.ok) {
+                // Se não for OK, tentar ler como texto primeiro
+                return response.text().then(text => {
+                    console.error('Erro na resposta:', text);
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        throw new Error('Erro ao cancelar aula: ' + response.status + ' ' + response.statusText);
+                    }
+                });
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.sucesso) {
+            console.log('Resposta do servidor:', data);
+            
+            // A API retorna 'success' (não 'sucesso')
+            if (data.success) {
                 // Sucesso
-                mostrarMensagemSucesso('Aula cancelada com sucesso!', data.dados);
+                mostrarMensagemSucesso('Aula cancelada com sucesso!', data.data || {});
                 
                 // Remover card da aula
-                const card = document.querySelector(`[data-aula-id="${data.dados.aula_id}"]`);
+                const aulaId = data.data?.aula_id || formData.get('aula_id');
+                const card = document.querySelector(`[data-aula-id="${aulaId}"]`);
                 if (card) {
                     card.remove();
                 }
                 
                 // Fechar modal
-                const modal = bootstrap.Modal.getInstance(document.getElementById('modalCancelar'));
-                modal.hide();
+                fecharModalCancelar();
                 
                 // Recarregar página após 2 segundos
                 setTimeout(() => {
@@ -338,7 +737,8 @@ if (!isset($aulas_lista)) {
                 }, 2000);
             } else {
                 // Erro
-                mostrarMensagemErro('Erro ao cancelar aula: ' + data.mensagem);
+                const mensagemErro = data.message || data.mensagem || 'Erro desconhecido ao cancelar aula';
+                mostrarMensagemErro('Erro ao cancelar aula: ' + mensagemErro);
                 
                 // Reativar botão
                 btnConfirmar.innerHTML = textoOriginal;
@@ -346,8 +746,16 @@ if (!isset($aulas_lista)) {
             }
         })
         .catch(error => {
-            console.error('Erro:', error);
-            mostrarMensagemErro('Erro ao cancelar aula. Tente novamente.');
+            console.error('Erro ao cancelar aula:', error);
+            console.error('Stack trace:', error.stack);
+            
+            // Mensagem de erro mais específica
+            let mensagemErro = 'Erro ao cancelar aula. Tente novamente.';
+            if (error.message) {
+                mensagemErro = error.message;
+            }
+            
+            mostrarMensagemErro(mensagemErro);
             
             // Reativar botão
             btnConfirmar.innerHTML = textoOriginal;

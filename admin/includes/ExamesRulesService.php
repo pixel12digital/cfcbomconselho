@@ -157,10 +157,10 @@ class ExamesRulesService {
                 ];
             }
             
-            // Buscar prova teórica aprovada
+            // Buscar prova teórica (primeiro tenta concluída, depois verifica se há agendada)
             // Prioridade: tabela exames (tipo='teorico'), fallback para campo direto em alunos
             $provaTeorica = $this->db->fetch("
-                SELECT tipo, status, resultado, data_resultado
+                SELECT tipo, status, resultado, data_resultado, data_agendada
                 FROM exames 
                 WHERE aluno_id = ? 
                 AND tipo = 'teorico' 
@@ -169,8 +169,32 @@ class ExamesRulesService {
                 LIMIT 1
             ", [$alunoId]);
             
-            // Se não encontrou na tabela exames, tentar campo direto em alunos
+            // Se não encontrou prova concluída, verificar se há prova agendada
             if (!$provaTeorica) {
+                $provaAgendada = $this->db->fetch("
+                    SELECT tipo, status, resultado, data_agendada
+                    FROM exames 
+                    WHERE aluno_id = ? 
+                    AND tipo = 'teorico' 
+                    AND status = 'agendado'
+                    ORDER BY data_agendada DESC
+                    LIMIT 1
+                ", [$alunoId]);
+                
+                if ($provaAgendada) {
+                    // Prova está agendada mas não concluída
+                    $dataFormatada = $provaAgendada['data_agendada'] ? 
+                        date('d/m/Y', strtotime($provaAgendada['data_agendada'])) : 
+                        'data não informada';
+                    
+                    return [
+                        'ok' => false,
+                        'codigo' => 'PROVA_TEORICA_AGENDADA_NAO_CONCLUIDA',
+                        'mensagem' => "Prova teórica agendada para {$dataFormatada}, mas ainda não foi concluída. É necessário concluir e aprovar a prova teórica antes de agendar aulas práticas."
+                    ];
+                }
+                
+                // Se não encontrou na tabela exames, tentar campo direto em alunos
                 $alunoDetalhes = $this->db->fetch("
                     SELECT resultado_prova_teorica, data_prova_teorica 
                     FROM alunos WHERE id = ?
@@ -186,6 +210,15 @@ class ExamesRulesService {
                 }
             }
             
+            // Se ainda não encontrou nenhuma prova teórica
+            if (!$provaTeorica) {
+                return [
+                    'ok' => false,
+                    'codigo' => 'PROVA_TEORICA_NAO_REALIZADA',
+                    'mensagem' => 'Prova teórica não realizada. É necessário agendar e aprovar a prova teórica antes de agendar aulas práticas.'
+                ];
+            }
+            
             // Verificar se prova teórica foi aprovada
             // Aceita tanto 'aprovado' quanto 'apto' como válidos
             $provaAprovada = $provaTeorica && 
@@ -195,11 +228,13 @@ class ExamesRulesService {
             if (!$provaAprovada) {
                 $statusProva = $provaTeorica ? $provaTeorica['resultado'] : 'não realizada';
                 
-                // Mensagem de erro: manter compatibilidade com formato atual
+                // Mensagem específica baseada no resultado
+                $mensagemErro = "Prova teórica concluída, mas resultado: '{$statusProva}'. É necessário que a prova teórica esteja aprovada para agendar aulas práticas.";
+                
                 return [
                     'ok' => false,
                     'codigo' => 'PROVA_TEORICA_NAO_APROVADA',
-                    'mensagem' => "Prova teórica não aprovada: {$statusProva}"
+                    'mensagem' => $mensagemErro
                 ];
             }
             

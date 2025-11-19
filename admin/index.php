@@ -75,28 +75,111 @@ try {
 $page = $_GET['page'] ?? 'dashboard';
 $action = $_GET['action'] ?? 'list';
 
+// Verificação ANTECIPADA para turma-chamada (ANTES de qualquer output HTML)
+// Isso evita o erro "headers already sent" quando a página requer turma_id
+if ($page === 'turma-chamada' && !isset($_GET['turma_id'])) {
+    header('Location: index.php?page=turmas-teoricas');
+    exit();
+}
+
 // Definir constante para indicar que o roteamento está ativo
 define('ADMIN_ROUTING', true);
 
 // Processamento de formulários POST - DEVE VIR ANTES DE QUALQUER SAÍDA HTML
 
-// Processamento de faturas
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'financeiro-faturas' && isset($_GET['action']) && $_GET['action'] === 'create') {
-    header('Content-Type: application/json');
+// Endpoint AJAX para buscar descrição sugerida da fatura
+if ($page === 'financeiro-faturas' && isset($_GET['action']) && $_GET['action'] === 'descricao_sugerida_fatura') {
+    // Limpar qualquer output anterior
+    if (ob_get_level() > 0) {
+        ob_clean();
+    }
+    
+    header('Content-Type: application/json; charset=utf-8');
     
     try {
-        // Validar dados obrigatórios
-        $aluno_id = $_POST['aluno_id'] ?? null;
-        $valor = $_POST['valor_total'] ?? null; // Corrigido para valor_total
-        $data_vencimento = $_POST['data_vencimento'] ?? null;
-        $descricao = $_POST['descricao'] ?? null;
+        $alunoId = isset($_POST['aluno_id']) ? (int) $_POST['aluno_id'] : 0;
+        $matriculaId = isset($_POST['matricula_id']) ? (int) $_POST['matricula_id'] : null;
         
-        if (!$aluno_id || !$valor || !$data_vencimento || !$descricao) {
-            throw new Exception('Todos os campos obrigatórios devem ser preenchidos.');
+        if ($alunoId <= 0 && !$matriculaId) {
+            echo json_encode([
+                'success' => false,
+                'message' => 'aluno_id inválido'
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+        }
+        
+        // Incluir função compartilhada
+        if (!function_exists('buildDescricaoSugestaoFatura')) {
+            require_once __DIR__ . '/includes/financeiro-faturas-functions.php';
+        }
+        
+        $descricao = buildDescricaoSugestaoFatura($db, $alunoId, $matriculaId);
+        
+        echo json_encode([
+            'success' => true,
+            'descricao_sugerida' => $descricao,
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+        
+    } catch (Exception $e) {
+        echo json_encode([
+            'success' => false,
+            'message' => 'Erro ao buscar descrição sugerida: ' . $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        exit;
+    }
+}
+
+// Processamento de faturas
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'financeiro-faturas' && isset($_GET['action']) && $_GET['action'] === 'create') {
+    // Limpar qualquer output anterior (se output buffering estiver ativo)
+    if (ob_get_level() > 0) {
+        ob_clean();
+    }
+    
+    // Definir header JSON primeiro, antes de qualquer output
+    header('Content-Type: application/json; charset=utf-8');
+    
+    // Error handler temporário para converter warnings/notices em ErrorException
+    // Isso garante que qualquer erro PHP seja capturado e retornado como JSON
+    $previousErrorHandler = set_error_handler(function($severity, $message, $file, $line) {
+        // Respeitar @ (error_reporting() == 0) - não converter erros suprimidos
+        if (!(error_reporting() & $severity)) {
+            return false;
+        }
+        throw new ErrorException($message, 0, $severity, $file, $line);
+    });
+    
+    try {
+        // Verificar se usuário está logado e obter dados do usuário
+        if (!isset($user) || !$user || !isset($user['id'])) {
+            throw new Exception('Usuário não autenticado. Faça login novamente.');
+        }
+        // Validar dados obrigatórios
+        $aluno_id = isset($_POST['aluno_id']) ? trim($_POST['aluno_id']) : null;
+        $valor = isset($_POST['valor_total']) ? trim($_POST['valor_total']) : null;
+        $data_vencimento = isset($_POST['data_vencimento']) ? trim($_POST['data_vencimento']) : null;
+        $descricao = isset($_POST['descricao']) ? trim($_POST['descricao']) : null;
+        
+        // Validar campos obrigatórios
+        if (empty($aluno_id) || empty($valor) || empty($data_vencimento) || empty($descricao)) {
+            throw new Exception('Todos os campos obrigatórios devem ser preenchidos: Aluno, Valor Total, Data de Vencimento e Descrição.');
+        }
+        
+        // Validar formato numérico do valor
+        // O frontend já envia o valor convertido (ex: "3500.00" com ponto decimal)
+        $valor = floatval($valor);
+        if ($valor <= 0) {
+            throw new Exception('O valor total deve ser maior que zero.');
+        }
+        
+        // Validar formato da data
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $data_vencimento)) {
+            throw new Exception('Data de vencimento inválida. Use o formato YYYY-MM-DD.');
         }
         
         // Verificar se o aluno existe
-        $aluno = $db->fetchRow("SELECT id, nome FROM alunos WHERE id = ?", [$aluno_id]);
+        $aluno = $db->fetch("SELECT id, nome FROM alunos WHERE id = ?", [$aluno_id]);
         if (!$aluno) {
             throw new Exception('Aluno não encontrado.');
         }
@@ -109,47 +192,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'financeiro-faturas' && i
             $parcelas_editadas = null;
             if (isset($_POST['parcelas_editadas']) && !empty($_POST['parcelas_editadas'])) {
                 $parcelas_editadas = json_decode($_POST['parcelas_editadas'], true);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    throw new Exception('Erro ao processar parcelas editadas: ' . json_last_error_msg());
+                }
             }
             
             // Se houver parcelas editadas, usar elas diretamente
             if ($parcelas_editadas && is_array($parcelas_editadas) && count($parcelas_editadas) > 0) {
                 $faturas_criadas = [];
+                $total_parcelas = count($parcelas_editadas); // Total de itens (entrada + parcelas)
                 
                 foreach ($parcelas_editadas as $parcela) {
+                    $titulo_parcela = isset($parcela['tipo']) && $parcela['tipo'] === 'entrada' 
+                        ? $descricao . ' - Entrada'
+                        : $descricao . " - {$parcela['numero']}ª parcela";
+                    
                     $dados_parcela = [
                         'aluno_id' => $aluno_id,
+                        'titulo' => $titulo_parcela, // Campo obrigatório
                         'valor' => floatval($parcela['valor']),
+                        'valor_total' => floatval($parcela['valor']), // Campo obrigatório
                         'data_vencimento' => $parcela['vencimento'],
-                        'descricao' => isset($parcela['tipo']) && $parcela['tipo'] === 'entrada' 
-                            ? $descricao . ' - Entrada'
-                            : $descricao . " - {$parcela['numero']}ª parcela",
-                        'observacoes' => $_POST['observacoes'] ?? null,
+                        'observacoes' => isset($_POST['observacoes']) && !empty(trim($_POST['observacoes'])) ? trim($_POST['observacoes']) : null,
                         'status' => $_POST['status'] ?? 'aberta',
                         'forma_pagamento' => $_POST['forma_pagamento'] ?? 'boleto',
+                        'parcelas' => $total_parcelas, // Número total de itens (entrada + parcelas)
                         'criado_em' => date('Y-m-d H:i:s'),
                         'criado_por' => $user['id']
                     ];
                     
-                    $fatura_id = $db->insert('financeiro_faturas', $dados_parcela);
-                    if ($fatura_id) {
-                        $faturas_criadas[] = $fatura_id;
+                    try {
+                        $fatura_id = $db->insert('financeiro_faturas', $dados_parcela);
+                        if ($fatura_id) {
+                            $faturas_criadas[] = $fatura_id;
+                        }
+                    } catch (PDOException $e) {
+                        error_log('[FATURA CREATE PARCELA PDO ERROR] ' . $e->getMessage());
+                        error_log('[FATURA CREATE PARCELA PDO ERROR] Dados: ' . json_encode($dados_parcela, JSON_UNESCAPED_UNICODE));
+                        throw new Exception('Erro ao criar parcela: ' . $e->getMessage());
                     }
                 }
                 
                 if (count($faturas_criadas) > 0) {
+                    header('Content-Type: application/json; charset=utf-8');
                     echo json_encode([
                         'success' => true,
                         'message' => 'Fatura parcelada criada com sucesso! ' . count($faturas_criadas) . ' faturas geradas.',
                         'faturas_criadas' => $faturas_criadas,
                         'parcelamento' => true
-                    ]);
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    
+                    // Restaurar error handler antes de sair
+                    if ($previousErrorHandler !== null) {
+                        set_error_handler($previousErrorHandler);
+                    } else {
+                        restore_error_handler();
+                    }
+                    exit;
                 } else {
                     throw new Exception('Erro ao criar faturas parceladas.');
                 }
             } else {
                 // Processar parcelamento automático (cálculo original)
-                $valor_total = floatval($valor);
-                $entrada = floatval($_POST['entrada'] ?? 0);
+                // $valor já foi convertido para float na validação acima
+                $valor_total = $valor;
+                // Converter entrada: pode vir como "500.00" (já convertido pelo frontend) ou "500,00" (formato brasileiro)
+                $entrada_raw = isset($_POST['entrada']) ? trim($_POST['entrada']) : '0';
+                // Se contém vírgula, é formato brasileiro; senão, já está convertido
+                if (strpos($entrada_raw, ',') !== false) {
+                    $entrada = floatval(str_replace(',', '.', str_replace('.', '', $entrada_raw)));
+                } else {
+                    $entrada = floatval($entrada_raw);
+                }
                 $num_parcelas = intval($_POST['num_parcelas'] ?? 1);
                 $intervalo_dias = intval($_POST['intervalo_parcelas'] ?? 30);
                 
@@ -172,21 +286,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'financeiro-faturas' && i
                 
                 // Criar entrada se houver
                 if ($entrada > 0) {
+                    $titulo_entrada = $descricao . ' - Entrada';
                     $dados_entrada = [
                         'aluno_id' => $aluno_id,
+                        'titulo' => $titulo_entrada, // Campo obrigatório
                         'valor' => $entrada,
+                        'valor_total' => $entrada, // Campo obrigatório
                         'data_vencimento' => $data_base->format('Y-m-d'),
-                        'descricao' => $descricao . ' - Entrada',
-                        'observacoes' => $_POST['observacoes'] ?? null,
+                        'observacoes' => isset($_POST['observacoes']) && !empty(trim($_POST['observacoes'])) ? trim($_POST['observacoes']) : null,
                         'status' => $_POST['status'] ?? 'aberta',
                         'forma_pagamento' => $_POST['forma_pagamento'] ?? 'boleto',
+                        'parcelas' => $num_parcelas + 1, // Entrada + parcelas
                         'criado_em' => date('Y-m-d H:i:s'),
                         'criado_por' => $user['id']
                     ];
                     
-                    $fatura_id = $db->insert('financeiro_faturas', $dados_entrada);
-                    if ($fatura_id) {
-                        $faturas_criadas[] = $fatura_id;
+                    try {
+                        $fatura_id = $db->insert('financeiro_faturas', $dados_entrada);
+                        if ($fatura_id) {
+                            $faturas_criadas[] = $fatura_id;
+                        }
+                    } catch (PDOException $e) {
+                        error_log('[FATURA CREATE ENTRADA PDO ERROR] ' . $e->getMessage());
+                        throw new Exception('Erro ao criar entrada: ' . $e->getMessage());
                     }
                 }
                 
@@ -195,31 +317,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'financeiro-faturas' && i
                     $data_parcela = clone $data_base;
                     $data_parcela->add(new DateInterval('P' . ($i * $intervalo_dias) . 'D'));
                     
+                    $titulo_parcela = $descricao . " - {$i}ª parcela de {$num_parcelas}";
                     $dados_parcela = [
                         'aluno_id' => $aluno_id,
+                        'titulo' => $titulo_parcela, // Campo obrigatório
                         'valor' => $valor_parcela,
+                        'valor_total' => $valor_parcela, // Campo obrigatório
                         'data_vencimento' => $data_parcela->format('Y-m-d'),
-                        'descricao' => $descricao . " - {$i}ª parcela de {$num_parcelas}",
-                        'observacoes' => $_POST['observacoes'] ?? null,
+                        'observacoes' => isset($_POST['observacoes']) && !empty(trim($_POST['observacoes'])) ? trim($_POST['observacoes']) : null,
                         'status' => $_POST['status'] ?? 'aberta',
                         'forma_pagamento' => $_POST['forma_pagamento'] ?? 'boleto',
+                        'parcelas' => $num_parcelas, // Número total de parcelas
                         'criado_em' => date('Y-m-d H:i:s'),
                         'criado_por' => $user['id']
                     ];
                     
-                    $fatura_id = $db->insert('financeiro_faturas', $dados_parcela);
-                    if ($fatura_id) {
-                        $faturas_criadas[] = $fatura_id;
+                    try {
+                        $fatura_id = $db->insert('financeiro_faturas', $dados_parcela);
+                        if ($fatura_id) {
+                            $faturas_criadas[] = $fatura_id;
+                        }
+                    } catch (PDOException $e) {
+                        error_log('[FATURA CREATE PARCELA PDO ERROR] ' . $e->getMessage());
+                        throw new Exception('Erro ao criar parcela ' . $i . ': ' . $e->getMessage());
                     }
                 }
                 
                 if (count($faturas_criadas) > 0) {
+                    header('Content-Type: application/json; charset=utf-8');
                     echo json_encode([
                         'success' => true,
                         'message' => 'Fatura parcelada criada com sucesso! ' . count($faturas_criadas) . ' faturas geradas.',
                         'faturas_criadas' => $faturas_criadas,
                         'parcelamento' => true
-                    ]);
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    
+                    // Restaurar error handler antes de sair
+                    if ($previousErrorHandler !== null) {
+                        set_error_handler($previousErrorHandler);
+                    } else {
+                        restore_error_handler();
+                    }
+                    exit;
                 } else {
                     throw new Exception('Erro ao criar faturas parceladas.');
                 }
@@ -227,40 +366,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'financeiro-faturas' && i
             
         } else {
             // Fatura única
+            // $valor já foi convertido para float na validação acima
+            // A tabela financeiro_faturas exige 'titulo' (NOT NULL) e 'valor_total' (NOT NULL)
             $dados = [
                 'aluno_id' => $aluno_id,
-                'valor' => floatval($valor),
+                'titulo' => $descricao, // Usar descricao como titulo (campo obrigatório)
+                'valor' => $valor,
+                'valor_total' => $valor, // Campo obrigatório na tabela
                 'data_vencimento' => $data_vencimento,
-                'descricao' => $descricao,
-                'observacoes' => $_POST['observacoes'] ?? null,
+                'observacoes' => isset($_POST['observacoes']) && !empty(trim($_POST['observacoes'])) ? trim($_POST['observacoes']) : null,
                 'status' => $_POST['status'] ?? 'aberta',
                 'forma_pagamento' => $_POST['forma_pagamento'] ?? 'boleto',
+                'parcelas' => 1, // Fatura única = 1 parcela
                 'criado_em' => date('Y-m-d H:i:s'),
                 'criado_por' => $user['id']
             ];
             
-            // Inserir fatura
-            $fatura_id = $db->insert('financeiro_faturas', $dados);
+            // Log dos dados antes do insert (para debug)
+            if (defined('LOG_ENABLED') && LOG_ENABLED) {
+                error_log('[FATURA CREATE] Dados preparados: ' . json_encode($dados, JSON_UNESCAPED_UNICODE));
+            }
             
-            if ($fatura_id) {
-                echo json_encode([
-                    'success' => true,
-                    'message' => 'Fatura criada com sucesso!',
-                    'fatura_id' => $fatura_id,
-                    'parcelamento' => false
-                ]);
-            } else {
-                throw new Exception('Erro ao criar fatura no banco de dados.');
+            // Inserir fatura
+            try {
+                $fatura_id = $db->insert('financeiro_faturas', $dados);
+                
+                if ($fatura_id) {
+                    header('Content-Type: application/json; charset=utf-8');
+                    echo json_encode([
+                        'success' => true,
+                        'message' => 'Fatura criada com sucesso!',
+                        'fatura_id' => $fatura_id,
+                        'parcelamento' => false
+                    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    
+                    // Restaurar error handler antes de sair
+                    if ($previousErrorHandler !== null) {
+                        set_error_handler($previousErrorHandler);
+                    } else {
+                        restore_error_handler();
+                    }
+                    exit;
+                } else {
+                    throw new Exception('Erro ao criar fatura no banco de dados. Insert retornou false.');
+                }
+            } catch (PDOException $e) {
+                // Log do erro PDO específico
+                error_log('[FATURA CREATE PDO ERROR] ' . $e->getMessage());
+                error_log('[FATURA CREATE PDO ERROR] SQL State: ' . $e->getCode());
+                error_log('[FATURA CREATE PDO ERROR] Dados tentados: ' . json_encode($dados, JSON_UNESCAPED_UNICODE));
+                throw new Exception('Erro ao inserir fatura no banco de dados: ' . $e->getMessage());
             }
         }
         
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
+        // Sempre retornar 500 para erros não tratados (pode ser ajustado para 400 em validações específicas)
+        http_response_code(500);
+        
+        // Montar debug com informações completas
+        $debug = [
+            'type' => get_class($e),
+            'msg' => $e->getMessage(),
+            'file' => basename($e->getFile()),
+            'line' => $e->getLine()
+        ];
+        
+        // Log para o servidor
+        error_log('[FATURA CREATE ERROR] ' . json_encode($debug, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+        
+        // Garantir header JSON
+        header('Content-Type: application/json; charset=utf-8');
+        
+        // Retornar JSON de erro
         echo json_encode([
             'success' => false,
-            'message' => $e->getMessage()
-        ]);
+            'message' => 'Erro ao criar fatura. Detalhes em debug (ambiente de desenvolvimento).',
+            'debug' => $debug
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        
+        // Restaurar error handler antes de sair
+        if ($previousErrorHandler !== null) {
+            set_error_handler($previousErrorHandler);
+        } else {
+            restore_error_handler();
+        }
+        
+        exit;
+    } finally {
+        // Garantir que o error handler seja restaurado mesmo se houver algum problema
+        if (isset($previousErrorHandler)) {
+            if ($previousErrorHandler !== null) {
+                set_error_handler($previousErrorHandler);
+            } else {
+                restore_error_handler();
+            }
+        }
     }
-    exit;
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
@@ -1353,7 +1554,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <span>Turmas Teóricas</span>
                         </a>
                         <!-- TODO: Criar página presencas-teoricas.php - por enquanto usar turma-chamada.php -->
-                        <a href="pages/turma-chamada.php" class="nav-sublink" onclick="return confirm('Esta página ainda está em desenvolvimento. Deseja continuar?');">
+                        <a href="index.php?page=turma-chamada" class="nav-sublink <?php echo $page === 'turma-chamada' ? 'active' : ''; ?>" onclick="return confirm('Esta página ainda está em desenvolvimento. Deseja continuar?');">
                             <i class="fas fa-check-square"></i>
                             <span>Presenças Teóricas</span>
                             <small style="color: #999; font-size: 0.7em;">(Temporário)</small>
@@ -1670,7 +1871,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <span>Turmas Teóricas</span>
                                 </a>
                                 <!-- TODO: Criar página presencas-teoricas.php - por enquanto usar turma-chamada.php -->
-                                <a href="pages/turma-chamada.php" class="mobile-nav-sublink" onclick="return confirm('Esta página ainda está em desenvolvimento. Deseja continuar?');">
+                                <a href="index.php?page=turma-chamada" class="mobile-nav-sublink <?php echo $page === 'turma-chamada' ? 'active' : ''; ?>" onclick="return confirm('Esta página ainda está em desenvolvimento. Deseja continuar?');">
                                     <i class="fas fa-check-square"></i>
                                     <span>Presenças Teóricas</span>
                                     <small style="color: #999; font-size: 0.7em;">(Temporário)</small>
@@ -2384,6 +2585,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     switch ($page) {
                         // Casos específicos para turmas teóricas
                     }
+                    break;
+                    
+                case 'turma-chamada':
+                    // Verificar se turma_id foi fornecido ANTES de qualquer output
+                    $turmaId = $_GET['turma_id'] ?? null;
+                    if (!$turmaId) {
+                        // Redirecionar ANTES de incluir qualquer HTML
+                        header('Location: index.php?page=turmas-teoricas');
+                        exit();
+                    }
+                    // Se chegou aqui, turma_id existe - a página vai validar o restante
                     break;
                     
                 default:

@@ -32,8 +32,16 @@ $turmaId = $_GET['turma_id'] ?? null;
 $aulaId = $_GET['aula_id'] ?? null;
 
 if (!$turmaId) {
-    header('Location: /admin/pages/turmas.php');
-    exit();
+    // Se já houve output (página incluída via router), usar JavaScript para redirecionar
+    if (headers_sent()) {
+        echo '<div class="alert alert-warning m-3"><p>É necessário selecionar uma turma para acessar a chamada. Redirecionando...</p></div>';
+        echo '<script>setTimeout(function(){ window.location.href = "index.php?page=turmas-teoricas"; }, 1000);</script>';
+        exit();
+    } else {
+        // Caso contrário, usar header redirect normal
+        header('Location: index.php?page=turmas-teoricas');
+        exit();
+    }
 }
 
 // Buscar dados da turma
@@ -49,8 +57,16 @@ $turma = $db->fetch("
 ", [$turmaId]);
 
 if (!$turma) {
-    header('Location: /admin/pages/turmas.php');
-    exit();
+    // Se já houve output (página incluída via router), usar JavaScript para redirecionar
+    if (headers_sent()) {
+        echo '<div class="alert alert-danger m-3"><p>Turma não encontrada. Redirecionando...</p></div>';
+        echo '<script>setTimeout(function(){ window.location.href = "index.php?page=turmas-teoricas"; }, 1000);</script>';
+        exit();
+    } else {
+        // Caso contrário, usar header redirect normal
+        header('Location: index.php?page=turmas-teoricas');
+        exit();
+    }
 }
 
 // Verificar se usuário tem permissão para esta turma

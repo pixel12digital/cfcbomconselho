@@ -113,7 +113,9 @@ class Database {
             $this->statement = $this->connection->prepare($sql);
             
             if (!$this->statement) {
-                throw new Exception('Erro na preparação da query');
+                $errorInfo = $this->connection->errorInfo();
+                $pdoMessage = $errorInfo && !empty($errorInfo[2]) ? $errorInfo[2] : 'Falha na preparação';
+                throw new Exception('Erro na preparação da query: ' . $pdoMessage . ' | SQL: ' . $sql);
             }
             
             $this->statement->execute($params);
@@ -138,7 +140,9 @@ class Database {
                 try {
                     $this->statement = $this->connection->prepare($sql);
                     if (!$this->statement) {
-                        throw new Exception('Erro na preparação da query após reconexão');
+                        $errorInfo = $this->connection->errorInfo();
+                        $pdoMessage = $errorInfo && !empty($errorInfo[2]) ? $errorInfo[2] : 'Falha na preparação';
+                        throw new Exception('Erro na preparação da query após reconexão: ' . $pdoMessage . ' | SQL: ' . $sql);
                     }
                     
                     $this->statement->execute($params);
@@ -157,14 +161,46 @@ class Database {
                     $this->logError('Erro na execução da query após reconexão: ' . $e2->getMessage());
                     $this->logError('SQL: ' . $sql);
                     $this->logError('Parâmetros: ' . json_encode($params));
-                    throw new Exception('Erro na execução da query após reconexão');
+                    
+                    // Obter errorInfo do PDO para detalhes completos
+                    $errorInfo = $this->statement ? $this->statement->errorInfo() : null;
+                    $pdoMessage = $e2->getMessage();
+                    if ($errorInfo && !empty($errorInfo[2])) {
+                        $pdoMessage = $errorInfo[2];
+                    }
+                    
+                    // Montar mensagem detalhada
+                    $msg = 'Erro na execução da query após reconexão';
+                    if ($pdoMessage) {
+                        $msg .= ': ' . $pdoMessage;
+                    }
+                    $msg .= ' | SQL: ' . $sql;
+                    $msg .= ' | PARAMS: ' . json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                    
+                    throw new Exception($msg);
                 }
             }
             
             $this->logError('Erro na execução da query: ' . $e->getMessage());
             $this->logError('SQL: ' . $sql);
             $this->logError('Parâmetros: ' . json_encode($params));
-            throw new Exception('Erro na execução da query');
+            
+            // Obter errorInfo do PDO para detalhes completos
+            $errorInfo = $this->statement ? $this->statement->errorInfo() : null;
+            $pdoMessage = $e->getMessage();
+            if ($errorInfo && !empty($errorInfo[2])) {
+                $pdoMessage = $errorInfo[2];
+            }
+            
+            // Montar mensagem detalhada
+            $msg = 'Erro na execução da query';
+            if ($pdoMessage) {
+                $msg .= ': ' . $pdoMessage;
+            }
+            $msg .= ' | SQL: ' . $sql;
+            $msg .= ' | PARAMS: ' . json_encode($params, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            
+            throw new Exception($msg);
         }
     }
     

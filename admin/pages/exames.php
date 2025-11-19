@@ -98,9 +98,23 @@ try {
         ORDER BY a.nome
     ");
     
-    // Buscar exames recentes (últimos 30 dias e próximos 30 dias) FILTRADOS POR TIPO
-    // IMPORTANTE: O filtro por tipo vem da URL (?page=exames&tipo=medico, etc.)
+    // =====================================================
+    // CONSULTA SQL PRINCIPAL: BUSCAR EXAMES FILTRADOS POR TIPO
+    // =====================================================
+    // O filtro por tipo vem da URL (?page=exames&tipo=teorico, etc.)
     // O tipo já foi normalizado anteriormente (linha 23-29)
+    // Valores possíveis: 'medico', 'psicotecnico', 'teorico', 'pratico'
+    // 
+    // QUERY SQL PARA VERIFICAÇÃO MANUAL NO BANCO:
+    // SELECT id, aluno_id, tipo, data_agendada, hora_agendada, status
+    // FROM exames
+    // ORDER BY id DESC
+    // LIMIT 10;
+    // 
+    // Verificar se o campo tipo está sendo salvo corretamente:
+    // - Deve conter apenas: 'medico', 'psicotecnico', 'teorico', 'pratico'
+    // - Não deve estar vazio ('') ou com outros valores
+    // =====================================================
     $exames = $db->fetchAll("
         SELECT e.*, a.nome as aluno_nome, a.cpf as aluno_cpf,
                c.nome as cfc_nome
@@ -108,9 +122,9 @@ try {
         JOIN alunos a ON e.aluno_id = a.id
         JOIN cfcs c ON a.cfc_id = c.id
         WHERE e.tipo = ?
-          AND (e.data_agendada >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-           OR e.data_agendada <= DATE_ADD(CURDATE(), INTERVAL 30 DAY))
-        ORDER BY e.data_agendada DESC, e.tipo
+          AND e.data_agendada BETWEEN DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+                                  AND DATE_ADD(CURDATE(), INTERVAL 30 DAY)
+        ORDER BY e.data_agendada DESC, e.hora_agendada DESC, e.id DESC
     ", [$tipo]);
     
 } catch (Exception $e) {
@@ -1462,9 +1476,10 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
             <table class="table table-hover" id="tabela-exames">
                 <thead>
                     <tr>
-                        <th>Aluno</th>
+                                <th>Aluno</th>
                         <th>Tipo</th>
                         <th>Data Agendada</th>
+                        <th>Horário</th>
                         <th>Clínica</th>
                         <th>Status</th>
                         <th>Resultado</th>
@@ -1475,7 +1490,7 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                 <tbody>
                     <?php if (empty($exames)): ?>
                         <tr>
-                            <td colspan="8" class="text-center py-4">
+                            <td colspan="9" class="text-center py-4">
                                 <i class="fas fa-info-circle me-2"></i>
                                 Nenhum exame encontrado no período selecionado.
                             </td>
@@ -1514,6 +1529,21 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                                 <td>
                                     <i class="fas fa-calendar me-1"></i>
                                     <?php echo date('d/m/Y', strtotime($exame['data_agendada'])); ?>
+                                </td>
+                                <td>
+                                    <?php 
+                                    if (!empty($exame['hora_agendada'])) {
+                                        // Se for TIME, formatar diretamente
+                                        $hora = $exame['hora_agendada'];
+                                        // Se vier como "HH:MM:SS", pegar só "HH:MM"
+                                        if (strlen($hora) > 5) {
+                                            $hora = substr($hora, 0, 5);
+                                        }
+                                        echo '<i class="fas fa-clock me-1"></i>' . $hora;
+                                    } else {
+                                        echo '<span class="text-muted">-</span>';
+                                    }
+                                    ?>
                                 </td>
                                 <td>
                                     <?php echo $exame['clinica_nome'] ? htmlspecialchars($exame['clinica_nome']) : '-'; ?>
@@ -1625,6 +1655,23 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                             </div>
                             
                             <div class="exam-detail-item">
+                                <div class="exam-detail-label">Horário</div>
+                                <div class="exam-detail-value">
+                                    <?php 
+                                    if (!empty($exame['hora_agendada'])) {
+                                        $hora = $exame['hora_agendada'];
+                                        if (strlen($hora) > 5) {
+                                            $hora = substr($hora, 0, 5);
+                                        }
+                                        echo '<i class="fas fa-clock me-1"></i>' . $hora;
+                                    } else {
+                                        echo '<span class="text-muted">-</span>';
+                                    }
+                                    ?>
+                                </div>
+                            </div>
+                            
+                            <div class="exam-detail-item">
                                 <div class="exam-detail-label">Clínica</div>
                                 <div class="exam-detail-value">
                                     <?php echo $exame['clinica_nome'] ? htmlspecialchars($exame['clinica_nome']) : '-'; ?>
@@ -1732,21 +1779,44 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                             </label>
                         </div>
                         
-                        <!-- Campo hidden com o tipo atual (controlado pela URL) -->
+                        <!-- =====================================================
+                             CAMPO HIDDEN COM O TIPO (VALOR TÉCNICO PARA O BANCO)
+                             =====================================================
+                             Este campo hidden envia o valor do tipo para a API.
+                             O valor vem de $tipo que é normalizado da URL (?tipo=teorico).
+                             Valores possíveis: 'medico', 'psicotecnico', 'teorico', 'pratico'
+                             IMPORTANTE: Este é o valor que será salvo no banco (campo exames.tipo)
+                             ===================================================== -->
                         <input type="hidden" name="tipo" id="tipo_exame" value="<?php echo htmlspecialchars($tipo); ?>">
                         
-                        <!-- Campo informativo mostrando o tipo atual (desabilitado) -->
+                        <!-- =====================================================
+                             CAMPO INFORMATIVO (APENAS PARA EXIBIÇÃO - NÃO É ENVIADO)
+                             =====================================================
+                             Este campo é apenas visual (disabled) e mostra o texto amigável.
+                             NÃO possui atributo "name", então NÃO é enviado no POST.
+                             Serve apenas para mostrar ao usuário qual tipo está sendo agendado.
+                             O valor real que vai para o banco vem do campo hidden acima.
+                             ===================================================== -->
                         <div class="form-floating">
-                            <input type="text" class="form-control" value="<?php echo htmlspecialchars($tipoTexto); ?>" disabled>
+                            <input type="text" class="form-control" value="<?php echo htmlspecialchars($tipoTexto); ?>" disabled readonly>
                             <label for="tipo_exame_info">
                                 <i class="fas fa-clipboard-list me-1"></i>Tipo de Exame/Prova *
                             </label>
                         </div>
                         
                         <div class="form-floating">
-                            <input type="date" class="form-control" name="data_agendada" id="data_agendada" required>
+                            <?php $hoje = date('Y-m-d'); ?>
+                            <input type="date" class="form-control" name="data_agendada" id="data_agendada" 
+                                   min="<?php echo $hoje; ?>" required>
                             <label for="data_agendada">
                                 <i class="fas fa-calendar me-1"></i>Data do Exame *
+                            </label>
+                        </div>
+                        
+                        <div class="form-floating">
+                            <input type="time" class="form-control" name="hora_agendada" id="hora_agendada">
+                            <label for="hora_agendada">
+                                <i class="fas fa-clock me-1"></i>Horário do Exame
                             </label>
                         </div>
                         
@@ -1950,13 +2020,50 @@ class SistemaExames {
 
 // Funções globais
 function abrirModalAgendar() {
-    console.log('🔍 DEBUG: Iniciando abertura do modal');
+    // IMPORTANTE: Garantir que o campo tipo_exame tenha o valor correto ANTES de limpar o formulário
+    // O valor vem da URL (?tipo=teorico) e foi definido no PHP quando a página carregou
+    const tipoFromUrl = '<?php echo htmlspecialchars($tipo, ENT_QUOTES, "UTF-8"); ?>';
+    const campoTipo = document.getElementById('tipo_exame');
+    
+    // Fallback: tentar obter da URL também
+    const urlParams = new URLSearchParams(window.location.search);
+    const tipoFromUrlParams = urlParams.get('tipo');
+    
+    // Garantir que o tipo esteja definido (priorizar PHP, depois URL)
+    let tipoFinal = tipoFromUrl || tipoFromUrlParams || '';
+    
+    if (campoTipo && tipoFinal) {
+        campoTipo.value = tipoFinal;
+    }
     
     const modal = new bootstrap.Modal(document.getElementById('modalAgendarExame'));
     modal.show();
     
-    // Limpar formulário
-    document.getElementById('formAgendarExame').reset();
+    // Limpar formulário (preservar o tipo que foi definido acima)
+    const form = document.getElementById('formAgendarExame');
+    const tipoValuePreservar = tipoFinal || campoTipo?.value || ''; // Preservar valor do tipo
+    form.reset();
+    
+    // Restaurar o valor do tipo após reset (reset() apaga campos hidden também)
+    if (campoTipo && tipoValuePreservar) {
+        campoTipo.value = tipoValuePreservar;
+    }
+    
+    // Preencher automaticamente com data de hoje se não houver data selecionada
+    setTimeout(() => {
+        const inputData = document.getElementById('data_agendada');
+        if (!inputData.value) {
+            const hoje = new Date().toISOString().split('T')[0];
+            inputData.value = hoje;
+            // Disparar evento para atualizar label flutuante
+            inputData.dispatchEvent(new Event('input', { bubbles: true }));
+        }
+        
+        // Verificar novamente se o tipo ainda está presente após o timeout
+        if (campoTipo && !campoTipo.value && tipoValuePreservar) {
+            campoTipo.value = tipoValuePreservar;
+        }
+    }, 100);
     
     // Restaurar título original
     document.querySelector('#modalAgendarExame .modal-title').innerHTML = 
@@ -1975,7 +2082,7 @@ function abrirModalAgendar() {
     
     // Atualizar label de clínica baseado no tipo atual da URL
     // O tipo já está no campo hidden #tipo_exame
-    const tipoAtual = document.getElementById('tipo_exame')?.value;
+    const tipoAtual = tipoFinal || campoTipo?.value || '';
     if (tipoAtual) {
         atualizarLabelClinica(tipoAtual);
     }
@@ -1986,8 +2093,6 @@ function abrirModalAgendar() {
         const modalDialog = modalElement.querySelector('.modal-dialog');
         
         if (modalElement && modalDialog) {
-            console.log('🔍 DEBUG: Aplicando correção responsiva');
-            
             // Calcular largura responsiva COM GUTTER
             const viewportWidth = window.innerWidth;
             const gutter = viewportWidth >= 992 ? 128 : 32; // 4rem desktop, 1rem mobile
@@ -1998,8 +2103,6 @@ function abrirModalAgendar() {
             modalDialog.style.maxWidth = maxWidth + 'px';
             modalDialog.style.marginLeft = 'auto';
             modalDialog.style.marginRight = 'auto';
-            
-            console.log('🔍 DEBUG: Largura responsiva aplicada:', maxWidth + 'px');
         }
     }, 100);
 }
@@ -2153,13 +2256,65 @@ function agendarExame() {
         return;
     }
     
-    if (!formData.get('tipo')) {
-        alert('Selecione o tipo de exame');
-        return;
+    // Verificar se o tipo está presente no formulário
+    const tipoValue = formData.get('tipo');
+    if (!tipoValue) {
+        // Tentar obter da URL como fallback
+        const urlParams = new URLSearchParams(window.location.search);
+        const tipoFromUrl = urlParams.get('tipo');
+        
+        if (tipoFromUrl) {
+            // Definir o tipo no campo hidden e no formData
+            const campoTipo = document.getElementById('tipo_exame');
+            if (campoTipo) {
+                campoTipo.value = tipoFromUrl;
+                formData.set('tipo', tipoFromUrl);
+            }
+        } else {
+            alert('Erro: Tipo de exame não encontrado. Recarregue a página e tente novamente.');
+            return;
+        }
     }
     
     if (!formData.get('data_agendada')) {
         alert('Selecione a data do exame');
+        return;
+    }
+    
+    // =====================================================
+    // VALIDAÇÃO FRONT-END: BLOQUEAR DATA/HORÁRIO RETROATIVO
+    // =====================================================
+    const dataAgendada = formData.get('data_agendada');
+    const horaAgendada = formData.get('hora_agendada');
+    
+    if (!dataAgendada) {
+        alert('Selecione a data do exame');
+        return;
+    }
+    
+    // Montar objeto Date para comparar
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0); // Zerar hora para comparação de data
+    
+    let dataExame;
+    if (horaAgendada) {
+        // Se tiver hora, montar data+hora completa
+        const [ano, mes, dia] = dataAgendada.split('-');
+        const [hora, minuto] = horaAgendada.split(':');
+        dataExame = new Date(ano, mes - 1, dia, parseInt(hora), parseInt(minuto), 0, 0);
+    } else {
+        // Se não tiver hora, considerar apenas a data (início do dia)
+        const [ano, mes, dia] = dataAgendada.split('-');
+        dataExame = new Date(ano, mes - 1, dia, 0, 0, 0, 0);
+    }
+    
+    const agora = new Date();
+    
+    // Validar se a data/hora do exame é anterior ao momento atual
+    if (dataExame < agora) {
+        // Usar o mesmo padrão visual da página
+        const mensagem = 'Não é permitido agendar exame em data/horário já passados. Escolha uma data futura.';
+        alert('❌ ' + mensagem);
         return;
     }
     
@@ -2170,38 +2325,55 @@ function agendarExame() {
         cache: 'no-cache'
     })
     .then(response => {
-        console.log('Response status:', response.status);
-        console.log('Response headers:', response.headers);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        // Sempre tentar parsear como JSON, independente do status HTTP
         return response.text().then(text => {
-            console.log('Response text:', text);
             try {
-                return JSON.parse(text);
+                const data = JSON.parse(text);
+                // Se o status não é OK mas temos JSON, ainda retornar o JSON
+                if (!response.ok && !data.success) {
+                    // A API já retornou erro estruturado
+                    return data;
+                }
+                return data;
             } catch (e) {
-                console.error('JSON parse error:', e);
-                console.error('Response text was:', text);
-                throw new Error('Invalid JSON response');
+                console.error('Erro ao processar resposta do servidor:', e);
+                // Se não conseguir parsear JSON, criar objeto de erro
+                return {
+                    success: false,
+                    error: 'Resposta inválida do servidor',
+                    codigo: 'RESPOSTA_INVALIDA'
+                };
             }
         });
     })
     .then(data => {
-        console.log('Parsed data:', data);
-        if (data.success) {
-            alert('✅ Exame agendado com sucesso!');
+        if (data.success === true) {
+            // Sucesso
+            const mensagem = data.message || 'Exame agendado com sucesso!';
+            alert('✅ ' + mensagem);
             location.reload();
         } else {
-            // Mostrar mensagem amigável em vez de erro técnico
-            const message = data.friendly_message || data.message || data.error || 'Erro desconhecido';
-            alert(message);
+            // Erro - mostrar mensagem amigável
+            const errorMsg = data.error || data.message || 'Erro ao agendar exame';
+            const codigo = data.codigo ? ' (Código: ' + data.codigo + ')' : '';
+            
+            let mensagem = '❌ ' + errorMsg;
+            
+            // Para erros de validação (DATA_RETROATIVA, etc), não mostrar código técnico
+            if (data.codigo && ['DATA_RETROATIVA', 'DATA_INVALIDA', 'TIPO_INVALIDO', 'CAMPO_OBRIGATORIO'].includes(data.codigo)) {
+                // Apenas a mensagem amigável
+                mensagem = '❌ ' + errorMsg;
+            } else {
+                mensagem += codigo;
+            }
+            
+            
+            alert(mensagem);
         }
     })
     .catch(error => {
         console.error('Erro completo:', error);
-        alert('❌ Erro ao agendar exame: ' + error.message);
+        alert('❌ Erro ao agendar exame: ' + error.message + '\n\nVerifique o console para mais detalhes.');
     });
 }
 
@@ -2258,25 +2430,20 @@ function cancelarExame(exameId) {
         cache: 'no-cache'
     })
     .then(response => {
-        console.log('Cancel response status:', response.status);
-        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         return response.text().then(text => {
-            console.log('Cancel response text:', text);
             try {
                 return JSON.parse(text);
             } catch (e) {
-                console.error('JSON parse error:', e);
-                console.error('Response text was:', text);
+                console.error('Erro ao processar resposta do servidor:', e);
                 throw new Error('Invalid JSON response');
             }
         });
     })
     .then(data => {
-        console.log('Cancel parsed data:', data);
         if (data.success) {
             alert('Exame cancelado com sucesso!');
             location.reload();
@@ -2299,8 +2466,13 @@ function alterarResultado(selectElement) {
     if (currentStatus === 'cancelado') {
         alert('Não é possível alterar o resultado de um exame cancelado.');
         // Reverter para o valor anterior
-        location.reload();
+        selectElement.value = selectElement.getAttribute('data-last-value') || 'pendente';
         return;
+    }
+    
+    // Salvar valor anterior para poder reverter se houver erro
+    if (!selectElement.getAttribute('data-last-value')) {
+        selectElement.setAttribute('data-last-value', selectElement.value);
     }
     
     // Adicionar indicador de carregamento
@@ -2323,35 +2495,44 @@ function alterarResultado(selectElement) {
         cache: 'no-cache'
     })
     .then(response => {
-        console.log('Update response status:', response.status);
-        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         return response.text().then(text => {
-            console.log('Update response text:', text);
             try {
                 return JSON.parse(text);
             } catch (e) {
-                console.error('JSON parse error:', e);
-                console.error('Response text was:', text);
+                console.error('Erro ao processar resposta do servidor:', e);
                 throw new Error('Invalid JSON response');
             }
         });
     })
     .then(data => {
-        console.log('Update parsed data:', data);
         if (data.success) {
+            // Calcular novo status baseado no resultado
+            const novoStatus = (novoResultado === 'apto' || novoResultado === 'inapto' || 
+                               novoResultado === 'aprovado' || novoResultado === 'reprovado') 
+                               ? 'concluido' : 
+                               (novoResultado === 'inapto_temporario' ? 'pendente' : 'agendado');
+            
+            // Atualizar data-current-status para refletir o novo status
+            selectElement.setAttribute('data-current-status', novoStatus);
+            
             // Atualizar o status na interface se necessário
             atualizarStatusNaInterface(exameId, novoResultado);
+            
+            // Salvar o novo valor como último valor válido
+            selectElement.setAttribute('data-last-value', novoResultado);
             
             // Mostrar mensagem de sucesso
             const textosResultado = {
                 'pendente': 'Aguardando',
                 'apto': 'Apto',
                 'inapto': 'Inapto',
-                'inapto_temporario': 'Inapto Temporário'
+                'inapto_temporario': 'Inapto Temporário',
+                'aprovado': 'Aprovado',
+                'reprovado': 'Reprovado'
             };
             
             const mensagem = `Resultado alterado para "${textosResultado[novoResultado] || novoResultado}"`;
@@ -2362,18 +2543,22 @@ function alterarResultado(selectElement) {
         } else {
             alert('Erro ao alterar resultado: ' + (data.error || data.mensagem || 'Erro desconhecido'));
             // Reverter para o valor anterior
-            location.reload();
+            const valorAnterior = selectElement.getAttribute('data-last-value') || 'pendente';
+            selectElement.value = valorAnterior;
         }
     })
     .catch(error => {
         console.error('Erro completo na alteração:', error);
         alert('Erro ao alterar resultado: ' + error.message);
         // Reverter para o valor anterior
-        location.reload();
+        const valorAnterior = selectElement.getAttribute('data-last-value') || 'pendente';
+        selectElement.value = valorAnterior;
     })
     .finally(() => {
         // Remover indicador de carregamento
         selectElement.classList.remove('loading');
+        // Garantir que o select permaneça habilitado para permitir edições
+        selectElement.disabled = false;
     });
 }
 
@@ -2386,7 +2571,8 @@ function atualizarStatusNaInterface(exameId, resultado) {
     let novoStatus = 'agendado';
     let novaClasse = 'badge-agendado';
     
-    if (resultado === 'apto' || resultado === 'inapto') {
+    // Resultados que indicam conclusão do exame/prova
+    if (resultado === 'apto' || resultado === 'inapto' || resultado === 'aprovado' || resultado === 'reprovado') {
         novoStatus = 'concluido';
         novaClasse = 'badge-concluido';
     } else if (resultado === 'inapto_temporario') {
@@ -2405,14 +2591,23 @@ function atualizarStatusNaInterface(exameId, resultado) {
             statusCell.className = `badge-status ${novaClasse}`;
         }
         
-        // Atualizar a data do resultado se não for pendente
+        // Atualizar o select de resultado para mostrar o valor selecionado
+        // IMPORTANTE: Manter o select habilitado para permitir alterações
+        const selectResultado = linha.querySelector('.resultado-select');
+        if (selectResultado) {
+            selectResultado.value = resultado;
+            // Garantir que o select permaneça habilitado (permitir edição mesmo após aprovar)
+            selectResultado.disabled = false;
+        }
+        
+        // Atualizar a data do resultado se não for pendente (coluna 8: Data Resultado)
         if (resultado !== 'pendente') {
-            const dataResultadoCell = linha.querySelector('td:nth-child(7)'); // Coluna da data do resultado
+            const dataResultadoCell = linha.querySelector('td:nth-child(8)'); // Coluna 8 = Data Resultado
             if (dataResultadoCell) {
                 dataResultadoCell.textContent = new Date().toLocaleDateString('pt-BR');
             }
         } else {
-            const dataResultadoCell = linha.querySelector('td:nth-child(7)'); // Coluna da data do resultado
+            const dataResultadoCell = linha.querySelector('td:nth-child(8)'); // Coluna 8 = Data Resultado
             if (dataResultadoCell) {
                 dataResultadoCell.textContent = '-';
             }
@@ -2425,6 +2620,14 @@ function atualizarStatusNaInterface(exameId, resultado) {
         if (statusCell) {
             statusCell.textContent = novoStatus.charAt(0).toUpperCase() + novoStatus.slice(1);
             statusCell.className = `badge-status ${novaClasse}`;
+        }
+        
+        // Atualizar o select de resultado no card mobile
+        const selectResultadoCard = card.querySelector('.resultado-select');
+        if (selectResultadoCard) {
+            selectResultadoCard.value = resultado;
+            // Garantir que o select permaneça habilitado
+            selectResultadoCard.disabled = false;
         }
         
         // Atualizar a data do resultado se não for pendente
@@ -2482,6 +2685,13 @@ function editarExame(exameId) {
             document.getElementById('aluno_id').value = exame.aluno_id;
             document.getElementById('tipo_exame').value = exame.tipo;
             document.getElementById('data_agendada').value = exame.data_agendada;
+            // Preencher horário se existir (formato HH:MM ou HH:MM:SS)
+            if (exame.hora_agendada) {
+                const hora = exame.hora_agendada.length > 5 ? exame.hora_agendada.substring(0, 5) : exame.hora_agendada;
+                document.getElementById('hora_agendada').value = hora;
+            } else {
+                document.getElementById('hora_agendada').value = '';
+            }
             document.getElementById('clinica_nome').value = exame.clinica_nome || '';
             document.getElementById('protocolo').value = exame.protocolo || '';
             document.getElementById('observacoes').value = exame.observacoes || '';
@@ -2565,25 +2775,20 @@ function salvarEdicaoExame(exameId) {
         cache: 'no-cache'
     })
     .then(response => {
-        console.log('Edit response status:', response.status);
-        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         return response.text().then(text => {
-            console.log('Edit response text:', text);
             try {
                 return JSON.parse(text);
             } catch (e) {
-                console.error('JSON parse error:', e);
-                console.error('Response text was:', text);
+                console.error('Erro ao processar resposta do servidor:', e);
                 throw new Error('Invalid JSON response');
             }
         });
     })
     .then(data => {
-        console.log('Edit parsed data:', data);
         if (data.success) {
             alert('✅ Exame atualizado com sucesso!');
             location.reload();
@@ -2613,25 +2818,20 @@ function cancelarExame(exameId) {
         cache: 'no-cache'
     })
     .then(response => {
-        console.log('Cancel response status:', response.status);
-        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         return response.text().then(text => {
-            console.log('Cancel response text:', text);
             try {
                 return JSON.parse(text);
             } catch (e) {
-                console.error('JSON parse error:', e);
-                console.error('Response text was:', text);
+                console.error('Erro ao processar resposta do servidor:', e);
                 throw new Error('Invalid JSON response');
             }
         });
     })
     .then(data => {
-        console.log('Cancel parsed data:', data);
         if (data.success) {
             alert('Exame cancelado com sucesso!');
             location.reload();
@@ -2660,25 +2860,20 @@ function excluirExame(exameId) {
         cache: 'no-cache'
     })
     .then(response => {
-        console.log('Delete response status:', response.status);
-        
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
         
         return response.text().then(text => {
-            console.log('Delete response text:', text);
             try {
                 return JSON.parse(text);
             } catch (e) {
-                console.error('JSON parse error:', e);
-                console.error('Response text was:', text);
+                console.error('Erro ao processar resposta do servidor:', e);
                 throw new Error('Invalid JSON response');
             }
         });
     })
     .then(data => {
-        console.log('Delete parsed data:', data);
         if (data.success) {
             alert('Exame excluído definitivamente!');
             location.reload();

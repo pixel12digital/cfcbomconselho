@@ -710,10 +710,25 @@ class SistemaAgendamento {
             // Verificar se é erro de conflito específico
             if (error.message.startsWith('CONFLITO:')) {
                 const mensagemConflito = error.message.replace('CONFLITO: ', '');
+                
+                // Log para debug
+                console.log('[DEBUG financeiro] Mensagem de erro extraída:', mensagemConflito);
+                
+                // Verificar se é erro financeiro específico
+                const isFinanceiro = mensagemConflito.includes('Financeiro') || 
+                                    mensagemConflito.includes('financeiro') ||
+                                    mensagemConflito.includes('não lançado') ||
+                                    mensagemConflito.includes('inadimplente') ||
+                                    mensagemConflito.includes('parcelas em atraso');
+                
+                if (isFinanceiro) {
+                    console.log('[DEBUG financeiro] Erro financeiro detectado - tipo: regra_financeira');
+                }
+                
                 return {
                     sucesso: false,
-                    mensagem: `⚠️ ${mensagemConflito}`,
-                    tipo: 'warning'
+                    mensagem: isFinanceiro ? mensagemConflito : `⚠️ ${mensagemConflito}`,
+                    tipo: isFinanceiro ? 'error' : 'warning'
                 };
             }
             
