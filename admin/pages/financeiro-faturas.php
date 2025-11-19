@@ -16,6 +16,70 @@ if (!$isAdmin && $user['tipo'] !== 'secretaria') {
     return;
 }
 
+/**
+ * Obtém a descrição curta da fatura para exibição na listagem
+ * Se termina com "Entrada" ou "Xª parcela", retorna apenas isso
+ * Caso contrário, retorna o título completo
+ */
+function getDescricaoCurtaFatura(string $titulo): string {
+    $tituloTrim = trim($titulo);
+    
+    // Regex para capturar "Entrada" ou "<n>ª parcela" no final
+    if (preg_match('/(Entrada|\d+ª parcela)\s*$/u', $tituloTrim, $matches)) {
+        return $matches[1]; // Entrada ou "Xª parcela"
+    }
+    
+    // Caso não seja entrada/parcela, retorna o título inteiro
+    return $tituloTrim;
+}
+
+/**
+ * Formata o status da fatura para exibição visual
+ * Retorna array com 'label' (texto) e 'class' (classe CSS)
+ */
+function formatarStatusFatura(string $status, ?string $dataVencimento = null): array {
+    $hoje = new DateTime('today');
+    
+    // Se status é vencida, sempre mostrar EM ATRASO
+    if ($status === 'vencida') {
+        return [
+            'label' => 'EM ATRASO',
+            'class' => 'danger',
+            'status_original' => 'vencida'
+        ];
+    }
+    
+    // Se status é aberta e está vencida, mostrar EM ATRASO
+    if ($status === 'aberta' && $dataVencimento) {
+        try {
+            $vencimento = new DateTime($dataVencimento);
+            if ($vencimento < $hoje) {
+                return [
+                    'label' => 'EM ATRASO',
+                    'class' => 'danger',
+                    'status_original' => 'aberta'
+                ];
+            }
+        } catch (Exception $e) {
+            // Se houver erro ao parsear data, usar status padrão
+        }
+    }
+    
+    // Status padrão
+    $statusMap = [
+        'aberta' => ['label' => 'ABERTA', 'class' => 'primary'],
+        'paga' => ['label' => 'PAGA', 'class' => 'success'],
+        'parcial' => ['label' => 'PARCIAL', 'class' => 'warning'],
+        'cancelada' => ['label' => 'CANCELADA', 'class' => 'secondary']
+    ];
+    
+    return $statusMap[$status] ?? [
+        'label' => strtoupper($status),
+        'class' => 'secondary',
+        'status_original' => $status
+    ];
+}
+
 // Obter estatísticas
 try {
     $stats = [
@@ -229,17 +293,49 @@ if ($aluno_id_get || $matricula_id_get) {
     border: 1px solid #fecaca;
 }
 
+.status-cancelada { 
+    background-color: #f8d7da; 
+    color: #842029; 
+    border: 1px solid #f5c2c7;
+}
+
 .status-parcial { 
-    background-color: var(--blue-50); 
-    color: var(--blue-700); 
+    background-color: #fff3cd; 
+    color: #856404; 
+    border: 1px solid #ffeaa7;
+}
+
+/* Classes para novos status formatados */
+.status-primary { 
+    background-color: var(--blue-100); 
+    color: var(--blue-800); 
     border: 1px solid var(--blue-200);
 }
 
-.status-cancelada {
-    background-color: var(--gray-100);
-    color: var(--gray-600);
-    border: 1px solid var(--gray-200);
+.status-success { 
+    background-color: #dcfce7; 
+    color: #166534; 
+    border: 1px solid #bbf7d0;
 }
+
+.status-danger { 
+    background-color: #fef2f2; 
+    color: #991b1b; 
+    border: 1px solid #fecaca;
+}
+
+.status-secondary { 
+    background-color: #f8d7da; 
+    color: #842029; 
+    border: 1px solid #f5c2c7;
+}
+
+.status-warning { 
+    background-color: #fff3cd; 
+    color: #856404; 
+    border: 1px solid #ffeaa7;
+}
+
 
 /* =====================================================
    LAYOUT COMPACTO DA TABELA DE FATURAS
@@ -666,7 +762,7 @@ if ($aluno_id_get || $matricula_id_get) {
             <div class="d-flex justify-content-between">
                 <div>
                     <h6 class="mb-0">Total de Faturas</h6>
-                    <h3 class="mb-0"><?php echo $stats['total_faturas']; ?></h3>
+                    <h3 class="mb-0" id="stats-total-faturas"><?php echo $stats['total_faturas']; ?></h3>
                 </div>
                 <div class="align-self-center">
                     <i class="fas fa-file-invoice fa-2x"></i>
@@ -679,7 +775,7 @@ if ($aluno_id_get || $matricula_id_get) {
             <div class="d-flex justify-content-between">
                 <div>
                     <h6 class="mb-0">Faturas Pagas</h6>
-                    <h3 class="mb-0"><?php echo $stats['faturas_pagas']; ?></h3>
+                    <h3 class="mb-0" id="stats-faturas-pagas"><?php echo $stats['faturas_pagas']; ?></h3>
                 </div>
                 <div class="align-self-center">
                     <i class="fas fa-check-circle fa-2x"></i>
@@ -692,7 +788,7 @@ if ($aluno_id_get || $matricula_id_get) {
             <div class="d-flex justify-content-between">
                 <div>
                     <h6 class="mb-0">Faturas Vencidas</h6>
-                    <h3 class="mb-0"><?php echo $stats['faturas_vencidas']; ?></h3>
+                    <h3 class="mb-0" id="stats-faturas-vencidas"><?php echo $stats['faturas_vencidas']; ?></h3>
                 </div>
                 <div class="align-self-center">
                     <i class="fas fa-exclamation-triangle fa-2x"></i>
@@ -705,7 +801,7 @@ if ($aluno_id_get || $matricula_id_get) {
             <div class="d-flex justify-content-between">
                 <div>
                     <h6 class="mb-0">Valor em Aberto</h6>
-                    <h3 class="mb-0">R$ <?php echo number_format($stats['total_valor'], 2, ',', '.'); ?></h3>
+                    <h3 class="mb-0" id="stats-valor-aberto">R$ <?php echo number_format($stats['total_valor'], 2, ',', '.'); ?></h3>
                 </div>
                 <div class="align-self-center">
                     <i class="fas fa-money-bill-wave fa-2x"></i>
@@ -802,15 +898,30 @@ if ($aluno_id_get || $matricula_id_get) {
                     <?php else: ?>
                     <?php foreach ($faturas as $fatura): ?>
                     <?php
-                    // Extrair descrição curta (última parte após o último "-")
+                    // Obter descrição curta usando a nova regra
                     $tituloCompleto = $fatura['descricao'] ?? $fatura['titulo'] ?? '';
-                    $descricaoCurta = $tituloCompleto;
-                    $parts = explode('-', $tituloCompleto);
-                    if (count($parts) > 1) {
-                        $descricaoCurta = trim(end($parts));
+                    $descricaoCurta = getDescricaoCurtaFatura($tituloCompleto);
+                    
+                    // Formatar status considerando se está vencida
+                    $statusInfo = formatarStatusFatura($fatura['status'], $fatura['data_vencimento'] ?? null);
+                    
+                    // Log de debug (apenas em modo desenvolvimento)
+                    if (defined('DEBUG') && DEBUG) {
+                        error_log(sprintf(
+                            "Fatura ID: %d | Status: %s | Vencimento: %s | Título: %s | Descrição curta: %s",
+                            $fatura['id'],
+                            $fatura['status'],
+                            $fatura['data_vencimento'] ?? 'N/A',
+                            $tituloCompleto,
+                            $descricaoCurta
+                        ));
                     }
                     ?>
-                    <tr data-fatura-id="<?php echo $fatura['id']; ?>" data-vencimento="<?php echo htmlspecialchars($fatura['data_vencimento']); ?>">
+                    <tr data-fatura-id="<?php echo $fatura['id']; ?>" 
+                        data-status="<?php echo htmlspecialchars($fatura['status']); ?>" 
+                        data-vencimento="<?php echo htmlspecialchars($fatura['data_vencimento']); ?>"
+                        data-titulo="<?php echo htmlspecialchars($tituloCompleto); ?>"
+                        data-descricao-curta="<?php echo htmlspecialchars($descricaoCurta); ?>">
                         <td class="col-aluno">
                             <?php if ($fatura['aluno_nome']): ?>
                             <span class="aluno-nome"><?php echo htmlspecialchars($fatura['aluno_nome']); ?></span>
@@ -829,8 +940,9 @@ if ($aluno_id_get || $matricula_id_get) {
                         </td>
                         <td class="col-vencimento"><?php echo date('d/m/Y', strtotime($fatura['data_vencimento'])); ?></td>
                         <td class="col-status">
-                            <span class="status-badge status-<?php echo $fatura['status']; ?>">
-                                <?php echo ucfirst($fatura['status']); ?>
+                            <span class="status-badge status-<?php echo $statusInfo['class']; ?>" 
+                                  data-status-original="<?php echo htmlspecialchars($fatura['status']); ?>">
+                                <?php echo htmlspecialchars($statusInfo['label']); ?>
                             </span>
                         </td>
                         <td class="col-acoes">
@@ -1274,6 +1386,47 @@ if ($aluno_id_get || $matricula_id_get) {
                             </div>
                         </div>
                     </div>
+
+                    <!-- Separador Visual -->
+                    <hr class="my-4" style="border-color: #e5e7eb;">
+
+                    <!-- Seção: Resumo de Pagamentos -->
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3 border-bottom pb-2" style="font-size: 0.95rem; font-weight: 600;">
+                            <i class="fas fa-money-bill-wave me-2"></i>Resumo de Pagamentos
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    Total Pago
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-success text-white fw-bold">R$</span>
+                                    <input type="text" class="form-control" id="editar_total_pago" 
+                                           readonly style="padding: 0.5rem; font-size: 0.9rem; background-color: #d1e7dd;">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    Saldo em Aberto
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-warning text-white fw-bold">R$</span>
+                                    <input type="text" class="form-control" id="editar_saldo_aberto" 
+                                           readonly style="padding: 0.5rem; font-size: 0.9rem; background-color: #fff3cd;">
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    Último Pagamento
+                                </label>
+                                <div class="form-control" id="editar_ultimo_pagamento" 
+                                     style="padding: 0.5rem; font-size: 0.9rem; background-color: #f8f9fa;">
+                                    <span>-</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="modal-form-footer financeiro-modal-footer">
@@ -1282,6 +1435,158 @@ if ($aluno_id_get || $matricula_id_get) {
                     </button>
                     <button type="submit" class="btn btn-primary" id="btnSalvarEdicao">
                         <i class="fas fa-save me-1"></i>Salvar Alterações
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Visualização de Fatura -->
+<div id="modalVisualizarFatura" class="custom-modal">
+    <div class="custom-modal-dialog">
+        <div class="custom-modal-content">
+            <div class="modal-form-header financeiro-modal-header">
+                <h2 class="financeiro-modal-title">
+                    <i class="fas fa-eye me-2"></i>Visualizar Fatura
+                </h2>
+                <button type="button" class="btn-close financeiro-modal-close" onclick="fecharModalVisualizarFatura()"></button>
+            </div>
+            
+            <div class="modal-form-body financeiro-modal-body" id="modalVisualizarFaturaBody">
+                <!-- Conteúdo será preenchido via JavaScript -->
+                <div class="text-center py-5">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-3 text-muted">Carregando dados da fatura...</p>
+                </div>
+            </div>
+            
+            <div class="modal-form-footer financeiro-modal-footer">
+                <button type="button" class="btn btn-outline-secondary" onclick="fecharModalVisualizarFatura()">
+                    <i class="fas fa-times me-1"></i>Fechar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal de Registrar Pagamento -->
+<div id="modalRegistrarPagamento" class="custom-modal">
+    <div class="custom-modal-dialog">
+        <div class="custom-modal-content">
+            <form id="formRegistrarPagamento" class="modal-form financeiro-modal-form">
+                <div class="modal-form-header financeiro-modal-header">
+                    <h2 class="financeiro-modal-title">
+                        <i class="fas fa-money-bill-wave me-2"></i>Registrar Pagamento
+                    </h2>
+                    <button type="button" class="btn-close financeiro-modal-close" onclick="fecharModalRegistrarPagamento()"></button>
+                </div>
+                
+                <div class="modal-form-body financeiro-modal-body">
+                    <!-- Hidden para ID da fatura -->
+                    <input type="hidden" id="pagamento_fatura_id" name="fatura_id">
+                    
+                    <!-- Seção: Informações da Fatura -->
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3 border-bottom pb-2" style="font-size: 0.95rem; font-weight: 600;">
+                            <i class="fas fa-file-invoice me-2"></i>Informações da Fatura
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    Aluno
+                                </label>
+                                <div class="form-control" id="pagamento_aluno_info" style="padding: 0.5rem; font-size: 0.9rem; background-color: #f8f9fa;" readonly>
+                                    <span id="pagamento_aluno_nome">-</span>
+                                    <span id="pagamento_aluno_cpf" class="text-muted ms-2">-</span>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    Valor da Fatura
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-primary text-white fw-bold">R$</span>
+                                    <input type="text" class="form-control" id="pagamento_valor_fatura" 
+                                           readonly style="padding: 0.5rem; font-size: 0.9rem; background-color: #f8f9fa;">
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    Saldo em Aberto
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-warning text-white fw-bold">R$</span>
+                                    <input type="text" class="form-control" id="pagamento_saldo_aberto" 
+                                           readonly style="padding: 0.5rem; font-size: 0.9rem; background-color: #fff3cd;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Separador Visual -->
+                    <hr class="my-4" style="border-color: #e5e7eb;">
+
+                    <!-- Seção: Dados do Pagamento -->
+                    <div class="mb-4">
+                        <h6 class="text-primary mb-3 border-bottom pb-2" style="font-size: 0.95rem; font-weight: 600;">
+                            <i class="fas fa-money-bill-wave me-2"></i>Dados do Pagamento
+                        </h6>
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label for="pagamento_data_pagamento" class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-calendar me-1"></i>Data de Pagamento <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" class="form-control" id="pagamento_data_pagamento" name="data_pagamento" 
+                                       required style="padding: 0.5rem; font-size: 0.9rem;">
+                                <small class="text-muted" style="font-size: 0.8rem;">Data em que o pagamento foi recebido</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="pagamento_valor_pago" class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-dollar-sign me-1"></i>Valor Pago <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-success text-white fw-bold">R$</span>
+                                    <input type="number" class="form-control" id="pagamento_valor_pago" name="valor_pago" 
+                                           step="0.01" min="0.01" required style="padding: 0.5rem; font-size: 0.9rem;"
+                                           placeholder="0,00">
+                                </div>
+                                <small class="text-muted" style="font-size: 0.8rem;">Valor recebido neste pagamento</small>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="pagamento_metodo" class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-credit-card me-1"></i>Método de Pagamento <span class="text-danger">*</span>
+                                </label>
+                                <select class="form-select" id="pagamento_metodo" name="metodo" 
+                                        required style="padding: 0.5rem; font-size: 0.9rem;">
+                                    <option value="pix">PIX</option>
+                                    <option value="boleto">Boleto</option>
+                                    <option value="cartao">Cartão</option>
+                                    <option value="dinheiro">Dinheiro</option>
+                                    <option value="transferencia">Transferência</option>
+                                    <option value="outros">Outros</option>
+                                </select>
+                            </div>
+                            <div class="col-12">
+                                <label for="pagamento_obs" class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                                    <i class="fas fa-sticky-note me-1"></i>Observações
+                                </label>
+                                <textarea class="form-control" id="pagamento_obs" name="obs" rows="3" 
+                                          style="padding: 0.5rem; font-size: 0.9rem;"
+                                          placeholder="Observações sobre o pagamento (opcional)"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-form-footer financeiro-modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" onclick="fecharModalRegistrarPagamento()">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-success" id="btnSalvarPagamento">
+                        <i class="fas fa-check me-1"></i>Registrar Pagamento
                     </button>
                 </div>
             </form>
@@ -2445,6 +2750,103 @@ document.getElementById('formEditarFatura').addEventListener('submit', async fun
     }
 });
 
+// Handler do formulário de registrar pagamento
+document.getElementById('formRegistrarPagamento').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const faturaId = document.getElementById('pagamento_fatura_id').value;
+    if (!faturaId) {
+        showAlert('danger', 'ID da fatura não encontrado.');
+        return;
+    }
+    
+    const submitBtn = document.getElementById('btnSalvarPagamento');
+    const originalText = submitBtn.innerHTML;
+    
+    // Desabilitar botão e mostrar loading
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Registrando...';
+    
+    try {
+        // Montar payload
+        const payload = {
+            fatura_id: parseInt(faturaId),
+            data_pagamento: document.getElementById('pagamento_data_pagamento').value,
+            valor_pago: parseFloat(document.getElementById('pagamento_valor_pago').value),
+            metodo: document.getElementById('pagamento_metodo').value,
+            obs: document.getElementById('pagamento_obs').value || null
+        };
+        
+        // Validar valor pago
+        if (payload.valor_pago <= 0) {
+            throw new Error('O valor pago deve ser maior que zero.');
+        }
+        
+        console.log('💰 Registrando pagamento:', payload);
+        
+        // Fazer requisição POST para registrar pagamento
+        const apiUrl = getApiPagamentosUrl();
+        const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        });
+        
+        // Ler texto primeiro para evitar erro de parsing
+        const responseText = await response.text();
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        // Verificar se a resposta é JSON
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('❌ Resposta não é JSON. Status:', response.status);
+            console.error('❌ Content-Type:', contentType);
+            console.error('❌ Primeiros 500 caracteres da resposta:', responseText.substring(0, 500));
+            
+            if (response.status === 404) {
+                throw new Error(`API não encontrada (404). Verifique se o arquivo admin/api/pagamentos.php existe.`);
+            }
+            
+            throw new Error(`Erro ao registrar pagamento: Servidor retornou ${response.status} (${response.statusText}). A resposta não é JSON válido.`);
+        }
+        
+        // Tentar fazer parse do JSON
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('❌ Erro ao fazer parse do JSON:', parseError);
+            console.error('❌ Conteúdo recebido:', responseText.substring(0, 500));
+            throw new Error('Resposta do servidor não é JSON válido. Verifique o console para detalhes.');
+        }
+        
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || data.message || 'Erro ao registrar pagamento');
+        }
+        
+        // Sucesso
+        console.log('✅ Pagamento registrado com sucesso:', data);
+        showAlert('success', data.message || 'Pagamento registrado com sucesso!');
+        
+        // Fechar modal
+        fecharModalRegistrarPagamento();
+        
+        // Recarregar página mantendo parâmetros da URL (filtros, paginação, etc.)
+        setTimeout(() => {
+            window.location.reload();
+        }, 1000);
+        
+    } catch (error) {
+        console.error('❌ Erro ao registrar pagamento:', error);
+        showAlert('danger', 'Erro ao registrar pagamento: ' + error.message);
+        
+        // Reabilitar botão
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+    }
+});
+
 /**
  * Função auxiliar para construir URL da API de faturas
  * Retorna caminho relativo baseado na URL atual
@@ -2465,6 +2867,21 @@ function getApiFaturasUrl(params = '') {
     // Fallback: construir caminho absoluto
     const absoluteUrl = `/admin/api/financeiro-faturas.php${params ? '?' + params : ''}`;
     console.log('📍 URL absoluta (fallback):', absoluteUrl);
+    return absoluteUrl;
+}
+
+/**
+ * Função auxiliar para construir URL da API de pagamentos
+ */
+function getApiPagamentosUrl(params = '') {
+    const pathname = window.location.pathname;
+    
+    if (pathname.includes('/admin/')) {
+        const relativeUrl = `api/pagamentos.php${params ? '?' + params : ''}`;
+        return relativeUrl;
+    }
+    
+    const absoluteUrl = `/admin/api/pagamentos.php${params ? '?' + params : ''}`;
     return absoluteUrl;
 }
 
@@ -2533,6 +2950,35 @@ async function editarFatura(id) {
         
         const fatura = data.data;
         
+        // Buscar pagamentos da fatura para resumo
+        console.log('✏️ Buscando pagamentos para resumo na edição da fatura:', fatura.id);
+        let totalPago = 0;
+        let ultimoPagamento = null;
+        
+        try {
+            const apiUrlPagamentos = getApiPagamentosUrl(`fatura_id=${fatura.id}`);
+            const responsePagamentos = await fetch(apiUrlPagamentos);
+            const responseTextPagamentos = await responsePagamentos.text();
+            const contentTypePagamentos = responsePagamentos.headers.get('content-type');
+            
+            if (contentTypePagamentos && contentTypePagamentos.includes('application/json')) {
+                const dataPagamentos = JSON.parse(responseTextPagamentos);
+                if (dataPagamentos.success && dataPagamentos.pagamentos) {
+                    totalPago = dataPagamentos.pagamentos.reduce((sum, p) => sum + parseFloat(p.valor_pago || 0), 0);
+                    if (dataPagamentos.pagamentos.length > 0) {
+                        ultimoPagamento = dataPagamentos.pagamentos[0]; // Já vem ordenado por data_pagamento DESC
+                    }
+                    console.log('✏️ Resumo de pagamentos:', { totalPago, ultimoPagamento: ultimoPagamento?.data_pagamento });
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Erro ao buscar pagamentos para resumo (continuando edição):', error);
+        }
+        
+        // Calcular saldo em aberto
+        const valorTotal = parseFloat(fatura.valor || fatura.valor_total || 0);
+        const saldoAberto = Math.max(0, valorTotal - totalPago);
+        
         // Preencher campos do formulário
         document.getElementById('editar_fatura_id').value = fatura.id;
         
@@ -2541,8 +2987,7 @@ async function editarFatura(id) {
         document.getElementById('editar_aluno_cpf').textContent = fatura.cpf ? ` • ${fatura.cpf}` : '';
         
         // Valor (somente leitura)
-        const valor = parseFloat(fatura.valor || fatura.valor_total || 0);
-        document.getElementById('editar_valor').value = valor.toLocaleString('pt-BR', {
+        document.getElementById('editar_valor').value = valorTotal.toLocaleString('pt-BR', {
             minimumFractionDigits: 2,
             maximumFractionDigits: 2
         });
@@ -2557,9 +3002,34 @@ async function editarFatura(id) {
         const formaPagamento = fatura.forma_pagamento || 'avista';
         document.getElementById('editar_forma_pagamento').value = formaPagamento;
         
+        // Preencher resumo de pagamentos
+        const totalPagoFormatado = totalPago.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        document.getElementById('editar_total_pago').value = totalPagoFormatado;
+        
+        const saldoAbertoFormatado = saldoAberto.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        document.getElementById('editar_saldo_aberto').value = saldoAbertoFormatado;
+        
+        // Último pagamento
+        let ultimoPagamentoTexto = '-';
+        if (ultimoPagamento && ultimoPagamento.data_pagamento) {
+            const dataUltimoPag = new Date(ultimoPagamento.data_pagamento);
+            if (!isNaN(dataUltimoPag.getTime())) {
+                ultimoPagamentoTexto = dataUltimoPag.toLocaleDateString('pt-BR');
+            }
+        }
+        document.getElementById('editar_ultimo_pagamento').querySelector('span').textContent = ultimoPagamentoTexto;
+        
         // Reabilitar formulário
         form.querySelectorAll('input, select, button').forEach(el => {
-            if (el.id !== 'editar_valor' && el.id !== 'editar_aluno_info') {
+            if (el.id !== 'editar_valor' && el.id !== 'editar_aluno_info' && 
+                el.id !== 'editar_total_pago' && el.id !== 'editar_saldo_aberto' && 
+                el.id !== 'editar_ultimo_pagamento') {
                 el.disabled = false;
             }
         });
@@ -2603,24 +3073,896 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function visualizarFatura(id) {
-    // Implementar visualização da fatura
-    alert('Visualização da fatura ' + id + ' será implementada em breve.');
+/**
+ * Função auxiliar para escapar HTML e prevenir XSS
+ */
+function escapeHtml(text) {
+    if (text === null || text === undefined) return '';
+    if (typeof text !== 'string') {
+        text = String(text);
+    }
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
 }
 
+/**
+ * Visualiza uma fatura em modal somente leitura
+ */
+async function visualizarFatura(id) {
+    if (!id) {
+        showAlert('danger', 'ID da fatura não fornecido.');
+        return;
+    }
+    
+    const modal = document.getElementById('modalVisualizarFatura');
+    if (!modal) {
+        showAlert('danger', 'Modal de visualização não encontrado.');
+        return;
+    }
+    
+    // Mostrar modal com loading
+    modal.setAttribute('data-opened', 'true');
+    const modalBody = document.getElementById('modalVisualizarFaturaBody');
+    
+    // Mostrar loading
+    modalBody.innerHTML = `
+        <div class="text-center py-5">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-3 text-muted">Carregando dados da fatura...</p>
+        </div>
+    `;
+    
+    try {
+        // Buscar dados da fatura via API GET
+        const apiUrl = getApiFaturasUrl(`id=${id}`);
+        console.log('🔍 Visualizando fatura via:', apiUrl);
+        const response = await fetch(apiUrl);
+        
+        // Ler texto primeiro para evitar erro de parsing
+        const responseText = await response.text();
+        const contentType = response.headers.get('content-type');
+        let data;
+        
+        // Verificar se a resposta é JSON
+        if (!contentType || !contentType.includes('application/json')) {
+            console.error('❌ Resposta não é JSON. Status:', response.status);
+            console.error('❌ Content-Type:', contentType);
+            console.error('❌ Primeiros 500 caracteres da resposta:', responseText.substring(0, 500));
+            
+            if (response.status === 404) {
+                throw new Error(`API não encontrada (404). Verifique se o arquivo admin/api/financeiro-faturas.php existe. URL tentada: ${apiUrl}`);
+            }
+            
+            throw new Error(`Erro ao carregar fatura: Servidor retornou ${response.status} (${response.statusText}). A resposta não é JSON válido.`);
+        }
+        
+        // Tentar fazer parse do JSON
+        try {
+            data = JSON.parse(responseText);
+        } catch (parseError) {
+            console.error('❌ Erro ao fazer parse do JSON:', parseError);
+            console.error('❌ Conteúdo recebido:', responseText.substring(0, 500));
+            throw new Error('Resposta do servidor não é JSON válido. Verifique o console para detalhes.');
+        }
+        
+        if (!response.ok || !data.success) {
+            throw new Error(data.error || 'Erro ao carregar dados da fatura');
+        }
+        
+        const fatura = data.data;
+        
+        // Buscar pagamentos da fatura
+        console.log('👁️ Buscando pagamentos para visualização da fatura:', fatura.id);
+        let pagamentos = [];
+        let totalPago = 0;
+        let ultimoPagamento = null;
+        
+        try {
+            const apiUrlPagamentos = getApiPagamentosUrl(`fatura_id=${fatura.id}`);
+            const responsePagamentos = await fetch(apiUrlPagamentos);
+            const responseTextPagamentos = await responsePagamentos.text();
+            const contentTypePagamentos = responsePagamentos.headers.get('content-type');
+            
+            if (contentTypePagamentos && contentTypePagamentos.includes('application/json')) {
+                const dataPagamentos = JSON.parse(responseTextPagamentos);
+                if (dataPagamentos.success && dataPagamentos.pagamentos) {
+                    pagamentos = dataPagamentos.pagamentos;
+                    totalPago = pagamentos.reduce((sum, p) => sum + parseFloat(p.valor_pago || 0), 0);
+                    if (pagamentos.length > 0) {
+                        ultimoPagamento = pagamentos[0]; // Já vem ordenado por data_pagamento DESC
+                    }
+                    console.log('👁️ Pagamentos encontrados:', pagamentos.length, 'Total pago:', totalPago);
+                }
+            }
+        } catch (error) {
+            console.warn('⚠️ Erro ao buscar pagamentos (continuando visualização):', error);
+        }
+        
+        // Calcular saldo em aberto
+        const valorTotal = parseFloat(fatura.valor || fatura.valor_total || 0);
+        const saldoAberto = Math.max(0, valorTotal - totalPago);
+        
+        // Escapar valores para prevenir XSS e erros de sintaxe
+        const alunoNome = escapeHtml(fatura.aluno_nome || 'Aluno não encontrado');
+        const alunoCpf = escapeHtml(fatura.cpf || fatura.aluno_cpf || '');
+        const titulo = escapeHtml(fatura.titulo || '-');
+        const observacoes = escapeHtml(fatura.observacoes || '');
+        
+        // Formatar valores
+        const valorFormatado = valorTotal.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+        const totalPagoFormatado = totalPago.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+        const saldoAbertoFormatado = saldoAberto.toLocaleString('pt-BR', {
+            style: 'currency',
+            currency: 'BRL'
+        });
+        
+        // Formatar data de vencimento
+        let dataVencimentoFormatada = '-';
+        if (fatura.data_vencimento || fatura.vencimento) {
+            const dataVenc = new Date(fatura.data_vencimento || fatura.vencimento);
+            if (!isNaN(dataVenc.getTime())) {
+                dataVencimentoFormatada = dataVenc.toLocaleDateString('pt-BR');
+            }
+        }
+        
+        // Formatar status
+        const statusLabels = {
+            'aberta': 'Aberta',
+            'paga': 'Paga',
+            'vencida': 'Vencida',
+            'parcial': 'Parcial',
+            'cancelada': 'Cancelada'
+        };
+        const statusLabel = statusLabels[fatura.status] || escapeHtml(fatura.status || 'Aberta');
+        const statusClass = {
+            'aberta': 'primary',
+            'paga': 'success',
+            'vencida': 'danger',
+            'parcial': 'warning',
+            'cancelada': 'secondary'
+        }[fatura.status] || 'primary';
+        
+        // Formatar forma de pagamento
+        const formaPagamentoLabels = {
+            'avista': 'À Vista',
+            'boleto': 'Boleto',
+            'pix': 'PIX',
+            'cartao': 'Cartão',
+            'transferencia': 'Transferência',
+            'dinheiro': 'Dinheiro'
+        };
+        const formaPagamentoLabel = formaPagamentoLabels[fatura.forma_pagamento] || escapeHtml(fatura.forma_pagamento || 'À Vista');
+        
+        // Formatar método de pagamento
+        const metodoLabels = {
+            'pix': 'PIX',
+            'boleto': 'Boleto',
+            'cartao': 'Cartão',
+            'dinheiro': 'Dinheiro',
+            'transferencia': 'Transferência',
+            'outros': 'Outros'
+        };
+        
+        // Montar HTML do conteúdo
+        const html = `
+            <!-- Seção: Informações Básicas -->
+            <div class="mb-4">
+                <h6 class="text-primary mb-3 border-bottom pb-2" style="font-size: 0.95rem; font-weight: 600;">
+                    <i class="fas fa-info-circle me-2"></i>Informações Básicas
+                </h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            Aluno
+                        </label>
+                        <div class="form-control" style="padding: 0.5rem; font-size: 0.9rem; background-color: #f8f9fa;">
+                            <span>${alunoNome}</span>
+                            ${alunoCpf ? `<span class="text-muted ms-2">• ${alunoCpf}</span>` : ''}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            Valor Total
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-primary text-white fw-bold">R$</span>
+                            <input type="text" class="form-control" value="${escapeHtml(valorFormatado)}" 
+                                   readonly style="padding: 0.5rem; font-size: 0.9rem; background-color: #f8f9fa;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Separador Visual -->
+            <hr class="my-4" style="border-color: #e5e7eb;">
+
+            <!-- Seção: Resumo Financeiro -->
+            <div class="mb-4">
+                <h6 class="text-primary mb-3 border-bottom pb-2" style="font-size: 0.95rem; font-weight: 600;">
+                    <i class="fas fa-calculator me-2"></i>Resumo Financeiro
+                </h6>
+                <div class="row g-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            Total da Fatura
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-primary text-white fw-bold">R$</span>
+                            <input type="text" class="form-control" value="${escapeHtml(valorFormatado)}" 
+                                   readonly style="padding: 0.5rem; font-size: 0.9rem; background-color: #f8f9fa;">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            Total Pago
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-success text-white fw-bold">R$</span>
+                            <input type="text" class="form-control" value="${escapeHtml(totalPagoFormatado)}" 
+                                   readonly style="padding: 0.5rem; font-size: 0.9rem; background-color: #d1e7dd;">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            Saldo em Aberto
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-warning text-white fw-bold">R$</span>
+                            <input type="text" class="form-control" value="${escapeHtml(saldoAbertoFormatado)}" 
+                                   readonly style="padding: 0.5rem; font-size: 0.9rem; background-color: ${saldoAberto > 0 ? '#fff3cd' : '#d1e7dd'};">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Separador Visual -->
+            <hr class="my-4" style="border-color: #e5e7eb;">
+
+            <!-- Seção: Detalhes da Fatura -->
+            <div class="mb-4">
+                <h6 class="text-primary mb-3 border-bottom pb-2" style="font-size: 0.95rem; font-weight: 600;">
+                    <i class="fas fa-file-invoice me-2"></i>Detalhes da Fatura
+                </h6>
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            <i class="fas fa-align-left me-1"></i>Descrição / Título
+                        </label>
+                        <div class="form-control" style="padding: 0.5rem; font-size: 0.9rem; background-color: #f8f9fa;">
+                            ${titulo}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            <i class="fas fa-calendar me-1"></i>Data de Vencimento
+                        </label>
+                        <div class="form-control" style="padding: 0.5rem; font-size: 0.9rem; background-color: #f8f9fa;">
+                            ${escapeHtml(dataVencimentoFormatada)}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            <i class="fas fa-credit-card me-1"></i>Forma de Pagamento
+                        </label>
+                        <div class="form-control" style="padding: 0.5rem; font-size: 0.9rem; background-color: #f8f9fa;">
+                            ${formaPagamentoLabel}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            <i class="fas fa-info-circle me-1"></i>Status
+                        </label>
+                        <div>
+                            <span class="badge bg-${statusClass}">${statusLabel}</span>
+                        </div>
+                    </div>
+                    ${observacoes ? `
+                    <div class="col-12">
+                        <label class="form-label fw-semibold" style="font-size: 0.9rem; margin-bottom: 0.5rem;">
+                            <i class="fas fa-sticky-note me-1"></i>Observações
+                        </label>
+                        <div class="form-control" style="padding: 0.5rem; font-size: 0.9rem; background-color: #f8f9fa; min-height: 80px;">
+                            ${observacoes}
+                        </div>
+                    </div>
+                    ` : ''}
+                </div>
+            </div>
+
+            <!-- Separador Visual -->
+            <hr class="my-4" style="border-color: #e5e7eb;">
+
+            <!-- Seção: Histórico de Pagamentos -->
+            <div class="mb-4">
+                <h6 class="text-primary mb-3 border-bottom pb-2" style="font-size: 0.95rem; font-weight: 600;">
+                    <i class="fas fa-history me-2"></i>Histórico de Pagamentos
+                </h6>
+                ${pagamentos.length > 0 ? `
+                <div class="table-responsive">
+                    <table class="table table-sm table-hover">
+                        <thead>
+                            <tr>
+                                <th style="font-size: 0.85rem;">Data</th>
+                                <th style="font-size: 0.85rem;">Valor</th>
+                                <th style="font-size: 0.85rem;">Método</th>
+                                <th style="font-size: 0.85rem;">Observações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${pagamentos.map(p => {
+                                const dataPag = new Date(p.data_pagamento);
+                                const dataPagFormatada = !isNaN(dataPag.getTime()) ? dataPag.toLocaleDateString('pt-BR') : '-';
+                                const valorPagFormatado = parseFloat(p.valor_pago || 0).toLocaleString('pt-BR', {
+                                    style: 'currency',
+                                    currency: 'BRL'
+                                });
+                                const metodoPag = metodoLabels[p.metodo] || escapeHtml(p.metodo || '-');
+                                const obsPag = escapeHtml(p.obs || '-');
+                                return `
+                                    <tr>
+                                        <td style="font-size: 0.85rem;">${dataPagFormatada}</td>
+                                        <td style="font-size: 0.85rem; font-weight: 600;">${valorPagFormatado}</td>
+                                        <td style="font-size: 0.85rem;">${metodoPag}</td>
+                                        <td style="font-size: 0.85rem; color: #6c757d;">${obsPag}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+                ` : `
+                <div class="alert alert-info mb-0" style="font-size: 0.9rem;">
+                    <i class="fas fa-info-circle me-2"></i>Nenhum pagamento registrado ainda.
+                </div>
+                `}
+            </div>
+        `;
+        
+        // Preencher modal
+        modalBody.innerHTML = html;
+        
+    } catch (error) {
+        console.error('Erro ao visualizar fatura:', error);
+        showAlert('danger', 'Erro ao carregar dados da fatura: ' + error.message);
+        
+        // Mostrar mensagem de erro no modal
+        modalBody.innerHTML = `
+            <div class="alert alert-danger">
+                <i class="fas fa-exclamation-triangle me-2"></i>
+                <strong>Erro ao carregar fatura:</strong><br>
+                ${error.message}
+            </div>
+        `;
+    }
+}
+
+/**
+ * Fecha o modal de visualização
+ */
+function fecharModalVisualizarFatura() {
+    const modal = document.getElementById('modalVisualizarFatura');
+    if (modal) {
+        modal.setAttribute('data-opened', 'false');
+    }
+}
+
+// Fechar modal de visualização ao clicar no backdrop
+document.addEventListener('DOMContentLoaded', function() {
+    const modalVisualizar = document.getElementById('modalVisualizarFatura');
+    if (modalVisualizar) {
+        modalVisualizar.addEventListener('click', function(e) {
+            // Se clicou diretamente no backdrop (não no dialog)
+            if (e.target === modalVisualizar) {
+                fecharModalVisualizarFatura();
+            }
+        });
+    }
+});
+
+/**
+ * Abre modal de registrar pagamento para a fatura
+ */
 function marcarComoPaga(id) {
-    if (confirm('Deseja marcar esta fatura como paga?')) {
-        // Implementar marcação como paga
-        alert('Marcação como paga será implementada em breve.');
+    if (!id) {
+        showAlert('danger', 'ID da fatura não fornecido.');
+        return;
+    }
+    
+    // Verificar se a fatura está cancelada antes de abrir o modal
+    const row = document.querySelector(`tr[data-fatura-id="${id}"]`);
+    const status = row?.dataset.status || null;
+    
+    if (status === 'cancelada') {
+        showAlert('warning', 'Não é possível registrar pagamentos para uma fatura cancelada.');
+        return;
+    }
+    
+    abrirModalRegistrarPagamento(id);
+}
+
+/**
+ * Abre modal de registrar pagamento e carrega dados da fatura
+ */
+async function abrirModalRegistrarPagamento(faturaId) {
+    if (!faturaId) {
+        showAlert('danger', 'ID da fatura não fornecido.');
+        return;
+    }
+    
+    const modal = document.getElementById('modalRegistrarPagamento');
+    if (!modal) {
+        showAlert('danger', 'Modal de registrar pagamento não encontrado.');
+        return;
+    }
+    
+    // Mostrar modal com loading
+    modal.setAttribute('data-opened', 'true');
+    const form = document.getElementById('formRegistrarPagamento');
+    form.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = true);
+    
+    try {
+        console.log('💰 Carregando dados da fatura para pagamento:', faturaId);
+        
+        // 1. Buscar dados da fatura
+        const apiUrlFatura = getApiFaturasUrl(`id=${faturaId}`);
+        const responseFatura = await fetch(apiUrlFatura);
+        const responseTextFatura = await responseFatura.text();
+        const contentTypeFatura = responseFatura.headers.get('content-type');
+        
+        if (!contentTypeFatura || !contentTypeFatura.includes('application/json')) {
+            throw new Error(`Erro ao carregar fatura: Servidor retornou ${responseFatura.status}`);
+        }
+        
+        const dataFatura = JSON.parse(responseTextFatura);
+        if (!responseFatura.ok || !dataFatura.success) {
+            throw new Error(dataFatura.error || 'Erro ao carregar dados da fatura');
+        }
+        
+        const fatura = dataFatura.data;
+        
+        // Validar se a fatura não está cancelada (validação adicional no backend)
+        if (fatura.status === 'cancelada') {
+            showAlert('warning', 'Não é possível registrar pagamentos para uma fatura cancelada.');
+            fecharModalRegistrarPagamento();
+            return;
+        }
+        
+        // 2. Buscar pagamentos existentes
+        console.log('💰 Buscando pagamentos existentes para fatura:', faturaId);
+        const apiUrlPagamentos = getApiPagamentosUrl(`fatura_id=${faturaId}`);
+        const responsePagamentos = await fetch(apiUrlPagamentos);
+        const responseTextPagamentos = await responsePagamentos.text();
+        const contentTypePagamentos = responsePagamentos.headers.get('content-type');
+        
+        let totalPago = 0;
+        if (contentTypePagamentos && contentTypePagamentos.includes('application/json')) {
+            try {
+                const dataPagamentos = JSON.parse(responseTextPagamentos);
+                if (dataPagamentos.success && dataPagamentos.pagamentos) {
+                    totalPago = dataPagamentos.pagamentos.reduce((sum, p) => sum + parseFloat(p.valor_pago || 0), 0);
+                    console.log('💰 Total já pago:', totalPago);
+                }
+            } catch (e) {
+                console.warn('⚠️ Erro ao processar pagamentos (continuando):', e);
+            }
+        }
+        
+        // 3. Calcular saldo em aberto
+        const valorTotal = parseFloat(fatura.valor_total || fatura.valor || 0);
+        const saldoAberto = Math.max(0, valorTotal - totalPago);
+        
+        console.log('💰 Resumo financeiro:', {
+            valorTotal,
+            totalPago,
+            saldoAberto
+        });
+        
+        // 4. Preencher formulário
+        document.getElementById('pagamento_fatura_id').value = faturaId;
+        
+        // Aluno
+        document.getElementById('pagamento_aluno_nome').textContent = fatura.aluno_nome || 'Aluno não encontrado';
+        document.getElementById('pagamento_aluno_cpf').textContent = fatura.cpf || fatura.aluno_cpf ? ` • ${fatura.cpf || fatura.aluno_cpf}` : '';
+        
+        // Valor da fatura
+        const valorFormatado = valorTotal.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        document.getElementById('pagamento_valor_fatura').value = valorFormatado;
+        
+        // Saldo em aberto
+        const saldoFormatado = saldoAberto.toLocaleString('pt-BR', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2
+        });
+        document.getElementById('pagamento_saldo_aberto').value = saldoFormatado;
+        
+        // Valor pago (pré-preenchido com saldo, mas permitir edição)
+        document.getElementById('pagamento_valor_pago').value = saldoAberto > 0 ? saldoAberto.toFixed(2) : '0.00';
+        
+        // Data de pagamento (hoje)
+        const hoje = new Date().toISOString().split('T')[0];
+        document.getElementById('pagamento_data_pagamento').value = hoje;
+        
+        // Reabilitar formulário
+        form.querySelectorAll('input, select, textarea, button').forEach(el => {
+            if (el.id !== 'pagamento_valor_fatura' && el.id !== 'pagamento_saldo_aberto' && el.id !== 'pagamento_aluno_info') {
+                el.disabled = false;
+            }
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar dados para pagamento:', error);
+        showAlert('danger', 'Erro ao carregar dados da fatura: ' + error.message);
+        fecharModalRegistrarPagamento();
     }
 }
 
-function cancelarFatura(id) {
-    if (confirm('Deseja cancelar esta fatura?')) {
-        // Implementar cancelamento
-        alert('Cancelamento será implementado em breve.');
+/**
+ * Fecha o modal de registrar pagamento
+ */
+function fecharModalRegistrarPagamento() {
+    const modal = document.getElementById('modalRegistrarPagamento');
+    if (modal) {
+        modal.setAttribute('data-opened', 'false');
+        
+        // Limpar formulário
+        const form = document.getElementById('formRegistrarPagamento');
+        if (form) {
+            form.reset();
+        }
     }
 }
+
+// Fechar modal de registrar pagamento ao clicar no backdrop
+document.addEventListener('DOMContentLoaded', function() {
+    const modalRegistrarPagamento = document.getElementById('modalRegistrarPagamento');
+    if (modalRegistrarPagamento) {
+        modalRegistrarPagamento.addEventListener('click', function(e) {
+            if (e.target === modalRegistrarPagamento) {
+                fecharModalRegistrarPagamento();
+            }
+        });
+    }
+});
+
+/**
+ * Cancela uma fatura (muda status para 'cancelada')
+ * Apenas permite cancelar faturas em aberto/vencidas sem pagamentos
+ */
+async function cancelarFatura(id) {
+    if (!id) {
+        showAlert('danger', 'ID da fatura não fornecido.');
+        return;
+    }
+    
+    try {
+        // 1. Obter dados da linha e status atual
+        const row = document.querySelector(`tr[data-fatura-id="${id}"]`);
+        if (!row) {
+            showAlert('danger', 'Fatura não encontrada na tabela.');
+            return;
+        }
+        
+        const status = row.dataset.status || null;
+        
+        // 2. Validar se pode cancelar (apenas aberta ou vencida)
+        if (status && ['paga', 'parcial', 'cancelada'].includes(status)) {
+            let mensagem = 'Somente faturas em aberto podem ser canceladas.';
+            if (status === 'cancelada') {
+                mensagem = 'Esta fatura já está cancelada.';
+            } else if (status === 'paga') {
+                mensagem = 'Não é possível cancelar uma fatura já paga.';
+            } else if (status === 'parcial') {
+                mensagem = 'Não é possível cancelar uma fatura com pagamentos parciais.';
+            }
+            showAlert('warning', mensagem);
+            return;
+        }
+        
+        // 3. Verificar se há pagamentos via API
+        console.log('🔍 Verificando pagamentos da fatura:', id);
+        const apiUrlPagamentos = getApiPagamentosUrl(`fatura_id=${id}`);
+        const responsePagamentos = await fetch(apiUrlPagamentos);
+        const responseTextPagamentos = await responsePagamentos.text();
+        const contentTypePagamentos = responsePagamentos.headers.get('content-type');
+        
+        let temPagamentos = false;
+        if (contentTypePagamentos && contentTypePagamentos.includes('application/json')) {
+            try {
+                const dataPagamentos = JSON.parse(responseTextPagamentos);
+                if (dataPagamentos.success && dataPagamentos.pagamentos && Array.isArray(dataPagamentos.pagamentos)) {
+                    temPagamentos = dataPagamentos.pagamentos.length > 0;
+                    console.log('💰 Pagamentos encontrados:', dataPagamentos.pagamentos.length);
+                }
+            } catch (e) {
+                console.warn('⚠️ Erro ao processar resposta de pagamentos:', e);
+            }
+        }
+        
+        if (temPagamentos) {
+            showAlert('warning', 'Não é possível cancelar fatura que já possui pagamentos registrados.');
+            return;
+        }
+        
+        // 4. Buscar dados da fatura para mostrar no diálogo de confirmação
+        console.log('📄 Carregando dados da fatura para confirmação:', id);
+        const apiUrlFatura = getApiFaturasUrl(`id=${id}`);
+        const responseFatura = await fetch(apiUrlFatura);
+        const responseTextFatura = await responseFatura.text();
+        const contentTypeFatura = responseFatura.headers.get('content-type');
+        
+        if (!contentTypeFatura || !contentTypeFatura.includes('application/json')) {
+            throw new Error(`Erro ao carregar fatura: Servidor retornou ${responseFatura.status}`);
+        }
+        
+        const dataFatura = JSON.parse(responseTextFatura);
+        if (!responseFatura.ok || !dataFatura.success) {
+            throw new Error(dataFatura.error || 'Erro ao carregar dados da fatura');
+        }
+        
+        const fatura = dataFatura.data;
+        
+        // Formatar valores para exibição
+        const formatarMoeda = (valor) => {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor || 0);
+        };
+        
+        const formatarData = (data) => {
+            if (!data) return '-';
+            try {
+                const d = new Date(data);
+                return d.toLocaleDateString('pt-BR');
+            } catch (e) {
+                return data;
+            }
+        };
+        
+        // 5. Confirmar com o usuário
+        const mensagemConfirmacao = `
+            Confirma o cancelamento desta fatura?<br><br>
+            <strong>Aluno:</strong> ${escapeHtml(fatura.aluno_nome || 'Não informado')}<br>
+            <strong>Descrição:</strong> ${escapeHtml(fatura.titulo || 'Não informado')}<br>
+            <strong>Vencimento:</strong> ${formatarData(fatura.data_vencimento || fatura.vencimento)}<br>
+            <strong>Valor:</strong> ${formatarMoeda(fatura.valor_total || fatura.valor || 0)}<br><br>
+            <small class="text-muted">Esta ação não pode ser desfeita.</small>
+        `;
+        
+        if (!confirm(mensagemConfirmacao.replace(/<[^>]*>/g, ''))) {
+            return;
+        }
+        
+        // 6. Enviar PUT para marcar como cancelada
+        console.log('❌ Cancelando fatura:', id);
+        const responseCancel = await fetch(apiUrlFatura, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                status: 'cancelada'
+            })
+        });
+        
+        const responseTextCancel = await responseCancel.text();
+        const contentTypeCancel = responseCancel.headers.get('content-type');
+        
+        if (!contentTypeCancel || !contentTypeCancel.includes('application/json')) {
+            console.error('❌ Resposta não é JSON. Status:', responseCancel.status);
+            console.error('❌ Primeiros 500 caracteres:', responseTextCancel.substring(0, 500));
+            throw new Error(`Erro ao cancelar fatura: Servidor retornou ${responseCancel.status}`);
+        }
+        
+        const dataCancel = JSON.parse(responseTextCancel);
+        
+        if (!responseCancel.ok || !dataCancel.success) {
+            throw new Error(dataCancel.error || dataCancel.message || 'Erro ao cancelar fatura');
+        }
+        
+        // 7. Sucesso - atualizar linha na tabela sem recarregar
+        console.log('✅ Fatura cancelada com sucesso');
+        showAlert('success', 'Fatura cancelada com sucesso.');
+        
+        // Atualizar dataset da linha
+        row.dataset.status = 'cancelada';
+        
+        // Atualizar badge de status
+        const statusCell = row.querySelector('.col-status');
+        if (statusCell) {
+            statusCell.innerHTML = '<span class="status-badge status-cancelada">Cancelada</span>';
+        }
+        
+        // 8. Atualizar cards de resumo sem recarregar a página
+        atualizarResumoFinanceiro();
+        
+    } catch (error) {
+        console.error('❌ Erro ao cancelar fatura:', error);
+        showAlert('danger', 'Erro ao cancelar fatura: ' + error.message);
+    }
+}
+
+/**
+ * Atualiza os cards de resumo financeiro (estatísticas) sem recarregar a página
+ * Recalcula baseado nas linhas da tabela visíveis
+ * 
+ * NOTA: Esta função recalcula baseado nas faturas visíveis na tabela atual.
+ * Se houver filtros aplicados, os cards refletirão apenas as faturas filtradas.
+ * Para totais globais exatos, seria necessário uma chamada à API, mas isso
+ * foi simplificado para evitar requisições extras.
+ */
+function atualizarResumoFinanceiro() {
+    try {
+        // Contar faturas na tabela visível
+        const linhas = document.querySelectorAll('#tabela-faturas tbody tr[data-fatura-id]');
+        let totalFaturas = linhas.length;
+        let faturasPagas = 0;
+        let faturasVencidas = 0;
+        let valorAberto = 0;
+        
+        const hoje = new Date();
+        hoje.setHours(0, 0, 0, 0);
+        
+        linhas.forEach(linha => {
+            const status = linha.dataset.status || '';
+            const vencimento = linha.dataset.vencimento || '';
+            
+            // Contar pagas
+            if (status === 'paga') {
+                faturasPagas++;
+            }
+            
+            // Contar vencidas (aberta ou parcial com vencimento < hoje)
+            if ((status === 'aberta' || status === 'vencida') && vencimento) {
+                try {
+                    const dataVenc = new Date(vencimento);
+                    dataVenc.setHours(0, 0, 0, 0);
+                    if (dataVenc < hoje) {
+                        faturasVencidas++;
+                    }
+                } catch (e) {
+                    // Ignorar erro de parsing de data
+                }
+            }
+            
+            // Somar valor em aberto (apenas faturas abertas/vencidas/parciais, não canceladas)
+            if (status === 'aberta' || status === 'vencida' || status === 'parcial') {
+                const valorCell = linha.querySelector('.col-valor .valor-formatado');
+                if (valorCell) {
+                    const valorText = valorCell.textContent.replace(/[^\d,.-]/g, '').replace(',', '.');
+                    const valor = parseFloat(valorText) || 0;
+                    valorAberto += valor;
+                }
+            }
+        });
+        
+        // Atualizar elementos dos cards
+        const totalFaturasEl = document.getElementById('stats-total-faturas');
+        const faturasPagasEl = document.getElementById('stats-faturas-pagas');
+        const faturasVencidasEl = document.getElementById('stats-faturas-vencidas');
+        const valorAbertoEl = document.getElementById('stats-valor-aberto');
+        
+        if (totalFaturasEl) {
+            totalFaturasEl.textContent = totalFaturas;
+        }
+        if (faturasPagasEl) {
+            faturasPagasEl.textContent = faturasPagas;
+        }
+        if (faturasVencidasEl) {
+            faturasVencidasEl.textContent = faturasVencidas;
+        }
+        if (valorAbertoEl) {
+            // Formatar valor em R$ brasileiro
+            const valorFormatado = 'R$ ' + valorAberto.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+            valorAbertoEl.textContent = valorFormatado;
+        }
+        
+        console.log('✅ Cards de resumo atualizados:', {
+            totalFaturas,
+            faturasPagas,
+            faturasVencidas,
+            valorAberto
+        });
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar resumo financeiro:', error);
+        // Não bloquear o fluxo - apenas logar o erro
+    }
+}
+
+// Log de debug para faturas (apenas em modo desenvolvimento)
+// Esta função será chamada automaticamente quando a página carregar
+(function() {
+    // Habilitar debug por padrão (pode ser desabilitado depois)
+    if (typeof window.DEBUG === 'undefined') {
+        window.DEBUG = true;
+    }
+    
+    // Aguardar DOM estar pronto
+    function logFaturasDebug() {
+        if (!window.DEBUG) return;
+        
+        const linhas = document.querySelectorAll('#tabela-faturas tbody tr[data-fatura-id]');
+        if (linhas.length === 0) return;
+        
+        console.log('📋 Debug de Faturas - Total:', linhas.length);
+        
+        linhas.forEach((linha) => {
+            const faturaId = linha.dataset.faturaId;
+            const status = linha.dataset.status;
+            const vencimento = linha.dataset.vencimento || '';
+            const titulo = linha.dataset.titulo || '';
+            const descricaoCurta = linha.dataset.descricaoCurta || '';
+            
+            console.log('📋 Fatura Debug:', {
+                id: faturaId,
+                status: status,
+                data_vencimento: vencimento,
+                titulo: titulo,
+                descricao_curta_renderizada: descricaoCurta
+            });
+        });
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', logFaturasDebug);
+    } else {
+        setTimeout(logFaturasDebug, 500); // Aguardar tabela ser renderizada
+    }
+})();
+
+// Log de debug para faturas (apenas em modo desenvolvimento)
+// Esta função será chamada automaticamente quando a página carregar
+(function() {
+    // Habilitar debug por padrão (pode ser desabilitado depois)
+    if (typeof window.DEBUG === 'undefined') {
+        window.DEBUG = true;
+    }
+    
+    // Aguardar DOM estar pronto
+    function logFaturasDebug() {
+        if (!window.DEBUG) return;
+        
+        const linhas = document.querySelectorAll('#tabela-faturas tbody tr[data-fatura-id]');
+        if (linhas.length === 0) return;
+        
+        console.log('📋 Debug de Faturas - Total:', linhas.length);
+        
+        linhas.forEach((linha) => {
+            const faturaId = linha.dataset.faturaId;
+            const status = linha.dataset.status;
+            const vencimento = linha.dataset.vencimento || '';
+            const titulo = linha.dataset.titulo || '';
+            const descricaoCurta = linha.dataset.descricaoCurta || '';
+            
+            console.log('📋 Fatura Debug:', {
+                id: faturaId,
+                status: status,
+                data_vencimento: vencimento,
+                titulo: titulo,
+                descricao_curta_renderizada: descricaoCurta
+            });
+        });
+    }
+    
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', logFaturasDebug);
+    } else {
+        setTimeout(logFaturasDebug, 500); // Aguardar tabela ser renderizada
+    }
+})();
 
 // Função para mostrar alertas
 function showAlert(type, message) {

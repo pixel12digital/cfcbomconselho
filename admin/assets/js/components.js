@@ -290,10 +290,12 @@ class InputMask {
                     mutation.addedNodes.forEach((node) => {
                         if (node.nodeType === 1) { // Element node
                             // Ignorar mudanças em tabelas de parcelas (evitar loop)
-                            if (node.id === 'tabela-parcelas' || 
-                                node.closest && node.closest('#tabela-parcelas') ||
+                            const isTabelaParcelas = node.id === 'tabela-parcelas' || 
+                                (node.closest && node.closest('#tabela-parcelas')) ||
                                 (node.tagName && node.tagName.toLowerCase() === 'tr' && 
-                                 node.closest && node.closest('#tabela-parcelas')) {
+                                 node.closest && node.closest('#tabela-parcelas'));
+                            
+                            if (isTabelaParcelas) {
                                 return; // Pular mudanças na tabela de parcelas
                             }
                             hasRelevantChanges = true;

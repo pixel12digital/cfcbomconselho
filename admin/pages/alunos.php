@@ -2632,9 +2632,25 @@ input.form-control.invalid {
                     <!-- Linha 2 - Atalho -->
                     <div class="row mb-2">
                       <div class="col-12">
-                        <button type="button" class="btn btn-link p-0 aluno-btn-financeiro" disabled style="font-size: 0.85rem; text-decoration: none;">
-                          Ver Financeiro do Aluno
-                        </button>
+                        <a href="#" class="btn btn-link p-0 aluno-btn-financeiro" style="font-size: 0.85rem; text-decoration: none; pointer-events: none; opacity: 0.5;">
+                          <i class="fas fa-dollar-sign me-1"></i>Ver Financeiro do Aluno
+                        </a>
+                      </div>
+                    </div>
+                    
+                    <!-- Resumo Financeiro do Aluno (somente leitura) -->
+                    <div class="row mb-2">
+                      <div class="col-12">
+                        <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
+                          <i class="fas fa-calculator me-1"></i>Resumo Financeiro do Aluno
+                        </h6>
+                        <!-- Campo oculto para armazenar aluno_id para uso no resumo -->
+                        <input type="hidden" id="editar_aluno_id" value="">
+                        <div id="resumo-financeiro-matricula" class="p-2" style="background-color: #f8f9fa; border-radius: 0.25rem; min-height: 80px;">
+                          <div class="text-center text-muted small">
+                            <i class="fas fa-spinner fa-spin"></i> Carregando resumo financeiro...
+                          </div>
+                        </div>
                       </div>
                     </div>
                     
@@ -2735,8 +2751,11 @@ input.form-control.invalid {
                         <div class="card-body text-center">
                           <i class="fas fa-dollar-sign fa-2x text-warning mb-2"></i>
                           <h6 class="card-title mb-1">Situação Financeira</h6>
-                          <div class="aluno-card-valor" data-field="financeiro_resumo">
-                            <p class="card-text text-muted small mb-0">Em breve resumo do progresso</p>
+                          <div class="aluno-card-valor" data-field="financeiro_resumo" id="card-situacao-financeira-historico">
+                            <p class="card-text text-muted small mb-0">
+                              <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+                              Carregando situação financeira...
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -4102,6 +4121,9 @@ window.editarAluno = function(id) {
                     logModalAluno('🔄 Timestamp:', new Date().toISOString());
                     preencherFormularioAluno(data.aluno);
                     logModalAluno('✅ Formulário preenchido - função executada');
+                    
+                    // Carregar resumo financeiro do aluno (para todas as abas que precisam)
+                    atualizarResumoFinanceiroAluno(id, null);
                     
                     // Carregar matrícula principal após preencher formulário
                     setTimeout(() => {
@@ -6343,6 +6365,31 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
+    // Listener para carregar resumo financeiro quando a aba Matrícula for mostrada
+    const matriculaTab = document.getElementById('matricula-tab');
+    const matriculaPane = document.getElementById('matricula');
+    
+    if (matriculaTab && matriculaPane) {
+        // Usar evento Bootstrap 5 para quando a aba é mostrada
+        matriculaTab.addEventListener('shown.bs.tab', function() {
+            // Quando a aba Matrícula é mostrada, verificar se precisa carregar o resumo
+            const container = document.getElementById('resumo-financeiro-matricula');
+            const alunoId = document.getElementById('aluno_id_hidden')?.value || 
+                           document.getElementById('editar_aluno_id')?.value;
+            
+            // Se o container ainda mostra "Carregando..." e temos um alunoId, carregar
+            if (container && alunoId) {
+                const textoAtual = container.textContent || '';
+                if (textoAtual.includes('Carregando') || textoAtual.trim() === '') {
+                    logModalAluno('🔄 Aba Matrícula ativada - carregando resumo financeiro');
+                    atualizarResumoFinanceiroMatricula(alunoId);
+                }
+            }
+        });
+        
+        logModalAluno('✅ Listener da aba Matrícula configurado');
+    }
+    
     // Mostrar notificação de carregamento
     if (typeof notifications !== 'undefined') {
         notifications.info('Página de alunos carregada com sucesso!');
@@ -6853,6 +6900,7 @@ async function carregarMatriculaPrincipal(alunoId) {
         limparAbaMatricula();
         atualizarResumoProcessoHistorico(null);
         atualizarResumoFinanceiroAluno(alunoId, null);
+        atualizarResumoFinanceiroMatricula(alunoId);
         atualizarResumoTeoricoAluno(alunoId);
         atualizarResumoPraticoAluno(alunoId);
         atualizarResumoProvasAluno(alunoId);
@@ -6969,6 +7017,25 @@ function preencherAbaMatriculaComDados(matricula) {
         
         // status_pagamento não é alterado nesta etapa
         
+        // 5) Carregar resumo financeiro do aluno na aba Matrícula
+        // Obter alunoId do campo hidden ou da matrícula
+        const alunoIdField = document.getElementById('aluno_id_hidden');
+        const alunoId = alunoIdField?.value || matricula?.aluno_id || document.getElementById('editar_aluno_id')?.value;
+        
+        // Atualizar campo oculto editar_aluno_id se necessário
+        const editarAlunoIdField = document.getElementById('editar_aluno_id');
+        if (editarAlunoIdField && alunoId) {
+            editarAlunoIdField.value = alunoId;
+        }
+        
+        // Carregar resumo financeiro (será executado quando a aba for mostrada também)
+        if (alunoId) {
+            logModalAluno('💰 Carregando resumo financeiro para aluno (aba Matrícula):', alunoId);
+            atualizarResumoFinanceiroMatricula(alunoId);
+        } else {
+            logModalAluno('⚠️ AlunoId não encontrado para carregar resumo financeiro');
+        }
+        
         logModalAluno('✅ Aba Matrícula preenchida com sucesso');
         
     } catch (error) {
@@ -7018,107 +7085,134 @@ function limparAbaMatricula() {
 /**
  * Atualiza o card "Situação Financeira" na aba Histórico e no modal de visualização
  * Atualiza TODOS os elementos com data-field="financeiro_resumo"
+ * Usa a nova API financeiro-resumo-aluno.php que retorna resumo completo
  * @param {number} alunoId - ID do aluno
- * @param {Object|null} matricula - Objeto da matrícula principal (opcional, para usar matricula_id se disponível)
+ * @param {Object|null} matricula - Objeto da matrícula principal (opcional, não usado mais mas mantido para compatibilidade)
  */
 async function atualizarResumoFinanceiroAluno(alunoId, matricula = null) {
     try {
         logModalAluno('💰 Carregando resumo financeiro para aluno:', alunoId);
         
-        // Montar URL da API de faturas
-        let url = `api/faturas.php?aluno_id=${alunoId}`;
-        if (matricula && matricula.id) {
-            url += `&matricula_id=${matricula.id}`;
+        // Usar nova API de resumo financeiro
+        const url = `api/financeiro-resumo-aluno.php?aluno_id=${alunoId}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        const response = await fetch(url);
         const data = await response.json();
         
         if (!data.success) {
-            console.error('❌ Erro ao buscar faturas (resumo financeiro):', data.error);
-            // Em caso de erro, usar texto padrão
-            atualizarCardsFinanceiroResumo('Não lançado');
-            return;
-        }
-        
-        const faturas = data.faturas || [];
-        
-        if (faturas.length === 0) {
-            logModalAluno('⚠️ Nenhuma fatura encontrada para o aluno');
-            atualizarCardsFinanceiroResumo('Não lançado');
-            return;
-        }
-        
-        // Calcular status geral seguindo a prioridade das regras de negócio
-        const hoje = new Date();
-        hoje.setHours(0, 0, 0, 0);
-        
-        let statusTexto = 'Não lançado';
-        
-        // Prioridade 1: Verificar se há faturas vencidas ou abertas com vencimento < hoje
-        const temVencida = faturas.some(f => {
-            if (f.status === 'vencida') return true;
-            if (f.status === 'aberta') {
-                // Tentar ambos os nomes de campo (vencimento ou data_vencimento)
-                const dataVenc = f.vencimento || f.data_vencimento;
-                if (dataVenc) {
-                    const dataVencimento = new Date(dataVenc);
-                    dataVencimento.setHours(0, 0, 0, 0);
-                    return dataVencimento < hoje;
-                }
-            }
-            return false;
-        });
-        
-        if (temVencida) {
-            statusTexto = 'Em atraso';
-        } else {
-            // Prioridade 2: Verificar se há faturas abertas com vencimento >= hoje
-            const temAberta = faturas.some(f => {
-                if (f.status === 'aberta') {
-                    // Tentar ambos os nomes de campo (vencimento ou data_vencimento)
-                    const dataVenc = f.vencimento || f.data_vencimento;
-                    if (dataVenc) {
-                        const dataVencimento = new Date(dataVenc);
-                        dataVencimento.setHours(0, 0, 0, 0);
-                        return dataVencimento >= hoje;
-                    }
-                }
-                return false;
-            });
-            
-            if (temAberta) {
-                statusTexto = 'Em aberto';
-            } else {
-                // Prioridade 3: Verificar se há faturas pagas
-                const temPaga = faturas.some(f => f.status === 'paga');
-                
-                if (temPaga) {
-                    statusTexto = 'Quitado';
+            console.error('❌ Erro ao buscar resumo financeiro:', data.error);
+            // Em caso de erro, mostrar mensagem de erro nos cards
+            const cardElements = document.querySelectorAll('[data-field="financeiro_resumo"]');
+            cardElements.forEach((cardEl) => {
+                const isCardHistorico = cardEl.id === 'card-situacao-financeira-historico';
+                if (isCardHistorico) {
+                    cardEl.innerHTML = `
+                        <div class="text-center">
+                            <p class="text-muted small mb-0" style="font-size: 0.7rem;">
+                                Não foi possível carregar a situação financeira.
+                            </p>
+                        </div>
+                    `;
                 } else {
-                    // Se não se enquadrar em nenhuma categoria, manter "Não lançado"
-                    statusTexto = 'Não lançado';
+                    cardEl.innerHTML = `
+                        <div class="text-center">
+                            <p class="text-muted small mb-0" style="font-size: 0.75rem;">
+                                Não foi possível carregar a situação financeira.
+                            </p>
+                        </div>
+                    `;
                 }
-            }
+            });
+            return;
         }
         
-        logModalAluno('✅ Status financeiro calculado:', statusTexto, `(Total de faturas: ${faturas.length})`);
+        const resumo = data.resumo || {};
+        logModalAluno('✅ Resumo financeiro carregado:', resumo);
         
-        // Atualizar todos os cards
-        atualizarCardsFinanceiroResumo(statusTexto);
+        // Atualizar todos os cards com o resumo completo
+        atualizarCardsFinanceiroResumo(resumo, alunoId);
         
     } catch (error) {
         console.error('❌ Erro ao carregar resumo financeiro:', error);
-        // Em caso de erro, usar texto padrão
-        atualizarCardsFinanceiroResumo('Não lançado');
+        // Em caso de erro, mostrar mensagem de erro nos cards
+        const cardElements = document.querySelectorAll('[data-field="financeiro_resumo"]');
+        cardElements.forEach((cardEl) => {
+            const isCardHistorico = cardEl.id === 'card-situacao-financeira-historico';
+            if (isCardHistorico) {
+                cardEl.innerHTML = `
+                    <div class="text-center">
+                        <p class="text-muted small mb-0" style="font-size: 0.7rem;">
+                            Não foi possível carregar a situação financeira.
+                        </p>
+                    </div>
+                `;
+            } else {
+                cardEl.innerHTML = `
+                    <div class="text-center">
+                        <p class="text-muted small mb-0" style="font-size: 0.75rem;">
+                            Não foi possível carregar a situação financeira.
+                        </p>
+                    </div>
+                `;
+            }
+        });
     }
 }
 
 /**
- * Atualiza todos os elementos com data-field="financeiro_resumo" com o texto fornecido
- * @param {string} texto - Texto a ser exibido no card
+ * Atualiza o resumo financeiro na aba Matrícula
+ * Usa endpoint PHP que retorna HTML renderizado diretamente
+ * @param {number} alunoId - ID do aluno
  */
-function atualizarCardsFinanceiroResumo(texto) {
+async function atualizarResumoFinanceiroMatricula(alunoId) {
+    try {
+        if (!alunoId) {
+            return;
+        }
+        
+        const container = document.getElementById('resumo-financeiro-matricula');
+        if (!container) {
+            return;
+        }
+        
+        // Mostrar loading
+        container.innerHTML = '<div class="text-center text-muted small"><i class="fas fa-spinner fa-spin"></i> Carregando resumo financeiro...</div>';
+        
+        // Buscar HTML renderizado diretamente do PHP
+        const url = `api/financeiro-resumo-aluno-html.php?aluno_id=${alunoId}`;
+        const response = await fetch(url);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+        
+        // Obter HTML diretamente (não é JSON)
+        const html = await response.text();
+        
+        // Inserir HTML renderizado no container
+        container.innerHTML = html;
+        
+        logModalAluno('✅ Resumo financeiro carregado na aba Matrícula');
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar resumo financeiro na aba Matrícula:', error);
+        const container = document.getElementById('resumo-financeiro-matricula');
+        if (container) {
+            container.innerHTML = '<div class="text-center text-danger small">Erro ao carregar resumo financeiro.</div>';
+        }
+    }
+}
+
+/**
+ * Atualiza todos os elementos com data-field="financeiro_resumo" com o resumo financeiro
+ * @param {Object|null} resumo - Objeto de resumo financeiro ou null para valores padrão
+ * @param {number} alunoId - ID do aluno (para link "Ver Financeiro")
+ */
+function atualizarCardsFinanceiroResumo(resumo, alunoId) {
     try {
         const cardElements = document.querySelectorAll('[data-field="financeiro_resumo"]');
         
@@ -7127,13 +7221,119 @@ function atualizarCardsFinanceiroResumo(texto) {
             return;
         }
         
-        // Atualizar todos os elementos encontrados
-        cardElements.forEach((cardElement, index) => {
-            cardElement.innerHTML = `<span class="text-muted">${texto}</span>`;
-            logModalAluno(`✅ Card financeiro_resumo [${index + 1}] atualizado:`, texto);
+        // Se resumo for null, usar valores padrão
+        if (!resumo) {
+            resumo = {
+                qtd_faturas: 0,
+                status_financeiro: 'nao_lancado',
+                total_contratado: 0,
+                total_pago: 0,
+                saldo_aberto: 0,
+                qtd_faturas_vencidas: 0,
+                proximo_vencimento: null
+            };
+        }
+        
+        // Mapear status para labels e classes
+        const statusMap = {
+            'nao_lancado': { label: 'Não lançado', class: 'secondary' },
+            'em_dia': { label: 'Em dia', class: 'success' },
+            'em_aberto': { label: 'Em aberto', class: 'warning' },
+            'parcial': { label: 'Parcialmente pago', class: 'info' },
+            'inadimplente': { label: 'Inadimplente', class: 'danger' }
+        };
+        
+        const statusInfo = statusMap[resumo.status_financeiro] || statusMap['nao_lancado'];
+        
+        // Formatar valores monetários
+        const formatarMoeda = (valor) => {
+            return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL'
+            }).format(valor || 0);
+        };
+        
+        // Formatar data
+        const formatarData = (data) => {
+            if (!data) return null;
+            const d = new Date(data);
+            return d.toLocaleDateString('pt-BR');
+        };
+        
+        // Montar HTML do resumo para cada card
+        // Verificar se é o card da aba Histórico (mais compacto) ou outros cards (mais detalhado)
+        cardElements.forEach((cardEl, index) => {
+            const isCardHistorico = cardEl.id === 'card-situacao-financeira-historico';
+            let html = '';
+            
+            if (resumo.qtd_faturas === 0) {
+                // Nenhuma fatura lançada
+                html = `
+                    <div class="text-center">
+                        <span class="badge bg-${statusInfo.class} mb-2">${statusInfo.label}</span>
+                        <p class="text-muted small mb-0" style="font-size: 0.75rem;">Nenhuma fatura lançada para este aluno.</p>
+                    </div>
+                `;
+            } else {
+                // Há faturas - mostrar resumo
+                if (isCardHistorico) {
+                    // Card da aba Histórico - versão mais compacta
+                    html = `
+                        <div class="text-center">
+                            <span class="badge bg-${statusInfo.class} mb-1" style="font-size: 0.7rem;">${statusInfo.label}</span>
+                            <p class="text-muted small mb-0" style="font-size: 0.7rem; line-height: 1.3;">
+                                ${resumo.saldo_aberto > 0 
+                                    ? `Saldo: <strong>${formatarMoeda(resumo.saldo_aberto)}</strong>` 
+                                    : 'Em dia'}
+                                ${resumo.qtd_faturas_vencidas > 0 
+                                    ? `<br><span class="text-danger" style="font-weight: 600;">${resumo.qtd_faturas_vencidas} vencida(s)</span>` 
+                                    : ''}
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    // Outros cards - versão mais detalhada
+                    html = `
+                        <div class="text-center">
+                            <span class="badge bg-${statusInfo.class} mb-2">${statusInfo.label}</span>
+                            <p class="text-muted small mb-1" style="font-size: 0.75rem;">
+                                Contratado: <strong>${formatarMoeda(resumo.total_contratado)}</strong><br>
+                                Pago: <strong>${formatarMoeda(resumo.total_pago)}</strong><br>
+                                Saldo: <strong>${formatarMoeda(resumo.saldo_aberto)}</strong>
+                            </p>
+                    `;
+                    
+                    if (resumo.proximo_vencimento) {
+                        html += `<p class="text-muted small mb-1" style="font-size: 0.7rem;">Próximo vencimento: ${formatarData(resumo.proximo_vencimento)}</p>`;
+                    }
+                    
+                    if (resumo.qtd_faturas_vencidas > 0) {
+                        html += `<p class="text-danger small mb-0" style="font-size: 0.7rem; font-weight: 600;">Faturas vencidas: ${resumo.qtd_faturas_vencidas}</p>`;
+                    }
+                    
+                    html += `</div>`;
+                }
+            }
+            
+            // Adicionar link "Ver Financeiro" apenas se não for o card da aba Histórico (para manter compacto)
+            if (!isCardHistorico && alunoId) {
+                html += `
+                    <div class="text-center mt-2">
+                        <a href="?page=financeiro-faturas&aluno_id=${alunoId}" 
+                           class="btn btn-sm btn-outline-primary" 
+                           style="font-size: 0.7rem; padding: 0.2rem 0.5rem;">
+                            <i class="fas fa-dollar-sign me-1"></i>Ver Financeiro
+                        </a>
+                    </div>
+                `;
+            }
+            
+            // Atualizar este card específico
+            cardEl.innerHTML = html;
+            logModalAluno(`✅ Card financeiro_resumo [${index + 1}] atualizado com resumo completo`);
         });
         
-        logModalAluno(`✅ Total de ${cardElements.length} card(s) financeiro(s) atualizado(s) com: ${texto}`);
+        logModalAluno(`✅ Total de ${cardElements.length} card(s) financeiro(s) atualizado(s)`);
         
     } catch (error) {
         console.error('❌ Erro ao atualizar cards financeiro resumo:', error);
@@ -7729,22 +7929,21 @@ function registrarEventosAtalhosAluno() {
             logModalAluno(`✅ Eventos registrados para ${atalhos.length} atalho(s) de aluno`);
         }
         
-        // Habilitar botão "Ver Financeiro do Aluno" na aba Matrícula
-        const btnFinanceiro = document.querySelector('.aluno-btn-financeiro');
-        if (btnFinanceiro) {
-            btnFinanceiro.classList.remove('disabled');
-            btnFinanceiro.removeAttribute('disabled');
-            
-            // Remover listener antigo para evitar duplicação
-            const novoBtn = btnFinanceiro.cloneNode(true);
-            btnFinanceiro.parentNode.replaceChild(novoBtn, btnFinanceiro);
-            
-            novoBtn.addEventListener('click', function (e) {
-                e.preventDefault();
-                abrirAtalhoAluno('ver-financeiro-aluno');
-            });
-            
-            logModalAluno('✅ Botão "Ver Financeiro do Aluno" habilitado');
+        // Habilitar link "Ver Financeiro do Aluno" na aba Matrícula
+        const linkFinanceiro = document.querySelector('.aluno-btn-financeiro');
+        if (linkFinanceiro) {
+            // Obter alunoId do modal
+            const alunoId = document.getElementById('editar_aluno_id')?.value;
+            if (alunoId) {
+                // Configurar link funcional
+                linkFinanceiro.href = `?page=financeiro-faturas&aluno_id=${alunoId}`;
+                linkFinanceiro.style.pointerEvents = 'auto';
+                linkFinanceiro.style.opacity = '1';
+                linkFinanceiro.style.cursor = 'pointer';
+                linkFinanceiro.style.textDecoration = 'underline';
+                
+                logModalAluno('✅ Link "Ver Financeiro do Aluno" habilitado');
+            }
         }
         
     } catch (error) {
