@@ -2020,12 +2020,31 @@ function formatDateLocal(date) {
 }
 
 // Função para calcular vencimentos das parcelas
+/**
+ * Adiciona meses a uma data mantendo o dia do mês
+ * Se o mês resultante não tiver o mesmo dia (ex.: 31 → fevereiro), ajusta para o último dia do mês
+ * @param {Date} date - Data base
+ * @param {number} months - Número de meses a adicionar
+ * @returns {Date} Nova data com meses adicionados
+ */
+function addMonthsKeepingDay(date, months) {
+    const d = new Date(date.getTime());
+    const originalDay = d.getDate();
+    d.setMonth(d.getMonth() + months);
+    // Se o mês novo não tiver o mesmo dia (ex.: 31 → fevereiro), ajustar para o último dia do mês
+    if (d.getDate() < originalDay) {
+        d.setDate(0); // último dia do mês anterior
+    }
+    return d;
+}
+
 function calcularVencimentosParcelas(opcoes) {
     const {
         dataPrimeiraParcela, // Date ou string YYYY-MM-DD
         quantidadeParcelas,
         frequencia,          // 'monthly' | 'days'
-        intervaloDias        // number, usado só se frequencia === 'days'
+        intervaloDias,       // number, usado só se frequencia === 'days'
+        temEntrada           // boolean, indica se há entrada (para parcelamento mensal)
     } = opcoes;
 
     const vencimentos = [];
@@ -2044,27 +2063,34 @@ function calcularVencimentosParcelas(opcoes) {
     
     const diaBase = base.getDate();
 
+    // Log para debug
+    console.log('[DEBUG PARCELAS] Data base:', formatDateLocal(base), 'Frequência:', frequencia, 'Tem entrada:', temEntrada);
+
     for (let i = 0; i < quantidadeParcelas; i++) {
-        let d = new Date(base);
+        let d;
 
         if (frequencia === 'monthly') {
-            // Avança i meses mantendo o dia, caindo no mesmo dia
-            // (se o mês não tiver esse dia, usar o último dia do mês)
-            const targetMonth = d.getMonth() + i;
-            const targetYear = d.getFullYear() + Math.floor(targetMonth / 12);
-            const monthIndex = (targetMonth % 12 + 12) % 12;
-
-            // Cria a data tentativamente com o mesmo dia
-            d = new Date(targetYear, monthIndex, diaBase);
-
-            // Se o dia "voltou" (ex: pedimos dia 31/02), ajustar para último dia do mês
-            if (d.getMonth() !== monthIndex) {
-                d = new Date(targetYear, monthIndex + 1, 0); // dia 0 do próximo mês = último dia do mês desejado
+            // REGRA: Para parcelamento mensal com entrada, a 1ª parcela deve ser data + 1 mês
+            // Para parcelamento mensal sem entrada, a 1ª parcela é a data base
+            if (temEntrada) {
+                // Com entrada: 1ª parcela = data base + 1 mês, 2ª = data base + 2 meses, etc.
+                d = addMonthsKeepingDay(base, i + 1);
+            } else {
+                // Sem entrada: 1ª parcela = data base, 2ª = data base + 1 mês, etc.
+                d = addMonthsKeepingDay(base, i);
             }
         } else if (frequencia === 'days') {
+            // Para frequência por dias, manter lógica original
+            d = new Date(base);
             const dias = intervaloDias || 30;
             d.setDate(d.getDate() + i * dias);
+        } else {
+            // Fallback: usar data base
+            d = new Date(base);
         }
+
+        // Log para debug
+        console.log(`[DEBUG PARCELAS] Parcela ${i + 1}:`, formatDateLocal(d));
 
         vencimentos.push(d);
     }
@@ -2225,14 +2251,26 @@ function calcularParcelas() {
         }
         
         // Calcular vencimentos das parcelas
-        // IMPORTANTE: Se houver entrada, as parcelas começam a partir da data_vencimento
-        // Se não houver entrada, a 1ª parcela é na data_vencimento
-        // Em ambos os casos, data_vencimento é a referência central
+        // REGRA DE NEGÓCIO:
+        // - Para parcelamento mensal COM entrada: Entrada = data_vencimento, 1ª parcela = data_vencimento + 1 mês
+        // - Para parcelamento mensal SEM entrada: 1ª parcela = data_vencimento, 2ª = data_vencimento + 1 mês
+        // - Para outras frequências (dias, quinzenal, etc.): manter comportamento original
+        const temEntrada = entradaValida > 0.009;
+        
+        // Log para debug
+        console.log('[DEBUG PARCELAS] Iniciando cálculo:', {
+            dataBase: formatDateLocal(dataBase),
+            frequencia: frequencia,
+            temEntrada: temEntrada,
+            numParcelas: numParcelasValido
+        });
+        
         const vencimentos = calcularVencimentosParcelas({
-            dataPrimeiraParcela: dataBase, // Sempre data_vencimento
+            dataPrimeiraParcela: dataBase, // Sempre data_vencimento como referência
             quantidadeParcelas: numParcelasValido,
             frequencia: frequencia,
-            intervaloDias: intervaloDias
+            intervaloDias: intervaloDias,
+            temEntrada: temEntrada // Passar informação se há entrada para ajustar cálculo mensal
         });
         
         // Adicionar parcelas com proteção contra loops infinitos

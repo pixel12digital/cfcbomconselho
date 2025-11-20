@@ -61,17 +61,48 @@ if (!$alunoId) {
     }
 }
 
-// Buscar dados do aluno
+// Buscar dados do aluno com matrícula ativa (priorizar categoria/tipo da matrícula)
+// REGRA DE PADRONIZAÇÃO: Sempre priorizar dados da matrícula ativa quando existir
 if (defined('ADMIN_ROUTING') && isset($aluno)) {
     // Se estamos no sistema de roteamento e já temos os dados
     $alunoData = $aluno;
     $cfcData = $cfc;
+    
+    // Se não vier categoria_cnh_matricula, buscar matrícula ativa
+    if (empty($alunoData['categoria_cnh_matricula'])) {
+        $matriculaAtiva = $db->fetch("
+            SELECT categoria_cnh, tipo_servico
+            FROM matriculas
+            WHERE aluno_id = ? AND status = 'ativa'
+            ORDER BY data_inicio DESC
+            LIMIT 1
+        ", [$alunoId]);
+        
+        if ($matriculaAtiva) {
+            $alunoData['categoria_cnh_matricula'] = $matriculaAtiva['categoria_cnh'] ?? null;
+            $alunoData['tipo_servico_matricula'] = $matriculaAtiva['tipo_servico'] ?? null;
+        }
+    }
 } else {
-    // Buscar dados do banco
+    // Buscar dados do banco com JOIN para matrícula ativa
     $alunoData = $db->fetch("
-        SELECT a.*, c.nome as cfc_nome, c.cnpj as cfc_cnpj
+        SELECT 
+            a.*, 
+            c.nome as cfc_nome, 
+            c.cnpj as cfc_cnpj,
+            m_ativa.categoria_cnh AS categoria_cnh_matricula,
+            m_ativa.tipo_servico AS tipo_servico_matricula
         FROM alunos a 
-        LEFT JOIN cfcs c ON a.cfc_id = c.id 
+        LEFT JOIN cfcs c ON a.cfc_id = c.id
+        LEFT JOIN (
+            SELECT 
+                m1.aluno_id,
+                m1.categoria_cnh,
+                m1.tipo_servico
+            FROM matriculas m1
+            WHERE m1.status = 'ativa'
+            GROUP BY m1.aluno_id
+        ) AS m_ativa ON m_ativa.aluno_id = a.id
         WHERE a.id = ?
     ", [$alunoId]);
     
@@ -175,9 +206,84 @@ $aulasPraticasPorTipo = [
 // Incluir classe de configurações
 require_once __DIR__ . '/../includes/configuracoes_categorias.php';
 
+/**
+ * FUNÇÃO CENTRALIZADA PARA CALCULAR CARGA DE CATEGORIA
+ * REGRA DE NEGÓCIO:
+ * - Para categoria simples (ex: B): usar teoria e práticas da própria categoria
+ * - Para categoria combinada (ex: AB):
+ *   - Teoria: NÃO duplicar (usar valor único, ex: 45h, não 90h)
+ *   - Práticas: SOMAR as práticas das categorias componentes (ex: A=20 + B=20 = 40)
+ */
+function calcularCargaCategoriaHistorico($categoriaCodigo, $configManager) {
+    // Decompor categoria para verificar se é combinada
+    $categoriasIndividuais = $configManager->decomporCategoriaCombinada($categoriaCodigo);
+    $ehCombinada = count($categoriasIndividuais) > 1;
+    
+    if ($ehCombinada) {
+        // Categoria combinada: somar práticas, teoria única
+        $totalHorasTeoricas = 0;
+        $totalAulasPraticas = 0;
+        $primeiraConfig = null;
+        
+        foreach ($categoriasIndividuais as $cat) {
+            $config = $configManager->getConfiguracaoByCategoria($cat);
+            if ($config) {
+                if ($primeiraConfig === null) {
+                    $primeiraConfig = $config;
+                }
+                // Teoria: usar apenas da primeira categoria (não somar)
+                // Práticas: somar todas as categorias componentes
+                $totalAulasPraticas += (int)($config['horas_praticas_total'] ?? 0);
+            }
+        }
+        
+        // Teoria: usar da primeira categoria (valor único, não somado)
+        $totalHorasTeoricas = $primeiraConfig ? (int)($primeiraConfig['horas_teoricas'] ?? 0) : 0;
+        
+        return [
+            'total_horas_teoricas' => $totalHorasTeoricas,
+            'total_aulas_praticas' => $totalAulasPraticas,
+            'eh_combinada' => true,
+            'categorias_componentes' => $categoriasIndividuais
+        ];
+    } else {
+        // Categoria simples: usar valores diretos
+        $config = $configManager->getConfiguracaoByCategoria($categoriaCodigo);
+        if ($config) {
+            return [
+                'total_horas_teoricas' => (int)($config['horas_teoricas'] ?? 0),
+                'total_aulas_praticas' => (int)($config['horas_praticas_total'] ?? 0),
+                'eh_combinada' => false,
+                'categorias_componentes' => [$categoriaCodigo]
+            ];
+        }
+    }
+    
+    // Fallback se não encontrar configuração
+    return [
+        'total_horas_teoricas' => 45,
+        'total_aulas_praticas' => 20,
+        'eh_combinada' => false,
+        'categorias_componentes' => []
+    ];
+}
+
 // Calcular progresso baseado na configuração da categoria
+// REGRA DE PADRONIZAÇÃO: Priorizar categoria da matrícula ativa quando existir
 $configManager = ConfiguracoesCategorias::getInstance();
-$categoriaAluno = $alunoData['categoria_cnh'];
+$categoriaAluno = !empty($alunoData['categoria_cnh_matricula']) 
+    ? $alunoData['categoria_cnh_matricula'] 
+    : $alunoData['categoria_cnh'];
+
+// Calcular carga usando função centralizada
+$cargaCategoria = calcularCargaCategoriaHistorico($categoriaAluno, $configManager);
+
+// Log para debug
+error_log('[DEBUG HISTORICO] Aluno ' . $alunoId . ' - categoria: ' . $categoriaAluno);
+error_log('[DEBUG HISTORICO] Carga calculada: ' . json_encode($cargaCategoria));
+error_log('[DEBUG HISTORICO] total_horas_teoricas: ' . $cargaCategoria['total_horas_teoricas']);
+error_log('[DEBUG HISTORICO] total_aulas_praticas: ' . $cargaCategoria['total_aulas_praticas']);
+error_log('[DEBUG HISTORICO] total_horas_necessarias: ' . ($cargaCategoria['total_horas_teoricas'] + $cargaCategoria['total_aulas_praticas']));
 
 // Verificar se é uma categoria mudanca_categoria (ex: AB, AC, etc.)
 $configuracoesCategorias = $configManager->getConfiguracoesParaCategoriaCombinada($categoriaAluno);
@@ -185,13 +291,13 @@ $ehCategoriaCombinada = count($configuracoesCategorias) > 1;
 
 if ($ehCategoriaCombinada) {
     // Para categorias mudanca_categorias, calcular progresso separadamente para cada categoria
-    $aulasNecessarias = 0;
-    $aulasTeoricasNecessarias = 0;
+    // REGRA: Usar função centralizada para garantir teoria única e práticas somadas
+    $aulasNecessarias = $cargaCategoria['total_aulas_praticas']; // Soma das práticas (ex: 20+20=40)
+    $aulasTeoricasNecessarias = $cargaCategoria['total_horas_teoricas']; // Teoria única (ex: 45, não 90)
     $progressoDetalhado = [];
     
     foreach ($configuracoesCategorias as $categoria => $config) {
-        $aulasNecessarias += $config['horas_praticas_total'];
-        $aulasTeoricasNecessarias += $config['horas_teoricas'];
+        // NÃO somar aqui - já foi calculado pela função centralizada
         
         // Calcular aulas concluídas por tipo para esta categoria específica
         // Para teóricas, contar apenas disciplinas únicas para evitar duplicação
@@ -340,12 +446,13 @@ if ($ehCategoriaCombinada) {
         }
     }
 } else {
-    // Para categoria única, usar configuração direta
+    // Para categoria única, usar função centralizada para garantir consistência
     $configuracaoCategoria = $configManager->getConfiguracaoByCategoria($categoriaAluno);
     
     if ($configuracaoCategoria) {
-        $aulasNecessarias = $configuracaoCategoria['horas_praticas_total'];
-        $aulasTeoricasNecessarias = $configuracaoCategoria['horas_teoricas'];
+        // REGRA: Usar função centralizada para garantir consistência
+        $aulasNecessarias = $cargaCategoria['total_aulas_praticas'];
+        $aulasTeoricasNecessarias = $cargaCategoria['total_horas_teoricas'];
         
         $progressoDetalhado = [
             'teoricas' => [
@@ -473,7 +580,14 @@ $proximasAulas = $db->fetchAll("
                                 <p><strong>Nome:</strong> <?php echo htmlspecialchars($alunoData['nome']); ?></p>
                                 <p><strong>CPF:</strong> <?php echo htmlspecialchars($alunoData['cpf']); ?></p>
                                 <p><strong>Categoria CNH:</strong> 
-                                    <span class="badge bg-primary"><?php echo htmlspecialchars($alunoData['categoria_cnh']); ?></span>
+                                    <?php 
+                                    // REGRA DE PADRONIZAÇÃO: Priorizar categoria da matrícula ativa quando existir
+                                    $categoriaExibicao = !empty($alunoData['categoria_cnh_matricula']) 
+                                        ? $alunoData['categoria_cnh_matricula'] 
+                                        : $alunoData['categoria_cnh'];
+                                    $badgeClass = !empty($alunoData['categoria_cnh_matricula']) ? 'bg-primary' : 'bg-secondary';
+                                    ?>
+                                    <span class="badge <?php echo $badgeClass; ?>"><?php echo htmlspecialchars($categoriaExibicao); ?></span>
                                 </p>
                             </div>
                             <div class="col-md-6">
@@ -623,7 +737,13 @@ $proximasAulas = $db->fetchAll("
                                 <?php echo htmlspecialchars($configuracaoCategoria['nome']); ?>
                             </h6>
                             <span class="badge bg-warning text-dark fs-6">
-                                Categoria <?php echo htmlspecialchars($alunoData['categoria_cnh']); ?>
+                                Categoria <?php 
+                                // REGRA DE PADRONIZAÇÃO: Priorizar categoria da matrícula ativa quando existir
+                                $categoriaExibicao = !empty($alunoData['categoria_cnh_matricula']) 
+                                    ? $alunoData['categoria_cnh_matricula'] 
+                                    : $alunoData['categoria_cnh'];
+                                echo htmlspecialchars($categoriaExibicao); 
+                                ?>
                             </span>
                         </div>
                         
@@ -710,7 +830,13 @@ $proximasAulas = $db->fetchAll("
                         <div class="text-center">
                             <i class="fas fa-exclamation-triangle fa-2x text-warning mb-2"></i>
                             <p class="text-muted mb-0">Configuração não encontrada</p>
-                            <small class="text-muted">Categoria: <?php echo htmlspecialchars($alunoData['categoria_cnh']); ?></small>
+                            <small class="text-muted">Categoria: <?php 
+                            // REGRA DE PADRONIZAÇÃO: Priorizar categoria da matrícula ativa quando existir
+                            $categoriaExibicao = !empty($alunoData['categoria_cnh_matricula']) 
+                                ? $alunoData['categoria_cnh_matricula'] 
+                                : $alunoData['categoria_cnh'];
+                            echo htmlspecialchars($categoriaExibicao); 
+                            ?></small>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -738,23 +864,24 @@ $proximasAulas = $db->fetchAll("
                         $totalPraticasConcluidasGeral = 0;
                         
                         if ($ehCategoriaCombinada) {
-                            // Para categorias mudanca_categorias, contar teóricas apenas uma vez
-                            $primeiraConfig = reset($configuracoesCategorias);
-                            $totalTeoricasGeral = $primeiraConfig['horas_teoricas'];
+                            // REGRA: Usar função centralizada para garantir teoria única e práticas somadas
+                            $totalTeoricasGeral = $cargaCategoria['total_horas_teoricas']; // Teoria única (não somada)
+                            $totalPraticasGeral = $cargaCategoria['total_aulas_praticas']; // Práticas somadas (ex: 40)
                             
                             foreach ($configuracoesCategorias as $categoria => $config) {
                                 $totalTeoricasConcluidasGeral += $progressoDetalhado[$categoria]['teoricas']['concluidas'];
-                                $totalPraticasGeral += $config['horas_praticas_total']; // Somar as práticas das categorias
+                                // NÃO somar práticas aqui - já foi calculado pela função centralizada
                                 
                                 foreach (['praticas_moto', 'praticas_carro', 'praticas_carga', 'praticas_passageiros', 'praticas_combinacao'] as $tipo) {
                                     $totalPraticasConcluidasGeral += $progressoDetalhado[$categoria][$tipo]['concluidas'];
                                 }
                             }
                         } else {
+                            // Categoria simples: usar valores da função centralizada ou configuração direta
                             if ($configuracaoCategoria) {
-                                $totalTeoricasGeral = $configuracaoCategoria['horas_teoricas'];
+                                $totalTeoricasGeral = $cargaCategoria['total_horas_teoricas'];
                                 $totalTeoricasConcluidasGeral = $progressoDetalhado['teoricas']['concluidas'];
-                                $totalPraticasGeral = $configuracaoCategoria['horas_praticas_total'];
+                                $totalPraticasGeral = $cargaCategoria['total_aulas_praticas'];
                                 $totalPraticasConcluidasGeral = $aulasPraticasConcluidas;
                             } else {
                                 // Fallback para valores padrão
@@ -767,6 +894,13 @@ $proximasAulas = $db->fetchAll("
                         
                         $percentualTeoricasGeral = $totalTeoricasGeral > 0 ? min(100, ($totalTeoricasConcluidasGeral / $totalTeoricasGeral) * 100) : 0;
                         $percentualPraticasGeral = $totalPraticasGeral > 0 ? min(100, ($totalPraticasConcluidasGeral / $totalPraticasGeral) * 100) : 0;
+                        
+                        // Log final para debug
+                        error_log('[DEBUG HISTORICO FINAL] categoria: ' . $categoriaAluno . ', ' . json_encode([
+                            'totalHorasTeoricas' => $totalTeoricasGeral,
+                            'totalAulasPraticas' => $totalPraticasGeral,
+                            'totalHorasNecessarias' => $totalTeoricasGeral + $totalPraticasGeral
+                        ]));
                         ?>
                         
                         <div class="row">
@@ -1135,6 +1269,45 @@ $proximasAulas = $db->fetchAll("
 
         <!-- Progresso Detalhado por Categoria -->
         <?php if ($progressoDetalhado): ?>
+        <?php
+        // Calcular totais gerais ANTES de renderizar o "Progresso Detalhado por Categoria"
+        // para que possam ser reutilizados no bloco de resumo teórico
+        // (Essas mesmas variáveis são recalculadas no bloco "Total Geral" abaixo, mas precisamos aqui também)
+        $totalTeoricasGeralDetalhado = 0;
+        $totalTeoricasConcluidasGeralDetalhado = 0;
+        $totalPraticasGeralDetalhado = 0;
+        $totalPraticasConcluidasGeralDetalhado = 0;
+        
+        if ($ehCategoriaCombinada) {
+            // REGRA: Usar função centralizada para garantir teoria única e práticas somadas
+            $totalTeoricasGeralDetalhado = $cargaCategoria['total_horas_teoricas']; // Teoria única (não somada)
+            $totalPraticasGeralDetalhado = $cargaCategoria['total_aulas_praticas']; // Práticas somadas (ex: 40)
+            
+            foreach ($configuracoesCategorias as $categoria => $config) {
+                $totalTeoricasConcluidasGeralDetalhado += $progressoDetalhado[$categoria]['teoricas']['concluidas'];
+                
+                foreach (['praticas_moto', 'praticas_carro', 'praticas_carga', 'praticas_passageiros', 'praticas_combinacao'] as $tipo) {
+                    $totalPraticasConcluidasGeralDetalhado += $progressoDetalhado[$categoria][$tipo]['concluidas'];
+                }
+            }
+        } else {
+            // Categoria simples: usar valores da função centralizada ou configuração direta
+            if ($configuracaoCategoria) {
+                $totalTeoricasGeralDetalhado = $cargaCategoria['total_horas_teoricas'];
+                $totalTeoricasConcluidasGeralDetalhado = $progressoDetalhado['teoricas']['concluidas'];
+                $totalPraticasGeralDetalhado = $cargaCategoria['total_aulas_praticas'];
+                $totalPraticasConcluidasGeralDetalhado = $aulasPraticasConcluidas;
+            } else {
+                // Fallback para valores padrão
+                $totalTeoricasGeralDetalhado = 45;
+                $totalTeoricasConcluidasGeralDetalhado = $progressoDetalhado['teoricas']['concluidas'];
+                $totalPraticasGeralDetalhado = 25;
+                $totalPraticasConcluidasGeralDetalhado = $aulasPraticasConcluidas;
+            }
+        }
+        
+        $percentualTeoricasGeralDetalhado = $totalTeoricasGeralDetalhado > 0 ? min(100, ($totalTeoricasConcluidasGeralDetalhado / $totalTeoricasGeralDetalhado) * 100) : 0;
+        ?>
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card">
@@ -1146,171 +1319,87 @@ $proximasAulas = $db->fetchAll("
                     </div>
                     <div class="card-body">
                         <?php if ($ehCategoriaCombinada): ?>
+                        <?php
+                        // Regra de negócio:
+                        // - Carga teórica é única para o curso combinado (ex.: AB) -> 45h teóricas no total.
+                        // - Carga prática é por categoria (ex.: A = 20 aulas, B = 20 aulas).
+                        // - Nesta tela, o resumo teórico é mostrado em um bloco único,
+                        //   e o detalhamento por categoria mostra apenas as práticas.
+                        
+                        // Reutilizar os valores já calculados corretamente no "Total Geral"
+                        // Esses valores já garantem teoria única e práticas somadas
+                        ?>
+                        
+                        <!-- Resumo Teórico do Curso (Categorias Combinadas) -->
+                        <div class="card card-progresso-teorico mb-3">
+                            <div class="card-body py-3">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="fw-semibold text-primary">
+                                            Resumo Teórico do Curso (Categorias combinadas)
+                                        </div>
+                                        <small class="text-muted">
+                                            Carga teórica compartilhada para todas as categorias deste curso combinado.
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div class="fw-bold">
+                                            <?php echo $totalTeoricasConcluidasGeralDetalhado; ?> / <?php echo $totalTeoricasGeralDetalhado; ?>
+                                        </div>
+                                        <small class="text-muted">
+                                            Total necessário: <?php echo $totalTeoricasGeralDetalhado; ?> aulas teóricas
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
                         <!-- Progresso para categorias mudanca_categorias -->
                         <?php foreach ($configuracoesCategorias as $categoria => $config): ?>
-                        <div class="border rounded p-3 mb-3">
-                            <h6 class="text-primary mb-3">
-                                <i class="fas fa-certificate me-2"></i>
-                                Categoria <?php echo $categoria; ?>: <?php echo htmlspecialchars($config['nome']); ?>
-                            </h6>
-                            
-                            <!-- Teóricas -->
-                            <?php if ($config['horas_teoricas'] > 0): ?>
-                            <div class="mb-3">
-                                <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <span class="fw-bold">
-                                        <i class="fas fa-book text-info me-2"></i>
-                                        Aulas Teóricas
-                                    </span>
-                                    <span class="badge bg-info">
-                                        <?php echo $progressoDetalhado[$categoria]['teoricas']['concluidas']; ?>/<?php echo $progressoDetalhado[$categoria]['teoricas']['necessarias']; ?>
-                                    </span>
-                                </div>
-                                <div class="progress" style="height: 8px;">
-                                    <div class="progress-bar bg-info" role="progressbar" 
-                                         style="width: <?php echo $progressoDetalhado[$categoria]['teoricas']['percentual']; ?>%">
+                        <?php
+                        // Calcular práticas concluídas desta categoria
+                        $totalPraticasConcluidas = 0;
+                        $totalPraticasNecessarias = $config['horas_praticas_total'];
+                        foreach (['praticas_moto', 'praticas_carro', 'praticas_carga', 'praticas_passageiros', 'praticas_combinacao'] as $tipo) {
+                            $totalPraticasConcluidas += $progressoDetalhado[$categoria][$tipo]['concluidas'];
+                        }
+                        $percentualPraticas = $totalPraticasNecessarias > 0 ? min(100, ($totalPraticasConcluidas / $totalPraticasNecessarias) * 100) : 0;
+                        ?>
+                        <div class="card card-progresso-categoria mb-3">
+                            <div class="card-body py-3">
+                                <div class="mb-2 d-flex justify-content-between align-items-center">
+                                    <div class="fw-semibold text-primary">
+                                        Categoria <?php echo $categoria; ?>: <?php echo htmlspecialchars($config['nome']); ?>
                                     </div>
+                                    <span class="badge bg-light text-primary border">
+                                        Aulas práticas (<?php echo $categoria; ?>)
+                                    </span>
                                 </div>
-                                <small class="text-muted">
-                                    Necessário: <?php echo $config['horas_teoricas']; ?>h teóricas
-                                </small>
-                            </div>
-                            <?php endif; ?>
-                            
-                            <!-- Práticas -->
-                            <div class="mb-3">
+                                
+                                <div class="small text-muted mb-2">
+                                    Categoria <?php echo $categoria; ?>: <?php echo $config['horas_praticas_total']; ?> aulas práticas
+                                </div>
+                                
                                 <div class="d-flex justify-content-between align-items-center mb-1">
-                                    <span class="fw-bold">
-                                        <i class="fas fa-car text-success me-2"></i>
-                                        Aulas Práticas
-                                    </span>
+                                    <span class="small text-muted">Progresso</span>
                                     <span class="badge bg-success">
-                                        <?php 
-                                        $totalPraticasConcluidas = 0;
-                                        $totalPraticasNecessarias = $config['horas_praticas_total']; // Usar sempre o total da configuração
-                                        foreach (['praticas_moto', 'praticas_carro', 'praticas_carga', 'praticas_passageiros', 'praticas_combinacao'] as $tipo) {
-                                            $totalPraticasConcluidas += $progressoDetalhado[$categoria][$tipo]['concluidas'];
-                                        }
-                                        echo $totalPraticasConcluidas . '/' . $totalPraticasNecessarias;
-                                        ?>
+                                        <?php echo $totalPraticasConcluidas; ?>/<?php echo $totalPraticasNecessarias; ?>
                                     </span>
                                 </div>
+                                
                                 <div class="progress" style="height: 8px;">
                                     <div class="progress-bar bg-success" role="progressbar" 
-                                         style="width: <?php 
-                                         $totalPraticasNecessarias = $config['horas_praticas_total']; // Usar sempre o total da configuração
-                                         echo $totalPraticasNecessarias > 0 ? min(100, ($totalPraticasConcluidas / $totalPraticasNecessarias) * 100) : 0; ?>%">
+                                         style="width: <?php echo $percentualPraticas; ?>%">
                                     </div>
                                 </div>
-                                <small class="text-muted">
-                                    Total necessário: <?php echo $config['horas_praticas_total']; ?> aulas práticas
-                                </small>
-                            </div>
-                            
-                            <!-- Detalhamento por tipo de veículo -->
-                            <div class="row">
-                                <?php if ($config['horas_praticas_moto'] > 0): ?>
-                                <div class="col-md-6 mb-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span>
-                                            <i class="fas fa-motorcycle text-warning me-2"></i>
-                                            <strong>Motocicletas</strong>
-                                        </span>
-                                        <span class="badge bg-warning">
-                                            <?php echo $progressoDetalhado[$categoria]['praticas_moto']['concluidas']; ?>/<?php echo $progressoDetalhado[$categoria]['praticas_moto']['necessarias']; ?>
-                                        </span>
-                                    </div>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-warning" role="progressbar" 
-                                             style="width: <?php echo $progressoDetalhado[$categoria]['praticas_moto']['percentual']; ?>%">
-                                        </div>
-                                    </div>
-                                    <small class="text-muted"><?php echo $config['horas_praticas_moto']; ?>h necessárias</small>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <?php if ($config['horas_praticas_carro'] > 0): ?>
-                                <div class="col-md-6 mb-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span>
-                                            <i class="fas fa-car text-primary me-2"></i>
-                                            <strong>Automóveis</strong>
-                                        </span>
-                                        <span class="badge bg-primary">
-                                            <?php echo $progressoDetalhado[$categoria]['praticas_carro']['concluidas']; ?>/<?php echo $progressoDetalhado[$categoria]['praticas_carro']['necessarias']; ?>
-                                        </span>
-                                    </div>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-primary" role="progressbar" 
-                                             style="width: <?php echo $progressoDetalhado[$categoria]['praticas_carro']['percentual']; ?>%">
-                                        </div>
-                                    </div>
-                                    <small class="text-muted"><?php echo $config['horas_praticas_carro']; ?>h necessárias</small>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <?php if ($config['horas_praticas_carga'] > 0): ?>
-                                <div class="col-md-6 mb-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span>
-                                            <i class="fas fa-truck text-secondary me-2"></i>
-                                            <strong>Carga</strong>
-                                        </span>
-                                        <span class="badge bg-secondary">
-                                            <?php echo $progressoDetalhado[$categoria]['praticas_carga']['concluidas']; ?>/<?php echo $progressoDetalhado[$categoria]['praticas_carga']['necessarias']; ?>
-                                        </span>
-                                    </div>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-secondary" role="progressbar" 
-                                             style="width: <?php echo $progressoDetalhado[$categoria]['praticas_carga']['percentual']; ?>%">
-                                        </div>
-                                    </div>
-                                    <small class="text-muted"><?php echo $config['horas_praticas_carga']; ?>h necessárias</small>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <?php if ($config['horas_praticas_passageiros'] > 0): ?>
-                                <div class="col-md-6 mb-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span>
-                                            <i class="fas fa-bus text-info me-2"></i>
-                                            <strong>Passageiros</strong>
-                                        </span>
-                                        <span class="badge bg-info">
-                                            <?php echo $progressoDetalhado[$categoria]['praticas_passageiros']['concluidas']; ?>/<?php echo $progressoDetalhado[$categoria]['praticas_passageiros']['necessarias']; ?>
-                                        </span>
-                                    </div>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-info" role="progressbar" 
-                                             style="width: <?php echo $progressoDetalhado[$categoria]['praticas_passageiros']['percentual']; ?>%">
-                                        </div>
-                                    </div>
-                                    <small class="text-muted"><?php echo $config['horas_praticas_passageiros']; ?>h necessárias</small>
-                                </div>
-                                <?php endif; ?>
-                                
-                                <?php if ($config['horas_praticas_combinacao'] > 0): ?>
-                                <div class="col-md-6 mb-2">
-                                    <div class="d-flex justify-content-between align-items-center">
-                                        <span>
-                                            <i class="fas fa-trailer text-dark me-2"></i>
-                                            <strong>Combinação</strong>
-                                        </span>
-                                        <span class="badge bg-dark">
-                                            <?php echo $progressoDetalhado[$categoria]['praticas_combinacao']['concluidas']; ?>/<?php echo $progressoDetalhado[$categoria]['praticas_combinacao']['necessarias']; ?>
-                                        </span>
-                                    </div>
-                                    <div class="progress" style="height: 6px;">
-                                        <div class="progress-bar bg-dark" role="progressbar" 
-                                             style="width: <?php echo $progressoDetalhado[$categoria]['praticas_combinacao']['percentual']; ?>%">
-                                        </div>
-                                    </div>
-                                    <small class="text-muted"><?php echo $config['horas_praticas_combinacao']; ?>h necessárias</small>
-                                </div>
-                                <?php endif; ?>
                             </div>
                         </div>
                         <?php endforeach; ?>
+                        
+                        <!-- Rodapé com total combinado de práticas -->
+                        <div class="text-muted small mt-1 mb-3">
+                            Total combinado de aulas práticas para todas as categorias: <?php echo $cargaCategoria['total_aulas_praticas']; ?> aulas.
+                        </div>
                         
                         <?php else: ?>
                         <!-- Progresso para categoria única -->
@@ -1716,6 +1805,26 @@ $proximasAulas = $db->fetchAll("
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <style>
+        /* Estilos para cards compactos do Progresso Detalhado por Categoria */
+        .card-progresso-teorico,
+        .card-progresso-categoria {
+            border-radius: 10px;
+        }
+
+        .card-progresso-teorico .card-body,
+        .card-progresso-categoria .card-body {
+            padding-top: 0.75rem;
+            padding-bottom: 0.75rem;
+        }
+
+        /* Em telas grandes, reduzir um pouco ainda mais a "altura visual" */
+        @media (min-width: 992px) {
+            .card-progresso-categoria {
+                margin-bottom: 0.75rem;
+            }
+        }
+    </style>
     <script>
         // Funções para ações
         function verDetalhesAula(aulaId) {

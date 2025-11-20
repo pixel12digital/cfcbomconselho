@@ -55,6 +55,56 @@ if (!isset($stats['total_alunos'])) {
 // Debug: Verificar se os dados estão sendo carregados
 error_log("DEBUG ALUNOS: Total de alunos carregados: " . count($alunos));
 error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum'));
+
+/**
+ * Função helper para obter categoria priorizando matrícula ativa
+ * @param array $aluno Array do aluno (pode conter categoria_cnh_matricula e categoria_cnh)
+ * @return string Categoria a ser exibida
+ */
+function obterCategoriaExibicao($aluno) {
+    // Prioridade 1: Categoria da matrícula ativa
+    if (!empty($aluno['categoria_cnh_matricula'])) {
+        return $aluno['categoria_cnh_matricula'];
+    }
+    // Prioridade 2: Categoria do aluno (fallback)
+    if (!empty($aluno['categoria_cnh'])) {
+        return $aluno['categoria_cnh'];
+    }
+    // Prioridade 3: Tentar extrair de operações
+    if (!empty($aluno['operacoes'])) {
+        $operacoes = is_string($aluno['operacoes']) ? json_decode($aluno['operacoes'], true) : $aluno['operacoes'];
+        if (is_array($operacoes) && !empty($operacoes)) {
+            $primeiraOp = $operacoes[0];
+            return $primeiraOp['categoria'] ?? $primeiraOp['categoria_cnh'] ?? 'N/A';
+        }
+    }
+    return 'N/A';
+}
+
+/**
+ * Função helper para obter tipo de serviço priorizando matrícula ativa
+ * @param array $aluno Array do aluno (pode conter tipo_servico_matricula e tipo_servico)
+ * @return string Tipo de serviço a ser exibido
+ */
+function obterTipoServicoExibicao($aluno) {
+    // Prioridade 1: Tipo de serviço da matrícula ativa
+    if (!empty($aluno['tipo_servico_matricula'])) {
+        return $aluno['tipo_servico_matricula'];
+    }
+    // Prioridade 2: Tipo de serviço do aluno (fallback)
+    if (!empty($aluno['tipo_servico'])) {
+        return $aluno['tipo_servico'];
+    }
+    // Prioridade 3: Tentar extrair de operações
+    if (!empty($aluno['operacoes'])) {
+        $operacoes = is_string($aluno['operacoes']) ? json_decode($aluno['operacoes'], true) : $aluno['operacoes'];
+        if (is_array($operacoes) && !empty($operacoes)) {
+            $primeiraOp = $operacoes[0];
+            return $primeiraOp['tipo_servico'] ?? $primeiraOp['tipo'] ?? 'Primeira Habilitação';
+        }
+    }
+    return 'Primeira Habilitação';
+}
 ?>
 
 <style>
@@ -1594,50 +1644,14 @@ input.form-control.invalid {
                             </td>
                             <td>
                                 <?php 
-                                // Mostrar operações dinâmicas em vez de categoria única
-                                $operacoes = $aluno['operacoes'];
-                                if (is_string($operacoes)) {
-                                    $operacoes = json_decode($operacoes, true);
-                                }
+                                // Obter categoria priorizando matrícula ativa
+                                $categoriaExibicao = obterCategoriaExibicao($aluno);
                                 
-                                if (!empty($operacoes) && is_array($operacoes)) {
-                                    foreach ($operacoes as $index => $operacao) {
-                                        $badgeClass = '';
-                                        $tipoText = '';
-                                        
-                                        $tipo = $operacao['tipo'] ?? 'desconhecido';
-                                        $categoria = $operacao['categoria'] ?? $operacao['categoria_cnh'] ?? 'N/A';
-                                        
-                                        switch ($tipo) {
-                                            case 'primeira_habilitacao':
-                                                $badgeClass = 'bg-primary';
-                                                $tipoText = '';
-                                                break;
-                                            case 'adicao':
-                                                $badgeClass = 'badge-status-ativo';
-                                                $tipoText = '';
-                                                break;
-                                            case 'mudanca':
-                                                $badgeClass = 'badge-status-pendente';
-                                                $tipoText = '';
-                                                break;
-                                            case 'aula_avulsa':
-                                                $badgeClass = 'bg-info';
-                                                $tipoText = '';
-                                                break;
-                                            default:
-                                                $badgeClass = 'badge-status-inativo';
-                                                $tipoText = '';
-                                        }
-                                        
-                                        if ($index > 0) echo '<br>';
-                                        echo '<span class="badge ' . $badgeClass . ' me-1" title="' . ucfirst(str_replace('_', ' ', $tipo)) . '">' . 
-                                             htmlspecialchars($categoria) . '</span>';
-                                    }
-                                } else {
-                                    // Fallback para categoria antiga se não houver operações
-                                    echo '<span class="badge bg-secondary">' . htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A') . '</span>';
-                                }
+                                // Se houver matrícula ativa, usar badge primário; caso contrário, secundário
+                                $badgeClass = !empty($aluno['categoria_cnh_matricula']) ? 'bg-primary' : 'bg-secondary';
+                                
+                                echo '<span class="badge ' . $badgeClass . '" title="Categoria CNH">' . 
+                                     htmlspecialchars($categoriaExibicao) . '</span>';
                                 ?>
                             </td>
                             <td>
@@ -1675,14 +1689,7 @@ input.form-control.invalid {
                                         <i class="fas fa-eye" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
                                     </button>
                                     
-                                    <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
-                                    <button type="button" class="btn btn-sm btn-primary-action btn-add action-icon-btn" 
-                                            onclick="agendarAula(<?php echo $aluno['id']; ?>)" 
-                                            title="Agendar nova aula para este aluno" data-tooltip="Agendar nova aula para este aluno"
-                                            style="display: inline-flex !important; visibility: visible !important; opacity: 1 !important;">
-                                        <i class="fas fa-calendar-plus" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
-                                    </button>
-                                    <?php endif; ?>
+                                    <!-- Botão de agendamento removido conforme solicitado -->
                                     
                                     <button type="button" class="btn btn-sm btn-secondary-action btn-history action-icon-btn" 
                                             onclick="historicoAluno(<?php echo $aluno['id']; ?>)" 
@@ -1760,22 +1767,10 @@ input.form-control.invalid {
                             <span class="mobile-aluno-label">Categoria</span>
                             <span class="mobile-aluno-value">
                                 <?php 
-                                if (!empty($aluno['operacoes'])) {
-                                    // Verificar se operacoes é string JSON e converter para array
-                                    $operacoes = $aluno['operacoes'];
-                                    if (is_string($operacoes)) {
-                                        $operacoes = json_decode($operacoes, true);
-                                    }
-                                    
-                                    if (is_array($operacoes) && !empty($operacoes)) {
-                                        $categorias = array_column($operacoes, 'categoria');
-                                        echo implode(', ', array_unique($categorias));
-                                    } else {
-                                        echo htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A');
-                                    }
-                                } else {
-                                    echo htmlspecialchars($aluno['categoria_cnh'] ?? 'N/A');
-                                }
+                                // REGRA DE PADRONIZAÇÃO: Priorizar categoria da matrícula ativa quando existir
+                                // Usar a mesma função helper da tabela desktop
+                                $categoriaExibicao = obterCategoriaExibicao($aluno);
+                                echo htmlspecialchars($categoriaExibicao);
                                 ?>
                             </span>
                         </div>
@@ -1788,9 +1783,7 @@ input.form-control.invalid {
                         <button type="button" class="btn btn-sm btn-warning" onclick="editarAluno(<?php echo $aluno['id']; ?>)" title="Editar aluno">
                             <i class="fas fa-edit"></i>
                         </button>
-                        <button type="button" class="btn btn-sm btn-info" onclick="agendarAula(<?php echo $aluno['id']; ?>)" title="Agendar aula">
-                            <i class="fas fa-calendar-plus"></i>
-                        </button>
+                        <!-- Botão de agendamento removido conforme solicitado -->
                         <button type="button" class="btn btn-sm btn-secondary" onclick="historicoAluno(<?php echo $aluno['id']; ?>)" title="Histórico de aulas">
                             <i class="fas fa-history"></i>
                         </button>
@@ -2338,15 +2331,16 @@ input.form-control.invalid {
                     </div>
                   </div>
                   
-                  <div class="row">
+                  <div class="row mb-3" id="observacoes-section">
                     <div class="col-12">
                       <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
                         <i class="fas fa-sticky-note me-1"></i>Observações Gerais
                       </h6>
-                      <div class="mb-1">
+                      <div class="mb-2">
                         <label for="observacoes" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Observações</label>
-                        <textarea class="form-control" id="observacoes" name="observacoes" rows="1" 
-                                  placeholder="Informações adicionais sobre o aluno..." style="padding: 0.4rem; font-size: 0.85rem; resize: vertical;"></textarea>
+                        <textarea class="form-control" id="observacoes" name="observacoes" rows="3" 
+                                  placeholder="Informações adicionais sobre o aluno..." 
+                                  style="padding: 0.4rem; font-size: 0.85rem; resize: vertical; min-height: 80px;"></textarea>
                       </div>
                     </div>
                   </div>
@@ -2405,7 +2399,10 @@ input.form-control.invalid {
                       <div class="col-md-4">
                         <div class="mb-1">
                           <label for="data_conclusao" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Data de Conclusão</label>
-                          <input type="date" class="form-control" id="data_conclusao" name="data_conclusao" style="padding: 0.4rem; font-size: 0.85rem;">
+                          <input type="date" class="form-control" id="data_conclusao" name="data_conclusao" 
+                                 placeholder="Preenchida automaticamente quando a matrícula for concluída" 
+                                 readonly style="padding: 0.4rem; font-size: 0.85rem; background-color: #f8f9fa; cursor: not-allowed;"
+                                 title="Este campo é preenchido automaticamente quando o status da matrícula muda para 'Concluída'">
                         </div>
                       </div>
                     </div>
@@ -2439,9 +2436,11 @@ input.form-control.invalid {
                       <div class="col-md-4">
                         <div class="mb-1">
                           <label for="renach" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">RENACH *</label>
-                          <input type="text" class="form-control" id="renach" name="renach" required 
+                          <input type="text" class="form-control" id="renach" name="renach" 
                                  placeholder="PE000000000" maxlength="11" style="padding: 0.4rem; font-size: 0.85rem;"
-                                 data-mask="renach">
+                                 data-mask="renach" data-required-in-matricula="true">
+                          <!-- NOTA: required removido do HTML para evitar erro "not focusable" ao salvar apenas aba Dados.
+                               A validação de RENACH obrigatório será feita via JS apenas quando a aba Matrícula for utilizada. -->
                         </div>
                       </div>
                     </div>
@@ -2529,7 +2528,8 @@ input.form-control.invalid {
                           <input type="number" class="form-control" id="aulas_praticas_extras" name="aulas_praticas_extras" min="0" style="padding: 0.4rem; font-size: 0.85rem;">
                         </div>
                       </div>
-                      <div class="col-md-4">
+                      <!-- Instrutor Principal - OCULTO conforme solicitado -->
+                      <div class="col-md-4 d-none">
                         <div class="mb-1">
                           <label for="instrutor_principal_id" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Instrutor Principal</label>
                           <select class="form-select" id="instrutor_principal_id" name="instrutor_principal_id" style="padding: 0.4rem; font-size: 0.85rem;">
@@ -2671,14 +2671,47 @@ input.form-control.invalid {
                 <div class="aluno-tab-pane-inner">
                   <div class="container-fluid" id="documentos-container">
                     <h6 class="text-primary border-bottom pb-1 mb-2">Documentos do Aluno</h6>
-                    <p class="text-muted mb-3">
-                      Envie e acompanhe aqui os documentos do aluno.
+                    <p class="text-muted mb-3" style="font-size: 0.85rem;">
+                      Envie e gerencie os documentos do aluno. Formatos aceitos: PDF, JPG, PNG (máx. 5MB).
                     </p>
 
-                    <!-- Lista dinâmica de documentos -->
+                    <!-- Formulário de Upload - SEM <form> aninhado -->
+                    <div class="card mb-3" style="border: 1px solid #dee2e6;">
+                      <div class="card-body p-3">
+                        <div id="documentos-aluno-wrapper">
+                          <div class="row g-2 align-items-end">
+                            <div class="col-md-4">
+                              <label for="tipo-documento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.25rem;">Tipo de Documento</label>
+                              <select class="form-select form-select-sm" id="tipo-documento" style="font-size: 0.85rem;">
+                                <option value="">Selecione...</option>
+                                <option value="rg">RG</option>
+                                <option value="cpf">CPF</option>
+                                <option value="comprovante_residencia">Comprovante de Residência</option>
+                                <option value="foto_3x4">Foto 3x4</option>
+                                <option value="outro">Outro</option>
+                              </select>
+                            </div>
+                            <div class="col-md-5">
+                              <label for="arquivo-documento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.25rem;">Arquivo</label>
+                              <input type="file" class="form-control form-control-sm" id="arquivo-documento" 
+                                     accept=".pdf,.jpg,.jpeg,.png" style="font-size: 0.85rem; padding: 0.4rem;">
+                            </div>
+                            <div class="col-md-3">
+                              <button type="button" class="btn btn-primary btn-sm w-100" id="btn-enviar-documento" onclick="enviarDocumento(event)" style="font-size: 0.85rem;">
+                                <i class="fas fa-upload me-1"></i>Enviar
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Lista de Documentos -->
                     <div id="documentos-list">
-                      <!-- JS vai preencher aqui.
-                           Quando não houver dados, mostrar o empty-state aqui dentro. -->
+                      <div class="d-flex flex-column align-items-center justify-content-center py-5 text-muted">
+                        <i class="fas fa-file-alt fa-2x mb-3"></i>
+                        <p class="mb-0" style="font-size: 0.9rem;">Carregando documentos...</p>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -3015,8 +3048,8 @@ input.form-control.invalid {
             </div>
             
             <div class="form-group">
-                <label for="observacoes">Observações</label>
-                <textarea id="observacoes" name="observacoes" rows="3" placeholder="Observações sobre a aula..."></textarea>
+                <label for="observacoes_aula">Observações</label>
+                <textarea id="observacoes_aula" name="observacoes_aula" rows="3" placeholder="Observações sobre a aula..."></textarea>
             </div>
             
             <div class="form-actions">
@@ -3032,6 +3065,17 @@ input.form-control.invalid {
 
 <!-- Scripts específicos para Alunos -->
 <script>
+// =====================================================
+// DECLARAÇÃO GLOBAL DE FUNÇÕES (ANTES DE TUDO)
+// =====================================================
+// Garantir que abrirModalAluno está disponível globalmente desde o início
+// (será redefinida mais abaixo com a implementação completa)
+if (typeof window.abrirModalAluno === 'undefined') {
+    window.abrirModalAluno = function() {
+        console.warn('abrirModalAluno chamada antes de ser totalmente inicializada');
+    };
+}
+
 // =====================================================
 // FLAG DE DEBUG PARA MODAL DE ALUNO
 // =====================================================
@@ -3134,12 +3178,87 @@ document.addEventListener('DOMContentLoaded', function() {
     // Inicializar controles do modal
 inicializarModalAluno();
     
-    // Adicionar event listener para o formulário
+    // Adicionar event listener para o formulário e botão
     const formAluno = document.getElementById('formAluno');
+    const btnSalvar = document.getElementById('btnSalvarAluno');
+    
     if (formAluno) {
-        formAluno.addEventListener('submit', function(e) {
+        console.log('[DEBUG] Inicializando eventos do formulário formAluno');
+        formAluno.addEventListener('submit', async function(e) {
             e.preventDefault();
-            salvarAluno();
+            console.log('[DEBUG] Submit formAluno disparado');
+            
+            // Detectar qual aba está ativa (Bootstrap usa aria-selected ou classe active)
+            const matriculaTab = document.getElementById('matricula-tab');
+            const matriculaPane = document.getElementById('matricula');
+            
+            // Verificar de múltiplas formas (Bootstrap pode usar diferentes métodos)
+            const isMatriculaActive = (matriculaTab && (
+                matriculaTab.classList.contains('active') || 
+                matriculaTab.getAttribute('aria-selected') === 'true'
+            )) || (matriculaPane && (
+                matriculaPane.classList.contains('active') || 
+                matriculaPane.classList.contains('show')
+            ));
+            
+            console.log('[DEBUG] Submit - Detecção de aba:', {
+                isMatriculaActive: isMatriculaActive,
+                tabHasActive: matriculaTab?.classList.contains('active'),
+                tabAriaSelected: matriculaTab?.getAttribute('aria-selected'),
+                paneHasActive: matriculaPane?.classList.contains('active'),
+                paneHasShow: matriculaPane?.classList.contains('show')
+            });
+            
+            if (isMatriculaActive) {
+                // Se está na aba Matrícula, salvar Matrícula
+                console.log('[DEBUG] Submit - ✅ Aba Matrícula detectada, chamando saveAlunoMatricula');
+                await saveAlunoMatricula();
+            } else {
+                // Se está em outra aba, salvar apenas Dados
+                console.log('[DEBUG] Submit - ⚠️ Aba Matrícula NÃO detectada, chamando saveAlunoDados');
+                await saveAlunoDados(false);
+            }
+        });
+    }
+    
+    if (btnSalvar) {
+        console.log('[DEBUG] Inicializando eventos do botão Salvar Aluno');
+        btnSalvar.addEventListener('click', async function(e) {
+            e.preventDefault();
+            console.log('[DEBUG] Clique no botão Salvar Aluno');
+            
+            // Detectar qual aba está ativa (Bootstrap usa aria-selected ou classe active)
+            const matriculaTab = document.getElementById('matricula-tab');
+            const matriculaPane = document.getElementById('matricula');
+            
+            // Verificar de múltiplas formas (Bootstrap pode usar diferentes métodos)
+            const isMatriculaActive = (matriculaTab && (
+                matriculaTab.classList.contains('active') || 
+                matriculaTab.getAttribute('aria-selected') === 'true'
+            )) || (matriculaPane && (
+                matriculaPane.classList.contains('active') || 
+                matriculaPane.classList.contains('show')
+            ));
+            
+            console.log('[DEBUG] Detecção de aba:', {
+                matriculaTab: matriculaTab ? 'existe' : 'não existe',
+                matriculaPane: matriculaPane ? 'existe' : 'não existe',
+                tabHasActive: matriculaTab?.classList.contains('active'),
+                tabAriaSelected: matriculaTab?.getAttribute('aria-selected'),
+                paneHasActive: matriculaPane?.classList.contains('active'),
+                paneHasShow: matriculaPane?.classList.contains('show'),
+                isMatriculaActive: isMatriculaActive
+            });
+            
+            // Se está na aba Matrícula, salvar Matrícula
+            if (isMatriculaActive) {
+                console.log('[DEBUG] ✅ Aba Matrícula detectada como ativa, chamando saveAlunoMatricula');
+                await saveAlunoMatricula();
+            } else {
+                // Se está em outra aba, salvar apenas Dados
+                console.log('[DEBUG] ⚠️ Aba Matrícula NÃO detectada como ativa, chamando saveAlunoDados');
+                await saveAlunoDados(false);
+            }
         });
     }
 
@@ -3359,6 +3478,13 @@ function mostrarFeedbackCEP(tipo, mensagem) {
 // Globais para evitar carregamentos duplicados
 let carregamentoMunicipios = {}; // Estado -> Promise em andamento
 
+/**
+ * Carrega municípios de um estado via API centralizada
+ * Fonte: admin/api/municipios.php?uf={estado}
+ * 
+ * NOTA: Esta função foi atualizada para usar a fonte centralizada de municípios
+ * em vez do array hardcoded, garantindo consistência e facilidade de manutenção.
+ */
 function carregarMunicipios(estado) {
     const municipioSelect = document.getElementById('naturalidade_municipio');
     
@@ -3367,7 +3493,13 @@ function carregarMunicipios(estado) {
         return Promise.reject('Select de município não encontrado');
     }
     
-    console.log('🔄 Carregando municípios para estado:', estado);
+    if (!estado || estado.trim() === '') {
+        municipioSelect.innerHTML = '<option value="">Primeiro selecione o estado</option>';
+        municipioSelect.disabled = true;
+        return Promise.resolve();
+    }
+    
+    console.log('🔄 Carregando municípios para estado:', estado, '(via API centralizada)');
     
     // Se já está no meio de um carregamento para este estado, retornar a promessa existente
     if (carregamentoMunicipios[estado]) {
@@ -3375,66 +3507,99 @@ function carregarMunicipios(estado) {
         return carregamentoMunicipios[estado];
     }
     
-    // Verificar se os municípios já estão carregados para este estado
-    const opcoesAtuais = Array.from(municipioSelect.options).map(o => o.value).slice(1);
-    const municipiosEsperados = getMunicipiosPorEstado(estado);
-    
-    // Se não há municípios para este estado, manter placeholder e desabilitar
-    if (municipiosEsperados.length === 0) {
-        municipioSelect.innerHTML = '<option value="">Estado não configurado</option>';
-        municipioSelect.disabled = true;
-        console.warn('⚠️ Estado', estado, 'não possui municípios configurados');
-        return Promise.resolve();
-    }
-    
-    if (opcoesAtuais.length > 0 && municipiosEsperados.length === opcoesAtuais.length) {
-        console.log('✅ Municípios já estão carregados para', estado);
-        municipioSelect.disabled = false;
-        return Promise.resolve();
-    }
-    
     // Mostrar indicador de carregamento
     municipioSelect.innerHTML = '<option value="">Carregando municípios...</option>';
     municipioSelect.disabled = true;
     
-    // Usar lista estática de municípios (resolvendo problema de CSP)
-    const municipios = getMunicipiosPorEstado(estado);
+    // Buscar municípios da API centralizada
+    // NOTA: Detectar caminho base automaticamente baseado na URL atual
+    // A página é acessada via index.php?page=alunos (em admin/index.php)
+    // Então o caminho relativo correto é ../api/ (subindo de pages/ para admin/, depois entrando em api/)
+    // Mas se a URL já contém /admin/, usar caminho absoluto
+    let apiUrl;
+    const currentPath = window.location.pathname;
     
-    console.log('Municípios encontrados:', municipios); // Debug
+    // Detectar caminho base corretamente
+    // A URL atual é algo como: /cfc-bom-conselho/admin/index.php
+    // Precisamos construir: /cfc-bom-conselho/admin/api/municipios.php
+    if (currentPath.includes('/admin/')) {
+        // Se a URL contém /admin/, extrair o caminho base até /admin/
+        const adminIndex = currentPath.indexOf('/admin/');
+        const basePath = currentPath.substring(0, adminIndex + 7); // +7 para incluir '/admin/'
+        apiUrl = `${basePath}api/municipios.php?uf=${encodeURIComponent(estado)}`;
+    } else {
+        // Caso contrário, tentar caminho relativo (assumindo que estamos em admin/pages/)
+        apiUrl = `../api/municipios.php?uf=${encodeURIComponent(estado)}`;
+    }
     
-    // Criar e armazenar a Promise para evitar carregamentos duplicados
-    const promiseEmAndamento = new Promise((resolve, reject) => {
-        setTimeout(() => {
-            try {
-                municipioSelect.innerHTML = '<option value="">Selecione o município...</option>';
-                
-                // Ordenar municípios alfabeticamente
-                municipios.sort((a, b) => a.localeCompare(b, 'pt-BR'));
-                
-                municipios.forEach(municipio => {
-                    const option = document.createElement('option');
-                    option.value = municipio;
-                    option.textContent = municipio;
-                    municipioSelect.appendChild(option);
-                });
-                
-                municipioSelect.disabled = false;
-                console.log('✅ Municípios carregados no select:', municipioSelect.options.length);
-                
-                // Limpar a referência ao carregamento
-                delete carregamentoMunicipios[estado];
-                
-                // Disparar evento de mudança para notificar que os municípios foram carregados
-                municipioSelect.dispatchEvent(new Event('change'));
-                
-                resolve();
-            } catch (error) {
-                console.error('❌ Erro ao carregar municípios', error);
-                delete carregamentoMunicipios[estado];
-                reject(error);
+    console.log('🔍 Carregando municípios de:', apiUrl, '(path atual:', currentPath, ')');
+    
+    const promiseEmAndamento = fetch(apiUrl)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
-        }, 100);
-    });
+            return response.json();
+        })
+        .then(data => {
+            if (!data.success) {
+                throw new Error(data.error || 'Erro ao carregar municípios');
+            }
+            
+            const municipios = data.municipios || [];
+            console.log(`✅ ${municipios.length} municípios carregados para ${estado} (via API)`);
+            
+            // Limpar select e adicionar opção padrão
+            municipioSelect.innerHTML = '<option value="">Selecione o município...</option>';
+            
+            // Adicionar municípios ao select (já vêm ordenados da API)
+            municipios.forEach(municipio => {
+                const option = document.createElement('option');
+                option.value = municipio;
+                option.textContent = municipio;
+                municipioSelect.appendChild(option);
+            });
+            
+            municipioSelect.disabled = false;
+            
+            // Disparar evento de mudança
+            municipioSelect.dispatchEvent(new Event('change'));
+            
+            // Limpar a referência ao carregamento
+            delete carregamentoMunicipios[estado];
+            
+            return municipios;
+        })
+        .catch(error => {
+            console.error('❌ Erro ao carregar municípios da API:', error);
+            municipioSelect.innerHTML = '<option value="">Erro ao carregar municípios</option>';
+            municipioSelect.disabled = true;
+            
+            // Limpar a referência ao carregamento
+            delete carregamentoMunicipios[estado];
+            
+            // Fallback: tentar usar lista estática se API falhar
+            console.warn('⚠️ Tentando fallback para lista estática...');
+            try {
+                const municipiosFallback = getMunicipiosPorEstado(estado);
+                if (municipiosFallback && municipiosFallback.length > 0) {
+                    municipioSelect.innerHTML = '<option value="">Selecione o município...</option>';
+                    municipiosFallback.sort((a, b) => a.localeCompare(b, 'pt-BR'));
+                    municipiosFallback.forEach(municipio => {
+                        const option = document.createElement('option');
+                        option.value = municipio;
+                        option.textContent = municipio;
+                        municipioSelect.appendChild(option);
+                    });
+                    municipioSelect.disabled = false;
+                    console.log('✅ Fallback: Municípios carregados da lista estática');
+                }
+            } catch (fallbackError) {
+                console.error('❌ Erro no fallback:', fallbackError);
+            }
+            
+            throw error;
+        });
     
     // Armazenar a Promise em andamento
     carregamentoMunicipios[estado] = promiseEmAndamento;
@@ -3587,7 +3752,7 @@ function getMunicipiosPorEstado(estado) {
             'Gravatal', 'Armazém', 'Braço do Norte', 'São Ludgero', 'Orleans', 'Capivari de Baixo',
             'Lauro Muller', 'Meleiro', 'Pescaria Brava', 'Praia Grande', 'Timbó', 'Rio do Oeste',
             'Ponte Alta', 'Agrolândia', 'Atalanta', 'Chapadão do Lageado', 'Dona Emma', 'Ibirama',
-            'Lontras'
+            'Lontras', 'Witmarsum'
         ],
         'AL': [
             'Maceió', 'Arapiraca', 'Rio Largo', 'Marechal Deodoro', 'Palmeira dos Índios',
@@ -4095,16 +4260,18 @@ window.editarAluno = function(id) {
                             const modal = document.getElementById('modalAluno');
                             const form = document.getElementById('formAluno');
                             const estadoSelect = document.getElementById('naturalidade_estado');
+                            const observacoesField = document.getElementById('observacoes');
                             
                             const modalVisible = modal ? window.getComputedStyle(modal).display !== 'none' : false;
                             if (modal && modalVisible && 
-                                form && estadoSelect) {
-                                logModalAluno('✅ Modal totalmente carregado e pronto');
+                                form && estadoSelect && observacoesField) {
+                                logModalAluno('✅ Modal totalmente carregado e pronto (incluindo campo observacoes)');
                                 resolve();
                             } else {
                                 logModalAluno('⏳ Aguardando modal carregar...', {
                                     modalVisible,
                                     formExists: !!form,
+                                    observacoesExists: !!observacoesField,
                                     estadoExists: !!estadoSelect
                                 });
                                 setTimeout(checkModal, 50);
@@ -4119,21 +4286,55 @@ window.editarAluno = function(id) {
                     logModalAluno('🔄 Callando preencherFormularioAluno com dados:', data.aluno);
                     logModalAluno('🔄 Naturalidade disponível:', data.aluno.naturalidade);
                     logModalAluno('🔄 Timestamp:', new Date().toISOString());
+                    
+                    // Log específico para LGPD e Observações antes de preencher
+                    console.log('🔍 DEBUG - Aluno carregado para edição:', {
+                        id: data.aluno.id,
+                        nome: data.aluno.nome,
+                        lgpd_consentimento: data.aluno.lgpd_consentimento,
+                        lgpd_consentimento_em: data.aluno.lgpd_consentimento_em,
+                        observacoes: data.aluno.observacoes,
+                        observacoes_length: data.aluno.observacoes ? data.aluno.observacoes.length : 0
+                    });
+                    
                     preencherFormularioAluno(data.aluno);
                     logModalAluno('✅ Formulário preenchido - função executada');
                     
-                    // Carregar resumo financeiro do aluno (para todas as abas que precisam)
-                    atualizarResumoFinanceiroAluno(id, null);
+                // Carregar resumo financeiro do aluno (para todas as abas que precisam)
+                atualizarResumoFinanceiroAluno(id, null);
+                
+                // Se a API GET de alunos retornou dados da matrícula, usar como fallback
+                // antes de carregar da API GET de matrículas
+                const dadosMatriculaDoAluno = {
+                    aulas_praticas_contratadas: data.aluno.aulas_praticas_contratadas,
+                    aulas_praticas_extras: data.aluno.aulas_praticas_extras,
+                    forma_pagamento: data.aluno.forma_pagamento ?? data.aluno.forma_pagamento_matricula,
+                    status_pagamento: data.aluno.status_pagamento_matricula,
+                    valor_total: data.aluno.valor_total_matricula,
+                    previsao_conclusao: data.aluno.previsao_conclusao,
+                    processo_numero: data.aluno.numero_processo,
+                    processo_numero_detran: data.aluno.detran_numero,
+                    processo_situacao: data.aluno.processo_situacao,
+                    renach: data.aluno.renach_matricula ?? data.aluno.renach,
+                    status: data.aluno.status_matricula,
+                    data_inicio: data.aluno.data_matricula,
+                    data_fim: data.aluno.data_conclusao,
+                    categoria_cnh: data.aluno.categoria_cnh,
+                    tipo_servico: data.aluno.tipo_servico
+                };
+                
+                // Log dos dados da matrícula vindos da API GET de alunos
+                console.log('[DEBUG MATRICULA] Dados da matrícula vindos da API GET de alunos:', dadosMatriculaDoAluno);
+                
+                // Carregar matrícula principal após preencher formulário
+                setTimeout(() => {
+                    carregarMatriculaPrincipal(id, dadosMatriculaDoAluno);
                     
-                    // Carregar matrícula principal após preencher formulário
+                    // Carregar histórico do aluno
                     setTimeout(() => {
-                        carregarMatriculaPrincipal(id);
-                        
-                        // Carregar histórico do aluno
-                        setTimeout(() => {
-                            carregarHistoricoAluno(id);
-                        }, 600);
-                    }, 300);
+                        carregarHistoricoAluno(id);
+                    }, 600);
+                }, 300);
                     
                     // Aplicar validação automática após preenchimento
                     setTimeout(() => {
@@ -4183,22 +4384,64 @@ function preencherFormularioAluno(aluno) {
         'nome': aluno.nome || '',
         'cpf': aluno.cpf || '',
         'rg': aluno.rg || '',
+        'rg_orgao_emissor': aluno.rg_orgao_emissor || '',
+        'rg_uf': aluno.rg_uf || '',
+        'rg_data_emissao': aluno.rg_data_emissao ? aluno.rg_data_emissao.split(' ')[0] : '', // Formato YYYY-MM-DD para input date
         'renach': aluno.renach || '',
-        'data_nascimento': aluno.data_nascimento || '',
+        'data_nascimento': (() => {
+            // Tratar data de nascimento: converter para formato YYYY-MM-DD se válida
+            const data = aluno.data_nascimento;
+            if (!data || data === '0000-00-00' || data === '0000-00-00 00:00:00') {
+                return ''; // Data inválida ou vazia
+            }
+            // Se já está em formato YYYY-MM-DD, retornar direto
+            if (typeof data === 'string' && /^\d{4}-\d{2}-\d{2}/.test(data)) {
+                return data.split(' ')[0]; // Pegar apenas a parte da data (ignorar hora se houver)
+            }
+            // Tentar converter de outros formatos
+            try {
+                const dataObj = new Date(data);
+                if (!isNaN(dataObj.getTime())) {
+                    const ano = dataObj.getFullYear();
+                    const mes = String(dataObj.getMonth() + 1).padStart(2, '0');
+                    const dia = String(dataObj.getDate()).padStart(2, '0');
+                    return `${ano}-${mes}-${dia}`;
+                }
+            } catch (e) {
+                console.warn('⚠️ Erro ao converter data_nascimento:', e);
+            }
+            return ''; // Fallback: retornar vazio
+        })(),
+        'estado_civil': aluno.estado_civil || '',
+        'profissao': aluno.profissao || '',
+        'escolaridade': aluno.escolaridade || '',
         'naturalidade': aluno.naturalidade || '',
         'naturalidade_estado': extrairEstadoNaturalidade(aluno.naturalidade),
         'naturalidade_municipio': extrairMunicipioNaturalidade(aluno.naturalidade),
         'nacionalidade': aluno.nacionalidade || '',
         'email': aluno.email || '',
         'telefone': aluno.telefone || '',
+        'telefone_secundario': aluno.telefone_secundario || '',
+        'contato_emergencia_nome': aluno.contato_emergencia_nome || '',
+        'contato_emergencia_telefone': aluno.contato_emergencia_telefone || '',
         'cfc_id': aluno.cfc_id || '',
         'status': aluno.status || 'ativo',
-        'atividade_remunerada': aluno.atividade_remunerada || 0
+        'atividade_remunerada': aluno.atividade_remunerada || 0,
+        'observacoes': aluno.observacoes || ''
     };
     
     // Carregar foto existente se houver
+    console.log('📷 Verificando foto do aluno:', aluno.foto);
     if (aluno.foto) {
+        console.log('📷 Carregando foto existente:', aluno.foto);
         carregarFotoExistenteAluno(aluno.foto);
+    } else {
+        console.log('ℹ️ Nenhuma foto encontrada para o aluno');
+        // Garantir que o placeholder está visível
+        const container = document.getElementById('preview-container-aluno');
+        const placeholder = document.getElementById('placeholder-foto-aluno');
+        if (container) container.style.display = 'none';
+        if (placeholder) placeholder.style.display = 'block';
     }
     
     console.log('📝 Campos a serem preenchidos:', campos);
@@ -4219,17 +4462,43 @@ function preencherFormularioAluno(aluno) {
         console.log(`🔍 Campo ${campoId}:`, elemento ? '✅ Existe' : '❌ Não existe');
         if (elemento) {
             const valorAnterior = elemento.value;
-            elemento.value = campos[campoId];
+            
+            // Tratamento especial para selects (estado_civil, escolaridade, rg_uf)
+            if (elemento.tagName === 'SELECT') {
+                elemento.value = campos[campoId];
+                // Se o valor não foi definido (não existe nas opções), manter o primeiro (placeholder)
+                if (elemento.value !== campos[campoId] && campos[campoId]) {
+                    console.warn(`⚠️ Valor "${campos[campoId]}" não encontrado nas opções do select ${campoId}`);
+                }
+            } else {
+                elemento.value = campos[campoId];
+            }
+            
             console.log(`✅ Campo ${campoId}:`);
             console.log(`  - Valor anterior: "${valorAnterior}"`);
             console.log(`  - Valor novo: "${campos[campoId]}"`);
             console.log(`  - Valor atual: "${elemento.value}"`);
             
             // Verificar se o valor foi realmente definido (comparação mais robusta)
+            // Tratamento especial para data_nascimento: não bloquear outros campos se houver problema
             if (String(elemento.value).trim() !== String(campos[campoId]).trim()) {
-                console.error(`❌ ERRO: Campo ${campoId} não foi preenchido corretamente!`);
-                console.error(`  - Esperado: "${campos[campoId]}"`);
-                console.error(`  - Atual: "${elemento.value}"`);
+                if (campoId === 'data_nascimento') {
+                    // Para data_nascimento, apenas avisar mas não bloquear
+                    const valorBruto = aluno.data_nascimento;
+                    if (valorBruto && valorBruto !== '0000-00-00' && valorBruto !== '0000-00-00 00:00:00') {
+                        console.warn(`⚠️ AVISO: Campo ${campoId} em formato inesperado`, {
+                            esperado: campos[campoId],
+                            atual: elemento.value,
+                            valorBruto: valorBruto
+                        });
+                    } else {
+                        console.log(`ℹ️ Campo ${campoId} vazio ou inválido no banco - deixando vazio`);
+                    }
+                } else {
+                    console.error(`❌ ERRO: Campo ${campoId} não foi preenchido corretamente!`);
+                    console.error(`  - Esperado: "${campos[campoId]}"`);
+                    console.error(`  - Atual: "${elemento.value}"`);
+                }
             } else {
                 console.log(`✅ Campo ${campoId} preenchido corretamente`);
             }
@@ -4246,6 +4515,89 @@ function preencherFormularioAluno(aluno) {
         console.log(`✅ Checkbox atividade_remunerada:`, valorAtividade ? 'Marcado' : 'Desmarcado');
     } else {
         console.warn(`⚠️ Checkbox atividade_remunerada não encontrado no DOM`);
+    }
+    
+    // Tratamento especial para LGPD
+    console.log('🔒 Verificando LGPD do aluno:', {
+        lgpd_consentimento: aluno.lgpd_consentimento,
+        lgpd_consentimento_em: aluno.lgpd_consentimento_em,
+        tipo_lgpd_consentimento: typeof aluno.lgpd_consentimento,
+        tipo_lgpd_consentimento_em: typeof aluno.lgpd_consentimento_em,
+        lgpd_consentimento_undefined: aluno.lgpd_consentimento === undefined,
+        lgpd_consentimento_null: aluno.lgpd_consentimento === null
+    });
+    
+    // Checkbox LGPD
+    const lgpdCheckbox = document.getElementById('lgpd_consentimento');
+    if (lgpdCheckbox) {
+        // Verificar se o valor existe e converter para boolean
+        // Aceitar: 1, '1', true, ou qualquer valor truthy quando convertido
+        const lgpdValue = aluno.lgpd_consentimento !== undefined && 
+                         aluno.lgpd_consentimento !== null &&
+                         (aluno.lgpd_consentimento == 1 || 
+                          aluno.lgpd_consentimento === '1' || 
+                          aluno.lgpd_consentimento === true || 
+                          aluno.lgpd_consentimento === 1);
+        lgpdCheckbox.checked = lgpdValue;
+        console.log(`✅ Checkbox lgpd_consentimento:`, {
+            valorBruto: aluno.lgpd_consentimento,
+            valorConvertido: lgpdValue,
+            checked: lgpdCheckbox.checked,
+            elementoEncontrado: true
+        });
+    } else {
+        console.error('❌ Checkbox lgpd_consentimento não encontrado no DOM');
+    }
+    
+    // Data/Hora do Consentimento LGPD
+    const lgpdConsentimentoEm = document.getElementById('lgpd_consentimento_em');
+    if (lgpdConsentimentoEm) {
+        // Verificar se há data válida (não vazia, não null, não data inválida do MySQL)
+        if (aluno.lgpd_consentimento_em && 
+            String(aluno.lgpd_consentimento_em).trim() !== '' && 
+            aluno.lgpd_consentimento_em !== '0000-00-00 00:00:00' && 
+            aluno.lgpd_consentimento_em !== '0000-00-00' &&
+            aluno.lgpd_consentimento_em !== null) {
+            // Formatar data/hora para exibição (dd/mm/aaaa hh:mm)
+            try {
+                const dataConsentimento = new Date(aluno.lgpd_consentimento_em);
+                if (!isNaN(dataConsentimento.getTime())) {
+                    const dia = String(dataConsentimento.getDate()).padStart(2, '0');
+                    const mes = String(dataConsentimento.getMonth() + 1).padStart(2, '0');
+                    const ano = dataConsentimento.getFullYear();
+                    const hora = String(dataConsentimento.getHours()).padStart(2, '0');
+                    const minuto = String(dataConsentimento.getMinutes()).padStart(2, '0');
+                    lgpdConsentimentoEm.value = `${dia}/${mes}/${ano} ${hora}:${minuto}`;
+                    console.log(`✅ Campo lgpd_consentimento_em preenchido:`, lgpdConsentimentoEm.value);
+                } else {
+                    console.warn(`⚠️ Data de consentimento LGPD inválida (não é uma data válida):`, aluno.lgpd_consentimento_em);
+                    lgpdConsentimentoEm.value = '';
+                }
+            } catch (e) {
+                console.warn(`⚠️ Erro ao formatar data de consentimento LGPD:`, e, aluno.lgpd_consentimento_em);
+                lgpdConsentimentoEm.value = '';
+            }
+        } else {
+            // Se não houver data, deixar vazio (placeholder será exibido)
+            lgpdConsentimentoEm.value = '';
+            console.log(`ℹ️ Campo lgpd_consentimento_em vazio - não há data de consentimento salva ou data inválida`, {
+                valorBruto: aluno.lgpd_consentimento_em,
+                isNull: aluno.lgpd_consentimento_em === null,
+                isUndefined: aluno.lgpd_consentimento_em === undefined
+            });
+        }
+    } else {
+        console.error('❌ Campo lgpd_consentimento_em não encontrado no DOM');
+    }
+    
+    // Preencher Observações
+    const observacoesField = document.getElementById('observacoes');
+    if (observacoesField) {
+        const valorObservacoes = (aluno.observacoes !== undefined && aluno.observacoes !== null)
+            ? String(aluno.observacoes)
+            : '';
+        
+        observacoesField.value = valorObservacoes;
     }
     
     // Preencher tipo de serviço e categoria CNH
@@ -4463,14 +4815,7 @@ function preencherFormularioAluno(aluno) {
     console.log('🔍 Quantidade de operações:', aluno.operacoes ? aluno.operacoes.length : 'undefined');
     carregarOperacoesExistentes(aluno.operacoes || []);
     
-    // Preencher campo de observações
-    const observacoesField = document.getElementById('observacoes');
-    if (observacoesField) {
-        observacoesField.value = aluno.observacoes || '';
-        console.log('✅ Campo observacoes preenchido:', aluno.observacoes);
-    } else {
-        console.warn('⚠️ Campo observacoes não encontrado no DOM');
-    }
+    // Observações já foi preenchido acima no tratamento especial após o loop de campos
 }
 function visualizarAluno(id) {
     console.log('🚀 visualizandoAluno chamada com ID:', id);
@@ -4568,6 +4913,9 @@ function visualizarAluno(id) {
                 preencherModalVisualizacao(data.aluno);
                 console.log('✅ Modal preenchido');
 
+                // Carregar contador de documentos
+                carregarContadorDocumentos(id);
+
                 // Carregar resumo da matrícula principal após preencher modal
                 setTimeout(() => {
                     carregarResumoMatriculaParaVisualizacao(id);
@@ -4611,6 +4959,67 @@ function visualizarAluno(id) {
 }
 
 function preencherModalVisualizacao(aluno) {
+    // Funções auxiliares para formatação
+    const formatarDataHora = (dataHora) => {
+        if (!dataHora) return '—';
+        try {
+            const data = new Date(dataHora);
+            if (isNaN(data.getTime())) return '—';
+            return data.toLocaleString('pt-BR', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        } catch (e) {
+            return '—';
+        }
+    };
+    
+    const formatarBadgeStatus = (valor, tipo = 'status') => {
+        if (!valor || valor === '') return '<span class="badge bg-secondary">Não informado</span>';
+        
+        const valorLower = String(valor).toLowerCase();
+        let badgeClass = 'bg-secondary';
+        let texto = valor;
+        
+        if (tipo === 'status_matricula') {
+            const map = {
+                'ativa': { class: 'bg-success', texto: 'Ativa' },
+                'em_analise': { class: 'bg-warning', texto: 'Em Análise' },
+                'concluida': { class: 'bg-info', texto: 'Concluída' },
+                'trancada': { class: 'bg-secondary', texto: 'Trancada' },
+                'cancelada': { class: 'bg-danger', texto: 'Cancelada' }
+            };
+            const mapped = map[valorLower] || { class: 'bg-secondary', texto: valor };
+            badgeClass = mapped.class;
+            texto = mapped.texto;
+        } else if (tipo === 'processo_situacao') {
+            const map = {
+                'em_analise': { class: 'bg-warning', texto: 'Em Análise' },
+                'aprovado': { class: 'bg-success', texto: 'Aprovado' },
+                'indeferido': { class: 'bg-danger', texto: 'Indeferido' },
+                'nao_informado': { class: 'bg-secondary', texto: 'Não Informado' }
+            };
+            const mapped = map[valorLower] || { class: 'bg-secondary', texto: valor };
+            badgeClass = mapped.class;
+            texto = mapped.texto;
+        } else if (tipo === 'status_pagamento') {
+            const map = {
+                'em_dia': { class: 'bg-success', texto: 'EM DIA' },
+                'em_aberto': { class: 'bg-warning', texto: 'EM ABERTO' },
+                'em_atraso': { class: 'bg-danger', texto: 'EM ATRASO' },
+                'pendente': { class: 'bg-secondary', texto: 'PENDENTE' }
+            };
+            const mapped = map[valorLower] || { class: 'bg-secondary', texto: valor.toUpperCase() };
+            badgeClass = mapped.class;
+            texto = mapped.texto;
+        }
+        
+        return `<span class="badge ${badgeClass}">${texto}</span>`;
+    };
+    
     // Handle endereco field - it might be a string or an object
     let endereco = aluno.endereco;
     if (typeof aluno.endereco === 'string') {
@@ -4641,21 +5050,86 @@ function preencherModalVisualizacao(aluno) {
         return `${window.location.origin}${projectPath}/${normalizedFoto}`;
     })();
 
-    // Extrair tipo de serviço e categoria (placeholder por enquanto)
-    let tipoServicoTexto = 'Primeira Habilitação B - Automóvel'; // TODO: extrair de operacoes quando disponível
-    if (aluno.operacoes) {
-        try {
-            const operacoes = typeof aluno.operacoes === 'string' ? JSON.parse(aluno.operacoes) : aluno.operacoes;
-            if (Array.isArray(operacoes) && operacoes.length > 0) {
-                const primeiraOp = operacoes[0];
-                const tipoServico = primeiraOp.tipo_servico || primeiraOp.tipo || 'Primeira Habilitação';
-                const categoria = primeiraOp.categoria_cnh || primeiraOp.categoria || 'B';
-                tipoServicoTexto = `${tipoServico} ${categoria} - Automóvel`;
-            }
-        } catch (e) {
-            // Manter placeholder se não conseguir parsear
+    // Função helper para obter categoria priorizando matrícula ativa
+    function obterCategoriaExibicao(aluno) {
+        // Prioridade 1: Categoria da matrícula ativa
+        if (aluno.categoria_cnh_matricula) {
+            return aluno.categoria_cnh_matricula;
         }
+        // Prioridade 2: Categoria do aluno (fallback)
+        if (aluno.categoria_cnh) {
+            return aluno.categoria_cnh;
+        }
+        // Prioridade 3: Tentar extrair de operações
+        if (aluno.operacoes) {
+            try {
+                const operacoes = typeof aluno.operacoes === 'string' ? JSON.parse(aluno.operacoes) : aluno.operacoes;
+                if (Array.isArray(operacoes) && operacoes.length > 0) {
+                    const primeiraOp = operacoes[0];
+                    return primeiraOp.categoria || primeiraOp.categoria_cnh || 'N/A';
+                }
+            } catch (e) {
+                // Ignorar erro de parse
+            }
+        }
+        return 'N/A';
     }
+    
+    // Função helper para obter tipo de serviço priorizando matrícula ativa
+    function obterTipoServicoExibicao(aluno) {
+        // Prioridade 1: Tipo de serviço da matrícula ativa
+        if (aluno.tipo_servico_matricula) {
+            return aluno.tipo_servico_matricula;
+        }
+        // Prioridade 2: Tipo de serviço do aluno (fallback)
+        if (aluno.tipo_servico) {
+            return aluno.tipo_servico;
+        }
+        // Prioridade 3: Tentar extrair de operações
+        if (aluno.operacoes) {
+            try {
+                const operacoes = typeof aluno.operacoes === 'string' ? JSON.parse(aluno.operacoes) : aluno.operacoes;
+                if (Array.isArray(operacoes) && operacoes.length > 0) {
+                    const primeiraOp = operacoes[0];
+                    return primeiraOp.tipo_servico || primeiraOp.tipo || 'Primeira Habilitação';
+                }
+            } catch (e) {
+                // Ignorar erro de parse
+            }
+        }
+        return 'Primeira Habilitação';
+    }
+    
+    // Obter categoria e tipo de serviço usando as funções helper
+    const categoriaExibicao = obterCategoriaExibicao(aluno);
+    const tipoServicoExibicao = obterTipoServicoExibicao(aluno);
+    
+    // Formatar texto do tipo de serviço
+    // Mapear tipo_servico para texto amigável
+    const tipoServicoMap = {
+        'primeira_habilitacao': 'Primeira Habilitação',
+        'adicao': 'Adição de Categoria',
+        'mudanca': 'Mudança de Categoria',
+        'renovacao': 'Renovação',
+        'reciclagem': 'Reciclagem'
+    };
+    
+    const tipoServicoTextoFormatado = tipoServicoMap[tipoServicoExibicao] || tipoServicoExibicao;
+    
+    // Formatar categoria (ex: AB -> "A + B", B -> "B")
+    let categoriaFormatada = categoriaExibicao;
+    if (categoriaExibicao === 'AB') {
+        categoriaFormatada = 'A + B';
+    } else if (categoriaExibicao === 'AC') {
+        categoriaFormatada = 'A + C';
+    } else if (categoriaExibicao === 'AD') {
+        categoriaFormatada = 'A + D';
+    } else if (categoriaExibicao === 'AE') {
+        categoriaFormatada = 'A + E';
+    }
+    
+    // Montar texto final
+    let tipoServicoTexto = `${tipoServicoTextoFormatado} ${categoriaFormatada}`;
 
     const html = `
         <!-- VISUALIZAR ALUNO: Header com dados essenciais -->
@@ -4697,7 +5171,17 @@ function preencherModalVisualizacao(aluno) {
                     </h6>
                     <p class="mb-1" style="font-size: 0.9rem;"><strong>RG:</strong> ${aluno.rg || 'Não informado'}${aluno.rg_orgao_emissor ? ` / ${aluno.rg_orgao_emissor}` : ''}${aluno.rg_uf ? ` ${aluno.rg_uf}` : ''}</p>
                     ${aluno.rg_data_emissao ? `<p class="mb-1" style="font-size: 0.85rem; color: #6c757d;">Data de Emissão: ${new Date(aluno.rg_data_emissao).toLocaleDateString('pt-BR')}</p>` : ''}
-                    <p class="mb-1" style="font-size: 0.9rem;"><strong>RENACH:</strong> ${aluno.renach || 'Não informado'}</p>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>RENACH:</strong> ${(aluno.renach_matricula || aluno.renach) || 'Não informado'}</p>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>Número do Processo:</strong> ${aluno.numero_processo || 'Não informado'}</p>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>Número DETRAN / Protocolo:</strong> ${aluno.detran_numero || 'Não informado'}</p>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>Status da Matrícula:</strong> ${formatarBadgeStatus(aluno.status_matricula, 'status_matricula')}</p>
+                    <p class="mb-1" style="font-size: 0.9rem;"><strong>Situação do Processo:</strong> ${formatarBadgeStatus(aluno.processo_situacao, 'processo_situacao')}</p>
+                    <p class="mb-1" style="font-size: 0.9rem;">
+                        <strong>Documentos anexados:</strong> 
+                        <span id="contador-documentos-${aluno.id}" class="badge bg-info">
+                            <i class="fas fa-spinner fa-spin me-1"></i>Carregando...
+                        </span>
+                    </p>
                 </div>
 
                 <!-- Dados Pessoais -->
@@ -4714,6 +5198,21 @@ function preencherModalVisualizacao(aluno) {
                     <p class="mb-1" style="font-size: 0.9rem;">
                         <strong>Atividade Remunerada:</strong> 
                         ${aluno.atividade_remunerada == 1 ? '<span class="badge bg-success"><i class="fas fa-briefcase me-1"></i>Sim</span>' : '<span class="badge bg-secondary"><i class="fas fa-user me-1"></i>Não</span>'}
+                    </p>
+                </div>
+
+                <!-- LGPD -->
+                <div class="mb-3">
+                    <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem;">
+                        <i class="fas fa-shield-alt me-1"></i>LGPD
+                    </h6>
+                    <p class="mb-1" style="font-size: 0.9rem;">
+                        <strong>Consentimento LGPD:</strong> 
+                        ${aluno.lgpd_consentimento == 1 ? '<span class="badge bg-success">Sim</span>' : '<span class="badge bg-secondary">Não</span>'}
+                    </p>
+                    <p class="mb-1" style="font-size: 0.9rem;">
+                        <strong>Data/Hora do Consentimento:</strong> 
+                        ${aluno.lgpd_consentimento_em ? formatarDataHora(aluno.lgpd_consentimento_em) : '—'}
                     </p>
                 </div>
 
@@ -4807,6 +5306,10 @@ function preencherModalVisualizacao(aluno) {
                                 <h6 class="card-title mb-1" style="font-size: 0.85rem;">Situação Financeira</h6>
                                 <div class="aluno-card-valor" data-field="financeiro_resumo" style="font-size: 0.8rem;">
                                     <span class="text-muted">Em aberto</span>
+                                </div>
+                                <div class="mt-2" style="font-size: 0.75rem;">
+                                    <strong>Status de Pagamento:</strong><br>
+                                    ${formatarBadgeStatus(aluno.status_pagamento, 'status_pagamento')}
                                 </div>
                             </div>
                         </div>
@@ -5215,7 +5718,7 @@ function limparFiltros() {
     }
 }
 
-function filtrarAlunos() {
+function filtrarAlunos({ silencioso = false } = {}) {
     const busca = document.getElementById('buscaAluno').value.toLowerCase();
     const status = document.getElementById('filtroStatus').value;
     const cfc = document.getElementById('filtroCFC').value;
@@ -5253,8 +5756,8 @@ function filtrarAlunos() {
     // Atualizar estatísticas
     document.getElementById('totalAlunos').textContent = contador;
     
-    // Mostrar notificação de resultado
-    if (typeof notifications !== 'undefined') {
+    // Mostrar notificação de resultado apenas se não for silencioso
+    if (!silencioso && typeof notifications !== 'undefined') {
         notifications.info(`Filtro aplicado: ${contador} aluno(s) encontrado(s)`);
     }
 
@@ -5477,7 +5980,7 @@ function resetarFormularioAgendamento() {
     }
     
     // Resetar observações
-    const observacoes = document.getElementById('observacoes');
+    const observacoes = document.getElementById('observacoes_aula');
     if (observacoes) {
         observacoes.value = '';
     }
@@ -6029,7 +6532,8 @@ document.addEventListener('keydown', function(e) {
 // Função para ajustar modal responsivo (deve ser global)
 // Função removida - usando a versão mais completa abaixo
 
-function abrirModalAluno() {
+// Garantir que a função está disponível globalmente
+window.abrirModalAluno = function abrirModalAluno() {
     logModalAluno('🚀 Abrindo modal customizado...');
     
     logModalAluno('🔒 Verificando conflitos com modal de visualização...');
@@ -6176,6 +6680,34 @@ function resetFormulario() {
         }
     });
     
+    // CORREÇÃO: Limpar completamente a foto do aluno
+    const fotoInput = document.getElementById('foto');
+    const fotoPreview = document.getElementById('foto-preview-aluno');
+    const previewContainer = document.getElementById('preview-container-aluno');
+    const placeholderFoto = document.getElementById('placeholder-foto-aluno');
+    
+    if (fotoInput) {
+        fotoInput.value = ''; // Limpar o input file
+    }
+    
+    if (fotoPreview) {
+        fotoPreview.src = ''; // Limpar a URL da preview
+    }
+    
+    if (previewContainer) {
+        previewContainer.style.display = 'none'; // Ocultar container de preview
+    }
+    
+    if (placeholderFoto) {
+        placeholderFoto.style.display = 'block'; // Mostrar placeholder
+    }
+    
+    // Limpar qualquer estado interno relacionado à foto
+    if (fotoPreview && fotoPreview.classList) {
+        fotoPreview.classList.remove('has-image');
+    }
+    
+    logModalAluno('✅ Formulário resetado completamente (incluindo foto)');
     console.log('✅ Formulário resetado completamente');
 }
 
@@ -6365,12 +6897,66 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Listener para carregar resumo financeiro quando a aba Matrícula for mostrada
+    // Listener para carregar resumo financeiro e salvamento automático ao trocar para aba Matrícula
     const matriculaTab = document.getElementById('matricula-tab');
     const matriculaPane = document.getElementById('matricula');
+    const dadosTab = document.getElementById('dados-tab');
     
     if (matriculaTab && matriculaPane) {
-        // Usar evento Bootstrap 5 para quando a aba é mostrada
+        // Interceptar clique na aba Matrícula para salvar Dados automaticamente
+        matriculaTab.addEventListener('click', async function(e) {
+            // Verificar se estamos na aba Dados e há dados preenchidos
+            const isDadosTabActiveForAutoSave = dadosTab && dadosTab.classList.contains('active');
+            const alunoId = document.getElementById('aluno_id_hidden')?.value || 
+                           document.getElementById('editar_aluno_id')?.value;
+            
+            // Se estamos na aba Dados e não temos alunoId ainda (novo aluno), salvar Dados primeiro
+            if (isDadosTabActiveForAutoSave && !alunoId) {
+                e.preventDefault(); // Prevenir troca imediata de aba
+                
+                // Verificar se há dados preenchidos na aba Dados
+                const nome = document.getElementById('nome')?.value.trim();
+                const cpf = document.getElementById('cpf')?.value.trim();
+                
+                if (nome || cpf) {
+                    // Tentar salvar Dados automaticamente
+                    try {
+                        const resultado = await saveAlunoDados(true); // true = salvamento silencioso (sem fechar modal)
+                        
+                        if (resultado.success) {
+                            // Após salvar com sucesso, permitir troca de aba
+                            const alunoIdNovo = resultado.aluno_id || resultado.id;
+                            if (alunoIdNovo) {
+                                // Atualizar ID do aluno no formulário
+                                const alunoIdField = document.getElementById('aluno_id_hidden');
+                                if (alunoIdField) {
+                                    alunoIdField.value = alunoIdNovo;
+                                }
+                                
+                                // Agora permitir a troca de aba
+                                const matriculaTabBootstrap = new bootstrap.Tab(matriculaTab);
+                                matriculaTabBootstrap.show();
+                                
+                                console.log('✅ Dados salvos automaticamente, trocando para aba Matrícula');
+                            }
+                        } else {
+                            // Se falhou, mostrar erro e não trocar de aba
+                            alert('⚠️ Não foi possível salvar os dados do aluno.\n\n' + (resultado.error || 'Verifique os campos obrigatórios na aba Dados.'));
+                            return false;
+                        }
+                    } catch (error) {
+                        console.error('Erro ao salvar dados automaticamente:', error);
+                        alert('⚠️ Erro ao salvar dados do aluno. Verifique o console para mais detalhes.');
+                        return false;
+                    }
+                } else {
+                    // Se não há dados preenchidos, permitir troca normalmente
+                    return true;
+                }
+            }
+        });
+        
+        // Usar evento Bootstrap 5 para quando a aba é mostrada (após troca bem-sucedida)
         matriculaTab.addEventListener('shown.bs.tab', function() {
             // Quando a aba Matrícula é mostrada, verificar se precisa carregar o resumo
             const container = document.getElementById('resumo-financeiro-matricula');
@@ -6387,7 +6973,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
         
-        logModalAluno('✅ Listener da aba Matrícula configurado');
+        logModalAluno('✅ Listener da aba Matrícula configurado (com salvamento automático)');
     }
     
     // Mostrar notificação de carregamento
@@ -6432,10 +7018,486 @@ window.addEventListener('load', () => {
 });
 // Função para carregar categorias CNH dinamicamente
 // Removido: função carregarCategoriasCNH() - não é mais necessária
-// Função para salvar aluno via AJAX
+
+/**
+ * Salva apenas os dados básicos do aluno (aba Dados)
+ * Não exige matrícula preenchida
+ * 
+ * @param {boolean} silencioso - Se true, não mostra mensagens de sucesso nem fecha modal
+ * @returns {Promise<{success: boolean, aluno_id?: number, error?: string}>}
+ */
+async function saveAlunoDados(silencioso = false) {
+    console.log('[DEBUG] saveAlunoDados iniciado');
+    
+    const form = document.getElementById('formAluno');
+    if (!form) {
+        console.error('[DEBUG] Form formAluno não encontrado!');
+        return { success: false, error: 'Formulário não encontrado' };
+    }
+    
+    const formData = new FormData(form);
+    
+    // Validar apenas campos da aba Dados
+    const nome = formData.get('nome')?.trim();
+    const cpf = formData.get('cpf')?.trim();
+    
+    if (!nome) {
+        alert('⚠️ O campo Nome é obrigatório.');
+        document.getElementById('nome')?.focus();
+        return { success: false, error: 'Nome é obrigatório' };
+    }
+    
+    if (!cpf || cpf.length < 14) {
+        alert('⚠️ O campo CPF é obrigatório e deve estar completo.');
+        document.getElementById('cpf')?.focus();
+        return { success: false, error: 'CPF é obrigatório' };
+    }
+    
+    // Validar CPF
+    const cpfLimpo = cpf.replace(/\D/g, '');
+    if (!validarCPF(cpfLimpo)) {
+        alert('Por favor, digite um CPF válido.');
+        document.getElementById('cpf')?.focus();
+        return { success: false, error: 'CPF inválido' };
+    }
+    
+    // Mostrar loading no botão
+    const btnSalvar = document.getElementById('btnSalvarAluno');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando Dados...';
+    btnSalvar.disabled = true;
+    
+    // Preparar dados apenas da aba Dados
+    const dadosFormData = new FormData();
+    dadosFormData.append('nome', nome);
+    dadosFormData.append('cpf', cpf);
+    dadosFormData.append('rg', formData.get('rg') || '');
+    dadosFormData.append('rg_orgao_emissor', formData.get('rg_orgao_emissor') || '');
+    dadosFormData.append('rg_uf', formData.get('rg_uf') || '');
+    dadosFormData.append('rg_data_emissao', formData.get('rg_data_emissao') || '');
+    dadosFormData.append('data_nascimento', formData.get('data_nascimento') || '');
+    dadosFormData.append('estado_civil', formData.get('estado_civil') || '');
+    dadosFormData.append('profissao', formData.get('profissao') || '');
+    dadosFormData.append('escolaridade', formData.get('escolaridade') || '');
+    
+    // Naturalidade
+    const naturalidadeField = document.getElementById('naturalidade');
+    const estadoField = document.getElementById('naturalidade_estado');
+    const municipioField = document.getElementById('naturalidade_municipio');
+    
+    let naturalidadeValue = formData.get('naturalidade') || '';
+    if (!naturalidadeValue && estadoField?.value && municipioField?.value) {
+        const nomeEstado = getNomeEstadoPorSigla(estadoField.value);
+        naturalidadeValue = `${municipioField.value} - ${nomeEstado}`;
+        if (naturalidadeField) {
+            naturalidadeField.value = naturalidadeValue;
+        }
+    }
+    dadosFormData.append('naturalidade', naturalidadeValue);
+    dadosFormData.append('naturalidade_estado', estadoField?.value || '');
+    dadosFormData.append('naturalidade_municipio', municipioField?.value || '');
+    
+    dadosFormData.append('nacionalidade', formData.get('nacionalidade') || '');
+    dadosFormData.append('email', formData.get('email') || '');
+    dadosFormData.append('telefone', formData.get('telefone') || '');
+    dadosFormData.append('telefone_secundario', formData.get('telefone_secundario') || '');
+    dadosFormData.append('contato_emergencia_nome', formData.get('contato_emergencia_nome') || '');
+    dadosFormData.append('contato_emergencia_telefone', formData.get('contato_emergencia_telefone') || '');
+    dadosFormData.append('status', formData.get('status') || 'ativo');
+    dadosFormData.append('cfc_id', formData.get('cfc_id') || '');
+    dadosFormData.append('atividade_remunerada', formData.get('atividade_remunerada') ? 1 : 0);
+    dadosFormData.append('cep', formData.get('cep') || '');
+    dadosFormData.append('endereco', formData.get('logradouro') || '');
+    dadosFormData.append('numero', formData.get('numero') || '');
+    dadosFormData.append('bairro', formData.get('bairro') || '');
+    dadosFormData.append('cidade', formData.get('cidade') || '');
+    dadosFormData.append('estado', formData.get('uf') || '');
+    dadosFormData.append('observacoes', formData.get('observacoes') || '');
+    
+    // LGPD
+    const lgpdCheckbox = document.getElementById('lgpd_consentimento');
+    const lgpdConsentimento = lgpdCheckbox && lgpdCheckbox.checked ? 1 : 0;
+    dadosFormData.append('lgpd_consentimento', lgpdConsentimento);
+    
+    // Se LGPD está marcado e não há data de consentimento salva, será definida no backend
+    // Se já existe data, manter (não enviar lgpd_consentimento_em aqui, deixar backend decidir)
+    
+    // Adicionar ID do aluno se for edição
+    const alunoIdHidden = document.getElementById('aluno_id_hidden');
+    const acaoAluno = document.getElementById('acaoAluno');
+    const isEditing = acaoAluno && acaoAluno.value === 'editar';
+    
+    if (isEditing && alunoIdHidden && alunoIdHidden.value) {
+        dadosFormData.append('id', alunoIdHidden.value);
+    }
+    
+    // Adicionar foto se houver
+    const fotoInput = document.getElementById('foto');
+    if (fotoInput && fotoInput.files && fotoInput.files[0]) {
+        dadosFormData.append('foto', fotoInput.files[0]);
+    }
+    
+    // Marcar que é salvamento apenas de Dados (não incluir matrícula)
+    dadosFormData.append('salvar_apenas_dados', '1');
+    
+    try {
+        const timestamp = new Date().getTime();
+        // Sempre usar POST (tanto para criar quanto para editar)
+        const method = 'POST';
+        const alunoId = alunoIdHidden?.value;
+        const url = alunoId
+            ? `api/alunos.php?id=${alunoId}&t=${timestamp}`
+            : `api/alunos.php?t=${timestamp}`;
+        
+        // Log do payload para debug
+        console.log('📤 Enviando dados do aluno:', {
+            method: method,
+            url: url,
+            isEditing: isEditing,
+            alunoId: alunoId,
+            camposEnviados: Array.from(dadosFormData.keys()),
+            temFoto: fotoInput && fotoInput.files && fotoInput.files[0] ? true : false
+        });
+        
+        // IMPORTANTE: Não definir Content-Type manualmente para FormData
+        // O navegador define automaticamente com o boundary correto
+        const response = await fetch(url, {
+            method: method,
+            body: dadosFormData
+            // Não definir headers['Content-Type'] - deixar o navegador fazer isso
+        });
+        
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Resposta não é JSON:', text);
+            throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+        }
+        
+        if (data.success) {
+            const alunoId = data.aluno_id || data.id;
+            
+            // Atualizar ID do aluno no formulário
+            if (alunoId && alunoIdHidden) {
+                alunoIdHidden.value = alunoId;
+            }
+            
+            // Restaurar botão antes de fechar modal
+            btnSalvar.innerHTML = textoOriginal;
+            btnSalvar.disabled = false;
+            
+            if (!silencioso) {
+                // Mostrar notificação discreta (sem alert)
+                mostrarAlerta(data.message || 'Aluno atualizado com sucesso!', 'success');
+                
+                // Fechar modal automaticamente
+                fecharModalAluno();
+                
+                // Atualizar lista de alunos silenciosamente (sem mostrar "Filtro aplicado...")
+                if (typeof filtrarAlunos === 'function') {
+                    filtrarAlunos({ silencioso: true });
+                }
+            }
+            
+            return { success: true, aluno_id: alunoId };
+        } else {
+            throw new Error(data.error || 'Erro desconhecido');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar dados do aluno:', error);
+        alert('Erro ao salvar dados do aluno: ' + error.message);
+        btnSalvar.innerHTML = textoOriginal;
+        btnSalvar.disabled = false;
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Salva a matrícula do aluno (aba Matrícula)
+ * Exige que o aluno já exista (ID definido)
+ * 
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function saveAlunoMatricula() {
+    console.log('[DEBUG] saveAlunoMatricula chamada');
+    
+    const alunoIdHidden = document.getElementById('aluno_id_hidden');
+    const alunoId = alunoIdHidden?.value;
+    
+    console.log('[DEBUG] alunoId:', alunoId);
+    
+    if (!alunoId) {
+        // Se não tem alunoId, tentar salvar Dados primeiro
+        const resultadoDados = await saveAlunoDados(true);
+        if (!resultadoDados.success) {
+            alert('⚠️ É necessário salvar os dados do aluno primeiro.\n\nPor favor, preencha e salve a aba Dados antes de salvar a Matrícula.');
+            return { success: false, error: 'Aluno não existe ainda' };
+        }
+        
+        // Atualizar alunoId após salvar Dados
+        const novoAlunoId = resultadoDados.aluno_id;
+        if (novoAlunoId && alunoIdHidden) {
+            alunoIdHidden.value = novoAlunoId;
+        }
+    }
+    
+    const form = document.getElementById('formAluno');
+    const formData = new FormData(form);
+    
+    // Validar campos obrigatórios da Matrícula
+    // NOTA: RENACH não é mais obrigatório se estiver na aba Matrícula mas o campo está na aba Dados
+    // A validação será feita apenas se o campo estiver visível e tiver o atributo required
+    const renachField = document.getElementById('renach');
+    const renach = renachField?.value.trim();
+    
+    // Verificar se RENACH é realmente obrigatório (está na aba Matrícula e tem required)
+    const matriculaTabPane = document.getElementById('matricula');
+    const renachTabPane = renachField?.closest('.tab-pane');
+    const isRenachInMatriculaTab = renachTabPane && renachTabPane.id === 'matricula';
+    
+    // Se RENACH está na aba Matrícula e está vazio, mas não tem required, não bloquear
+    if (!renach && isRenachInMatriculaTab && !renachField?.hasAttribute('required')) {
+        console.log('⚠️ RENACH vazio, mas não é obrigatório na aba Matrícula. Continuando...');
+    } else if (!renach && renachField?.hasAttribute('required')) {
+        alert('⚠️ O campo RENACH é obrigatório na aba Matrícula.');
+        renachField?.focus();
+        renachField?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        return { success: false, error: 'RENACH é obrigatório' };
+    }
+    
+    // Mostrar loading no botão
+    const btnSalvar = document.getElementById('btnSalvarAluno');
+    const textoOriginal = btnSalvar.innerHTML;
+    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando Matrícula...';
+    btnSalvar.disabled = true;
+    
+    // Coletar operações de habilitação
+    const operacoes = coletarDadosOperacoes();
+    
+    // Extrair categoria_cnh e tipo_servico da primeira operação
+    let categoriaCnh = '';
+    let tipoServico = '';
+    if (operacoes && operacoes.length > 0) {
+        const primeiraOperacao = operacoes[0];
+        categoriaCnh = primeiraOperacao.categoria || formData.get('categoria_cnh') || '';
+        // Mapear tipo da operação para tipo_servico da API
+        const tipoOperacao = primeiraOperacao.tipo || '';
+        if (tipoOperacao === 'primeira_habilitacao' || tipoOperacao === 'primeira') {
+            tipoServico = 'primeira_habilitacao';
+        } else if (tipoOperacao === 'adicao' || tipoOperacao === 'adicao_categoria') {
+            tipoServico = 'adicao';
+        } else if (tipoOperacao === 'mudanca' || tipoOperacao === 'mudanca_categoria') {
+            tipoServico = 'mudanca';
+        } else {
+            tipoServico = tipoOperacao || formData.get('tipo_servico') || '';
+        }
+    } else {
+        // Fallback: tentar pegar do formulário
+        categoriaCnh = formData.get('categoria_cnh') || '';
+        tipoServico = formData.get('tipo_servico') || '';
+    }
+    
+    // Validar campos obrigatórios da API
+    const dataMatricula = formData.get('data_matricula') || '';
+    if (!categoriaCnh || !tipoServico || !dataMatricula) {
+        const camposFaltando = [];
+        if (!categoriaCnh) camposFaltando.push('Categoria CNH');
+        if (!tipoServico) camposFaltando.push('Tipo de Serviço');
+        if (!dataMatricula) camposFaltando.push('Data da Matrícula');
+        
+        alert('⚠️ Campos obrigatórios da matrícula não preenchidos:\n\n' +
+              camposFaltando.map(c => `- ${c}`).join('\n') +
+              '\n\nPor favor, preencha todos os campos obrigatórios.');
+        btnSalvar.innerHTML = textoOriginal;
+        btnSalvar.disabled = false;
+        return { success: false, error: 'Campos obrigatórios não preenchidos' };
+    }
+    
+    // Verificar se é edição (já existe matrícula) ou criação
+    const matriculaId = contextoAlunoAtual.matriculaId || null;
+    const isEdicao = matriculaId !== null && matriculaId !== undefined;
+    
+    // Preparar dados da Matrícula em formato JSON
+    const dadosMatricula = {
+        aluno_id: parseInt(alunoIdHidden.value),
+        categoria_cnh: categoriaCnh,
+        tipo_servico: tipoServico,
+        data_inicio: dataMatricula,
+        data_fim: formData.get('data_conclusao') || null,
+        previsao_conclusao: formData.get('previsao_conclusao') || null,
+        status: formData.get('status_matricula') || 'ativa',
+        valor_total: (() => {
+            const valorStr = formData.get('valor_curso');
+            if (!valorStr) return null;
+            // Remover tudo exceto números, vírgula e ponto
+            let valorLimpo = valorStr.replace(/[^\d,.-]/g, '');
+            // Se tiver ponto e vírgula, o ponto é separador de milhar (formato brasileiro: 3.500,00)
+            if (valorLimpo.includes('.') && valorLimpo.includes(',')) {
+                // Remover pontos (separadores de milhar) e substituir vírgula por ponto
+                valorLimpo = valorLimpo.replace(/\./g, '').replace(',', '.');
+            } else if (valorLimpo.includes(',')) {
+                // Apenas vírgula, substituir por ponto
+                valorLimpo = valorLimpo.replace(',', '.');
+            }
+            const valorNum = parseFloat(valorLimpo);
+            return isNaN(valorNum) ? null : valorNum;
+        })(),
+        forma_pagamento: (() => {
+            const valor = formData.get('forma_pagamento');
+            console.log('[DEBUG SAVE] forma_pagamento do formData:', valor, 'tipo:', typeof valor);
+            if (valor && valor.trim() !== '' && valor.trim() !== 'Selecione...') {
+                console.log('[DEBUG SAVE] forma_pagamento válido:', valor.trim());
+                return valor.trim();
+            }
+            console.log('[DEBUG SAVE] forma_pagamento vazio ou inválido, retornando null');
+            return null;
+        })(),
+        status_pagamento: (() => {
+            const valor = formData.get('status_pagamento');
+            return valor && valor.trim() !== '' ? valor.trim() : null;
+        })(),
+        observacoes: formData.get('observacoes') || null,
+        renach: renach || null,
+        processo_numero: formData.get('processo_numero') || null,
+        processo_numero_detran: formData.get('processo_numero_detran') || null,
+        processo_situacao: formData.get('processo_situacao') || null,
+        forma_pagamento: (() => {
+            const valor = formData.get('forma_pagamento');
+            console.log('[DEBUG SAVE] forma_pagamento do formData:', valor, 'tipo:', typeof valor);
+            if (valor && valor.trim() !== '' && valor.trim() !== 'Selecione...') {
+                console.log('[DEBUG SAVE] forma_pagamento válido:', valor.trim());
+                return valor.trim();
+            }
+            console.log('[DEBUG SAVE] forma_pagamento vazio ou inválido, retornando null');
+            return null;
+        })(),
+        aulas_praticas_contratadas: (() => {
+            const valor = formData.get('aulas_praticas_contratadas');
+            console.log('[DEBUG SAVE] aulas_praticas_contratadas do formData:', valor, 'tipo:', typeof valor);
+            if (valor && valor.trim() !== '') {
+                const parsed = parseInt(valor);
+                console.log('[DEBUG SAVE] aulas_praticas_contratadas parseado:', parsed);
+                return isNaN(parsed) ? null : parsed;
+            }
+            console.log('[DEBUG SAVE] aulas_praticas_contratadas vazio ou inválido, retornando null');
+            return null;
+        })(),
+        aulas_praticas_extras: (() => {
+            const valor = formData.get('aulas_praticas_extras');
+            console.log('[DEBUG SAVE] aulas_praticas_extras do formData:', valor, 'tipo:', typeof valor);
+            if (valor && valor.trim() !== '') {
+                const parsed = parseInt(valor);
+                console.log('[DEBUG SAVE] aulas_praticas_extras parseado:', parsed);
+                return isNaN(parsed) ? null : parsed;
+            }
+            console.log('[DEBUG SAVE] aulas_praticas_extras vazio ou inválido, retornando null');
+            return null;
+        })()
+    };
+    
+    // Se for edição, adicionar ID da matrícula
+    if (isEdicao) {
+        dadosMatricula.id = parseInt(matriculaId);
+    }
+    
+    // Log completo do payload antes de enviar
+    console.log('[DEBUG SAVE] Payload completo que será enviado:', JSON.stringify(dadosMatricula, null, 2));
+    
+    try {
+        const timestamp = new Date().getTime();
+        // Se for edição, usar PUT; se for criação, usar POST
+        const url = isEdicao 
+            ? `api/matriculas.php?id=${matriculaId}&t=${timestamp}`
+            : `api/matriculas.php?t=${timestamp}`;
+        const method = isEdicao ? 'PUT' : 'POST';
+        
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(dadosMatricula)
+        });
+        
+        const text = await response.text();
+        let data;
+        try {
+            data = JSON.parse(text);
+        } catch (e) {
+            console.error('Resposta não é JSON:', text);
+            throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
+        }
+        
+        if (data.success) {
+            // Atualizar matriculaId no contexto se foi criação
+            if (data.matricula_id && !isEdicao) {
+                contextoAlunoAtual.matriculaId = data.matricula_id;
+            }
+            
+            // Restaurar botão antes de fechar modal
+            btnSalvar.innerHTML = textoOriginal;
+            btnSalvar.disabled = false;
+            
+            // Mostrar notificação discreta (sem alert)
+            mostrarAlerta(data.message || 'Matrícula salva com sucesso!', 'success');
+            
+            // Fechar modal automaticamente
+            fecharModalAluno();
+            
+            // Atualizar lista de alunos silenciosamente (sem mostrar "Filtro aplicado...")
+            if (typeof filtrarAlunos === 'function') {
+                filtrarAlunos({ silencioso: true });
+            }
+            
+            // Recarregar dados em background (sem mostrar mensagens ou recarregar página)
+            const alunoId = parseInt(alunoIdHidden.value);
+            if (alunoId) {
+                // Recarregar matrícula principal silenciosamente após fechar modal
+                setTimeout(() => {
+                    carregarMatriculaPrincipal(alunoId).catch(() => {
+                        // Ignorar erros silenciosamente
+                    });
+                }, 500);
+            }
+            
+            return { success: true };
+        } else {
+            throw new Error(data.error || 'Erro desconhecido');
+        }
+    } catch (error) {
+        console.error('Erro ao salvar matrícula:', error);
+        alert('Erro ao salvar matrícula: ' + error.message);
+        btnSalvar.innerHTML = textoOriginal;
+        btnSalvar.disabled = false;
+        return { success: false, error: error.message };
+    }
+}
+
+// Função para salvar aluno via AJAX (mantida para compatibilidade, mas agora usa saveAlunoDados/saveAlunoMatricula)
 function salvarAluno() {
     const form = document.getElementById('formAluno');
     const formData = new FormData(form);
+    
+    // CORREÇÃO: Validar RENACH apenas se estiver na aba Matrícula e for obrigatório
+    // Nota: O campo renach está na aba Matrícula, então só validamos se o usuário estiver nessa aba
+    const renachField = document.getElementById('renach');
+    const matriculaTabPane = document.getElementById('matricula');
+    const isMatriculaTabActive = matriculaTabPane && matriculaTabPane.classList.contains('active');
+    
+    // Se RENACH tem data-required-in-matricula e estamos na aba Matrícula, validar
+    if (renachField && renachField.dataset.requiredInMatricula === 'true' && isMatriculaTabActive) {
+        const renachValue = renachField.value.trim();
+        if (!renachValue) {
+            alert('⚠️ O campo RENACH é obrigatório na aba Matrícula.\n\nPor favor, preencha o RENACH antes de salvar.');
+            renachField.focus();
+            renachField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+        }
+    }
+    
+    // Se não estamos na aba Matrícula, não validar RENACH (permitir salvar apenas com dados básicos)
     
     // Validar CPF antes de prosseguir
     const cpfInput = document.getElementById('cpf');
@@ -6578,13 +7640,29 @@ function salvarAluno() {
     .then(data => {
         console.log('Dados da resposta:', data);
         if (data.success) {
-            // Sucesso
-            alert(data.message || 'Aluno salvo com sucesso!');
+            // Restaurar botão antes de fechar modal
+            const btnSalvar = document.getElementById('btnSalvarAluno');
+            if (btnSalvar) {
+                const textoOriginal = btnSalvar.innerHTML;
+                btnSalvar.innerHTML = textoOriginal;
+                btnSalvar.disabled = false;
+            }
+            
+            // Mostrar notificação discreta (sem alert)
+            mostrarAlerta(data.message || 'Aluno salvo com sucesso!', 'success');
             
             // Obter aluno_id da resposta (pode ser data.aluno_id ou data.id)
             const alunoId = data.aluno_id || data.id || alunoIdHidden?.value;
             
-            // Sincronizar matrícula principal após salvar aluno
+            // Fechar modal automaticamente
+            fecharModalAluno();
+            
+            // Atualizar lista de alunos silenciosamente (sem mostrar "Filtro aplicado...")
+            if (typeof filtrarAlunos === 'function') {
+                filtrarAlunos({ silencioso: true });
+            }
+            
+            // Sincronizar matrícula principal após salvar aluno (em background)
             if (alunoId) {
                 // Usar setTimeout para não bloquear o fluxo principal
                 setTimeout(() => {
@@ -6593,13 +7671,6 @@ function salvarAluno() {
             } else {
                 console.warn('⚠️ Aluno ID não encontrado na resposta, não será possível sincronizar matrícula');
             }
-            
-            fecharModalAluno();
-            
-            // Recarregar a página para mostrar o novo aluno
-            setTimeout(() => {
-                window.location.reload();
-            }, 1000);
         } else {
             // Erro
             alert('Erro ao salvar aluno: ' + (data.error || 'Erro desconhecido'));
@@ -6822,12 +7893,24 @@ async function carregarResumoMatriculaParaVisualizacao(alunoId) {
  * Carrega a matrícula principal do aluno e preenche a aba Matrícula e atualiza o card de Histórico
  * @param {number} alunoId - ID do aluno
  */
-async function carregarMatriculaPrincipal(alunoId) {
+async function carregarMatriculaPrincipal(alunoId, dadosFallback = null) {
     try {
         logModalAluno('📥 Carregando matrícula principal para aluno:', alunoId);
         
         const response = await fetch(`api/matriculas.php?aluno_id=${alunoId}`);
+        
+        // Verificar se a resposta é JSON válido
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('[DEBUG MATRICULA] Resposta não é JSON. Conteúdo:', text.substring(0, 200));
+            throw new Error('A API retornou HTML em vez de JSON. Verifique se há erros no servidor.');
+        }
+        
         const data = await response.json();
+        
+        // Log completo da resposta
+        console.log('[DEBUG MATRICULA] Resposta completa da API matriculas.php:', JSON.stringify(data, null, 2));
         
         if (!data.success) {
             console.error('❌ Erro ao buscar matrículas:', data.error);
@@ -6865,8 +7948,47 @@ async function carregarMatriculaPrincipal(alunoId) {
         }
         
         // Usar sempre a primeira matrícula (matrícula principal)
-        const matricula = matriculas[0];
+        let matricula = matriculas[0];
         logModalAluno('✅ Matrícula principal encontrada:', matricula);
+        
+        // Se os campos problemáticos estiverem undefined/null e tivermos dados de fallback, usar fallback
+        if (dadosFallback) {
+            if ((matricula.aulas_praticas_contratadas === undefined || matricula.aulas_praticas_contratadas === null) && dadosFallback.aulas_praticas_contratadas !== undefined && dadosFallback.aulas_praticas_contratadas !== null) {
+                matricula.aulas_praticas_contratadas = dadosFallback.aulas_praticas_contratadas;
+                console.log('[DEBUG MATRICULA] Usando fallback para aulas_praticas_contratadas:', dadosFallback.aulas_praticas_contratadas);
+            }
+            if ((matricula.aulas_praticas_extras === undefined || matricula.aulas_praticas_extras === null) && dadosFallback.aulas_praticas_extras !== undefined && dadosFallback.aulas_praticas_extras !== null) {
+                matricula.aulas_praticas_extras = dadosFallback.aulas_praticas_extras;
+                console.log('[DEBUG MATRICULA] Usando fallback para aulas_praticas_extras:', dadosFallback.aulas_praticas_extras);
+            }
+            if ((matricula.forma_pagamento === undefined || matricula.forma_pagamento === null || matricula.forma_pagamento === '') && dadosFallback.forma_pagamento !== undefined && dadosFallback.forma_pagamento !== null && dadosFallback.forma_pagamento !== '') {
+                matricula.forma_pagamento = dadosFallback.forma_pagamento;
+                console.log('[DEBUG MATRICULA] Usando fallback para forma_pagamento:', dadosFallback.forma_pagamento);
+            }
+        }
+        
+        // Log completo para debug dos campos problemáticos
+        console.log('[DEBUG MATRICULA] Dados recebidos da API matriculas.php (APÓS FALLBACK):', {
+            aulas_praticas_contratadas: matricula.aulas_praticas_contratadas,
+            aulas_praticas_extras: matricula.aulas_praticas_extras,
+            forma_pagamento: matricula.forma_pagamento,
+            forma_pagamento_matricula: matricula.forma_pagamento_matricula,
+            matricula_completa: matricula,
+            todas_as_chaves: Object.keys(matricula)
+        });
+        
+        // Log detalhado de cada campo
+        console.log('[DEBUG MATRICULA] Verificação detalhada:', {
+            'matricula.aulas_praticas_contratadas': matricula.aulas_praticas_contratadas,
+            'typeof aulas_praticas_contratadas': typeof matricula.aulas_praticas_contratadas,
+            'aulas_praticas_contratadas in matricula': 'aulas_praticas_contratadas' in matricula,
+            'matricula.aulas_praticas_extras': matricula.aulas_praticas_extras,
+            'typeof aulas_praticas_extras': typeof matricula.aulas_praticas_extras,
+            'aulas_praticas_extras in matricula': 'aulas_praticas_extras' in matricula,
+            'matricula.forma_pagamento': matricula.forma_pagamento,
+            'typeof forma_pagamento': typeof matricula.forma_pagamento,
+            'forma_pagamento in matricula': 'forma_pagamento' in matricula
+        });
         
         // Preencher contexto com matrícula
         contextoAlunoAtual.matriculaId = matricula.id || null;
@@ -6962,15 +8084,91 @@ function preencherAbaMatriculaComDados(matricula) {
             }
         }
         
-        if (matricula.data_fim) {
-            const dataConclusaoInput = document.getElementById('data_conclusao');
-            if (dataConclusaoInput) {
+        // Data de conclusão - somente leitura (preenchida automaticamente)
+        const dataConclusaoInput = document.getElementById('data_conclusao');
+        if (dataConclusaoInput) {
+            if (matricula.data_fim) {
                 dataConclusaoInput.value = matricula.data_fim;
                 logModalAluno('✅ Data conclusão preenchida:', matricula.data_fim);
             }
+            // Tornar campo readonly com placeholder explicativo
+            dataConclusaoInput.readOnly = true;
+            dataConclusaoInput.placeholder = 'Preenchida automaticamente quando a matrícula for concluída';
+            dataConclusaoInput.title = 'Este campo é preenchido automaticamente quando o status da matrícula muda para "Concluída"';
         }
         
-        // previsao_conclusao não é alterado nesta etapa
+        // Preencher RENACH da matrícula
+        if (matricula.renach) {
+            const renachField = document.getElementById('renach');
+            if (renachField) {
+                renachField.value = matricula.renach;
+                logModalAluno('✅ RENACH da matrícula preenchido:', matricula.renach);
+            }
+        }
+        
+        // Preencher campos do processo DETRAN
+        if (matricula.processo_numero) {
+            const processoNumeroInput = document.getElementById('processo_numero');
+            if (processoNumeroInput) {
+                processoNumeroInput.value = matricula.processo_numero;
+            }
+        }
+        
+        if (matricula.processo_numero_detran) {
+            const processoNumeroDetranInput = document.getElementById('processo_numero_detran');
+            if (processoNumeroDetranInput) {
+                processoNumeroDetranInput.value = matricula.processo_numero_detran;
+            }
+        }
+        
+        if (matricula.processo_situacao) {
+            const processoSituacaoSelect = document.getElementById('processo_situacao');
+            if (processoSituacaoSelect) {
+                processoSituacaoSelect.value = matricula.processo_situacao;
+            }
+        }
+        
+        // Preencher Previsão de Conclusão
+        if (matricula.previsao_conclusao) {
+            const previsaoConclusaoInput = document.getElementById('previsao_conclusao');
+            if (previsaoConclusaoInput) {
+                previsaoConclusaoInput.value = matricula.previsao_conclusao;
+                logModalAluno('✅ Previsão de conclusão preenchida:', matricula.previsao_conclusao);
+            }
+        }
+        
+        // Preencher Aulas Práticas Contratadas
+        // Log para debug completo
+        console.log('[DEBUG MATRICULA FILL] Dados completos recebidos:', matricula);
+        console.log('[DEBUG MATRICULA FILL] aulas_praticas_contratadas recebido:', matricula.aulas_praticas_contratadas);
+        if (matricula.aulas_praticas_contratadas !== undefined && matricula.aulas_praticas_contratadas !== null) {
+            const aulasContratadasInput = document.getElementById('aulas_praticas_contratadas');
+            if (aulasContratadasInput) {
+                aulasContratadasInput.value = matricula.aulas_praticas_contratadas;
+                logModalAluno('✅ Aulas práticas contratadas preenchidas:', matricula.aulas_praticas_contratadas);
+                console.log('[DEBUG MATRICULA FILL] ✅ Campo aulas_praticas_contratadas preenchido com valor:', matricula.aulas_praticas_contratadas);
+            } else {
+                console.warn('[DEBUG MATRICULA] Campo aulas_praticas_contratadas não encontrado no DOM');
+            }
+        } else {
+            console.log('[DEBUG MATRICULA] aulas_praticas_contratadas está undefined ou null');
+        }
+        
+        // Preencher Aulas Extras
+        // Log para debug
+        console.log('[DEBUG MATRICULA FILL] aulas_praticas_extras recebido:', matricula.aulas_praticas_extras);
+        if (matricula.aulas_praticas_extras !== undefined && matricula.aulas_praticas_extras !== null) {
+            const aulasExtrasInput = document.getElementById('aulas_praticas_extras');
+            if (aulasExtrasInput) {
+                aulasExtrasInput.value = matricula.aulas_praticas_extras;
+                logModalAluno('✅ Aulas extras preenchidas:', matricula.aulas_praticas_extras);
+                console.log('[DEBUG MATRICULA FILL] ✅ Campo aulas_praticas_extras preenchido com valor:', matricula.aulas_praticas_extras);
+            } else {
+                console.warn('[DEBUG MATRICULA] Campo aulas_praticas_extras não encontrado no DOM');
+            }
+        } else {
+            console.log('[DEBUG MATRICULA] aulas_praticas_extras está undefined ou null');
+        }
         
         // 3) Preencher status
         if (matricula.status) {
@@ -6998,24 +8196,68 @@ function preencherAbaMatriculaComDados(matricula) {
         if (matricula.valor_total !== null && matricula.valor_total !== undefined) {
             const valorCursoInput = document.getElementById('valor_curso');
             if (valorCursoInput) {
-                // Formatar valor para exibição (converter de número para formato brasileiro se necessário)
-                const valorFormatado = typeof matricula.valor_total === 'number' 
-                    ? matricula.valor_total.toFixed(2).replace('.', ',')
-                    : matricula.valor_total.toString().replace('.', ',');
+                // Formatar valor para exibição no formato brasileiro (1.500,00)
+                let valorFormatado = '';
+                if (typeof matricula.valor_total === 'number') {
+                    // Converter número para formato brasileiro: 3500.00 -> 3.500,00
+                    const valorStr = matricula.valor_total.toFixed(2);
+                    const partes = valorStr.split('.');
+                    const inteiro = partes[0];
+                    const decimal = partes[1] || '00';
+                    // Adicionar separador de milhar
+                    const inteiroFormatado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                    valorFormatado = `${inteiroFormatado},${decimal}`;
+                } else {
+                    // Se já vier como string, tentar formatar
+                    const valorNum = parseFloat(matricula.valor_total);
+                    if (!isNaN(valorNum)) {
+                        const valorStr = valorNum.toFixed(2);
+                        const partes = valorStr.split('.');
+                        const inteiro = partes[0];
+                        const decimal = partes[1] || '00';
+                        const inteiroFormatado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+                        valorFormatado = `${inteiroFormatado},${decimal}`;
+                    } else {
+                        valorFormatado = matricula.valor_total.toString();
+                    }
+                }
                 valorCursoInput.value = valorFormatado;
                 logModalAluno('✅ Valor curso preenchido:', valorFormatado);
             }
         }
         
-        if (matricula.forma_pagamento) {
+        // Preencher Forma de Pagamento
+        // Aceitar tanto forma_pagamento quanto forma_pagamento_matricula (vindo de diferentes APIs)
+        // Tratar string vazia como null
+        let formaPagamento = matricula.forma_pagamento ?? matricula.forma_pagamento_matricula ?? null;
+        if (formaPagamento === '' || formaPagamento === 'Selecione...') {
+            formaPagamento = null;
+        }
+        console.log('[DEBUG MATRICULA FILL] forma_pagamento recebido:', {
+            forma_pagamento: matricula.forma_pagamento,
+            forma_pagamento_matricula: matricula.forma_pagamento_matricula,
+            valor_final: formaPagamento
+        });
+        if (formaPagamento && formaPagamento !== '' && formaPagamento !== 'Selecione...') {
             const formaPagamentoSelect = document.getElementById('forma_pagamento');
             if (formaPagamentoSelect) {
-                formaPagamentoSelect.value = matricula.forma_pagamento;
-                logModalAluno('✅ Forma pagamento preenchida:', matricula.forma_pagamento);
+                formaPagamentoSelect.value = formaPagamento;
+                logModalAluno('✅ Forma pagamento preenchida:', formaPagamento);
+            } else {
+                console.warn('[DEBUG MATRICULA] Campo forma_pagamento não encontrado no DOM');
             }
+        } else {
+            console.log('[DEBUG MATRICULA] forma_pagamento está vazio ou null');
         }
         
-        // status_pagamento não é alterado nesta etapa
+        // Preencher Status de Pagamento
+        if (matricula.status_pagamento) {
+            const statusPagamentoSelect = document.getElementById('status_pagamento');
+            if (statusPagamentoSelect) {
+                statusPagamentoSelect.value = matricula.status_pagamento;
+                logModalAluno('✅ Status pagamento preenchido:', matricula.status_pagamento);
+            }
+        }
         
         // 5) Carregar resumo financeiro do aluno na aba Matrícula
         // Obter alunoId do campo hidden ou da matrícula
@@ -7101,6 +8343,15 @@ async function atualizarResumoFinanceiroAluno(alunoId, matricula = null) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
+        // Verificar se a resposta é JSON antes de fazer parse
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // Se não for JSON, ler como texto para ver o erro
+            const text = await response.text();
+            console.error('❌ Resposta não é JSON. Conteúdo recebido:', text.substring(0, 200));
+            throw new Error('A API retornou HTML em vez de JSON. Verifique se há erros no servidor.');
+        }
+        
         const data = await response.json();
         
         if (!data.success) {
@@ -7138,6 +8389,12 @@ async function atualizarResumoFinanceiroAluno(alunoId, matricula = null) {
         
     } catch (error) {
         console.error('❌ Erro ao carregar resumo financeiro:', error);
+        
+        // Log detalhado do erro para debug
+        if (error.message && error.message.includes('HTML')) {
+            console.error('⚠️ A API retornou HTML em vez de JSON. Isso geralmente indica um erro PHP no servidor.');
+        }
+        
         // Em caso de erro, mostrar mensagem de erro nos cards
         const cardElements = document.querySelectorAll('[data-field="financeiro_resumo"]');
         cardElements.forEach((cardEl) => {
@@ -8379,7 +9636,18 @@ function carregarMatriculas(alunoId) {
 }
 // Função para carregar documentos da aba Documentos
 function carregarDocumentos(alunoId) {
-    if (!alunoId) return;
+    if (!alunoId) {
+        const list = document.querySelector('#modalAluno #documentos-list');
+        if (list) {
+            list.innerHTML = `
+                <div class="d-flex flex-column align-items-center justify-content-center py-5 text-muted">
+                    <i class="fas fa-file-alt fa-2x mb-3"></i>
+                    <p class="mb-0" style="font-size: 0.9rem;">Nenhum aluno selecionado</p>
+                </div>
+            `;
+        }
+        return;
+    }
     
     // Verificar se a lista existe (aba deve ter estrutura correta)
     const list = document.querySelector('#modalAluno #documentos-list');
@@ -8388,46 +9656,88 @@ function carregarDocumentos(alunoId) {
         return;
     }
     
-    fetch(`api/aluno-documentos.php?aluno_id=${alunoId}`)
-        .then(response => response.json())
+    // Mostrar loading
+    list.innerHTML = `
+        <div class="d-flex flex-column align-items-center justify-content-center py-5 text-muted">
+            <i class="fas fa-spinner fa-spin fa-2x mb-3"></i>
+            <p class="mb-0" style="font-size: 0.9rem;">Carregando documentos...</p>
+        </div>
+    `;
+    
+    fetch(`api/aluno_documentos.php?aluno_id=${alunoId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            if (data.success && data.documentos.length > 0) {
+            if (data.success && data.documentos && data.documentos.length > 0) {
                 list.innerHTML = `
-                    <div class="row">
-                        ${data.documentos.map(doc => `
-                            <div class="col-md-6 mb-3">
-                                <div class="card">
-                                    <div class="card-body">
-                                        <h6 class="card-title">${doc.tipo_documento}</h6>
-                                        <p class="card-text small">${doc.nome_arquivo}</p>
-                                        <div class="d-flex justify-content-between">
-                                            <span class="badge bg-${doc.status === 'aprovado' ? 'success' : doc.status === 'rejeitado' ? 'danger' : 'warning'}">${doc.status}</span>
-                                            <div>
-                                                <button class="btn btn-sm btn-outline-primary" onclick="visualizarDocumento(${doc.id})">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                                <button class="btn btn-sm btn-outline-danger" onclick="excluirDocumento(${doc.id})">
+                    <div class="row g-3">
+                        ${data.documentos.map(doc => {
+                            const tipoLabel = {
+                                'rg': 'RG',
+                                'cpf': 'CPF',
+                                'comprovante_residencia': 'Comprovante de Residência',
+                                'foto_3x4': 'Foto 3x4',
+                                'outro': 'Outro'
+                            }[doc.tipo] || doc.tipo;
+                            
+                            const tamanhoFormatado = formatarTamanhoArquivo(doc.tamanho_bytes);
+                            const dataFormatada = formatarDataDocumento(doc.criado_em);
+                            const urlArquivo = construirUrlArquivo(doc.arquivo);
+                            
+                            return `
+                                <div class="col-md-6">
+                                    <div class="card border" style="font-size: 0.85rem;">
+                                        <div class="card-body p-3">
+                                            <div class="d-flex align-items-start mb-2">
+                                                <i class="fas fa-file-${doc.mime_type?.includes('pdf') ? 'pdf' : 'image'} fa-2x text-primary me-2"></i>
+                                                <div class="flex-grow-1">
+                                                    <h6 class="card-title mb-1" style="font-size: 0.9rem; font-weight: 600;">${tipoLabel}</h6>
+                                                    <p class="card-text mb-1 text-muted" style="font-size: 0.8rem;">
+                                                        <i class="fas fa-file me-1"></i>${doc.nome_original}
+                                                    </p>
+                                                    <div class="d-flex align-items-center gap-3 text-muted" style="font-size: 0.75rem;">
+                                                        <span><i class="fas fa-calendar me-1"></i>${dataFormatada}</span>
+                                                        <span><i class="fas fa-weight me-1"></i>${tamanhoFormatado}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex gap-2 mt-2">
+                                                <a href="${urlArquivo}" target="_blank" class="btn btn-sm btn-outline-primary flex-fill" style="font-size: 0.8rem;">
+                                                    <i class="fas fa-eye me-1"></i>Abrir
+                                                </a>
+                                                <button class="btn btn-sm btn-outline-danger" onclick="excluirDocumento(${doc.id}, ${alunoId})" style="font-size: 0.8rem;">
                                                     <i class="fas fa-trash"></i>
                                                 </button>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                        `).join('')}
+                            `;
+                        }).join('')}
                     </div>
                 `;
             } else {
                 list.innerHTML = `
                     <div class="d-flex flex-column align-items-center justify-content-center py-5 text-muted">
                         <i class="fas fa-file-alt fa-2x mb-3"></i>
-                        <p class="mb-0">Nenhum documento encontrado</p>
+                        <p class="mb-0" style="font-size: 0.9rem;">Nenhum documento encontrado</p>
+                        <small class="text-muted mt-1">Envie o primeiro documento usando o formulário acima</small>
                     </div>
                 `;
             }
         })
         .catch(error => {
-            console.error('Erro ao carregar documentos:', error);
+            console.error('[Documentos] Erro ao carregar:', error);
+            list.innerHTML = `
+                <div class="alert alert-danger" role="alert" style="font-size: 0.85rem;">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Erro ao carregar documentos: ${error.message}
+                </div>
+            `;
             if (list) {
                 list.innerHTML = `
                     <div class="alert alert-danger">
@@ -8442,9 +9752,242 @@ function carregarDocumentos(alunoId) {
         });
 }
 
+// Função para enviar documento
+function enviarDocumento(event) {
+    if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+    }
+    
+    console.log('[Documentos] enviarDocumento chamada - upload de documento');
+    
+    // Descobrir o aluno_id atual de forma confiável (mesma fonte usada para carregar dados/matrícula)
+    const alunoIdHidden = document.getElementById('aluno_id_hidden');
+    const alunoIdInput = document.getElementById('aluno_id');
+    const alunoIdData = document.querySelector('[data-aluno-id]')?.getAttribute('data-aluno-id');
+    
+    // Tentar múltiplas fontes (prioridade: hidden > input > data-attr > contexto global)
+    const alunoId = (alunoIdHidden?.value) 
+        || (alunoIdInput?.value)
+        || alunoIdData
+        || (typeof contextoAlunoAtual !== 'undefined' && contextoAlunoAtual?.alunoId)
+        || null;
+    
+    // Validações simples no frontend
+    if (!alunoId) {
+        alert('⚠️ Aluno não identificado para envio de documento. Feche e reabra o modal de edição.');
+        return;
+    }
+    
+    const tipoSelect = document.getElementById('tipo-documento');
+    const arquivoInput = document.getElementById('arquivo-documento');
+    const btnEnviar = document.getElementById('btn-enviar-documento');
+    
+    if (!tipoSelect || !tipoSelect.value) {
+        alert('⚠️ Por favor, selecione o tipo de documento.');
+        if (tipoSelect) tipoSelect.focus();
+        return;
+    }
+    
+    if (!arquivoInput || !arquivoInput.files || !arquivoInput.files[0]) {
+        alert('⚠️ Por favor, selecione um arquivo.');
+        if (arquivoInput) arquivoInput.focus();
+        return;
+    }
+    
+    // Validar tamanho (5MB)
+    const arquivo = arquivoInput.files[0];
+    const maxSize = 5 * 1024 * 1024; // 5MB
+    if (arquivo.size > maxSize) {
+        alert('⚠️ Arquivo muito grande. Máximo 5MB.');
+        return;
+    }
+    
+    // Preparar FormData próprio (sem depender de <form> HTML)
+    const formData = new FormData();
+    formData.append('aluno_id', alunoId);
+    formData.append('tipo', tipoSelect.value); // Usar 'tipo' conforme documentação da API
+    formData.append('arquivo', arquivo);
+    
+    // Log de debug (limpo)
+    console.log('[Documentos] Enviando FormData:', {
+        aluno_id: alunoId,
+        tipo: tipoSelect.value,
+        arquivo_nome: arquivo.name,
+        arquivo_tamanho: arquivo.size,
+        arquivo_tipo: arquivo.type,
+    });
+    
+    // Desabilitar botão e mostrar loading
+    const textoOriginal = btnEnviar ? btnEnviar.innerHTML : null;
+    if (btnEnviar) {
+        btnEnviar.disabled = true;
+        btnEnviar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Enviando...';
+    }
+    
+    // URL da API (aluno_id também na query string para compatibilidade)
+    const url = `api/aluno_documentos.php?aluno_id=${encodeURIComponent(alunoId)}`;
+    
+    // Enviar para API
+    fetch(url, {
+        method: 'POST',
+        body: formData
+    })
+    .then(async response => {
+        const data = await response.json().catch(() => null);
+        
+        if (!response.ok || !data || !data.success) {
+            console.error('[Documentos] Erro ao enviar:', { response, data });
+            const msg = (data && (data.error || data.message)) 
+                ? (data.error || data.message)
+                : 'Erro ao enviar documento. Tente novamente.';
+            throw new Error(msg);
+        }
+        
+        return data;
+    })
+    .then(data => {
+        // Sucesso: recarregar a lista de documentos
+        console.log('[Documentos] Documento enviado com sucesso:', data);
+        
+        // Limpar formulário
+        if (tipoSelect) tipoSelect.value = '';
+        if (arquivoInput) arquivoInput.value = '';
+        
+        // Recarregar lista de documentos
+        if (typeof carregarDocumentos === 'function') {
+            carregarDocumentos(alunoId);
+        }
+        
+        // Mostrar mensagem de sucesso (discreta)
+        if (typeof mostrarAlerta === 'function') {
+            mostrarAlerta('Documento enviado com sucesso!', 'success');
+        } else {
+            alert('✅ Documento enviado com sucesso!');
+        }
+    })
+    .catch(error => {
+        console.error('[Documentos] Erro inesperado ao enviar:', error);
+        const msg = error.message || 'Erro inesperado ao enviar documento. Verifique sua conexão e tente novamente.';
+        if (typeof mostrarAlerta === 'function') {
+            mostrarAlerta(msg, 'error');
+        } else {
+            alert('❌ ' + msg);
+        }
+    })
+    .finally(() => {
+        // Restaurar botão
+        if (btnEnviar) {
+            btnEnviar.disabled = false;
+            btnEnviar.innerHTML = textoOriginal || '<i class="fas fa-upload me-1"></i>Enviar';
+        }
+        // NÃO fechar o modal, não recarregar a página
+    });
+}
+
+// Função para excluir documento
+function excluirDocumento(documentoId, alunoId) {
+    if (!confirm('⚠️ Tem certeza que deseja excluir este documento?')) {
+        return;
+    }
+    
+    fetch(`api/aluno_documentos.php?id=${documentoId}`, {
+        method: 'DELETE'
+    })
+    .then(response => {
+        if (!response.ok) {
+            return response.json().then(data => {
+                throw new Error(data.error || `HTTP ${response.status}`);
+            });
+        }
+        return response.json();
+    })
+    .then(data => {
+        if (data.success) {
+            // Recarregar lista de documentos
+            carregarDocumentos(alunoId);
+            
+            // Mostrar mensagem de sucesso
+            alert('✅ Documento excluído com sucesso!');
+        } else {
+            throw new Error(data.error || 'Erro desconhecido');
+        }
+    })
+    .catch(error => {
+        console.error('[Documentos] Erro ao excluir:', error);
+        alert('❌ Erro ao excluir documento: ' + error.message);
+    });
+}
+
+// Funções auxiliares para documentos
+function formatarTamanhoArquivo(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+}
+
+function formatarDataDocumento(dataString) {
+    if (!dataString) return '—';
+    const data = new Date(dataString);
+    return data.toLocaleDateString('pt-BR', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+}
+
+function construirUrlArquivo(caminhoRelativo) {
+    if (!caminhoRelativo) return '#';
+    // Construir URL absoluta baseada no caminho atual
+    const basePathParts = window.location.pathname.split('/');
+    const projectPath = basePathParts.slice(0, -2).join('/');
+    return `${window.location.origin}${projectPath}/${caminhoRelativo}`;
+}
+
+// Função para carregar contador de documentos no modal Detalhes
+function carregarContadorDocumentos(alunoId) {
+    if (!alunoId) return;
+    
+    const contadorElement = document.getElementById(`contador-documentos-${alunoId}`);
+    if (!contadorElement) return;
+    
+    fetch(`api/aluno_documentos.php?aluno_id=${alunoId}`)
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success && data.documentos) {
+                const quantidade = data.documentos.length;
+                contadorElement.innerHTML = `<i class="fas fa-file-alt me-1"></i>${quantidade}`;
+                contadorElement.className = quantidade > 0 ? 'badge bg-success' : 'badge bg-secondary';
+            } else {
+                contadorElement.innerHTML = '<i class="fas fa-file-alt me-1"></i>0';
+                contadorElement.className = 'badge bg-secondary';
+            }
+        })
+        .catch(error => {
+            console.error('[Documentos] Erro ao carregar contador:', error);
+            contadorElement.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i>—';
+            contadorElement.className = 'badge bg-warning';
+        });
+}
+
 // Função para carregar dados de uma aba específica
 function carregarDadosAba(abaId, alunoId) {
     logModalAluno(`📊 Carregando dados da aba: ${abaId} para aluno: ${alunoId}`);
+    
+    // Carregar documentos se a aba Documentos for aberta
+    if (abaId === 'documentos' && alunoId) {
+        carregarDocumentos(alunoId);
+        return;
+    }
     
     // Carregar matrícula principal se necessário (para abas Matrícula e Histórico)
     if ((abaId === 'matricula' || abaId === 'historico') && alunoId) {
@@ -8888,13 +10431,21 @@ document.addEventListener('shown.bs.modal', ajustarModalResponsivo);
 // Função removida - usando a versão mais completa acima
 
 // Override das funções existentes para incluir ajuste responsivo
-const originalAbrirModalAluno = window.abrirModalAluno;
-if (originalAbrirModalAluno) {
+// NOTA: Esta função só será executada se abrirModalAluno já estiver definida
+// A função abrirModalAluno já está definida como window.abrirModalAluno acima (linha ~6132)
+if (typeof window.abrirModalAluno === 'function') {
+    const originalAbrirModalAluno = window.abrirModalAluno;
     window.abrirModalAluno = function() {
-        originalAbrirModalAluno();
+        if (originalAbrirModalAluno) {
+            originalAbrirModalAluno();
+        }
         setTimeout(() => {
-            ajustarModalResponsivo();
-            validarLayoutModalAluno(); // Validar layout após abrir
+            if (typeof ajustarModalResponsivo === 'function') {
+                ajustarModalResponsivo();
+            }
+            if (typeof validarLayoutModalAluno === 'function') {
+                validarLayoutModalAluno(); // Validar layout após abrir
+            }
         }, 100);
     };
 }
@@ -9272,44 +10823,82 @@ function removerFotoAluno() {
 function carregarFotoExistenteAluno(caminhoFoto) {
     console.log('📷 Carregando foto existente do aluno:', caminhoFoto);
     
+    const preview = document.getElementById('foto-preview-aluno');
+    const container = document.getElementById('preview-container-aluno');
+    const placeholder = document.getElementById('placeholder-foto-aluno');
+    
+    // Verificar se os elementos existem
+    if (!preview || !container || !placeholder) {
+        console.warn('⚠️ Elementos de preview de foto não encontrados no DOM');
+        return;
+    }
+    
     if (caminhoFoto && caminhoFoto.trim() !== '') {
-        const preview = document.getElementById('foto-preview-aluno');
-        const container = document.getElementById('preview-container-aluno');
-        const placeholder = document.getElementById('placeholder-foto-aluno');
-        
-        // Construir URL completa da foto
+        // Construir URL completa da foto usando o mesmo método do modal de detalhes
         let urlFoto;
-        if (caminhoFoto.startsWith('http')) {
+        if (caminhoFoto.startsWith('http://') || caminhoFoto.startsWith('https://')) {
+            // URL absoluta já completa
             urlFoto = caminhoFoto;
+        } else if (caminhoFoto.startsWith('/')) {
+            // Caminho absoluto a partir da raiz do servidor
+            // Extrair base path do projeto (ex: /cfc-bom-conselho)
+            const origin = window.location.origin;
+            const projectBase = window.location.pathname.split('/admin/')[0] || '';
+            urlFoto = `${origin}${projectBase}${caminhoFoto}`;
         } else {
-            // Construir URL baseada no contexto atual
-            const baseUrl = window.location.origin;
-            const basePath = window.location.pathname.split('/').slice(0, -2).join('/');
-            urlFoto = `${baseUrl}${basePath}/${caminhoFoto}`;
+            // Caminho relativo - construir baseado na estrutura do projeto
+            // O caminho salvo no banco é: admin/uploads/alunos/nome_arquivo
+            
+            // Extrair base path do projeto (ex: /cfc-bom-conselho)
+            const origin = window.location.origin;
+            const projectBase = window.location.pathname.split('/admin/')[0] || '';
+            const baseUrl = `${origin}${projectBase}`;
+            
+            // Normalizar caminho (remover barras iniciais se houver)
+            const normalizedFoto = caminhoFoto.replace(/^\/+/, '');
+            
+            // Se o caminho já começa com admin/, usar direto
+            if (normalizedFoto.startsWith('admin/')) {
+                urlFoto = `${baseUrl}/${normalizedFoto}`;
+            } else if (normalizedFoto.startsWith('uploads/')) {
+                // Se começa com uploads/, adicionar admin/ antes
+                urlFoto = `${baseUrl}/admin/${normalizedFoto}`;
+            } else {
+                // Se não começa com admin/ nem uploads/, assumir que é apenas o nome do arquivo
+                // e construir o caminho completo: admin/uploads/alunos/nome_arquivo
+                urlFoto = `${baseUrl}/admin/uploads/alunos/${normalizedFoto}`;
+            }
         }
         
         console.log('📷 URL da foto do aluno construída:', urlFoto);
+        console.log('📷 Base URL usada:', window.location.origin + (window.location.pathname.split('/admin/')[0] || ''));
         
-        preview.src = urlFoto;
-        container.style.display = 'block';
-        placeholder.style.display = 'none';
+        // Limpar handlers anteriores para evitar múltiplos eventos
+        preview.onload = null;
+        preview.onerror = null;
         
-        // Verificar se a imagem carregou
+        // Definir handlers antes de definir src
         preview.onload = function() {
             console.log('✅ Foto existente do aluno carregada com sucesso');
+            container.style.display = 'block';
+            placeholder.style.display = 'none';
         };
         
         preview.onerror = function() {
-            console.error('❌ Erro ao carregar foto do aluno:', urlFoto);
-            // Se der erro, mostrar placeholder
+            console.warn('⚠️ Erro ao carregar foto do aluno (404 ou outro erro):', urlFoto);
+            // Se der erro, mostrar placeholder e esconder preview
+            // Não tentar carregar novamente para evitar loop de 404
             container.style.display = 'none';
             placeholder.style.display = 'block';
+            // Limpar src para evitar tentativas repetidas
+            preview.src = '';
+            preview.onerror = null; // Remover handler para evitar loops
         };
+        
+        // Definir src por último para disparar o carregamento
+        preview.src = urlFoto;
     } else {
         // Se não há foto, mostrar placeholder
-        const container = document.getElementById('preview-container-aluno');
-        const placeholder = document.getElementById('placeholder-foto-aluno');
-        
         container.style.display = 'none';
         placeholder.style.display = 'block';
         

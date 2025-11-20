@@ -75,6 +75,34 @@ class CredentialManager {
     public static function createStudentCredentials($dados) {
         $db = db();
         
+        // Determinar email a ser usado
+        $email = $dados['email'] ?? ($dados['cpf'] . '@aluno.cfc');
+        
+        // Verificar se o email já existe na tabela usuarios
+        $usuarioExistente = $db->fetch("SELECT id, nome, tipo FROM usuarios WHERE email = ?", [$email]);
+        
+        if ($usuarioExistente) {
+            // Se o usuário já existe, retornar sucesso sem criar duplicado
+            // Mas verificar se é do tipo 'aluno' para garantir consistência
+            if ($usuarioExistente['tipo'] === 'aluno') {
+                return [
+                    'success' => true,
+                    'usuario_id' => $usuarioExistente['id'],
+                    'cpf' => $dados['cpf'],
+                    'senha_temporaria' => null, // Não gerar nova senha se usuário já existe
+                    'message' => 'Usuário já existe para este email. Credenciais não foram alteradas.',
+                    'usuario_existente' => true
+                ];
+            } else {
+                // Se o email existe mas é de outro tipo, retornar erro
+                return [
+                    'success' => false,
+                    'message' => 'Este email já está cadastrado para outro tipo de usuário (' . $usuarioExistente['tipo'] . ')'
+                ];
+            }
+        }
+        
+        // Se o email não existe, criar novo usuário
         // Gerar senha temporária
         $tempPassword = self::generateTempPassword();
         $hashedPassword = password_hash($tempPassword, PASSWORD_DEFAULT);
@@ -82,7 +110,7 @@ class CredentialManager {
         // Criar usuário na tabela usuarios
         $usuarioData = [
             'nome' => $dados['nome'],
-            'email' => $dados['email'] ?? $dados['cpf'] . '@aluno.cfc',
+            'email' => $email,
             'senha' => $hashedPassword,
             'tipo' => 'aluno',
             'ativo' => true,
@@ -91,19 +119,41 @@ class CredentialManager {
             'criado_em' => date('Y-m-d H:i:s')
         ];
         
-        $usuarioId = $db->insert('usuarios', $usuarioData);
-        
-        if ($usuarioId) {
-            // Não precisamos atualizar a tabela alunos pois ela não tem campos de usuário
-            // O relacionamento é feito apenas através do CPF/email
+        try {
+            $usuarioId = $db->insert('usuarios', $usuarioData);
             
-            return [
-                'success' => true,
-                'usuario_id' => $usuarioId,
-                'cpf' => $dados['cpf'],
-                'senha_temporaria' => $tempPassword,
-                'message' => 'Credenciais do aluno criadas com sucesso'
-            ];
+            if ($usuarioId) {
+                // Não precisamos atualizar a tabela alunos pois ela não tem campos de usuário
+                // O relacionamento é feito apenas através do CPF/email
+                
+                return [
+                    'success' => true,
+                    'usuario_id' => $usuarioId,
+                    'cpf' => $dados['cpf'],
+                    'senha_temporaria' => $tempPassword,
+                    'message' => 'Credenciais do aluno criadas com sucesso',
+                    'usuario_existente' => false
+                ];
+            }
+        } catch (Exception $e) {
+            // Se der erro de duplicação (mesmo após verificação), tratar graciosamente
+            if (strpos($e->getMessage(), 'Duplicate entry') !== false || strpos($e->getMessage(), 'for key \'email\'') !== false) {
+                // Tentar buscar o usuário que foi criado entre a verificação e a inserção
+                $usuarioExistente = $db->fetch("SELECT id, nome, tipo FROM usuarios WHERE email = ?", [$email]);
+                if ($usuarioExistente && $usuarioExistente['tipo'] === 'aluno') {
+                    return [
+                        'success' => true,
+                        'usuario_id' => $usuarioExistente['id'],
+                        'cpf' => $dados['cpf'],
+                        'senha_temporaria' => null,
+                        'message' => 'Usuário já existe para este email. Credenciais não foram alteradas.',
+                        'usuario_existente' => true
+                    ];
+                }
+            }
+            
+            // Se for outro tipo de erro, propagar
+            throw $e;
         }
         
         return [

@@ -2135,11 +2135,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     }
                     
                     try {
-                        // Construir query base
+                        // Construir query base com JOIN para matrícula ativa (priorizar categoria/tipo da matrícula)
+                        // REGRA DE PADRONIZAÇÃO: Sempre priorizar dados da matrícula ativa quando existir
                         $sql = "
-                            SELECT DISTINCT a.id, a.nome, a.cpf, a.rg, a.data_nascimento, a.endereco, 
-                                   a.telefone, a.email, a.cfc_id, a.categoria_cnh, a.status, a.criado_em, a.operacoes
+                            SELECT DISTINCT 
+                                a.id, a.nome, a.cpf, a.rg, a.data_nascimento, a.endereco, 
+                                a.telefone, a.email, a.cfc_id, a.categoria_cnh, a.status, a.criado_em, a.operacoes,
+                                m_ativa.categoria_cnh AS categoria_cnh_matricula,
+                                m_ativa.tipo_servico AS tipo_servico_matricula
                             FROM alunos a
+                            LEFT JOIN (
+                                SELECT 
+                                    m1.aluno_id,
+                                    m1.categoria_cnh,
+                                    m1.tipo_servico
+                                FROM matriculas m1
+                                WHERE m1.status = 'ativa'
+                                GROUP BY m1.aluno_id
+                            ) AS m_ativa ON m_ativa.aluno_id = a.id
                         ";
                         
                         $params = [];
