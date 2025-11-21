@@ -56,16 +56,18 @@ $proximasAulas = $db->fetchAll("
 // Buscar notificações não lidas
 $notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($user['id'], 'instrutor');
 
-// Buscar turmas teóricas do instrutor
+// Buscar turmas teóricas do instrutor (CORRIGIDO: usar turmas_teoricas e turma_matriculas)
 $turmasTeoricas = $db->fetchAll("
-    SELECT DISTINCT t.*, COUNT(a.id) as total_alunos
-    FROM turmas t
-    JOIN aulas a ON t.id = a.turma_id
-    WHERE t.instrutor_id = ? 
-      AND t.tipo = 'teorica'
-      AND t.status = 'ativa'
-    GROUP BY t.id
-    ORDER BY t.nome ASC
+    SELECT 
+        tt.*,
+        COUNT(DISTINCT tm.id) as total_alunos
+    FROM turmas_teoricas tt
+    LEFT JOIN turma_matriculas tm ON tt.id = tm.turma_id 
+        AND tm.status IN ('matriculado', 'cursando', 'concluido')
+    WHERE tt.instrutor_id = ? 
+      AND tt.status IN ('ativa', 'completa', 'cursando', 'concluida')
+    GROUP BY tt.id
+    ORDER BY tt.nome ASC
 ", [$user['id']]);
 
 // Configurar variáveis para o layout
@@ -330,12 +332,12 @@ ob_start();
                             </div>
                             
                             <div class="d-grid gap-2">
-                                <a href="/instrutor/turma.php?id=<?php echo $turma['id']; ?>&acao=chamada" 
+                                <a href="/admin/index.php?page=turma-chamada&turma_id=<?php echo $turma['id']; ?>" 
                                    class="btn btn-primary btn-mobile">
                                     <i class="fas fa-clipboard-list me-2"></i>
                                     Fazer Chamada
                                 </a>
-                                <a href="/instrutor/turma.php?id=<?php echo $turma['id']; ?>&acao=diario" 
+                                <a href="/admin/index.php?page=turma-diario&turma_id=<?php echo $turma['id']; ?>" 
                                    class="btn btn-outline-primary btn-mobile">
                                     <i class="fas fa-book me-2"></i>
                                     Abrir Diário

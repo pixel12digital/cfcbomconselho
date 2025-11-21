@@ -74,6 +74,15 @@ if ($userType === 'instrutor' && $turma['instrutor_id'] != $userId) {
     $canEdit = false;
 }
 
+// Verificar regras adicionais: turma concluída/cancelada
+if ($turma['status'] === 'cancelada') {
+    // Ninguém pode editar turmas canceladas
+    $canEdit = false;
+} elseif ($turma['status'] === 'concluida' && $userType === 'instrutor') {
+    // Instrutor não pode editar turmas concluídas (apenas admin/secretaria)
+    $canEdit = false;
+}
+
 // Buscar aulas da turma (CORRIGIDO: usar turma_aulas_agendadas e aula_id)
 $aulas = $db->fetchAll("
     SELECT 
@@ -325,6 +334,63 @@ if ($aulaId) {
             background: #f8d7da;
             color: #721c24;
         }
+        
+        /* CSS Responsivo para Mobile */
+        @media (max-width: 767px) {
+            .btn-presenca {
+                min-width: 120px;
+                padding: 10px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .stats-card {
+                padding: 10px 5px;
+            }
+            
+            .stats-number {
+                font-size: 1.5em;
+            }
+            
+            .stats-label {
+                font-size: 0.8em;
+            }
+            
+            .aluno-item {
+                padding: 12px;
+                margin-bottom: 12px;
+            }
+            
+            .chamada-header {
+                padding: 15px;
+            }
+            
+            .chamada-header h2 {
+                font-size: 1.3rem;
+            }
+            
+            .toast-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+            }
+            
+            .toast {
+                max-width: 100%;
+            }
+            
+            .btn-group {
+                width: 100%;
+            }
+            
+            .btn-group .btn {
+                flex: 1;
+            }
+            
+            .frequencia-badge {
+                font-size: 0.75em;
+                padding: 3px 6px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -332,8 +398,28 @@ if ($aulaId) {
         <div class="container-fluid">
             <!-- Header da Chamada -->
             <div class="chamada-header">
+                <!-- Aviso de turma concluída/cancelada -->
+                <?php if (!$canEdit): ?>
+                    <?php if ($turma['status'] === 'concluida'): ?>
+                    <div class="alert alert-warning mb-3" role="alert">
+                        <i class="fas fa-info-circle me-2"></i>
+                        <strong>Turma concluída:</strong> Esta turma está concluída. Apenas administração pode ajustar presenças.
+                    </div>
+                    <?php elseif ($turma['status'] === 'cancelada'): ?>
+                    <div class="alert alert-danger mb-3" role="alert">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        <strong>Turma cancelada:</strong> Não é possível editar presenças de turmas canceladas.
+                    </div>
+                    <?php elseif ($userType === 'instrutor' && $turma['instrutor_id'] != $userId): ?>
+                    <div class="alert alert-info mb-3" role="alert">
+                        <i class="fas fa-lock me-2"></i>
+                        <strong>Sem permissão:</strong> Você não é o instrutor desta turma. Apenas visualização.
+                    </div>
+                    <?php endif; ?>
+                <?php endif; ?>
+                
                 <div class="row align-items-center">
-                    <div class="col-md-8">
+                    <div class="col-12 col-md-8">
                         <h2 class="mb-1">
                             <i class="fas fa-clipboard-check text-primary"></i>
                             Chamada - <?= htmlspecialchars($turma['nome']) ?>
@@ -346,12 +432,12 @@ if ($aulaId) {
                         <?php if ($aulaAtual): ?>
                         <p class="text-muted mb-0">
                             <i class="fas fa-calendar"></i> <?= date('d/m/Y', strtotime($aulaAtual['data_aula'])) ?> |
-                            <i class="fas fa-clock"></i> <?= $aulaAtual['duracao_minutos'] ?> min |
+                            <i class="fas fa-clock"></i> <?= $aulaAtual['duracao_minutos'] ?? 'N/A' ?> min |
                             <i class="fas fa-book"></i> <?= htmlspecialchars($aulaAtual['nome_aula']) ?>
                         </p>
                         <?php endif; ?>
                     </div>
-                    <div class="col-md-4 text-end">
+                    <div class="col-12 col-md-4 text-end mt-2 mt-md-0">
                         <!-- Links Contextuais -->
                         <div class="btn-group" role="group">
                             <a href="turma-diario.php?turma_id=<?= $turmaId ?>&aula_id=<?= $aulaId ?>" 
@@ -408,25 +494,25 @@ if ($aulaId) {
 
             <!-- Estatísticas da Turma -->
             <div class="row mb-4">
-                <div class="col-md-3">
+                <div class="col-6 col-md-3 mb-3 mb-md-0">
                     <div class="chamada-card stats-card">
                         <div class="stats-number text-primary"><?= $estatisticasTurma['total_alunos'] ?></div>
                         <div class="stats-label">Total de Alunos</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3 mb-3 mb-md-0">
                     <div class="chamada-card stats-card">
                         <div class="stats-number text-success"><?= $estatisticasTurma['presentes'] ?></div>
                         <div class="stats-label">Presentes</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3 mb-3 mb-md-0">
                     <div class="chamada-card stats-card">
                         <div class="stats-number text-danger"><?= $estatisticasTurma['ausentes'] ?></div>
                         <div class="stats-label">Ausentes</div>
                     </div>
                 </div>
-                <div class="col-md-3">
+                <div class="col-6 col-md-3 mb-3 mb-md-0">
                     <div class="chamada-card stats-card">
                         <div class="stats-number text-info"><?= $estatisticasTurma['frequencia_media'] ?>%</div>
                         <div class="stats-label">Frequência Média</div>
@@ -480,11 +566,14 @@ if ($aulaId) {
                         <?php foreach ($alunos as $aluno): ?>
                         <div class="aluno-item <?= $aluno['presenca_id'] ? ($aluno['presente'] ? 'presente' : 'ausente') : 'sem-registro' ?>" 
                              data-aluno-id="<?= $aluno['id'] ?>" 
-                             data-presenca-id="<?= $aluno['presenca_id'] ?>">
+                             data-presenca-id="<?= $aluno['presenca_id'] ?>"
+                             data-frequencia-aluno-id="<?= $aluno['id'] ?>">
+                            <!-- Layout Mobile-First: Empilhado em mobile, grid em desktop -->
                             <div class="row align-items-center">
-                                <div class="col-md-4">
+                                <!-- Nome e CPF -->
+                                <div class="col-12 col-md-4 mb-2 mb-md-0">
                                     <div class="d-flex align-items-center">
-                                        <div class="me-3">
+                                        <div class="me-2 me-md-3">
                                             <i class="fas fa-user-circle fa-2x text-muted"></i>
                                         </div>
                                         <div>
@@ -493,48 +582,64 @@ if ($aulaId) {
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-2">
-                                    <span class="badge bg-<?= $aluno['status_matricula'] === 'ativo' ? 'success' : 'primary' ?>">
+                                
+                                <!-- Status e Frequência (lado a lado em mobile) -->
+                                <div class="col-6 col-md-2 mb-2 mb-md-0">
+                                    <span class="badge bg-<?= in_array($aluno['status_matricula'], ['cursando', 'matriculado']) ? 'success' : 'primary' ?>">
                                         <?= ucfirst($aluno['status_matricula']) ?>
                                     </span>
                                 </div>
-                                <div class="col-md-2">
-                                    <?php if ($frequenciaGeral && isset($frequenciaGeral['frequencias_alunos'])): ?>
-                                        <?php 
-                                        $freqAluno = null;
+                                <div class="col-6 col-md-2 mb-2 mb-md-0">
+                                    <?php 
+                                    // Buscar frequência do aluno (priorizar frequencia_percentual direto do aluno, depois da API)
+                                    $percentualFreq = null;
+                                    
+                                    // Primeiro, tentar usar frequencia_percentual direto do aluno (já vem na query)
+                                    if (isset($aluno['frequencia_percentual']) && $aluno['frequencia_percentual'] !== null) {
+                                        $percentualFreq = (float)$aluno['frequencia_percentual'];
+                                    } 
+                                    // Se não tiver, tentar buscar da API de frequência
+                                    elseif ($frequenciaGeral && isset($frequenciaGeral['frequencias_alunos'])) {
                                         foreach ($frequenciaGeral['frequencias_alunos'] as $freq) {
                                             if ($freq['aluno']['id'] == $aluno['id']) {
-                                                $freqAluno = $freq;
+                                                $percentualFreq = (float)$freq['estatisticas']['percentual_frequencia'];
                                                 break;
                                             }
                                         }
-                                        ?>
-                                        <?php if ($freqAluno): ?>
-                                            <?php 
-                                            $percentual = $freqAluno['estatisticas']['percentual_frequencia'];
-                                            $classe = 'baixo';
-                                            if ($percentual >= $turma['frequencia_minima']) {
-                                                $classe = 'alto';
-                                            } elseif ($percentual >= ($turma['frequencia_minima'] - 10)) {
-                                                $classe = 'medio';
-                                            }
-                                            ?>
-                                            <span class="frequencia-badge <?= $classe ?>">
-                                                <?= $percentual ?>%
-                                            </span>
-                                        <?php endif; ?>
+                                    }
+                                    
+                                    if ($percentualFreq !== null):
+                                        $frequenciaMinima = isset($turma['frequencia_minima']) ? (float)$turma['frequencia_minima'] : 75.0;
+                                        $classe = 'baixo';
+                                        if ($percentualFreq >= $frequenciaMinima) {
+                                            $classe = 'alto';
+                                        } elseif ($percentualFreq >= ($frequenciaMinima - 10)) {
+                                            $classe = 'medio';
+                                        }
+                                    ?>
+                                        <span class="frequencia-badge <?= $classe ?>" id="freq-badge-<?= $aluno['id'] ?>">
+                                            <?= number_format($percentualFreq, 1) ?>%
+                                        </span>
+                                    <?php else: ?>
+                                        <span class="frequencia-badge baixo" id="freq-badge-<?= $aluno['id'] ?>">
+                                            N/A
+                                        </span>
                                     <?php endif; ?>
                                 </div>
-                                <div class="col-md-4">
+                                
+                                <!-- Botões de Presença -->
+                                <div class="col-12 col-md-4 mt-2 mt-md-0">
                                     <?php if ($canEdit): ?>
-                                    <div class="btn-group" role="group">
+                                    <div class="btn-group w-100 w-md-auto" role="group">
                                         <button class="btn btn-sm btn-outline-success btn-presenca <?= $aluno['presenca_id'] && $aluno['presente'] ? 'active' : '' ?>" 
-                                                onclick="marcarPresenca(<?= $aluno['id'] ?>, true)">
-                                            <i class="fas fa-check"></i> Presente
+                                                onclick="marcarPresenca(<?= $aluno['id'] ?>, true)"
+                                                <?= !$canEdit ? 'disabled' : '' ?>>
+                                            <i class="fas fa-check"></i> <span class="d-none d-md-inline">Presente</span>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger btn-presenca <?= $aluno['presenca_id'] && !$aluno['presente'] ? 'active' : '' ?>" 
-                                                onclick="marcarPresenca(<?= $aluno['id'] ?>, false)">
-                                            <i class="fas fa-times"></i> Ausente
+                                                onclick="marcarPresenca(<?= $aluno['id'] ?>, false)"
+                                                <?= !$canEdit ? 'disabled' : '' ?>>
+                                            <i class="fas fa-times"></i> <span class="d-none d-md-inline">Ausente</span>
                                         </button>
                                     </div>
                                     <?php else: ?>
@@ -717,6 +822,8 @@ if ($aulaId) {
                     const alunoId = alunoItem.dataset.alunoId;
                     atualizarInterfaceAluno(alunoId, presente, presencaId);
                     alteracoesPendentes = true;
+                    // Atualizar frequência do aluno após atualizar presença
+                    atualizarFrequenciaAluno(alunoId);
                 } else {
                     mostrarToast('Erro ao atualizar presença: ' + data.message, 'error');
                 }
@@ -725,6 +832,40 @@ if ($aulaId) {
                 console.error('Erro:', error);
                 mostrarToast('Erro de conexão. Tente novamente.', 'error');
             });
+        }
+        
+        // Função para atualizar frequência do aluno após marcar presença
+        function atualizarFrequenciaAluno(alunoId) {
+            // Buscar frequência atualizada via API
+            fetch(`/admin/api/turma-frequencia.php?turma_id=${turmaId}&aluno_id=${alunoId}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success && data.data && data.data.estatisticas) {
+                        const percentual = data.data.estatisticas.percentual_frequencia;
+                        const badgeElement = document.getElementById(`freq-badge-${alunoId}`);
+                        
+                        if (badgeElement) {
+                            // Atualizar valor
+                            badgeElement.textContent = percentual.toFixed(1) + '%';
+                            
+                            // Atualizar classe (alto/médio/baixo)
+                            badgeElement.className = 'frequencia-badge ';
+                            // Frequência mínima padrão: 75%
+                            const frequenciaMinima = 75.0;
+                            if (percentual >= frequenciaMinima) {
+                                badgeElement.className += 'alto';
+                            } else if (percentual >= (frequenciaMinima - 10)) {
+                                badgeElement.className += 'medio';
+                            } else {
+                                badgeElement.className += 'baixo';
+                            }
+                        }
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro ao atualizar frequência:', error);
+                    // Não mostrar erro ao usuário, apenas logar
+                });
         }
 
         // Função para atualizar interface do aluno
@@ -784,7 +925,7 @@ if ($aulaId) {
             if (presencas.length > 0) {
                 const dados = {
                     turma_id: turmaId,
-                    turma_aula_id: aulaId,
+                    aula_id: aulaId, // Usar aula_id (nome correto)
                     presencas: presencas
                 };
 
@@ -802,6 +943,10 @@ if ($aulaId) {
                         if (data.erros && data.erros.length > 0) {
                             mostrarToast('Alguns erros: ' + data.erros.join(', '), 'error');
                         }
+                        // Atualizar frequências de todos os alunos processados
+                        presencas.forEach(presenca => {
+                            atualizarFrequenciaAluno(presenca.aluno_id);
+                        });
                         recarregarPagina();
                     } else {
                         mostrarToast('Erro ao processar presenças: ' + data.message, 'error');
@@ -874,9 +1019,17 @@ if ($aulaId) {
                 }
             });
 
-            // Atualizar números na interface
-            document.querySelector('.stats-number.text-success').textContent = presentes;
-            document.querySelector('.stats-number.text-danger').textContent = ausentes;
+            // Atualizar números na interface (com verificação de existência)
+            const statsPresentes = document.querySelector('.stats-number.text-success');
+            const statsAusentes = document.querySelector('.stats-number.text-danger');
+            const statsFrequencia = document.querySelector('.stats-number.text-info');
+            
+            if (statsPresentes) {
+                statsPresentes.textContent = presentes;
+            }
+            if (statsAusentes) {
+                statsAusentes.textContent = ausentes;
+            }
             
             // Calcular frequência média
             const totalRegistradas = presentes + ausentes;
@@ -884,7 +1037,9 @@ if ($aulaId) {
             if (totalRegistradas > 0) {
                 frequenciaMedia = Math.round((presentes / totalRegistradas) * 100);
             }
-            document.querySelector('.stats-number.text-info').textContent = frequenciaMedia + '%';
+            if (statsFrequencia) {
+                statsFrequencia.textContent = frequenciaMedia + '%';
+            }
         }
 
         // Função para trocar de aula

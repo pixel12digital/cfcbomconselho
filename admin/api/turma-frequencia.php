@@ -25,12 +25,28 @@ require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
-// Verificar autenticação
-if (!isLoggedIn() || !hasPermission('admin')) {
+// Verificar autenticação (aceitar admin, secretaria e instrutor)
+if (!isLoggedIn()) {
     http_response_code(401);
     echo json_encode([
         'success' => false,
         'message' => 'Usuário não autenticado'
+    ], JSON_UNESCAPED_UNICODE);
+    exit();
+}
+
+// Verificar se é admin, secretaria ou instrutor
+require_once __DIR__ . '/../../includes/auth.php';
+$currentUser = getCurrentUser();
+$isAdmin = ($currentUser['tipo'] ?? '') === 'admin';
+$isSecretaria = ($currentUser['tipo'] ?? '') === 'secretaria';
+$isInstrutor = ($currentUser['tipo'] ?? '') === 'instrutor';
+
+if (!$isAdmin && !$isSecretaria && !$isInstrutor) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Permissão negada - Apenas administradores, secretaria e instrutores podem acessar frequências'
     ], JSON_UNESCAPED_UNICODE);
     exit();
 }
