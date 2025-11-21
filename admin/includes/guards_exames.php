@@ -2,6 +2,12 @@
 /**
  * Guards de Exames e Inadimplência
  * Sistema de verificação de bloqueios para aulas teóricas
+ * 
+ * NOTA SOBRE CFC:
+ * - Esta classe trabalha apenas com aluno_id, independente de CFC
+ * - Não há dependência de CFC canônico ou valores fixos
+ * - CFC canônico do CFC Bom Conselho é ID 36 (documentado em docs/)
+ * - Migração CFC 1 → 36 é SEMPRE manual, via script documentado
  */
 
 require_once __DIR__ . '/../../includes/config.php';
@@ -36,32 +42,99 @@ class GuardsExames {
     }
     
     /**
-     * Verificar se exames médico e psicotécnico estão OK
+     * Verificar se aluno tem exames OK para aulas teóricas
+     * FUNÇÃO CENTRALIZADA - Usa a mesma lógica do histórico do aluno
+     * 
+     * Critério:
+     * - Exame médico: status 'concluido' E resultado em ['apto', 'aprovado'] E tem resultado lançado
+     * - Exame psicotécnico: status 'concluido' E resultado em ['apto', 'aprovado'] E tem resultado lançado
+     * 
+     * Compatibilidade: 'aprovado' é tratado como equivalente a 'apto' (valores antigos)
+     * 
+     * @param int $alunoId
+     * @return bool
      */
-    public static function verificarExamesOK($alunoId) {
+    public static function alunoComExamesOkParaTeoricas($alunoId) {
         $db = db();
         
-        // Buscar exames do aluno
+        // Buscar exames do aluno (buscar todos, não apenas concluídos, para verificar tem_resultado)
         $exames = $db->fetchAll("
-            SELECT tipo, status, resultado 
+            SELECT tipo, status, resultado, data_resultado
             FROM exames 
-            WHERE aluno_id = ? AND status = 'concluido'
+            WHERE aluno_id = ? 
+            ORDER BY tipo, data_agendada DESC
         ", [$alunoId]);
         
         $medico = null;
         $psicotecnico = null;
         
+        // Pegar o exame mais recente de cada tipo
         foreach ($exames as $exame) {
-            if ($exame['tipo'] === 'medico') {
+            if ($exame['tipo'] === 'medico' && !$medico) {
                 $medico = $exame;
-            } elseif ($exame['tipo'] === 'psicotecnico') {
+            } elseif ($exame['tipo'] === 'psicotecnico' && !$psicotecnico) {
                 $psicotecnico = $exame;
             }
         }
         
-        // Exames OK = ambos aptos (inapto_temporario é considerado não apto para aulas teóricas)
-        return ($medico && $medico['resultado'] === 'apto') && 
-               ($psicotecnico && $psicotecnico['resultado'] === 'apto');
+        // Função helper para verificar se tem resultado lançado (mesma lógica do histórico)
+        $temResultado = function($exame) {
+            if (!$exame) return false;
+            $resultado = $exame['resultado'] ?? null;
+            $dataResultado = $exame['data_resultado'] ?? null;
+            
+            // Considera que tem resultado se:
+            // 1. Campo resultado não está vazio/null e não é 'pendente' e está em valores válidos
+            // 2. OU existe data_resultado preenchida
+            if (!empty($resultado) && $resultado !== 'pendente' && 
+                in_array($resultado, ['apto', 'inapto', 'inapto_temporario', 'aprovado', 'reprovado'])) {
+                return true;
+            } elseif (!empty($dataResultado)) {
+                return true;
+            }
+            return false;
+        };
+        
+        // Verificar se ambos têm resultado lançado
+        $medicoTemResultado = $temResultado($medico);
+        $psicotecnicoTemResultado = $temResultado($psicotecnico);
+        
+        // Verificar se resultados são aptos/aprovados (compatibilidade com valores antigos)
+        $medicoApto = false;
+        $psicotecnicoApto = false;
+        
+        if ($medicoTemResultado) {
+            $resultadoMedico = $medico['resultado'] ?? '';
+            $medicoApto = in_array($resultadoMedico, ['apto', 'aprovado']);
+        }
+        
+        if ($psicotecnicoTemResultado) {
+            $resultadoPsicotecnico = $psicotecnico['resultado'] ?? '';
+            $psicotecnicoApto = in_array($resultadoPsicotecnico, ['apto', 'aprovado']);
+        }
+        
+        // Exames OK = ambos têm resultado lançado E ambos são aptos/aprovados
+        $examesOK = $medicoTemResultado && $medicoApto && 
+                   $psicotecnicoTemResultado && $psicotecnicoApto;
+        
+        // Log para debug
+        error_log("[GUARDS EXAMES] Aluno {$alunoId} - medico_tem_resultado=" . ($medicoTemResultado ? 'true' : 'false') . 
+                 ", medico_apto=" . ($medicoApto ? 'true' : 'false') . 
+                 ", psicotecnico_tem_resultado=" . ($psicotecnicoTemResultado ? 'true' : 'false') . 
+                 ", psicotecnico_apto=" . ($psicotecnicoApto ? 'true' : 'false') . 
+                 ", exames_ok=" . ($examesOK ? 'true' : 'false'));
+        
+        return $examesOK;
+    }
+    
+    /**
+     * Verificar se exames médico e psicotécnico estão OK
+     * DEPRECATED: Use alunoComExamesOkParaTeoricas() para garantir consistência
+     * Mantido para compatibilidade com código existente
+     */
+    public static function verificarExamesOK($alunoId) {
+        // Usar função centralizada
+        return self::alunoComExamesOkParaTeoricas($alunoId);
     }
     
     /**
@@ -123,7 +196,7 @@ class GuardsExames {
         return [
             'medico' => $medico,
             'psicotecnico' => $psicotecnico,
-            'exames_ok' => self::verificarExamesOK($alunoId)
+            'exames_ok' => self::alunoComExamesOkParaTeoricas($alunoId)
         ];
     }
     

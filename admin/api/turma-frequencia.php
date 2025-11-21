@@ -90,12 +90,13 @@ function handleGetRequest($db) {
  * Calcular frequência de um aluno específico
  */
 function calcularFrequenciaAluno($db, $alunoId, $turmaId) {
+    // CORRIGIDO: Usar turma_matriculas e turmas_teoricas (tabelas corretas)
     // Buscar dados do aluno
     $aluno = $db->fetch("
-        SELECT a.*, ta.status as status_matricula
+        SELECT a.*, tm.status as status_matricula
         FROM alunos a
-        JOIN turma_alunos ta ON a.id = ta.aluno_id
-        WHERE a.id = ? AND ta.turma_id = ?
+        JOIN turma_matriculas tm ON a.id = tm.aluno_id
+        WHERE a.id = ? AND tm.turma_id = ?
     ", [$alunoId, $turmaId]);
     
     if (!$aluno) {
@@ -105,9 +106,9 @@ function calcularFrequenciaAluno($db, $alunoId, $turmaId) {
         ];
     }
     
-    // Buscar dados da turma
+    // Buscar dados da turma (CORRIGIDO: usar turmas_teoricas)
     $turma = $db->fetch("
-        SELECT * FROM turmas WHERE id = ?
+        SELECT * FROM turmas_teoricas WHERE id = ?
     ", [$turmaId]);
     
     if (!$turma) {
@@ -117,58 +118,64 @@ function calcularFrequenciaAluno($db, $alunoId, $turmaId) {
         ];
     }
     
-    // Contar aulas programadas da turma
+    // Contar aulas programadas da turma (CORRIGIDO: usar turma_aulas_agendadas)
     $aulasProgramadas = $db->fetch("
         SELECT COUNT(*) as total
-        FROM turma_aulas 
-        WHERE turma_id = ? AND status IN ('agendada', 'concluida')
+        FROM turma_aulas_agendadas 
+        WHERE turma_id = ? AND status IN ('agendada', 'realizada')
     ", [$turmaId]);
     
     $totalAulas = $aulasProgramadas['total'];
     
-    // Contar presenças do aluno
+    // Contar presenças do aluno (CORRIGIDO: considerar apenas aulas válidas)
     $presencas = $db->fetch("
         SELECT 
             COUNT(*) as total_registradas,
-            COUNT(CASE WHEN presente = 1 THEN 1 END) as presentes,
-            COUNT(CASE WHEN presente = 0 THEN 1 END) as ausentes
-        FROM turma_presencas 
-        WHERE turma_id = ? AND aluno_id = ?
+            COUNT(CASE WHEN tp.presente = 1 THEN 1 END) as presentes,
+            COUNT(CASE WHEN tp.presente = 0 THEN 1 END) as ausentes
+        FROM turma_presencas tp
+        INNER JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
+        WHERE tp.turma_id = ? 
+        AND tp.aluno_id = ?
+        AND taa.status IN ('agendada', 'realizada')
     ", [$turmaId, $alunoId]);
     
     $totalRegistradas = $presencas['total_registradas'];
     $aulasPresentes = $presencas['presentes'];
     $aulasAusentes = $presencas['ausentes'];
     
-    // Calcular percentual de frequência
+    // Calcular percentual de frequência (baseado em aulas válidas, não apenas registradas)
     $percentualFrequencia = 0;
-    if ($totalRegistradas > 0) {
-        $percentualFrequencia = round(($aulasPresentes / $totalRegistradas) * 100, 2);
+    if ($totalAulas > 0) {
+        $percentualFrequencia = round(($aulasPresentes / $totalAulas) * 100, 2);
     }
     
     // Determinar status de frequência
+    // Frequência mínima padrão: 75% (se não houver campo na turma)
+    $frequenciaMinima = isset($turma['frequencia_minima']) ? (float)$turma['frequencia_minima'] : 75.0;
+    
     $statusFrequencia = 'PENDENTE';
-    if ($totalRegistradas > 0) {
-        if ($percentualFrequencia >= $turma['frequencia_minima']) {
+    if ($totalAulas > 0) {
+        if ($percentualFrequencia >= $frequenciaMinima) {
             $statusFrequencia = 'APROVADO';
         } else {
             $statusFrequencia = 'REPROVADO';
         }
     }
     
-    // Buscar histórico de presenças
+    // Buscar histórico de presenças (CORRIGIDO: usar turma_aulas_agendadas e aula_id)
     $historicoPresencas = $db->fetchAll("
         SELECT 
             tp.presente,
-            tp.observacao,
+            tp.justificativa as observacao,
             tp.registrado_em,
-            ta.nome_aula,
-            ta.data_aula,
-            ta.ordem
+            taa.nome_aula,
+            taa.data_aula,
+            taa.ordem_global as ordem
         FROM turma_presencas tp
-        JOIN turma_aulas ta ON tp.turma_aula_id = ta.id
+        JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
         WHERE tp.turma_id = ? AND tp.aluno_id = ?
-        ORDER BY ta.ordem ASC
+        ORDER BY taa.ordem_global ASC
     ", [$turmaId, $alunoId]);
     
     return [
@@ -181,7 +188,7 @@ function calcularFrequenciaAluno($db, $alunoId, $turmaId) {
         'turma' => [
             'id' => $turma['id'],
             'nome' => $turma['nome'],
-            'frequencia_minima' => $turma['frequencia_minima']
+            'frequencia_minima' => isset($turma['frequencia_minima']) ? $turma['frequencia_minima'] : 75.0
         ],
         'estatisticas' => [
             'total_aulas_programadas' => $totalAulas,
@@ -200,9 +207,10 @@ function calcularFrequenciaAluno($db, $alunoId, $turmaId) {
  * Calcular frequência de todos os alunos da turma
  */
 function calcularFrequenciaTurma($db, $turmaId) {
+    // CORRIGIDO: Usar turmas_teoricas e turma_matriculas (tabelas corretas)
     // Buscar dados da turma
     $turma = $db->fetch("
-        SELECT * FROM turmas WHERE id = ?
+        SELECT * FROM turmas_teoricas WHERE id = ?
     ", [$turmaId]);
     
     if (!$turma) {
@@ -212,26 +220,26 @@ function calcularFrequenciaTurma($db, $turmaId) {
         ];
     }
     
-    // Contar aulas programadas da turma
+    // Contar aulas programadas da turma (CORRIGIDO: usar turma_aulas_agendadas)
     $aulasProgramadas = $db->fetch("
         SELECT COUNT(*) as total
-        FROM turma_aulas 
-        WHERE turma_id = ? AND status IN ('agendada', 'concluida')
+        FROM turma_aulas_agendadas 
+        WHERE turma_id = ? AND status IN ('agendada', 'realizada')
     ", [$turmaId]);
     
     $totalAulas = $aulasProgramadas['total'];
     
-    // Buscar todos os alunos matriculados
+    // Buscar todos os alunos matriculados (CORRIGIDO: usar turma_matriculas)
     $alunos = $db->fetchAll("
         SELECT 
             a.id,
             a.nome,
             a.cpf,
-            ta.status as status_matricula,
-            ta.data_matricula
+            tm.status as status_matricula,
+            tm.data_matricula
         FROM alunos a
-        JOIN turma_alunos ta ON a.id = ta.aluno_id
-        WHERE ta.turma_id = ? AND ta.status IN ('matriculado', 'ativo')
+        JOIN turma_matriculas tm ON a.id = tm.aluno_id
+        WHERE tm.turma_id = ? AND tm.status IN ('matriculado', 'cursando', 'concluido')
         ORDER BY a.nome ASC
     ", [$turmaId]);
     
@@ -248,33 +256,39 @@ function calcularFrequenciaTurma($db, $turmaId) {
     $somaFrequencias = 0;
     $alunosComFrequencia = 0;
     
+    // Frequência mínima padrão: 75% (se não houver campo na turma)
+    $frequenciaMinima = isset($turma['frequencia_minima']) ? (float)$turma['frequencia_minima'] : 75.0;
+    
     foreach ($alunos as $aluno) {
-        // Contar presenças do aluno
+        // Contar presenças do aluno (CORRIGIDO: considerar apenas aulas válidas)
         $presencas = $db->fetch("
             SELECT 
                 COUNT(*) as total_registradas,
-                COUNT(CASE WHEN presente = 1 THEN 1 END) as presentes,
-                COUNT(CASE WHEN presente = 0 THEN 1 END) as ausentes
-            FROM turma_presencas 
-            WHERE turma_id = ? AND aluno_id = ?
+                COUNT(CASE WHEN tp.presente = 1 THEN 1 END) as presentes,
+                COUNT(CASE WHEN tp.presente = 0 THEN 1 END) as ausentes
+            FROM turma_presencas tp
+            INNER JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
+            WHERE tp.turma_id = ? 
+            AND tp.aluno_id = ?
+            AND taa.status IN ('agendada', 'realizada')
         ", [$turmaId, $aluno['id']]);
         
         $totalRegistradas = $presencas['total_registradas'];
         $aulasPresentes = $presencas['presentes'];
         $aulasAusentes = $presencas['ausentes'];
         
-        // Calcular percentual de frequência
+        // Calcular percentual de frequência (baseado em aulas válidas, não apenas registradas)
         $percentualFrequencia = 0;
-        if ($totalRegistradas > 0) {
-            $percentualFrequencia = round(($aulasPresentes / $totalRegistradas) * 100, 2);
+        if ($totalAulas > 0) {
+            $percentualFrequencia = round(($aulasPresentes / $totalAulas) * 100, 2);
             $somaFrequencias += $percentualFrequencia;
             $alunosComFrequencia++;
         }
         
         // Determinar status de frequência
         $statusFrequencia = 'PENDENTE';
-        if ($totalRegistradas > 0) {
-            if ($percentualFrequencia >= $turma['frequencia_minima']) {
+        if ($totalAulas > 0) {
+            if ($percentualFrequencia >= $frequenciaMinima) {
                 $statusFrequencia = 'APROVADO';
                 $estatisticasGerais['aprovados_frequencia']++;
             } else {
@@ -302,11 +316,14 @@ function calcularFrequenciaTurma($db, $turmaId) {
         $estatisticasGerais['frequencia_media'] = round($somaFrequencias / $alunosComFrequencia, 2);
     }
     
+    // Frequência mínima padrão: 75% (se não houver campo na turma)
+    $frequenciaMinima = isset($turma['frequencia_minima']) ? (float)$turma['frequencia_minima'] : 75.0;
+    
     return [
         'turma' => [
             'id' => $turma['id'],
             'nome' => $turma['nome'],
-            'frequencia_minima' => $turma['frequencia_minima']
+            'frequencia_minima' => $frequenciaMinima
         ],
         'estatisticas_gerais' => $estatisticasGerais,
         'frequencias_alunos' => $frequencias,
@@ -318,13 +335,14 @@ function calcularFrequenciaTurma($db, $turmaId) {
  * Listar frequências com filtros
  */
 function listarFrequencias($db) {
+    // CORRIGIDO: Usar turmas_teoricas, turma_matriculas, turma_aulas_agendadas (tabelas corretas)
     $sql = "
         SELECT 
-            t.id as turma_id,
-            t.nome as turma_nome,
-            t.frequencia_minima,
-            COUNT(DISTINCT ta_aluno.aluno_id) as total_alunos,
-            COUNT(DISTINCT ta_aula.id) as total_aulas,
+            tt.id as turma_id,
+            tt.nome as turma_nome,
+            COALESCE(tt.frequencia_minima, 75.0) as frequencia_minima,
+            COUNT(DISTINCT tm.aluno_id) as total_alunos,
+            COUNT(DISTINCT taa.id) as total_aulas,
             COUNT(tp.id) as total_presencas_registradas,
             COUNT(CASE WHEN tp.presente = 1 THEN 1 END) as total_presentes,
             ROUND(
@@ -334,12 +352,12 @@ function listarFrequencias($db) {
                     ELSE 0 
                 END, 2
             ) as frequencia_media
-        FROM turmas t
-        LEFT JOIN turma_alunos ta_aluno ON t.id = ta_aluno.turma_id
-        LEFT JOIN turma_aulas ta_aula ON t.id = ta_aula.turma_id
-        LEFT JOIN turma_presencas tp ON t.id = tp.turma_id
-        GROUP BY t.id, t.nome, t.frequencia_minima
-        ORDER BY t.created_at DESC
+        FROM turmas_teoricas tt
+        LEFT JOIN turma_matriculas tm ON tt.id = tm.turma_id
+        LEFT JOIN turma_aulas_agendadas taa ON tt.id = taa.turma_id
+        LEFT JOIN turma_presencas tp ON tt.id = tp.turma_id
+        GROUP BY tt.id, tt.nome, tt.frequencia_minima
+        ORDER BY tt.criado_em DESC
         LIMIT 50
     ";
     
@@ -350,6 +368,7 @@ function listarFrequencias($db) {
  * Calcular frequência em tempo real (para uso em chamadas)
  */
 function calcularFrequenciaTempoReal($db, $turmaId, $aulaId) {
+    // CORRIGIDO: Usar aula_id e turma_matriculas (tabelas/campos corretos)
     // Buscar presenças da aula atual
     $presencasAula = $db->fetchAll("
         SELECT 
@@ -358,19 +377,19 @@ function calcularFrequenciaTempoReal($db, $turmaId, $aulaId) {
             a.nome as aluno_nome
         FROM turma_presencas tp
         JOIN alunos a ON tp.aluno_id = a.id
-        WHERE tp.turma_id = ? AND tp.turma_aula_id = ?
+        WHERE tp.turma_id = ? AND tp.aula_id = ?
         ORDER BY a.nome ASC
     ", [$turmaId, $aulaId]);
     
-    // Buscar todos os alunos matriculados na turma
+    // Buscar todos os alunos matriculados na turma (CORRIGIDO: usar turma_matriculas)
     $alunosTurma = $db->fetchAll("
         SELECT 
             a.id,
             a.nome,
             a.cpf
         FROM alunos a
-        JOIN turma_alunos ta ON a.id = ta.aluno_id
-        WHERE ta.turma_id = ? AND ta.status IN ('matriculado', 'ativo')
+        JOIN turma_matriculas tm ON a.id = tm.aluno_id
+        WHERE tm.turma_id = ? AND tm.status IN ('matriculado', 'cursando', 'concluido')
         ORDER BY a.nome ASC
     ", [$turmaId]);
     

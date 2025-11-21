@@ -263,6 +263,9 @@ foreach ($disciplinasSelecionadas as $disciplinaSelecionada) {
 }
 
 // Obter alunos matriculados na turma
+// Incluir helper de categoria CNH
+require_once __DIR__ . '/../includes/helpers_cnh.php';
+
 try {
     $alunosMatriculados = $db->fetchAll("
         SELECT 
@@ -277,10 +280,18 @@ try {
             a.categoria_cnh,
             a.telefone,
             a.email,
-            c.nome as cfc_nome
+            c.nome as cfc_nome,
+            -- Incluir categoria da matrícula ativa (prioridade 1)
+            m_ativa.categoria_cnh as categoria_cnh_matricula,
+            m_ativa.tipo_servico as tipo_servico_matricula
         FROM turma_matriculas tm
         JOIN alunos a ON tm.aluno_id = a.id
         JOIN cfcs c ON a.cfc_id = c.id
+        LEFT JOIN (
+            SELECT aluno_id, categoria_cnh, tipo_servico
+            FROM matriculas
+            WHERE status = 'ativa'
+        ) m_ativa ON a.id = m_ativa.aluno_id
         WHERE tm.turma_id = ? 
           AND tm.status IN ('matriculado', 'cursando', 'concluido', 'evadido', 'transferido')
         ORDER BY tm.data_matricula DESC, a.nome
@@ -4916,8 +4927,15 @@ function updateTurmaHeaderName(newName) {
                                 <?= htmlspecialchars($aluno['cpf'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                             </td>
                             <td>
-                                <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
-                                    <?= htmlspecialchars($aluno['categoria_cnh'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                                <?php 
+                                // Obter categoria priorizando matrícula ativa (usando helper centralizado)
+                                $categoriaExibicao = obterCategoriaExibicao($aluno);
+                                
+                                // Se houver matrícula ativa, usar badge primário; caso contrário, secundário
+                                $badgeClass = !empty($aluno['categoria_cnh_matricula']) ? 'bg-primary' : 'bg-secondary';
+                                ?>
+                                <span class="badge <?= $badgeClass ?>" style="padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;" title="Categoria CNH">
+                                    <?= htmlspecialchars($categoriaExibicao, ENT_QUOTES, 'UTF-8') ?>
                                 </span>
                             </td>
                             <td>
@@ -11826,10 +11844,10 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                 const modalQuantidadeAulas = document.getElementById('modal_quantidade_aulas');
                 const modalObservacoes = document.getElementById('modal_observacoes');
                 
-                // Extrair disciplina do nome da aula (ex: "Legislação de Trânsito - Aula 2" -> "legislacao_transito")
+                // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Usar exatamente o valor de disciplina retornado pela API (slug do banco)
                 let disciplinaId = agendamento.disciplina || '';
                 if (!disciplinaId && agendamento.nome_aula) {
-                    // Tentar extrair do nome
+                    // Tentar extrair do nome (fallback apenas se não vier do banco)
                     const partes = agendamento.nome_aula.split(' - ');
                     if (partes.length > 0) {
                         // Normalizar: remover acentos e converter para formato do banco
@@ -11842,13 +11860,20 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                     }
                 }
                 
-                // Normalizar disciplina antes de preencher no campo
+                // Preencher campo disciplina no modal unificado (sem normalizar - usar valor do banco)
                 if (modalDisciplinaId && disciplinaId) {
-                    modalDisciplinaId.value = normalizarDisciplinaJS(disciplinaId);
+                    modalDisciplinaId.value = disciplinaId; // Usar valor direto do banco, sem normalização JS
                     
                     // ✅ Registrar disciplina aberta para manter accordion após salvar
                     window.ultimaDisciplinaAberta = normalizarDisciplinaJS(disciplinaId);
                     console.log('📌 Disciplina registrada ao editar:', window.ultimaDisciplinaAberta);
+                }
+                
+                // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Preencher campo disciplina no modal de edição separado
+                const editDisciplinaField = document.getElementById('editDisciplina');
+                if (editDisciplinaField && disciplinaId) {
+                    editDisciplinaField.value = disciplinaId; // Usar valor direto do banco, sem normalização
+                    console.log('✅ [FIX FASE 2] Campo editDisciplina preenchido com:', disciplinaId);
                 }
                 if (modalDisciplinaNome && agendamento.nome_aula) {
                     // Extrair nome da disciplina (sem " - Aula X")
@@ -11928,18 +11953,26 @@ function editarAgendamento(id, nomeAula, dataAula, horaInicio, horaFim, instruto
                 const modalQuantidadeAulas = document.getElementById('modal_quantidade_aulas');
                 const modalObservacoes = document.getElementById('modal_observacoes');
                 
+                // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Usar exatamente o valor de disciplina retornado pela API (slug do banco)
                 let disciplinaId = agendamento.disciplina || '';
                 if (!disciplinaId && agendamento.nome_aula) {
                     const partes = agendamento.nome_aula.split(' - ');
                     if (partes.length > 0) {
-                        // Normalizar disciplina extraída do nome da aula
+                        // Normalizar disciplina extraída do nome da aula (fallback apenas)
                         disciplinaId = normalizarDisciplinaJS(partes[0]);
                     }
                 }
                 
-                // Normalizar disciplina antes de preencher no campo (caso já venha do banco)
+                // Preencher campo disciplina no modal unificado (sem normalizar - usar valor do banco)
                 if (modalDisciplinaId && disciplinaId) {
-                    modalDisciplinaId.value = normalizarDisciplinaJS(disciplinaId);
+                    modalDisciplinaId.value = disciplinaId; // Usar valor direto do banco, sem normalização JS
+                }
+                
+                // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Preencher campo disciplina no modal de edição separado
+                const editDisciplinaField = document.getElementById('editDisciplina');
+                if (editDisciplinaField && disciplinaId) {
+                    editDisciplinaField.value = disciplinaId; // Usar valor direto do banco, sem normalização
+                    console.log('✅ [FIX FASE 2] Campo editDisciplina preenchido (fallback) com:', disciplinaId);
                 }
                 if (modalDisciplinaNome && agendamento.nome_aula) {
                     const nomeDisciplina = agendamento.nome_aula.split(' - ')[0];
@@ -12217,6 +12250,15 @@ function salvarEdicaoAgendamento() {
         data.observacoes = observacoes.value;
     }
     
+    // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Garantir que disciplina seja incluída no payload
+    const editDisciplina = document.getElementById('editDisciplina');
+    if (editDisciplina && editDisciplina.value) {
+        data.disciplina = editDisciplina.value;
+        console.log('✅ [FIX FASE 2] Disciplina incluída no payload:', editDisciplina.value);
+    } else {
+        console.warn('⚠️ [FIX FASE 2] Campo disciplina não encontrado ou vazio no formEditarAgendamento');
+    }
+    
     data.acao = 'editar_aula';
     data.aula_id = document.getElementById('editAgendamentoId').value;
     
@@ -12313,6 +12355,8 @@ function criarModalEdicao() {
             <div class="popup-modal-content">
                 <form id="formEditarAgendamento">
                     <input type="hidden" id="editAgendamentoId" name="aula_id">
+                    <!-- [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Campo disciplina para garantir envio no FormData -->
+                    <input type="hidden" name="disciplina" id="editDisciplina">
                     
                     <div class="row g-3">
                         <div class="col-md-6">
@@ -12719,6 +12763,8 @@ function fecharModalInserirAlunos() {
 }
 
 const TURMA_ID_DETALHES = <?= $turmaId ?>;
+const TURMA_CFC_ID = <?= (int)($turma['cfc_id'] ?? 0) ?>;
+const SESSION_CFC_ID = <?= (int)($user['cfc_id'] ?? 0) ?>;
 
 // Utilitários para manipulação de alunos matriculados e aptos
 function escapeHtml(value) {
@@ -12848,9 +12894,38 @@ function garantirEstruturaTabelaAlunos() {
     return { wrapper, tabela, tbody };
 }
 
+// Função helper para obter categoria priorizando matrícula ativa (reutilizada do módulo de alunos)
+function obterCategoriaExibicao(aluno) {
+    // Prioridade 1: Categoria da matrícula ativa
+    if (aluno.categoria_cnh_matricula) {
+        return aluno.categoria_cnh_matricula;
+    }
+    // Prioridade 2: Categoria do aluno (fallback)
+    if (aluno.categoria_cnh) {
+        return aluno.categoria_cnh;
+    }
+    // Prioridade 3: Tentar extrair de operações
+    if (aluno.operacoes) {
+        try {
+            const operacoes = typeof aluno.operacoes === 'string' ? JSON.parse(aluno.operacoes) : aluno.operacoes;
+            if (Array.isArray(operacoes) && operacoes.length > 0) {
+                const primeiraOp = operacoes[0];
+                return primeiraOp.categoria || primeiraOp.categoria_cnh || 'N/A';
+            }
+        } catch (e) {
+            // Ignorar erro de parse
+        }
+    }
+    return 'N/A';
+}
+
 function gerarLinhaAlunoMatriculado(alunoInfo, matriculaInfo) {
     const iniciais = escapeHtml(obterIniciais(alunoInfo.nome));
     const dataFormatada = formatarDataHoraBrasileira(matriculaInfo?.data_matricula);
+    
+    // Obter categoria priorizando matrícula ativa
+    const categoriaExibicao = obterCategoriaExibicao(alunoInfo);
+    const badgeClass = alunoInfo.categoria_cnh_matricula ? 'bg-primary' : 'bg-secondary';
 
     return `
         <tr data-aluno-id="${alunoInfo.id}">
@@ -12870,8 +12945,8 @@ function gerarLinhaAlunoMatriculado(alunoInfo, matriculaInfo) {
                 ${escapeHtml(alunoInfo.cpf || '')}
             </td>
             <td>
-                <span style="background: #e8f5e8; color: #2e7d32; padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;">
-                    ${escapeHtml(alunoInfo.categoria_cnh || '--')}
+                <span class="badge ${badgeClass}" style="padding: 4px 8px; border-radius: 12px; font-size: 0.8rem; font-weight: 600;" title="Categoria CNH">
+                    ${escapeHtml(categoriaExibicao || '--')}
                 </span>
             </td>
             <td>
@@ -12960,9 +13035,22 @@ function carregarAlunosAptos(turmaId) {
     .then(data => {
         loading.style.display = 'none';
         console.log('Dados recebidos:', data);
+        console.log('[TURMAS TEORICAS FRONTEND] Debug Info recebido:', data.debug_info);
         
         if (data.sucesso) {
-            exibirAlunosAptos(data.alunos, turmaId, data.debug_info);
+            // Garantir que debug_info tenha os valores de CFC
+            const debugInfo = data.debug_info || {};
+            if (!debugInfo.turma_cfc_id && TURMA_CFC_ID) {
+                debugInfo.turma_cfc_id = TURMA_CFC_ID;
+            }
+            if (!debugInfo.session_cfc_id && SESSION_CFC_ID) {
+                debugInfo.session_cfc_id = SESSION_CFC_ID;
+            }
+            if (debugInfo.turma_cfc_id && debugInfo.session_cfc_id) {
+                debugInfo.cfc_ids_match = (debugInfo.turma_cfc_id === debugInfo.session_cfc_id);
+            }
+            
+            exibirAlunosAptos(data.alunos, turmaId, debugInfo);
         } else {
             container.innerHTML = `
                 <div class="alert alert-warning">
@@ -12990,16 +13078,22 @@ function carregarAlunosAptos(turmaId) {
 function exibirAlunosAptos(alunos, turmaId, debugInfo = null) {
     const container = document.getElementById('listaAlunosAptos');
     
-    if (alunos.length === 0) {
+        if (alunos.length === 0) {
         let debugHtml = '';
         if (debugInfo) {
+            const sessionLabel = debugInfo.session_cfc_label || (debugInfo.session_cfc_id === 0 ? 'admin_global' : 'cfc_especifico');
+            const isAdminGlobal = debugInfo.is_admin_global || (debugInfo.session_cfc_id === 0);
+            const cfcMatchText = isAdminGlobal ? 'N/A (Admin Global)' : (debugInfo.cfc_ids_match ? 'Sim' : 'Não');
+            
             debugHtml = `
                 <div class="alert alert-warning mt-2">
                     <i class="fas fa-bug"></i>
                     <strong>Debug Info:</strong><br>
-                    CFC da Turma: ${debugInfo.turma_cfc_id}<br>
-                    CFC da Sessão: ${debugInfo.session_cfc_id}<br>
-                    CFCs coincidem: ${debugInfo.cfc_ids_match ? 'Sim' : 'Não'}<br>
+                    CFC da Turma: ${debugInfo.turma_cfc_id || 'N/A'}<br>
+                    CFC da Sessão: ${debugInfo.session_cfc_id || 0} (${sessionLabel})<br>
+                    CFCs coincidem: ${cfcMatchText}<br>
+                    ${debugInfo.total_candidatos !== undefined ? `Total candidatos: ${debugInfo.total_candidatos}<br>` : ''}
+                    ${debugInfo.total_aptos !== undefined ? `Total aptos: ${debugInfo.total_aptos}<br>` : ''}
                 </div>
             `;
         }
@@ -13016,23 +13110,30 @@ function exibirAlunosAptos(alunos, turmaId, debugInfo = null) {
     
     let html = `
         <div class="alunos-grid">
-            ${alunos.map(aluno => `
+            ${alunos.map(aluno => {
+                // Obter categoria priorizando matrícula ativa
+                const categoriaExibicao = obterCategoriaExibicao(aluno);
+                return `
                 <div class="aluno-card" data-aluno-id="${aluno.id}">
                     <div class="aluno-info">
                         <h4>${escapeHtml(aluno.nome)}</h4>
                         <p><strong>CPF:</strong> ${escapeHtml(aluno.cpf || '')}</p>
-                        <p><strong>Categoria:</strong> ${escapeHtml(aluno.categoria_cnh || '')}</p>
+                        <p><strong>Categoria:</strong> ${escapeHtml(categoriaExibicao || '')}</p>
                         <p><strong>CFC:</strong> ${escapeHtml(aluno.cfc_nome || '')}</p>
                     </div>
                     <div class="exames-status">
-                        <div class="exame-status apto">
-                            <i class="fas fa-user-md"></i>
-                            <span>Médico: Apto</span>
-                        </div>
-                        <div class="exame-status apto">
-                            <i class="fas fa-brain"></i>
-                            <span>Psicotécnico: Apto</span>
-                        </div>
+                        ${aluno.exame_medico_resultado ? `
+                            <div class="exame-status ${aluno.exame_medico_resultado === 'apto' || aluno.exame_medico_resultado === 'aprovado' ? 'apto' : 'inapto'}">
+                                <i class="fas fa-user-md"></i>
+                                <span>Médico: ${aluno.exame_medico_resultado === 'apto' || aluno.exame_medico_resultado === 'aprovado' ? 'Apto' : (aluno.exame_medico_resultado === 'inapto' || aluno.exame_medico_resultado === 'reprovado' ? 'Inapto' : aluno.exame_medico_resultado)}</span>
+                            </div>
+                        ` : ''}
+                        ${aluno.exame_psicotecnico_resultado ? `
+                            <div class="exame-status ${aluno.exame_psicotecnico_resultado === 'apto' || aluno.exame_psicotecnico_resultado === 'aprovado' ? 'apto' : 'inapto'}">
+                                <i class="fas fa-brain"></i>
+                                <span>Psicotécnico: ${aluno.exame_psicotecnico_resultado === 'apto' || aluno.exame_psicotecnico_resultado === 'aprovado' ? 'Apto' : (aluno.exame_psicotecnico_resultado === 'inapto' || aluno.exame_psicotecnico_resultado === 'reprovado' ? 'Inapto' : aluno.exame_psicotecnico_resultado)}</span>
+                            </div>
+                        ` : ''}
                     </div>
                     <div class="aluno-actions">
                         <button class="btn btn-success btn-sm" data-role="matricular-aluno" onclick="matricularAluno(${aluno.id}, ${turmaId}, this)">
@@ -13041,7 +13142,8 @@ function exibirAlunosAptos(alunos, turmaId, debugInfo = null) {
                         </button>
                     </div>
                 </div>
-            `).join('')}
+            `;
+            }).join('')}
         </div>
     `;
     
@@ -13058,7 +13160,9 @@ function exibirAlunosAptos(alunos, turmaId, debugInfo = null) {
         if (button) {
             button.dataset.nome = aluno.nome || '';
             button.dataset.cpf = aluno.cpf || '';
-            button.dataset.categoria = aluno.categoria_cnh || '';
+            // Usar categoria priorizando matrícula ativa
+            const categoriaExibicao = obterCategoriaExibicao(aluno);
+            button.dataset.categoria = categoriaExibicao || '';
             button.dataset.cfc = aluno.cfc_nome || '';
             button.dataset.email = aluno.email || '';
             button.dataset.telefone = aluno.telefone || '';
@@ -13085,6 +13189,19 @@ function matricularAluno(alunoId, turmaId, buttonEl) {
         button.disabled = true;
     }
     
+    const payload = {
+        aluno_id: alunoId,
+        turma_id: turmaId
+    };
+    
+    // Log detalhado para debug
+    console.log('[MATRICULAR_ALUNO] Enviando requisição', {
+        url: 'api/matricular-aluno-turma.php',
+        turmaId: turmaId,
+        alunoId: alunoId,
+        payload: payload
+    });
+    
     fetch('api/matricular-aluno-turma.php', {
         method: 'POST',
         headers: {
@@ -13092,24 +13209,36 @@ function matricularAluno(alunoId, turmaId, buttonEl) {
             'Accept': 'application/json',
         },
         credentials: 'same-origin', // Incluir cookies de sessão
-        body: JSON.stringify({
-            aluno_id: alunoId,
-            turma_id: turmaId
-        })
+        body: JSON.stringify(payload)
     })
     .then(async response => {
-        const data = await response.json().catch(() => null);
-        if (!response.ok || !data) {
-            const mensagemErro = data?.mensagem || 'Erro ao processar a resposta da matrícula.';
+        // Tentar parsear JSON mesmo se status não for 200
+        let data = null;
+        try {
+            const text = await response.text();
+            data = text ? JSON.parse(text) : null;
+        } catch (e) {
+            console.error('[MATRICULAR_ALUNO] Erro ao parsear resposta JSON:', e);
+            throw { tipo: 'parse', mensagem: 'Erro ao processar resposta do servidor' };
+        }
+        
+        // Log da resposta
+        console.log('[MATRICULAR_ALUNO] Resposta recebida', {
+            status: response.status,
+            ok: response.ok,
+            data: data
+        });
+        
+        // Se não tiver sucesso no JSON, tratar como erro
+        if (!data || !data.sucesso) {
+            const mensagemErro = data?.mensagem || 'Não foi possível matricular o aluno.';
             throw { tipo: 'api', mensagem: mensagemErro };
         }
+        
         return data;
     })
     .then(data => {
-        if (!data.sucesso) {
-            mostrarMensagem('error', data.mensagem || 'Não foi possível matricular o aluno.');
-            return;
-        }
+        console.log('[MATRICULAR_ALUNO] Matrícula realizada com sucesso', data);
 
         const listaAptos = document.getElementById('listaAlunosAptos');
         const alunoCard = listaAptos ? listaAptos.querySelector(`[data-aluno-id="${alunoId}"]`) : null;
@@ -13121,15 +13250,24 @@ function matricularAluno(alunoId, turmaId, buttonEl) {
         }
 
         // Preparar dados para tabela
+        // Construir objeto aluno completo para usar obterCategoriaExibicao
+        const alunoCompleto = {
+            categoria_cnh: alunoDataset.categoria || data?.dados?.aluno?.categoria_cnh || '',
+            categoria_cnh_matricula: data?.dados?.aluno?.categoria_cnh_matricula || null,
+            operacoes: data?.dados?.aluno?.operacoes || null
+        };
+        
         const alunoInfo = {
             id: data?.dados?.aluno?.id ?? alunoId,
             nome: alunoDataset.nome || data?.dados?.aluno?.nome || '',
             cpf: alunoDataset.cpf || data?.dados?.aluno?.cpf || '',
             categoria_cnh: alunoDataset.categoria || data?.dados?.aluno?.categoria_cnh || '',
+            categoria_cnh_matricula: data?.dados?.aluno?.categoria_cnh_matricula || null,
             cfc_nome: alunoDataset.cfc || data?.dados?.aluno?.cfc_nome || '',
             email: alunoDataset.email || data?.dados?.aluno?.email || '',
             telefone: alunoDataset.telefone || data?.dados?.aluno?.telefone || '',
-            status: alunoDataset.status || data?.dados?.matricula?.status || 'matriculado'
+            status: alunoDataset.status || data?.dados?.matricula?.status || 'matriculado',
+            operacoes: data?.dados?.aluno?.operacoes || null
         };
 
         const matriculaInfo = {
@@ -13150,11 +13288,19 @@ function matricularAluno(alunoId, turmaId, buttonEl) {
         mostrarMensagem('success', data.mensagem);
     })
     .catch(error => {
+        console.error('[MATRICULAR_ALUNO] Erro inesperado', error);
+        
         if (error?.tipo === 'api') {
             mostrarMensagem('error', error.mensagem);
             return;
         }
-        const mensagem = error?.message || 'Erro desconhecido ao matricular aluno.';
+        
+        if (error?.tipo === 'parse') {
+            mostrarMensagem('error', error.mensagem);
+            return;
+        }
+        
+        const mensagem = error?.message || error?.mensagem || 'Erro desconhecido ao matricular aluno.';
         mostrarMensagem('error', 'Erro ao matricular aluno: ' + mensagem);
     })
     .finally(() => {
@@ -13715,13 +13861,13 @@ function normalizarDisciplinaJS(disciplina) {
     
     console.log('🔧 [normalizarDisciplinaJS] Após remover acentos:', normalizado);
     
-    // Se já tiver underscores, remover "de", "da", "do" que estão entre underscores
+    // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Se já tiver underscores, remover "de", "da", "do", "e" que estão entre underscores
     if (normalizado.includes('_')) {
-        // Remover "_de_", "_da_", "_do_", etc. e também no início/fim
+        // Remover "_de_", "_da_", "_do_", "_e_", etc. e também no início/fim
         normalizado = normalizado
-            .replace(/_(de|da|do|das|dos)_/gi, '_') // Remove palavras comuns entre underscores
-            .replace(/^(de|da|do|das|dos)_/gi, '') // Remove no início
-            .replace(/_(de|da|do|das|dos)$/gi, '') // Remove no fim
+            .replace(/_(de|da|do|das|dos|e|a|o|as|os)_/gi, '_') // Remove palavras comuns entre underscores, incluindo 'e'
+            .replace(/^(de|da|do|das|dos|e|a|o|as|os)_/gi, '') // Remove no início
+            .replace(/_(de|da|do|das|dos|e|a|o|as|os)$/gi, '') // Remove no fim
             .replace(/_+/g, '_') // Remover underscores duplos
             .replace(/^_+|_+$/g, ''); // Remover underscores no início/fim
         console.log('🔧 [normalizarDisciplinaJS] Após remover palavras comuns (underscore):', normalizado);

@@ -56,55 +56,9 @@ if (!isset($stats['total_alunos'])) {
 error_log("DEBUG ALUNOS: Total de alunos carregados: " . count($alunos));
 error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum'));
 
-/**
- * Função helper para obter categoria priorizando matrícula ativa
- * @param array $aluno Array do aluno (pode conter categoria_cnh_matricula e categoria_cnh)
- * @return string Categoria a ser exibida
- */
-function obterCategoriaExibicao($aluno) {
-    // Prioridade 1: Categoria da matrícula ativa
-    if (!empty($aluno['categoria_cnh_matricula'])) {
-        return $aluno['categoria_cnh_matricula'];
-    }
-    // Prioridade 2: Categoria do aluno (fallback)
-    if (!empty($aluno['categoria_cnh'])) {
-        return $aluno['categoria_cnh'];
-    }
-    // Prioridade 3: Tentar extrair de operações
-    if (!empty($aluno['operacoes'])) {
-        $operacoes = is_string($aluno['operacoes']) ? json_decode($aluno['operacoes'], true) : $aluno['operacoes'];
-        if (is_array($operacoes) && !empty($operacoes)) {
-            $primeiraOp = $operacoes[0];
-            return $primeiraOp['categoria'] ?? $primeiraOp['categoria_cnh'] ?? 'N/A';
-        }
-    }
-    return 'N/A';
-}
-
-/**
- * Função helper para obter tipo de serviço priorizando matrícula ativa
- * @param array $aluno Array do aluno (pode conter tipo_servico_matricula e tipo_servico)
- * @return string Tipo de serviço a ser exibido
- */
-function obterTipoServicoExibicao($aluno) {
-    // Prioridade 1: Tipo de serviço da matrícula ativa
-    if (!empty($aluno['tipo_servico_matricula'])) {
-        return $aluno['tipo_servico_matricula'];
-    }
-    // Prioridade 2: Tipo de serviço do aluno (fallback)
-    if (!empty($aluno['tipo_servico'])) {
-        return $aluno['tipo_servico'];
-    }
-    // Prioridade 3: Tentar extrair de operações
-    if (!empty($aluno['operacoes'])) {
-        $operacoes = is_string($aluno['operacoes']) ? json_decode($aluno['operacoes'], true) : $aluno['operacoes'];
-        if (is_array($operacoes) && !empty($operacoes)) {
-            $primeiraOp = $operacoes[0];
-            return $primeiraOp['tipo_servico'] ?? $primeiraOp['tipo'] ?? 'Primeira Habilitação';
-        }
-    }
-    return 'Primeira Habilitação';
-}
+// Funções helper movidas para admin/includes/helpers_cnh.php
+// Incluir o helper comum
+require_once __DIR__ . '/includes/helpers_cnh.php';
 ?>
 
 <style>

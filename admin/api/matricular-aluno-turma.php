@@ -2,6 +2,11 @@
 /**
  * API para matricular aluno em turma teórica
  * Valida exames e realiza a matrícula
+ * 
+ * NOTA SOBRE CFC:
+ * - CFC canônico do CFC Bom Conselho é ID 36 (não mais 1)
+ * - Usa guards centralizados para validação de exames e financeiro
+ * - Migração CFC 1 → 36 é sempre manual
  */
 
 // Configurações de cabeçalho
@@ -15,6 +20,8 @@ $rootPath = dirname(__DIR__, 2); // Volta 2 níveis: admin/api -> admin -> raiz
 require_once $rootPath . '/includes/config.php';
 require_once $rootPath . '/includes/database.php';
 require_once $rootPath . '/includes/auth.php';
+require_once __DIR__ . '/../includes/guards_exames.php';
+require_once __DIR__ . '/../includes/FinanceiroAlunoHelper.php';
 
 // Verificar autenticação - temporariamente mais permissivo para debug
 if (!isLoggedIn()) {
@@ -51,12 +58,23 @@ $input = json_decode(file_get_contents('php://input'), true);
 $alunoId = $input['aluno_id'] ?? null;
 $turmaId = $input['turma_id'] ?? null;
 
-// Debug: Log da requisição
-error_log("API matricular-aluno-turma: Requisição recebida - alunoId: $alunoId, turmaId: $turmaId, input: " . print_r($input, true));
+// Log detalhado da requisição
+error_log('[MATRICULAR_ALUNO_TURMA] ===============================');
+error_log('[MATRICULAR_ALUNO_TURMA] REQUEST METHOD: ' . $_SERVER['REQUEST_METHOD']);
+error_log('[MATRICULAR_ALUNO_TURMA] RAW $_POST: ' . print_r($_POST, true));
+error_log('[MATRICULAR_ALUNO_TURMA] RAW $_GET: ' . print_r($_GET, true));
+error_log('[MATRICULAR_ALUNO_TURMA] RAW php://input: ' . file_get_contents('php://input'));
+error_log('[MATRICULAR_ALUNO_TURMA] alunoId: ' . ($alunoId ?? 'NULL'));
+error_log('[MATRICULAR_ALUNO_TURMA] turmaId: ' . ($turmaId ?? 'NULL'));
+error_log('[MATRICULAR_ALUNO_TURMA] input completo: ' . print_r($input, true));
 
 if (!$alunoId || !$turmaId) {
-    http_response_code(400);
-    echo json_encode(['sucesso' => false, 'mensagem' => 'ID do aluno e da turma são obrigatórios']);
+    error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: parâmetros obrigatórios ausentes. alunoId=' . ($alunoId ?? 'NULL') . ', turmaId=' . ($turmaId ?? 'NULL'));
+    http_response_code(200); // Retornar 200 com success=false para melhor tratamento no frontend
+    echo json_encode([
+        'sucesso' => false, 
+        'mensagem' => 'ID do aluno e da turma são obrigatórios'
+    ], JSON_UNESCAPED_UNICODE);
     exit;
 }
 
@@ -74,8 +92,11 @@ try {
     ", [$turmaId]);
     
     if (!$turma) {
+        error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: turma não encontrada. turmaId=' . $turmaId);
         throw new Exception('Turma não encontrada');
     }
+    
+    error_log('[MATRICULAR_ALUNO_TURMA] Turma encontrada: id=' . $turma['id'] . ', nome=' . $turma['nome'] . ', cfc_id=' . $turma['cfc_id']);
 
     // Se ainda não sabemos o CFC em uso, assumir o da turma
     if (!$cfcId) {
@@ -83,8 +104,10 @@ try {
     }
     
     // Verificar se a turma está em status que permite matrícula
-    if (!in_array($turma['status'], ['agendando', 'completa', 'ativa'])) {
-        throw new Exception('A turma deve estar em status agendando, completa ou ativa para receber alunos');
+    // Nota: 'criando' também permite matrícula (turma em construção)
+    if (!in_array($turma['status'], ['criando', 'agendando', 'completa', 'ativa'])) {
+        error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: status da turma não permite matrícula. status=' . $turma['status']);
+        throw new Exception('A turma deve estar em status criando, agendando, completa ou ativa para receber alunos');
     }
     
     // Verificar se há vagas disponíveis
@@ -94,10 +117,13 @@ try {
     ", [$turmaId]);
     
     if ($alunosMatriculados >= $turma['max_alunos']) {
+        error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: turma sem vagas. turmaId=' . $turmaId . ', matriculados=' . $alunosMatriculados . ', max=' . $turma['max_alunos']);
         throw new Exception('Turma sem vagas disponíveis');
     }
     
-    // Buscar dados do aluno
+    error_log('[MATRICULAR_ALUNO_TURMA] ✅ Vagas disponíveis: ' . ($turma['max_alunos'] - $alunosMatriculados) . ' de ' . $turma['max_alunos']);
+    
+    // Buscar dados do aluno (incluindo categoria da matrícula ativa)
     $aluno = $db->fetch("
         SELECT 
             a.id,
@@ -108,15 +134,26 @@ try {
             a.categoria_cnh,
             a.email,
             a.telefone,
-            c.nome AS cfc_nome
+            c.nome AS cfc_nome,
+            -- Incluir categoria da matrícula ativa (prioridade 1)
+            m_ativa.categoria_cnh as categoria_cnh_matricula,
+            m_ativa.tipo_servico as tipo_servico_matricula
         FROM alunos a
         LEFT JOIN cfcs c ON a.cfc_id = c.id
+        LEFT JOIN (
+            SELECT aluno_id, categoria_cnh, tipo_servico
+            FROM matriculas
+            WHERE status = 'ativa'
+        ) m_ativa ON a.id = m_ativa.aluno_id
         WHERE a.id = ?
     ", [$alunoId]);
     
     if (!$aluno) {
+        error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: aluno não encontrado. alunoId=' . $alunoId);
         throw new Exception('Aluno não encontrado');
     }
+    
+    error_log('[MATRICULAR_ALUNO_TURMA] Aluno encontrado: id=' . $aluno['id'] . ', nome=' . $aluno['nome'] . ', cfc_id=' . $aluno['cfc_id'] . ', status=' . $aluno['status']);
     
     // Garantir que o CFC da turma exista; se não existir e o usuário for admin, alinhar com CFC válido
     $cfcTurmaExiste = $db->fetchColumn("SELECT COUNT(*) FROM cfcs WHERE id = ?", [$turma['cfc_id']]);
@@ -150,7 +187,9 @@ try {
     if (function_exists('hasPermission')) {
         $podeGerenciarTodosCfc = $podeGerenciarTodosCfc || hasPermission('admin');
     }
+    // Verificar compatibilidade CFC
     if ((int)$aluno['cfc_id'] !== (int)$turma['cfc_id']) {
+        error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: CFC incompatível. aluno_cfc_id=' . $aluno['cfc_id'] . ', turma_cfc_id=' . $turma['cfc_id']);
         if ($podeGerenciarTodosCfc) {
             $cfcAnterior = $aluno['cfc_id'];
             $db->update('alunos', ['cfc_id' => $turma['cfc_id']], 'id = ?', [$alunoId]);
@@ -158,19 +197,24 @@ try {
             $aluno['cfc_nome'] = $db->fetchColumn("SELECT nome FROM cfcs WHERE id = ?", [$turma['cfc_id']]) ?: $aluno['cfc_nome'];
             
             error_log(sprintf(
-                'API matricular-aluno-turma: Admin transferiu aluno %d do CFC %d para CFC %d antes da matrícula',
+                '[MATRICULAR_ALUNO_TURMA] Admin transferiu aluno %d do CFC %d para CFC %d antes da matrícula',
                 $alunoId,
                 $cfcAnterior,
                 $turma['cfc_id']
             ));
         } else {
-            throw new Exception('Aluno pertence a outro CFC');
+            throw new Exception('Aluno pertence a outro CFC. Aluno: CFC ' . $aluno['cfc_id'] . ', Turma: CFC ' . $turma['cfc_id']);
         }
+    } else {
+        error_log('[MATRICULAR_ALUNO_TURMA] ✅ CFC compatível: aluno e turma ambos com cfc_id=' . $turma['cfc_id']);
     }
     
     if ($aluno['status'] !== 'ativo') {
+        error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: aluno não está ativo. alunoId=' . $alunoId . ', status=' . $aluno['status']);
         throw new Exception('Aluno não está ativo');
     }
+    
+    error_log('[MATRICULAR_ALUNO_TURMA] ✅ Aluno está ativo');
     
     // Verificar se o aluno já está matriculado nesta turma (apenas status ativo)
     $matriculaExistente = $db->fetch("
@@ -179,6 +223,7 @@ try {
     ", [$turmaId, $alunoId]);
     
     if ($matriculaExistente) {
+        error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: aluno já matriculado. alunoId=' . $alunoId . ', turmaId=' . $turmaId);
         throw new Exception('Aluno já está matriculado nesta turma');
     }
     
@@ -189,32 +234,27 @@ try {
         ORDER BY data_matricula DESC LIMIT 1
     ", [$turmaId, $alunoId]);
     
-    // Verificar exames do aluno
-    $exames = $db->fetchAll("
-        SELECT tipo, status, resultado 
-        FROM exames 
-        WHERE aluno_id = ? AND status = 'concluido'
-    ", [$alunoId]);
+    // Verificar exames usando guard centralizado (compatível com valores antigos 'aprovado' e novos 'apto')
+    error_log('[MATRICULAR_ALUNO_TURMA] Verificando exames do aluno ' . $alunoId . ' usando guard centralizado...');
+    $examesOK = GuardsExames::alunoComExamesOkParaTeoricas($alunoId);
     
-    $medico = null;
-    $psicotecnico = null;
-    
-    foreach ($exames as $exame) {
-        if ($exame['tipo'] === 'medico') {
-            $medico = $exame;
-        } elseif ($exame['tipo'] === 'psicotecnico') {
-            $psicotecnico = $exame;
-        }
+    if (!$examesOK) {
+        error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: exames não OK para aulas teóricas. alunoId=' . $alunoId);
+        throw new Exception('Aluno não possui exames médico e psicotécnico concluídos e aprovados');
     }
     
-    // Validar exames
-    if (!$medico || $medico['resultado'] !== 'apto') {
-        throw new Exception('Aluno não possui exame médico aprovado');
+    error_log('[MATRICULAR_ALUNO_TURMA] ✅ Exames OK para aulas teóricas');
+    
+    // Verificar financeiro usando helper centralizado
+    error_log('[MATRICULAR_ALUNO_TURMA] Verificando financeiro do aluno ' . $alunoId . '...');
+    $financeiro = FinanceiroAlunoHelper::verificarPermissaoFinanceiraAluno($alunoId);
+    
+    if (!$financeiro['liberado']) {
+        error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: financeiro bloqueado. alunoId=' . $alunoId . ', status=' . $financeiro['status'] . ', motivo=' . $financeiro['motivo']);
+        throw new Exception($financeiro['motivo'] ?? 'Aluno com pendências financeiras');
     }
     
-    if (!$psicotecnico || $psicotecnico['resultado'] !== 'apto') {
-        throw new Exception('Aluno não possui exame psicotécnico aprovado');
-    }
+    error_log('[MATRICULAR_ALUNO_TURMA] ✅ Financeiro OK - aluno liberado para avançar');
     
     // Realizar matrícula
     if ($matriculaAnterior) {
@@ -267,6 +307,8 @@ try {
     // Confirmar transação
     $db->commit();
     
+    error_log('[MATRICULAR_ALUNO_TURMA] ✅ Matrícula criada com sucesso: matricula_id=' . $matriculaId . ', alunoId=' . $alunoId . ', turmaId=' . $turmaId);
+    
     // Preparar resposta de sucesso
     $response = [
         'sucesso' => true,
@@ -278,6 +320,8 @@ try {
                 'nome' => $aluno['nome'],
                 'cpf' => $aluno['cpf'],
                 'categoria_cnh' => $aluno['categoria_cnh'] ?? null,
+                'categoria_cnh_matricula' => $aluno['categoria_cnh_matricula'] ?? null,
+                'tipo_servico_matricula' => $aluno['tipo_servico_matricula'] ?? null,
                 'cfc_nome' => $aluno['cfc_nome'] ?? null,
                 'email' => $aluno['email'] ?? null,
                 'telefone' => $aluno['telefone'] ?? null,
@@ -299,16 +343,20 @@ try {
     
 } catch (Exception $e) {
     // Reverter transação em caso de erro
-    if ($db->inTransaction()) {
+    if (isset($db) && $db->inTransaction()) {
         $db->rollback();
     }
     
-    error_log("Erro na API matricular-aluno-turma: " . $e->getMessage());
+    $mensagemErro = $e->getMessage();
+    error_log('[MATRICULAR_ALUNO_TURMA] ERRO 400 - motivo: ' . $mensagemErro);
+    error_log('[MATRICULAR_ALUNO_TURMA] Stack trace: ' . $e->getTraceAsString());
     
-    http_response_code(400);
+    // Retornar 200 com success=false para melhor tratamento no frontend
+    // (mantém compatibilidade, mas permite tratamento mais amigável)
+    http_response_code(200);
     echo json_encode([
         'sucesso' => false, 
-        'mensagem' => $e->getMessage()
+        'mensagem' => $mensagemErro
     ], JSON_UNESCAPED_UNICODE);
 }
 ?>

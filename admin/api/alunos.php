@@ -1,5 +1,15 @@
 <?php
-// API para gerenciamento de Alunos
+/**
+ * API para gerenciamento de Alunos
+ * 
+ * NOTA SOBRE CFC:
+ * - CFC canônico do CFC Bom Conselho é ID 36 (não mais 1)
+ * - Esta API garante que alunos sejam criados/editados com o CFC correto:
+ *   - Usuário de CFC específico: sempre usa CFC da sessão (não permite alteração)
+ *   - Admin Global: exige seleção explícita do CFC (não assume valores)
+ * - Migração CFC 1 → 36 é SEMPRE manual, via script documentado em docs/MIGRACAO_CFC_1_PARA_36.md
+ * - Nenhuma rotina automática (cron, API, página web) deve disparar UPDATEs de CFC em massa
+ */
 // Configuração para produção
 ini_set('display_errors', 0); // Não mostrar erros na tela para API
 ini_set('log_errors', 1);
@@ -865,6 +875,36 @@ try {
                     error_log('[API Alunos] Dados inválidos recebidos');
                 }
                 sendJsonResponse(['success' => false, 'error' => 'Dados inválidos'], 400);
+            }
+            
+            // Obter usuário atual e CFC da sessão
+            $user = getCurrentUser();
+            $userCfcId = isset($user['cfc_id']) ? (int)$user['cfc_id'] : 0;
+            $isAdminGlobal = ($userCfcId === 0 || $userCfcId === null);
+            
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] Usuário atual - cfc_id: ' . $userCfcId . ', isAdminGlobal: ' . ($isAdminGlobal ? 'SIM' : 'NÃO'));
+            }
+            
+            // REGRA DE NEGÓCIO: Garantir cfc_id correto
+            // Se NÃO for admin global: cfc_id deve ser sempre o cfc_id da sessão
+            // Se for admin global: cfc_id deve ser fornecido explicitamente
+            if (!$isAdminGlobal) {
+                // Usuário de CFC específico: usar sempre o CFC da sessão
+                if (empty($data['cfc_id']) || (int)$data['cfc_id'] !== $userCfcId) {
+                    if (LOG_ENABLED) {
+                        error_log('[API Alunos] Ajustando cfc_id para CFC da sessão: ' . $userCfcId);
+                    }
+                    $data['cfc_id'] = $userCfcId;
+                }
+            } else {
+                // Admin Global: cfc_id deve ser fornecido explicitamente
+                if (empty($data['cfc_id'])) {
+                    if (LOG_ENABLED) {
+                        error_log('[API Alunos] Admin Global - cfc_id não fornecido');
+                    }
+                    sendJsonResponse(['success' => false, 'error' => 'CFC é obrigatório para Admin Global'], 400);
+                }
             }
             
             // Validações básicas

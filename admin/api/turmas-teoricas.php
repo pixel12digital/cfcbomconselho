@@ -610,9 +610,18 @@ function handleVerificarConflitos($turmaManager) {
         $conflitos = [];
         $qtdAulas = $dados['quantidade_aulas'];
         
+        // [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Detectar modo edição e passar aula_id para verificação
+        $aulaId = isset($dados['aula_id']) && $dados['aula_id'] !== '' && $dados['aula_id'] !== null
+            ? (int)$dados['aula_id']
+            : null;
+        $isEdicao = !empty($aulaId);
+        
+        error_log("[VERIFICAR_CONFLITOS] Request: " . json_encode($_GET));
+        error_log("[VERIFICAR_CONFLITOS] Modo edição detectado: " . ($isEdicao ? 'sim' : 'nao') . ", aula_id=" . ($aulaId ?? 'null'));
+        
         // 1. Verificar carga horária da disciplina (já normalizada acima)
-        error_log("🔍 [DEBUG] Chamando verificarCargaHorariaDisciplinaAPI com: turma_id={$dados['turma_id']}, disciplina='{$dados['disciplina']}', qtdAulas={$qtdAulas}");
-        $validacaoCargaHoraria = verificarCargaHorariaDisciplinaAPI($turmaManager, $dados['turma_id'], $dados['disciplina'], $qtdAulas);
+        error_log("🔍 [DEBUG] Chamando verificarCargaHorariaDisciplinaAPI com: turma_id={$dados['turma_id']}, disciplina='{$dados['disciplina']}', qtdAulas={$qtdAulas}, aulaId=" . ($aulaId ?? 'null'));
+        $validacaoCargaHoraria = verificarCargaHorariaDisciplinaAPI($turmaManager, $dados['turma_id'], $dados['disciplina'], $qtdAulas, $aulaId);
         error_log("🔍 [DEBUG] Resultado verificarCargaHorariaDisciplinaAPI: " . json_encode($validacaoCargaHoraria));
         if (!$validacaoCargaHoraria['disponivel']) {
             http_response_code(200);
@@ -801,12 +810,18 @@ function normalizarDisciplinaAPI($disciplina) {
     $normalizado = strtolower($disciplina);
     $normalizado = strtr($normalizado, $acentos);
     
-    // Se já estiver no formato correto (com underscores), remover "de", "da", "do"
+    // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Se já estiver no formato correto (com underscores), remover "de", "da", "do", "e"
     if (strpos($normalizado, '_') !== false) {
-        // Remover palavras comuns: de, da, do, das, dos
-        $normalizado = preg_replace('/\b(de|da|do|das|dos)\b_?/i', '', $normalizado);
-        $normalizado = preg_replace('/_+/', '_', $normalizado); // Remover underscores duplos
-        $normalizado = trim($normalizado, '_'); // Remover underscores no início/fim
+        // Remover palavras comuns entre underscores, incluindo 'e': de, da, do, das, dos, e, a, o
+        // Primeiro, remover palavras comuns que estão entre underscores: _de_, _da_, _do_, _e_, etc.
+        $normalizado = preg_replace('/_(de|da|do|das|dos|e|a|o|as|os)_/i', '_', $normalizado);
+        // Remover palavras comuns no início: de_, da_, do_, e_, etc.
+        $normalizado = preg_replace('/^(de|da|do|das|dos|e|a|o|as|os)_/i', '', $normalizado);
+        // Remover palavras comuns no fim: _de, _da, _do, _e, etc.
+        $normalizado = preg_replace('/_(de|da|do|das|dos|e|a|o|as|os)$/i', '', $normalizado);
+        // Remover underscores duplos e limpar
+        $normalizado = preg_replace('/_+/', '_', $normalizado);
+        $normalizado = trim($normalizado, '_');
         return $normalizado;
     }
     
@@ -823,16 +838,17 @@ function normalizarDisciplinaAPI($disciplina) {
     return $normalizado;
 }
 
-function verificarCargaHorariaDisciplinaAPI($turmaManager, $turmaId, $disciplina, $qtdAulasNovas) {
+// [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Adicionar parâmetro opcional aulaId para descontar aula atual na edição
+function verificarCargaHorariaDisciplinaAPI($turmaManager, $turmaId, $disciplina, $qtdAulasNovas, $aulaId = null) {
     try {
         error_log("🔍 [DEBUG verificarCargaHorariaDisciplinaAPI] INÍCIO");
-        error_log("🔍 [DEBUG] Parâmetros recebidos: turmaId={$turmaId}, disciplina='{$disciplina}', qtdAulasNovas={$qtdAulasNovas}");
+        error_log("🔍 [DEBUG] Parâmetros recebidos: turmaId={$turmaId}, disciplina='{$disciplina}', qtdAulasNovas={$qtdAulasNovas}, aulaId=" . ($aulaId ?? 'null'));
         
         $db = Database::getInstance();
         
-        // Normalizar disciplina para formato do banco (remover acentos)
+        // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Normalizar disciplina para formato do banco (remover acentos e "e")
         $disciplinaNormalizada = normalizarDisciplinaAPI($disciplina);
-        error_log("🔍 [DEBUG] Disciplina normalizada: '{$disciplinaNormalizada}'");
+        error_log("🔍 [DEBUG] Disciplina original: '{$disciplina}', normalizada: '{$disciplinaNormalizada}'");
         
         // Buscar curso_tipo da turma
         $turma = $db->fetch("SELECT curso_tipo FROM turmas_teoricas WHERE id = ?", [$turmaId]);
@@ -896,32 +912,69 @@ function verificarCargaHorariaDisciplinaAPI($turmaManager, $turmaId, $disciplina
         
         $cargaMaximaAulas = (int)$cargaMaxima['aulas_obrigatorias'];
         
-        // Contar aulas já agendadas
-        $aulasAgendadas = $db->fetch("
+        // [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Contar aulas já agendadas, descontando a aula atual se estiver editando
+        $sqlTotal = "
             SELECT COUNT(*) as total
             FROM turma_aulas_agendadas 
-            WHERE turma_id = ? AND disciplina = ? AND status IN ('agendada', 'realizada')
-        ", [$turmaId, $disciplinaNormalizada]);
+            WHERE turma_id = ? 
+              AND disciplina = ? 
+              AND status IN ('agendada', 'realizada')
+        ";
+        $paramsTotal = [$turmaId, $disciplinaNormalizada];
         
-        $totalAgendadas = (int)$aulasAgendadas['total'];
-        $totalAposAgendamento = $totalAgendadas + $qtdAulasNovas;
-        
-        if ($totalAgendadas >= $cargaMaximaAulas) {
-            return [
-                'disponivel' => false,
-                'mensagem' => "❌ DISCIPLINA COMPLETA: A disciplina já possui todas as {$cargaMaximaAulas} aulas obrigatórias agendadas."
-            ];
+        // Se estiver em modo edição, excluir a própria aula do count
+        if ($aulaId !== null) {
+            $sqlTotal .= " AND id != ?";
+            $paramsTotal[] = $aulaId;
+            error_log("🔍 [DEBUG verificarCargaHorariaDisciplinaAPI] Modo edição: excluindo aula_id={$aulaId} do count");
         }
         
-        if ($totalAposAgendamento > $cargaMaximaAulas) {
+        $aulasAgendadas = $db->fetch($sqlTotal, $paramsTotal);
+        $totalAgendadas = (int)$aulasAgendadas['total'];
+        
+        // [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Calcular total após operação
+        // Se estiver editando, já descontamos a aula atual do count acima
+        // Então só precisamos somar a quantidade de aulas novas
+        $totalAposOperacao = $totalAgendadas + $qtdAulasNovas;
+        
+        error_log("🔍 [DEBUG verificarCargaHorariaDisciplinaAPI] totalAgendadas={$totalAgendadas}, qtdAulasNovas={$qtdAulasNovas}, totalAposOperacao={$totalAposOperacao}, cargaMaximaAulas={$cargaMaximaAulas}, aulaId=" . ($aulaId ?? 'null'));
+        
+        // [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Regras de bloqueio ajustadas
+        // Se exceder o limite, bloquear sempre
+        if ($totalAposOperacao > $cargaMaximaAulas) {
             $aulasRestantes = $cargaMaximaAulas - $totalAgendadas;
             return [
                 'disponivel' => false,
+                'tipo' => 'disciplina_excedida',
                 'mensagem' => "❌ CARGA HORÁRIA EXCEDIDA: Você ainda pode agendar apenas {$aulasRestantes} aula(s) restante(s)."
             ];
         }
         
-        return ['disponivel' => true];
+        // Se disciplina está completa E é criação (não edição), bloquear
+        if ($totalAgendadas >= $cargaMaximaAulas && $aulaId === null) {
+            return [
+                'disponivel' => false,
+                'tipo' => 'disciplina_completa',
+                'mensagem' => "❌ DISCIPLINA COMPLETA: A disciplina já possui todas as {$cargaMaximaAulas} aulas obrigatórias agendadas."
+            ];
+        }
+        
+        // Se disciplina está completa MAS é edição (aulaId !== null), permitir
+        // Isso permite editar aulas mesmo quando a disciplina está completa
+        if ($totalAgendadas >= $cargaMaximaAulas && $aulaId !== null) {
+            error_log("🔍 [DEBUG verificarCargaHorariaDisciplinaAPI] Disciplina completa mas é edição - permitindo (totalAgendadas={$totalAgendadas}, cargaMaxima={$cargaMaximaAulas})");
+            return [
+                'disponivel' => true,
+                'tipo' => 'ok',
+                'mensagem' => '✅ Disponível para edição.'
+            ];
+        }
+        
+        return [
+            'disponivel' => true,
+            'tipo' => 'ok',
+            'mensagem' => '✅ Disponível.'
+        ];
         
     } catch (Exception $e) {
         return [
@@ -1136,14 +1189,26 @@ function handleEditarAula($turmaManager, $dados) {
     }
 
     $turmaId = (int)$aulaExistente['turma_id'];
-    $disciplinaOriginal = $aulaExistente['disciplina'] ?? '';
-    $novaDisciplina = $dados['disciplina'] ?? $disciplinaOriginal;
-
-    if (!empty($novaDisciplina)) {
-        $novaDisciplina = normalizarDisciplinaAPI($novaDisciplina);
-    }
-
-    if (empty($novaDisciplina)) {
+    
+    // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Normalizar ambas as disciplinas antes de comparar
+    $disciplinaOriginalBruta = $aulaExistente['disciplina'] ?? '';
+    $disciplinaOriginalNormalizada = $disciplinaOriginalBruta !== ''
+        ? normalizarDisciplinaAPI($disciplinaOriginalBruta)
+        : '';
+    
+    // Se não veio no payload OU veio vazia => usa a original
+    $disciplinaEnviadaBruta = isset($dados['disciplina']) && trim($dados['disciplina']) !== ''
+        ? $dados['disciplina']
+        : $disciplinaOriginalBruta;
+    
+    $novaDisciplinaNormalizada = $disciplinaEnviadaBruta !== ''
+        ? normalizarDisciplinaAPI($disciplinaEnviadaBruta)
+        : '';
+    
+    // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Logs de debug temporários
+    error_log("[EDITAR AULA] Aula {$aulaId} - disciplina_original_bruta={$disciplinaOriginalBruta}, disciplina_original_norm={$disciplinaOriginalNormalizada}, disciplina_enviada_bruta={$disciplinaEnviadaBruta}, disciplina_nova_norm={$novaDisciplinaNormalizada}");
+    
+    if (empty($novaDisciplinaNormalizada)) {
         http_response_code(400);
         echo json_encode([
             'sucesso' => false,
@@ -1151,8 +1216,11 @@ function handleEditarAula($turmaManager, $dados) {
         ], JSON_UNESCAPED_UNICODE);
         return;
     }
-
-    $disciplinaAlterada = $novaDisciplina !== $disciplinaOriginal;
+    
+    // Comparar sempre disciplinas normalizadas
+    $disciplinaAlterada = $novaDisciplinaNormalizada !== $disciplinaOriginalNormalizada;
+    
+    error_log("[EDITAR AULA] Aula {$aulaId} - disciplina_alterada=" . ($disciplinaAlterada ? 'sim' : 'nao'));
 
     // Dados de data e horário
     $novaDataAula = $dados['data_aula'] ?? $aulaExistente['data_aula'];
@@ -1179,9 +1247,12 @@ function handleEditarAula($turmaManager, $dados) {
 
     $novoInstrutorId = $dados['instrutor_id'] ?? $aulaExistente['instrutor_id'];
 
-    if ($disciplinaAlterada) {
+    // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Só validar se disciplina realmente foi alterada
+    // [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Passar aulaId para descontar a aula atual do count
+    if ($disciplinaAlterada && $novaDisciplinaNormalizada !== '') {
         $turmaManagerLocal = ($turmaManager instanceof TurmaTeoricaManager) ? $turmaManager : new TurmaTeoricaManager();
-        $validacaoCarga = verificarCargaHorariaDisciplinaAPI($turmaManagerLocal, $turmaId, $novaDisciplina, 1);
+        error_log("[EDITAR AULA] Aula {$aulaId} - Validando carga horária para disciplina alterada: {$novaDisciplinaNormalizada}");
+        $validacaoCarga = verificarCargaHorariaDisciplinaAPI($turmaManagerLocal, $turmaId, $novaDisciplinaNormalizada, 1, $aulaId);
 
         if (!$validacaoCarga['disponivel']) {
             http_response_code(409);
@@ -1192,6 +1263,8 @@ function handleEditarAula($turmaManager, $dados) {
             ], JSON_UNESCAPED_UNICODE);
             return;
         }
+    } else {
+        error_log("[EDITAR AULA] Aula {$aulaId} - Disciplina não foi alterada, pulando validação de carga horária");
     }
 
     // Verificar conflitos de horário se houver mudança
@@ -1253,10 +1326,10 @@ function handleEditarAula($turmaManager, $dados) {
     $novoNomeAula = $dados['nome_aula'] ?? $aulaExistente['nome_aula'];
     if ($disciplinaAlterada) {
         // Nome definitivo será ajustado após reordenar, usar placeholder coerente
-        $novoNomeAula = gerarNomeAulaAPI($novaDisciplina, 1);
+        $novoNomeAula = gerarNomeAulaAPI($novaDisciplinaNormalizada, 1);
     }
 
-    // Preparar dados para update
+    // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Preparar dados para update - usar disciplina normalizada
     $dadosUpdate = [
         'nome_aula' => $novoNomeAula,
         'data_aula' => $novaDataAula,
@@ -1264,7 +1337,7 @@ function handleEditarAula($turmaManager, $dados) {
         'hora_fim' => $novaHoraFim,
         'instrutor_id' => $novoInstrutorId,
         'observacoes' => $dados['observacoes'] ?? $aulaExistente['observacoes'],
-        'disciplina' => $novaDisciplina
+        'disciplina' => $novaDisciplinaNormalizada // Sempre usar versão normalizada
     ];
 
     error_log("🔧 [DEBUG] Dados para update: " . print_r($dadosUpdate, true));
@@ -1274,10 +1347,11 @@ function handleEditarAula($turmaManager, $dados) {
 
     error_log("🔧 [DEBUG] Resultado do update: " . ($result ? 'sucesso' : 'falha'));
 
+    // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Reordenar usando disciplinas normalizadas
     if ($disciplinaAlterada) {
         try {
-            reordenarDisciplinaTurma($db, $turmaId, $disciplinaOriginal);
-            reordenarDisciplinaTurma($db, $turmaId, $novaDisciplina);
+            reordenarDisciplinaTurma($db, $turmaId, $disciplinaOriginalNormalizada);
+            reordenarDisciplinaTurma($db, $turmaId, $novaDisciplinaNormalizada);
         } catch (Exception $e) {
             error_log('⚠️ [DEBUG] Falha ao reordenar disciplinas após edição: ' . $e->getMessage());
         }

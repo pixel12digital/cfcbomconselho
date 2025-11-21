@@ -1171,6 +1171,7 @@ class TurmaTeoricaManager {
             $qtdAulas = (int)$dados['quantidade_aulas'];
             
             // 1. Verificar se não excede a carga horária da disciplina
+            // [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Não passar aulaId aqui pois é criação (verificarConflitosHorario é usado apenas na criação)
             $validacaoCargaHoraria = $this->verificarCargaHorariaDisciplina($dados['turma_id'], $dados['disciplina'], $qtdAulas);
             if (!$validacaoCargaHoraria['disponivel']) {
                 return $validacaoCargaHoraria;
@@ -1296,12 +1297,18 @@ class TurmaTeoricaManager {
         $normalizado = strtolower($disciplina);
         $normalizado = strtr($normalizado, $acentos);
         
-        // Se já estiver no formato correto (com underscores), remover "de", "da", "do"
+        // [FIX] FASE 2 - EDICAO DISCIPLINA TURMA 16: Se já estiver no formato correto (com underscores), remover "de", "da", "do", "e"
         if (strpos($normalizado, '_') !== false) {
-            // Remover palavras comuns: de, da, do, das, dos
-            $normalizado = preg_replace('/\b(de|da|do|das|dos)\b_?/i', '', $normalizado);
-            $normalizado = preg_replace('/_+/', '_', $normalizado); // Remover underscores duplos
-            $normalizado = trim($normalizado, '_'); // Remover underscores no início/fim
+            // Remover palavras comuns entre underscores, incluindo 'e': de, da, do, das, dos, e, a, o
+            // Primeiro, remover palavras comuns que estão entre underscores: _de_, _da_, _do_, _e_, etc.
+            $normalizado = preg_replace('/_(de|da|do|das|dos|e|a|o|as|os)_/i', '_', $normalizado);
+            // Remover palavras comuns no início: de_, da_, do_, e_, etc.
+            $normalizado = preg_replace('/^(de|da|do|das|dos|e|a|o|as|os)_/i', '', $normalizado);
+            // Remover palavras comuns no fim: _de, _da, _do, _e, etc.
+            $normalizado = preg_replace('/_(de|da|do|das|dos|e|a|o|as|os)$/i', '', $normalizado);
+            // Remover underscores duplos e limpar
+            $normalizado = preg_replace('/_+/', '_', $normalizado);
+            $normalizado = trim($normalizado, '_');
             return $normalizado;
         }
         
@@ -1318,10 +1325,13 @@ class TurmaTeoricaManager {
         return $normalizado;
     }
     
-    private function verificarCargaHorariaDisciplina($turmaId, $disciplina, $qtdAulasNovas) {
+    // [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Adicionar parâmetro opcional aulaId para descontar aula atual na edição
+    private function verificarCargaHorariaDisciplina($turmaId, $disciplina, $qtdAulasNovas, $aulaId = null) {
         try {
             // Normalizar disciplina para formato do banco (remover acentos)
             $disciplinaNormalizada = $this->normalizarDisciplina($disciplina);
+            
+            error_log("🔍 [DEBUG verificarCargaHorariaDisciplina] Parâmetros: turmaId={$turmaId}, disciplina='{$disciplina}', qtdAulasNovas={$qtdAulasNovas}, aulaId=" . ($aulaId ?? 'null'));
             
             // Primeiro, buscar o curso_tipo da turma
             $turma = $this->db->fetch("SELECT curso_tipo FROM turmas_teoricas WHERE id = ?", [$turmaId]);
@@ -1391,55 +1401,87 @@ class TurmaTeoricaManager {
             
             $cargaMaximaAulas = (int)$cargaMaxima['aulas_obrigatorias'];
             
-            // Contar aulas já agendadas para esta disciplina nesta turma
-            $aulasAgendadas = $this->db->fetch("
+            // [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Contar aulas já agendadas, descontando a aula atual se estiver editando
+            $sqlTotal = "
                 SELECT COUNT(*) as total
                 FROM turma_aulas_agendadas 
                 WHERE turma_id = ? 
-                AND disciplina = ? 
-                AND status IN ('agendada', 'realizada')
-            ", [$turmaId, $disciplinaNormalizada]);
+                  AND disciplina = ? 
+                  AND status IN ('agendada', 'realizada')
+            ";
+            $paramsTotal = [$turmaId, $disciplinaNormalizada];
             
+            // Se estiver em modo edição, excluir a própria aula do count
+            if ($aulaId !== null) {
+                $sqlTotal .= " AND id != ?";
+                $paramsTotal[] = $aulaId;
+                error_log("🔍 [DEBUG verificarCargaHorariaDisciplina] Modo edição: excluindo aula_id={$aulaId} do count");
+            }
+            
+            $aulasAgendadas = $this->db->fetch($sqlTotal, $paramsTotal);
             $totalAgendadas = (int)$aulasAgendadas['total'];
-            $totalAposAgendamento = $totalAgendadas + $qtdAulasNovas;
             
-            // Verificar se disciplina já está completa
-            if ($totalAgendadas >= $cargaMaximaAulas) {
-                $nomeDisciplina = $this->obterNomeDisciplina($disciplinaNormalizada);
+            // [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Calcular total após operação
+            // Se estiver editando, já descontamos a aula atual do count acima
+            // Então só precisamos somar a quantidade de aulas novas
+            $totalAposOperacao = $totalAgendadas + $qtdAulasNovas;
+            
+            error_log("🔍 [DEBUG verificarCargaHorariaDisciplina] totalAgendadas={$totalAgendadas}, qtdAulasNovas={$qtdAulasNovas}, totalAposOperacao={$totalAposOperacao}, cargaMaximaAulas={$cargaMaximaAulas}, aulaId=" . ($aulaId ?? 'null'));
+            
+            $nomeDisciplina = $this->obterNomeDisciplina($disciplinaNormalizada);
+            
+            // [FIX] FASE 3 - EDICAO DISCIPLINA COMPLETA: Regras de bloqueio ajustadas
+            // Se exceder o limite, bloquear sempre
+            if ($totalAposOperacao > $cargaMaximaAulas) {
+                $aulasRestantes = $cargaMaximaAulas - $totalAgendadas;
                 return [
                     'disponivel' => false,
-                    'mensagem' => "❌ DISCIPLINA COMPLETA: A disciplina '{$nomeDisciplina}' já possui todas as {$cargaMaximaAulas} aulas obrigatórias agendadas. Não é possível adicionar mais aulas.",
-                    'tipo_erro' => 'disciplina_completa',
+                    'tipo_erro' => 'disciplina_excedida',
+                    'mensagem' => "❌ CARGA HORÁRIA EXCEDIDA: A disciplina '{$nomeDisciplina}' possui carga horária máxima de {$cargaMaximaAulas} aulas. Já foram agendadas {$totalAgendadas} aulas e você está tentando agendar mais {$qtdAulasNovas} aulas. Você ainda pode agendar apenas {$aulasRestantes} aula(s) restante(s).",
                     'aulas_agendadas' => $totalAgendadas,
                     'aulas_obrigatorias' => $cargaMaximaAulas
                 ];
             }
             
-            if ($totalAposAgendamento > $cargaMaximaAulas) {
-                $nomeDisciplina = $this->obterNomeDisciplina($disciplinaNormalizada);
-                $aulasRestantes = $cargaMaximaAulas - $totalAgendadas;
+            // Se disciplina está completa E é criação (não edição), bloquear
+            if ($totalAgendadas >= $cargaMaximaAulas && $aulaId === null) {
                 return [
                     'disponivel' => false,
-                    'mensagem' => "❌ CARGA HORÁRIA EXCEDIDA: A disciplina '{$nomeDisciplina}' possui carga horária máxima de {$cargaMaximaAulas} aulas. Já foram agendadas {$totalAgendadas} aulas e você está tentando agendar mais {$qtdAulasNovas} aulas. Você ainda pode agendar apenas {$aulasRestantes} aula(s) restante(s).",
-                    'tipo_erro' => 'carga_horaria_excedida',
-                    'detalhes' => [
-                        'disciplina' => $nomeDisciplina,
-                        'carga_maxima' => $cargaMaximaAulas,
-                        'aulas_agendadas' => $totalAgendadas,
-                        'aulas_tentando_agendar' => $qtdAulasNovas,
-                        'aulas_restantes' => $aulasRestantes,
-                        'total_apos_agendamento' => $totalAposAgendamento
-                    ]
+                    'tipo_erro' => 'disciplina_completa',
+                    'mensagem' => "❌ DISCIPLINA COMPLETA: A disciplina '{$nomeDisciplina}' já possui todas as {$cargaMaximaAulas} aulas obrigatórias agendadas. Não é possível adicionar mais aulas.",
+                    'aulas_agendadas' => $totalAgendadas,
+                    'aulas_obrigatorias' => $cargaMaximaAulas
                 ];
             }
             
-            return ['disponivel' => true];
+            // Se disciplina está completa MAS é edição (aulaId !== null), permitir
+            // Isso permite editar aulas mesmo quando a disciplina está completa
+            if ($totalAgendadas >= $cargaMaximaAulas && $aulaId !== null) {
+                error_log("🔍 [DEBUG verificarCargaHorariaDisciplina] Disciplina completa mas é edição - permitindo (totalAgendadas={$totalAgendadas}, cargaMaxima={$cargaMaximaAulas})");
+                return [
+                    'disponivel' => true,
+                    'tipo_erro' => 'ok',
+                    'mensagem' => "✅ Disponível para edição. A disciplina '{$nomeDisciplina}' está completa ({$totalAgendadas}/{$cargaMaximaAulas}), mas a edição é permitida.",
+                    'aulas_agendadas' => $totalAgendadas,
+                    'aulas_obrigatorias' => $cargaMaximaAulas
+                ];
+            }
+            
+            // Caso normal: ainda há espaço para mais aulas
+            return [
+                'disponivel' => true,
+                'tipo_erro' => 'ok',
+                'mensagem' => "✅ Disponível. A disciplina '{$nomeDisciplina}' possui {$totalAgendadas}/{$cargaMaximaAulas} aulas agendadas.",
+                'aulas_agendadas' => $totalAgendadas,
+                'aulas_obrigatorias' => $cargaMaximaAulas
+            ];
             
         } catch (Exception $e) {
+            error_log("❌ [DEBUG verificarCargaHorariaDisciplina] Erro: " . $e->getMessage());
             return [
                 'disponivel' => false,
-                'mensagem' => 'Erro ao verificar carga horária: ' . $e->getMessage(),
-                'tipo_erro' => 'erro_sistema'
+                'tipo_erro' => 'erro_interno',
+                'mensagem' => 'Erro ao verificar carga horária: ' . $e->getMessage()
             ];
         }
     }
@@ -1581,6 +1623,7 @@ class TurmaTeoricaManager {
         $nomeDisciplina = $nomes[$disciplina] ?? ucfirst(str_replace('_', ' ', $disciplina));
         return "{$nomeDisciplina} - Aula {$ordem}";
     }
+    
     
     private function formatarMensagemExame($validacaoExames) {
         $tipo = $validacaoExames['tipo'] ?? '';
@@ -1991,6 +2034,139 @@ class TurmaTeoricaManager {
             return [
                 'sucesso' => false,
                 'mensagem' => 'Erro ao remover aluno: ' . $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Recalcular frequência percentual de um aluno em uma turma teórica
+     * 
+     * REGRA DE NEGÓCIO:
+     * - Conta apenas aulas com status 'agendada' ou 'realizada' (aulas válidas)
+     * - Conta apenas presenças onde presente = 1 (presentes)
+     * - Fórmula: (total_presentes / total_aulas_validas) * 100
+     * - Atualiza turma_matriculas.frequencia_percentual
+     * 
+     * @param int $turmaId ID da turma teórica
+     * @param int $alunoId ID do aluno
+     * @return void
+     * @throws Exception Se houver erro ao recalcular
+     */
+    public function recalcularFrequenciaAluno(int $turmaId, int $alunoId): void {
+        try {
+            // Verificar se matrícula existe
+            $matricula = $this->db->fetch(
+                "SELECT id FROM turma_matriculas WHERE turma_id = ? AND aluno_id = ?",
+                [$turmaId, $alunoId]
+            );
+            
+            if (!$matricula) {
+                error_log("Tentativa de recalcular frequência para aluno não matriculado (turma_id={$turmaId}, aluno_id={$alunoId})");
+                return; // Não lança exceção, apenas retorna silenciosamente
+            }
+            
+            // Contar total de aulas válidas da turma
+            // Aulas válidas: status 'agendada' ou 'realizada' (não canceladas)
+            $aulasValidas = $this->db->fetch(
+                "SELECT COUNT(*) as total 
+                 FROM turma_aulas_agendadas 
+                 WHERE turma_id = ? 
+                 AND status IN ('agendada', 'realizada')",
+                [$turmaId]
+            );
+            
+            $totalAulasValidas = (int)($aulasValidas['total'] ?? 0);
+            
+            // Se não houver aulas válidas, frequência = 0
+            if ($totalAulasValidas === 0) {
+                $this->db->update(
+                    'turma_matriculas',
+                    ['frequencia_percentual' => 0.00],
+                    'turma_id = ? AND aluno_id = ?',
+                    [$turmaId, $alunoId]
+                );
+                return;
+            }
+            
+            // Contar presenças do aluno (apenas onde presente = 1)
+            $presencas = $this->db->fetch(
+                "SELECT COUNT(*) as total_presentes
+                 FROM turma_presencas tp
+                 INNER JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
+                 WHERE tp.turma_id = ? 
+                 AND tp.aluno_id = ? 
+                 AND tp.presente = 1
+                 AND taa.status IN ('agendada', 'realizada')",
+                [$turmaId, $alunoId]
+            );
+            
+            $totalPresentes = (int)($presencas['total_presentes'] ?? 0);
+            
+            // Calcular frequência percentual
+            $frequenciaPercentual = ($totalPresentes / $totalAulasValidas) * 100;
+            $frequenciaPercentual = round($frequenciaPercentual, 2);
+            
+            // Atualizar turma_matriculas.frequencia_percentual
+            $this->db->update(
+                'turma_matriculas',
+                ['frequencia_percentual' => $frequenciaPercentual],
+                'turma_id = ? AND aluno_id = ?',
+                [$turmaId, $alunoId]
+            );
+            
+            error_log("Frequência recalculada: Aluno {$alunoId}, Turma {$turmaId} - {$totalPresentes}/{$totalAulasValidas} = {$frequenciaPercentual}%");
+            
+        } catch (Exception $e) {
+            error_log("Erro ao recalcular frequência (turma_id={$turmaId}, aluno_id={$alunoId}): " . $e->getMessage());
+            throw $e;
+        }
+    }
+    
+    /**
+     * Recalcular frequência percentual de todos os alunos de uma turma teórica
+     * 
+     * Útil para scripts de correção e manutenção
+     * 
+     * @param int $turmaId ID da turma teórica
+     * @return array Resultado com estatísticas
+     */
+    public function recalcularFrequenciaTurma(int $turmaId): array {
+        try {
+            // Buscar todos os alunos matriculados na turma
+            $alunos = $this->db->fetchAll(
+                "SELECT aluno_id FROM turma_matriculas 
+                 WHERE turma_id = ? 
+                 AND status IN ('matriculado', 'cursando', 'concluido')",
+                [$turmaId]
+            );
+            
+            $totalAlunos = count($alunos);
+            $sucessos = 0;
+            $erros = 0;
+            
+            foreach ($alunos as $aluno) {
+                try {
+                    $this->recalcularFrequenciaAluno($turmaId, $aluno['aluno_id']);
+                    $sucessos++;
+                } catch (Exception $e) {
+                    $erros++;
+                    error_log("Erro ao recalcular frequência do aluno {$aluno['aluno_id']}: " . $e->getMessage());
+                }
+            }
+            
+            return [
+                'sucesso' => true,
+                'total_alunos' => $totalAlunos,
+                'sucessos' => $sucessos,
+                'erros' => $erros,
+                'mensagem' => "Frequência recalculada para {$sucessos} de {$totalAlunos} alunos"
+            ];
+            
+        } catch (Exception $e) {
+            error_log("Erro ao recalcular frequência da turma {$turmaId}: " . $e->getMessage());
+            return [
+                'sucesso' => false,
+                'mensagem' => 'Erro ao recalcular frequência da turma: ' . $e->getMessage()
             ];
         }
     }

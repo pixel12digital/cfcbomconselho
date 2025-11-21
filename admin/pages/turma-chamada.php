@@ -44,16 +44,16 @@ if (!$turmaId) {
     }
 }
 
-// Buscar dados da turma
+// Buscar dados da turma (CORRIGIDO: usar turmas_teoricas em vez de turmas)
 $turma = $db->fetch("
     SELECT 
-        t.*,
+        tt.*,
         i.nome as instrutor_nome,
         c.nome as cfc_nome
-    FROM turmas t
-    LEFT JOIN instrutores i ON t.instrutor_id = i.id
-    LEFT JOIN cfcs c ON t.cfc_id = c.id
-    WHERE t.id = ?
+    FROM turmas_teoricas tt
+    LEFT JOIN instrutores i ON tt.instrutor_id = i.id
+    LEFT JOIN cfcs c ON tt.cfc_id = c.id
+    WHERE tt.id = ?
 ", [$turmaId]);
 
 if (!$turma) {
@@ -74,16 +74,16 @@ if ($userType === 'instrutor' && $turma['instrutor_id'] != $userId) {
     $canEdit = false;
 }
 
-// Buscar aulas da turma
+// Buscar aulas da turma (CORRIGIDO: usar turma_aulas_agendadas e aula_id)
 $aulas = $db->fetchAll("
     SELECT 
-        ta.*,
+        taa.*,
         COUNT(tp.id) as presencas_registradas
-    FROM turma_aulas ta
-    LEFT JOIN turma_presencas tp ON ta.id = tp.turma_aula_id
-    WHERE ta.turma_id = ?
-    GROUP BY ta.id
-    ORDER BY ta.ordem ASC
+    FROM turma_aulas_agendadas taa
+    LEFT JOIN turma_presencas tp ON taa.id = tp.aula_id
+    WHERE taa.turma_id = ?
+    GROUP BY taa.id
+    ORDER BY taa.ordem_global ASC
 ", [$turmaId]);
 
 // Se não especificou aula, usar a primeira
@@ -91,33 +91,34 @@ if (!$aulaId && !empty($aulas)) {
     $aulaId = $aulas[0]['id'];
 }
 
-// Buscar dados da aula atual
+// Buscar dados da aula atual (CORRIGIDO: usar turma_aulas_agendadas)
 $aulaAtual = null;
 if ($aulaId) {
     $aulaAtual = $db->fetch("
-        SELECT * FROM turma_aulas WHERE id = ? AND turma_id = ?
+        SELECT * FROM turma_aulas_agendadas WHERE id = ? AND turma_id = ?
     ", [$aulaId, $turmaId]);
 }
 
-// Buscar alunos matriculados na turma
+// Buscar alunos matriculados na turma (CORRIGIDO: usar turma_matriculas e aula_id)
 $alunos = $db->fetchAll("
     SELECT 
         a.*,
-        ta.status as status_matricula,
-        ta.data_matricula,
+        tm.status as status_matricula,
+        tm.data_matricula,
+        tm.frequencia_percentual,
         tp.presente,
-        tp.observacao as observacao_presenca,
+        tp.justificativa as observacao_presenca,
         tp.registrado_em as presenca_registrada_em,
         tp.id as presenca_id
     FROM alunos a
-    JOIN turma_alunos ta ON a.id = ta.aluno_id
+    JOIN turma_matriculas tm ON a.id = tm.aluno_id
     LEFT JOIN turma_presencas tp ON (
         a.id = tp.aluno_id 
         AND tp.turma_id = ? 
-        AND tp.turma_aula_id = ?
+        AND tp.aula_id = ?
     )
-    WHERE ta.turma_id = ? 
-    AND ta.status IN ('matriculado', 'ativo')
+    WHERE tm.turma_id = ? 
+    AND tm.status IN ('matriculado', 'cursando', 'concluido')
     ORDER BY a.nome ASC
 ", [$turmaId, $aulaId, $turmaId]);
 

@@ -130,6 +130,38 @@ try {
                     ]);
                 }
                 
+                // =====================================================
+                // VERIFICAÇÃO DE BLOQUEIO FINANCEIRO
+                // =====================================================
+                // FUNÇÃO CENTRAL: FinanceiroAlunoHelper::verificarPermissaoFinanceiraAluno()
+                // 
+                // Esta é a mesma função usada no histórico do aluno.
+                // Garante que a validação financeira seja consistente em ambos os lugares.
+                // 
+                // REGRA PARA EXAMES:
+                // - Bloquear se não houver nenhuma fatura lançada
+                // - Bloquear se existir qualquer fatura em atraso
+                // - Permitir se houver pelo menos uma fatura PAGA e não houver faturas em atraso
+                // - Faturas ABERTAS com vencimento futuro NÃO bloqueiam
+                // =====================================================
+                require_once __DIR__ . '/../includes/FinanceiroAlunoHelper.php';
+                $verificacaoFinanceira = FinanceiroAlunoHelper::verificarPermissaoFinanceiraAluno($alunoId);
+                
+                error_log('[BLOQUEIO FINANCEIRO EXAMES] Aluno ' . $alunoId . 
+                         ' - Liberado: ' . ($verificacaoFinanceira['liberado'] ? 'SIM' : 'NÃO') . 
+                         ' - Status: ' . $verificacaoFinanceira['status'] . 
+                         ' - Origem: Tela de Exames');
+                
+                if (!$verificacaoFinanceira['liberado']) {
+                    returnJson([
+                        'success' => false,
+                        'error' => $verificacaoFinanceira['motivo'],
+                        'codigo' => 'BLOQUEIO_FINANCEIRO',
+                        'status_financeiro' => $verificacaoFinanceira['status'],
+                        'http_status' => 403
+                    ]);
+                }
+                
                 // Preparar hora_agendada
                 $horaAgendada = isset($_POST['hora_agendada']) ? trim($_POST['hora_agendada']) : null;
                 if ($horaAgendada === '') {

@@ -168,16 +168,128 @@ foreach ($exames as $exame) {
     }
 }
 
+// =====================================================
+// FUNÇÃO HELPER PARA RENDERIZAR BADGES DE EXAME
+// =====================================================
+// Centraliza a lógica de exibição de status e resultado
+// para garantir consistência entre histórico e tela de exames
+// =====================================================
+function renderizarBadgesExame($exame) {
+    if (!$exame) {
+        return [
+            'status_badge' => '',
+            'resultado_badge' => '',
+            'tem_resultado' => false
+        ];
+    }
+    
+    $status = $exame['status'] ?? 'agendado';
+    $resultado = $exame['resultado'] ?? null;
+    $dataResultado = $exame['data_resultado'] ?? null;
+    
+    // Log para debug
+    error_log('[DEBUG EXAME] id=' . ($exame['id'] ?? 'N/A') . 
+             ', status=' . $status . 
+             ', resultado=' . ($resultado ?? 'NULL') . 
+             ', data_resultado=' . ($dataResultado ?? 'NULL'));
+    
+    // Determinar se tem resultado lançado
+    // Considera que tem resultado se:
+    // 1. O campo resultado não está vazio/null e não é 'pendente'
+    // 2. OU existe data_resultado preenchida
+    $temResultado = false;
+    if (!empty($resultado) && $resultado !== 'pendente' && in_array($resultado, ['apto', 'inapto', 'inapto_temporario', 'aprovado', 'reprovado'])) {
+        $temResultado = true;
+    } elseif (!empty($dataResultado)) {
+        $temResultado = true;
+    }
+    
+    // Badge de Status (principal)
+    $statusBadge = '';
+    if ($status === 'agendado') {
+        $statusBadge = '<span class="badge bg-primary">Agendado</span>';
+    } elseif ($status === 'concluido') {
+        $statusBadge = '<span class="badge bg-success">Concluído</span>';
+    } elseif ($status === 'cancelado') {
+        $statusBadge = '<span class="badge bg-danger">Cancelado</span>';
+    } else {
+        $statusBadge = '<span class="badge bg-secondary">' . ucfirst($status) . '</span>';
+    }
+    
+    // Badge de Resultado (secundária)
+    // COMPATIBILIDADE: 'aprovado' = 'apto', 'reprovado' = 'inapto' (valores antigos)
+    $resultadoBadge = '';
+    if ($temResultado) {
+        // Normalizar valores antigos para exibição
+        $resultadoNormalizado = $resultado;
+        if ($resultado === 'aprovado') {
+            $resultadoNormalizado = 'apto';
+        } elseif ($resultado === 'reprovado') {
+            $resultadoNormalizado = 'inapto';
+        }
+        
+        // Tem resultado lançado - mostrar o resultado
+        if ($resultadoNormalizado === 'apto') {
+            $resultadoBadge = '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Apto</span>';
+        } elseif ($resultadoNormalizado === 'inapto') {
+            $resultadoBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Inapto</span>';
+        } elseif ($resultadoNormalizado === 'inapto_temporario') {
+            $resultadoBadge = '<span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Inapto Temporário</span>';
+        } else {
+            // Resultado lançado mas valor não reconhecido - mostrar como pendente por segurança
+            $resultadoBadge = '<span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Pendente</span>';
+        }
+    } else {
+        // Não tem resultado lançado - mostrar pendente
+        $resultadoBadge = '<span class="badge bg-warning"><i class="fas fa-clock me-1"></i>Pendente</span>';
+    }
+    
+    return [
+        'status_badge' => $statusBadge,
+        'resultado_badge' => $resultadoBadge,
+        'tem_resultado' => $temResultado
+    ];
+}
+
 // Calcular se exames estão OK
+// Usar função helper para verificar se ambos têm resultado 'apto' (ou 'aprovado' para compatibilidade)
+$badgesMedicoOK = renderizarBadgesExame($exameMedico);
+$badgesPsicotecnicoOK = renderizarBadgesExame($examePsicotecnico);
+
 $examesOK = false;
-if ($exameMedico && $exameMedico['status'] === 'concluido' && $exameMedico['resultado'] === 'apto' &&
-    $examePsicotecnico && $examePsicotecnico['status'] === 'concluido' && $examePsicotecnico['resultado'] === 'apto') {
+// Verificar se ambos têm resultado 'apto' (ou 'aprovado' como equivalente para compatibilidade)
+$resultadoMedicoOK = in_array($exameMedico['resultado'] ?? '', ['apto', 'aprovado']);
+$resultadoPsicotecnicoOK = in_array($examePsicotecnico['resultado'] ?? '', ['apto', 'aprovado']);
+
+if ($exameMedico && $badgesMedicoOK['tem_resultado'] && $resultadoMedicoOK &&
+    $examePsicotecnico && $badgesPsicotecnicoOK['tem_resultado'] && $resultadoPsicotecnicoOK) {
     $examesOK = true;
 }
 
 // Verificar guards de bloqueio
 require_once __DIR__ . '/../includes/guards_exames.php';
 $bloqueioTeorica = GuardsExames::verificarBloqueioTeorica($alunoId);
+
+// =====================================================
+// VERIFICAÇÃO DE BLOQUEIO FINANCEIRO PARA EXAMES
+// =====================================================
+// FUNÇÃO CENTRAL: FinanceiroAlunoHelper::verificarPermissaoFinanceiraAluno()
+// 
+// Esta é a mesma função usada na tela de exames (admin/api/exames_simple.php).
+// Garante que a validação financeira seja consistente em ambos os lugares.
+// 
+// REGRA PARA EXAMES:
+// - Bloquear se não houver nenhuma fatura lançada
+// - Bloquear se existir qualquer fatura em atraso
+// - Permitir se houver pelo menos uma fatura PAGA e não houver faturas em atraso
+// - Faturas ABERTAS com vencimento futuro NÃO bloqueiam
+// =====================================================
+require_once __DIR__ . '/../includes/FinanceiroAlunoHelper.php';
+$verificacaoFinanceiraExames = FinanceiroAlunoHelper::verificarPermissaoFinanceiraAluno($alunoId);
+
+error_log('[HISTORICO ALUNO] Aluno ' . $alunoId . 
+         ' - Verificação Financeira: ' . json_encode($verificacaoFinanceiraExames) . 
+         ' - Origem: Histórico do Aluno');
 
 // Calcular estatísticas por tipo de aula
 // Para teóricas, contar apenas disciplinas únicas para evitar duplicação
@@ -1023,32 +1135,18 @@ $proximasAulas = $db->fetchAll("
                                     </div>
                                     <div class="card-body">
                                         <?php if ($exameMedico): ?>
-                                            <!-- Status Badge -->
+                                            <?php 
+                                            // Usar função helper centralizada para renderizar badges
+                                            $badgesMedico = renderizarBadgesExame($exameMedico);
+                                            ?>
+                                            <!-- Status Badge (Principal) -->
                                             <div class="mb-2">
-                                                <?php if ($exameMedico['status'] === 'agendado'): ?>
-                                                    <span class="badge bg-primary">Agendado</span>
-                                                <?php elseif ($exameMedico['status'] === 'concluido'): ?>
-                                                    <span class="badge bg-success">Concluído</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-secondary">Cancelado</span>
-                                                <?php endif; ?>
+                                                <?php echo $badgesMedico['status_badge']; ?>
                                             </div>
                                             
-                                            <!-- Resultado Badge -->
+                                            <!-- Resultado Badge (Secundária) -->
                                             <div class="mb-2">
-                                                <?php if ($exameMedico['resultado'] === 'apto'): ?>
-                                                    <span class="badge bg-success">
-                                                        <i class="fas fa-check me-1"></i>Apto
-                                                    </span>
-                                                <?php elseif ($exameMedico['resultado'] === 'inapto'): ?>
-                                                    <span class="badge bg-danger">
-                                                        <i class="fas fa-times me-1"></i>Inapto
-                                                    </span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-warning">
-                                                        <i class="fas fa-clock me-1"></i>Pendente
-                                                    </span>
-                                                <?php endif; ?>
+                                                <?php echo $badgesMedico['resultado_badge']; ?>
                                             </div>
                                             
                                             <!-- Informações -->
@@ -1071,14 +1169,23 @@ $proximasAulas = $db->fetchAll("
                                             </div>
                                             
                                             <!-- Ações -->
-                                            <?php if ($exameMedico['status'] === 'agendado' && ($isAdmin || $isSecretaria)): ?>
+                                            <?php 
+                                            // Mostrar botões apenas se exame está agendado E não tem resultado lançado
+                                            $podeLancarResultado = ($exameMedico['status'] === 'agendado' || $exameMedico['status'] === 'concluido') 
+                                                                   && !$badgesMedico['tem_resultado'] 
+                                                                   && ($isAdmin || $isSecretaria);
+                                            ?>
+                                            <?php if ($podeLancarResultado): ?>
                                                 <div class="mt-3">
-                                                    <button class="btn btn-sm btn-outline-primary" onclick="abrirModalResultado(<?php echo $exameMedico['id']; ?>, 'medico')">
+                                                    <a href="index.php?page=exames&tipo=medico&exame_id=<?php echo (int)$exameMedico['id']; ?>&origem=historico" 
+                                                       class="btn btn-sm btn-outline-primary">
                                                         <i class="fas fa-edit me-1"></i>Lançar Resultado
-                                                    </button>
-                                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelarExame(<?php echo $exameMedico['id']; ?>)">
-                                                        <i class="fas fa-times me-1"></i>Cancelar
-                                                    </button>
+                                                    </a>
+                                                    <?php if ($exameMedico['status'] === 'agendado'): ?>
+                                                        <button class="btn btn-sm btn-outline-danger" onclick="cancelarExame(<?php echo $exameMedico['id']; ?>)">
+                                                            <i class="fas fa-times me-1"></i>Cancelar
+                                                        </button>
+                                                    <?php endif; ?>
                                                 </div>
                                             <?php endif; ?>
                                         <?php else: ?>
@@ -1086,9 +1193,13 @@ $proximasAulas = $db->fetchAll("
                                                 <i class="fas fa-plus-circle fa-2x text-muted mb-2"></i>
                                                 <p class="text-muted mb-0">Nenhum exame agendado</p>
                                                 <?php if ($isAdmin || $isSecretaria): ?>
-                                                    <button class="btn btn-sm btn-primary mt-2" onclick="abrirModalAgendamento('medico')">
+                                                    <a href="index.php?page=exames&tipo=medico&aluno_id=<?php echo (int)$alunoId; ?>&origem=historico" 
+                                                       class="btn btn-sm btn-primary mt-2 <?php echo !$verificacaoFinanceiraExames['liberado'] ? 'btn-disabled' : ''; ?>"
+                                                       data-bloqueado="<?php echo $verificacaoFinanceiraExames['liberado'] ? '0' : '1'; ?>"
+                                                       data-motivo="<?php echo htmlspecialchars($verificacaoFinanceiraExames['motivo']); ?>"
+                                                       <?php if (!$verificacaoFinanceiraExames['liberado']): ?>style="opacity: 0.6; cursor: not-allowed;"<?php endif; ?>>
                                                         <i class="fas fa-plus me-1"></i>Agendar Exame
-                                                    </button>
+                                                    </a>
                                                 <?php endif; ?>
                                             </div>
                                         <?php endif; ?>
@@ -1107,32 +1218,18 @@ $proximasAulas = $db->fetchAll("
                                     </div>
                                     <div class="card-body">
                                         <?php if ($examePsicotecnico): ?>
-                                            <!-- Status Badge -->
+                                            <?php 
+                                            // Usar função helper centralizada para renderizar badges
+                                            $badgesPsicotecnico = renderizarBadgesExame($examePsicotecnico);
+                                            ?>
+                                            <!-- Status Badge (Principal) -->
                                             <div class="mb-2">
-                                                <?php if ($examePsicotecnico['status'] === 'agendado'): ?>
-                                                    <span class="badge bg-primary">Agendado</span>
-                                                <?php elseif ($examePsicotecnico['status'] === 'concluido'): ?>
-                                                    <span class="badge bg-success">Concluído</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-secondary">Cancelado</span>
-                                                <?php endif; ?>
+                                                <?php echo $badgesPsicotecnico['status_badge']; ?>
                                             </div>
                                             
-                                            <!-- Resultado Badge -->
+                                            <!-- Resultado Badge (Secundária) -->
                                             <div class="mb-2">
-                                                <?php if ($examePsicotecnico['resultado'] === 'apto'): ?>
-                                                    <span class="badge bg-success">
-                                                        <i class="fas fa-check me-1"></i>Apto
-                                                    </span>
-                                                <?php elseif ($examePsicotecnico['resultado'] === 'inapto'): ?>
-                                                    <span class="badge bg-danger">
-                                                        <i class="fas fa-times me-1"></i>Inapto
-                                                    </span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-warning">
-                                                        <i class="fas fa-clock me-1"></i>Pendente
-                                                    </span>
-                                                <?php endif; ?>
+                                                <?php echo $badgesPsicotecnico['resultado_badge']; ?>
                                             </div>
                                             
                                             <!-- Informações -->
@@ -1155,14 +1252,23 @@ $proximasAulas = $db->fetchAll("
                                             </div>
                                             
                                             <!-- Ações -->
-                                            <?php if ($examePsicotecnico['status'] === 'agendado' && ($isAdmin || $isSecretaria)): ?>
+                                            <?php 
+                                            // Mostrar botões apenas se exame está agendado E não tem resultado lançado
+                                            $podeLancarResultadoPsico = ($examePsicotecnico['status'] === 'agendado' || $examePsicotecnico['status'] === 'concluido') 
+                                                                        && !$badgesPsicotecnico['tem_resultado'] 
+                                                                        && ($isAdmin || $isSecretaria);
+                                            ?>
+                                            <?php if ($podeLancarResultadoPsico): ?>
                                                 <div class="mt-3">
-                                                    <button class="btn btn-sm btn-outline-primary" onclick="abrirModalResultado(<?php echo $examePsicotecnico['id']; ?>, 'psicotecnico')">
+                                                    <a href="index.php?page=exames&tipo=psicotecnico&exame_id=<?php echo (int)$examePsicotecnico['id']; ?>&origem=historico" 
+                                                       class="btn btn-sm btn-outline-primary">
                                                         <i class="fas fa-edit me-1"></i>Lançar Resultado
-                                                    </button>
-                                                    <button class="btn btn-sm btn-outline-danger" onclick="cancelarExame(<?php echo $examePsicotecnico['id']; ?>)">
-                                                        <i class="fas fa-times me-1"></i>Cancelar
-                                                    </button>
+                                                    </a>
+                                                    <?php if ($examePsicotecnico['status'] === 'agendado'): ?>
+                                                        <button class="btn btn-sm btn-outline-danger" onclick="cancelarExame(<?php echo $examePsicotecnico['id']; ?>)">
+                                                            <i class="fas fa-times me-1"></i>Cancelar
+                                                        </button>
+                                                    <?php endif; ?>
                                                 </div>
                                             <?php endif; ?>
                                         <?php else: ?>
@@ -1170,9 +1276,13 @@ $proximasAulas = $db->fetchAll("
                                                 <i class="fas fa-plus-circle fa-2x text-muted mb-2"></i>
                                                 <p class="text-muted mb-0">Nenhum exame agendado</p>
                                                 <?php if ($isAdmin || $isSecretaria): ?>
-                                                    <button class="btn btn-sm btn-primary mt-2" onclick="abrirModalAgendamento('psicotecnico')">
+                                                    <a href="index.php?page=exames&tipo=psicotecnico&aluno_id=<?php echo (int)$alunoId; ?>&origem=historico" 
+                                                       class="btn btn-sm btn-primary mt-2 <?php echo !$verificacaoFinanceiraExames['liberado'] ? 'btn-disabled' : ''; ?>"
+                                                       data-bloqueado="<?php echo $verificacaoFinanceiraExames['liberado'] ? '0' : '1'; ?>"
+                                                       data-motivo="<?php echo htmlspecialchars($verificacaoFinanceiraExames['motivo']); ?>"
+                                                       <?php if (!$verificacaoFinanceiraExames['liberado']): ?>style="opacity: 0.6; cursor: not-allowed;"<?php endif; ?>>
                                                         <i class="fas fa-plus me-1"></i>Agendar Exame
-                                                    </button>
+                                                    </a>
                                                 <?php endif; ?>
                                             </div>
                                         <?php endif; ?>
@@ -1182,41 +1292,112 @@ $proximasAulas = $db->fetchAll("
                         </div>
                         
                         <!-- Status Geral dos Exames -->
-                        <div class="mt-4 p-3 border rounded <?php echo $examesOK ? 'bg-success bg-opacity-10 border-success' : 'bg-warning bg-opacity-10 border-warning'; ?>">
-                            <div class="d-flex align-items-center">
-                                <?php if ($examesOK): ?>
+                        <?php 
+                        // =====================================================
+                        // VERIFICAÇÃO DE EXAMES PENDENTES
+                        // =====================================================
+                        // Usar função helper para verificar se há exames pendentes
+                        // Esconder completamente o bloco se não houver pendências
+                        // =====================================================
+                        $badgesMedicoCheck = renderizarBadgesExame($exameMedico);
+                        $badgesPsicotecnicoCheck = renderizarBadgesExame($examePsicotecnico);
+                        
+                        $examesPendentes = [];
+                        
+                        // Exame médico pendente: não existe OU não tem resultado lançado E não está cancelado
+                        if (!$exameMedico) {
+                            $examesPendentes[] = 'Falta agendar exame médico';
+                        } elseif (!$badgesMedicoCheck['tem_resultado'] && ($exameMedico['status'] ?? '') !== 'cancelado') {
+                            $examesPendentes[] = 'Falta lançar resultado do exame médico';
+                        }
+                        
+                        // Exame psicotécnico pendente: não existe OU não tem resultado lançado E não está cancelado
+                        if (!$examePsicotecnico) {
+                            $examesPendentes[] = 'Falta agendar exame psicotécnico';
+                        } elseif (!$badgesPsicotecnicoCheck['tem_resultado'] && ($examePsicotecnico['status'] ?? '') !== 'cancelado') {
+                            $examesPendentes[] = 'Falta lançar resultado do exame psicotécnico';
+                        }
+                        
+                        error_log('[EXAMES PENDENTES] Aluno ' . $alunoId . 
+                                 ' - Total pendentes: ' . count($examesPendentes) . 
+                                 ' - Lista: ' . implode(', ', $examesPendentes));
+                        
+                        // Só exibir o bloco se houver pendências OU se exames estiverem OK (para mostrar status positivo)
+                        // Esta variável será reutilizada no bloco de bloqueios para garantir consistência
+                        $temPendencias = !empty($examesPendentes);
+                        ?>
+                        
+                        <?php if ($examesOK): ?>
+                            <!-- Exames OK - Status Positivo -->
+                            <div class="mt-4 p-3 border rounded bg-success bg-opacity-10 border-success">
+                                <div class="d-flex align-items-center">
                                     <i class="fas fa-check-circle fa-2x text-success me-3"></i>
                                     <div>
                                         <h6 class="mb-1 text-success">Exames OK</h6>
                                         <small class="text-muted">Aluno apto para prosseguir com aulas teóricas</small>
                                     </div>
-                                <?php else: ?>
+                                </div>
+                            </div>
+                        <?php elseif ($temPendencias): ?>
+                            <!-- Exames Pendentes - Só aparece se houver pendências -->
+                            <div class="mt-4 p-3 border rounded bg-warning bg-opacity-10 border-warning">
+                                <div class="d-flex align-items-center">
                                     <i class="fas fa-exclamation-triangle fa-2x text-warning me-3"></i>
                                     <div>
                                         <h6 class="mb-1 text-warning">Exames Pendentes</h6>
                                         <small class="text-muted">
-                                            <?php if (!$exameMedico): ?>
-                                                • Falta agendar exame médico<br>
-                                            <?php elseif ($exameMedico['resultado'] !== 'apto'): ?>
-                                                • Falta lançar resultado do exame médico<br>
-                                            <?php endif; ?>
-                                            <?php if (!$examePsicotecnico): ?>
-                                                • Falta agendar exame psicotécnico<br>
-                                            <?php elseif ($examePsicotecnico['resultado'] !== 'apto'): ?>
-                                                • Falta lançar resultado do exame psicotécnico<br>
-                                            <?php endif; ?>
+                                            <?php foreach ($examesPendentes as $pendente): ?>
+                                                • <?php echo htmlspecialchars($pendente); ?><br>
+                                            <?php endforeach; ?>
                                         </small>
                                     </div>
-                                <?php endif; ?>
+                                </div>
                             </div>
-                        </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Status de Bloqueios -->
-        <?php if (!$bloqueioTeorica['pode_prosseguir']): ?>
+        <?php 
+        // =====================================================
+        // BLOQUEIOS PARA AULAS TEÓRICAS
+        // =====================================================
+        // Reutilizar a mesma lógica centralizada de exames
+        // para garantir consistência entre bloco de exames e bloqueios
+        // =====================================================
+        
+        // Filtrar motivos de bloqueio: remover motivo de exames se exames estiverem OK
+        // Usar a mesma variável $examesOK já calculada acima (linha ~254-267)
+        // e $temPendencias calculada no bloco "Exames Pendentes" (linha ~1326)
+        $motivosBloqueioFiltrados = [];
+        $adicionarMotivoExames = false;
+        
+        foreach ($bloqueioTeorica['motivos_bloqueio'] as $motivo) {
+            // Se o motivo é sobre exames, verificar usando a mesma lógica centralizada
+            if (stripos($motivo, 'Exames médico e psicotécnico') !== false) {
+                // Só adicionar se realmente houver pendência de exames
+                // Usar a mesma lógica do bloco "Exames Pendentes"
+                // Se exames estão OK, não adicionar o motivo
+                if (!$examesOK && $temPendencias) {
+                    $motivosBloqueioFiltrados[] = $motivo;
+                    $adicionarMotivoExames = true;
+                    error_log("[BLOQUEIOS TEORICAS] Aluno {$alunoId} - examesOK=false, temPendencias=true - motivo_exames_adicionado=true");
+                } else {
+                    error_log("[BLOQUEIOS TEORICAS] Aluno {$alunoId} - examesOK=" . ($examesOK ? 'true' : 'false') . ", temPendencias=" . ($temPendencias ? 'true' : 'false') . " - motivo_exames_adicionado=false");
+                }
+            } else {
+                // Outros motivos (financeiro, documentação, etc.) são mantidos intocados
+                $motivosBloqueioFiltrados[] = $motivo;
+            }
+        }
+        
+        // Mostrar bloco apenas se houver motivos de bloqueio após filtrar
+        $mostrarBlocoBloqueios = !empty($motivosBloqueioFiltrados);
+        ?>
+        
+        <?php if ($mostrarBlocoBloqueios): ?>
         <div class="row mb-4">
             <div class="col-12">
                 <div class="card border-warning">
@@ -1234,7 +1415,7 @@ $proximasAulas = $db->fetchAll("
                             </h6>
                             <p class="mb-2">O aluno não pode prosseguir com aulas teóricas pelos seguintes motivos:</p>
                             <ul class="mb-0">
-                                <?php foreach ($bloqueioTeorica['motivos_bloqueio'] as $motivo): ?>
+                                <?php foreach ($motivosBloqueioFiltrados as $motivo): ?>
                                     <li><?php echo htmlspecialchars($motivo); ?></li>
                                 <?php endforeach; ?>
                             </ul>
@@ -1261,6 +1442,218 @@ $proximasAulas = $db->fetchAll("
                             </h6>
                             <p class="mb-0">O aluno está liberado para prosseguir com aulas teóricas. Exames OK e situação financeira regularizada.</p>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <!-- Presença Teórica -->
+        <?php
+        // Buscar turmas teóricas do aluno
+        $turmasTeoricasAluno = $db->fetchAll("
+            SELECT 
+                tm.id as matricula_id,
+                tm.turma_id,
+                tm.status as status_matricula,
+                tm.data_matricula,
+                tm.frequencia_percentual,
+                tt.nome as turma_nome,
+                tt.curso_tipo,
+                tt.data_inicio,
+                tt.data_fim,
+                tt.status as turma_status
+            FROM turma_matriculas tm
+            JOIN turmas_teoricas tt ON tm.turma_id = tt.id
+            WHERE tm.aluno_id = ?
+            AND tm.status IN ('matriculado', 'cursando', 'concluido')
+            ORDER BY tm.data_matricula DESC
+        ", [$alunoId]);
+        
+        // Para cada turma, buscar aulas e presenças
+        $presencaTeoricaDetalhada = [];
+        foreach ($turmasTeoricasAluno as $turma) {
+            // Buscar aulas agendadas da turma
+            $aulasTurma = $db->fetchAll("
+                SELECT 
+                    taa.id as aula_id,
+                    taa.nome_aula,
+                    taa.disciplina,
+                    taa.data_aula,
+                    taa.hora_inicio,
+                    taa.hora_fim,
+                    taa.status as aula_status,
+                    taa.ordem_global
+                FROM turma_aulas_agendadas taa
+                WHERE taa.turma_id = ?
+                AND taa.status IN ('agendada', 'realizada')
+                ORDER BY taa.ordem_global ASC
+            ", [$turma['turma_id']]);
+            
+            // Buscar presenças do aluno nesta turma
+            $presencasAluno = $db->fetchAll("
+                SELECT 
+                    tp.aula_id,
+                    tp.presente,
+                    tp.justificativa,
+                    tp.registrado_em
+                FROM turma_presencas tp
+                WHERE tp.turma_id = ? AND tp.aluno_id = ?
+            ", [$turma['turma_id'], $alunoId]);
+            
+            // Criar mapa de presenças por aula_id
+            $presencasMap = [];
+            foreach ($presencasAluno as $presenca) {
+                $presencasMap[$presenca['aula_id']] = $presenca;
+            }
+            
+            // Montar lista de aulas com status de presença
+            $aulasComPresenca = [];
+            foreach ($aulasTurma as $aula) {
+                $presenca = $presencasMap[$aula['aula_id']] ?? null;
+                $aulasComPresenca[] = [
+                    'aula' => $aula,
+                    'presenca' => $presenca,
+                    'status_presenca' => $presenca ? ($presenca['presente'] ? 'presente' : 'ausente') : 'nao_registrado'
+                ];
+            }
+            
+            $presencaTeoricaDetalhada[] = [
+                'turma' => $turma,
+                'aulas' => $aulasComPresenca
+            ];
+        }
+        
+        // Mapear nomes dos cursos
+        $nomesCursos = [
+            'formacao_45h' => 'Formação 45h',
+            'formacao_acc_20h' => 'Formação ACC 20h',
+            'reciclagem_infrator' => 'Reciclagem Infrator',
+            'atualizacao' => 'Atualização'
+        ];
+        ?>
+        
+        <?php if (!empty($presencaTeoricaDetalhada)): ?>
+        <div class="row mb-4">
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-header bg-info text-white">
+                        <h5 class="card-title mb-0">
+                            <i class="fas fa-clipboard-check me-2"></i>
+                            Presença Teórica
+                        </h5>
+                    </div>
+                    <div class="card-body">
+                        <?php foreach ($presencaTeoricaDetalhada as $item): ?>
+                            <?php 
+                            $turma = $item['turma'];
+                            $aulas = $item['aulas'];
+                            $frequencia = (float)($turma['frequencia_percentual'] ?? 0);
+                            
+                            // Determinar status da matrícula
+                            $statusMatricula = $turma['status_matricula'];
+                            $statusLabel = [
+                                'matriculado' => 'Matriculado',
+                                'cursando' => 'Cursando',
+                                'concluido' => 'Concluído',
+                                'evadido' => 'Evadido',
+                                'transferido' => 'Transferido'
+                            ][$statusMatricula] ?? ucfirst($statusMatricula);
+                            
+                            // Badge de frequência
+                            $freqBadgeClass = 'bg-success';
+                            if ($frequencia < 75) {
+                                $freqBadgeClass = 'bg-danger';
+                            } elseif ($frequencia < 90) {
+                                $freqBadgeClass = 'bg-warning';
+                            }
+                            ?>
+                            <div class="mb-4 pb-3 border-bottom">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="mb-1">
+                                            <i class="fas fa-book me-2"></i>
+                                            <?php echo htmlspecialchars($turma['turma_nome']); ?>
+                                        </h6>
+                                        <small class="text-muted">
+                                            <?php echo htmlspecialchars($nomesCursos[$turma['curso_tipo']] ?? $turma['curso_tipo']); ?> | 
+                                            <?php echo date('d/m/Y', strtotime($turma['data_inicio'])); ?> - 
+                                            <?php echo date('d/m/Y', strtotime($turma['data_fim'])); ?>
+                                        </small>
+                                    </div>
+                                    <div class="text-end">
+                                        <div>
+                                            <span class="badge <?php echo $freqBadgeClass; ?>">
+                                                Frequência: <?php echo number_format($frequencia, 1); ?>%
+                                            </span>
+                                        </div>
+                                        <small class="text-muted d-block mt-1">
+                                            Status: <?php echo $statusLabel; ?>
+                                        </small>
+                                    </div>
+                                </div>
+                                
+                                <?php if (!empty($aulas)): ?>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Data</th>
+                                                <th>Disciplina</th>
+                                                <th>Horário</th>
+                                                <th>Presença</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <?php foreach ($aulas as $itemAula): ?>
+                                                <?php 
+                                                $aula = $itemAula['aula'];
+                                                $statusPresenca = $itemAula['status_presenca'];
+                                                
+                                                $presencaBadge = '';
+                                                if ($statusPresenca === 'presente') {
+                                                    $presencaBadge = '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Presente</span>';
+                                                } elseif ($statusPresenca === 'ausente') {
+                                                    $presencaBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Ausente</span>';
+                                                } else {
+                                                    $presencaBadge = '<span class="badge bg-secondary"><i class="fas fa-minus me-1"></i>Não registrado</span>';
+                                                }
+                                                
+                                                // Nome da disciplina
+                                                $nomesDisciplinas = [
+                                                    'legislacao_transito' => 'Legislação de Trânsito',
+                                                    'direcao_defensiva' => 'Direção Defensiva',
+                                                    'primeiros_socorros' => 'Primeiros Socorros',
+                                                    'meio_ambiente_cidadania' => 'Meio Ambiente e Cidadania',
+                                                    'mecanica_basica' => 'Mecânica Básica'
+                                                ];
+                                                $disciplinaNome = $nomesDisciplinas[$aula['disciplina']] ?? ucfirst(str_replace('_', ' ', $aula['disciplina']));
+                                                ?>
+                                                <tr>
+                                                    <td><?php echo date('d/m/Y', strtotime($aula['data_aula'])); ?></td>
+                                                    <td><?php echo htmlspecialchars($disciplinaNome); ?></td>
+                                                    <td>
+                                                        <?php echo date('H:i', strtotime($aula['hora_inicio'])); ?> - 
+                                                        <?php echo date('H:i', strtotime($aula['hora_fim'])); ?>
+                                                    </td>
+                                                    <td>
+                                                        <?php echo $presencaBadge; ?>
+                                                        <?php if ($itemAula['presenca'] && !empty($itemAula['presenca']['justificativa'])): ?>
+                                                            <i class="fas fa-comment-alt text-info ms-2" 
+                                                               data-bs-toggle="tooltip" 
+                                                               title="<?php echo htmlspecialchars($itemAula['presenca']['justificativa']); ?>"></i>
+                                                        <?php endif; ?>
+                                                    </td>
+                                                </tr>
+                                            <?php endforeach; ?>
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <?php else: ?>
+                                    <p class="text-muted mb-0"><i class="fas fa-info-circle me-2"></i>Nenhuma aula agendada para esta turma.</p>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
@@ -2085,124 +2478,34 @@ $proximasAulas = $db->fetchAll("
         // FUNÇÕES PARA EXAMES
         // =====================================================
 
-        function abrirModalAgendamento(tipo) {
-            console.log('🔍 Função abrirModalAgendamento chamada com tipo:', tipo);
-            
-            // Verificar se o Bootstrap está carregado
-            if (typeof bootstrap === 'undefined') {
-                console.error('❌ Bootstrap não está carregado!');
-                alert('Erro: Bootstrap não está carregado. Recarregue a página.');
-                return;
-            }
-            
-            // Verificar se o modal existe
-            const modalElement = document.getElementById('modalAgendamento');
-            if (!modalElement) {
-                console.error('❌ Modal modalAgendamento não encontrado!');
-                alert('Erro: Modal não encontrado. Recarregue a página.');
-                return;
-            }
-            
-            console.log('✅ Modal encontrado, criando instância Bootstrap...');
-            const modal = new bootstrap.Modal(modalElement);
-            
-            // Verificar se os elementos existem
-            const tipoExameElement = document.getElementById('tipoExame');
-            const tipoExameLabelElement = document.getElementById('tipoExameLabel');
-            
-            if (!tipoExameElement) {
-                console.error('❌ Elemento tipoExame não encontrado!');
-                return;
-            }
-            
-            if (!tipoExameLabelElement) {
-                console.error('❌ Elemento tipoExameLabel não encontrado!');
-                return;
-            }
-            
-            console.log('✅ Elementos encontrados, configurando valores...');
-            tipoExameElement.value = tipo;
-            tipoExameLabelElement.textContent = tipo === 'medico' ? 'Médico' : 'Psicotécnico';
-            
-            console.log('✅ Mostrando modal...');
-            modal.show();
-        }
+        // NOTA: Funções abrirModalAgendamento, agendarExame e lancarResultado foram removidas.
+        // O agendamento de exames agora é feito através do módulo dedicado (page=exames).
+        // Os botões "Agendar Exame" no histórico redirecionam para o novo módulo.
 
-        function abrirModalResultado(exameId, tipo) {
-            const modal = new bootstrap.Modal(document.getElementById('modalResultado'));
-            document.getElementById('exameIdResultado').value = exameId;
-            document.getElementById('tipoExameResultado').value = tipo;
-            document.getElementById('tipoExameResultadoLabel').textContent = tipo === 'medico' ? 'Médico' : 'Psicotécnico';
-            modal.show();
-        }
-
-        function agendarExame() {
-            const form = document.getElementById('formAgendamento');
-            const formData = new FormData(form);
+        // =====================================================
+        // BLOQUEIO FINANCEIRO: Interceptar cliques em botões bloqueados
+        // =====================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            // Selecionar todos os botões "Agendar Exame" com data-bloqueado
+            const botoesAgendarExame = document.querySelectorAll('a[data-bloqueado="1"]');
             
-            // Mostrar loading
-            const btnSalvar = document.getElementById('btnSalvarAgendamento');
-            const loadingHtml = btnSalvar.innerHTML;
-            btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
-            btnSalvar.disabled = true;
-
-            fetch('api/exames.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('success', 'Exame agendado com sucesso!');
-                    bootstrap.Modal.getInstance(document.getElementById('modalAgendamento')).hide();
-                    location.reload(); // Recarregar para mostrar o novo exame
-                } else {
-                    showToast('error', data.error || 'Erro ao agendar exame');
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                showToast('error', 'Erro ao agendar exame');
-            })
-            .finally(() => {
-                btnSalvar.innerHTML = loadingHtml;
-                btnSalvar.disabled = false;
+            console.log('[BLOQUEIO FINANCEIRO] Encontrados ' + botoesAgendarExame.length + ' botões bloqueados');
+            
+            botoesAgendarExame.forEach(function(botao) {
+                botao.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    const motivo = botao.getAttribute('data-motivo') || 'Não é possível avançar: situação financeira não regularizada.';
+                    
+                    console.log('[BLOQUEIO FINANCEIRO] Clique bloqueado - Motivo: ' + motivo);
+                    
+                    alert('⚠️ ' + motivo);
+                    
+                    return false;
+                });
             });
-        }
-
-        function lancarResultado() {
-            const form = document.getElementById('formResultado');
-            const formData = new FormData(form);
-            
-            // Mostrar loading
-            const btnSalvar = document.getElementById('btnSalvarResultado');
-            const loadingHtml = btnSalvar.innerHTML;
-            btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Salvando...';
-            btnSalvar.disabled = true;
-
-            fetch(`api/exames.php?id=${document.getElementById('exameIdResultado').value}`, {
-                method: 'PUT',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    showToast('success', 'Resultado lançado com sucesso!');
-                    bootstrap.Modal.getInstance(document.getElementById('modalResultado')).hide();
-                    location.reload(); // Recarregar para mostrar o resultado
-                } else {
-                    showToast('error', data.error || 'Erro ao lançar resultado');
-                }
-            })
-            .catch(error => {
-                console.error('Erro:', error);
-                showToast('error', 'Erro ao lançar resultado');
-            })
-            .finally(() => {
-                btnSalvar.innerHTML = loadingHtml;
-                btnSalvar.disabled = false;
-            });
-        }
+        });
 
         function cancelarExame(exameId) {
             if (!confirm('Tem certeza que deseja cancelar este exame?')) {
@@ -2228,99 +2531,10 @@ $proximasAulas = $db->fetchAll("
         }
     </script>
 
-    <!-- Modal Agendamento de Exame -->
-    <div class="modal fade" id="modalAgendamento" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-calendar-plus me-2"></i>
-                        Agendar Exame <span id="tipoExameLabel"></span>
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formAgendamento">
-                        <input type="hidden" id="tipoExame" name="tipo">
-                        <input type="hidden" name="aluno_id" value="<?php echo $alunoId; ?>">
-                        
-                        <div class="mb-3">
-                            <label for="data_agendada" class="form-label">Data e Hora do Exame</label>
-                            <input type="datetime-local" class="form-control" id="data_agendada" name="data_agendada" required>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="clinica_nome" class="form-label">Nome da Clínica</label>
-                            <input type="text" class="form-control" id="clinica_nome" name="clinica_nome" placeholder="Ex: Clínica São Paulo">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="protocolo" class="form-label">Protocolo/Guia</label>
-                            <input type="text" class="form-control" id="protocolo" name="protocolo" placeholder="Ex: PROT-001">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="observacoes" class="form-label">Observações</label>
-                            <textarea class="form-control" id="observacoes" name="observacoes" rows="3" placeholder="Observações sobre o agendamento..."></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnSalvarAgendamento" onclick="agendarExame()">
-                        <i class="fas fa-save me-2"></i>Agendar Exame
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal Lançar Resultado -->
-    <div class="modal fade" id="modalResultado" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title">
-                        <i class="fas fa-edit me-2"></i>
-                        Lançar Resultado - Exame <span id="tipoExameResultadoLabel"></span>
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="formResultado">
-                        <input type="hidden" id="exameIdResultado" name="exame_id">
-                        <input type="hidden" id="tipoExameResultado" name="tipo">
-                        
-                        <div class="mb-3">
-                            <label for="resultado" class="form-label">Resultado</label>
-                            <select class="form-control" id="resultado" name="resultado" required>
-                                <option value="">Selecione o resultado</option>
-                                <option value="apto">Apto</option>
-                                <option value="inapto">Inapto</option>
-                                <option value="pendente">Pendente</option>
-                            </select>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="data_resultado" class="form-label">Data do Resultado</label>
-                            <input type="date" class="form-control" id="data_resultado" name="data_resultado" value="<?php echo date('Y-m-d'); ?>">
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="observacoes_resultado" class="form-label">Observações</label>
-                            <textarea class="form-control" id="observacoes_resultado" name="observacoes" rows="3" placeholder="Observações sobre o resultado..."></textarea>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" id="btnSalvarResultado" onclick="lancarResultado()">
-                        <i class="fas fa-save me-2"></i>Lançar Resultado
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
+    <!-- NOTA: Modais antigos de agendamento (#modalAgendamento) e resultado (#modalResultado) foram removidos.
+         O agendamento de exames agora é feito através do módulo dedicado (page=exames).
+         Os botões "Agendar Exame" no histórico redirecionam para o novo módulo.
+         O lançamento de resultados também deve ser feito no módulo de exames. -->
 
     <!-- Toast Container -->
     <div class="toast-container position-fixed bottom-0 end-0 p-3">

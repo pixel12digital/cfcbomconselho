@@ -1558,24 +1558,31 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                                             data-exame-id="<?php echo $exame['id']; ?>"
                                             data-current-status="<?php echo $exame['status']; ?>"
                                             onchange="alterarResultado(this)">
-                                        <option value="pendente" <?php echo ($exame['resultado'] === 'pendente' || !$exame['resultado']) ? 'selected' : ''; ?>>
+                                        <?php 
+                                        // Normalizar valores antigos para exibição (compatibilidade)
+                                        $resultadoExibicao = $exame['resultado'] ?? 'pendente';
+                                        if ($resultadoExibicao === 'aprovado') {
+                                            $resultadoExibicao = 'apto';
+                                        } elseif ($resultadoExibicao === 'reprovado') {
+                                            $resultadoExibicao = 'inapto';
+                                        }
+                                        ?>
+                                        <option value="pendente" <?php echo ($resultadoExibicao === 'pendente' || !$exame['resultado']) ? 'selected' : ''; ?>>
                                             ⏳ Aguardando
                                         </option>
-                                        <option value="apto" <?php echo $exame['resultado'] === 'apto' ? 'selected' : ''; ?>>
+                                        <option value="apto" <?php echo $resultadoExibicao === 'apto' ? 'selected' : ''; ?>>
                                             ✅ Apto
                                         </option>
-                                        <option value="inapto" <?php echo $exame['resultado'] === 'inapto' ? 'selected' : ''; ?>>
+                                        <option value="inapto" <?php echo $resultadoExibicao === 'inapto' ? 'selected' : ''; ?>>
                                             ❌ Inapto
                                         </option>
-                                        <option value="inapto_temporario" <?php echo $exame['resultado'] === 'inapto_temporario' ? 'selected' : ''; ?>>
+                                        <option value="inapto_temporario" <?php echo $resultadoExibicao === 'inapto_temporario' ? 'selected' : ''; ?>>
                                             ⚠️ Inapto Temp.
                                         </option>
-                                        <option value="aprovado" <?php echo $exame['resultado'] === 'aprovado' ? 'selected' : ''; ?>>
-                                            ✅ Aprovado
-                                        </option>
-                                        <option value="reprovado" <?php echo $exame['resultado'] === 'reprovado' ? 'selected' : ''; ?>>
-                                            ❌ Reprovado
-                                        </option>
+                                        <!-- 
+                                        NOTA: Removidas opções "Aprovado" e "Reprovado" para simplificar interface.
+                                        Valores antigos são normalizados para 'apto'/'inapto' na exibição.
+                                        -->
                                     </select>
                                 </td>
                                 <td>
@@ -1701,24 +1708,31 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                                     data-exame-id="<?php echo $exame['id']; ?>"
                                     data-current-status="<?php echo $exame['status']; ?>"
                                     onchange="alterarResultado(this)">
-                                <option value="pendente" <?php echo ($exame['resultado'] === 'pendente' || !$exame['resultado']) ? 'selected' : ''; ?>>
+                                <?php 
+                                // Normalizar valores antigos para exibição (compatibilidade)
+                                $resultadoExibicao = $exame['resultado'] ?? 'pendente';
+                                if ($resultadoExibicao === 'aprovado') {
+                                    $resultadoExibicao = 'apto';
+                                } elseif ($resultadoExibicao === 'reprovado') {
+                                    $resultadoExibicao = 'inapto';
+                                }
+                                ?>
+                                <option value="pendente" <?php echo ($resultadoExibicao === 'pendente' || !$exame['resultado']) ? 'selected' : ''; ?>>
                                     ⏳ Aguardando
                                 </option>
-                                <option value="apto" <?php echo $exame['resultado'] === 'apto' ? 'selected' : ''; ?>>
+                                <option value="apto" <?php echo $resultadoExibicao === 'apto' ? 'selected' : ''; ?>>
                                     ✅ Apto
                                 </option>
-                                <option value="inapto" <?php echo $exame['resultado'] === 'inapto' ? 'selected' : ''; ?>>
+                                <option value="inapto" <?php echo $resultadoExibicao === 'inapto' ? 'selected' : ''; ?>>
                                     ❌ Inapto
                                 </option>
-                                <option value="inapto_temporario" <?php echo $exame['resultado'] === 'inapto_temporario' ? 'selected' : ''; ?>>
+                                <option value="inapto_temporario" <?php echo $resultadoExibicao === 'inapto_temporario' ? 'selected' : ''; ?>>
                                     ⚠️ Inapto Temp.
                                 </option>
-                                <option value="aprovado" <?php echo $exame['resultado'] === 'aprovado' ? 'selected' : ''; ?>>
-                                    ✅ Aprovado
-                                </option>
-                                <option value="reprovado" <?php echo $exame['resultado'] === 'reprovado' ? 'selected' : ''; ?>>
-                                    ❌ Reprovado
-                                </option>
+                                <!-- 
+                                NOTA: Removidas opções "Aprovado" e "Reprovado" para simplificar interface.
+                                Valores antigos são normalizados para 'apto'/'inapto' na exibição.
+                                -->
                             </select>
                         </div>
 
@@ -1766,10 +1780,15 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                     <div class="form-grid">
                         <!-- Primeira linha - 3 campos -->
                         <div class="form-floating">
+                            <?php 
+                            // Pré-selecionar aluno se vier do histórico
+                            $alunoIdPreSelecionado = isset($_GET['aluno_id']) ? (int)$_GET['aluno_id'] : null;
+                            ?>
                             <select class="form-select" name="aluno_id" id="aluno_id" required>
                                 <option value="">Selecione um aluno</option>
                                 <?php foreach ($alunos as $aluno): ?>
-                                    <option value="<?php echo $aluno['id']; ?>">
+                                    <option value="<?php echo $aluno['id']; ?>"
+                                        <?php echo $alunoIdPreSelecionado === (int)$aluno['id'] ? 'selected' : ''; ?>>
                                         <?php echo htmlspecialchars($aluno['nome'] . ' - ' . $aluno['cpf']); ?>
                                     </option>
                                 <?php endforeach; ?>
@@ -1886,12 +1905,14 @@ html body #modalAgendarExame .form-floating > textarea ~ label {
                         <label class="form-label">Resultado *</label>
                         <select class="form-control" name="resultado" required>
                             <option value="">Selecione o resultado</option>
-                            <option value="pendente">Pendente</option>
                             <option value="apto">Apto</option>
                             <option value="inapto">Inapto</option>
                             <option value="inapto_temporario">Inapto Temporário</option>
-                            <option value="aprovado">Aprovado</option>
-                            <option value="reprovado">Reprovado</option>
+                            <!-- 
+                            NOTA: Removidas opções "Aprovado" e "Reprovado" para simplificar interface.
+                            Valores antigos ('aprovado'/'reprovado') continuam sendo tratados como equivalentes
+                            a 'apto'/'inapto' na função renderizarBadgesExame() para compatibilidade.
+                            -->
                         </select>
                     </div>
                     
@@ -2120,8 +2141,36 @@ function abrirModalResultado(exameId) {
     document.querySelector('input[name="data_resultado"]').value = new Date().toISOString().split('T')[0];
 }
 
+// Variáveis globais para parâmetros da URL (usadas em agendarExame e salvarResultado)
+let urlParamsOrigem = null;
+let urlParamsAlunoId = null;
+let urlParamsExameId = null;
+
 // Configurar modal responsivo - SIMPLES COM DEBUG
 document.addEventListener('DOMContentLoaded', function() {
+    // Verificar se veio do histórico e abrir modal automaticamente
+    const urlParams = new URLSearchParams(window.location.search);
+    urlParamsOrigem = urlParams.get('origem');
+    urlParamsAlunoId = urlParams.get('aluno_id');
+    urlParamsExameId = urlParams.get('exame_id');
+    
+    if (urlParamsOrigem === 'historico') {
+        if (urlParamsAlunoId) {
+            // Abrir modal de agendamento
+            setTimeout(function() {
+                const btnAgendar = document.querySelector('button[onclick="abrirModalAgendar()"]');
+                if (btnAgendar) {
+                    btnAgendar.click();
+                }
+            }, 300);
+        } else if (urlParamsExameId) {
+            // Abrir modal de resultado
+            setTimeout(function() {
+                abrirModalResultado(urlParamsExameId);
+            }, 300);
+        }
+    }
+    
     const modal = document.getElementById('modalAgendarExame');
     if (modal) {
         modal.addEventListener('shown.bs.modal', function() {
@@ -2351,7 +2400,29 @@ function agendarExame() {
             // Sucesso
             const mensagem = data.message || 'Exame agendado com sucesso!';
             alert('✅ ' + mensagem);
-            location.reload();
+            
+            // Fechar o modal de agendamento
+            const modalAgendar = document.getElementById('modalAgendarExame');
+            if (modalAgendar) {
+                const bsModal = bootstrap.Modal.getInstance(modalAgendar);
+                if (bsModal) {
+                    bsModal.hide();
+                }
+            }
+            
+            // Verificar se veio do histórico
+            // Usar variáveis globais já lidas no DOMContentLoaded
+            if (urlParamsOrigem === 'historico') {
+                // Remover parâmetros que causam reabertura automática do modal
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete('origem');
+                currentUrl.searchParams.delete('aluno_id');
+                currentUrl.searchParams.delete('exame_id');
+                window.location.href = currentUrl.toString();
+            } else {
+                // Fluxo normal, quando vim pelo menu lateral de Exames
+                location.reload();
+            }
         } else {
             // Erro - mostrar mensagem amigável
             const errorMsg = data.error || data.message || 'Erro ao agendar exame';
@@ -2360,15 +2431,20 @@ function agendarExame() {
             let mensagem = '❌ ' + errorMsg;
             
             // Para erros de validação (DATA_RETROATIVA, etc), não mostrar código técnico
-            if (data.codigo && ['DATA_RETROATIVA', 'DATA_INVALIDA', 'TIPO_INVALIDO', 'CAMPO_OBRIGATORIO'].includes(data.codigo)) {
+            if (data.codigo && ['DATA_RETROATIVA', 'DATA_INVALIDA', 'TIPO_INVALIDO', 'CAMPO_OBRIGATORIO', 'BLOQUEIO_FINANCEIRO'].includes(data.codigo)) {
                 // Apenas a mensagem amigável
                 mensagem = '❌ ' + errorMsg;
             } else {
                 mensagem += codigo;
             }
             
-            
-            alert(mensagem);
+            // Para bloqueio financeiro, destacar visualmente
+            if (data.codigo === 'BLOQUEIO_FINANCEIRO') {
+                console.log('[BLOQUEIO FINANCEIRO] Exame bloqueado - Status: ' + (data.status_financeiro || 'N/A'));
+                alert('⚠️ BLOQUEIO FINANCEIRO\n\n' + errorMsg + '\n\nRegularize a situação financeira do aluno para continuar.');
+            } else {
+                alert(mensagem);
+            }
         }
     })
     .catch(error => {
@@ -2403,7 +2479,29 @@ function salvarResultado() {
     .then(data => {
         if (data.success) {
             alert('Resultado salvo com sucesso!');
-            location.reload();
+            
+            // Fechar o modal de resultado
+            const modalResultado = document.getElementById('modalResultadoExame');
+            if (modalResultado) {
+                const bsModal = bootstrap.Modal.getInstance(modalResultado);
+                if (bsModal) {
+                    bsModal.hide();
+                }
+            }
+            
+            // Verificar se veio do histórico
+            // Usar variáveis globais já lidas no DOMContentLoaded
+            if (urlParamsOrigem === 'historico') {
+                // Remover parâmetros que causam reabertura automática do modal
+                const currentUrl = new URL(window.location.href);
+                currentUrl.searchParams.delete('origem');
+                currentUrl.searchParams.delete('aluno_id');
+                currentUrl.searchParams.delete('exame_id');
+                window.location.href = currentUrl.toString();
+            } else {
+                // Fluxo normal, quando vim pelo menu lateral de Exames
+                location.reload();
+            }
         } else {
             alert('Erro ao salvar resultado: ' + (data.error || data.mensagem || 'Erro desconhecido'));
         }

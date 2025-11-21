@@ -32,6 +32,8 @@ class ExamesRulesService {
      * Validações:
      * - Exame médico aprovado (apto)
      * - Exame psicotécnico aprovado (apto)
+     * - Presença teórica: aluno deve estar matriculado em turma teórica válida
+     * - Frequência mínima: aluno deve ter frequência >= frequência mínima da turma (ou 75% default)
      * 
      * @param int $alunoId ID do aluno
      * @return array ['ok' => bool, 'codigo' => string, 'mensagem' => string]
@@ -48,8 +50,9 @@ class ExamesRulesService {
                 ];
             }
             
-            // Buscar exames médico e psicotécnico concluídos
-            // Prioridade: tabela exames, fallback para campos diretos em alunos
+            // ============================================
+            // VALIDAÇÃO 1: Exames médico e psicotécnico
+            // ============================================
             $exames = $this->db->fetchAll("
                 SELECT tipo, status, resultado 
                 FROM exames 
@@ -77,7 +80,6 @@ class ExamesRulesService {
                 ", [$alunoId]);
                 
                 if ($alunoDetalhes) {
-                    // Usar campos diretos como fallback
                     if (!$medico && $alunoDetalhes['exame_medico']) {
                         $medico = [
                             'tipo' => 'medico',
@@ -96,7 +98,6 @@ class ExamesRulesService {
             }
             
             // Verificar se ambos estão aptos
-            // Exames OK = ambos aptos (inapto_temporario é considerado não apto)
             $medicoOK = $medico && ($medico['resultado'] === 'apto' || $medico['resultado'] === 'aprovado');
             $psicotecnicoOK = $psicotecnico && ($psicotecnico['resultado'] === 'apto' || $psicotecnico['resultado'] === 'aprovado');
             
@@ -118,10 +119,78 @@ class ExamesRulesService {
                 ];
             }
             
+            // ============================================
+            // VALIDAÇÃO 2: Presença teórica
+            // ============================================
+            // Buscar turmas teóricas do aluno (status válidos: matriculado, cursando, concluido)
+            $turmasTeoricas = $this->db->fetchAll("
+                SELECT 
+                    tm.turma_id,
+                    tm.frequencia_percentual,
+                    tm.status as status_matricula,
+                    tt.nome as turma_nome,
+                    tt.status as turma_status
+                FROM turma_matriculas tm
+                JOIN turmas_teoricas tt ON tm.turma_id = tt.id
+                WHERE tm.aluno_id = ?
+                AND tm.status IN ('matriculado', 'cursando', 'concluido')
+                AND tt.status IN ('ativa', 'completa', 'concluida')
+                ORDER BY tm.data_matricula DESC
+            ", [$alunoId]);
+            
+            // Se não tem nenhuma turma teórica válida
+            if (empty($turmasTeoricas)) {
+                return [
+                    'ok' => false,
+                    'codigo' => 'SEM_TURMA_TEORICA',
+                    'mensagem' => 'Aluno não possui turma teórica válida para agendar a prova. É necessário estar matriculado e frequentar aulas teóricas antes de agendar a prova teórica.'
+                ];
+            }
+            
+            // Verificar frequência mínima
+            // Frequência mínima padrão: 75% (pode ser configurado por turma no futuro)
+            $frequenciaMinimaDefault = 75.0;
+            
+            $temFrequenciaSuficiente = false;
+            $turmaComFrequenciaOK = null;
+            $frequenciaAtual = 0;
+            $frequenciaMinima = $frequenciaMinimaDefault;
+            
+            foreach ($turmasTeoricas as $turma) {
+                $freqAtual = (float)($turma['frequencia_percentual'] ?? 0);
+                
+                // Se a turma tiver campo frequencia_minima, usar (futuro)
+                // Por enquanto, usar default
+                $freqMinima = $frequenciaMinimaDefault;
+                
+                if ($freqAtual >= $freqMinima) {
+                    $temFrequenciaSuficiente = true;
+                    $turmaComFrequenciaOK = $turma;
+                    $frequenciaAtual = $freqAtual;
+                    $frequenciaMinima = $freqMinima;
+                    break; // Uma turma com frequência OK é suficiente
+                } else {
+                    // Guardar a maior frequência encontrada para mensagem de erro
+                    if ($freqAtual > $frequenciaAtual) {
+                        $frequenciaAtual = $freqAtual;
+                        $frequenciaMinima = $freqMinima;
+                    }
+                }
+            }
+            
+            if (!$temFrequenciaSuficiente) {
+                return [
+                    'ok' => false,
+                    'codigo' => 'FREQUENCIA_INSUFICIENTE',
+                    'mensagem' => "Frequência teórica abaixo do mínimo exigido. Frequência atual: " . number_format($frequenciaAtual, 1) . "%. Mínimo exigido: " . number_format($frequenciaMinima, 1) . "%. É necessário frequentar mais aulas teóricas antes de agendar a prova."
+                ];
+            }
+            
+            // Todas as validações passaram
             return [
                 'ok' => true,
-                'codigo' => 'EXAMES_OK',
-                'mensagem' => 'Exames aprovados - pode agendar prova teórica'
+                'codigo' => 'EXAMES_E_PRESENCA_OK',
+                'mensagem' => 'Exames aprovados e frequência teórica suficiente - pode agendar prova teórica'
             ];
             
         } catch (Exception $e) {
@@ -129,7 +198,7 @@ class ExamesRulesService {
             return [
                 'ok' => false,
                 'codigo' => 'ERRO_VERIFICACAO',
-                'mensagem' => 'Erro ao verificar exames iniciais'
+                'mensagem' => 'Erro ao verificar exames iniciais e presença teórica'
             ];
         }
     }
