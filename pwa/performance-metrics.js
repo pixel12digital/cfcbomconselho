@@ -125,7 +125,13 @@ class PerformanceMetrics {
                     hadRecentInput: entry.hadRecentInput,
                     sources: entry.sources ? entry.sources.map(s => s.node) : []
                 });
-                console.log('[Performance] CLS:', this.metrics.cls);
+                // Log apenas a cada 10 entradas ou se o valor for significativo (> 0.1)
+                if (this.metrics.cls.entries.length % 10 === 0 || this.metrics.cls.value > 0.1) {
+                    console.log('[Performance] CLS:', {
+                        value: this.metrics.cls.value.toFixed(6),
+                        entries: this.metrics.cls.entries.length
+                    });
+                }
                 break;
         }
     }

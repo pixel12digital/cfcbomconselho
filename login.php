@@ -9,14 +9,10 @@ require_once 'includes/database.php';
 require_once 'includes/auth.php';
 
 // Se já estiver logado, redirecionar para dashboard apropriado
+// Usa função centralizada redirectAfterLogin() para garantir redirecionamento correto por tipo
 if (isLoggedIn()) {
     $user = getCurrentUser();
-    if ($user && $user['tipo'] === 'aluno') {
-        header('Location: aluno/dashboard.php');
-    } else {
-        header('Location: admin/');
-    }
-    exit;
+    redirectAfterLogin($user);
 }
 
 $error = '';
@@ -89,21 +85,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $error = 'CPF ou senha inválidos';
                 }
             } else {
-                // Para funcionários, usar sistema normal
-            $result = $auth->login($email, $senha, $remember);
-            
-            if ($result['success']) {
-                $success = $result['message'];
+                // Para funcionários (admin, secretaria, instrutor), usar sistema normal
+                $result = $auth->login($email, $senha, $remember);
                 
-                // Limpar buffer antes do redirecionamento
-                if (ob_get_level()) {
-                    ob_end_clean();
-                }
-                
-                header('Location: admin/');
-                exit;
-            } else {
-                $error = $result['message'];
+                if ($result['success']) {
+                    $success = $result['message'];
+                    
+                    // Limpar buffer antes do redirecionamento
+                    if (ob_get_level()) {
+                        ob_end_clean();
+                    }
+                    
+                    // Usar função centralizada para redirecionar baseado no tipo de usuário
+                    // Isso garante que instrutor vá para /instrutor/dashboard.php
+                    // e admin/secretaria vão para /admin/index.php
+                    $user = getCurrentUser();
+                    redirectAfterLogin($user);
+                } else {
+                    $error = $result['message'];
                 }
             }
         } catch (Exception $e) {

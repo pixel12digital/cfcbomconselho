@@ -94,7 +94,21 @@ try {
             
             // Verificar se é redefinição de senha
             if (isset($data['action']) && $data['action'] === 'reset_password') {
-                // Redefinir senha de usuário existente
+                /**
+                 * FLUXO COMPLETO DE REDEFINIÇÃO DE SENHA
+                 * 
+                 * Suporta dois modos:
+                 * - 'auto': Gera senha temporária automaticamente (recomendado)
+                 * - 'manual': Admin define a nova senha manualmente
+                 * 
+                 * Segurança:
+                 * - Senha sempre gravada como hash (bcrypt)
+                 * - Flag precisa_trocar_senha marcado após reset
+                 * - Log de auditoria registrado
+                 * - Senha temporária retornada apenas uma vez (modo auto)
+                 */
+                
+                // Validações obrigatórias
                 if (empty($data['user_id'])) {
                     error_log('[USUARIOS API] ID do usuário ausente para redefinição de senha');
                     http_response_code(400);
@@ -102,8 +116,47 @@ try {
                     exit;
                 }
                 
+                // Validar modo (auto ou manual)
+                $mode = $data['mode'] ?? 'auto';
+                if (!in_array($mode, ['auto', 'manual'])) {
+                    error_log('[USUARIOS API] Modo inválido: ' . $mode);
+                    http_response_code(400);
+                    echo json_encode(['error' => 'Modo inválido. Use "auto" ou "manual"', 'code' => 'INVALID_MODE']);
+                    exit;
+                }
+                
+                // Validar senha manual se modo manual
+                if ($mode === 'manual') {
+                    if (empty($data['nova_senha'])) {
+                        error_log('[USUARIOS API] Senha manual não fornecida');
+                        http_response_code(400);
+                        echo json_encode(['error' => 'Nova senha é obrigatória no modo manual', 'code' => 'MISSING_PASSWORD']);
+                        exit;
+                    }
+                    
+                    // Validar tamanho mínimo
+                    if (strlen($data['nova_senha']) < 8) {
+                        error_log('[USUARIOS API] Senha muito curta (mínimo 8 caracteres)');
+                        http_response_code(400);
+                        echo json_encode(['error' => 'A senha deve ter no mínimo 8 caracteres', 'code' => 'PASSWORD_TOO_SHORT']);
+                        exit;
+                    }
+                    
+                    // Validar confirmação (se fornecida)
+                    if (isset($data['nova_senha_confirmacao']) && $data['nova_senha'] !== $data['nova_senha_confirmacao']) {
+                        error_log('[USUARIOS API] Senhas não coincidem');
+                        http_response_code(400);
+                        echo json_encode(['error' => 'As senhas não coincidem', 'code' => 'PASSWORD_MISMATCH']);
+                        exit;
+                    }
+                }
+                
                 $userId = (int)$data['user_id'];
-                error_log('[USUARIOS API] Redefinindo senha para usuário ID: ' . $userId);
+                $adminId = $currentUser['id'];
+                $adminEmail = $currentUser['email'];
+                $clientIP = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+                
+                error_log('[USUARIOS API] Redefinindo senha para usuário ID: ' . $userId . ' (Modo: ' . $mode . ', Admin: ' . $adminEmail . ')');
                 
                 // Verificar se usuário existe
                 $usuario = $db->fetch("SELECT id, nome, email, cpf, tipo FROM usuarios WHERE id = ?", [$userId]);
@@ -116,40 +169,150 @@ try {
                 
                 error_log('[USUARIOS API] Usuário encontrado para redefinição: ' . $usuario['email']);
                 
-                // Gerar nova senha temporária
-                $novaSenhaTemporaria = CredentialManager::generateTemporaryPassword();
-                $senhaHash = password_hash($novaSenhaTemporaria, PASSWORD_DEFAULT);
+                // Determinar senha a ser usada
+                $novaSenha = null;
+                $senhaTemporaria = null;
+                
+                if ($mode === 'auto') {
+                    // Modo automático: gerar senha temporária
+                    $senhaTemporaria = CredentialManager::generateTemporaryPassword(10); // 10 caracteres
+                    $novaSenha = $senhaTemporaria;
+                } else {
+                    // Modo manual: usar senha fornecida pelo admin
+                    $novaSenha = $data['nova_senha'];
+                }
+                
+                // Gerar hash da senha
+                $senhaHash = password_hash($novaSenha, PASSWORD_DEFAULT);
+                
+                // Preparar update com flag precisa_trocar_senha
+                // Construir query SQL de forma segura
+                $updateFields = ['senha = ?'];
+                $updateValues = [$senhaHash];
+                
+                // Tentar adicionar flag precisa_trocar_senha (se coluna existir)
+                $hasPrecisaTrocarSenha = false;
+                try {
+                    // Verificar se coluna existe
+                    $columnCheck = $db->fetch("
+                        SELECT COLUMN_NAME 
+                        FROM INFORMATION_SCHEMA.COLUMNS 
+                        WHERE TABLE_SCHEMA = DATABASE() 
+                          AND TABLE_NAME = 'usuarios' 
+                          AND COLUMN_NAME = 'precisa_trocar_senha'
+                    ");
+                    
+                    if ($columnCheck) {
+                        $updateFields[] = 'precisa_trocar_senha = 1';
+                        $hasPrecisaTrocarSenha = true;
+                        error_log('[USUARIOS API] Flag precisa_trocar_senha será marcado');
+                    } else {
+                        error_log('[USUARIOS API] Coluna precisa_trocar_senha não existe - pulando flag');
+                    }
+                } catch (Exception $e) {
+                    error_log('[USUARIOS API] Erro ao verificar coluna precisa_trocar_senha: ' . $e->getMessage());
+                    // Continuar sem o flag se houver erro
+                }
+                
+                // Adicionar atualizado_em (usando NOW() do MySQL)
+                $updateFields[] = 'atualizado_em = NOW()';
+                
+                // Construir query SQL
+                $updateQuery = 'UPDATE usuarios SET ' . implode(', ', $updateFields) . ' WHERE id = ?';
+                $updateValues[] = $userId;
+                
+                error_log('[USUARIOS API] Query SQL: ' . $updateQuery);
+                error_log('[USUARIOS API] Parâmetros: ' . json_encode($updateValues));
                 
                 // Atualizar senha no banco
-                $result = $db->query("UPDATE usuarios SET senha = ?, atualizado_em = NOW() WHERE id = ?", [$senhaHash, $userId]);
+                $updateSuccess = false;
+                $updateError = null;
                 
-                if ($result) {
+                try {
+                    $result = $db->query($updateQuery, $updateValues);
+                    
+                    // Verificar se a atualização foi bem-sucedida
+                    // O método query() retorna um statement, precisamos verificar se houve linhas afetadas
+                    if ($result) {
+                        $rowsAffected = $result->rowCount();
+                        error_log('[USUARIOS API] Linhas afetadas: ' . $rowsAffected);
+                        
+                        if ($rowsAffected > 0) {
+                            $updateSuccess = true;
+                        } else {
+                            error_log('[USUARIOS API] AVISO: Nenhuma linha foi afetada na atualização');
+                            $updateSuccess = false;
+                            $updateError = 'Nenhuma linha foi afetada na atualização. Verifique se o usuário existe.';
+                        }
+                    } else {
+                        $updateSuccess = false;
+                        $updateError = 'Query retornou false';
+                    }
+                } catch (Exception $e) {
+                    error_log('[USUARIOS API] Exceção ao executar UPDATE: ' . $e->getMessage());
+                    error_log('[USUARIOS API] Stack trace: ' . $e->getTraceAsString());
+                    $updateSuccess = false;
+                    $updateError = $e->getMessage();
+                }
+                
+                if ($updateSuccess) {
                     error_log('[USUARIOS API] Senha redefinida com sucesso - ID: ' . $userId);
                     
-                    // Enviar credenciais por email
-                    CredentialManager::sendCredentials(
-                        $usuario['email'], 
-                        $novaSenhaTemporaria, 
-                        $usuario['tipo']
+                    // LOG DE AUDITORIA
+                    // Formato: [PASSWORD_RESET] admin_id=X, user_id=Y, mode=auto|manual, timestamp=Z, ip=W
+                    $auditLog = sprintf(
+                        '[PASSWORD_RESET] admin_id=%d, admin_email=%s, user_id=%d, user_email=%s, mode=%s, timestamp=%s, ip=%s',
+                        $adminId,
+                        $adminEmail,
+                        $userId,
+                        $usuario['email'],
+                        $mode,
+                        date('Y-m-d H:i:s'),
+                        $clientIP
                     );
+                    error_log($auditLog);
                     
+                    // Enviar credenciais por email (apenas modo automático e se email válido)
+                    if ($mode === 'auto' && !empty($usuario['email']) && filter_var($usuario['email'], FILTER_VALIDATE_EMAIL)) {
+                        // TODO: Quando sistema de email estiver configurado, substituir por envio real
+                        // Por enquanto, apenas log simulado
+                        CredentialManager::sendCredentials(
+                            $usuario['email'], 
+                            $senhaTemporaria, 
+                            $usuario['tipo']
+                        );
+                    }
+                    
+                    // Preparar resposta
                     $response = [
                         'success' => true, 
                         'message' => 'Senha redefinida com sucesso',
-                        'credentials' => [
+                        'mode' => $mode
+                    ];
+                    
+                    // Adicionar senha temporária apenas se modo automático
+                    if ($mode === 'auto' && $senhaTemporaria) {
+                        $response['temp_password'] = $senhaTemporaria;
+                        $response['credentials'] = [
                             'email' => $usuario['email'],
                             'cpf' => $usuario['cpf'] ?? '',
                             'tipo' => $usuario['tipo'],
-                            'senha_temporaria' => $novaSenhaTemporaria,
+                            'senha_temporaria' => $senhaTemporaria,
                             'message' => 'Nova senha temporária gerada'
-                        ]
-                    ];
+                        ];
+                    }
                     
                     echo json_encode($response);
                 } else {
-                    error_log('[USUARIOS API] Erro ao redefinir senha - ID: ' . $userId);
+                    $errorMessage = $updateError ?? 'Erro ao atualizar senha no banco de dados';
+                    error_log('[USUARIOS API] Erro ao redefinir senha - ID: ' . $userId . ' - Erro: ' . $errorMessage);
                     http_response_code(500);
-                    echo json_encode(['error' => 'Erro ao redefinir senha', 'code' => 'RESET_FAILED']);
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'Erro ao redefinir senha: ' . $errorMessage,
+                        'code' => 'RESET_FAILED',
+                        'details' => $updateError ?? 'Nenhuma linha foi afetada na atualização'
+                    ]);
                 }
                 break;
             }

@@ -46,69 +46,10 @@ $pageTitle = 'Gestão de Instrutores';
         margin-bottom: 1rem;
     }
     
-    /* Esconder tabela no mobile */
-    .table-responsive {
-        display: none !important;
-    }
-    
-    /* Mostrar cards no mobile - FORÇAR EXIBIÇÃO */
-    .mobile-instrutor-cards {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    }
-    
-    /* Forçar exibição dos cards mobile */
-    #mobileInstrutorCards {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        min-height: 200px !important;
-    }
-    
-    /* Garantir que cards individuais sejam visíveis */
+    /* Ajustes específicos para mobile (se necessário) */
     .mobile-instrutor-card {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
         margin-bottom: 1rem !important;
     }
-    
-    /* CSS ULTRA AGRESSIVO PARA MOBILE CARDS */
-    #mobileInstrutorCards,
-    .mobile-instrutor-cards,
-    .mobile-instrutor-card {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-        position: relative !important;
-        z-index: 1 !important;
-    }
-    
-    /* Forçar exibição mesmo com outros CSS */
-    body .mobile-instrutor-cards,
-    body #mobileInstrutorCards,
-    body .mobile-instrutor-card {
-        display: block !important;
-        visibility: visible !important;
-        opacity: 1 !important;
-    }
-}
-
-@media (min-width: 769px) {
-    /* Esconder cards no desktop */
-    .mobile-instrutor-cards {
-        display: none !important;
-    }
-    
-    #mobileInstrutorCards {
-        display: none !important;
-    }
-}
-
-/* Cards mobile */
-.mobile-instrutor-cards {
-    display: none;
 }
 
 .mobile-instrutor-card {
@@ -195,7 +136,7 @@ $pageTitle = 'Gestão de Instrutores';
         <div class="col-12">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h1 class="h3 mb-0">Gestão de Instrutores</h1>
-                <button class="btn btn-primary" onclick="abrirModalInstrutor()">
+                <button class="btn btn-primary" onclick="novoInstrutor()">
                     <i class="fas fa-plus"></i> Novo Instrutor
                 </button>
             </div>
@@ -295,7 +236,8 @@ $pageTitle = 'Gestão de Instrutores';
                     </div>
                 </div>
                 <div class="card-body">
-                    <div class="table-responsive">
+                    <!-- Tabela Desktop (visível apenas em desktop) -->
+                    <div class="table-responsive d-none d-md-block">
                         <table id="tabelaInstrutores" class="table table-striped table-hover">
                             <thead>
                                 <tr>
@@ -314,8 +256,8 @@ $pageTitle = 'Gestão de Instrutores';
                         </table>
                     </div>
                     
-                    <!-- Cards Mobile -->
-                    <div class="mobile-instrutor-cards" id="mobileInstrutorCards">
+                    <!-- Cards Mobile (visíveis apenas em mobile) -->
+                    <div class="mobile-instrutor-cards d-block d-md-none" id="mobileInstrutorCards">
                         <!-- Preencher via JavaScript -->
                     </div>
                 </div>
@@ -325,7 +267,7 @@ $pageTitle = 'Gestão de Instrutores';
 </div>
 
 <!-- Modal Customizado para Cadastro/Edição de Instrutor -->
-<div id="modalInstrutor" class="custom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; overflow: auto;">
+<div id="modalInstrutor" class="custom-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; overflow-x: hidden;">
     <div class="custom-modal-dialog" style="position: relative; width: 95%; max-width: 1200px; margin: 20px auto; background: white; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: block;">
         <form id="formInstrutor" enctype="multipart/form-data" onsubmit="return false;">
             <div class="modal-header" style="background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
@@ -334,7 +276,7 @@ $pageTitle = 'Gestão de Instrutores';
                 </h5>
                 <button type="button" class="btn-close" onclick="fecharModalInstrutor()" style="filter: invert(1); background: none; border: none; font-size: 1.25rem; color: white; opacity: 0.8; cursor: pointer;">&times;</button>
             </div>
-            <div class="modal-body" style="overflow-y: auto; padding: 1rem; max-height: 70vh;">
+            <div class="modal-body" style="overflow-y: auto; padding: 1rem; max-height: calc(100vh - 200px);">
                 <input type="hidden" name="acao" id="acaoInstrutor" value="novo">
                 <input type="hidden" name="instrutor_id" id="instrutor_id" value="">
                 
@@ -706,13 +648,13 @@ $pageTitle = 'Gestão de Instrutores';
 <script>
 // Garantir que o modal não abra automaticamente
 document.addEventListener('DOMContentLoaded', function() {
-    const modal = document.getElementById('modalInstrutor');
-    if (modal) {
-        // Forçar fechamento do modal se estiver aberto
-        modal.style.setProperty('display', 'none', 'important');
-        modal.classList.remove('show');
-        console.log('✅ Modal de instrutor fechado automaticamente');
-    }
+    // REMOVIDO: Script que fechava modal automaticamente estava impedindo abertura
+    // O modal agora é controlado exclusivamente por instrutores-page.js
+    // const modal = document.getElementById('modalInstrutor');
+    // if (modal) {
+    //     modal.style.setProperty('display', 'none', 'important');
+    //     modal.classList.remove('show');
+    // }
 });
 </script>
 <!-- instrutores.js já é carregado no index.php, não precisa carregar novamente -->

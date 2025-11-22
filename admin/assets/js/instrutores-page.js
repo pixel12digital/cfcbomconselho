@@ -114,28 +114,143 @@ function carregarFotoExistente(caminhoFoto) {
 }
 
 // Funções JavaScript com URLs CORRIGIDAS
-async function abrirModalInstrutor() {
-    console.log('🚀 Abrindo modal de instrutor...');
+
+// Função para criar novo instrutor
+// Exportada globalmente para uso em onclick e outras chamadas
+// IMPORTANTE: Esta é a versão principal
+async function novoInstrutor() {
+    console.log('➕ [DEBUG] novoInstrutor chamado (instrutores-page.js)');
     
-    document.getElementById('modalTitle').textContent = 'Novo Instrutor';
-    document.getElementById('acaoInstrutor').value = 'novo';
-    document.getElementById('instrutor_id').value = '';
+    // 1. Definir valores do modal para "Novo Instrutor"
+    const modalTitle = document.getElementById('modalTitle');
+    const acaoInstrutor = document.getElementById('acaoInstrutor');
+    const instrutorId = document.getElementById('instrutor_id');
     
-    // Limpar campos manualmente para evitar problemas com campos de data
+    if (!modalTitle || !acaoInstrutor || !instrutorId) {
+        console.error('❌ Elementos do modal não encontrados!');
+        mostrarAlerta('Erro ao abrir modal de novo instrutor', 'danger');
+        return;
+    }
+    
+    modalTitle.textContent = 'Novo Instrutor';
+    acaoInstrutor.value = 'novo';
+    instrutorId.value = '';
+    
+    console.log('✅ Valores do modal definidos:', {
+        titulo: modalTitle.textContent,
+        acao: acaoInstrutor.value,
+        instrutor_id: instrutorId.value
+    });
+    
+    // 2. Limpar campos do formulário
     limparCamposFormulario();
     
+    // 3. Abrir modal usando função base (NÃO chama window.abrirModalInstrutor para evitar loop)
+    abrirModalInstrutorBase();
+    
+    // 4. Carregar dados dos selects após abrir
+    setTimeout(async () => {
+        try {
+            verificarStatusSelects();
+            await testarAPIs();
+            await carregarCFCsComRetry();
+            await carregarUsuariosComRetry();
+            
+            setTimeout(async () => {
+                const cfcSelect = document.getElementById('cfc_id');
+                const usuarioSelect = document.getElementById('usuario_id');
+                
+                if (cfcSelect && cfcSelect.options.length <= 1) {
+                    await carregarCFCsComRetry();
+                }
+                if (usuarioSelect && usuarioSelect.options.length <= 1) {
+                    await carregarUsuariosComRetry();
+                }
+                verificarStatusSelects();
+            }, 500);
+        } catch (error) {
+            console.error('❌ Erro ao carregar dados do modal:', error);
+        }
+    }, 100);
+}
+
+// Função base para abrir modal - apenas abre o modal, sem lógica adicional
+// Esta função é usada internamente por novoInstrutor() e editarInstrutor()
+// NÃO deve ser chamada diretamente de fora, use novoInstrutor() ou editarInstrutor()
+function abrirModalInstrutorBase() {
+    console.log('🚀 [abrirModalInstrutorBase] Abrindo modal de instrutor (função base)...');
+    
     const modal = document.getElementById('modalInstrutor');
-    modal.style.display = 'block';
+    if (!modal) {
+        console.error('❌ Modal não encontrado!');
+        return;
+    }
+    
+    // Usar setProperty com !important para sobrescrever inline styles
+    modal.style.setProperty('display', 'block', 'important');
+    modal.style.setProperty('visibility', 'visible', 'important');
+    modal.style.setProperty('opacity', '1', 'important');
+    modal.style.setProperty('z-index', '9999', 'important');
+    modal.style.setProperty('overflow-y', 'auto', 'important');
+    modal.style.setProperty('overflow-x', 'hidden', 'important');
     modal.classList.add('show');
     
-    // Garantir que o modal seja visível
+    // Bloquear scroll do body quando modal abrir (mas manter scroll do modal)
+    // Salvar posição atual do scroll antes de bloquear
+    const scrollY = window.scrollY;
+    document.body.style.overflow = 'hidden';
+    document.body.style.position = 'fixed';
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = '100%';
+    
+    // Garantir que o modal seja visível e tenha scroll
+    const modalDialog = modal.querySelector('.custom-modal-dialog');
+    if (modalDialog) {
+        modalDialog.style.setProperty('opacity', '1', 'important');
+        modalDialog.style.setProperty('transform', 'translateY(0)', 'important');
+        modalDialog.style.setProperty('display', 'block', 'important');
+    }
+    
+    // Garantir que o modal-body tenha scroll
+    const modalBody = modal.querySelector('.modal-body');
+    if (modalBody) {
+        modalBody.style.setProperty('overflow-y', 'auto', 'important');
+        modalBody.style.setProperty('max-height', 'calc(100vh - 200px)', 'important');
+        modalBody.style.setProperty('pointer-events', 'auto', 'important');
+    }
+    
+    // Garantir que o modal-dialog não bloqueie cliques
+    if (modalDialog) {
+        modalDialog.style.setProperty('pointer-events', 'auto', 'important');
+    }
+    
+    // Garantir que o modal não bloqueie cliques nos botões
+    modal.style.setProperty('pointer-events', 'auto', 'important');
+    
+    console.log('✅ Modal aberto (base)');
+    console.log('🔍 Modal display:', modal.style.display);
+    console.log('🔍 Modal visibility:', modal.style.visibility);
+    console.log('🔍 Modal z-index:', modal.style.zIndex);
+    console.log('🔍 Modal overflow-y:', modal.style.overflowY);
+    console.log('🔍 Modal pointer-events:', modal.style.pointerEvents);
+    console.log('🔍 Modal-body overflow-y:', modalBody?.style.overflowY);
+    console.log('🔍 Modal-body pointer-events:', modalBody?.style.pointerEvents);
+}
+
+// Função completa para abrir modal e carregar dados - usada internamente
+// Esta função chama abrirModalInstrutorBase() e depois carrega os selects
+async function abrirModalInstrutorCompleto() {
+    console.log('🚀 [abrirModalInstrutorCompleto] Abrindo modal e carregando dados...');
+    
+    // Abrir modal primeiro
+    abrirModalInstrutorBase();
+    
+    // Carregar dados após o modal estar aberto
     setTimeout(async () => {
+        const modal = document.getElementById('modalInstrutor');
+        if (!modal) return;
+        
         modal.scrollTop = 0;
-        const modalDialog = modal.querySelector('.custom-modal-dialog');
-        if (modalDialog) {
-            modalDialog.style.opacity = '1';
-            modalDialog.style.transform = 'translateY(0)';
-        }
         
         // CARREGAR DADOS APÓS O MODAL ESTAR ABERTO
         console.log('📋 Modal aberto, carregando dados dos selects...');
@@ -180,26 +295,78 @@ async function abrirModalInstrutor() {
     }, 100);
 }
 
+// Exportar função base para uso global (para compatibilidade com instrutores.js)
+window.abrirModalInstrutorBase = abrirModalInstrutorBase;
+
 function fecharModalInstrutor() {
-    console.log('🚪 Fechando modal de instrutor...');
+    console.log('🚪 [fecharModalInstrutor] CLICOU EM FECHAR - Iniciando fechamento do modal de instrutor...');
     const modal = document.getElementById('modalInstrutor');
-    if (modal) {
-        // Remover classe show
-        modal.classList.remove('show');
-        
-        // Animar o fechamento
-        const modalDialog = modal.querySelector('.custom-modal-dialog');
-        if (modalDialog) {
-            modalDialog.style.opacity = '0';
-            modalDialog.style.transform = 'translateY(-20px)';
+    if (!modal) {
+        console.warn('⚠️ Modal de instrutor não encontrado no DOM');
+        // Mesmo assim, garantir que o body não está travado
+        const scrollY = document.body.style.top;
+        document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.top = '';
+        document.body.style.width = '';
+        // Restaurar posição do scroll se estava salva
+        if (scrollY) {
+            window.scrollTo(0, parseInt(scrollY || '0') * -1);
         }
-        
-        // Forçar fechamento após animação
-        setTimeout(() => {
-            modal.style.setProperty('display', 'none', 'important');
-            console.log('✅ Modal de instrutor fechado com sucesso');
-        }, 300);
+        return;
     }
+    
+    console.log('🔍 Modal encontrado, verificando estado atual:', {
+        display: modal.style.display,
+        bodyOverflow: document.body.style.overflow
+    });
+    
+    // Remover classe show
+    modal.classList.remove('show');
+    
+    // Ocultar modal com !important para garantir
+    modal.style.setProperty('display', 'none', 'important');
+    modal.style.setProperty('visibility', 'hidden', 'important');
+    modal.style.setProperty('opacity', '0', 'important');
+    modal.style.setProperty('z-index', '-1', 'important');
+    
+    // Animar o fechamento
+    const modalDialog = modal.querySelector('.custom-modal-dialog');
+    if (modalDialog) {
+        modalDialog.style.opacity = '0';
+        modalDialog.style.transform = 'translateY(-20px)';
+    }
+    
+    // Restaurar scroll do body IMEDIATAMENTE (não esperar animação)
+    const scrollY = document.body.style.top;
+    document.body.style.overflow = '';
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.width = '';
+    // Restaurar posição do scroll se estava salva
+    if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+    }
+    console.log('✅ Scroll do body restaurado');
+    
+    // Forçar fechamento após animação
+    setTimeout(() => {
+        modal.style.setProperty('display', 'none', 'important');
+        // Limpar propriedades de estilo que possam estar bloqueando
+        const propsToRemove = ['visibility', 'opacity', 'z-index', 'position', 'top', 'left', 'width', 'height'];
+        propsToRemove.forEach(prop => {
+            modal.style.removeProperty(prop);
+        });
+        
+        // Garantir que o body está destravado
+        document.body.style.overflow = 'auto';
+        document.body.style.removeProperty('overflow');
+        
+        console.log('✅ Modal de instrutor fechado com sucesso. Estado final:', {
+            display: modal.style.display,
+            bodyOverflow: document.body.style.overflow
+        });
+    }, 300);
 }
 
 // Função para limpar campos do formulário de forma segura
@@ -284,27 +451,55 @@ function limparCamposFormulario() {
     }, 100);
 }
 
+// Função para editar instrutor
+// Exportada globalmente para uso em onclick e outras chamadas
+// IMPORTANTE: Esta é a versão principal, sobrescreve qualquer versão anterior
 async function editarInstrutor(id) {
-    console.log('🔧 Editando instrutor ID:', id);
+    console.log('🔧 [DEBUG] editarInstrutor chamado para ID:', id);
     
     try {
-        // 1. Abrir modal primeiro
-        document.getElementById('modalTitle').textContent = 'Editar Instrutor';
-        document.getElementById('acaoInstrutor').value = 'editar';
-        document.getElementById('instrutor_id').value = id;
+        // 1. Definir valores do modal ANTES de abrir
+        const modalTitle = document.getElementById('modalTitle');
+        const acaoInstrutor = document.getElementById('acaoInstrutor');
+        const instrutorId = document.getElementById('instrutor_id');
         
-        // Abrir modal
-        abrirModalInstrutor();
+        if (!modalTitle || !acaoInstrutor || !instrutorId) {
+            console.error('❌ Elementos do modal não encontrados!');
+            mostrarAlerta('Erro ao abrir modal de edição', 'danger');
+            return;
+        }
         
-        // 2. Aguardar carregamento dos selects
+        modalTitle.textContent = 'Editar Instrutor';
+        acaoInstrutor.value = 'editar';
+        instrutorId.value = id;
+        
+        console.log('✅ Valores do modal definidos:', {
+            titulo: modalTitle.textContent,
+            acao: acaoInstrutor.value,
+            instrutor_id: instrutorId.value
+        });
+        
+        // 2. Abrir modal usando função base (NÃO chama window.abrirModalInstrutor para evitar loop)
+        abrirModalInstrutorBase();
+        
+        // 3. Aguardar carregamento dos selects
         console.log('📋 Aguardando carregamento dos selects...');
         await carregarCFCsComRetry();
         await carregarUsuariosComRetry();
         
-        // 3. Buscar dados do instrutor
+        // 4. Buscar dados do instrutor
         console.log('🔍 Buscando dados do instrutor...');
-        const response = await fetch(`${API_CONFIG.getRelativeApiUrl('INSTRUTORES')}?id=${id}`);
+        const apiUrl = API_CONFIG.getRelativeApiUrl('INSTRUTORES');
+        if (!apiUrl) {
+            throw new Error('API_CONFIG não está definido ou URL inválida');
+        }
+        
+        const response = await fetch(`${apiUrl}?id=${id}`);
         console.log('📡 Resposta da API:', response.status, response.statusText);
+        
+        if (!response.ok) {
+            throw new Error(`Erro HTTP: ${response.status}`);
+        }
         
         const data = await response.json();
         console.log('📊 Dados recebidos:', data);
@@ -718,37 +913,63 @@ function abrirModalVisualizacao(instrutor) {
         }
     }
     
-    // Criar modal se não existir
+    // Garantir que existe APENAS UM modal de visualização
     let modal = document.getElementById('modalVisualizacaoInstrutor');
-    if (!modal) {
-        modal = criarModalVisualizacao();
-        document.body.appendChild(modal);
+    
+    // Se já existe, remover para evitar duplicação
+    if (modal) {
+        console.log('⚠️ Modal de visualização já existe, removendo para recriar...');
+        modal.remove();
     }
+    
+    // Criar novo modal
+    modal = criarModalVisualizacao();
+    document.body.appendChild(modal);
+    console.log('✅ Modal de visualização criado e adicionado ao DOM');
     
     // Preencher dados do instrutor
     preencherModalVisualizacao(instrutor);
     
-    // FORÇAR exibição do modal no mobile
+    // Exibir modal
     modal.style.setProperty('display', 'block', 'important');
     modal.style.setProperty('visibility', 'visible', 'important');
     modal.style.setProperty('opacity', '1', 'important');
-    modal.style.setProperty('z-index', '99999', 'important');
+    modal.style.setProperty('z-index', '9999', 'important');
     modal.style.setProperty('position', 'fixed', 'important');
     modal.style.setProperty('top', '0', 'important');
     modal.style.setProperty('left', '0', 'important');
     modal.style.setProperty('width', '100vw', 'important');
     modal.style.setProperty('height', '100vh', 'important');
+    modal.style.setProperty('background', 'rgba(0,0,0,0.5)', 'important');
+    modal.style.setProperty('overflow', 'auto', 'important');
     modal.classList.add('show');
     
-    // Garantir que o modal-dialog seja visível
+    // Bloquear scroll do body quando modal abrir
+    document.body.style.overflow = 'hidden';
+    
+    // Garantir que o modal-dialog seja visível e tenha rolagem
     const modalDialog = modal.querySelector('.custom-modal-dialog');
     if (modalDialog) {
-        modalDialog.style.setProperty('z-index', '100000', 'important');
         modalDialog.style.setProperty('position', 'relative', 'important');
         modalDialog.style.setProperty('opacity', '1', 'important');
         modalDialog.style.setProperty('transform', 'translateY(0)', 'important');
         modalDialog.style.setProperty('display', 'block', 'important');
+        modalDialog.style.setProperty('max-height', '90vh', 'important');
+        modalDialog.style.setProperty('overflow-y', 'auto', 'important');
+        modalDialog.style.setProperty('overflow-x', 'hidden', 'important');
     }
+    
+    // Garantir que o modal-body tenha rolagem
+    const modalBody = modal.querySelector('.modal-body');
+    if (modalBody) {
+        modalBody.style.setProperty('overflow-y', 'auto', 'important');
+        modalBody.style.setProperty('overflow-x', 'hidden', 'important');
+        modalBody.style.setProperty('max-height', 'calc(90vh - 200px)', 'important');
+        modalBody.style.setProperty('padding', '1rem', 'important');
+    }
+    
+    // Garantir que o modal tenha pointer-events habilitado
+    modal.style.setProperty('pointer-events', 'auto', 'important');
     
     // Animar abertura
     setTimeout(() => {
@@ -802,10 +1023,14 @@ function excluirInstrutor(id) {
 }
 
 function salvarInstrutor() {
-    console.log('💾 Salvando instrutor...');
+    console.log('💾 [salvarInstrutor] CLICOU EM SALVAR - Salvando instrutor...');
     
     // Proteção contra múltiplos cliques
     const btnSalvar = document.getElementById('btnSalvarInstrutor');
+    if (!btnSalvar) {
+        console.error('❌ Botão de salvar não encontrado!');
+        return;
+    }
     if (btnSalvar.disabled) {
         console.log('⚠️ Salvamento já em andamento, ignorando clique...');
         return;
@@ -1001,9 +1226,49 @@ function imprimirInstrutores() {
     mostrarAlerta('Funcionalidade de impressão será implementada em breve!', 'info');
 }
 
+// Exportar funções globalmente ANTES de DOMContentLoaded (para sobrescrever versões temporárias de instrutores.js)
+// IMPORTANTE: Fazer isso DEPOIS que as funções foram definidas
+// CRÍTICO: Sobrescrever window.fecharModalInstrutor e window.editarInstrutor para evitar loops infinitos
+window.novoInstrutor = novoInstrutor;
+// CRÍTICO: Sobrescrever window.editarInstrutor com a versão correta (sem loop infinito)
+window.editarInstrutor = editarInstrutor;
+// Sobrescrever window.fecharModalInstrutor com a versão correta (sem recursão)
+window.fecharModalInstrutor = fecharModalInstrutor;
+// Exportar fecharModalVisualizacao globalmente para uso em onclick inline
+window.fecharModalVisualizacao = fecharModalVisualizacao;
+window.salvarInstrutor = salvarInstrutor;
+console.log('✅ [instrutores-page.js] Funções globais exportadas:', {
+    novoInstrutor: typeof window.novoInstrutor,
+    editarInstrutor: typeof window.editarInstrutor,
+    fecharModalInstrutor: typeof window.fecharModalInstrutor,
+    fecharModalVisualizacao: typeof window.fecharModalVisualizacao,
+    salvarInstrutor: typeof window.salvarInstrutor
+});
+
+// Verificação crítica: confirmar que as funções exportadas são as corretas
+const funcEditarStr = window.editarInstrutor.toString();
+const funcFecharStr = window.fecharModalInstrutor.toString();
+const isEditarCorreto = funcEditarStr.includes('[DEBUG] editarInstrutor chamado');
+const isFecharCorreto = funcFecharStr.includes('[fecharModalInstrutor] CLICOU EM FECHAR') || funcFecharStr.includes('fecharModalInstrutor()');
+
+console.log('🔍 [VERIFICAÇÃO] window.editarInstrutor é a versão correta?', isEditarCorreto);
+console.log('🔍 [VERIFICAÇÃO] window.fecharModalInstrutor é a versão correta?', isFecharCorreto);
+
+if (!isEditarCorreto || !isFecharCorreto) {
+    console.error('❌ [ERRO CRÍTICO] Funções globais não foram sobrescritas corretamente!');
+    console.error('❌ window.editarInstrutor contém:', funcEditarStr.substring(0, 100));
+    console.error('❌ window.fecharModalInstrutor contém:', funcFecharStr.substring(0, 100));
+} else {
+    console.log('✅ [CONFIRMADO] Todas as funções globais foram sobrescritas corretamente por instrutores-page.js');
+}
+
 // Inicializar página
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando página de instrutores...');
+    
+    // Garantir que as funções globais estão definidas (sobrescrever se necessário)
+    window.novoInstrutor = novoInstrutor;
+    window.editarInstrutor = editarInstrutor;
     
     // Verificar se há parâmetros na URL que podem causar abertura automática do modal
     const urlParams = new URLSearchParams(window.location.search);
@@ -1034,42 +1299,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Configurar campos de data para funcionarem corretamente
     configurarCamposData();
     
-    // Verificar se estamos no mobile e ajustar layout
-    verificarLayoutMobile();
-    
-    // CORREÇÃO TEMPORÁRIA: Forçar exibição dos elementos após carregamento
-    setTimeout(() => {
-        console.log('🔧 CORREÇÃO TEMPORÁRIA: Forçando exibição dos elementos...');
-        
-        const tableContainer = document.querySelector('.table-responsive');
-        const mobileCards = document.getElementById('mobileInstrutorCards') || document.querySelector('.mobile-instrutor-cards');
-        
-        if (tableContainer) {
-            tableContainer.style.setProperty('display', 'block', 'important');
-            tableContainer.style.setProperty('visibility', 'visible', 'important');
-            tableContainer.style.setProperty('opacity', '1', 'important');
-            console.log('✅ Tabela forçada a aparecer');
-        }
-        
-        if (mobileCards) {
-            mobileCards.style.setProperty('display', 'block', 'important');
-            mobileCards.style.setProperty('visibility', 'visible', 'important');
-            mobileCards.style.setProperty('opacity', '1', 'important');
-            console.log('✅ Cards mobile forçados a aparecer');
-        }
-        
-        // Verificar se há dados na tabela
-        const tbody = document.querySelector('#tabelaInstrutores tbody');
-        if (tbody && tbody.children.length === 0) {
-            console.log('⚠️ Tabela vazia, recarregando dados...');
-            carregarInstrutores();
-        }
-    }, 500);
+    // Layout responsivo agora é controlado por classes Bootstrap (d-none d-md-block / d-block d-md-none)
+    // Não é mais necessário chamar verificarLayoutMobile() - removido para evitar conflitos
     
     // Adicionar listener para fechar modal ao clicar fora
     if (modal) {
         modal.addEventListener('click', function(e) {
             if (e.target === modal) {
+                console.log('🖱️ [DEBUG] Clicou fora do modal, fechando...');
                 fecharModalInstrutor();
             }
         });
@@ -1077,79 +1314,71 @@ document.addEventListener('DOMContentLoaded', function() {
         // Adicionar listener para tecla ESC
         document.addEventListener('keydown', function(e) {
             if (e.key === 'Escape' && modal.style.display === 'block') {
+                console.log('⌨️ [DEBUG] Tecla ESC pressionada, fechando modal...');
                 fecharModalInstrutor();
             }
         });
     }
     
+    // Registrar listener de submit no formulário
+    const formInstrutor = document.getElementById('formInstrutor');
+    if (formInstrutor) {
+        console.log('✅ [DEBUG] Formulário encontrado, registrando listener de submit...');
+        formInstrutor.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('📝 [DEBUG] Formulário submetido, chamando salvarInstrutor()...');
+            salvarInstrutor();
+        });
+    } else {
+        console.warn('⚠️ [DEBUG] Formulário formInstrutor não encontrado!');
+    }
+    
+    // Registrar listener direto no botão de salvar (backup)
+    const btnSalvarInstrutor = document.getElementById('btnSalvarInstrutor');
+    if (btnSalvarInstrutor) {
+        console.log('✅ [DEBUG] Botão de salvar encontrado, registrando listener de clique...');
+        btnSalvarInstrutor.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🖱️ [DEBUG] Botão Salvar clicado, chamando salvarInstrutor()...');
+            salvarInstrutor();
+        });
+    } else {
+        console.warn('⚠️ [DEBUG] Botão btnSalvarInstrutor não encontrado!');
+    }
+    
+    // Registrar listeners nos botões de fechar (backup para onclick inline)
+    const btnClose = modal?.querySelector('.btn-close');
+    if (btnClose) {
+        console.log('✅ [DEBUG] Botão X encontrado, registrando listener de clique...');
+        btnClose.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🖱️ [DEBUG] Botão X clicado, chamando fecharModalInstrutor()...');
+            fecharModalInstrutor();
+        });
+    }
+    
+    // Registrar listener no botão Cancelar (backup para onclick inline)
+    const btnCancelar = modal?.querySelector('.btn-secondary');
+    if (btnCancelar && btnCancelar.textContent.includes('Cancelar')) {
+        console.log('✅ [DEBUG] Botão Cancelar encontrado, registrando listener de clique...');
+        btnCancelar.addEventListener('click', function(e) {
+            e.preventDefault();
+            console.log('🖱️ [DEBUG] Botão Cancelar clicado, chamando fecharModalInstrutor()...');
+            fecharModalInstrutor();
+        });
+    }
+    
     // Listener para mudanças de tamanho da tela
-    window.addEventListener('resize', verificarLayoutMobile);
+    // Listener de resize removido - layout controlado por classes Bootstrap
     
     console.log('✅ Página de instrutores inicializada com sucesso');
 });
 
-// Função para verificar se estamos no mobile e ajustar layout
-function verificarLayoutMobile() {
-    const isMobile = window.innerWidth <= 768;
-    const tableContainer = document.querySelector('.table-responsive');
-    let mobileCards = document.getElementById('mobileInstrutorCards');
-    
-    // Fallback para encontrar o container mobile
-    if (!mobileCards) {
-        mobileCards = document.querySelector('.mobile-instrutor-cards');
-        console.log('🔍 Usando fallback .mobile-instrutor-cards:', !!mobileCards);
-    }
-    
-    console.log('📱 Verificando layout mobile:', {
-        isMobile: isMobile,
-        windowWidth: window.innerWidth,
-        tableContainer: !!tableContainer,
-        mobileCards: !!mobileCards,
-        mobileCardsChildren: mobileCards ? mobileCards.children.length : 0
-    });
-    
-    if (isMobile) {
-        console.log('📱 MODO MOBILE ATIVADO');
-        
-        // Forçar exibição dos cards mobile
-        if (mobileCards) {
-            mobileCards.style.setProperty('display', 'block', 'important');
-            mobileCards.style.setProperty('visibility', 'visible', 'important');
-            mobileCards.style.setProperty('opacity', '1', 'important');
-            console.log('✅ Cards mobile forçados a aparecer');
-            
-            // Verificar se há cards criados
-            if (mobileCards.children.length === 0) {
-                console.log('⚠️ Nenhum card mobile encontrado, recarregando dados...');
-                carregarInstrutores();
-            } else {
-                console.log('✅ Cards mobile encontrados:', mobileCards.children.length);
-            }
-        } else {
-            console.error('❌ Elemento mobileInstrutorCards não encontrado!');
-        }
-        
-        // Ocultar tabela
-        if (tableContainer) {
-            tableContainer.style.setProperty('display', 'none', 'important');
-            console.log('✅ Tabela oculta no mobile');
-        }
-    } else {
-        console.log('🖥️ MODO DESKTOP ATIVADO');
-        
-        // Forçar exibição da tabela
-        if (tableContainer) {
-            tableContainer.style.setProperty('display', 'block', 'important');
-            console.log('✅ Tabela exibida no desktop');
-        }
-        
-        // Ocultar cards mobile
-        if (mobileCards) {
-            mobileCards.style.setProperty('display', 'none', 'important');
-            console.log('✅ Cards mobile ocultos no desktop');
-        }
-    }
-}
+// Função verificarLayoutMobile() REMOVIDA
+// Layout responsivo agora é controlado exclusivamente por classes Bootstrap:
+// - Tabela: d-none d-md-block (oculta em mobile, visível em desktop)
+// - Cards: d-block d-md-none (visível em mobile, oculta em desktop)
+// Isso evita conflitos entre CSS e JavaScript e garante comportamento consistente
 
 // Função para configurar campos de data híbridos
 function configurarCamposData() {
@@ -1458,11 +1687,7 @@ function carregarInstrutores() {
                 preencherTabelaInstrutores(data.data);
                 atualizarEstatisticas(data.data);
                 
-                // Forçar verificação do layout mobile após carregamento
-                setTimeout(() => {
-                    console.log('🔄 Verificando layout mobile após carregamento...');
-                    verificarLayoutMobile();
-                }, 200);
+                // Layout responsivo controlado por classes Bootstrap, não precisa de verificação manual
             } else {
                 console.error('❌ Erro na API Instrutores:', data.error);
                 mostrarAlerta('Erro ao carregar instrutores: ' + (data.error || 'Erro desconhecido'), 'danger');
@@ -1628,27 +1853,8 @@ function preencherTabelaInstrutores(instrutores) {
     const finalMobileCards = mobileCards || document.querySelector('.mobile-instrutor-cards');
     console.log('📱 Cards mobile criados:', finalMobileCards ? finalMobileCards.children.length : 0);
     console.log('🖥️ Linhas da tabela criadas:', tbody.children.length);
-           
-           // Forçar exibição dos cards mobile após criação
-           setTimeout(() => {
-               console.log('🔄 Forçando verificação do layout após criação dos cards...');
-               verificarLayoutMobile();
-               
-               // Verificar se os cards estão visíveis no mobile
-               const isMobile = window.innerWidth <= 768;
-               if (isMobile && mobileCards) {
-                   console.log('📱 Verificando visibilidade dos cards mobile...');
-                   console.log('  - mobileCards.style.display:', mobileCards.style.display);
-                   console.log('  - mobileCards.offsetHeight:', mobileCards.offsetHeight);
-                   console.log('  - mobileCards.children.length:', mobileCards.children.length);
-                   
-                   if (mobileCards.children.length > 0) {
-                       console.log('✅ Cards mobile criados e devem estar visíveis');
-                   } else {
-                       console.error('❌ Nenhum card mobile foi criado!');
-                   }
-               }
-           }, 100);
+           // Layout responsivo controlado por classes Bootstrap (d-none d-md-block / d-block d-md-none)
+           // Não é mais necessário forçar exibição via JavaScript
 }
 
 // Função para formatar categorias de habilitação
@@ -2078,22 +2284,23 @@ function criarModalVisualizacao() {
     const modal = document.createElement('div');
     modal.id = 'modalVisualizacaoInstrutor';
     modal.className = 'custom-modal modal-visualizacao-responsive';
+    modal.style.cssText = 'display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; overflow-y: auto; overflow-x: hidden;';
     
     modal.innerHTML = `
-        <div class="custom-modal-dialog modal-dialog-responsive">
-            <div class="modal-header modal-header-responsive">
-                <h5 class="modal-title modal-title-responsive">
+        <div class="custom-modal-dialog modal-dialog-responsive" style="position: relative; width: 95%; max-width: 1200px; margin: 20px auto; background: white; border-radius: 0.5rem; box-shadow: 0 0.5rem 1rem rgba(0,0,0,0.15); overflow: hidden; display: block; max-height: 90vh; overflow-y: auto;">
+            <div class="modal-header modal-header-responsive" style="background: linear-gradient(135deg, #17a2b8 0%, #138496 100%); color: white; border-bottom: none; padding: 0.75rem 1.5rem; flex-shrink: 0;">
+                <h5 class="modal-title modal-title-responsive" style="color: white; font-weight: 600; font-size: 1.25rem; margin: 0;">
                     <i class="fas fa-eye me-2"></i>Visualizar Instrutor
                 </h5>
-                <button type="button" class="btn-close btn-close-responsive" onclick="fecharModalVisualizacao()">&times;</button>
+                <button type="button" class="btn-close btn-close-responsive" id="btnFecharModalVisualizacaoX" style="filter: invert(1); background: none; border: none; font-size: 1.25rem; color: white; opacity: 0.8; cursor: pointer;">&times;</button>
             </div>
-            <div class="modal-body modal-body-responsive">
+            <div class="modal-body modal-body-responsive" style="overflow-y: auto; padding: 1rem; max-height: calc(90vh - 200px);">
                 <div id="conteudoVisualizacao">
                     <!-- Conteúdo será preenchido dinamicamente -->
                 </div>
             </div>
-            <div class="modal-footer modal-footer-responsive">
-                <button type="button" class="btn btn-secondary btn-responsive" onclick="fecharModalVisualizacao()">
+            <div class="modal-footer modal-footer-responsive" style="background: #f8f9fa; border-top: 1px solid #dee2e6; padding: 0.75rem 1.5rem; flex-shrink: 0;">
+                <button type="button" class="btn btn-secondary btn-responsive" id="btnFecharModalVisualizacao">
                     <i class="fas fa-times me-1"></i>Fechar
                 </button>
                 <button type="button" class="btn btn-primary btn-responsive" id="btnEditarInstrutor">
@@ -2106,16 +2313,56 @@ function criarModalVisualizacao() {
     // Adicionar listener para fechar modal ao clicar fora
     modal.addEventListener('click', function(e) {
         if (e.target === modal) {
+            console.log('🖱️ Clicou fora do modal, fechando...');
             fecharModalVisualizacao();
         }
     });
     
-    // Adicionar listener para tecla ESC
-    modal.addEventListener('keydown', function(e) {
+    // Adicionar listener para tecla ESC no documento (não no modal, pois modal pode não ter foco)
+    const escHandler = function(e) {
         if (e.key === 'Escape') {
-            fecharModalVisualizacao();
+            const modalAtual = document.getElementById('modalVisualizacaoInstrutor');
+            if (modalAtual && modalAtual.style.display === 'block') {
+                console.log('⌨️ Tecla ESC pressionada, fechando modal...');
+                fecharModalVisualizacao();
+                document.removeEventListener('keydown', escHandler);
+            }
         }
-    });
+    };
+    document.addEventListener('keydown', escHandler);
+    
+    // Garantir que os botões de fechar tenham listeners diretos
+    setTimeout(() => {
+        const btnFechar = document.getElementById('btnFecharModalVisualizacao');
+        if (btnFechar) {
+            // Remover listener anterior se existir
+            const novoBtnFechar = btnFechar.cloneNode(true);
+            btnFechar.parentNode.replaceChild(novoBtnFechar, btnFechar);
+            
+            novoBtnFechar.addEventListener('click', function(e) {
+                console.log('🖱️ [fecharModalVisualizacao] Botão Fechar clicado (listener direto)');
+                e.preventDefault();
+                e.stopPropagation();
+                fecharModalVisualizacao();
+            });
+            console.log('✅ Listener adicionado ao botão Fechar');
+        }
+        
+        const btnClose = document.getElementById('btnFecharModalVisualizacaoX');
+        if (btnClose) {
+            // Remover listener anterior se existir
+            const novoBtnClose = btnClose.cloneNode(true);
+            btnClose.parentNode.replaceChild(novoBtnClose, btnClose);
+            
+            novoBtnClose.addEventListener('click', function(e) {
+                console.log('🖱️ [fecharModalVisualizacao] Botão X clicado (listener direto)');
+                e.preventDefault();
+                e.stopPropagation();
+                fecharModalVisualizacao();
+            });
+            console.log('✅ Listener adicionado ao botão X');
+        }
+    }, 100);
     
     return modal;
 }
@@ -2422,49 +2669,93 @@ function preencherModalVisualizacao(instrutor) {
         console.log('🔧 CSS inline aplicado para forçar layout em coluna única e foto circular');
     }
     
-    // Configurar botão de editar
+    // Configurar botão de editar dentro do modal de visualização
     const btnEditar = document.getElementById('btnEditarInstrutor');
     if (btnEditar) {
-        btnEditar.onclick = function() {
-            // Fechar modal de visualização primeiro
-            fecharModalVisualizacao();
+        // Remover listeners anteriores para evitar duplicação
+        const novoBtnEditar = btnEditar.cloneNode(true);
+        btnEditar.parentNode.replaceChild(novoBtnEditar, btnEditar);
+        
+        // Adicionar listener direto (além do que pode estar no onclick inline)
+        novoBtnEditar.addEventListener('click', function(e) {
+            console.log('✏️ [DEBUG] Botão Editar clicado no modal de visualização (listener direto)');
+            e.preventDefault();
+            e.stopPropagation();
             
-            // Aguardar um pouco para garantir que o modal foi fechado antes de abrir o de edição
-            setTimeout(() => {
-                editarInstrutor(instrutor.id);
-            }, 350); // Tempo ligeiramente maior que a animação de fechamento (300ms)
-        };
+            const instrutorId = instrutor.id;
+            if (instrutorId) {
+                console.log('🔄 Fechando modal de visualização para abrir edição...');
+                // Fechar modal de visualização primeiro
+                fecharModalVisualizacao();
+                
+                // Aguardar um pouco para garantir que o modal de visualização fechou
+                setTimeout(() => {
+                    console.log('🔄 Abrindo modal de edição para instrutor ID:', instrutorId);
+                    // Chamar diretamente a função local editarInstrutor (definida neste arquivo)
+                    // NÃO usar window.editarInstrutor para evitar qualquer chance de cair em wrapper legado
+                    console.log('🔄 Chamando editarInstrutor diretamente (função local)...');
+                    if (typeof editarInstrutor === 'function') {
+                        editarInstrutor(instrutorId);
+                    } else {
+                        console.error('❌ Função editarInstrutor não encontrada localmente');
+                        mostrarAlerta('Erro: Função de editar não está disponível', 'danger');
+                    }
+                }, 350);
+            } else {
+                console.error('❌ ID do instrutor não encontrado');
+                mostrarAlerta('Erro: ID do instrutor não encontrado', 'danger');
+            }
+        });
+        
+        console.log('✅ Botão Editar configurado no modal de visualização');
+    } else {
+        console.warn('⚠️ Botão btnEditarInstrutor não encontrado');
     }
 }
 
 function fecharModalVisualizacao() {
-    console.log('🚪 Fechando modal de visualização...');
+    console.log('🚪 [fecharModalVisualizacao] Iniciando fechamento do modal de visualização...');
     const modal = document.getElementById('modalVisualizacaoInstrutor');
-    if (modal) {
-        const modalDialog = modal.querySelector('.custom-modal-dialog');
-        if (modalDialog) {
-            modalDialog.style.opacity = '0';
-            modalDialog.style.transform = 'translateY(-20px)';
-        }
-        
-        // Remover classe show para garantir que não interfira com outros modais
-        modal.classList.remove('show');
-        
-        setTimeout(() => {
-            // FORÇAR fechamento do modal
-            modal.style.setProperty('display', 'none', 'important');
-            modal.style.setProperty('visibility', 'hidden', 'important');
-            modal.style.setProperty('opacity', '0', 'important');
-            
-            // Limpar o conteúdo para evitar conflitos
-            const conteudoVisualizacao = document.getElementById('conteudoVisualizacao');
-            if (conteudoVisualizacao) {
-                conteudoVisualizacao.innerHTML = '';
-            }
-            
-            console.log('✅ Modal de visualização fechado com sucesso');
-        }, 300);
+    if (!modal) {
+        console.warn('⚠️ Modal de visualização não encontrado no DOM');
+        // Mesmo assim, garantir que o body não está travado
+        document.body.style.overflow = 'auto';
+        return;
     }
+    
+    console.log('🔍 Modal encontrado, fechando...');
+    
+    // Remover classe show
+    modal.classList.remove('show');
+    
+    // Restaurar scroll do body IMEDIATAMENTE
+    document.body.style.overflow = 'auto';
+    document.body.style.removeProperty('overflow');
+    document.body.style.removeProperty('position');
+    document.body.style.removeProperty('top');
+    document.body.style.removeProperty('width');
+    console.log('✅ Scroll do body restaurado');
+    
+    // Fechar modal imediatamente (sem animação)
+    modal.style.setProperty('display', 'none', 'important');
+    modal.style.setProperty('visibility', 'hidden', 'important');
+    modal.style.setProperty('opacity', '0', 'important');
+    
+    // Limpar propriedades de estilo
+    const propsToRemove = ['z-index', 'position', 'top', 'left', 'width', 'height', 'background', 'overflow', 'pointer-events'];
+    propsToRemove.forEach(prop => {
+        modal.style.removeProperty(prop);
+    });
+    
+    // Remover modal do DOM para garantir limpeza completa
+    setTimeout(() => {
+        if (modal.parentNode) {
+            modal.remove();
+            console.log('✅ Modal de visualização removido do DOM');
+        }
+    }, 100);
+    
+    console.log('✅ Modal de visualização fechado com sucesso');
 }
 
 function formatarDiasSemana(diasSemana) {

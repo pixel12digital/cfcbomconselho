@@ -1,4 +1,10 @@
 <?php
+// Verificar permissões - apenas admin e secretaria podem gerenciar usuários
+if (!canManageUsers()) {
+    echo '<div class="alert alert-danger">Você não tem permissão para acessar esta página. Apenas administradores e atendentes podem gerenciar usuários.</div>';
+    return;
+}
+
 // Verificar se as variáveis estão definidas
 $action = $_GET['action'] ?? 'list';
 $db = Database::getInstance();
@@ -7,7 +13,20 @@ $db = Database::getInstance();
 $usuarios = [];
 if ($action === 'list') {
     try {
-        $usuarios = $db->fetchAll("SELECT * FROM usuarios ORDER BY nome");
+        // Buscar também último acesso se a coluna existir
+        $usuarios = $db->fetchAll("
+            SELECT 
+                id,
+                nome,
+                email,
+                tipo,
+                ativo,
+                criado_em,
+                atualizado_em,
+                COALESCE(ultimo_login, NULL) as ultimo_acesso
+            FROM usuarios 
+            ORDER BY nome
+        ");
     } catch (Exception $e) {
         $usuarios = [];
         if (LOG_ENABLED) {
@@ -17,440 +36,377 @@ if ($action === 'list') {
 }
 ?>
 
-<!-- CSS específico para corrigir sobreposição -->
+<!-- CSS para Layout de Cards Compacto e Organizado -->
 <style>
-/* Estilos específicos para a página de usuários */
-.user-table {
-    margin-top: var(--spacing-lg);
+/* =====================================================
+   LAYOUT DE CARDS DE USUÁRIOS - COMPACTO E ORGANIZADO
+   ===================================================== */
+
+/* Container do Grid de Usuários */
+.users-grid-container {
+    padding: 0;
 }
 
-.user-actions {
+.users-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1rem;
+    padding: 0;
+}
+
+/* Card Individual de Usuário */
+.user-card {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+    transition: all 0.2s ease;
     display: flex;
-    gap: var(--spacing-xs);
+    flex-direction: column;
+    overflow: hidden;
 }
 
-.user-actions .btn {
-    padding: 4px 8px;
-    font-size: 12px;
+.user-card:hover {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
 }
 
-.user-badge {
-    font-size: 11px;
-    padding: 4px 6px;
+/* Linha 1: Header com Nome e Badges */
+.user-card-header {
+    padding: 1rem 1rem 0.75rem 1rem;
+    border-bottom: 1px solid #f0f0f0;
 }
 
-/* CORREÇÃO CRÍTICA: Eliminar "tabela dentro de tabela" */
+.user-card-title-section {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.user-card-name {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #212529;
+    margin: 0;
+    line-height: 1.3;
+    word-break: break-word;
+}
+
+.user-card-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.user-badge-type,
+.user-badge-status {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.65rem;
+    border-radius: 0.375rem;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+
+.user-badge-type i {
+    font-size: 0.7rem;
+}
+
+/* Linha 2: Informações do Usuário */
+.user-card-body {
+    padding: 0.75rem 1rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.user-info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    line-height: 1.4;
+}
+
+.user-info-icon {
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-top: 0.15rem;
+    flex-shrink: 0;
+    width: 16px;
+    text-align: center;
+}
+
+.user-info-label {
+    color: #6c757d;
+    font-weight: 500;
+    min-width: 85px;
+    flex-shrink: 0;
+}
+
+.user-info-value {
+    color: #212529;
+    word-break: break-word;
+    flex: 1;
+}
+
+/* Linha 3: Botões de Ação */
+.user-card-footer {
+    padding: 0.75rem 1rem;
+    border-top: 1px solid #f0f0f0;
+    background-color: #fafafa;
+}
+
+.user-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.user-card-actions .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.75rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    border-radius: 0.375rem;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.user-card-actions .btn i {
+    font-size: 0.8rem;
+}
+
+.user-card-actions .btn .btn-text {
+    display: inline;
+}
+
+.user-card-actions .btn-sm {
+    padding: 0.35rem 0.65rem;
+    font-size: 0.8rem;
+}
+
+/* Cores dos Botões */
+.btn-edit {
+    background-color: #0d6efd;
+    color: white;
+    border: 1px solid #0d6efd;
+}
+
+.btn-edit:hover {
+    background-color: #0b5ed7;
+    border-color: #0b5ed7;
+    color: white;
+}
+
+.btn-delete {
+    background-color: #dc3545;
+    color: white;
+    border: 1px solid #dc3545;
+}
+
+.btn-delete:hover {
+    background-color: #bb2d3b;
+    border-color: #bb2d3b;
+    color: white;
+}
+
+/* Badges de Status */
+.badge-success {
+    background-color: #198754;
+    color: white;
+}
+
+.badge-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.badge-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.badge-primary {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.badge-warning {
+    background-color: #ffc107;
+    color: #212529;
+}
+
+.badge-info {
+    background-color: #0dcaf0;
+    color: #212529;
+}
+
+/* Header do Card Principal */
 .card-header {
-    display: block !important;
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    justify-content: center !important;
-    padding: var(--spacing-lg) var(--spacing-xl) !important;
-    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%) !important;
-    border-bottom: 1px solid var(--gray-200) !important;
-    font-weight: var(--font-weight-semibold) !important;
-    color: var(--gray-700) !important;
-    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0 !important;
-    margin: 0 !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
+    padding: 1rem 1.25rem;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-bottom: 1px solid #dee2e6;
+    border-radius: 0.5rem 0.5rem 0 0;
 }
 
 .card-header h3 {
-    margin: 0 !important;
-    padding: 0 !important;
-    font-size: var(--font-size-xl) !important;
-    font-weight: var(--font-weight-bold) !important;
-    color: var(--gray-800) !important;
-    line-height: 1.2 !important;
+    margin: 0;
+    padding: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #212529;
 }
 
-/* Garantir que card-header não herde estilos de tabela */
-.card-header,
-.card-header * {
-    display: block !important;
-    display: flex !important;
-    box-sizing: border-box !important;
+/* Estilos para o filtro de tipo de usuário */
+.card-header .d-flex {
+    flex-wrap: wrap;
+    gap: 0.75rem;
 }
 
-.card-header h3 {
-    display: block !important;
+#filtroTipoUsuario {
+    font-size: 0.875rem;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    background-color: white;
+    cursor: pointer;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-/* Garantir que a tabela real tenha estilos corretos */
-.table-container {
-    overflow-x: auto;
-    max-width: 100%;
-    background: var(--white);
-    border-radius: 0 0 var(--border-radius-lg) var(--border-radius-lg);
-    box-shadow: none;
+#filtroTipoUsuario:hover {
+    border-color: #86b7fe;
 }
 
-.table {
-    width: 100%;
-    min-width: 600px;
-    table-layout: fixed;
-    border-collapse: separate !important;
-    border-spacing: 0 !important;
-    margin: 0 !important;
-    border: none !important;
+#filtroTipoUsuario:focus {
+    border-color: #86b7fe;
+    outline: 0;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
 }
 
-.table th {
-    background: linear-gradient(135deg, var(--gray-50) 0%, var(--gray-100) 100%) !important;
-    padding: 12px 8px !important;
-    text-align: left !important;
-    font-weight: var(--font-weight-semibold) !important;
-    color: var(--gray-700) !important;
-    border-bottom: 2px solid var(--gray-200) !important;
-    border-top: none !important;
-    border-left: none !important;
-    border-right: none !important;
-}
-
-.table th:first-child {
-    border-top-left-radius: 0 !important;
-}
-
-.table th:last-child {
-    border-top-right-radius: 0 !important;
-}
-
-.table td {
-    padding: 12px 8px !important;
-    border-bottom: 1px solid var(--gray-200) !important;
-    border-left: none !important;
-    border-right: none !important;
-    border-top: none !important;
-    color: var(--gray-800) !important;
-    vertical-align: middle !important;
-    white-space: nowrap !important;
-    overflow: hidden !important;
-    text-overflow: ellipsis !important;
-}
-
-.table tbody tr:hover {
-    background-color: var(--gray-50) !important;
-}
-
-.table tbody tr:last-child td {
-    border-bottom: none !important;
-}
-
-.table tbody tr:last-child td:first-child {
-    border-bottom-left-radius: var(--border-radius-lg) !important;
-}
-
-.table tbody tr:last-child td:last-child {
-    border-bottom-right-radius: var(--border-radius-lg) !important;
-}
-
-/* Larguras específicas das colunas */
-.table th:nth-child(1),
-.table td:nth-child(1) {
-    width: 35% !important;
-    min-width: 150px !important;
-}
-
-.table th:nth-child(2),
-.table td:nth-child(2) {
-    width: 20% !important;
-    min-width: 100px !important;
-}
-
-.table th:nth-child(3),
-.table td:nth-child(3) {
-    width: 15% !important;
-    min-width: 80px !important;
-}
-
-.table th:nth-child(4),
-.table td:nth-child(4) {
-    width: 15% !important;
-    min-width: 80px !important;
-}
-
-.table th:nth-child(5),
-.table td:nth-child(5) {
-    width: 15% !important;
-    min-width: 100px !important;
-}
-
-/* Botões de ação na tabela */
-.action-buttons-container {
-    display: flex !important;
-    gap: 8px !important;
-    align-items: center !important;
-    justify-content: center !important;
-}
-
-.action-btn {
-    width: 32px !important;
-    height: 24px !important;
-    padding: 0 !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    border-radius: 4px !important;
-    font-size: 12px !important;
-    min-width: 32px !important;
-    max-width: 32px !important;
+.card-body {
+    padding: 1.25rem;
 }
 
 /* =====================================================
-   RESPONSIVIDADE MOBILE - TABELA DE USUÁRIOS
+   RESPONSIVIDADE - GRID DE CARDS
    ===================================================== */
 
-/* FORÇAR RESPONSIVIDADE - CSS MAIS ESPECÍFICO */
-@media screen and (max-width: 768px), screen and (max-width: 900px) {
-    /* Container da tabela responsivo */
-    .card .card-body .table-container {
-        overflow-x: auto !important;
-        -webkit-overflow-scrolling: touch !important;
-        border-radius: 8px !important;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
-        max-width: 100% !important;
-        width: 100% !important;
+/* Desktop grande (2+ colunas) */
+@media (min-width: 1200px) {
+    .users-grid {
+        grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+        gap: 1.25rem;
+    }
+}
+
+/* Desktop médio (2 colunas) */
+@media (min-width: 768px) and (max-width: 1199px) {
+    .users-grid {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1rem;
+    }
+}
+
+/* Tablet e Mobile (1 coluna) */
+@media (max-width: 767px) {
+    .users-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
     }
     
-    /* Tabela mobile - FORÇAR LARGURA */
-    .card .card-body .table-container .table {
-        min-width: 600px !important;
-        width: 600px !important;
-        font-size: 14px !important;
-        table-layout: fixed !important;
+    .user-card {
+        margin: 0;
     }
     
-    /* Cabeçalho da tabela mobile */
-    .card .card-body .table-container .table th {
-        padding: 8px 6px !important;
-        font-size: 12px !important;
-        white-space: nowrap !important;
-        width: auto !important;
+    .user-card-name {
+        font-size: 1rem;
     }
     
-    /* Células da tabela mobile */
-    .card .card-body .table-container .table td {
-        padding: 8px 6px !important;
-        font-size: 13px !important;
-        white-space: nowrap !important;
-        width: auto !important;
+    .user-info-item {
+        font-size: 0.8125rem;
     }
     
-    /* Ajustar larguras das colunas para mobile */
-    .table th:nth-child(1),
-    .table td:nth-child(1) {
-        width: 30% !important;
-        min-width: 120px !important;
+    .user-info-label {
+        min-width: 75px;
+        font-size: 0.8125rem;
     }
     
-    .table th:nth-child(2),
-    .table td:nth-child(2) {
-        width: 25% !important;
-        min-width: 100px !important;
+    .user-card-actions .btn {
+        padding: 0.35rem 0.6rem;
+        font-size: 0.75rem;
     }
     
-    .table th:nth-child(3),
-    .table td:nth-child(3) {
-        width: 15% !important;
-        min-width: 70px !important;
+    .user-card-actions .btn .btn-text {
+        display: none; /* Ocultar texto em mobile, apenas ícones */
     }
     
-    .table th:nth-child(4),
-    .table td:nth-child(4) {
-        width: 15% !important;
-        min-width: 70px !important;
+    .user-card-actions .btn i {
+        margin: 0;
     }
-    
-    .table th:nth-child(5),
-    .table td:nth-child(5) {
-        width: 15% !important;
-        min-width: 80px !important;
-    }
-    
-    /* Botões de ação mobile */
-    .action-buttons-container {
-        gap: 4px !important;
-        flex-wrap: wrap !important;
-    }
-    
-    .action-btn {
-        width: 28px !important;
-        height: 22px !important;
-        font-size: 11px !important;
-        min-width: 28px !important;
-        max-width: 28px !important;
-    }
-    
-    /* Card mobile */
-    .card {
-        margin: 0 !important;
-        border-radius: var(--border-radius-lg) !important;
-        box-shadow: var(--shadow-sm) !important;
-    }
-    
-    .card-header {
-        padding: var(--spacing-md) !important;
-    }
-    
-    .card-header h3 {
-        font-size: var(--font-size-lg) !important;
-    }
-    
+}
+
+/* Mobile pequeno */
+@media (max-width: 480px) {
     .card-body {
-        padding: var(--spacing-md) !important;
-    }
-}
-
-@media screen and (max-width: 480px), screen and (max-width: 600px) {
-    /* Mobile pequeno - FORÇAR layout em cards */
-    .card .card-body .table-container {
-        display: none !important;
-        overflow: visible !important;
+        padding: 1rem;
     }
     
-    .card .card-body .table-container .table {
-        display: none !important;
-    }
-    
-    /* Cards para mobile pequeno - FORÇAR VISIBILIDADE */
-    .card .card-body .mobile-user-cards {
-        display: block !important;
-        width: 100% !important;
-    }
-    
-    .mobile-user-card {
-        background: var(--white) !important;
-        border: 1px solid var(--gray-200) !important;
-        border-radius: var(--border-radius-lg) !important;
-        padding: var(--spacing-md) !important;
-        margin-bottom: var(--spacing-md) !important;
-        box-shadow: var(--shadow-sm) !important;
-    }
-    
-    .mobile-user-card:last-child {
-        margin-bottom: 0 !important;
-    }
-    
-    .mobile-user-header {
-        display: flex !important;
-        justify-content: space-between !important;
+    /* Filtro em mobile: empilhar verticalmente */
+    .card-header .d-flex {
+        flex-direction: column;
         align-items: flex-start !important;
-        margin-bottom: var(--spacing-sm) !important;
     }
     
-    .mobile-user-name {
-        font-weight: var(--font-weight-semibold) !important;
-        color: var(--gray-800) !important;
-        font-size: var(--font-size-md) !important;
-        margin: 0 !important;
+    .card-header .d-flex > div:last-child {
+        width: 100%;
     }
     
-    .mobile-user-badge {
-        font-size: 11px !important;
-        padding: 4px 8px !important;
-        border-radius: var(--border-radius) !important;
+    #filtroTipoUsuario {
+        width: 100%;
+        min-width: auto;
     }
     
-    .mobile-user-info {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: var(--spacing-sm) !important;
-        margin-bottom: var(--spacing-sm) !important;
+    .user-card-header {
+        padding: 0.875rem 0.875rem 0.625rem 0.875rem;
     }
     
-    .mobile-user-field {
-        display: flex !important;
-        flex-direction: column !important;
+    .user-card-body {
+        padding: 0.625rem 0.875rem;
     }
     
-    .mobile-user-label {
-        font-size: 11px !important;
-        color: var(--gray-500) !important;
-        font-weight: var(--font-weight-medium) !important;
-        margin-bottom: 2px !important;
+    .user-card-footer {
+        padding: 0.625rem 0.875rem;
     }
     
-    .mobile-user-value {
-        font-size: 13px !important;
-        color: var(--gray-700) !important;
-        font-weight: var(--font-weight-normal) !important;
+    .user-card-actions {
+        gap: 0.375rem;
     }
     
-    .mobile-user-actions {
-        display: flex !important;
-        gap: var(--spacing-xs) !important;
-        justify-content: flex-end !important;
-        margin-top: var(--spacing-sm) !important;
-    }
-    
-    .mobile-user-actions .action-btn {
-        width: 32px !important;
-        height: 28px !important;
-        font-size: 12px !important;
-    }
-}
-
-.action-btn i {
-    margin: 0 !important;
-    font-size: 12px !important;
-}
-
-/* Responsividade da tabela */
-@media (max-width: 1200px) {
-    .table {
-        min-width: 500px !important;
-    }
-    
-    .table th,
-    .table td {
-        padding: 8px 6px !important;
-        font-size: 14px !important;
-    }
-}
-
-@media (max-width: 768px) {
-    .table {
-        min-width: 400px !important;
-    }
-    
-    .table th,
-    .table td {
-        padding: 6px 4px !important;
-        font-size: 12px !important;
-    }
-    
-    .badge {
-        font-size: 10px !important;
-        padding: 4px 6px !important;
-    }
-    
-    .action-btn {
-        width: 28px !important;
-        height: 20px !important;
-        min-width: 28px !important;
-        max-width: 28px !important;
-    }
-    
-    .action-btn i {
-        font-size: 10px !important;
+    .user-card-actions .btn {
+        padding: 0.4rem;
+        min-width: 36px;
+        justify-content: center;
     }
 }
 </style>
 
 <!-- Header da Página -->
-<div class="page-header-management">
-    <div class="header-content">
-        <h1 class="page-title">Gerenciar Usuários</h1>
-        <p class="page-subtitle">Cadastro e gerenciamento de usuários do sistema</p>
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <div>
+        <h1 class="h3 mb-1">Gerenciar Usuários</h1>
+        <p class="text-muted mb-0" style="font-size: 0.875rem;">Cadastro e gerenciamento de usuários do sistema</p>
     </div>
-    <div class="page-actions">
+    <div class="d-flex gap-2">
         <button class="btn btn-primary" id="btnNovoUsuario" title="Novo Usuário">
-            <i class="fas fa-plus"></i>
-        </button>
-        <button class="btn btn-outline-primary" id="btnExportar" title="Exportar Dados">
-            <i class="fas fa-download"></i>
+            <i class="fas fa-plus me-1"></i>
+            Novo Usuário
         </button>
     </div>
 </div>
@@ -459,147 +415,106 @@ if ($action === 'list') {
     <!-- Lista de Usuários -->
     <div class="card">
         <div class="card-header">
-            <h3>Usuários Cadastrados</h3>
+            <div class="d-flex justify-content-between align-items-center">
+                <h3 class="mb-0">Usuários Cadastrados</h3>
+                <div class="d-flex align-items-center gap-2">
+                    <label for="filtroTipoUsuario" class="mb-0 me-2 small text-muted">
+                        Filtrar por tipo:
+                    </label>
+                    <select id="filtroTipoUsuario" class="form-select form-select-sm" style="min-width: 200px;">
+                        <option value="todos">Todos</option>
+                        <option value="admin">Administradores</option>
+                        <option value="secretaria">Atendentes CFC</option>
+                        <option value="instrutor">Instrutores</option>
+                        <option value="aluno">Alunos</option>
+                    </select>
+                </div>
+            </div>
         </div>
         <div class="card-body">
             <?php if (!empty($usuarios)): ?>
-                <div class="table-container">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>Nome</th>
-                                <th>Tipo</th>
-                                <th>Status</th>
-                                <th>Criado em</th>
-                                <th>Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($usuarios as $usuario): ?>
-                                <tr>
-                                    <td>
-                                        <div class="font-weight-semibold"><?php echo htmlspecialchars($usuario['nome']); ?></div>
-                                    </td>
-                                    <td>
-                                        <?php 
-                                        $tipoDisplay = [
-                                            'admin' => ['text' => 'Administrador', 'class' => 'danger'],
-                                            'secretaria' => ['text' => 'Atendente CFC', 'class' => 'primary'],
-                                            'instrutor' => ['text' => 'Instrutor', 'class' => 'warning'],
-                                            'aluno' => ['text' => 'Aluno', 'class' => 'info']
-                                        ];
-                                        $tipoInfo = $tipoDisplay[$usuario['tipo']] ?? ['text' => ucfirst($usuario['tipo']), 'class' => 'secondary'];
-                                        ?>
-                                        <span class="badge badge-<?php echo $tipoInfo['class']; ?>">
-                                            <?php echo $tipoInfo['text']; ?>
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <span class="badge badge-<?php echo $usuario['ativo'] ? 'success' : 'secondary'; ?>">
-                                            <?php echo $usuario['ativo'] ? 'Ativo' : 'Inativo'; ?>
-                                        </span>
-                                    </td>
-                                    <td><?php echo date('d/m/Y', strtotime($usuario['criado_em'])); ?></td>
-                                    <td>
-                                        <div class="action-buttons-container">
-                                            <!-- Botão de edição -->
-                                            <button class="btn btn-edit action-btn btn-editar-usuario" 
-                                                    data-user-id="<?php echo $usuario['id']; ?>"
-                                                    title="Editar dados do usuário">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            
-                                            <!-- Botão de redefinir senha -->
-                                            <button class="btn btn-warning action-btn btn-redefinir-senha" 
-                                                    data-user-id="<?php echo $usuario['id']; ?>"
-                                                    data-user-name="<?php echo htmlspecialchars($usuario['nome']); ?>"
-                                                    data-user-email="<?php echo htmlspecialchars($usuario['email']); ?>"
-                                                    data-user-type="<?php echo $usuario['tipo']; ?>"
-                                                    title="Redefinir senha do usuário">
-                                                <i class="fas fa-key"></i>
-                                            </button>
-                                            
-                                            <!-- Botão de exclusão destacado -->
-                                            <button class="btn btn-delete action-btn btn-excluir-usuario" 
-                                                    data-user-id="<?php echo $usuario['id']; ?>"
-                                                    title="ATENCAO: EXCLUIR USUARIO - Esta acao nao pode ser desfeita!">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                <!-- Layout de Cards Responsivo - Unificado para Desktop e Mobile -->
+                <div class="users-grid-container">
+                    <div class="users-grid">
+                        <?php foreach ($usuarios as $usuario): ?>
+                            <?php 
+                            $tipoDisplay = [
+                                'admin' => ['text' => 'Administrador', 'class' => 'danger', 'icon' => 'user-cog'],
+                                'secretaria' => ['text' => 'Atendente CFC', 'class' => 'primary', 'icon' => 'user-tie'],
+                                'instrutor' => ['text' => 'Instrutor', 'class' => 'warning', 'icon' => 'chalkboard-teacher'],
+                                'aluno' => ['text' => 'Aluno', 'class' => 'info', 'icon' => 'user']
+                            ];
+                            $tipoInfo = $tipoDisplay[$usuario['tipo']] ?? ['text' => ucfirst($usuario['tipo']), 'class' => 'secondary', 'icon' => 'user'];
+                            // Marcar card com data-tipo para filtro
+                            $tipoUsuario = strtolower($usuario['tipo'] ?? '');
+                            ?>
+                            <div class="user-card" data-tipo="<?php echo htmlspecialchars($tipoUsuario); ?>">
+                                <!-- Linha 1: Nome e Badges -->
+                                <div class="user-card-header">
+                                    <div class="user-card-title-section">
+                                        <h4 class="user-card-name"><?php echo htmlspecialchars($usuario['nome']); ?></h4>
+                                        <div class="user-card-badges">
+                                            <span class="badge badge-<?php echo $tipoInfo['class']; ?> user-badge-type">
+                                                <i class="fas fa-<?php echo $tipoInfo['icon']; ?>"></i>
+                                                <?php echo $tipoInfo['text']; ?>
+                                            </span>
+                                            <span class="badge badge-<?php echo $usuario['ativo'] ? 'success' : 'secondary'; ?> user-badge-status">
+                                                <?php echo $usuario['ativo'] ? 'Ativo' : 'Inativo'; ?>
+                                            </span>
                                         </div>
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-                
-                <!-- Layout Mobile em Cards (oculto por padrão) -->
-                <div class="mobile-user-cards" style="display: none;">
-                    <?php foreach ($usuarios as $usuario): ?>
-                        <div class="mobile-user-card">
-                            <div class="mobile-user-header">
-                                <h4 class="mobile-user-name"><?php echo htmlspecialchars($usuario['nome']); ?></h4>
-                                <?php 
-                                $tipoDisplay = [
-                                    'admin' => ['text' => 'Admin', 'class' => 'danger'],
-                                    'secretaria' => ['text' => 'CFC', 'class' => 'primary'],
-                                    'instrutor' => ['text' => 'Instrutor', 'class' => 'warning'],
-                                    'aluno' => ['text' => 'Aluno', 'class' => 'info']
-                                ];
-                                $tipoInfo = $tipoDisplay[$usuario['tipo']] ?? ['text' => ucfirst($usuario['tipo']), 'class' => 'secondary'];
-                                ?>
-                                <span class="badge badge-<?php echo $tipoInfo['class']; ?> mobile-user-badge">
-                                    <?php echo $tipoInfo['text']; ?>
-                                </span>
+                                    </div>
+                                </div>
+                                
+                                <!-- Linha 2: Informações -->
+                                <div class="user-card-body">
+                                    <div class="user-info-item">
+                                        <i class="fas fa-envelope user-info-icon"></i>
+                                        <span class="user-info-label">E-mail:</span>
+                                        <span class="user-info-value"><?php echo htmlspecialchars($usuario['email']); ?></span>
+                                    </div>
+                                    <div class="user-info-item">
+                                        <i class="fas fa-calendar-plus user-info-icon"></i>
+                                        <span class="user-info-label">Criado em:</span>
+                                        <span class="user-info-value"><?php echo date('d/m/Y', strtotime($usuario['criado_em'])); ?></span>
+                                    </div>
+                                    <?php if (isset($usuario['ultimo_acesso']) && $usuario['ultimo_acesso']): ?>
+                                    <div class="user-info-item">
+                                        <i class="fas fa-clock user-info-icon"></i>
+                                        <span class="user-info-label">Último acesso:</span>
+                                        <span class="user-info-value"><?php echo date('d/m/Y H:i', strtotime($usuario['ultimo_acesso'])); ?></span>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <!-- Linha 3: Botões de Ação -->
+                                <div class="user-card-footer">
+                                    <div class="user-card-actions">
+                                        <button class="btn btn-sm btn-edit btn-editar-usuario" 
+                                                data-user-id="<?php echo $usuario['id']; ?>"
+                                                title="Editar dados do usuário">
+                                            <i class="fas fa-edit"></i>
+                                            <span class="btn-text">Editar</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-warning btn-redefinir-senha" 
+                                                data-user-id="<?php echo $usuario['id']; ?>"
+                                                data-user-name="<?php echo htmlspecialchars($usuario['nome']); ?>"
+                                                data-user-email="<?php echo htmlspecialchars($usuario['email']); ?>"
+                                                data-user-type="<?php echo $usuario['tipo']; ?>"
+                                                title="Redefinir senha do usuário">
+                                            <i class="fas fa-key"></i>
+                                            <span class="btn-text">Senha</span>
+                                        </button>
+                                        <button class="btn btn-sm btn-delete btn-excluir-usuario" 
+                                                data-user-id="<?php echo $usuario['id']; ?>"
+                                                title="Excluir usuário">
+                                            <i class="fas fa-trash"></i>
+                                            <span class="btn-text">Excluir</span>
+                                        </button>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <div class="mobile-user-info">
-                                <div class="mobile-user-field">
-                                    <span class="mobile-user-label">E-mail</span>
-                                    <span class="mobile-user-value"><?php echo htmlspecialchars($usuario['email']); ?></span>
-                                </div>
-                                <div class="mobile-user-field">
-                                    <span class="mobile-user-label">Status</span>
-                                    <span class="mobile-user-value">
-                                        <span class="badge badge-<?php echo $usuario['ativo'] ? 'success' : 'secondary'; ?>">
-                                            <?php echo $usuario['ativo'] ? 'Ativo' : 'Inativo'; ?>
-                                        </span>
-                                    </span>
-                                </div>
-                                <div class="mobile-user-field">
-                                    <span class="mobile-user-label">Criado em</span>
-                                    <span class="mobile-user-value"><?php echo date('d/m/Y', strtotime($usuario['criado_em'])); ?></span>
-                                </div>
-                                <div class="mobile-user-field">
-                                    <span class="mobile-user-label">Último acesso</span>
-                                    <span class="mobile-user-value">
-                                        <?php echo isset($usuario['ultimo_acesso']) && $usuario['ultimo_acesso'] ? date('d/m/Y H:i', strtotime($usuario['ultimo_acesso'])) : 'Nunca'; ?>
-                                    </span>
-                                </div>
-                            </div>
-                            
-                            <div class="mobile-user-actions">
-                                <button class="btn btn-edit action-btn btn-editar-usuario" 
-                                        data-user-id="<?php echo $usuario['id']; ?>"
-                                        title="Editar">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button class="btn btn-warning action-btn btn-redefinir-senha" 
-                                        data-user-id="<?php echo $usuario['id']; ?>"
-                                        data-user-name="<?php echo htmlspecialchars($usuario['nome']); ?>"
-                                        data-user-email="<?php echo htmlspecialchars($usuario['email']); ?>"
-                                        data-user-type="<?php echo $usuario['tipo']; ?>"
-                                        title="Redefinir Senha">
-                                    <i class="fas fa-key"></i>
-                                </button>
-                                <button class="btn btn-danger action-btn btn-excluir-usuario" 
-                                        data-user-id="<?php echo $usuario['id']; ?>"
-                                        title="Excluir">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
-                        </div>
-                    <?php endforeach; ?>
+                        <?php endforeach; ?>
+                    </div>
                 </div>
             <?php else: ?>
                 <div class="text-center p-5">
@@ -684,50 +599,108 @@ if ($action === 'list') {
 </div>
 
 <!-- Modal de Redefinição de Senha -->
+<!-- Modal de Redefinição de Senha - Versão Completa com Modos Auto/Manual -->
 <div id="resetPasswordModal" class="modal-overlay">
-    <div class="modal">
+    <div class="modal" style="max-width: 600px;">
         <div class="modal-header">
-            <h3 class="modal-title">Redefinir Senha</h3>
+            <h3 class="modal-title">Redefinir Senha do Usuário</h3>
             <button class="modal-close" onclick="closeResetPasswordModal()">
                 <i class="fas fa-times"></i>
             </button>
         </div>
-        <div class="modal-body">
-            <div class="alert alert-warning">
-                <i class="fas fa-exclamation-triangle"></i>
-                <strong>Atenção!</strong> Esta ação irá gerar uma nova senha temporária para o usuário.
+        <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+            <!-- Informações do Usuário -->
+            <div class="user-info mb-3">
+                <h5 class="mb-2">Informações do Usuário:</h5>
+                <p class="mb-1"><strong>Nome:</strong> <span id="resetUserName"></span></p>
+                <p class="mb-1"><strong>E-mail:</strong> <span id="resetUserEmail"></span></p>
+                <p class="mb-0"><strong>Tipo:</strong> <span id="resetUserType"></span></p>
             </div>
             
-            <div class="user-info">
-                <h4>Dados do Usuário:</h4>
-                <p><strong>Nome:</strong> <span id="resetUserName"></span></p>
-                <p><strong>E-mail:</strong> <span id="resetUserEmail"></span></p>
-            </div>
+            <hr class="my-3">
             
-            <div class="form-group">
-                <div class="alert alert-info">
-                    <i class="fas fa-info-circle"></i>
-                    <strong>O que acontecerá:</strong><br>
-                    • Uma nova senha temporária será gerada automaticamente<br>
-                    • As credenciais serão exibidas na tela após a redefinição<br>
-                    • O usuário receberá as novas credenciais por e-mail<br>
-                    • A senha anterior será invalidada imediatamente<br>
-                    • O usuário deve alterar a senha no próximo acesso
+            <!-- Seleção de Modo -->
+            <div class="form-group mb-3">
+                <label class="form-label fw-bold">Modo de Redefinição:</label>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="radio" name="resetMode" id="modeAuto" value="auto" checked onchange="toggleResetMode()">
+                    <label class="form-check-label" for="modeAuto">
+                        <strong>Gerar senha temporária automática</strong> <span class="badge bg-success">Recomendado</span>
+                    </label>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="radio" name="resetMode" id="modeManual" value="manual" onchange="toggleResetMode()">
+                    <label class="form-check-label" for="modeManual">
+                        <strong>Definir nova senha manualmente</strong>
+                    </label>
                 </div>
             </div>
             
+            <!-- Explicação Modo Automático -->
+            <div id="modeAutoInfo" class="alert alert-info mb-3">
+                <i class="fas fa-info-circle"></i>
+                <strong>O que acontecerá:</strong>
+                <ul class="mb-0 mt-2">
+                    <li>Uma senha temporária será gerada automaticamente (8-10 caracteres)</li>
+                    <li>A senha será exibida apenas uma vez após a redefinição</li>
+                    <li>O usuário deverá trocar a senha no primeiro acesso</li>
+                    <li>A senha anterior será invalidada imediatamente</li>
+                    <li>As credenciais serão enviadas por e-mail (se configurado)</li>
+                </ul>
+            </div>
+            
+            <!-- Campos Modo Manual -->
+            <div id="modeManualFields" class="mb-3" style="display: none;">
+                <div class="alert alert-warning mb-3">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Atenção:</strong> A senha definida manualmente não será exibida novamente após salvar.
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="novaSenha" class="form-label">Nova Senha <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="novaSenha" 
+                               placeholder="Mínimo 8 caracteres" 
+                               minlength="8" 
+                               oninput="validateManualPassword()">
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('novaSenha', 'toggleNovaSenha')">
+                            <i class="fas fa-eye" id="toggleNovaSenha"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">A senha deve ter no mínimo 8 caracteres</small>
+                    <div id="novaSenhaError" class="text-danger mt-1" style="display: none;"></div>
+                </div>
+                
+                <div class="form-group mb-3">
+                    <label for="novaSenhaConfirmacao" class="form-label">Confirmar Nova Senha <span class="text-danger">*</span></label>
+                    <div class="input-group">
+                        <input type="password" class="form-control" id="novaSenhaConfirmacao" 
+                               placeholder="Digite a senha novamente" 
+                               minlength="8" 
+                               oninput="validateManualPassword()">
+                        <button class="btn btn-outline-secondary" type="button" onclick="togglePasswordVisibility('novaSenhaConfirmacao', 'toggleNovaSenhaConfirmacao')">
+                            <i class="fas fa-eye" id="toggleNovaSenhaConfirmacao"></i>
+                        </button>
+                    </div>
+                    <div id="novaSenhaConfirmacaoError" class="text-danger mt-1" style="display: none;"></div>
+                </div>
+            </div>
+            
+            <!-- Confirmação -->
             <div class="form-group">
-                <label class="form-label">
-                    <input type="checkbox" id="confirmResetPassword" required>
-                    Confirmo que desejo redefinir a senha deste usuário
-                </label>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="confirmResetPassword" required onchange="toggleConfirmButton()">
+                    <label class="form-check-label" for="confirmResetPassword">
+                        Confirmo que desejo redefinir a senha deste usuário
+                    </label>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
             <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()">Cancelar</button>
             <button type="button" class="btn btn-warning" id="confirmResetBtn" onclick="confirmResetPassword()" disabled>
                 <i class="fas fa-key"></i>
-                Redefinir Senha
+                <span id="confirmResetBtnText">Redefinir Senha</span>
             </button>
         </div>
     </div>
@@ -843,16 +816,20 @@ window.showCreateUserModal = showCreateUserModal;
 
 // Mostrar modal de edição
 function editUser(userId) {
-    console.log('Funcao editUser chamada para usuario ID: ' + userId);
+    console.log('[USUARIOS] editUser chamado para ID:', userId);
+    
+    // DEBUG: Verificar estado da lista antes de abrir modal
+    const listaContainer = document.querySelector('.users-grid');
+    console.log('[USUARIOS] Container lista ANTES de abrir modal:', listaContainer);
+    console.log('[USUARIOS] Quantidade de cards ANTES:', listaContainer ? listaContainer.children.length : 'container não encontrado');
+    
     isEditMode = true;
     
-    // Buscar dados do usuário
-    const loadingEl = document.querySelector('.card-body');
-    if (loadingEl) {
-        loadingEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Carregando dados do usuario...</p></div>';
-    }
+    // CORREÇÃO DO BUG: Não substituir o conteúdo do .card-body
+    // O modal é um overlay, então não precisa esconder a lista
+    // A busca é rápida, então não precisa de loading destrutivo
     
-    console.log('Buscando dados do usuario na API...');
+    console.log('[USUARIOS] Buscando dados do usuario na API...');
     
     // Buscar dados reais da API
     fetch('api/usuarios.php?id=' + userId)
@@ -869,33 +846,23 @@ function editUser(userId) {
                 document.getElementById('userType').value = currentUser.tipo;
                 document.getElementById('userActive').checked = currentUser.ativo;
                 
-                // Senha não é mais necessária - sistema gera automaticamente
-                // document.getElementById('userPassword').required = false;
-                // document.getElementById('userConfirmPassword').required = false;
-                
                 // Mostrar modal
                 const modal = document.getElementById('userModal');
                 modal.classList.add('show');
+                
+                console.log('[USUARIOS] Modal aberto com sucesso');
+                
+                // DEBUG: Verificar estado da lista após abrir modal
+                const listaAposAbrir = document.querySelector('.users-grid');
+                console.log('[USUARIOS] Container lista APÓS abrir modal:', listaAposAbrir);
+                console.log('[USUARIOS] Quantidade de cards APÓS abrir:', listaAposAbrir ? listaAposAbrir.children.length : 'container não encontrado');
             } else {
                 showNotification(data.error || 'Erro ao carregar usuario', 'error');
             }
         })
         .catch(error => {
-            console.error('Erro:', error);
+            console.error('[USUARIOS] Erro ao carregar usuario:', error);
             showNotification('Erro ao carregar usuario. Tente novamente.', 'error');
-        })
-        .finally(() => {
-            // Restaurar conteúdo da página apenas se houver erro
-            if (loadingEl && !currentUser) {
-                console.log('Erro na edição - restaurando página...');
-                window.location.reload();
-            } else {
-                console.log('Edição carregada com sucesso - modal permanecerá aberto');
-                // Restaurar conteúdo da página sem recarregar
-                if (loadingEl) {
-                    loadingEl.innerHTML = '';
-                }
-            }
         });
 }
 
@@ -904,12 +871,43 @@ window.editUser = editUser;
 
 // Fechar modal
 function closeUserModal() {
-    console.log('Fechando modal...');
+    console.log('[USUARIOS] closeUserModal chamado');
+    
+    // DEBUG: Verificar estado da lista antes de fechar modal
+    const listaAntes = document.querySelector('.users-grid');
+    console.log('[USUARIOS] Container lista ANTES de fechar modal:', listaAntes);
+    console.log('[USUARIOS] Quantidade de cards ANTES de fechar:', listaAntes ? listaAntes.children.length : 'container não encontrado');
+    console.log('[USUARIOS] Display da lista ANTES:', listaAntes ? getComputedStyle(listaAntes).display : 'n/a');
+    
     const modal = document.getElementById('userModal');
-    modal.classList.remove('show');
-    document.getElementById('userForm').reset();
+    if (modal) {
+        modal.classList.remove('show');
+    }
+    
+    const form = document.getElementById('userForm');
+    if (form) {
+        form.reset();
+    }
+    
     currentUser = null;
-    console.log('Modal fechado com sucesso!');
+    isEditMode = false;
+    
+    console.log('[USUARIOS] Modal fechado');
+    
+    // DEBUG: Verificar estado da lista após fechar modal
+    const listaApos = document.querySelector('.users-grid');
+    console.log('[USUARIOS] Container lista APÓS fechar modal:', listaApos);
+    console.log('[USUARIOS] Quantidade de cards APÓS fechar:', listaApos ? listaApos.children.length : 'container não encontrado');
+    console.log('[USUARIOS] Display da lista APÓS:', listaApos ? getComputedStyle(listaApos).display : 'n/a');
+    
+    // GARANTIA: Se a lista não existir, recarregar a página
+    if (!listaApos || listaApos.children.length === 0) {
+        console.error('[USUARIOS] ⚠️ LISTA PERDIDA! Recarregando página...');
+        window.location.reload();
+        return;
+    }
+    
+    console.log('[USUARIOS] ✅ Lista preservada após fechar modal');
 }
 
 // Garantir que a função esteja disponível globalmente
@@ -974,11 +972,9 @@ function saveUser() {
         userData.id = formData.get('id');
     }
     
-    // Mostrar loading
-    const loadingEl = document.querySelector('.card-body');
-    if (loadingEl) {
-        loadingEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Salvando usuário...</p></div>';
-    }
+    // CORREÇÃO: Não substituir conteúdo da lista durante salvamento
+    // Usar notificação em vez de loading destrutivo
+    showNotification('Salvando usuário...', 'info');
     
     // Fazer requisição para a API
     const url = isEditMode ? 'api/usuarios.php' : 'api/usuarios.php';
@@ -1035,12 +1031,7 @@ Clique em "OK" para abrir a página completa de credenciais.
         console.error('Erro:', error);
         showNotification('Erro ao salvar usuário. Tente novamente.', 'error');
     })
-    .finally(() => {
-        // Restaurar conteúdo da página
-        if (loadingEl) {
-            window.location.reload();
-        }
-    });
+    // Não precisa de finally - reload já está no then() em caso de sucesso
 }
 
 // Garantir que a função esteja disponível globalmente
@@ -1059,11 +1050,9 @@ function deleteUser(userId) {
     if (confirm('⚠️ ATENÇÃO!\n\nTem certeza que deseja excluir este usuário?\n\nEsta ação NÃO pode ser desfeita!')) {
         console.log('Confirmacao recebida, excluindo usuario ID:', userId);
         
-        // Mostrar loading
-        const loadingEl = document.querySelector('.card-body');
-        if (loadingEl) {
-            loadingEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Excluindo usuario...</p></div>';
-        }
+        // CORREÇÃO: Não substituir conteúdo da lista durante exclusão
+        // Usar notificação em vez de loading destrutivo
+        showNotification('Excluindo usuário...', 'info');
         
         // URL da API
         const apiUrl = 'api/usuarios.php?id=' + encodeURIComponent(userId);
@@ -1174,15 +1163,13 @@ window.deleteUser = deleteUser;
 
 // Exportar usuários
 function exportUsers() {
-    console.log('Funcao exportUsers chamada!');
+    console.log('[USUARIOS] exportUsers chamado');
     
-    // Mostrar loading
-    const loadingEl = document.querySelector('.card-body');
-    if (loadingEl) {
-        loadingEl.innerHTML = '<div class="text-center p-5"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Carregando...</span></div><p class="mt-2">Preparando exportacao...</p></div>';
-    }
+    // CORREÇÃO: Não substituir conteúdo da lista durante exportação
+    // Usar notificação em vez de loading destrutivo
+    showNotification('Preparando exportação...', 'info');
     
-    console.log('Buscando dados dos usuarios na API...');
+    console.log('[USUARIOS] Buscando dados dos usuarios na API...');
     
     // Buscar dados reais da API
     fetch('api/usuarios.php')
@@ -1211,12 +1198,7 @@ function exportUsers() {
             console.error('Erro:', error);
             showNotification('Erro ao exportar usuários. Tente novamente.', 'error');
         })
-        .finally(() => {
-            // Restaurar conteúdo da página
-            if (loadingEl) {
-                window.location.reload();
-            }
-        });
+        // Não precisa de finally - exportação não destrói a lista
 }
 
 // Garantir que a função esteja disponível globalmente
@@ -1263,28 +1245,33 @@ function showResetPasswordModal(userId, userName, userEmail, userType) {
         type: userType
     };
     
+    // Mapear tipo para exibição
+    const tipoDisplay = {
+        'admin': 'Administrador',
+        'secretaria': 'Atendente CFC',
+        'instrutor': 'Instrutor',
+        'aluno': 'Aluno'
+    };
+    
     // Preencher dados do usuário no modal
     document.getElementById('resetUserName').textContent = userName;
     document.getElementById('resetUserEmail').textContent = userEmail;
+    document.getElementById('resetUserType').textContent = tipoDisplay[userType] || userType;
     
-    // Resetar checkbox e botão
+    // Resetar formulário
     document.getElementById('confirmResetPassword').checked = false;
     document.getElementById('confirmResetBtn').disabled = true;
+    document.getElementById('modeAuto').checked = true;
+    document.getElementById('modeManual').checked = false;
     
-    // Garantir que a tabela de usuários esteja visível antes de abrir o modal
-    const tableContainer = document.querySelector('.table-container');
-    const mobileCards = document.querySelector('.mobile-user-cards');
+    // Limpar campos modo manual
+    document.getElementById('novaSenha').value = '';
+    document.getElementById('novaSenhaConfirmacao').value = '';
+    document.getElementById('novaSenhaError').style.display = 'none';
+    document.getElementById('novaSenhaConfirmacaoError').style.display = 'none';
     
-    if (tableContainer) {
-        tableContainer.style.display = 'block';
-    }
-    
-    if (mobileCards) {
-        const viewportWidth = window.innerWidth;
-        if (viewportWidth <= 600) {
-            mobileCards.style.display = 'block';
-        }
-    }
+    // Mostrar/ocultar campos conforme modo
+    toggleResetMode();
     
     // Mostrar modal
     const modal = document.getElementById('resetPasswordModal');
@@ -1307,25 +1294,112 @@ function closeResetPasswordModal() {
     document.getElementById('confirmResetPassword').checked = false;
     document.getElementById('confirmResetBtn').disabled = true;
     
-    // Garantir que a tabela de usuários esteja visível
-    const tableContainer = document.querySelector('.table-container');
-    const mobileCards = document.querySelector('.mobile-user-cards');
-    
-    if (tableContainer) {
-        tableContainer.style.display = 'block';
-        console.log('Tabela de usuários mantida visível');
-    }
-    
-    if (mobileCards) {
-        // Verificar se é mobile e ajustar visibilidade
-        const viewportWidth = window.innerWidth;
-        if (viewportWidth <= 600) {
-            mobileCards.style.display = 'block';
-            console.log('Cards mobile mantidos visíveis');
-        }
-    }
+    // Limpar campos modo manual
+    document.getElementById('novaSenha').value = '';
+    document.getElementById('novaSenhaConfirmacao').value = '';
+    document.getElementById('novaSenhaError').style.display = 'none';
+    document.getElementById('novaSenhaConfirmacaoError').style.display = 'none';
     
     console.log('Modal de redefinição de senha fechado com sucesso!');
+}
+
+// Alternar entre modos de redefinição
+function toggleResetMode() {
+    const modeAuto = document.getElementById('modeAuto').checked;
+    const modeAutoInfo = document.getElementById('modeAutoInfo');
+    const modeManualFields = document.getElementById('modeManualFields');
+    
+    if (modeAuto) {
+        modeAutoInfo.style.display = 'block';
+        modeManualFields.style.display = 'none';
+    } else {
+        modeAutoInfo.style.display = 'none';
+        modeManualFields.style.display = 'block';
+    }
+    
+    // Validar e atualizar botão
+    validateManualPassword();
+    toggleConfirmButton();
+}
+
+// Validar senha manual
+function validateManualPassword() {
+    const modeManual = document.getElementById('modeManual').checked;
+    if (!modeManual) {
+        return true; // Modo automático não precisa validação de senha
+    }
+    
+    const novaSenha = document.getElementById('novaSenha').value;
+    const novaSenhaConfirmacao = document.getElementById('novaSenhaConfirmacao').value;
+    const novaSenhaError = document.getElementById('novaSenhaError');
+    const novaSenhaConfirmacaoError = document.getElementById('novaSenhaConfirmacaoError');
+    
+    let isValid = true;
+    
+    // Validar tamanho mínimo
+    if (novaSenha.length > 0 && novaSenha.length < 8) {
+        novaSenhaError.textContent = 'A senha deve ter no mínimo 8 caracteres';
+        novaSenhaError.style.display = 'block';
+        isValid = false;
+    } else {
+        novaSenhaError.style.display = 'none';
+    }
+    
+    // Validar confirmação
+    if (novaSenhaConfirmacao.length > 0) {
+        if (novaSenha !== novaSenhaConfirmacao) {
+            novaSenhaConfirmacaoError.textContent = 'As senhas não coincidem';
+            novaSenhaConfirmacaoError.style.display = 'block';
+            isValid = false;
+        } else {
+            novaSenhaConfirmacaoError.style.display = 'none';
+        }
+    } else {
+        novaSenhaConfirmacaoError.style.display = 'none';
+    }
+    
+    // Se modo manual, verificar se ambos os campos estão preenchidos
+    if (modeManual && (novaSenha.length === 0 || novaSenhaConfirmacao.length === 0)) {
+        isValid = false;
+    }
+    
+    return isValid;
+}
+
+// Alternar visibilidade de senha
+function togglePasswordVisibility(inputId, iconId) {
+    const input = document.getElementById(inputId);
+    const icon = document.getElementById(iconId);
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash');
+    } else {
+        input.type = 'password';
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye');
+    }
+}
+
+// Habilitar/desabilitar botão de confirmação
+function toggleConfirmButton() {
+    const confirmCheckbox = document.getElementById('confirmResetPassword').checked;
+    const confirmBtn = document.getElementById('confirmResetBtn');
+    
+    if (!confirmCheckbox) {
+        confirmBtn.disabled = true;
+        return;
+    }
+    
+    // Se modo manual, validar senha também
+    const modeManual = document.getElementById('modeManual').checked;
+    if (modeManual) {
+        const isValid = validateManualPassword();
+        confirmBtn.disabled = !isValid;
+    } else {
+        confirmBtn.disabled = false;
+    }
 }
 
 // Garantir que a função esteja disponível globalmente
@@ -1345,56 +1419,116 @@ function confirmResetPassword() {
         return;
     }
     
-    console.log('Confirmando redefinição de senha para usuário ID: ' + resetPasswordUser.id);
+    // Determinar modo
+    const modeAuto = document.getElementById('modeAuto').checked;
+    const mode = modeAuto ? 'auto' : 'manual';
+    
+    // Validar senha manual se necessário
+    if (mode === 'manual') {
+        const isValid = validateManualPassword();
+        if (!isValid) {
+            showNotification('Por favor, corrija os erros nos campos de senha', 'error');
+            return;
+        }
+    }
+    
+    console.log('Confirmando redefinição de senha para usuário ID: ' + resetPasswordUser.id + ' (Modo: ' + mode + ')');
     
     // Desabilitar botão para evitar cliques múltiplos
     const confirmBtn = document.getElementById('confirmResetBtn');
+    const confirmBtnText = document.getElementById('confirmResetBtnText');
     if (confirmBtn) {
         confirmBtn.disabled = true;
+        confirmBtnText.textContent = 'Redefinindo...';
         confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Redefinindo...';
     }
     
+    // Preparar dados da requisição
+    const requestData = {
+        action: 'reset_password',
+        user_id: resetPasswordUser.id,
+        mode: mode
+    };
+    
+    // Adicionar senha se modo manual
+    if (mode === 'manual') {
+        requestData.nova_senha = document.getElementById('novaSenha').value;
+        requestData.nova_senha_confirmacao = document.getElementById('novaSenhaConfirmacao').value;
+    }
+    
     // Fazer requisição para a API
+    console.log('[USUARIOS] Enviando requisição de redefinição de senha:', requestData);
+    
     fetch('api/usuarios.php', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-            action: 'reset_password',
-            user_id: resetPasswordUser.id
-        })
+        body: JSON.stringify(requestData)
     })
-    .then(response => response.json())
+    .then(response => {
+        console.log('[USUARIOS] Resposta recebida - Status:', response.status, response.statusText);
+        
+        // Verificar se a resposta é ok antes de fazer parse
+        if (!response.ok) {
+            // Tentar ler o corpo da resposta mesmo em caso de erro
+            return response.text().then(text => {
+                console.error('[USUARIOS] Erro HTTP:', response.status, text);
+                let errorData;
+                try {
+                    errorData = JSON.parse(text);
+                } catch (e) {
+                    errorData = { error: 'Erro ao processar resposta do servidor', details: text };
+                }
+                throw new Error(errorData.error || `Erro HTTP ${response.status}: ${response.statusText}`);
+            });
+        }
+        
+        return response.json();
+    })
     .then(data => {
+        console.log('[USUARIOS] Dados recebidos da API:', data);
+        
         if (data.success) {
             showNotification(data.message || 'Senha redefinida com sucesso!', 'success');
             closeResetPasswordModal();
             
-            // Se foram criadas credenciais, exibir na tela
-            if (data.credentials) {
-                console.log('🔐 Credenciais recebidas:', data.credentials);
-                const credentials = data.credentials;
+            // Se modo automático e senha temporária retornada, exibir modal de credenciais
+            if (mode === 'auto' && data.temp_password) {
+                console.log('[USUARIOS] 🔐 Senha temporária recebida:', data.temp_password);
+                
+                // Preparar credenciais para exibição
+                const credentials = {
+                    email: resetPasswordUser.email,
+                    senha_temporaria: data.temp_password,
+                    tipo: resetPasswordUser.type,
+                    message: 'Nova senha temporária gerada'
+                };
                 
                 // Exibir credenciais em modal customizado para facilitar cópia
                 showCredentialsModal(credentials);
+            } else if (mode === 'manual') {
+                // Modo manual: apenas notificação de sucesso
+                console.log('[USUARIOS] ✅ Senha redefinida manualmente com sucesso');
             }
             
             // Não recarregar automaticamente - a página já está correta
-            console.log('Senha redefinida com sucesso - página permanece carregada');
+            console.log('[USUARIOS] ✅ Senha redefinida com sucesso - página permanece carregada');
         } else {
+            console.error('[USUARIOS] ❌ Erro na resposta:', data);
             showNotification(data.error || 'Erro ao redefinir senha', 'error');
         }
     })
     .catch(error => {
-        console.error('Erro:', error);
-        showNotification('Erro ao redefinir senha. Tente novamente.', 'error');
+        console.error('[USUARIOS] ❌ Erro na requisição:', error);
+        console.error('[USUARIOS] Stack:', error.stack);
+        showNotification(error.message || 'Erro ao redefinir senha. Tente novamente.', 'error');
     })
     .finally(() => {
         // Restaurar botão
         if (confirmBtn) {
             confirmBtn.disabled = false;
-            confirmBtn.innerHTML = '<i class="fas fa-key"></i> Redefinir Senha';
+            confirmBtn.innerHTML = '<i class="fas fa-key"></i> <span id="confirmResetBtnText">Redefinir Senha</span>';
         }
         console.log('Operação de redefinição de senha finalizada');
     });
@@ -1521,8 +1655,11 @@ function togglePasswordVisibility() {
     }
 }
 
-// Garantir que a função esteja disponível globalmente
+// Garantir que as funções estejam disponíveis globalmente
+window.toggleResetMode = toggleResetMode;
+window.validateManualPassword = validateManualPassword;
 window.togglePasswordVisibility = togglePasswordVisibility;
+window.toggleConfirmButton = toggleConfirmButton;
 
 // Copiar todas as credenciais
 function copyAllCredentials() {
@@ -1546,14 +1683,22 @@ window.copyAllCredentials = copyAllCredentials;
 
 // Inicializar quando a página carregar
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM carregado, verificando funcoes...');
+    console.log('[USUARIOS] DOM carregado - Iniciando verificação...');
+    
+    // DEBUG: Verificar estado inicial da lista
+    const listaContainer = document.querySelector('.users-grid');
+    const cardBody = document.querySelector('.card-body');
+    console.log('[USUARIOS] Container lista inicial:', listaContainer);
+    console.log('[USUARIOS] Card body inicial:', cardBody);
+    console.log('[USUARIOS] Quantidade de cards inicial:', listaContainer ? listaContainer.children.length : 'container não encontrado');
+    console.log('[USUARIOS] Display da lista inicial:', listaContainer ? getComputedStyle(listaContainer).display : 'n/a');
     
     // Verificar se o modal está disponível
     const modal = document.getElementById('userModal');
     if (modal) {
-        console.log('Modal de usuário disponível e pronto para uso');
+        console.log('[USUARIOS] Modal de usuário disponível e pronto para uso');
     } else {
-        console.warn('Modal de usuário não encontrado');
+        console.warn('[USUARIOS] Modal de usuário não encontrado');
     }
     
     // Verificar se as funções estão definidas
@@ -2275,6 +2420,59 @@ document.addEventListener('DOMContentLoaded', function() {
             confirmBtn.disabled = !this.checked;
         });
     }
+    
+    // =====================================================
+    // FILTRO POR TIPO DE USUÁRIO
+    // =====================================================
+    // Implementação: Filtro visual que mostra/oculta cards baseado no tipo selecionado
+    // Compatibilidade: Funciona com modais (não recarrega página, apenas show/hide)
+    
+    const selectFiltro = document.getElementById('filtroTipoUsuario');
+    const cards = document.querySelectorAll('.user-card');
+    
+    if (!selectFiltro) {
+        console.warn('[USUARIOS] Filtro de tipo não inicializado — select não encontrado.');
+    } else if (!cards.length) {
+        console.warn('[USUARIOS] Filtro de tipo não inicializado — nenhum card encontrado.');
+    } else {
+        console.log('[USUARIOS] Filtro de tipo inicializado -', cards.length, 'cards encontrados');
+        
+        /**
+         * Aplica filtro baseado no tipo selecionado
+         * Mostra cards que correspondem ao tipo ou todos se "todos" estiver selecionado
+         */
+        function aplicarFiltroTipo() {
+            const tipoSelecionado = selectFiltro.value; // 'todos', 'admin', 'secretaria', 'instrutor', 'aluno'
+            let cardsVisiveis = 0;
+            let cardsOcultos = 0;
+            
+            cards.forEach(card => {
+                const tipoCard = (card.getAttribute('data-tipo') || '').toLowerCase();
+                
+                if (tipoSelecionado === 'todos' || tipoSelecionado === tipoCard) {
+                    card.classList.remove('d-none');
+                    cardsVisiveis++;
+                } else {
+                    card.classList.add('d-none');
+                    cardsOcultos++;
+                }
+            });
+            
+            console.log('[USUARIOS] Filtro aplicado:', {
+                tipo: tipoSelecionado,
+                visiveis: cardsVisiveis,
+                ocultos: cardsOcultos
+            });
+        }
+        
+        // Adicionar listener para mudanças no select
+        selectFiltro.addEventListener('change', aplicarFiltroTipo);
+        
+        // Aplicar filtro inicial (garantir estado consistente)
+        aplicarFiltroTipo();
+        
+        console.log('[USUARIOS] ✅ Filtro de tipo configurado com sucesso');
+    }
 });
 
 // Verificação adicional após carregamento completo
@@ -2288,7 +2486,7 @@ window.addEventListener('load', function() {
     console.log('- saveUser:', typeof saveUser);
     
     // Verificar se todas as funções estão disponíveis
-    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification', 'showResetPasswordModal', 'closeResetPasswordModal', 'confirmResetPassword', 'showCredentialsModal', 'closeCredentialsModal', 'copyToClipboard', 'togglePasswordVisibility', 'copyAllCredentials'];
+    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification', 'showResetPasswordModal', 'closeResetPasswordModal', 'confirmResetPassword', 'toggleResetMode', 'validateManualPassword', 'togglePasswordVisibility', 'toggleConfirmButton', 'showCredentialsModal', 'closeCredentialsModal', 'copyToClipboard', 'copyAllCredentials'];
     const funcoesFaltando = funcoes.filter(f => typeof window[f] !== 'function');
     
     if (funcoesFaltando.length > 0) {
@@ -2302,7 +2500,7 @@ window.addEventListener('load', function() {
 // Timeout adicional para garantir que as funções sejam definidas
 setTimeout(function() {
     console.log('Verificação de timeout das funções:');
-    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification', 'showResetPasswordModal', 'closeResetPasswordModal', 'confirmResetPassword', 'showCredentialsModal', 'closeCredentialsModal', 'copyToClipboard', 'togglePasswordVisibility', 'copyAllCredentials'];
+    const funcoes = ['showCreateUserModal', 'editUser', 'deleteUser', 'closeUserModal', 'saveUser', 'exportUsers', 'showNotification', 'showResetPasswordModal', 'closeResetPasswordModal', 'confirmResetPassword', 'toggleResetMode', 'validateManualPassword', 'togglePasswordVisibility', 'toggleConfirmButton', 'showCredentialsModal', 'closeCredentialsModal', 'copyToClipboard', 'copyAllCredentials'];
     funcoes.forEach(f => {
         if (typeof window[f] === 'function') {
             console.log(f + ': Disponível');

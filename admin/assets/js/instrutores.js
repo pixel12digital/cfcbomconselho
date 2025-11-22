@@ -266,80 +266,38 @@ async function fetchAPIInstrutores(endpoint = '', options = {}) {
     }
 }
 
-// Função para abrir modal de instrutor
+// FUNÇÕES DE MODAL REMOVIDAS - Agora controladas exclusivamente por instrutores-page.js
+// As funções window.abrirModalInstrutor e window.fecharModalInstrutor foram removidas
+// para evitar conflito com instrutores-page.js que tem versões mais completas.
+// Se precisar abrir/fechar modal de instrutor, use as funções de instrutores-page.js
+// ou chame diretamente: novoInstrutor(), editarInstrutor(id), fecharModalInstrutor()
+
+// Função wrapper para compatibilidade (delega para instrutores-page.js se disponível)
+// IMPORTANTE: NÃO chama novoInstrutor() para evitar loop infinito
 window.abrirModalInstrutor = async function() {
-    console.log('🚀 Abrindo modal de instrutor...');
+    console.log('⚠️ [instrutores.js] window.abrirModalInstrutor chamada - usando função base');
     
-    const modal = document.getElementById('modalInstrutor');
-    if (!modal) {
-        console.error('❌ Modal não encontrado!');
-        alert('Erro: Modal não encontrado na página!');
+    // Se a função base existir (de instrutores-page.js), use ela diretamente
+    // NÃO chama novoInstrutor() para evitar loop infinito
+    if (typeof window.abrirModalInstrutorBase === 'function') {
+        console.log('✅ Usando window.abrirModalInstrutorBase()');
+        window.abrirModalInstrutorBase();
         return;
     }
     
-    // Limpar formulário
-    const form = document.getElementById('formInstrutor');
-    if (form) {
-        form.reset();
-        document.getElementById('acaoInstrutor').value = 'novo';
-        document.getElementById('instrutor_id').value = '';
-        document.getElementById('modalTitle').textContent = 'Novo Instrutor';
-        
-        // Debug para verificar se os campos foram definidos corretamente
-        console.log('🔍 Debug - Campo acao definido como:', document.getElementById('acaoInstrutor').value);
-        console.log('🔍 Debug - Campo instrutor_id definido como:', document.getElementById('instrutor_id').value);
-    }
-    
-    // Mostrar modal
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
-    
-    // Carregar dados necessários para novo instrutor
-    try {
-        console.log('🔄 Carregando dados para novo instrutor...');
-        
-        // Verificar se as funções estão disponíveis
-        console.log('🔍 Verificando disponibilidade das funções:');
-        console.log('🔍 carregarUsuariosComRetry:', typeof carregarUsuariosComRetry);
-        console.log('🔍 carregarCFCsComRetry:', typeof carregarCFCsComRetry);
-        
-        // Carregar usuários se a função existir
-        if (typeof carregarUsuariosComRetry === 'function') {
-            console.log('🔄 Carregando usuários...');
-            await carregarUsuariosComRetry();
-            console.log('✅ Usuários carregados com sucesso!');
-        } else {
-            console.warn('⚠️ Função carregarUsuariosComRetry não encontrada');
-        }
-        
-        // Carregar CFCs se a função existir
-        if (typeof carregarCFCsComRetry === 'function') {
-            console.log('🔄 Carregando CFCs...');
-            await carregarCFCsComRetry();
-            console.log('✅ CFCs carregados com sucesso!');
-        } else {
-            console.warn('⚠️ Função carregarCFCsComRetry não encontrada');
-        }
-        
-        console.log('✅ Dados carregados com sucesso!');
-    } catch (error) {
-        console.error('❌ Erro ao carregar dados:', error);
-    }
-    
-    console.log('✅ Modal aberto com sucesso!');
-};
-
-// Função para fechar modal de instrutor
-window.fecharModalInstrutor = function() {
-    console.log('🚪 Fechando modal de instrutor...');
-    
+    // Fallback: apenas abrir modal básico se função base não existir
+    console.log('⚠️ Função base não encontrada, usando fallback básico');
     const modal = document.getElementById('modalInstrutor');
     if (modal) {
-        modal.style.display = 'none';
-        document.body.style.overflow = 'auto';
-        console.log('✅ Modal fechado!');
+        modal.style.display = 'block';
+        modal.classList.add('show');
+        document.body.style.overflow = 'hidden';
     }
 };
+
+// REMOVIDO: window.fecharModalInstrutor
+// Esta função agora está EXCLUSIVAMENTE em instrutores-page.js
+// Não deve haver nenhuma definição aqui para evitar conflitos
 
 // Função para salvar instrutor
 window.salvarInstrutor = async function() {
@@ -480,7 +438,8 @@ window.salvarInstrutor = async function() {
                 
                 if (data.success) {
                     alert(data.message || 'Instrutor salvo com sucesso!');
-                    fecharModalInstrutor();
+                    // Fechar modal - função está em instrutores-page.js
+                    // Não chamar aqui para evitar conflito
                     
                     // Recarregar página
                     setTimeout(() => {
@@ -504,301 +463,42 @@ window.salvarInstrutor = async function() {
     }
 };
 
-// Função para editar instrutor
-window.editarInstrutor = async function(id) {
-    console.log('✏️ Editando instrutor ID:', id);
+// REMOVIDO: window.editarInstrutor
+// Esta função agora está EXCLUSIVAMENTE em instrutores-page.js
+// Não deve haver nenhuma definição aqui para evitar conflitos
+
+// Função para alterar status do instrutor
+async function alterarStatusInstrutor(id, status) {
+    const acao = status ? 'ativar' : 'desativar';
+    const mensagem = `Tem certeza que deseja ${acao} este instrutor?`;
+    
+    if (!confirm(mensagem)) {
+        return;
+    }
     
     try {
-        const response = await fetchAPIInstrutores(`?id=${id}`);
+        const response = await fetchAPIInstrutores(`?id=${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ ativo: status })
+        });
+        
         const data = await response.json();
         
         if (data.success) {
-            const instrutor = data.data;
+            alert(`Instrutor ${acao}do com sucesso!`);
             
-            // Abrir modal primeiro
-            abrirModalInstrutor();
-            
-            // Configurar modal para edição APÓS abrir o modal
-            document.getElementById('modalTitle').textContent = 'Editar Instrutor';
-            document.getElementById('acaoInstrutor').value = 'editar';
-            document.getElementById('instrutor_id').value = id;
-            
-            console.log('✅ Modal configurado para edição - ID:', id);
-            console.log('✅ Campo acao definido como:', document.getElementById('acaoInstrutor').value);
-            console.log('✅ Campo instrutor_id definido como:', document.getElementById('instrutor_id').value);
-            
-            // Aguardar o modal estar visível antes de preencher
-            setTimeout(async () => {
-                try {
-                    // Primeiro, carregar os selects se necessário
-                    if (typeof carregarUsuariosComRetry === 'function') {
-                        console.log('🔄 Carregando usuários...');
-                        await carregarUsuariosComRetry();
-                    }
-                    
-                    if (typeof carregarCFCsComRetry === 'function') {
-                        console.log('🔄 Carregando CFCs...');
-                        await carregarCFCsComRetry();
-                    }
-                    
-                                         // Preencher formulário
-                     const nomeField = document.getElementById('nome');
-                     const emailField = document.getElementById('email');
-                     const telefoneField = document.getElementById('telefone');
-                     const credencialField = document.getElementById('credencial');
-                     const cfcField = document.getElementById('cfc_id');
-                     const ativoField = document.getElementById('ativo');
-                     const usuarioField = document.getElementById('usuario_id');
-                     
-                     // Campos adicionais que estavam faltando
-                     const cpfField = document.getElementById('cpf');
-                     const cnhField = document.getElementById('cnh');
-                     const dataNascimentoField = document.getElementById('data_nascimento');
-                     const horarioInicioField = document.getElementById('horario_inicio');
-                     const horarioFimField = document.getElementById('horario_fim');
-                     const enderecoField = document.getElementById('endereco');
-                     const cidadeField = document.getElementById('cidade');
-                     const ufField = document.getElementById('uf');
-                     const tipoCargaField = document.getElementById('tipo_carga');
-                     const validadeCredencialField = document.getElementById('validade_credencial');
-                     const observacoesField = document.getElementById('observacoes');
-                     
-                     if (nomeField) nomeField.value = instrutor.nome || '';
-                     if (emailField) emailField.value = instrutor.email || '';
-                     if (telefoneField) telefoneField.value = instrutor.telefone || '';
-                     if (credencialField) credencialField.value = instrutor.credencial || '';
-                     if (cfcField) cfcField.value = instrutor.cfc_id || '';
-                     if (ativoField) ativoField.value = instrutor.ativo ? '1' : '0';
-                     
-                     // Preencher campos adicionais
-                     if (cpfField) cpfField.value = instrutor.cpf || '';
-                     if (cnhField) cnhField.value = instrutor.cnh || '';
-                                           if (dataNascimentoField) {
-                          const dataFormatada = converterDataParaExibicao(instrutor.data_nascimento);
-                          dataNascimentoField.value = dataFormatada;
-                          if (dataFormatada) {
-                              console.log(`✅ Data de nascimento preenchida: ${dataFormatada}`);
-                          } else {
-                              console.warn('⚠️ Data de nascimento vazia ou inválida:', instrutor.data_nascimento);
-                          }
-                      }
-                     
-                     // Preencher horários (converter de HH:MM:SS para HH:MM)
-                     if (horarioInicioField && instrutor.horario_inicio) {
-                         horarioInicioField.value = instrutor.horario_inicio.substring(0, 5);
-                     }
-                     if (horarioFimField && instrutor.horario_fim) {
-                         horarioFimField.value = instrutor.horario_fim.substring(0, 5);
-                     }
-                     
-                     // Preencher campos de endereço
-                     if (enderecoField) enderecoField.value = instrutor.endereco || '';
-                     if (cidadeField) cidadeField.value = instrutor.cidade || '';
-                     if (ufField) ufField.value = instrutor.uf || '';
-                     
-                     // Preencher campos específicos do instrutor
-                     if (tipoCargaField) tipoCargaField.value = instrutor.tipo_carga || '';
-                                           if (validadeCredencialField) {
-                          const dataFormatada = converterDataParaExibicao(instrutor.validade_credencial);
-                          validadeCredencialField.value = dataFormatada;
-                          if (dataFormatada) {
-                              console.log(`✅ Validade da credencial preenchida: ${dataFormatada}`);
-                          } else {
-                              console.warn('⚠️ Validade da credencial vazia ou inválida:', instrutor.validade_credencial);
-                          }
-                      }
-                     if (observacoesField) observacoesField.value = instrutor.observacoes || '';
-                     
-                                           // Preencher categorias de habilitação (checkboxes)
-                      if (instrutor.categorias_json) {
-                          let categorias = [];
-                          try {
-                              // Tentar parsear como JSON primeiro
-                              if (typeof instrutor.categorias_json === 'string') {
-                                  if (instrutor.categorias_json.trim() === '') {
-                                      categorias = [];
-                                  } else {
-                                      try {
-                                          categorias = JSON.parse(instrutor.categorias_json);
-                                      } catch (e) {
-                                          console.warn('⚠️ Erro ao parsear categorias_json:', e);
-                                          categorias = [];
-                                      }
-                                  }
-                              } else if (Array.isArray(instrutor.categorias_json)) {
-                                  categorias = instrutor.categorias_json;
-                              } else {
-                                  categorias = [];
-                              }
-                          } catch (e) {
-                              console.warn('⚠️ Erro ao processar categorias_json:', e);
-                              categorias = [];
-                          }
-                          
-                          console.log('🔍 Categorias processadas (categorias_json):', categorias);
-                          
-                          if (Array.isArray(categorias) && categorias.length > 0) {
-                              categorias.forEach(categoria => {
-                                  const checkbox = document.querySelector(`input[name="categorias[]"][value="${categoria}"]`);
-                                  if (checkbox) {
-                                      checkbox.checked = true;
-                                      console.log(`✅ Categoria marcada: ${categoria}`);
-                                  } else {
-                                      console.warn(`⚠️ Checkbox para categoria "${categoria}" não encontrado`);
-                                  }
-                              });
-                          }
-                      } else if (instrutor.categoria_habilitacao) {
-                          // Fallback para o campo antigo
-                          let categorias = [];
-                          try {
-                              if (typeof instrutor.categoria_habilitacao === 'string') {
-                                  if (instrutor.categoria_habilitacao.trim() === '') {
-                                      categorias = [];
-                                  } else {
-                                      try {
-                                          categorias = JSON.parse(instrutor.categoria_habilitacao);
-                                      } catch (e) {
-                                          categorias = instrutor.categoria_habilitacao.split(',').map(cat => cat.trim()).filter(cat => cat !== '');
-                                      }
-                                  }
-                              } else if (Array.isArray(instrutor.categoria_habilitacao)) {
-                                  categorias = instrutor.categoria_habilitacao;
-                              } else {
-                                  categorias = [];
-                              }
-                          } catch (e) {
-                              console.warn('⚠️ Erro ao processar categoria_habilitacao:', e);
-                              categorias = [];
-                          }
-                          
-                          console.log('🔍 Categorias processadas (categoria_habilitacao):', categorias);
-                          
-                          if (Array.isArray(categorias) && categorias.length > 0) {
-                              categorias.forEach(categoria => {
-                                  const checkbox = document.querySelector(`input[name="categorias[]"][value="${categoria}"]`);
-                                  if (checkbox) {
-                                      checkbox.checked = true;
-                                      console.log(`✅ Categoria marcada: ${categoria}`);
-                                  } else {
-                                      console.warn(`⚠️ Checkbox para categoria "${categoria}" não encontrado`);
-                                  }
-                              });
-                          }
-                      }
-                     
-                     // Preencher dias da semana (checkboxes)
-                     if (instrutor.dias_semana) {
-                         let dias = [];
-                         try {
-                             // Tentar parsear como JSON primeiro
-                             if (typeof instrutor.dias_semana === 'string') {
-                                 if (instrutor.dias_semana.trim() === '') {
-                                     dias = [];
-                                 } else {
-                                     try {
-                                         dias = JSON.parse(instrutor.dias_semana);
-                                     } catch (e) {
-                                         // Se não for JSON, tentar split por vírgula
-                                         dias = instrutor.dias_semana.split(',').map(dia => dia.trim()).filter(dia => dia !== '');
-                                     }
-                                 }
-                             } else if (Array.isArray(instrutor.dias_semana)) {
-                                 dias = instrutor.dias_semana;
-                             } else {
-                                 dias = [];
-                             }
-                         } catch (e) {
-                             console.warn('⚠️ Erro ao processar dias_semana:', e);
-                             dias = [];
-                         }
-                         
-                         console.log('🔍 Dias da semana processados:', dias);
-                         
-                         if (Array.isArray(dias) && dias.length > 0) {
-                             dias.forEach(dia => {
-                                 const checkbox = document.querySelector(`input[name="dias_semana[]"][value="${dia}"]`);
-                                 if (checkbox) {
-                                     checkbox.checked = true;
-                                     console.log(`✅ Dia marcado: ${dia}`);
-                                 } else {
-                                     console.warn(`⚠️ Checkbox para dia "${dia}" não encontrado`);
-                                 }
-                             });
-                         }
-                     }
-                    
-                                         // Preencher usuário com verificação adicional
-                     if (usuarioField && instrutor.usuario_id) {
-                         const usuarioId = parseInt(instrutor.usuario_id);
-                         console.log(`🔍 Tentando preencher usuário ID: ${usuarioId}`);
-                         console.log(`🔍 Campo usuário encontrado:`, usuarioField);
-                         console.log(`🔍 Opções disponíveis:`, Array.from(usuarioField.options).map(opt => ({value: opt.value, text: opt.textContent})));
-                         
-                         // Aguardar um pouco mais para garantir que as opções foram carregadas
-                         setTimeout(() => {
-                             const usuarioOption = usuarioField.querySelector(`option[value="${usuarioId}"]`);
-                             if (usuarioOption) {
-                                 usuarioField.value = usuarioId;
-                                 console.log(`✅ Usuário preenchido: ${usuarioOption.textContent}`);
-                             } else {
-                                 console.warn(`⚠️ Opção de usuário ${usuarioId} não encontrada`);
-                                 console.log('🔍 Opções disponíveis:', Array.from(usuarioField.options).map(opt => ({value: opt.value, text: opt.textContent})));
-                                 
-                                 // Tentar encontrar por texto também
-                                 const options = Array.from(usuarioField.options);
-                                 const matchingOption = options.find(opt => opt.textContent.includes(instrutor.nome));
-                                 if (matchingOption) {
-                                     usuarioField.value = matchingOption.value;
-                                     console.log(`✅ Usuário preenchido por nome: ${matchingOption.textContent}`);
-                                 }
-                             }
-                         }, 300); // Aumentei o tempo para 300ms
-                     } else {
-                         console.warn('⚠️ Campo usuário não encontrado ou usuario_id não definido');
-                         console.log('🔍 usuarioField:', usuarioField);
-                         console.log('🔍 instrutor.usuario_id:', instrutor.usuario_id);
-                     }
-                    
-                    // Carregar foto existente se houver
-                    console.log('🔍 Debug - instrutor.foto:', instrutor.foto);
-                    console.log('🔍 Debug - typeof instrutor.foto:', typeof instrutor.foto);
-                    console.log('🔍 Debug - instrutor.foto trim:', instrutor.foto ? instrutor.foto.trim() : 'undefined');
-                    
-                    if (instrutor.foto && instrutor.foto.trim() !== '') {
-                        console.log('📷 Carregando foto existente:', instrutor.foto);
-                        console.log('🔍 Debug - Chamando carregarFotoExistente...');
-                        carregarFotoExistente(instrutor.foto);
-                    } else {
-                        console.log('📷 Nenhuma foto existente encontrada');
-                        console.log('🔍 Debug - Resetando preview da foto...');
-                        // Resetar preview da foto
-                        const preview = document.getElementById('foto-preview');
-                        const container = document.getElementById('preview-container');
-                        const placeholder = document.getElementById('placeholder-foto');
-                        
-                        console.log('🔍 Debug - preview element:', preview);
-                        console.log('🔍 Debug - container element:', container);
-                        console.log('🔍 Debug - placeholder element:', placeholder);
-                        
-                        if (preview) preview.src = '';
-                        if (container) container.style.display = 'none';
-                        if (placeholder) placeholder.style.display = 'block';
-                    }
-                    
-                    console.log('✅ Formulário preenchido com sucesso!');
-                } catch (error) {
-                    console.error('❌ Erro ao preencher formulário:', error);
-                }
-            }, 100);
+            // Recarregar página
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
         } else {
-            alert('Erro ao carregar dados do instrutor: ' + (data.error || 'Erro desconhecido'));
+            alert(`Erro ao ${acao} instrutor: ` + (data.error || 'Erro desconhecido'));
         }
     } catch (error) {
-        console.error('❌ Erro ao editar instrutor:', error);
-        alert('Erro ao carregar dados do instrutor: ' + error.message);
+        console.error(`❌ Erro ao ${acao} instrutor:`, error);
+        alert(`Erro ao ${acao} instrutor: ` + error.message);
     }
-};
+}
 
 // Função para excluir instrutor
 window.excluirInstrutor = async function(id) {
@@ -830,6 +530,104 @@ window.excluirInstrutor = async function(id) {
         alert('Erro ao excluir instrutor: ' + error.message);
     }
 };
+
+// Função para ativar instrutor
+window.ativarInstrutor = async function(id) {
+    await alterarStatusInstrutor(id, 1);
+};
+
+// Função para desativar instrutor
+window.desativarInstrutor = async function(id) {
+    await alterarStatusInstrutor(id, 0);
+};
+
+// Função para alterar status do instrutor (duplicada - remover se já existe)
+async function alterarStatusInstrutor(id, status) {
+    const acao = status ? 'ativar' : 'desativar';
+    const mensagem = `Tem certeza que deseja ${acao} este instrutor?`;
+    
+    if (!confirm(mensagem)) {
+        return;
+    }
+    
+    try {
+        const response = await fetchAPIInstrutores(`?id=${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ ativo: status })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(`Instrutor ${acao}do com sucesso!`);
+            
+            // Recarregar página
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            alert(`Erro ao ${acao} instrutor: ` + (data.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error(`❌ Erro ao ${acao} instrutor:`, error);
+        alert(`Erro ao ${acao} instrutor: ` + error.message);
+    }
+}
+
+// Função para excluir instrutor (duplicada - remover)
+window.excluirInstrutor = async function(id) {
+    console.log('🗑️ Excluindo instrutor ID:', id);
+    
+    if (!confirm('⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este instrutor?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetchAPIInstrutores(`?id=${id}`, {
+            method: 'DELETE'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert(data.message || 'Instrutor excluído com sucesso!');
+            
+            // Recarregar página
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        } else {
+            alert('Erro ao excluir instrutor: ' + (data.error || 'Erro desconhecido'));
+        }
+    } catch (error) {
+        console.error('❌ Erro ao excluir instrutor:', error);
+        alert('Erro ao excluir instrutor: ' + error.message);
+    }
+};
+
+// Função para ativar instrutor
+window.ativarInstrutor = async function(id) {
+    await alterarStatusInstrutor(id, 1);
+};
+
+// Função para desativar instrutor
+window.desativarInstrutor = async function(id) {
+    await alterarStatusInstrutor(id, 0);
+};
+
+// Inicialização quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 Inicializando sistema de instrutores...');
+    
+    // Event listeners para o modal - REMOVIDOS
+    // Os event listeners agora são registrados EXCLUSIVAMENTE em instrutores-page.js
+    // para evitar conflitos e loops infinitos
+    
+    console.log('✅ Sistema de instrutores inicializado!');
+    console.log('ℹ️ Event listeners do modal agora são gerenciados por instrutores-page.js');
+});
+
+console.log('📋 Arquivo instrutores.js carregado!');
 
 // Função para ativar/desativar instrutor
 window.ativarInstrutor = async function(id) {
@@ -876,16 +674,17 @@ async function alterarStatusInstrutor(id, status) {
 document.addEventListener('DOMContentLoaded', function() {
     console.log('🚀 Inicializando sistema de instrutores...');
     
-    // Event listeners para o modal
-    const modal = document.getElementById('modalInstrutor');
-    if (modal) {
-        // Fechar modal ao clicar fora
-        modal.addEventListener('click', function(e) {
-            if (e.target === modal) {
-                fecharModalInstrutor();
-            }
-        });
-    }
+    // Event listeners para o modal - REMOVIDOS
+    // Os event listeners agora são registrados EXCLUSIVAMENTE em instrutores-page.js
+    // para evitar conflitos e loops infinitos
+    // const modal = document.getElementById('modalInstrutor');
+    // if (modal) {
+    //     modal.addEventListener('click', function(e) {
+    //         if (e.target === modal) {
+    //             fecharModalInstrutor(); // ❌ Causava loop infinito
+    //         }
+    //     });
+    // }
     
     // Event listener para o formulário
     const form = document.getElementById('formInstrutor');
@@ -905,17 +704,20 @@ document.addEventListener('DOMContentLoaded', function() {
     //     });
     // }
     
-    // Event listener para ESC fechar modal
-    document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape') {
-            const modal = document.getElementById('modalInstrutor');
-            if (modal && modal.style.display === 'block') {
-                fecharModalInstrutor();
-            }
-        }
-    });
+    // Event listener para ESC fechar modal - REMOVIDO
+    // O listener de ESC agora é registrado EXCLUSIVAMENTE em instrutores-page.js
+    // para evitar loops infinitos
+    // document.addEventListener('keydown', function(e) {
+    //     if (e.key === 'Escape') {
+    //         const modal = document.getElementById('modalInstrutor');
+    //         if (modal && modal.style.display === 'block') {
+    //             fecharModalInstrutor(); // ❌ Causava loop infinito
+    //         }
+    //     }
+    // });
     
     console.log('✅ Sistema de instrutores inicializado!');
+    console.log('ℹ️ Event listeners do modal agora são gerenciados por instrutores-page.js');
 });
 
 console.log('📋 Arquivo instrutores.js carregado!');

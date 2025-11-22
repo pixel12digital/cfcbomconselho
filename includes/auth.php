@@ -245,6 +245,92 @@ class Auth {
         return in_array($user['tipo'], ['admin', 'secretaria', 'instrutor']);
     }
     
+    /**
+     * Redireciona o usuário para o painel apropriado após login
+     * Centraliza a lógica de redirecionamento por tipo de usuário
+     * Verifica se precisa trocar senha e redireciona adequadamente
+     * 
+     * @param array|null $user Dados do usuário (opcional, usa getCurrentUser() se não fornecido)
+     * @return void (faz redirect e exit)
+     */
+    public function redirectAfterLogin($user = null) {
+        if (!$user) {
+            $user = $this->getCurrentUser();
+        }
+        
+        if (!$user) {
+            // Se não houver usuário, redirecionar para login
+            header('Location: /cfc-bom-conselho/login.php');
+            exit;
+        }
+        
+        // Verificar se precisa trocar senha
+        // Se a coluna precisa_trocar_senha existir e estiver = 1, forçar troca de senha
+        $precisaTrocarSenha = false;
+        try {
+            // Verificar se coluna existe e se está ativa
+            $db = $this->db;
+            $checkColumn = $db->fetch("SHOW COLUMNS FROM usuarios LIKE 'precisa_trocar_senha'");
+            if ($checkColumn) {
+                // Buscar valor atual do flag
+                $usuarioCompleto = $db->fetch("SELECT precisa_trocar_senha FROM usuarios WHERE id = ?", [$user['id']]);
+                if ($usuarioCompleto && isset($usuarioCompleto['precisa_trocar_senha']) && $usuarioCompleto['precisa_trocar_senha'] == 1) {
+                    $precisaTrocarSenha = true;
+                }
+            }
+        } catch (Exception $e) {
+            // Se houver erro ao verificar, continuar normalmente
+            if (LOG_ENABLED) {
+                error_log('Erro ao verificar precisa_trocar_senha: ' . $e->getMessage());
+            }
+        }
+        
+        $tipo = strtolower($user['tipo'] ?? '');
+        
+        // Se precisa trocar senha, redirecionar para página de troca
+        if ($precisaTrocarSenha) {
+            switch ($tipo) {
+                case 'instrutor':
+                    header('Location: /cfc-bom-conselho/instrutor/trocar-senha.php?forcado=1');
+                    exit;
+                case 'admin':
+                case 'secretaria':
+                    // TODO: Criar página de troca de senha para admin/secretaria se necessário
+                    // Por enquanto, permite acesso normal
+                    break;
+                case 'aluno':
+                    // TODO: Criar página de troca de senha para aluno se necessário
+                    // Por enquanto, permite acesso normal
+                    break;
+            }
+        }
+        
+        // Determinar URL de destino baseado no tipo de usuário
+        switch ($tipo) {
+            case 'admin':
+            case 'secretaria':
+                // Admin e Secretaria vão para o painel administrativo
+                header('Location: /cfc-bom-conselho/admin/index.php');
+                break;
+                
+            case 'instrutor':
+                // Instrutor vai para o painel do instrutor
+                header('Location: /cfc-bom-conselho/instrutor/dashboard.php');
+                break;
+                
+            case 'aluno':
+                // Aluno vai para o painel do aluno
+                header('Location: /cfc-bom-conselho/aluno/dashboard.php');
+                break;
+                
+            default:
+                // Tipo desconhecido, redirecionar para login
+                header('Location: /cfc-bom-conselho/login.php');
+        }
+        
+        exit;
+    }
+    
     // Verificar se pode acessar configurações (apenas admin)
     public function canAccessConfigurations() {
         $user = $this->getCurrentUser();
@@ -685,5 +771,17 @@ function apiRequireAdmin() {
 
 // Instância global do sistema de autenticação - MOVIDA PARA O FINAL
 $auth = new Auth();
+
+/**
+ * Função global para redirecionar após login baseado no tipo de usuário
+ * Centraliza a lógica de redirecionamento
+ * 
+ * @param array|null $user Dados do usuário (opcional, usa getCurrentUser() se não fornecido)
+ * @return void (faz redirect e exit)
+ */
+function redirectAfterLogin($user = null) {
+    global $auth;
+    $auth->redirectAfterLogin($user);
+}
 
 ?>

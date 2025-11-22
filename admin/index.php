@@ -1694,6 +1694,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                 </div>
                 <?php endif; ?>
                 
+                <!-- Usuários do Sistema -->
+                <?php if ($isAdmin || $user['tipo'] === 'secretaria'): ?>
+                <div class="nav-item">
+                    <a href="index.php?page=usuarios" class="nav-link <?php echo $page === 'usuarios' ? 'active' : ''; ?>" title="Usuários do Sistema">
+                        <div class="nav-icon">
+                            <i class="fas fa-users-cog"></i>
+                        </div>
+                        <div class="nav-text">Usuários</div>
+                    </a>
+                </div>
+                <?php endif; ?>
+                
                 <!-- Configurações -->
                 <?php if ($isAdmin): ?>
                 <div class="nav-item nav-group">

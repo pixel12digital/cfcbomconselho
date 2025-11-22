@@ -20,68 +20,139 @@ if (!$user || $user['tipo'] !== 'instrutor') {
 $db = db();
 $notificacoes = new SistemaNotificacoes();
 
+// Verificar se precisa trocar senha - se sim, forçar redirecionamento
+// Esta verificação deve estar em TODAS as páginas do instrutor
+try {
+    $checkColumn = $db->fetch("SHOW COLUMNS FROM usuarios LIKE 'precisa_trocar_senha'");
+    if ($checkColumn) {
+        $usuarioCompleto = $db->fetch("SELECT precisa_trocar_senha FROM usuarios WHERE id = ?", [$user['id']]);
+        if ($usuarioCompleto && isset($usuarioCompleto['precisa_trocar_senha']) && $usuarioCompleto['precisa_trocar_senha'] == 1) {
+            // Verificar se não está já na página de trocar senha
+            $currentPage = basename($_SERVER['PHP_SELF']);
+            if ($currentPage !== 'trocar-senha.php') {
+                header('Location: /cfc-bom-conselho/instrutor/trocar-senha.php?forcado=1');
+                exit();
+            }
+        }
+    }
+} catch (Exception $e) {
+    // Se houver erro, continuar normalmente
+    if (defined('LOG_ENABLED') && LOG_ENABLED) {
+        error_log('Erro ao verificar precisa_trocar_senha: ' . $e->getMessage());
+    }
+}
+
 // Buscar dados do instrutor
-$instrutor = $db->fetch("SELECT * FROM instrutores WHERE id = ?", [$user['id']]);
+// A tabela instrutores tem usuario_id que referencia usuarios.id
+$instrutor = $db->fetch("
+    SELECT i.*, u.nome as nome_usuario, u.email as email_usuario 
+    FROM instrutores i 
+    LEFT JOIN usuarios u ON i.usuario_id = u.id 
+    WHERE i.usuario_id = ?
+", [$user['id']]);
+
+// Se não encontrar na tabela instrutores, usar dados do usuário diretamente
+if (!$instrutor) {
+    $instrutor = [
+        'id' => null,
+        'usuario_id' => $user['id'],
+        'nome' => $user['nome'] ?? 'Instrutor',
+        'nome_usuario' => $user['nome'] ?? 'Instrutor',
+        'email_usuario' => $user['email'] ?? '',
+        'credencial' => null,
+        'cfc_id' => null
+    ];
+}
+
+// Garantir que temos um nome para exibir
+$instrutor['nome'] = $instrutor['nome'] ?? $instrutor['nome_usuario'] ?? $user['nome'] ?? 'Instrutor';
+
+// Obter o ID do instrutor (da tabela instrutores) para usar nas queries de aulas
+// Se não tiver registro na tabela instrutores, não terá aulas
+$instrutorId = $instrutor['id'] ?? null;
 
 // Buscar aulas do dia
 $hoje = date('Y-m-d');
-$aulasHoje = $db->fetchAll("
-    SELECT a.*, 
-           al.nome as aluno_nome, al.telefone as aluno_telefone,
-           v.modelo as veiculo_modelo, v.placa as veiculo_placa
-    FROM aulas a
-    JOIN alunos al ON a.aluno_id = al.id
-    LEFT JOIN veiculos v ON a.veiculo_id = v.id
-    WHERE a.instrutor_id = ? 
-      AND a.data_aula = ?
-      AND a.status != 'cancelada'
-    ORDER BY a.hora_inicio ASC
-", [$user['id'], $hoje]);
+$aulasHoje = [];
+if ($instrutorId) {
+    $aulasHoje = $db->fetchAll("
+        SELECT a.*, 
+               al.nome as aluno_nome, al.telefone as aluno_telefone,
+               v.modelo as veiculo_modelo, v.placa as veiculo_placa
+        FROM aulas a
+        JOIN alunos al ON a.aluno_id = al.id
+        LEFT JOIN veiculos v ON a.veiculo_id = v.id
+        WHERE a.instrutor_id = ? 
+          AND a.data_aula = ?
+          AND a.status != 'cancelada'
+        ORDER BY a.hora_inicio ASC
+    ", [$instrutorId, $hoje]);
+}
 
 // Buscar próximas aulas (próximos 7 dias)
-$proximasAulas = $db->fetchAll("
-    SELECT a.*, 
-           al.nome as aluno_nome, al.telefone as aluno_telefone,
-           v.modelo as veiculo_modelo, v.placa as veiculo_placa
-    FROM aulas a
-    JOIN alunos al ON a.aluno_id = al.id
-    LEFT JOIN veiculos v ON a.veiculo_id = v.id
-    WHERE a.instrutor_id = ? 
-      AND a.data_aula > ?
-      AND a.data_aula <= DATE_ADD(?, INTERVAL 7 DAY)
-      AND a.status != 'cancelada'
-    ORDER BY a.data_aula ASC, a.hora_inicio ASC
-    LIMIT 10
-", [$user['id'], $hoje, $hoje]);
+$proximasAulas = [];
+if ($instrutorId) {
+    $proximasAulas = $db->fetchAll("
+        SELECT a.*, 
+               al.nome as aluno_nome, al.telefone as aluno_telefone,
+               v.modelo as veiculo_modelo, v.placa as veiculo_placa
+        FROM aulas a
+        JOIN alunos al ON a.aluno_id = al.id
+        LEFT JOIN veiculos v ON a.veiculo_id = v.id
+        WHERE a.instrutor_id = ? 
+          AND a.data_aula > ?
+          AND a.data_aula <= DATE_ADD(?, INTERVAL 7 DAY)
+          AND a.status != 'cancelada'
+        ORDER BY a.data_aula ASC, a.hora_inicio ASC
+        LIMIT 10
+    ", [$instrutorId, $hoje, $hoje]);
+}
 
 // Buscar notificações não lidas
 $notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($user['id'], 'instrutor');
 
 // Buscar turmas teóricas do dia
-$turmasTeoricas = $db->fetchAll("
-    SELECT a.*, 
-           al.nome as aluno_nome,
-           COUNT(*) as total_alunos
-    FROM aulas a
-    JOIN alunos al ON a.aluno_id = al.id
-    WHERE a.instrutor_id = ? 
-      AND a.data_aula = ?
-      AND a.tipo_aula = 'teorica'
-      AND a.status != 'cancelada'
-    GROUP BY a.id
-    ORDER BY a.hora_inicio ASC
-", [$user['id'], $hoje]);
+$turmasTeoricas = [];
+if ($instrutorId) {
+    $turmasTeoricas = $db->fetchAll("
+        SELECT a.*, 
+               al.nome as aluno_nome,
+               COUNT(*) as total_alunos
+        FROM aulas a
+        JOIN alunos al ON a.aluno_id = al.id
+        WHERE a.instrutor_id = ? 
+          AND a.data_aula = ?
+          AND a.tipo_aula = 'teorica'
+          AND a.status != 'cancelada'
+        GROUP BY a.id
+        ORDER BY a.hora_inicio ASC
+    ", [$instrutorId, $hoje]);
+}
 
 // Estatísticas do dia
-$statsHoje = $db->fetch("
-    SELECT 
+// Inicializar com valores padrão para evitar erros quando não há registro na tabela instrutores
+$statsHoje = [
+    'total_aulas' => 0,
+    'agendadas' => 0,
+    'confirmadas' => 0,
+    'concluidas' => 0
+];
+
+if ($instrutorId) {
+    $resultado = $db->fetch("
+        SELECT 
         COUNT(*) as total_aulas,
         SUM(CASE WHEN status = 'agendada' THEN 1 ELSE 0 END) as agendadas,
         SUM(CASE WHEN status = 'confirmada' THEN 1 ELSE 0 END) as confirmadas,
         SUM(CASE WHEN status = 'concluida' THEN 1 ELSE 0 END) as concluidas
     FROM aulas 
     WHERE instrutor_id = ? AND data_aula = ?
-", [$user['id'], $hoje]);
+", [$instrutorId, $hoje]);
+    
+    if ($resultado) {
+        $statsHoje = $resultado;
+    }
+}
 
 ?>
 <!DOCTYPE html>
@@ -96,8 +167,46 @@ $statsHoje = $db->fetch("
 <body>
     <!-- Header -->
     <div class="header">
-        <h1>Olá, <?php echo htmlspecialchars($instrutor['nome']); ?>!</h1>
-        <div class="subtitle">Gerencie suas aulas e turmas</div>
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h1>Olá, <?php echo htmlspecialchars($instrutor['nome']); ?>!</h1>
+                <div class="subtitle">Gerencie suas aulas e turmas</div>
+            </div>
+            <!-- Dropdown de Usuário -->
+            <div class="instrutor-profile-menu" style="position: relative;">
+                <button class="instrutor-profile-button" id="instrutor-profile-button" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 8px 12px; color: white; cursor: pointer; display: flex; align-items: center; gap: 8px;">
+                    <div class="instrutor-profile-avatar" style="width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">
+                        <?php 
+                        $iniciais = strtoupper(substr($instrutor['nome'], 0, 1));
+                        if (strpos($instrutor['nome'], ' ') !== false) {
+                            $nomes = explode(' ', $instrutor['nome']);
+                            $iniciais = strtoupper(substr($nomes[0], 0, 1) . substr(end($nomes), 0, 1));
+                        }
+                        echo htmlspecialchars($iniciais);
+                        ?>
+                    </div>
+                    <div style="display: flex; flex-direction: column; align-items: flex-start; text-align: left;">
+                        <span style="font-size: 14px; font-weight: 600; line-height: 1.2;"><?php echo htmlspecialchars($instrutor['nome']); ?></span>
+                        <span style="font-size: 12px; opacity: 0.9; line-height: 1.2;">Instrutor</span>
+                    </div>
+                    <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 4px;"></i>
+                </button>
+                <div class="instrutor-profile-dropdown" id="instrutor-profile-dropdown" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000;">
+                    <a href="perfil.php" class="instrutor-dropdown-item" style="display: flex; align-items: center; padding: 12px 16px; color: #333; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
+                        <i class="fas fa-user" style="width: 20px; margin-right: 12px; color: #666;"></i>
+                        Meu Perfil
+                    </a>
+                    <a href="trocar-senha.php" class="instrutor-dropdown-item" style="display: flex; align-items: center; padding: 12px 16px; color: #333; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
+                        <i class="fas fa-key" style="width: 20px; margin-right: 12px; color: #666;"></i>
+                        Trocar senha
+                    </a>
+                    <a href="../admin/logout.php" class="instrutor-dropdown-item" style="display: flex; align-items: center; padding: 12px 16px; color: #e74c3c; text-decoration: none;">
+                        <i class="fas fa-sign-out-alt" style="width: 20px; margin-right: 12px;"></i>
+                        Sair
+                    </a>
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="container">
@@ -449,8 +558,16 @@ $statsHoje = $db->fetch("
         }
 
         // Funções do modal
+        // FASE 1 - Ajuste: Normalizar valores de tipo_acao para corresponder à API
+        // Arquivo: instrutor/dashboard.php (linha ~561)
         function abrirModal(tipo, aulaId, data, hora) {
-            document.getElementById('tipoAcao').value = tipo;
+            // Normalizar tipo: 'cancelamento' ou 'transferencia' (API espera estes valores)
+            const tipoNormalizado = tipo === 'cancelamento' ? 'cancelamento' : 
+                                   tipo === 'transferencia' ? 'transferencia' : 
+                                   tipo === 'cancelar' ? 'cancelamento' : 
+                                   tipo === 'transferir' ? 'transferencia' : tipo;
+            
+            document.getElementById('tipoAcao').value = tipoNormalizado;
             document.getElementById('aulaId').value = aulaId;
             document.getElementById('dataAula').value = data;
             document.getElementById('horaAula').value = hora;
@@ -460,7 +577,7 @@ $statsHoje = $db->fetch("
             const novaDataGroup = document.getElementById('novaDataGroup');
             const novaHoraGroup = document.getElementById('novaHoraGroup');
             
-            if (tipo === 'transferencia') {
+            if (tipoNormalizado === 'transferencia') {
                 titulo.textContent = 'Solicitar Transferência';
                 novaDataGroup.style.display = 'block';
                 novaHoraGroup.style.display = 'block';
@@ -483,6 +600,8 @@ $statsHoje = $db->fetch("
         // Event listeners
         document.addEventListener('DOMContentLoaded', function() {
             // Botões de cancelamento
+            // FASE 1 - Ajuste: Normalizar tipo para 'cancelamento' (API espera este valor)
+            // Arquivo: instrutor/dashboard.php (linha ~595)
             document.querySelectorAll('.cancelar-aula').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const aulaId = this.dataset.aulaId;
@@ -493,6 +612,8 @@ $statsHoje = $db->fetch("
             });
 
             // Botões de transferência
+            // FASE 1 - Ajuste: Normalizar tipo para 'transferencia' (API espera este valor)
+            // Arquivo: instrutor/dashboard.php (linha ~604)
             document.querySelectorAll('.solicitar-transferencia').forEach(btn => {
                 btn.addEventListener('click', function() {
                     const aulaId = this.dataset.aulaId;
@@ -545,14 +666,18 @@ $statsHoje = $db->fetch("
             }
 
             try {
-                const response = await fetch('../admin/api/solicitacoes.php', {
+                // FASE 1 - Alteração: Usar nova API específica para instrutores
+                // Arquivo: instrutor/dashboard.php (linha ~657)
+                // Antes: admin/api/solicitacoes.php (bloqueava instrutores)
+                // Agora: admin/api/instrutor-aulas.php (específica para instrutores com validação de segurança)
+                const response = await fetch('../admin/api/instrutor-aulas.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
                         aula_id: formData.get('aula_id'),
-                        tipo_solicitacao: formData.get('tipo_acao'),
+                        tipo_acao: formData.get('tipo_acao'), // Mudou de tipo_solicitacao para tipo_acao
                         nova_data: formData.get('nova_data'),
                         nova_hora: formData.get('nova_hora'),
                         motivo: formData.get('motivo'),
@@ -741,5 +866,31 @@ $statsHoje = $db->fetch("
             }
         }
     </style>
+    
+    <!-- Script para Dropdown de Perfil -->
+    <script>
+        // Toggle do dropdown de perfil
+        document.addEventListener('DOMContentLoaded', function() {
+            const profileButton = document.getElementById('instrutor-profile-button');
+            const profileDropdown = document.getElementById('instrutor-profile-dropdown');
+            
+            if (profileButton && profileDropdown) {
+                profileButton.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    const isVisible = profileDropdown.style.display === 'block';
+                    profileDropdown.style.display = isVisible ? 'none' : 'block';
+                    profileButton.classList.toggle('active', !isVisible);
+                });
+                
+                // Fechar dropdown ao clicar fora
+                document.addEventListener('click', function(e) {
+                    if (!profileButton.contains(e.target) && !profileDropdown.contains(e.target)) {
+                        profileDropdown.style.display = 'none';
+                        profileButton.classList.remove('active');
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>

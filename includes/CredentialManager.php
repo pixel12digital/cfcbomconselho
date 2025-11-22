@@ -31,9 +31,35 @@ class CredentialManager {
     
     /**
      * Criar credenciais automáticas para funcionário
+     * 
+     * CORREÇÃO DE DUPLICAÇÃO (2024):
+     * - Problema: Função não verificava email antes de criar, permitindo duplicação
+     * - Solução: Verificação de email antes de inserir, similar a createStudentCredentials()
+     * - Proteção: Se email existir, retorna usuário existente sem criar duplicado
+     * - Tratamento: Exceções de race condition (duplicação entre verificação e inserção)
+     * - Auditoria: Logs de tentativas de criação duplicada
      */
     public static function createEmployeeCredentials($dados) {
         $db = db();
+        
+        // PROTEÇÃO: Verificar se o email já existe na tabela usuarios
+        $usuarioExistente = $db->fetch("SELECT id, nome, tipo FROM usuarios WHERE email = ?", [$dados['email']]);
+        
+        if ($usuarioExistente) {
+            // Se o usuário já existe, retornar sucesso sem criar duplicado
+            if (LOG_ENABLED) {
+                error_log('[CredentialManager] Email já existe para funcionário: ' . $dados['email'] . ' (ID: ' . $usuarioExistente['id'] . ')');
+            }
+            
+            return [
+                'success' => true,
+                'usuario_id' => $usuarioExistente['id'],
+                'email' => $dados['email'],
+                'senha_temporaria' => null, // Não gerar nova senha se usuário já existe
+                'message' => 'Usuário já existe para este email. Credenciais não foram alteradas.',
+                'usuario_existente' => true
+            ];
+        }
         
         // Gerar senha temporária
         $tempPassword = self::generateTempPassword();
@@ -51,16 +77,52 @@ class CredentialManager {
             'criado_em' => date('Y-m-d H:i:s')
         ];
         
-        $usuarioId = $db->insert('usuarios', $usuarioData);
-        
-        if ($usuarioId) {
-            return [
-                'success' => true,
-                'usuario_id' => $usuarioId,
-                'email' => $dados['email'],
-                'senha_temporaria' => $tempPassword,
-                'message' => 'Credenciais criadas com sucesso'
-            ];
+        try {
+            $usuarioId = $db->insert('usuarios', $usuarioData);
+            
+            if ($usuarioId) {
+                if (LOG_ENABLED) {
+                    error_log('[CredentialManager] Credenciais criadas para funcionário: ' . $dados['email'] . ' (ID: ' . $usuarioId . ')');
+                }
+                
+                return [
+                    'success' => true,
+                    'usuario_id' => $usuarioId,
+                    'email' => $dados['email'],
+                    'senha_temporaria' => $tempPassword,
+                    'message' => 'Credenciais criadas com sucesso',
+                    'usuario_existente' => false
+                ];
+            }
+        } catch (Exception $e) {
+            // Se der erro de duplicação (mesmo após verificação), tratar graciosamente
+            if (strpos($e->getMessage(), 'Duplicate entry') !== false || 
+                strpos($e->getMessage(), 'for key \'email\'') !== false ||
+                strpos($e->getMessage(), 'UNIQUE constraint') !== false) {
+                
+                // Tentar buscar o usuário que foi criado entre a verificação e a inserção
+                $usuarioExistente = $db->fetch("SELECT id, nome, tipo FROM usuarios WHERE email = ?", [$dados['email']]);
+                if ($usuarioExistente) {
+                    if (LOG_ENABLED) {
+                        error_log('[CredentialManager] Duplicação detectada após verificação para: ' . $dados['email'] . ' (ID: ' . $usuarioExistente['id'] . ')');
+                    }
+                    
+                    return [
+                        'success' => true,
+                        'usuario_id' => $usuarioExistente['id'],
+                        'email' => $dados['email'],
+                        'senha_temporaria' => null,
+                        'message' => 'Usuário já existe para este email. Credenciais não foram alteradas.',
+                        'usuario_existente' => true
+                    ];
+                }
+            }
+            
+            // Se for outro tipo de erro, propagar
+            if (LOG_ENABLED) {
+                error_log('[CredentialManager] Erro ao criar credenciais: ' . $e->getMessage());
+            }
+            throw $e;
         }
         
         return [
