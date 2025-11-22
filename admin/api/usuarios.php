@@ -363,6 +363,24 @@ try {
                 error_log('[USUARIOS API] Usuário criado com sucesso - ID: ' . $result);
                 $usuario = $db->fetch("SELECT id, nome, email, tipo, ativo, criado_em FROM usuarios WHERE id = ?", [$result]);
                 
+                // SYNC_INSTRUTORES: Se o tipo for 'instrutor', criar registro em instrutores automaticamente
+                if ($usuario && $usuario['tipo'] === 'instrutor') {
+                    if (LOG_ENABLED) {
+                        error_log('[USUARIOS API] Usuário criado como instrutor - criando registro em instrutores: usuario_id=' . $result);
+                    }
+                    
+                    $instrutorResult = createInstrutorFromUser($result);
+                    
+                    if ($instrutorResult['success']) {
+                        if (LOG_ENABLED) {
+                            error_log('[USUARIOS API] Registro de instrutor criado automaticamente: usuario_id=' . $result . ', instrutor_id=' . $instrutorResult['instrutor_id']);
+                        }
+                    } else {
+                        // Log do erro, mas não falha a criação do usuário
+                        error_log('[USUARIOS API] AVISO: Erro ao criar registro de instrutor automaticamente: usuario_id=' . $result . ', erro=' . $instrutorResult['message']);
+                    }
+                }
+                
                 $response = [
                     'success' => true, 
                     'message' => 'Usuário criado com sucesso', 
@@ -404,14 +422,16 @@ try {
             $id = (int)$data['id'];
             error_log('[USUARIOS API] Atualizando usuário ID: ' . $id);
             
-            // Verificar se usuário existe
-            $existingUser = $db->fetch("SELECT id FROM usuarios WHERE id = ?", [$id]);
+            // Verificar se usuário existe e buscar tipo atual ANTES da atualização
+            $existingUser = $db->fetch("SELECT id, nome, email, tipo FROM usuarios WHERE id = ?", [$id]);
             if (!$existingUser) {
                 error_log('[USUARIOS API] Usuário não encontrado para atualização - ID: ' . $id);
                 http_response_code(404);
                 echo json_encode(['error' => 'Usuário não encontrado', 'code' => 'USER_NOT_FOUND']);
                 exit;
             }
+            
+            $tipoAnterior = $existingUser['tipo'] ?? null;
             
             // Preparar dados para atualização
             $updateData = [];
@@ -433,6 +453,35 @@ try {
             if ($result) {
                 error_log('[USUARIOS API] Usuário atualizado com sucesso - ID: ' . $id);
                 $usuario = $db->fetch("SELECT id, nome, email, tipo, ativo, criado_em FROM usuarios WHERE id = ?", [$id]);
+                
+                // SYNC_INSTRUTORES: Se o tipo foi alterado para 'instrutor', criar registro em instrutores automaticamente
+                $tipoNovo = $updateData['tipo'] ?? $tipoAnterior;
+                if ($tipoNovo === 'instrutor' && $tipoAnterior !== 'instrutor') {
+                    // Tipo foi alterado de algo diferente para 'instrutor'
+                    if (LOG_ENABLED) {
+                        error_log('[USUARIOS API] Tipo alterado para instrutor - criando registro em instrutores: usuario_id=' . $id . ', tipo_anterior=' . $tipoAnterior);
+                    }
+                    
+                    $instrutorResult = createInstrutorFromUser($id);
+                    
+                    if ($instrutorResult['success']) {
+                        if ($instrutorResult['created']) {
+                            if (LOG_ENABLED) {
+                                error_log('[USUARIOS API] Registro de instrutor criado automaticamente após alteração de tipo: usuario_id=' . $id . ', instrutor_id=' . $instrutorResult['instrutor_id']);
+                            }
+                        } else {
+                            if (LOG_ENABLED) {
+                                error_log('[USUARIOS API] Registro de instrutor já existia: usuario_id=' . $id . ', instrutor_id=' . $instrutorResult['instrutor_id']);
+                            }
+                        }
+                    } else {
+                        // Log do erro, mas não falha a atualização do usuário
+                        error_log('[USUARIOS API] AVISO: Erro ao criar registro de instrutor automaticamente após alteração de tipo: usuario_id=' . $id . ', erro=' . $instrutorResult['message']);
+                    }
+                }
+                // TODO: Futuro - Se tipo foi alterado de 'instrutor' para outro, considerar desativar/arquivar registro em instrutores
+                // Por enquanto, apenas garantimos a criação quando tipo = 'instrutor'
+                
                 echo json_encode(['success' => true, 'message' => 'Usuário atualizado com sucesso', 'data' => $usuario]);
             } else {
                 error_log('[USUARIOS API] Erro ao atualizar usuário - ID: ' . $id);

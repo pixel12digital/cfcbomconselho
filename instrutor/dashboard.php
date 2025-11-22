@@ -13,7 +13,9 @@ require_once __DIR__ . '/../includes/services/SistemaNotificacoes.php';
 // Verificar autenticação
 $user = getCurrentUser();
 if (!$user || $user['tipo'] !== 'instrutor') {
-    header('Location: /login.php');
+    // FASE 2 - Correção: Usar BASE_PATH dinamicamente
+    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+    header('Location: ' . $basePath . '/login.php');
     exit();
 }
 

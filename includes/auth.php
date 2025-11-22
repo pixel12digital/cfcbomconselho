@@ -85,12 +85,15 @@ class Auth {
     
     // Método de logout
     public function logout() {
-        if (isset($_SESSION['user_id']) && AUDIT_ENABLED) {
+        // Obter user_id ANTES de limpar a sessão
+        $user_id = $_SESSION['user_id'] ?? null;
+        
+        if ($user_id && defined('AUDIT_ENABLED') && AUDIT_ENABLED) {
             try {
-                dbLog($_SESSION['user_id'], 'logout', 'usuarios', $_SESSION['user_id']);
+                dbLog($user_id, 'logout', 'usuarios', $user_id);
             } catch (Exception $e) {
                 // Ignorar erros de log por enquanto
-                if (LOG_ENABLED) {
+                if (defined('LOG_ENABLED') && LOG_ENABLED) {
                     error_log('Erro ao registrar log de logout: ' . $e->getMessage());
                 }
             }
@@ -98,27 +101,21 @@ class Auth {
         
         // Remover cookies de "lembrar-me" ANTES de destruir a sessão
         if (isset($_COOKIE['remember_token'])) {
-            $this->removeRememberToken($_COOKIE['remember_token']);
+            try {
+                $this->removeRememberToken($_COOKIE['remember_token']);
+            } catch (Exception $e) {
+                // Ignorar erros
+            }
             $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
-            setcookie('remember_token', '', time() - 3600, '/', '', $is_https, true);
+            @setcookie('remember_token', '', time() - 3600, '/', '', $is_https, true);
+            unset($_COOKIE['remember_token']);
         }
         
-        // Limpar todas as variáveis de sessão
-        $_SESSION = array();
-        
-        // Destruir a sessão
-        session_destroy();
-        
-        // Garantir que a sessão seja completamente limpa
-        if (session_status() === PHP_SESSION_ACTIVE) {
-            session_regenerate_id(true);
-        }
-        
-        // Remover todos os cookies relacionados à sessão
+        // Remover todos os cookies relacionados à sessão ANTES de destruir
         if (ini_get("session.use_cookies")) {
             $params = session_get_cookie_params();
             $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
-            setcookie(session_name(), '', time() - 42000,
+            @setcookie(session_name(), '', time() - 42000,
                 $params["path"], $params["domain"],
                 $is_https, $params["httponly"]
             );
@@ -129,11 +126,33 @@ class Auth {
             $is_https = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
             $host = $_SERVER['HTTP_HOST'] ?? '';
             // Tentar remover com diferentes combinações de parâmetros
-            setcookie('CFC_SESSION', '', time() - 42000, '/', '', $is_https, true);
+            @setcookie('CFC_SESSION', '', time() - 42000, '/', '', $is_https, true);
             if (strpos($host, 'hostingersite.com') !== false) {
-                setcookie('CFC_SESSION', '', time() - 42000, '/', '.hostingersite.com', $is_https, true);
-                setcookie('CFC_SESSION', '', time() - 42000, '/', $host, $is_https, true);
+                @setcookie('CFC_SESSION', '', time() - 42000, '/', '.hostingersite.com', $is_https, true);
+                @setcookie('CFC_SESSION', '', time() - 42000, '/', $host, $is_https, true);
             }
+            unset($_COOKIE['CFC_SESSION']);
+        }
+        
+        // Limpar todas as variáveis de sessão ANTES de destruir
+        $_SESSION = array();
+        
+        // Fechar a sessão antes de destruir (importante para garantir limpeza completa)
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            session_write_close();
+        }
+        
+        // Destruir a sessão completamente
+        if (function_exists('session_destroy') && session_status() !== PHP_SESSION_NONE) {
+            @session_destroy();
+        }
+        
+        // Garantir que não há sessão ativa após destruição
+        // Se ainda houver sessão ativa, tentar limpar novamente
+        if (session_status() === PHP_SESSION_ACTIVE) {
+            @session_start();
+            $_SESSION = array();
+            @session_destroy();
         }
         
         return ['success' => true, 'message' => 'Logout realizado com sucesso'];
@@ -141,8 +160,14 @@ class Auth {
     
     // Verificar se usuário está logado
     public function isLoggedIn() {
+        // Verificar se a sessão está realmente ativa
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            return false;
+        }
+        
         // Verificar sessão primeiro
         if (isset($_SESSION['user_id']) && isset($_SESSION['last_activity'])) {
+            // Verificar timeout
             if (time() - $_SESSION['last_activity'] > SESSION_TIMEOUT) {
                 $this->logout();
                 return false;
@@ -769,6 +794,161 @@ function apiRequireAdmin() {
         http_response_code(403);
         echo json_encode(['error' => 'Acesso negado - Administrador requerido']);
         exit;
+    }
+}
+
+/**
+ * FASE 2 - Correção: Função centralizada para obter instrutor_id
+ * Arquivo: includes/auth.php (linha ~800)
+ * 
+ * Usa o mesmo padrão da Fase 1 (admin/api/instrutor-aulas.php linha 64)
+ * Query: SELECT id FROM instrutores WHERE usuario_id = ?
+ * 
+ * @param int|null $userId ID do usuário (opcional, usa getCurrentUser() se não fornecido)
+ * @return int|null ID do instrutor ou null se não encontrado
+ */
+function getCurrentInstrutorId($userId = null) {
+    if ($userId === null) {
+        $user = getCurrentUser();
+        if (!$user) {
+            return null;
+        }
+        $userId = $user['id'];
+    }
+    
+    $db = db();
+    $instrutor = $db->fetch("SELECT id FROM instrutores WHERE usuario_id = ?", [$userId]);
+    
+    if (!$instrutor) {
+        return null;
+    }
+    
+    return $instrutor['id'];
+}
+
+/**
+ * Criar registro de instrutor a partir de um usuário
+ * 
+ * SYNC_INSTRUTORES - Função helper para garantir consistência entre usuarios e instrutores
+ * 
+ * @param int $usuarioId ID do usuário na tabela usuarios
+ * @param int|null $cfcId ID do CFC (se null, busca o primeiro CFC disponível)
+ * @return array ['success' => bool, 'instrutor_id' => int|null, 'message' => string, 'created' => bool]
+ */
+function createInstrutorFromUser($usuarioId, $cfcId = null) {
+    $db = db();
+    
+    // Verificar se usuário existe e é do tipo instrutor
+    $usuario = $db->fetch("SELECT id, nome, email, tipo FROM usuarios WHERE id = ?", [$usuarioId]);
+    if (!$usuario) {
+        if (LOG_ENABLED) {
+            error_log('[SYNC_INSTRUTORES] Usuário não encontrado: usuario_id=' . $usuarioId);
+        }
+        return [
+            'success' => false,
+            'instrutor_id' => null,
+            'message' => 'Usuário não encontrado',
+            'created' => false
+        ];
+    }
+    
+    if ($usuario['tipo'] !== 'instrutor') {
+        if (LOG_ENABLED) {
+            error_log('[SYNC_INSTRUTORES] Usuário não é do tipo instrutor: usuario_id=' . $usuarioId . ', tipo=' . $usuario['tipo']);
+        }
+        return [
+            'success' => false,
+            'instrutor_id' => null,
+            'message' => 'Usuário não é do tipo instrutor',
+            'created' => false
+        ];
+    }
+    
+    // Verificar se já existe registro em instrutores
+    $instrutorExistente = $db->fetch("SELECT id FROM instrutores WHERE usuario_id = ?", [$usuarioId]);
+    if ($instrutorExistente) {
+        if (LOG_ENABLED) {
+            error_log('[SYNC_INSTRUTORES] Instrutor já existe: usuario_id=' . $usuarioId . ', instrutor_id=' . $instrutorExistente['id']);
+        }
+        return [
+            'success' => true,
+            'instrutor_id' => $instrutorExistente['id'],
+            'message' => 'Instrutor já existe',
+            'created' => false
+        ];
+    }
+    
+    // Buscar CFC se não foi fornecido
+    if ($cfcId === null) {
+        $cfc = $db->fetch("SELECT id FROM cfcs ORDER BY id LIMIT 1");
+        if (!$cfc) {
+            if (LOG_ENABLED) {
+                error_log('[SYNC_INSTRUTORES] Nenhum CFC encontrado no banco de dados');
+            }
+            return [
+                'success' => false,
+                'instrutor_id' => null,
+                'message' => 'Nenhum CFC encontrado no banco de dados',
+                'created' => false
+            ];
+        }
+        $cfcId = $cfc['id'];
+    }
+    
+    // Gerar credencial única
+    $credencial = 'CRED-' . str_pad($usuarioId, 6, '0', STR_PAD_LEFT);
+    
+    // Verificar se credencial já existe
+    $credencialExistente = $db->fetch("SELECT id FROM instrutores WHERE credencial = ?", [$credencial]);
+    if ($credencialExistente) {
+        // Se existir, adicionar sufixo com timestamp
+        $credencial = 'CRED-' . str_pad($usuarioId, 6, '0', STR_PAD_LEFT) . '-' . time();
+    }
+    
+    // Criar registro de instrutor
+    $instrutorData = [
+        'nome' => $usuario['nome'] ?? '',
+        'usuario_id' => $usuarioId,
+        'cfc_id' => $cfcId,
+        'credencial' => $credencial,
+        'ativo' => 1,
+        'criado_em' => date('Y-m-d H:i:s')
+    ];
+    
+    try {
+        $instrutorId = $db->insert('instrutores', $instrutorData);
+        
+        if ($instrutorId) {
+            if (LOG_ENABLED) {
+                error_log('[SYNC_INSTRUTORES] Instrutor criado com sucesso: usuario_id=' . $usuarioId . ', instrutor_id=' . $instrutorId . ', cfc_id=' . $cfcId . ', credencial=' . $credencial);
+            }
+            return [
+                'success' => true,
+                'instrutor_id' => $instrutorId,
+                'message' => 'Instrutor criado com sucesso',
+                'created' => true
+            ];
+        } else {
+            if (LOG_ENABLED) {
+                error_log('[SYNC_INSTRUTORES] Erro ao criar instrutor: usuario_id=' . $usuarioId . ', erro=' . $db->getLastError());
+            }
+            return [
+                'success' => false,
+                'instrutor_id' => null,
+                'message' => 'Erro ao criar instrutor: ' . $db->getLastError(),
+                'created' => false
+            ];
+        }
+    } catch (Exception $e) {
+        if (LOG_ENABLED) {
+            error_log('[SYNC_INSTRUTORES] Exceção ao criar instrutor: usuario_id=' . $usuarioId . ', erro=' . $e->getMessage());
+        }
+        return [
+            'success' => false,
+            'instrutor_id' => null,
+            'message' => 'Erro ao criar instrutor: ' . $e->getMessage(),
+            'created' => false
+        ];
     }
 }
 

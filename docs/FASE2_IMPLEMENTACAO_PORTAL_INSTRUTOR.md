@@ -444,5 +444,89 @@ Conforme inventário original, ainda faltam:
 
 ---
 
+## 16. Correção – Vínculo de Instrutor nas Ocorrências
+
+### Data: 2024
+### Status: ✅ CORRIGIDO
+
+---
+
+### Problema Identificado
+
+Ao tentar registrar uma ocorrência na página `instrutor/ocorrencias.php`, aparecia o erro:
+> "Erro ao registrar ocorrência: Instrutor não encontrado. Verifique seu cadastro."
+
+### Causa Raiz
+
+A página `instrutor/ocorrencias.php` estava usando uma query diferente da Fase 1 para buscar o `instrutor_id`:
+- **Fase 1 (funcionando)**: `SELECT id FROM instrutores WHERE usuario_id = ?`
+- **Fase 2 (com problema)**: Query com LEFT JOIN que retornava `null` quando não havia registro na tabela `instrutores`, mas criava um array vazio em vez de retornar erro
+
+### O que foi Corrigido
+
+1. **Função Centralizada Criada:**
+   - ✅ Criada função `getCurrentInstrutorId($userId)` em `includes/auth.php`
+   - ✅ Usa o mesmo padrão da Fase 1: `SELECT id FROM instrutores WHERE usuario_id = ?`
+   - ✅ Retorna `null` se não encontrar (não cria array vazio)
+
+2. **API Criada:**
+   - ✅ Criado `admin/api/ocorrencias-instrutor.php`
+   - ✅ Usa `getCurrentInstrutorId()` para obter o instrutor_id
+   - ✅ Validações de segurança:
+     - Verifica autenticação
+     - Verifica tipo de usuário = 'instrutor'
+     - Valida que aula pertence ao instrutor (se fornecida)
+     - Não aceita `instrutor_id` via POST (sempre obtém do login)
+
+3. **Página Atualizada:**
+   - ✅ `instrutor/ocorrencias.php` agora usa `getCurrentInstrutorId()`
+   - ✅ Formulário envia via AJAX para a API (não mais POST direto)
+   - ✅ Feedback visual melhorado (mensagens de sucesso/erro dinâmicas)
+   - ✅ Listagem atualizada após registro bem-sucedido
+
+4. **Alinhamento com Fase 1:**
+   - ✅ `admin/api/instrutor-aulas.php` atualizado para usar `getCurrentInstrutorId()`
+   - ✅ Mesma lógica de obtenção do instrutor_id em ambas as APIs
+
+### Validações de Segurança Aplicadas
+
+1. **Autenticação:**
+   - ✅ Verifica `getCurrentUser()` - usuário deve estar autenticado
+
+2. **Tipo de Usuário:**
+   - ✅ Verifica `$user['tipo'] === 'instrutor'` - apenas instrutores podem usar
+
+3. **Propriedade do Instrutor:**
+   - ✅ `instrutor_id` sempre obtido do login (nunca via POST)
+   - ✅ Query: `SELECT id FROM instrutores WHERE usuario_id = ?`
+
+4. **Propriedade da Aula (se fornecida):**
+   - ✅ Valida que `aulas.instrutor_id = instrutor_id_do_login`
+   - ✅ Query: `SELECT id FROM aulas WHERE id = ? AND instrutor_id = ?`
+   - ✅ Bloqueia tentativas de vincular ocorrência a aula de outro instrutor
+
+5. **Logs de Auditoria:**
+   - ✅ Log detalhado quando instrutor não é encontrado
+   - ✅ Log de tentativas de acesso não autorizado
+   - ✅ Log de sucesso ao registrar ocorrência
+
+### Arquivos Modificados
+
+1. ✅ `includes/auth.php` - Adicionada função `getCurrentInstrutorId()`
+2. ✅ `admin/api/instrutor-aulas.php` - Atualizado para usar função centralizada
+3. ✅ `admin/api/ocorrencias-instrutor.php` - **NOVO** - API para ocorrências
+4. ✅ `instrutor/ocorrencias.php` - Atualizado para usar função centralizada e API
+
+### Testes Recomendados
+
+- [ ] Instrutor real logado registra ocorrência sem aula → deve salvar
+- [ ] Instrutor real logado registra ocorrência com aula sua → deve salvar
+- [ ] Tentativa de forçar `aula_id` de outro instrutor via DevTools → deve bloquear
+- [ ] Instrutor sem vínculo na tabela `instrutores` → deve mostrar erro com log detalhado
+- [ ] Mensagem de sucesso aparece após registro bem-sucedido
+- [ ] Listagem é atualizada após registro (sem F5)
+
+---
+
 **Fim da Fase 2**
 

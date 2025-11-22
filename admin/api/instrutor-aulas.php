@@ -60,12 +60,24 @@ try {
 
     $db = db();
 
-    // Buscar dados do instrutor na tabela instrutores
-    $instrutor = $db->fetch("SELECT id FROM instrutores WHERE usuario_id = ?", [$user['id']]);
-    if (!$instrutor) {
+    // FASE 2 - Correção: Usar função centralizada getCurrentInstrutorId()
+    // Arquivo: admin/api/instrutor-aulas.php (linha ~61)
+    // Mesma lógica, mas agora usando função reutilizável
+    $instrutorId = getCurrentInstrutorId($user['id']);
+    if (!$instrutorId) {
+        // Log detalhado para diagnóstico
+        if (defined('LOG_ENABLED') && LOG_ENABLED) {
+            error_log(sprintf(
+                '[INSTRUTOR_AULAS_API] Instrutor não encontrado - usuario_id=%d, tipo=%s, email=%s, timestamp=%s, ip=%s',
+                $user['id'],
+                $user['tipo'] ?? 'não definido',
+                $user['email'] ?? 'não definido',
+                date('Y-m-d H:i:s'),
+                $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+            ));
+        }
         returnJsonError('Instrutor não encontrado. Verifique seu cadastro.', 404);
     }
-    $instrutorId = $instrutor['id'];
 
     switch ($_SERVER['REQUEST_METHOD']) {
         case 'POST':

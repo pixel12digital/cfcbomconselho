@@ -102,6 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     
                     // Se estava forçado, redirecionar para dashboard
                     if ($precisaTrocarSenha || $forcado) {
+                        // CORREÇÃO: Usar BASE_PATH para garantir caminho correto
                         $basePath = defined('BASE_PATH') ? BASE_PATH : '';
                         header('Location: ' . $basePath . '/instrutor/dashboard.php?senha_alterada=1');
                         exit();
@@ -143,7 +144,8 @@ if (isset($_GET['senha_alterada']) && $_GET['senha_alterada'] == '1') {
                 <div class="subtitle"><?php echo $precisaTrocarSenha || $forcado ? 'Você precisa alterar sua senha para continuar' : 'Altere sua senha de acesso'; ?></div>
             </div>
             <?php if (!$precisaTrocarSenha && !$forcado): ?>
-            <a href="dashboard.php" style="color: white; text-decoration: none; padding: 8px 16px; background: rgba(255,255,255,0.2); border-radius: 8px;">
+            <?php $basePath = defined('BASE_PATH') ? BASE_PATH : ''; ?>
+            <a href="<?php echo $basePath; ?>/instrutor/dashboard.php" style="color: white; text-decoration: none; padding: 8px 16px; background: rgba(255,255,255,0.2); border-radius: 8px;">
                 <i class="fas fa-arrow-left"></i> Voltar
             </a>
             <?php endif; ?>
@@ -248,8 +250,9 @@ if (isset($_GET['senha_alterada']) && $_GET['senha_alterada'] == '1') {
                         <i class="fas fa-key"></i> Alterar Senha
                     </button>
                     <?php if (!$precisaTrocarSenha && !$forcado): ?>
+                    <?php $basePath = defined('BASE_PATH') ? BASE_PATH : ''; ?>
                     <a 
-                        href="dashboard.php" 
+                        href="<?php echo $basePath; ?>/instrutor/dashboard.php" 
                         style="padding: 12px 24px; background: #f0f0f0; color: #333; border: none; border-radius: 8px; font-size: 16px; font-weight: 600; text-decoration: none; display: flex; align-items: center; justify-content: center;"
                     >
                         Cancelar

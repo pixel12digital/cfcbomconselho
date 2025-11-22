@@ -832,7 +832,12 @@ function editUser(userId) {
     console.log('[USUARIOS] Buscando dados do usuario na API...');
     
     // Buscar dados reais da API
-    fetch('api/usuarios.php?id=' + userId)
+    // CORREÇÃO: Calcular caminho absoluto
+    const currentPath = window.location.pathname;
+    const apiUrl = currentPath.includes('/admin/') 
+        ? currentPath.substring(0, currentPath.indexOf('/admin/') + '/admin/'.length) + 'api/usuarios.php'
+        : '../api/usuarios.php';
+    fetch(apiUrl + '?id=' + userId)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -977,7 +982,11 @@ function saveUser() {
     showNotification('Salvando usuário...', 'info');
     
     // Fazer requisição para a API
-    const url = isEditMode ? 'api/usuarios.php' : 'api/usuarios.php';
+    // CORREÇÃO: Calcular caminho absoluto
+    const currentPath = window.location.pathname;
+    const url = currentPath.includes('/admin/') 
+        ? currentPath.substring(0, currentPath.indexOf('/admin/') + '/admin/'.length) + 'api/usuarios.php'
+        : '../api/usuarios.php';
     const method = isEditMode ? 'PUT' : 'POST';
     
     fetch(url, {
@@ -985,6 +994,7 @@ function saveUser() {
         headers: {
             'Content-Type': 'application/json',
         },
+        credentials: 'include', // Incluir cookies de sessão
         body: JSON.stringify(userData)
     })
     .then(response => response.json())
@@ -1055,7 +1065,11 @@ function deleteUser(userId) {
         showNotification('Excluindo usuário...', 'info');
         
         // URL da API
-        const apiUrl = 'api/usuarios.php?id=' + encodeURIComponent(userId);
+        // CORREÇÃO: Calcular caminho absoluto
+        const currentPath = window.location.pathname;
+        const apiUrl = (currentPath.includes('/admin/') 
+            ? currentPath.substring(0, currentPath.indexOf('/admin/') + '/admin/'.length) + 'api/usuarios.php'
+            : '../api/usuarios.php') + '?id=' + encodeURIComponent(userId);
         console.log('Fazendo requisicao DELETE para:', apiUrl);
         
         // Fazer requisição para a API
@@ -1172,7 +1186,12 @@ function exportUsers() {
     console.log('[USUARIOS] Buscando dados dos usuarios na API...');
     
     // Buscar dados reais da API
-    fetch('api/usuarios.php')
+    // CORREÇÃO: Calcular caminho absoluto
+    const currentPath = window.location.pathname;
+    const apiUrl = currentPath.includes('/admin/') 
+        ? currentPath.substring(0, currentPath.indexOf('/admin/') + '/admin/'.length) + 'api/usuarios.php'
+        : '../api/usuarios.php';
+    fetch(apiUrl)
         .then(response => response.json())
         .then(data => {
             if (data.success) {
@@ -1459,15 +1478,36 @@ function confirmResetPassword() {
     // Fazer requisição para a API
     console.log('[USUARIOS] Enviando requisição de redefinição de senha:', requestData);
     
-    fetch('api/usuarios.php', {
+    // CORREÇÃO: Calcular caminho absoluto baseado na estrutura do projeto
+    // A página está sempre em /admin/index.php?page=usuarios, então a API está em /admin/api/usuarios.php
+    const currentPath = window.location.pathname;
+    let apiUrl;
+    
+    // Extrair o diretório base (até /admin/)
+    if (currentPath.includes('/admin/')) {
+        // Se estamos em /admin/, a API está em /admin/api/
+        // Exemplo: /cfc-bom-conselho/admin/index.php -> /cfc-bom-conselho/admin/api/usuarios.php
+        const basePath = currentPath.substring(0, currentPath.indexOf('/admin/') + '/admin/'.length);
+        apiUrl = basePath + 'api/usuarios.php';
+    } else {
+        // Fallback: caminho relativo
+        apiUrl = '../api/usuarios.php';
+    }
+    
+    console.log('[USUARIOS] URL da API calculada:', apiUrl);
+    console.log('[USUARIOS] Caminho atual:', currentPath);
+    
+    fetch(apiUrl, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
         },
+        credentials: 'include', // Incluir cookies de sessão
         body: JSON.stringify(requestData)
     })
     .then(response => {
         console.log('[USUARIOS] Resposta recebida - Status:', response.status, response.statusText);
+        console.log('[USUARIOS] Headers:', response.headers);
         
         // Verificar se a resposta é ok antes de fazer parse
         if (!response.ok) {
@@ -1478,18 +1518,47 @@ function confirmResetPassword() {
                 try {
                     errorData = JSON.parse(text);
                 } catch (e) {
-                    errorData = { error: 'Erro ao processar resposta do servidor', details: text };
+                    errorData = { 
+                        success: false,
+                        error: 'Erro ao processar resposta do servidor', 
+                        details: text,
+                        code: 'PARSE_ERROR'
+                    };
                 }
-                throw new Error(errorData.error || `Erro HTTP ${response.status}: ${response.statusText}`);
+                // Retornar objeto de erro em vez de lançar exceção
+                return errorData;
             });
         }
         
-        return response.json();
+        // Tentar fazer parse do JSON
+        return response.text().then(text => {
+            console.log('[USUARIOS] Corpo da resposta (texto):', text);
+            try {
+                const jsonData = JSON.parse(text);
+                console.log('[USUARIOS] Dados parseados:', jsonData);
+                return jsonData;
+            } catch (e) {
+                console.error('[USUARIOS] Erro ao fazer parse do JSON:', e);
+                return {
+                    success: false,
+                    error: 'Resposta do servidor não é um JSON válido',
+                    details: text,
+                    code: 'INVALID_JSON'
+                };
+            }
+        });
     })
     .then(data => {
         console.log('[USUARIOS] Dados recebidos da API:', data);
         
-        if (data.success) {
+        // Verificar se data é válido
+        if (!data) {
+            console.error('[USUARIOS] ❌ Resposta vazia ou inválida');
+            showNotification('Erro: Resposta inválida do servidor', 'error');
+            return;
+        }
+        
+        if (data.success === true || data.success === 'true') {
             showNotification(data.message || 'Senha redefinida com sucesso!', 'success');
             closeResetPasswordModal();
             
@@ -1516,7 +1585,10 @@ function confirmResetPassword() {
             console.log('[USUARIOS] ✅ Senha redefinida com sucesso - página permanece carregada');
         } else {
             console.error('[USUARIOS] ❌ Erro na resposta:', data);
-            showNotification(data.error || 'Erro ao redefinir senha', 'error');
+            const errorMsg = data.error || data.message || 'Erro ao redefinir senha';
+            const errorCode = data.code || 'UNKNOWN_ERROR';
+            console.error('[USUARIOS] Código do erro:', errorCode);
+            showNotification(errorMsg + (data.details ? ' (' + data.details + ')' : ''), 'error');
         }
     })
     .catch(error => {

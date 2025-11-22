@@ -44,18 +44,26 @@ try {
     // Continuar normalmente
 }
 
-// FASE 2 - Buscar dados do instrutor (padrão do portal)
+// FASE 2 - Correção: Buscar dados do instrutor usando função centralizada
 // Arquivo: instrutor/ocorrencias.php (linha ~35)
-$instrutor = $db->fetch("
-    SELECT i.*, u.nome as nome_usuario, u.email as email_usuario 
-    FROM instrutores i 
-    LEFT JOIN usuarios u ON i.usuario_id = u.id 
-    WHERE i.usuario_id = ?
-", [$user['id']]);
+// Usa getCurrentInstrutorId() (mesmo padrão da Fase 1)
+$instrutorId = getCurrentInstrutorId($user['id']);
 
+// Buscar dados completos do instrutor para exibição (se existir)
+$instrutor = null;
+if ($instrutorId) {
+    $instrutor = $db->fetch("
+        SELECT i.*, u.nome as nome_usuario, u.email as email_usuario 
+        FROM instrutores i 
+        LEFT JOIN usuarios u ON i.usuario_id = u.id 
+        WHERE i.id = ?
+    ", [$instrutorId]);
+}
+
+// Se não encontrar, criar estrutura básica para exibição
 if (!$instrutor) {
     $instrutor = [
-        'id' => null,
+        'id' => $instrutorId,
         'usuario_id' => $user['id'],
         'nome' => $user['nome'] ?? 'Instrutor',
         'nome_usuario' => $user['nome'] ?? 'Instrutor',
@@ -66,14 +74,15 @@ if (!$instrutor) {
 }
 
 $instrutor['nome'] = $instrutor['nome'] ?? $instrutor['nome_usuario'] ?? $user['nome'] ?? 'Instrutor';
-$instrutorId = $instrutor['id'] ?? null;
 
 $success = '';
 $error = '';
 
-// FASE 2 - Processar cadastro de ocorrência
+// FASE 2 - Correção: Processamento movido para API (admin/api/ocorrencias-instrutor.php)
 // Arquivo: instrutor/ocorrencias.php (linha ~60)
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'registrar_ocorrencia') {
+// O formulário agora envia via AJAX para a API
+// Este bloco foi mantido apenas para compatibilidade, mas não será usado
+if (false && $_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'registrar_ocorrencia') {
     $tipo = $_POST['tipo'] ?? '';
     $dataOcorrencia = $_POST['data_ocorrencia'] ?? date('Y-m-d');
     $aulaId = !empty($_POST['aula_id']) ? (int)$_POST['aula_id'] : null;
@@ -174,8 +183,9 @@ if ($instrutorId) {
     ", [$instrutorId]);
 }
 
-// FASE 2 - Buscar ocorrências do instrutor
+// FASE 2 - Correção: Buscar ocorrências do instrutor usando instrutor_id correto
 // Arquivo: instrutor/ocorrencias.php (linha ~150)
+// Agora usa getCurrentInstrutorId() para garantir que temos o ID correto
 $ocorrencias = [];
 if ($instrutorId) {
     try {
@@ -193,8 +203,22 @@ if ($instrutorId) {
             ", [$instrutorId]);
         }
     } catch (Exception $e) {
-        // Tabela não existe ainda
-        error_log('Erro ao buscar ocorrências: ' . $e->getMessage());
+        // Tabela não existe ainda ou erro na query
+        if (defined('LOG_ENABLED') && LOG_ENABLED) {
+            error_log('[OCORRENCIAS_PAGE] Erro ao buscar ocorrências: ' . $e->getMessage());
+        }
+    }
+} else {
+    // FASE 2 - Correção: Log detalhado se instrutor_id não foi encontrado
+    // Arquivo: instrutor/ocorrencias.php (linha ~170)
+    if (defined('LOG_ENABLED') && LOG_ENABLED) {
+        error_log(sprintf(
+            '[OCORRENCIAS_PAGE] Instrutor não encontrado - usuario_id=%d, tipo=%s, email=%s, timestamp=%s',
+            $user['id'],
+            $user['tipo'] ?? 'não definido',
+            $user['email'] ?? 'não definido',
+            date('Y-m-d H:i:s')
+        ));
     }
 }
 
@@ -420,16 +444,169 @@ $statusOcorrencia = [
     </div>
 
     <script>
-        // FASE 2 - Validação frontend do formulário
-        // Arquivo: instrutor/ocorrencias.php (linha ~380)
-        document.getElementById('formOcorrencia').addEventListener('submit', function(e) {
-            const descricao = document.getElementById('descricao').value.trim();
+        // FASE 2 - Correção: Envio via API e atualização dinâmica da listagem
+        // Arquivo: instrutor/ocorrencias.php (linha ~431)
+        
+        // Função para mostrar mensagem de erro
+        function showError(message) {
+            const errorDiv = document.querySelector('.alert-danger');
+            const successDiv = document.querySelector('.alert-success');
             
+            if (successDiv) successDiv.style.display = 'none';
+            
+            if (errorDiv) {
+                errorDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + message;
+                errorDiv.style.display = 'block';
+            } else {
+                // Criar div de erro se não existir
+                const container = document.querySelector('.container');
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-danger';
+                alertDiv.style.cssText = 'background: #f8d7da; color: #721c24; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #f5c6cb;';
+                alertDiv.innerHTML = '<i class="fas fa-exclamation-circle"></i> ' + message;
+                container.insertBefore(alertDiv, container.firstChild);
+            }
+        }
+        
+        // Função para mostrar mensagem de sucesso
+        function showSuccess(message) {
+            const errorDiv = document.querySelector('.alert-danger');
+            const successDiv = document.querySelector('.alert-success');
+            
+            if (errorDiv) errorDiv.style.display = 'none';
+            
+            if (successDiv) {
+                successDiv.innerHTML = '<i class="fas fa-check-circle"></i> ' + message;
+                successDiv.style.display = 'block';
+            } else {
+                // Criar div de sucesso se não existir
+                const container = document.querySelector('.container');
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success';
+                alertDiv.style.cssText = 'background: #d4edda; color: #155724; padding: 12px 16px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #c3e6cb;';
+                alertDiv.innerHTML = '<i class="fas fa-check-circle"></i> ' + message;
+                container.insertBefore(alertDiv, container.firstChild);
+            }
+        }
+        
+        // FASE 2 - Correção: Usar caminho absoluto robusto baseado na URL atual
+        // Arquivo: instrutor/ocorrencias.php (linha ~492)
+        // Descobrir /cfc-bom-conselho independente da página atual
+        const BASE_PATH = window.location.pathname.split('/instrutor/')[0];
+        
+        // Caminho absoluto para a API, baseado na raiz do projeto
+        const API_OCORRENCIAS_URL = `${BASE_PATH}/admin/api/ocorrencias-instrutor.php`;
+        
+        // Debug: log do caminho final
+        console.log('[Ocorrências] URL da API final:', API_OCORRENCIAS_URL);
+        
+        // Função para recarregar a listagem de ocorrências
+        async function reloadOcorrencias() {
+            try {
+                const response = await fetch(API_OCORRENCIAS_URL, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include'
+                });
+                
+                const result = await response.json();
+                
+                if (result.success && result.data) {
+                    // Recarregar página para atualizar listagem (pode melhorar depois com atualização dinâmica)
+                    window.location.reload();
+                }
+            } catch (error) {
+                console.error('Erro ao recarregar ocorrências:', error);
+            }
+        }
+        
+        // Interceptar submit do formulário e enviar via API
+        document.getElementById('formOcorrencia').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const form = this;
+            const formData = new FormData(form);
+            const descricao = formData.get('descricao').trim();
+            
+            // Validação frontend
             if (descricao.length < 10) {
-                e.preventDefault();
-                alert('A descrição deve ter no mínimo 10 caracteres.');
+                showError('A descrição deve ter no mínimo 10 caracteres.');
                 return false;
             }
+            
+            // Desabilitar botão durante envio
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Registrando...';
+            
+            try {
+                // FASE 2 - Correção: Enviar para API usando constante padronizada
+                // Arquivo: instrutor/ocorrencias.php (linha ~540)
+                const response = await fetch(API_OCORRENCIAS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        tipo: formData.get('tipo'),
+                        data_ocorrencia: formData.get('data_ocorrencia'),
+                        aula_id: formData.get('aula_id') || null,
+                        descricao: descricao
+                    })
+                });
+                
+                // Verificar se a resposta é válida
+                if (!response.ok) {
+                    // Se for 404, o arquivo não foi encontrado
+                    if (response.status === 404) {
+                        console.error('[Ocorrências] API não encontrada. Caminho:', API_OCORRENCIAS_URL, 'Status:', response.status);
+                        showError('Erro: API não encontrada. Verifique o caminho do servidor.');
+                        return false;
+                    }
+                    
+                    // Tentar ler como texto primeiro para debug
+                    const text = await response.text();
+                    console.error('Resposta de erro:', text);
+                    
+                    // Tentar parsear como JSON se possível
+                    try {
+                        const errorResult = JSON.parse(text);
+                        showError(errorResult.message || 'Erro ao registrar ocorrência.');
+                    } catch (e) {
+                        // Se não for JSON, mostrar erro genérico
+                        showError('Erro ao comunicar com o servidor. Status: ' + response.status);
+                    }
+                    return false;
+                }
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showSuccess(result.message || 'Ocorrência registrada com sucesso!');
+                    form.reset();
+                    
+                    // Recarregar listagem após breve delay
+                    setTimeout(() => {
+                        reloadOcorrencias();
+                    }, 500);
+                } else {
+                    showError(result.message || 'Erro ao registrar ocorrência.');
+                }
+            } catch (error) {
+                console.error('Erro na requisição:', error);
+                console.error('[Ocorrências] Erro na requisição:', error);
+                console.error('[Ocorrências] Caminho da API usado:', API_OCORRENCIAS_URL);
+                showError('Erro de conexão. Verifique sua conexão e tente novamente.');
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+            
+            return false;
         });
     </script>
 </body>
