@@ -18,7 +18,8 @@ require_once __DIR__ . '/../includes/auth.php';
 // Arquivo: instrutor/contato.php (linha ~13)
 $user = getCurrentUser();
 if (!$user || $user['tipo'] !== 'instrutor') {
-    header('Location: /cfc-bom-conselho/login.php');
+    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+    header('Location: ' . $basePath . '/login.php');
     exit();
 }
 
@@ -33,7 +34,8 @@ try {
         if ($usuarioCompleto && isset($usuarioCompleto['precisa_trocar_senha']) && $usuarioCompleto['precisa_trocar_senha'] == 1) {
             $currentPage = basename($_SERVER['PHP_SELF']);
             if ($currentPage !== 'trocar-senha.php') {
-                header('Location: /cfc-bom-conselho/instrutor/trocar-senha.php?forcado=1');
+                $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                header('Location: ' . $basePath . '/instrutor/trocar-senha.php?forcado=1');
                 exit();
             }
         }
@@ -139,7 +141,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     $success = 'Mensagem enviada com sucesso! A secretaria entrará em contato em breve.';
                     
                     // Limpar formulário (redirecionar para evitar reenvio)
-                    header('Location: /cfc-bom-conselho/instrutor/contato.php?success=1');
+                    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                    header('Location: ' . $basePath . '/instrutor/contato.php?success=1');
                     exit();
                 } else {
                     $error = 'Erro ao enviar mensagem. Tente novamente.';

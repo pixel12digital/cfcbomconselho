@@ -12,7 +12,8 @@ require_once __DIR__ . '/../includes/auth.php';
 // Verificar autenticação
 $user = getCurrentUser();
 if (!$user || $user['tipo'] !== 'instrutor') {
-    header('Location: /cfc-bom-conselho/login.php');
+    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+    header('Location: ' . $basePath . '/login.php');
     exit();
 }
 
@@ -101,7 +102,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     
                     // Se estava forçado, redirecionar para dashboard
                     if ($precisaTrocarSenha || $forcado) {
-                        header('Location: /cfc-bom-conselho/instrutor/dashboard.php?senha_alterada=1');
+                        $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                        header('Location: ' . $basePath . '/instrutor/dashboard.php?senha_alterada=1');
                         exit();
                     } else {
                         $success = 'Senha alterada com sucesso!';

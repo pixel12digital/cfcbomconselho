@@ -260,7 +260,8 @@ class Auth {
         
         if (!$user) {
             // Se não houver usuário, redirecionar para login
-            header('Location: /cfc-bom-conselho/login.php');
+            $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+            header('Location: ' . $basePath . '/login.php');
             exit;
         }
         
@@ -289,10 +290,11 @@ class Auth {
         
         // Se precisa trocar senha, redirecionar para página de troca
         if ($precisaTrocarSenha) {
-            switch ($tipo) {
-                case 'instrutor':
-                    header('Location: /cfc-bom-conselho/instrutor/trocar-senha.php?forcado=1');
-                    exit;
+                    switch ($tipo) {
+                        case 'instrutor':
+                            $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                            header('Location: ' . $basePath . '/instrutor/trocar-senha.php?forcado=1');
+                            exit;
                 case 'admin':
                 case 'secretaria':
                     // TODO: Criar página de troca de senha para admin/secretaria se necessário
@@ -306,26 +308,27 @@ class Auth {
         }
         
         // Determinar URL de destino baseado no tipo de usuário
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '';
         switch ($tipo) {
             case 'admin':
             case 'secretaria':
                 // Admin e Secretaria vão para o painel administrativo
-                header('Location: /cfc-bom-conselho/admin/index.php');
+                header('Location: ' . $basePath . '/admin/index.php');
                 break;
                 
             case 'instrutor':
                 // Instrutor vai para o painel do instrutor
-                header('Location: /cfc-bom-conselho/instrutor/dashboard.php');
+                header('Location: ' . $basePath . '/instrutor/dashboard.php');
                 break;
                 
             case 'aluno':
                 // Aluno vai para o painel do aluno
-                header('Location: /cfc-bom-conselho/aluno/dashboard.php');
+                header('Location: ' . $basePath . '/aluno/dashboard.php');
                 break;
                 
             default:
                 // Tipo desconhecido, redirecionar para login
-                header('Location: /cfc-bom-conselho/login.php');
+                header('Location: ' . $basePath . '/login.php');
         }
         
         exit;

@@ -11,7 +11,8 @@ require_once __DIR__ . '/../includes/auth.php';
 // Verificar autenticação
 $user = getCurrentUser();
 if (!$user || $user['tipo'] !== 'instrutor') {
-    header('Location: /cfc-bom-conselho/login.php');
+    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+    header('Location: ' . $basePath . '/login.php');
     exit();
 }
 
@@ -23,7 +24,8 @@ try {
     if ($checkColumn) {
         $usuarioCompleto = $db->fetch("SELECT precisa_trocar_senha FROM usuarios WHERE id = ?", [$user['id']]);
         if ($usuarioCompleto && isset($usuarioCompleto['precisa_trocar_senha']) && $usuarioCompleto['precisa_trocar_senha'] == 1) {
-            header('Location: /cfc-bom-conselho/instrutor/trocar-senha.php?forcado=1');
+            $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+            header('Location: ' . $basePath . '/instrutor/trocar-senha.php?forcado=1');
             exit();
         }
     }
@@ -41,7 +43,8 @@ $usuarioCompleto = $db->fetch("
 ", [$user['id']]);
 
 if (!$usuarioCompleto) {
-    header('Location: /cfc-bom-conselho/instrutor/dashboard.php');
+    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+    header('Location: ' . $basePath . '/instrutor/dashboard.php');
     exit();
 }
 

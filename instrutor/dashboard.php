@@ -30,7 +30,8 @@ try {
             // Verificar se não está já na página de trocar senha
             $currentPage = basename($_SERVER['PHP_SELF']);
             if ($currentPage !== 'trocar-senha.php') {
-                header('Location: /cfc-bom-conselho/instrutor/trocar-senha.php?forcado=1');
+                $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                header('Location: ' . $basePath . '/instrutor/trocar-senha.php?forcado=1');
                 exit();
             }
         }

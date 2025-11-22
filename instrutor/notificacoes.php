@@ -20,7 +20,8 @@ require_once __DIR__ . '/../includes/services/SistemaNotificacoes.php';
 // Arquivo: instrutor/notificacoes.php (linha ~13)
 $user = getCurrentUser();
 if (!$user || $user['tipo'] !== 'instrutor') {
-    header('Location: /cfc-bom-conselho/login.php');
+    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+    header('Location: ' . $basePath . '/login.php');
     exit();
 }
 
@@ -36,7 +37,8 @@ try {
         if ($usuarioCompleto && isset($usuarioCompleto['precisa_trocar_senha']) && $usuarioCompleto['precisa_trocar_senha'] == 1) {
             $currentPage = basename($_SERVER['PHP_SELF']);
             if ($currentPage !== 'trocar-senha.php') {
-                header('Location: /cfc-bom-conselho/instrutor/trocar-senha.php?forcado=1');
+                $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+                header('Location: ' . $basePath . '/instrutor/trocar-senha.php?forcado=1');
                 exit();
             }
         }
