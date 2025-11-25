@@ -14,10 +14,16 @@ require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
-// Verificar autenticação
-if (!isLoggedIn()) {
-    header('Location: /login.php');
-    exit();
+// AJUSTE DASHBOARD INSTRUTOR - Verificar autenticação
+// Se estiver sendo incluído pelo router do admin, não fazer redirect aqui
+// (o admin/index.php já verificou a autenticação)
+if (!defined('ADMIN_ROUTING')) {
+    // Se não está sendo incluído pelo router, verificar autenticação diretamente
+    if (!isLoggedIn()) {
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+        header('Location: ' . $basePath . '/login.php');
+        exit();
+    }
 }
 
 $db = Database::getInstance();
@@ -45,13 +51,12 @@ if (!$turmaId) {
 }
 
 // Buscar dados da turma (CORRIGIDO: usar turmas_teoricas em vez de turmas)
+// CORREÇÃO: turmas_teoricas não tem instrutor_id - buscar instrutor da aula se aula_id fornecido
 $turma = $db->fetch("
     SELECT 
         tt.*,
-        i.nome as instrutor_nome,
         c.nome as cfc_nome
     FROM turmas_teoricas tt
-    LEFT JOIN instrutores i ON tt.instrutor_id = i.id
     LEFT JOIN cfcs c ON tt.cfc_id = c.id
     WHERE tt.id = ?
 ", [$turmaId]);
@@ -69,9 +74,50 @@ if (!$turma) {
     }
 }
 
-// Verificar se usuário tem permissão para esta turma
-if ($userType === 'instrutor' && $turma['instrutor_id'] != $userId) {
-    $canEdit = false;
+// Buscar instrutor da aula se aula_id fornecido, ou primeiro instrutor da turma
+$instrutorNome = null;
+if ($aulaId) {
+    $aulaInstrutor = $db->fetch("
+        SELECT i.nome as instrutor_nome
+        FROM turma_aulas_agendadas taa
+        LEFT JOIN instrutores i ON taa.instrutor_id = i.id
+        WHERE taa.id = ? AND taa.turma_id = ?
+    ", [$aulaId, $turmaId]);
+    $instrutorNome = $aulaInstrutor['instrutor_nome'] ?? null;
+} else {
+    // Se não há aula_id, buscar primeiro instrutor da turma
+    $primeiroInstrutor = $db->fetch("
+        SELECT i.nome as instrutor_nome
+        FROM turma_aulas_agendadas taa
+        LEFT JOIN instrutores i ON taa.instrutor_id = i.id
+        WHERE taa.turma_id = ?
+        LIMIT 1
+    ", [$turmaId]);
+    $instrutorNome = $primeiroInstrutor['instrutor_nome'] ?? null;
+}
+$turma['instrutor_nome'] = $instrutorNome;
+
+// Verificar se usuário tem permissão para esta turma/aula
+if ($userType === 'instrutor') {
+    if ($aulaId) {
+        // Verificar se é instrutor da aula específica
+        $aulaInstrutor = $db->fetch(
+            "SELECT instrutor_id FROM turma_aulas_agendadas WHERE id = ? AND turma_id = ?",
+            [$aulaId, $turmaId]
+        );
+        if (!$aulaInstrutor || $aulaInstrutor['instrutor_id'] != $userId) {
+            $canEdit = false;
+        }
+    } else {
+        // Verificar se tem alguma aula nesta turma
+        $temAula = $db->fetch(
+            "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND instrutor_id = ?",
+            [$turmaId, $userId]
+        );
+        if (!$temAula || $temAula['total'] == 0) {
+            $canEdit = false;
+        }
+    }
 }
 
 // Verificar regras adicionais: turma concluída/cancelada
@@ -84,16 +130,44 @@ if ($turma['status'] === 'cancelada') {
 }
 
 // Buscar aulas da turma (CORRIGIDO: usar turma_aulas_agendadas e aula_id)
-$aulas = $db->fetchAll("
-    SELECT 
-        taa.*,
-        COUNT(tp.id) as presencas_registradas
-    FROM turma_aulas_agendadas taa
-    LEFT JOIN turma_presencas tp ON taa.id = tp.aula_id
-    WHERE taa.turma_id = ?
-    GROUP BY taa.id
-    ORDER BY taa.ordem_global ASC
-", [$turmaId]);
+// AJUSTE DASHBOARD INSTRUTOR - Corrigir JOIN com turma_presencas
+// Verificar se a tabela turma_presencas existe antes de fazer o JOIN
+try {
+    $tabelaExiste = $db->fetch("SHOW TABLES LIKE 'turma_presencas'");
+    if ($tabelaExiste) {
+        // Tabela existe, fazer JOIN normal
+        $aulas = $db->fetchAll("
+            SELECT 
+                taa.*,
+                COUNT(DISTINCT tp.id) as presencas_registradas
+            FROM turma_aulas_agendadas taa
+            LEFT JOIN turma_presencas tp ON taa.id = tp.aula_id AND tp.turma_id = taa.turma_id
+            WHERE taa.turma_id = ?
+            GROUP BY taa.id
+            ORDER BY taa.ordem_global ASC
+        ", [$turmaId]);
+    } else {
+        // Tabela não existe, buscar apenas aulas sem contar presenças
+        $aulas = $db->fetchAll("
+            SELECT 
+                taa.*,
+                0 as presencas_registradas
+            FROM turma_aulas_agendadas taa
+            WHERE taa.turma_id = ?
+            ORDER BY taa.ordem_global ASC
+        ", [$turmaId]);
+    }
+} catch (Exception $e) {
+    // Em caso de erro, buscar apenas aulas sem contar presenças
+    $aulas = $db->fetchAll("
+        SELECT 
+            taa.*,
+            0 as presencas_registradas
+        FROM turma_aulas_agendadas taa
+        WHERE taa.turma_id = ?
+        ORDER BY taa.ordem_global ASC
+    ", [$turmaId]);
+}
 
 // Se não especificou aula, usar a primeira
 if (!$aulaId && !empty($aulas)) {
@@ -108,28 +182,98 @@ if ($aulaId) {
     ", [$aulaId, $turmaId]);
 }
 
-// Buscar alunos matriculados na turma (CORRIGIDO: usar turma_matriculas e aula_id)
-$alunos = $db->fetchAll("
-    SELECT 
-        a.*,
-        tm.status as status_matricula,
-        tm.data_matricula,
-        tm.frequencia_percentual,
-        tp.presente,
-        tp.justificativa as observacao_presenca,
-        tp.registrado_em as presenca_registrada_em,
-        tp.id as presenca_id
-    FROM alunos a
-    JOIN turma_matriculas tm ON a.id = tm.aluno_id
-    LEFT JOIN turma_presencas tp ON (
-        a.id = tp.aluno_id 
-        AND tp.turma_id = ? 
-        AND tp.aula_id = ?
-    )
-    WHERE tm.turma_id = ? 
-    AND tm.status IN ('matriculado', 'cursando', 'concluido')
-    ORDER BY a.nome ASC
-", [$turmaId, $aulaId, $turmaId]);
+// AJUSTE DASHBOARD INSTRUTOR - Buscar alunos matriculados na turma
+// Verificar se a tabela turma_presencas existe e quais colunas tem
+$tabelaPresencasExiste = false;
+$colunaJustificativaExiste = false;
+$colunaAulaIdExiste = false;
+
+try {
+    $tabelaPresencasExiste = $db->fetch("SHOW TABLES LIKE 'turma_presencas'");
+    if ($tabelaPresencasExiste) {
+        // Verificar quais colunas existem
+        $colunas = $db->fetchAll("SHOW COLUMNS FROM turma_presencas");
+        foreach ($colunas as $col) {
+            if ($col['Field'] === 'justificativa') {
+                $colunaJustificativaExiste = true;
+            }
+            if ($col['Field'] === 'aula_id') {
+                $colunaAulaIdExiste = true;
+            }
+        }
+    }
+} catch (Exception $e) {
+    // Tabela não existe ou erro ao verificar
+}
+
+if ($tabelaPresencasExiste && $colunaAulaIdExiste) {
+    // Tabela existe com estrutura esperada
+    if ($colunaJustificativaExiste) {
+        // Coluna justificativa existe
+        $alunos = $db->fetchAll("
+            SELECT 
+                a.*,
+                tm.status as status_matricula,
+                tm.data_matricula,
+                tm.frequencia_percentual,
+                tp.presente,
+                tp.justificativa as observacao_presenca,
+                tp.registrado_em as presenca_registrada_em,
+                tp.id as presenca_id
+            FROM alunos a
+            JOIN turma_matriculas tm ON a.id = tm.aluno_id
+            LEFT JOIN turma_presencas tp ON (
+                a.id = tp.aluno_id 
+                AND tp.turma_id = ? 
+                AND tp.aula_id = ?
+            )
+            WHERE tm.turma_id = ? 
+            AND tm.status IN ('matriculado', 'cursando', 'concluido')
+            ORDER BY a.nome ASC
+        ", [$turmaId, $aulaId, $turmaId]);
+    } else {
+        // Coluna justificativa não existe, usar NULL
+        $alunos = $db->fetchAll("
+            SELECT 
+                a.*,
+                tm.status as status_matricula,
+                tm.data_matricula,
+                tm.frequencia_percentual,
+                tp.presente,
+                NULL as observacao_presenca,
+                tp.registrado_em as presenca_registrada_em,
+                tp.id as presenca_id
+            FROM alunos a
+            JOIN turma_matriculas tm ON a.id = tm.aluno_id
+            LEFT JOIN turma_presencas tp ON (
+                a.id = tp.aluno_id 
+                AND tp.turma_id = ? 
+                AND tp.aula_id = ?
+            )
+            WHERE tm.turma_id = ? 
+            AND tm.status IN ('matriculado', 'cursando', 'concluido')
+            ORDER BY a.nome ASC
+        ", [$turmaId, $aulaId, $turmaId]);
+    }
+} else {
+    // Tabela não existe ou não tem aula_id, buscar apenas alunos sem presenças
+    $alunos = $db->fetchAll("
+        SELECT 
+            a.*,
+            tm.status as status_matricula,
+            tm.data_matricula,
+            tm.frequencia_percentual,
+            NULL as presente,
+            NULL as observacao_presenca,
+            NULL as presenca_registrada_em,
+            NULL as presenca_id
+        FROM alunos a
+        JOIN turma_matriculas tm ON a.id = tm.aluno_id
+        WHERE tm.turma_id = ? 
+        AND tm.status IN ('matriculado', 'cursando', 'concluido')
+        ORDER BY a.nome ASC
+    ", [$turmaId]);
+}
 
 // Calcular estatísticas da turma
 $estatisticasTurma = [
@@ -410,10 +554,10 @@ if ($aulaId) {
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         <strong>Turma cancelada:</strong> Não é possível editar presenças de turmas canceladas.
                     </div>
-                    <?php elseif ($userType === 'instrutor' && $turma['instrutor_id'] != $userId): ?>
+                    <?php elseif ($userType === 'instrutor' && !$canEdit): ?>
                     <div class="alert alert-info mb-3" role="alert">
                         <i class="fas fa-lock me-2"></i>
-                        <strong>Sem permissão:</strong> Você não é o instrutor desta turma. Apenas visualização.
+                        <strong>Sem permissão:</strong> Você não é o instrutor desta aula. Apenas visualização.
                     </div>
                     <?php endif; ?>
                 <?php endif; ?>
@@ -440,7 +584,13 @@ if ($aulaId) {
                     <div class="col-12 col-md-4 text-end mt-2 mt-md-0">
                         <!-- Links Contextuais -->
                         <div class="btn-group" role="group">
-                            <a href="turma-diario.php?turma_id=<?= $turmaId ?>&aula_id=<?= $aulaId ?>" 
+                            <?php 
+                            // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Link para diário usando roteador admin
+                            $origem = $_GET['origem'] ?? null;
+                            $origemParam = $origem ? '&origem=' . urlencode($origem) : '';
+                            $urlDiario = 'index.php?page=turma-diario&turma_id=' . (int)$turmaId . ($aulaId ? '&aula_id=' . (int)$aulaId : '') . $origemParam;
+                            ?>
+                            <a href="<?php echo htmlspecialchars($urlDiario); ?>" 
                                class="btn btn-outline-info btn-sm" title="Ir para Diário desta aula">
                                 <i class="fas fa-book-open"></i> Diário
                             </a>
@@ -450,7 +600,18 @@ if ($aulaId) {
                                     <i class="fas fa-chart-bar"></i> Relatórios
                                 </a>
                             <?php endif; ?>
-                            <a href="turmas.php" class="btn btn-outline-secondary btn-sm" title="Voltar para Gestão de Turmas">
+                            <?php 
+                            // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Botão Voltar respeitando origem
+                            $origem = $_GET['origem'] ?? null;
+                            if ($origem === 'instrutor') {
+                                $backUrl = (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '') . '/instrutor/dashboard.php';
+                                $backTitle = 'Voltar para Dashboard do Instrutor';
+                            } else {
+                                $backUrl = 'index.php?page=turmas-teoricas&acao=detalhes&turma_id=' . (int)$turmaId;
+                                $backTitle = 'Voltar para Gestão de Turmas';
+                            }
+                            ?>
+                            <a href="<?php echo htmlspecialchars($backUrl); ?>" class="btn btn-outline-secondary btn-sm" title="<?php echo htmlspecialchars($backTitle); ?>">
                                 <i class="fas fa-arrow-left"></i> Voltar
                             </a>
                         </div>
@@ -472,7 +633,7 @@ if ($aulaId) {
                         <select class="form-select" id="aulaSelector" onchange="trocarAula()">
                             <?php foreach ($aulas as $aula): ?>
                             <option value="<?= $aula['id'] ?>" <?= $aula['id'] == $aulaId ? 'selected' : '' ?>>
-                                Aula <?= $aula['ordem'] ?> - <?= htmlspecialchars($aula['nome_aula']) ?>
+                                Aula <?= htmlspecialchars($aula['ordem_global'] ?? $aula['ordem_disciplina'] ?? 'N/A') ?> - <?= htmlspecialchars($aula['nome_aula'] ?? 'Sem nome') ?>
                                 (<?= date('d/m/Y', strtotime($aula['data_aula'])) ?>)
                             </option>
                             <?php endforeach; ?>
@@ -1042,11 +1203,15 @@ if ($aulaId) {
             }
         }
 
-        // Função para trocar de aula
+        // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Função para trocar de aula preservando page=turma-chamada
         function trocarAula() {
             const novoAulaId = document.getElementById('aulaSelector').value;
             if (novoAulaId != aulaId) {
-                window.location.href = `?turma_id=${turmaId}&aula_id=${novoAulaId}`;
+                // Preservar parâmetro page e origem se existir
+                const urlParams = new URLSearchParams(window.location.search);
+                const origem = urlParams.get('origem') || '';
+                const origemParam = origem ? `&origem=${origem}` : '';
+                window.location.href = `?page=turma-chamada&turma_id=${turmaId}&aula_id=${novoAulaId}${origemParam}`;
             }
         }
 

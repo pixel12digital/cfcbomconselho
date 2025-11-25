@@ -13,8 +13,10 @@ if (!defined('ADMIN_ROUTING')) {
     die('Acesso negado');
 }
 
-// Parâmetros da URL
+// AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Parâmetros da URL
 $turmaId = $_GET['turma_id'] ?? null;
+$aulaId = $_GET['aula_id'] ?? null;
+$origem = $_GET['origem'] ?? null;
 
 if (!$turmaId) {
     echo '<div class="alert alert-danger">ID da turma não informado.</div>';
@@ -183,11 +185,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
             </p>
         </div>
         <nav aria-label="Navegação da página">
-            <a href="?page=turmas" 
+            <?php 
+            // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Botão Voltar respeitando origem
+            if ($origem === 'instrutor') {
+                $backUrl = (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '') . '/instrutor/dashboard.php';
+                $backTitle = 'Voltar para Dashboard do Instrutor';
+            } else {
+                $backUrl = '?page=turmas-teoricas';
+                $backTitle = 'Voltar para a lista de turmas';
+            }
+            ?>
+            <a href="<?php echo htmlspecialchars($backUrl); ?>" 
                class="btn btn-outline-secondary" 
                role="button"
-               aria-label="Voltar para a lista de turmas"
-               title="Voltar para a lista de turmas">
+               aria-label="<?php echo htmlspecialchars($backTitle); ?>"
+               title="<?php echo htmlspecialchars($backTitle); ?>">
                 <i class="fas fa-arrow-left" aria-hidden="true"></i> 
                 <span>Voltar</span>
             </a>
@@ -199,10 +211,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
 <section class="card mb-4" aria-labelledby="turma-detalhes-title">
     <div class="card-header d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">
-            <a href="?page=turmas-teoricas" 
+            <?php 
+            // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Botão Voltar respeitando origem (segundo botão)
+            if ($origem === 'instrutor') {
+                $backUrl2 = (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '') . '/instrutor/dashboard.php';
+                $backTitle2 = 'Voltar para Dashboard do Instrutor';
+            } else {
+                $backUrl2 = '?page=turmas-teoricas';
+                $backTitle2 = 'Voltar para gestão de turmas';
+            }
+            ?>
+            <a href="<?php echo htmlspecialchars($backUrl2); ?>" 
                class="btn btn-outline-secondary btn-sm me-3" 
-               aria-label="Voltar para gestão de turmas"
-               title="Voltar para gestão de turmas">
+               aria-label="<?php echo htmlspecialchars($backTitle2); ?>"
+               title="<?php echo htmlspecialchars($backTitle2); ?>">
                 <i class="fas fa-arrow-left" aria-hidden="true"></i> 
                 <span>Voltar</span>
             </a>

@@ -58,7 +58,7 @@ error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum')
 
 // Funções helper movidas para admin/includes/helpers_cnh.php
 // Incluir o helper comum
-require_once __DIR__ . '/includes/helpers_cnh.php';
+require_once __DIR__ . '/../includes/helpers_cnh.php';
 ?>
 
 <style>

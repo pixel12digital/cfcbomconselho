@@ -46,6 +46,18 @@ try {
     $db = db();
     $notificacoes = new SistemaNotificacoes();
 
+    // FASE 2 - NOTIFICACOES ALUNO - Ajustar identificação do usuário
+    // Para alunos, usar aluno_id (da tabela alunos) ao invés de usuario_id (da tabela usuarios)
+    $usuarioIdParaNotificacoes = $user['id'];
+    if ($user['tipo'] === 'aluno') {
+        $alunoId = getCurrentAlunoId($user['id']);
+        if ($alunoId) {
+            $usuarioIdParaNotificacoes = $alunoId;
+        } else {
+            returnJsonError('Aluno não encontrado no sistema', 404);
+        }
+    }
+
     switch ($_SERVER['REQUEST_METHOD']) {
         case 'GET':
             // Buscar notificações do usuário
@@ -65,7 +77,7 @@ try {
                     LEFT JOIN usuarios u ON n.usuario_id = u.id AND n.tipo_usuario IN ('admin', 'secretaria')
                     WHERE n.usuario_id = ? AND n.tipo_usuario = ?";
             
-            $params = [$user['id'], $user['tipo']];
+            $params = [$usuarioIdParaNotificacoes, $user['tipo']];
             
             if ($apenas_nao_lidas) {
                 $sql .= " AND n.lida = FALSE";
@@ -80,7 +92,7 @@ try {
             break;
 
         case 'POST':
-            // Marcar notificação como lida
+            // FASE 2 - NOTIFICACOES ALUNO - Marcar notificação como lida
             $input = json_decode(file_get_contents('php://input'), true);
             
             if (!isset($input['notificacao_id'])) {
@@ -89,10 +101,11 @@ try {
             
             $notificacao_id = (int)$input['notificacao_id'];
             
-            // Verificar se a notificação pertence ao usuário
+            // FASE 2 - NOTIFICACOES ALUNO - Verificar se a notificação pertence ao usuário
+            // Sempre limitar notificações ao aluno logado usando usuarioIdParaNotificacoes
             $notificacao = $db->fetch(
                 "SELECT * FROM notificacoes WHERE id = ? AND usuario_id = ? AND tipo_usuario = ?",
-                [$notificacao_id, $user['id'], $user['tipo']]
+                [$notificacao_id, $usuarioIdParaNotificacoes, $user['tipo']]
             );
             
             if (!$notificacao) {
@@ -113,11 +126,12 @@ try {
             break;
 
         case 'PUT':
-            // Marcar todas as notificações como lidas
+            // FASE 2 - NOTIFICACOES ALUNO - Marcar todas as notificações como lidas
+            // Sempre limitar notificações ao aluno logado usando usuarioIdParaNotificacoes
             $result = $db->query(
                 "UPDATE notificacoes SET lida = TRUE, lida_em = NOW() 
                  WHERE usuario_id = ? AND tipo_usuario = ? AND lida = FALSE",
-                [$user['id'], $user['tipo']]
+                [$usuarioIdParaNotificacoes, $user['tipo']]
             );
             
             if ($result) {
@@ -128,7 +142,7 @@ try {
             break;
 
         case 'DELETE':
-            // Deletar notificação
+            // FASE 2 - NOTIFICACOES ALUNO - Deletar notificação
             $input = json_decode(file_get_contents('php://input'), true);
             
             if (!isset($input['notificacao_id'])) {
@@ -137,10 +151,11 @@ try {
             
             $notificacao_id = (int)$input['notificacao_id'];
             
-            // Verificar se a notificação pertence ao usuário
+            // FASE 2 - NOTIFICACOES ALUNO - Verificar se a notificação pertence ao usuário
+            // Sempre limitar notificações ao aluno logado usando usuarioIdParaNotificacoes
             $notificacao = $db->fetch(
                 "SELECT * FROM notificacoes WHERE id = ? AND usuario_id = ? AND tipo_usuario = ?",
-                [$notificacao_id, $user['id'], $user['tipo']]
+                [$notificacao_id, $usuarioIdParaNotificacoes, $user['tipo']]
             );
             
             if (!$notificacao) {

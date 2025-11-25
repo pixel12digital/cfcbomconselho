@@ -34,32 +34,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if ($selectedType === 'aluno') {
                 $db = db();
                 
+                // CORREÇÃO CRÍTICA: Limpar CPF (remover pontos e traços) antes de buscar
+                // O CPF pode vir formatado (034.547.699-90) mas no banco está sem formatação
+                $cpfLimpo = preg_replace('/[^0-9]/', '', $email);
+                
                 // Log de debug
-                error_log("[LOGIN ALUNO] Tentativa de login - CPF: $email, Senha: $senha");
+                error_log("[LOGIN ALUNO] Tentativa de login - CPF Original: $email, CPF Limpo: $cpfLimpo, Senha: [oculta]");
                 
-                // Primeiro, tentar buscar na tabela alunos
-                $aluno = $db->fetch("SELECT * FROM alunos WHERE cpf = ? AND ativo = 1", [$email]);
-                error_log("[LOGIN ALUNO] Busca na tabela alunos: " . ($aluno ? "Encontrado ID " . $aluno['id'] : "Não encontrado"));
+                // CORREÇÃO: Priorizar busca na tabela usuarios (onde a senha é atualizada)
+                // Primeiro, buscar na tabela usuarios (onde a senha é atualizada pelo admin)
+                $aluno = null;
                 
-                // Se não encontrar na tabela alunos, buscar na tabela usuarios
+                // Tentar buscar por CPF (limpo) primeiro na tabela usuarios
+                $aluno = $db->fetch("SELECT * FROM usuarios WHERE cpf = ? AND tipo = 'aluno' AND ativo = 1", [$cpfLimpo]);
+                error_log("[LOGIN ALUNO] Busca por CPF limpo na tabela usuarios: " . ($aluno ? "Encontrado ID " . $aluno['id'] : "Não encontrado"));
+                
+                // Se não encontrar por CPF, tentar por email na tabela usuarios
                 if (!$aluno) {
-                    // Tentar buscar por CPF primeiro
-                    $aluno = $db->fetch("SELECT * FROM usuarios WHERE cpf = ? AND tipo = 'aluno' AND ativo = 1", [$email]);
-                    error_log("[LOGIN ALUNO] Busca por CPF na tabela usuarios: " . ($aluno ? "Encontrado ID " . $aluno['id'] : "Não encontrado"));
-                    
-                    // Se não encontrar por CPF, tentar por email
-                    if (!$aluno) {
-                        $aluno = $db->fetch("SELECT * FROM usuarios WHERE email = ? AND tipo = 'aluno' AND ativo = 1", [$email]);
-                        error_log("[LOGIN ALUNO] Busca por email na tabela usuarios: " . ($aluno ? "Encontrado ID " . $aluno['id'] : "Não encontrado"));
-                    }
+                    $aluno = $db->fetch("SELECT * FROM usuarios WHERE email = ? AND tipo = 'aluno' AND ativo = 1", [$email]);
+                    error_log("[LOGIN ALUNO] Busca por email na tabela usuarios: " . ($aluno ? "Encontrado ID " . $aluno['id'] : "Não encontrado"));
+                }
+                
+                // Se não encontrar na tabela usuarios, tentar na tabela alunos (compatibilidade com sistema antigo)
+                if (!$aluno) {
+                    $aluno = $db->fetch("SELECT * FROM alunos WHERE cpf = ? AND ativo = 1", [$cpfLimpo]);
+                    error_log("[LOGIN ALUNO] Busca na tabela alunos (fallback) com CPF limpo: " . ($aluno ? "Encontrado ID " . $aluno['id'] : "Não encontrado"));
                 }
                 
                 if ($aluno) {
-                    $senhaValida = password_verify($senha, $aluno['senha'] ?? '');
-                    $senhaDefault = ($senha === '123456');
-                    error_log("[LOGIN ALUNO] Verificação de senha - Válida: " . ($senhaValida ? "SIM" : "NÃO") . ", Padrão: " . ($senhaDefault ? "SIM" : "NÃO"));
-                    
-                    if ($senhaValida || $senhaDefault) {
+                    // Verificar se a senha existe
+                    $senhaHash = $aluno['senha'] ?? null;
+                    if (!$senhaHash) {
+                        error_log("[LOGIN ALUNO] ERRO: Campo 'senha' está vazio ou não existe para ID: " . $aluno['id']);
+                        $error = 'Erro no cadastro. Entre em contato com o administrador.';
+                    } else {
+                        $senhaValida = password_verify($senha, $senhaHash);
+                        $senhaDefault = ($senha === '123456');
+                        
+                        error_log("[LOGIN ALUNO] Verificação de senha:");
+                        error_log("[LOGIN ALUNO]   - Hash existe: SIM");
+                        error_log("[LOGIN ALUNO]   - Comprimento do hash: " . strlen($senhaHash) . " caracteres");
+                        error_log("[LOGIN ALUNO]   - Primeiros 20 chars do hash: " . substr($senhaHash, 0, 20) . "...");
+                        error_log("[LOGIN ALUNO]   - password_verify: " . ($senhaValida ? "SIM" : "NÃO"));
+                        error_log("[LOGIN ALUNO]   - Senha padrão (123456): " . ($senhaDefault ? "SIM" : "NÃO"));
+                        
+                        if ($senhaValida || $senhaDefault) {
                         // Usar o sistema de autenticação unificado
                         $_SESSION['user_id'] = $aluno['id'];
                         $_SESSION['user_email'] = $aluno['email'] ?? $aluno['cpf'] . '@aluno.cfc';
@@ -74,14 +93,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ob_end_clean();
                         }
                         
-                        header('Location: aluno/dashboard.php');
-                        exit;
-                    } else {
-                        error_log("[LOGIN ALUNO] Senha inválida para ID: " . $aluno['id']);
-                        $error = 'CPF ou senha inválidos';
+                            header('Location: aluno/dashboard.php');
+                            exit;
+                        } else {
+                            error_log("[LOGIN ALUNO] Senha inválida para ID: " . $aluno['id']);
+                            error_log("[LOGIN ALUNO] Tente verificar: 1) Se a senha foi atualizada corretamente, 2) Se há espaços extras, 3) Se o hash está correto");
+                            $error = 'CPF ou senha inválidos';
+                        }
                     }
                 } else {
-                    error_log("[LOGIN ALUNO] Usuário não encontrado");
+                    error_log("[LOGIN ALUNO] Usuário não encontrado com CPF: $cpfLimpo (original: $email)");
+                    error_log("[LOGIN ALUNO] Verifique: 1) Se o CPF está correto, 2) Se o usuário está ativo, 3) Se o tipo é 'aluno'");
                     $error = 'CPF ou senha inválidos';
                 }
             } else {

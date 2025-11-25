@@ -57,15 +57,17 @@ $proximasAulas = $db->fetchAll("
 $notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($user['id'], 'instrutor');
 
 // Buscar turmas teóricas do instrutor (CORRIGIDO: usar turmas_teoricas e turma_matriculas)
+// CORREÇÃO: turmas_teoricas não tem instrutor_id - o instrutor está em turma_aulas_agendadas
 $turmasTeoricas = $db->fetchAll("
     SELECT 
         tt.*,
         COUNT(DISTINCT tm.id) as total_alunos
     FROM turmas_teoricas tt
+    INNER JOIN turma_aulas_agendadas taa_instrutor ON tt.id = taa_instrutor.turma_id 
+        AND taa_instrutor.instrutor_id = ?
     LEFT JOIN turma_matriculas tm ON tt.id = tm.turma_id 
         AND tm.status IN ('matriculado', 'cursando', 'concluido')
-    WHERE tt.instrutor_id = ? 
-      AND tt.status IN ('ativa', 'completa', 'cursando', 'concluida')
+    WHERE tt.status IN ('ativa', 'completa', 'cursando', 'concluida')
     GROUP BY tt.id
     ORDER BY tt.nome ASC
 ", [$user['id']]);

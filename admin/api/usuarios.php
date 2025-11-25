@@ -258,6 +258,26 @@ try {
                 if ($updateSuccess) {
                     error_log('[USUARIOS API] Senha redefinida com sucesso - ID: ' . $userId);
                     
+                    // CORREÇÃO CRÍTICA: Se for aluno, também atualizar senha na tabela alunos
+                    // O login de aluno busca primeiro na tabela alunos, então precisa sincronizar
+                    if ($usuario['tipo'] === 'aluno' && !empty($usuario['cpf'])) {
+                        try {
+                            // Buscar aluno na tabela alunos pelo CPF
+                            $alunoNaTabelaAlunos = $db->fetch("SELECT id FROM alunos WHERE cpf = ?", [$usuario['cpf']]);
+                            
+                            if ($alunoNaTabelaAlunos) {
+                                // Atualizar senha também na tabela alunos
+                                $db->query("UPDATE alunos SET senha = ? WHERE cpf = ?", [$senhaHash, $usuario['cpf']]);
+                                error_log('[USUARIOS API] Senha também atualizada na tabela alunos para CPF: ' . $usuario['cpf']);
+                            } else {
+                                error_log('[USUARIOS API] Aluno não encontrado na tabela alunos para CPF: ' . $usuario['cpf']);
+                            }
+                        } catch (Exception $e) {
+                            error_log('[USUARIOS API] Erro ao atualizar senha na tabela alunos: ' . $e->getMessage());
+                            // Não falhar a operação principal se houver erro na sincronização
+                        }
+                    }
+                    
                     // LOG DE AUDITORIA
                     // Formato: [PASSWORD_RESET] admin_id=X, user_id=Y, mode=auto|manual, timestamp=Z, ip=W
                     $auditLog = sprintf(

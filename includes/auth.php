@@ -827,6 +827,202 @@ function getCurrentInstrutorId($userId = null) {
 }
 
 /**
+ * FASE 1 - PRESENCA TEORICA - Função centralizada para obter aluno_id
+ * Arquivo: includes/auth.php (linha ~828)
+ * 
+ * Obtém o ID do aluno na tabela alunos a partir do usuário logado.
+ * A relação é feita pelo CPF (usuarios.cpf = alunos.cpf).
+ * 
+ * @param int|null $userId ID do usuário (opcional, usa getCurrentUser() se não fornecido)
+ * @return int|null ID do aluno ou null se não encontrado
+ */
+/**
+ * FASE 1 - AREA ALUNO PENDENCIAS - Função robusta para obter o ID do aluno associado ao usuário logado
+ * 
+ * Ordem de tentativa:
+ * 1. Buscar por usuario_id (campo direto na tabela alunos)
+ * 2. Buscar por email (e atualizar usuario_id se necessário - migração silenciosa)
+ * 3. Buscar por CPF (e atualizar usuario_id se necessário - migração silenciosa)
+ * 
+ * @param int|null $userId ID do usuário (opcional, usa getCurrentUser() se não fornecido)
+ * @return int|null ID do aluno ou null se não encontrado
+ */
+function getCurrentAlunoId($userId = null) {
+    if ($userId === null) {
+        $user = getCurrentUser();
+        if (!$user || $user['tipo'] !== 'aluno') {
+            // Log mesmo quando não é aluno para debug
+            error_log("[getCurrentAlunoId] Usuário não é aluno ou não logado. Tipo: " . ($user['tipo'] ?? 'N/A'));
+            return null;
+        }
+        $userId = $user['id'];
+    }
+    
+    $db = db();
+    
+    // Log temporário para debug (sempre ativo para diagnóstico)
+    error_log("[getCurrentAlunoId] Buscando aluno para usuario_id: $userId");
+    
+    // Verificar se a coluna usuario_id existe (usado em todas as tentativas)
+    $colunaExiste = false;
+    try {
+        $colunas = $db->fetchAll("SHOW COLUMNS FROM alunos LIKE 'usuario_id'");
+        $colunaExiste = !empty($colunas);
+        error_log("[getCurrentAlunoId] Coluna usuario_id existe: " . ($colunaExiste ? 'SIM' : 'NÃO'));
+    } catch (Exception $e) {
+        error_log("[getCurrentAlunoId] Erro ao verificar coluna usuario_id: " . $e->getMessage());
+    }
+    
+    // TENTATIVA 1: Buscar por usuario_id (campo direto na tabela alunos)
+    if ($colunaExiste) {
+        try {
+            $aluno = $db->fetch("SELECT id, usuario_id FROM alunos WHERE usuario_id = ? LIMIT 1", [$userId]);
+            if ($aluno && isset($aluno['id'])) {
+                error_log("[getCurrentAlunoId] Aluno encontrado por usuario_id: {$aluno['id']}");
+                return (int)$aluno['id'];
+            }
+        } catch (Exception $e) {
+            error_log("[getCurrentAlunoId] Erro ao buscar por usuario_id: " . $e->getMessage());
+        }
+    } else {
+        error_log("[getCurrentAlunoId] Coluna usuario_id não existe na tabela alunos, pulando tentativa 1");
+    }
+    
+    // Buscar dados do usuário atual (usado nas tentativas 2 e 3)
+    $usuario = null;
+    try {
+        // Não filtrar por tipo aqui, pois pode ser que o tipo não esteja correto
+        $usuario = $db->fetch("SELECT id, email, cpf, tipo FROM usuarios WHERE id = ?", [$userId]);
+        error_log("[getCurrentAlunoId] Busca de usuário - id: $userId");
+        if ($usuario) {
+            error_log("[getCurrentAlunoId] Usuário encontrado - id: {$usuario['id']}, tipo: " . ($usuario['tipo'] ?? 'N/A') . ", email: " . ($usuario['email'] ?? 'N/A') . ", cpf: " . ($usuario['cpf'] ?? 'N/A'));
+        } else {
+            error_log("[getCurrentAlunoId] ERRO: Usuário não encontrado na tabela usuarios para id: $userId");
+            return null; // Se não encontrou o usuário, não tem como encontrar o aluno
+        }
+        
+        // Se o tipo não for 'aluno', ainda assim tentar buscar (pode ser erro de cadastro)
+        if (($usuario['tipo'] ?? '') !== 'aluno') {
+            error_log("[getCurrentAlunoId] AVISO: Usuário tipo '{$usuario['tipo']}' não é 'aluno', mas continuando busca...");
+        }
+    } catch (Exception $e) {
+        error_log("[getCurrentAlunoId] ERRO ao buscar usuário: " . $e->getMessage());
+        return null;
+    }
+    
+    // TENTATIVA 2: Buscar por email (e atualizar usuario_id se necessário)
+    try {
+        if ($usuario && !empty($usuario['email'])) {
+            // Buscar aluno por email (case-insensitive)
+            error_log("[getCurrentAlunoId] Tentativa 2: Buscando aluno por email: " . $usuario['email']);
+            $aluno = $db->fetch("SELECT id" . ($colunaExiste ? ", usuario_id" : "") . " FROM alunos WHERE LOWER(email) = LOWER(?) LIMIT 1", [$usuario['email']]);
+            
+            if ($aluno && isset($aluno['id'])) {
+                error_log("[getCurrentAlunoId] Aluno encontrado por email! ID: {$aluno['id']}");
+                // Se encontrou por email mas usuario_id está nulo ou diferente, atualizar (migração silenciosa)
+                // Só tentar atualizar se a coluna existir
+                if ($colunaExiste && (empty($aluno['usuario_id']) || (int)$aluno['usuario_id'] !== (int)$userId)) {
+                    try {
+                        $db->query("UPDATE alunos SET usuario_id = ? WHERE id = ?", [$userId, $aluno['id']]);
+                        if (defined('LOG_ENABLED') && LOG_ENABLED) {
+                            error_log("[getCurrentAlunoId] Atualizado usuario_id para aluno_id {$aluno['id']} via email");
+                        }
+                    } catch (Exception $e) {
+                        // Se a coluna usuario_id não existir, ignorar erro e continuar
+                        if (defined('LOG_ENABLED') && LOG_ENABLED) {
+                            error_log("[getCurrentAlunoId] Não foi possível atualizar usuario_id: " . $e->getMessage());
+                        }
+                    }
+                }
+                
+                if (defined('LOG_ENABLED') && LOG_ENABLED) {
+                    error_log("[getCurrentAlunoId] Aluno encontrado por email: {$aluno['id']}");
+                }
+                return (int)$aluno['id'];
+            }
+        }
+    } catch (Exception $e) {
+        if (defined('LOG_ENABLED') && LOG_ENABLED) {
+            error_log("[getCurrentAlunoId] Erro ao buscar por email: " . $e->getMessage());
+        }
+    }
+    
+    // TENTATIVA 3: Buscar por CPF (e atualizar usuario_id se necessário)
+    try {
+        if ($usuario && !empty($usuario['cpf'])) {
+            // Limpar CPF (remover formatação) para comparação
+            $cpfLimpo = preg_replace('/[^0-9]/', '', $usuario['cpf']);
+            
+            // Buscar aluno por CPF (pode estar com ou sem formatação no banco)
+            error_log("[getCurrentAlunoId] Tentativa 3: Buscando aluno por CPF - Original: " . $usuario['cpf'] . ", Limpo: $cpfLimpo");
+            
+            // Tentar primeiro com CPF limpo (mais comum no banco)
+            $campos = "id, cpf";
+            if ($colunaExiste) {
+                $campos .= ", usuario_id";
+            }
+            $aluno = $db->fetch("SELECT $campos FROM alunos WHERE cpf = ? LIMIT 1", [$cpfLimpo]);
+            
+            // Se não encontrar com CPF limpo, tentar com CPF formatado
+            if (!$aluno && $usuario['cpf'] !== $cpfLimpo) {
+                error_log("[getCurrentAlunoId] Tentando CPF formatado: " . $usuario['cpf']);
+                $aluno = $db->fetch("SELECT $campos FROM alunos WHERE cpf = ? LIMIT 1", [$usuario['cpf']]);
+            }
+            
+            // Se ainda não encontrou, tentar buscar removendo formatação do CPF do banco também
+            if (!$aluno) {
+                error_log("[getCurrentAlunoId] Buscando todos os alunos e comparando CPFs limpos...");
+                // Buscar todos os alunos e comparar CPFs limpos
+                $todosAlunos = $db->fetchAll("SELECT $campos FROM alunos WHERE cpf IS NOT NULL AND cpf != ''");
+                error_log("[getCurrentAlunoId] Total de alunos com CPF: " . count($todosAlunos));
+                foreach ($todosAlunos as $a) {
+                    $cpfAlunoLimpo = preg_replace('/[^0-9]/', '', $a['cpf']);
+                    if ($cpfAlunoLimpo === $cpfLimpo) {
+                        error_log("[getCurrentAlunoId] Match encontrado! Aluno ID: {$a['id']}, CPF no banco: {$a['cpf']}");
+                        $aluno = $a;
+                        break;
+                    }
+                }
+            }
+            
+            if ($aluno && isset($aluno['id'])) {
+                // Se encontrou por CPF mas usuario_id está nulo ou diferente, atualizar (migração silenciosa)
+                // Só tentar atualizar se a coluna existir
+                if ($colunaExiste && (empty($aluno['usuario_id']) || (int)$aluno['usuario_id'] !== (int)$userId)) {
+                    try {
+                        $db->query("UPDATE alunos SET usuario_id = ? WHERE id = ?", [$userId, $aluno['id']]);
+                        if (defined('LOG_ENABLED') && LOG_ENABLED) {
+                            error_log("[getCurrentAlunoId] Atualizado usuario_id para aluno_id {$aluno['id']} via CPF");
+                        }
+                    } catch (Exception $e) {
+                        // Se a coluna usuario_id não existir, ignorar erro e continuar
+                        if (defined('LOG_ENABLED') && LOG_ENABLED) {
+                            error_log("[getCurrentAlunoId] Não foi possível atualizar usuario_id: " . $e->getMessage());
+                        }
+                    }
+                }
+                
+                if (defined('LOG_ENABLED') && LOG_ENABLED) {
+                    error_log("[getCurrentAlunoId] Aluno encontrado por CPF: {$aluno['id']}");
+                }
+                return (int)$aluno['id'];
+            }
+        }
+    } catch (Exception $e) {
+        if (defined('LOG_ENABLED') && LOG_ENABLED) {
+            error_log("[getCurrentAlunoId] Erro ao buscar por CPF: " . $e->getMessage());
+        }
+    }
+    
+    // Se nenhuma tentativa funcionou, retornar null
+    if (defined('LOG_ENABLED') && LOG_ENABLED) {
+        error_log("[getCurrentAlunoId] Aluno não encontrado para usuario_id: $userId");
+    }
+    
+    return null;
+}
+
+/**
  * Criar registro de instrutor a partir de um usuário
  * 
  * SYNC_INSTRUTORES - Função helper para garantir consistência entre usuarios e instrutores

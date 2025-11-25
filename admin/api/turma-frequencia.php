@@ -35,18 +35,20 @@ if (!isLoggedIn()) {
     exit();
 }
 
-// Verificar se é admin, secretaria ou instrutor
+// FASE 1 - PRESENCA TEORICA - Ajustar permissões para incluir aluno
+// Arquivo: admin/api/turma-frequencia.php (linha ~38)
 require_once __DIR__ . '/../../includes/auth.php';
 $currentUser = getCurrentUser();
 $isAdmin = ($currentUser['tipo'] ?? '') === 'admin';
 $isSecretaria = ($currentUser['tipo'] ?? '') === 'secretaria';
 $isInstrutor = ($currentUser['tipo'] ?? '') === 'instrutor';
+$isAluno = ($currentUser['tipo'] ?? '') === 'aluno';
 
-if (!$isAdmin && !$isSecretaria && !$isInstrutor) {
+if (!$isAdmin && !$isSecretaria && !$isInstrutor && !$isAluno) {
     http_response_code(403);
     echo json_encode([
         'success' => false,
-        'message' => 'Permissão negada - Apenas administradores, secretaria e instrutores podem acessar frequências'
+        'message' => 'Permissão negada - Apenas administradores, secretaria, instrutores e alunos podem acessar frequências'
     ], JSON_UNESCAPED_UNICODE);
     exit();
 }
@@ -74,8 +76,39 @@ try {
 
 /**
  * Manipular requisições GET
+ * FASE 1 - PRESENCA TEORICA - Adicionar validação de segurança para aluno
  */
 function handleGetRequest($db) {
+    global $isAluno, $currentUser;
+    
+    // FASE 1 - PRESENCA TEORICA - Validação de segurança para aluno
+    if ($isAluno) {
+        $currentAlunoId = getCurrentAlunoId();
+        if (!$currentAlunoId) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Aluno não encontrado ou não autenticado'
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
+        
+        // Aluno só pode ver sua própria frequência
+        if (isset($_GET['aluno_id']) && (int)$_GET['aluno_id'] !== $currentAlunoId) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Permissão negada - Você só pode ver sua própria frequência'
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
+        
+        // Se não especificou aluno_id, usar o ID do aluno logado
+        if (!isset($_GET['aluno_id']) && isset($_GET['turma_id'])) {
+            $_GET['aluno_id'] = $currentAlunoId;
+        }
+    }
+    
     if (isset($_GET['aluno_id']) && isset($_GET['turma_id'])) {
         // Calcular frequência de um aluno específico
         $frequencia = calcularFrequenciaAluno($db, $_GET['aluno_id'], $_GET['turma_id']);
@@ -85,7 +118,15 @@ function handleGetRequest($db) {
         ], JSON_UNESCAPED_UNICODE);
         
     } elseif (isset($_GET['turma_id'])) {
-        // Calcular frequência de todos os alunos da turma
+        // Calcular frequência de todos os alunos da turma (apenas admin/secretaria/instrutor)
+        if ($isAluno) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Permissão negada - Alunos não podem ver frequência de toda a turma'
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
         $frequencias = calcularFrequenciaTurma($db, $_GET['turma_id']);
         echo json_encode([
             'success' => true,
@@ -93,7 +134,15 @@ function handleGetRequest($db) {
         ], JSON_UNESCAPED_UNICODE);
         
     } else {
-        // Listar frequências com filtros
+        // Listar frequências com filtros (apenas admin/secretaria/instrutor)
+        if ($isAluno) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Permissão negada - Alunos não podem listar todas as frequências'
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
         $frequencias = listarFrequencias($db);
         echo json_encode([
             'success' => true,

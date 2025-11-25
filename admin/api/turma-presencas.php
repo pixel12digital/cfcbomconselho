@@ -35,18 +35,21 @@ if (!isLoggedIn()) {
     exit();
 }
 
-// Verificar se é admin, secretaria ou instrutor
+// FASE 1 - PRESENCA TEORICA - Ajustar permissões para incluir aluno (apenas leitura)
+// Arquivo: admin/api/turma-presencas.php (linha ~38)
 require_once __DIR__ . '/../../includes/auth.php';
 $currentUser = getCurrentUser();
 $isAdmin = ($currentUser['tipo'] ?? '') === 'admin';
 $isSecretaria = ($currentUser['tipo'] ?? '') === 'secretaria';
 $isInstrutor = ($currentUser['tipo'] ?? '') === 'instrutor';
+$isAluno = ($currentUser['tipo'] ?? '') === 'aluno';
 
-if (!$isAdmin && !$isSecretaria && !$isInstrutor) {
+// Aluno pode apenas ler suas próprias presenças (GET), não pode criar/editar/excluir
+if (!$isAdmin && !$isSecretaria && !$isInstrutor && !$isAluno) {
     http_response_code(403);
     echo json_encode([
         'success' => false,
-        'message' => 'Permissão negada - Apenas administradores, secretaria e instrutores podem gerenciar presenças'
+        'message' => 'Permissão negada - Apenas administradores, secretaria, instrutores e alunos podem acessar presenças'
     ], JSON_UNESCAPED_UNICODE);
     exit();
 }
@@ -92,10 +95,70 @@ try {
 
 /**
  * Manipular requisições GET
+ * FASE 1 - PRESENCA TEORICA - Adicionar validação de segurança para aluno
  */
 function handleGetRequest($db) {
+    global $isAluno, $currentUser;
+    
+    // FASE 1 - PRESENCA TEORICA - Validação de segurança para aluno
+    if ($isAluno) {
+        $currentAlunoId = getCurrentAlunoId();
+        if (!$currentAlunoId) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Aluno não encontrado ou não autenticado'
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
+        
+        // Aluno só pode ver suas próprias presenças
+        if (isset($_GET['aluno_id']) && (int)$_GET['aluno_id'] !== $currentAlunoId) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Permissão negada - Você só pode ver suas próprias presenças'
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
+        
+        // Se não especificou aluno_id mas especificou turma_id, usar o ID do aluno logado
+        if (!isset($_GET['aluno_id']) && isset($_GET['turma_id'])) {
+            $_GET['aluno_id'] = $currentAlunoId;
+        }
+        
+        // Aluno não pode ver presenças de uma aula específica (todos os alunos) ou de toda a turma
+        if (isset($_GET['turma_id']) && isset($_GET['aula_id'])) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Permissão negada - Alunos não podem ver presenças de outros alunos'
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
+        
+        if (isset($_GET['turma_id']) && !isset($_GET['aluno_id'])) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Permissão negada - Alunos não podem ver presenças de toda a turma'
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
+        
+        // Aluno não pode listar todas as presenças
+        if (!isset($_GET['turma_id']) && !isset($_GET['aluno_id'])) {
+            http_response_code(403);
+            echo json_encode([
+                'success' => false,
+                'message' => 'Permissão negada - Alunos não podem listar todas as presenças'
+            ], JSON_UNESCAPED_UNICODE);
+            exit();
+        }
+    }
+    
     if (isset($_GET['turma_id']) && isset($_GET['aula_id'])) {
-        // Buscar presenças de uma aula específica
+        // Buscar presenças de uma aula específica (apenas admin/secretaria/instrutor)
         $presencas = buscarPresencasAula($db, $_GET['turma_id'], $_GET['aula_id']);
         echo json_encode([
             'success' => true,
@@ -111,7 +174,7 @@ function handleGetRequest($db) {
         ], JSON_UNESCAPED_UNICODE);
         
     } elseif (isset($_GET['turma_id'])) {
-        // Buscar todas as presenças de uma turma
+        // Buscar todas as presenças de uma turma (apenas admin/secretaria/instrutor)
         $presencas = buscarPresencasTurma($db, $_GET['turma_id']);
         echo json_encode([
             'success' => true,
@@ -119,7 +182,7 @@ function handleGetRequest($db) {
         ], JSON_UNESCAPED_UNICODE);
         
     } else {
-        // Listar presenças com filtros
+        // Listar presenças com filtros (apenas admin/secretaria/instrutor)
         $presencas = listarPresencas($db);
         echo json_encode([
             'success' => true,
@@ -130,8 +193,21 @@ function handleGetRequest($db) {
 
 /**
  * Manipular requisições POST
+ * FASE 1 - PRESENCA TEORICA - Bloquear aluno de criar presenças
  */
 function handlePostRequest($db, $userId) {
+    global $isAluno;
+    
+    // FASE 1 - PRESENCA TEORICA - Aluno não pode criar presenças
+    if ($isAluno) {
+        http_response_code(403);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Permissão negada - Alunos não podem criar presenças'
+        ], JSON_UNESCAPED_UNICODE);
+        exit();
+    }
+    
     $input = json_decode(file_get_contents('php://input'), true);
     
     if (json_last_error() !== JSON_ERROR_NONE) {
@@ -161,8 +237,21 @@ function handlePostRequest($db, $userId) {
 
 /**
  * Manipular requisições PUT
+ * FASE 1 - PRESENCA TEORICA - Bloquear aluno de editar presenças
  */
 function handlePutRequest($db, $userId) {
+    global $isAluno;
+    
+    // FASE 1 - PRESENCA TEORICA - Aluno não pode editar presenças
+    if ($isAluno) {
+        http_response_code(403);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Permissão negada - Alunos não podem editar presenças'
+        ], JSON_UNESCAPED_UNICODE);
+        exit();
+    }
+    
     $presencaId = $_GET['id'] ?? null;
     
     if (!$presencaId) {
@@ -197,8 +286,21 @@ function handlePutRequest($db, $userId) {
 
 /**
  * Manipular requisições DELETE
+ * FASE 1 - PRESENCA TEORICA - Bloquear aluno de excluir presenças
  */
 function handleDeleteRequest($db) {
+    global $isAluno;
+    
+    // FASE 1 - PRESENCA TEORICA - Aluno não pode excluir presenças
+    if ($isAluno) {
+        http_response_code(403);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Permissão negada - Alunos não podem excluir presenças'
+        ], JSON_UNESCAPED_UNICODE);
+        exit();
+    }
+    
     $presencaId = $_GET['id'] ?? null;
     
     if (!$presencaId) {
@@ -348,8 +450,9 @@ function listarPresencas($db) {
  */
 function validarRegrasEdicaoPresenca($db, $turmaId, $aulaId, $userId, $isAdmin, $isSecretaria, $isInstrutor) {
     // Buscar dados da turma
+    // CORREÇÃO: turmas_teoricas não tem instrutor_id - o instrutor está em turma_aulas_agendadas
     $turma = $db->fetch(
-        "SELECT status, instrutor_id FROM turmas_teoricas WHERE id = ?",
+        "SELECT status FROM turmas_teoricas WHERE id = ?",
         [$turmaId]
     );
     
@@ -368,13 +471,35 @@ function validarRegrasEdicaoPresenca($db, $turmaId, $aulaId, $userId, $isAdmin, 
         ];
     }
     
-    // Regra 2: Instrutor só pode editar se for instrutor da turma
+    // Regra 2: Instrutor só pode editar se for instrutor da aula específica
+    // CORREÇÃO: Verificar instrutor através da aula agendada, não da turma
     if ($isInstrutor && !$isAdmin && !$isSecretaria) {
-        if ($turma['instrutor_id'] != $userId) {
-            return [
-                'permitido' => false,
-                'motivo' => 'Você não é o instrutor desta turma'
-            ];
+        if ($aulaId) {
+            // Buscar o instrutor da aula específica
+            $aula = $db->fetch(
+                "SELECT instrutor_id FROM turma_aulas_agendadas WHERE id = ? AND turma_id = ?",
+                [$aulaId, $turmaId]
+            );
+            
+            if (!$aula || $aula['instrutor_id'] != $userId) {
+                return [
+                    'permitido' => false,
+                    'motivo' => 'Você não é o instrutor desta aula'
+                ];
+            }
+        } else {
+            // Se não há aula_id, verificar se o instrutor tem alguma aula nesta turma
+            $temAula = $db->fetch(
+                "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND instrutor_id = ?",
+                [$turmaId, $userId]
+            );
+            
+            if (!$temAula || $temAula['total'] == 0) {
+                return [
+                    'permitido' => false,
+                    'motivo' => 'Você não é instrutor de nenhuma aula desta turma'
+                ];
+            }
         }
         
         // Regra 3: Instrutor não pode editar se turma está concluída
@@ -490,7 +615,22 @@ function marcarPresencaIndividual($db, $dados, $userId) {
             'registrado_por' => $userId
         ]);
         
-        // Log de auditoria
+        // FASE 1 - LOG PRESENCA TEORICA - INICIO
+        // Registrar log de criação de presença
+        registrarLogPresenca(
+            $db,
+            $presencaId,
+            $dados['turma_id'],
+            $aulaId,
+            $dados['aluno_id'],
+            'create',
+            $userId,
+            null, // dadosAntigos = NULL para create
+            $dados // dadosNovos
+        );
+        // FASE 1 - LOG PRESENCA TEORICA - FIM
+        
+        // Log de auditoria (mantido para compatibilidade)
         logAuditoria($db, $userId, 'presenca_criada', $presencaId, $dados);
         
         // Recalcular frequência do aluno após inserir presença
@@ -604,6 +744,21 @@ function marcarPresencasLote($db, $dados, $userId) {
                 'registrado_por' => $userId
             ]);
             
+            // FASE 1 - LOG PRESENCA TEORICA - INICIO
+            // Registrar log de criação de presença em lote
+            registrarLogPresenca(
+                $db,
+                $presencaId,
+                $turmaId,
+                $aulaId,
+                $presenca['aluno_id'],
+                'create',
+                $userId,
+                null, // dadosAntigos = NULL para create
+                $presenca // dadosNovos
+            );
+            // FASE 1 - LOG PRESENCA TEORICA - FIM
+            
             // Marcar aluno para recalcular frequência depois
             if (!in_array($presenca['aluno_id'], $alunosProcessados)) {
                 $alunosProcessados[] = $presenca['aluno_id'];
@@ -685,13 +840,28 @@ function atualizarPresenca($db, $presencaId, $dados, $userId) {
     try {
         $db->beginTransaction();
         
+        // FASE 1 - LOG PRESENCA TEORICA - INICIO
+        // Registrar log ANTES de atualizar (para capturar valores antigos)
+        registrarLogPresenca(
+            $db,
+            $presencaId,
+            $presenca['turma_id'],
+            $presenca['aula_id'],
+            $presenca['aluno_id'],
+            'update',
+            $userId,
+            $presenca, // dadosAntigos
+            $dados // dadosNovos
+        );
+        // FASE 1 - LOG PRESENCA TEORICA - FIM
+        
         // Atualizar presença (usando justificativa, nome correto do campo)
         $db->update('turma_presencas', [
             'presente' => $dados['presente'] ? 1 : 0,
             'justificativa' => $dados['justificativa'] ?? $dados['observacao'] ?? null // Compatibilidade
         ], 'id = ?', [$presencaId]);
         
-        // Log de auditoria
+        // Log de auditoria (mantido para compatibilidade)
         logAuditoria($db, $userId, 'presenca_atualizada', $presencaId, [
             'dados_anteriores' => $presenca,
             'dados_novos' => $dados
@@ -751,10 +921,25 @@ function excluirPresenca($db, $presencaId) {
     try {
         $db->beginTransaction();
         
+        // FASE 1 - LOG PRESENCA TEORICA - INICIO
+        // Registrar log ANTES de excluir (para capturar valores atuais)
+        registrarLogPresenca(
+            $db,
+            $presencaId,
+            $presenca['turma_id'],
+            $presenca['aula_id'],
+            $presenca['aluno_id'],
+            'delete',
+            $userId,
+            $presenca, // dadosAntigos
+            null // dadosNovos = NULL para delete
+        );
+        // FASE 1 - LOG PRESENCA TEORICA - FIM
+        
         // Excluir presença
         $db->delete('turma_presencas', 'id = ?', [$presencaId]);
         
-        // Log de auditoria
+        // Log de auditoria (mantido para compatibilidade)
         logAuditoria($db, $_SESSION['user_id'] ?? 1, 'presenca_excluida', $presencaId, $presenca);
         
         // Recalcular frequência do aluno após excluir presença
@@ -821,7 +1006,7 @@ function validarDadosPresenca($dados, $presencaId = null) {
 }
 
 /**
- * Log de auditoria
+ * Log de auditoria (mantido para compatibilidade)
  */
 function logAuditoria($db, $userId, $acao, $presencaId, $dados) {
     try {
@@ -839,4 +1024,64 @@ function logAuditoria($db, $userId, $acao, $presencaId, $dados) {
         error_log("Erro ao registrar auditoria: " . $e->getMessage());
     }
 }
+
+/**
+ * FASE 1 - LOG PRESENCA TEORICA - INICIO
+ * Registrar log de alteração de presença na tabela turma_presencas_log
+ * 
+ * @param object $db Instância do banco de dados
+ * @param int $presencaId ID da presença (NULL se for delete)
+ * @param int $turmaId ID da turma
+ * @param int $aulaId ID da aula
+ * @param int $alunoId ID do aluno
+ * @param string $acao Ação realizada: 'create', 'update', 'delete'
+ * @param int $userId ID do usuário que fez a alteração
+ * @param array|null $dadosAntigos Dados antes da alteração (para update/delete)
+ * @param array|null $dadosNovos Dados depois da alteração (para create/update)
+ */
+function registrarLogPresenca($db, $presencaId, $turmaId, $aulaId, $alunoId, $acao, $userId, $dadosAntigos = null, $dadosNovos = null) {
+    try {
+        // Preparar valores antes e depois conforme a ação
+        $presenteAntes = null;
+        $justificativaAntes = null;
+        $presenteDepois = null;
+        $justificativaDepois = null;
+        
+        if ($acao === 'create') {
+            // CREATE: antes é NULL, depois são os valores novos
+            $presenteDepois = isset($dadosNovos['presente']) ? ($dadosNovos['presente'] ? 1 : 0) : null;
+            $justificativaDepois = $dadosNovos['justificativa'] ?? $dadosNovos['observacao'] ?? null;
+        } elseif ($acao === 'update') {
+            // UPDATE: antes são os valores antigos, depois são os valores novos
+            $presenteAntes = isset($dadosAntigos['presente']) ? ($dadosAntigos['presente'] ? 1 : 0) : null;
+            $justificativaAntes = $dadosAntigos['justificativa'] ?? null;
+            $presenteDepois = isset($dadosNovos['presente']) ? ($dadosNovos['presente'] ? 1 : 0) : null;
+            $justificativaDepois = $dadosNovos['justificativa'] ?? $dadosNovos['observacao'] ?? null;
+        } elseif ($acao === 'delete') {
+            // DELETE: antes são os valores atuais, depois é NULL
+            $presenteAntes = isset($dadosAntigos['presente']) ? ($dadosAntigos['presente'] ? 1 : 0) : null;
+            $justificativaAntes = $dadosAntigos['justificativa'] ?? null;
+            // presente_depois e justificativa_depois permanecem NULL
+        }
+        
+        // Inserir log na tabela turma_presencas_log
+        $db->insert('turma_presencas_log', [
+            'presenca_id' => $presencaId,
+            'turma_id' => $turmaId,
+            'aula_id' => $aulaId,
+            'aluno_id' => $alunoId,
+            'presente_antes' => $presenteAntes,
+            'justificativa_antes' => $justificativaAntes,
+            'presente_depois' => $presenteDepois,
+            'justificativa_depois' => $justificativaDepois,
+            'acao' => $acao,
+            'alterado_por' => $userId
+        ]);
+        
+    } catch (Exception $e) {
+        // Log de erro silencioso - não deve interromper o processo principal
+        error_log("FASE 1 - LOG PRESENCA TEORICA - Erro ao registrar log de presença: " . $e->getMessage());
+    }
+}
+// FASE 1 - LOG PRESENCA TEORICA - FIM
 ?>

@@ -14,18 +14,25 @@ require_once '../includes/config.php';
 require_once '../includes/database.php';
 require_once '../includes/auth.php';
 
-// Verificar se o usuário está logado e tem permissão de admin ou instrutor
-if (!isLoggedIn() || (!hasPermission('admin') && !hasPermission('instrutor'))) {
+// AJUSTE DASHBOARD INSTRUTOR - Verificar se o usuário está logado e tem permissão de admin ou é instrutor
+// hasPermission('instrutor') verifica se tem a permissão 'instrutor', não se É instrutor
+// Por isso, verificamos diretamente o tipo do usuário
+if (!isLoggedIn()) {
     header('Location: ../index.php');
     exit;
 }
 
-// Obter dados do usuário logado
 $user = getCurrentUser();
+if (!$user || ($user['tipo'] !== 'admin' && $user['tipo'] !== 'instrutor' && $user['tipo'] !== 'secretaria')) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Obter dados do usuário logado (já obtido acima na verificação de permissão)
 $userType = $user['tipo'] ?? 'admin';
 $userId = $user['id'] ?? null;
-$isAdmin = hasPermission('admin');
-$isInstrutor = hasPermission('instrutor');
+$isAdmin = ($user['tipo'] === 'admin');
+$isInstrutor = ($user['tipo'] === 'instrutor');
 $db = Database::getInstance();
 
 // Obter estatísticas para o dashboard
@@ -1553,12 +1560,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <i class="fas fa-chalkboard-teacher"></i>
                             <span>Turmas Teóricas</span>
                         </a>
-                        <!-- TODO: Criar página presencas-teoricas.php - por enquanto usar turma-chamada.php -->
-                        <a href="index.php?page=turma-chamada" class="nav-sublink <?php echo $page === 'turma-chamada' ? 'active' : ''; ?>" onclick="return confirm('Esta página ainda está em desenvolvimento. Deseja continuar?');">
-                            <i class="fas fa-check-square"></i>
-                            <span>Presenças Teóricas</span>
-                            <small style="color: #999; font-size: 0.7em;">(Temporário)</small>
-                        </a>
+                        <!-- 
+                            AJUSTE MENU PRESENCA TEORICA - REMOVIDO ITEM TEMPORÁRIO
+                            O fluxo oficial de presença TEÓRICA é via:
+                            Acadêmico → Turmas Teóricas → Detalhes da Turma → Seleção da Aula → Chamada/Frequência
+                            
+                            O antigo menu "Presenças Teóricas (Temporário)" foi removido para evitar duplicidade de caminhos.
+                            A página turma-chamada.php continua existindo e funcionando, mas não deve ser acessada diretamente
+                            pelo menu - apenas através do fluxo oficial via Turmas Teóricas.
+                        -->
                         <!-- TODO: Criar página aulas-praticas.php - por enquanto usar listar-aulas.php -->
                         <a href="pages/listar-aulas.php" class="nav-sublink">
                             <i class="fas fa-car-side"></i>
@@ -1882,12 +1892,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <i class="fas fa-chalkboard-teacher"></i>
                                     <span>Turmas Teóricas</span>
                                 </a>
-                                <!-- TODO: Criar página presencas-teoricas.php - por enquanto usar turma-chamada.php -->
-                                <a href="index.php?page=turma-chamada" class="mobile-nav-sublink <?php echo $page === 'turma-chamada' ? 'active' : ''; ?>" onclick="return confirm('Esta página ainda está em desenvolvimento. Deseja continuar?');">
-                                    <i class="fas fa-check-square"></i>
-                                    <span>Presenças Teóricas</span>
-                                    <small style="color: #999; font-size: 0.7em;">(Temporário)</small>
-                                </a>
+                                <!-- 
+                                    AJUSTE MENU PRESENCA TEORICA - REMOVIDO ITEM TEMPORÁRIO (MOBILE)
+                                    O fluxo oficial de presença TEÓRICA é via:
+                                    Acadêmico → Turmas Teóricas → Detalhes da Turma → Seleção da Aula → Chamada/Frequência
+                                    
+                                    O antigo menu "Presenças Teóricas (Temporário)" foi removido para evitar duplicidade de caminhos.
+                                -->
                                 <!-- TODO: Criar página aulas-praticas.php - por enquanto usar listar-aulas.php -->
                                 <a href="pages/listar-aulas.php" class="mobile-nav-sublink">
                                     <i class="fas fa-car-side"></i>

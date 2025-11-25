@@ -58,7 +58,8 @@ if (!isLoggedIn()) {
 }
 
 $currentUser = getCurrentUser();
-if (!in_array($currentUser['tipo'], ['admin', 'secretaria'])) {
+// FASE 3 - FINANCEIRO ALUNO - Permitir acesso de alunos também
+if (!in_array($currentUser['tipo'], ['admin', 'secretaria', 'aluno'])) {
     sendJsonResponse(['success' => false, 'error' => 'Sem permissão'], 403);
 }
 
@@ -90,8 +91,24 @@ try {
 }
 
 function handleGet($db, $user) {
+    // FASE 3 - FINANCEIRO ALUNO - Se for aluno, forçar aluno_id e bloquear export CSV
+    $alunoIdLogado = null;
+    if ($user['tipo'] === 'aluno') {
+        // Alunos não podem exportar CSV
+        if (isset($_GET['export']) && $_GET['export'] === 'csv') {
+            sendJsonResponse(['success' => false, 'error' => 'Sem permissão para exportar'], 403);
+        }
+        
+        // FASE 3 - FINANCEIRO ALUNO - Sempre usar getCurrentAlunoId() para alunos
+        // Ignorar qualquer aluno_id vindo de GET/POST
+        $alunoIdLogado = getCurrentAlunoId($user['id']);
+        if (!$alunoIdLogado) {
+            sendJsonResponse(['success' => false, 'error' => 'Aluno não encontrado no sistema'], 404);
+        }
+    }
+    
     $id = $_GET['id'] ?? null;
-    $aluno_id = $_GET['aluno_id'] ?? null;
+    $aluno_id = ($user['tipo'] === 'aluno') ? $alunoIdLogado : ($_GET['aluno_id'] ?? null);
     $status = $_GET['status'] ?? null;
     $data_inicio = $_GET['data_inicio'] ?? null;
     $data_fim = $_GET['data_fim'] ?? null;
@@ -99,7 +116,7 @@ function handleGet($db, $user) {
     $limit = (int)($_GET['limit'] ?? 20);
     $offset = ($page - 1) * $limit;
     
-    // Export CSV
+    // Export CSV (apenas admin/secretaria)
     if (isset($_GET['export']) && $_GET['export'] === 'csv') {
         exportCSV($db, $user);
         return;
@@ -122,6 +139,11 @@ function handleGet($db, $user) {
             ", [$id]);
             
             if (!$fatura) {
+                sendJsonResponse(['success' => false, 'error' => 'Fatura não encontrada'], 404);
+            }
+            
+            // FASE 3 - FINANCEIRO ALUNO - Verificar se aluno pode acessar esta fatura
+            if ($user['tipo'] === 'aluno' && (int)$fatura['aluno_id'] !== (int)$alunoIdLogado) {
                 sendJsonResponse(['success' => false, 'error' => 'Fatura não encontrada'], 404);
             }
             

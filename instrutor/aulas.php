@@ -66,10 +66,11 @@ if (!$instrutor) {
 $instrutor['nome'] = $instrutor['nome'] ?? $instrutor['nome_usuario'] ?? $user['nome'] ?? 'Instrutor';
 $instrutorId = $instrutor['id'] ?? null;
 
-// Processar filtros
+// FASE 1 - PRESENCA TEORICA - Processar filtros
 $dataInicio = $_GET['data_inicio'] ?? date('Y-m-d', strtotime('-30 days'));
 $dataFim = $_GET['data_fim'] ?? date('Y-m-d', strtotime('+30 days'));
 $statusFiltro = $_GET['status'] ?? '';
+$tipoFiltro = $_GET['tipo'] ?? ''; // FASE 1 - PRESENCA TEORICA - Filtro por tipo (pratica/teorica)
 
 // Validar datas
 if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataInicio) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataFim)) {
@@ -77,13 +78,18 @@ if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $dataInicio) || !preg_match('/^\d{4}-\d
     $dataFim = date('Y-m-d', strtotime('+30 days'));
 }
 
-// Buscar aulas
+// FASE INSTRUTOR - AULAS TEORICAS - Inicializar variáveis
 $aulas = [];
-if ($instrutorId) {
+$aulasPraticas = [];
+$aulasTeoricas = [];
+
+// FASE INSTRUTOR - AULAS TEORICAS - Buscar aulas práticas
+if ($instrutorId && ($tipoFiltro === '' || $tipoFiltro === 'pratica')) {
     $sql = "
         SELECT a.*, 
                al.nome as aluno_nome, al.telefone as aluno_telefone,
-               v.modelo as veiculo_modelo, v.placa as veiculo_placa
+               v.modelo as veiculo_modelo, v.placa as veiculo_placa,
+               'pratica' as tipo_aula
         FROM aulas a
         JOIN alunos al ON a.aluno_id = al.id
         LEFT JOIN veiculos v ON a.veiculo_id = v.id
@@ -101,21 +107,89 @@ if ($instrutorId) {
     
     $sql .= " ORDER BY a.data_aula DESC, a.hora_inicio DESC";
     
-    $aulas = $db->fetchAll($sql, $params);
+    $aulasPraticas = $db->fetchAll($sql, $params);
 }
 
-// Estatísticas
+// FASE INSTRUTOR - AULAS TEORICAS - Buscar aulas teóricas (turma_aulas_agendadas)
+// Nota: $aulasTeoricas já foi inicializada acima na linha 84
+if ($instrutorId && ($tipoFiltro === '' || $tipoFiltro === 'teorica')) {
+    $sqlTeoricas = "
+        SELECT 
+            taa.id,
+            taa.turma_id,
+            taa.disciplina,
+            taa.nome_aula,
+            taa.data_aula,
+            taa.hora_inicio,
+            taa.hora_fim,
+            taa.status,
+            taa.observacoes,
+            tt.nome as turma_nome,
+            s.nome as sala_nome,
+            'teorica' as tipo_aula
+        FROM turma_aulas_agendadas taa
+        JOIN turmas_teoricas tt ON taa.turma_id = tt.id
+        LEFT JOIN salas s ON taa.sala_id = s.id
+        WHERE taa.instrutor_id = ?
+          AND taa.data_aula >= ?
+          AND taa.data_aula <= ?
+    ";
+    
+    $paramsTeoricas = [$instrutorId, $dataInicio, $dataFim];
+    
+    // Aplicar filtro de status (adaptar para status de aulas teóricas)
+    if ($statusFiltro) {
+        if ($statusFiltro === 'concluida') {
+            $sqlTeoricas .= " AND taa.status = 'realizada'";
+        } elseif ($statusFiltro === 'agendada') {
+            $sqlTeoricas .= " AND taa.status = 'agendada'";
+        } elseif ($statusFiltro === 'cancelada') {
+            $sqlTeoricas .= " AND taa.status = 'cancelada'";
+        }
+    } else {
+        // Por padrão, mostrar apenas agendadas e realizadas
+        $sqlTeoricas .= " AND taa.status IN ('agendada', 'realizada')";
+    }
+    
+    $sqlTeoricas .= " ORDER BY taa.data_aula DESC, taa.hora_inicio DESC";
+    
+    $aulasTeoricas = $db->fetchAll($sqlTeoricas, $paramsTeoricas);
+}
+
+// FASE INSTRUTOR - AULAS TEORICAS - Combinar aulas práticas e teóricas
+// Garantir que as variáveis estejam sempre definidas como arrays antes do merge
+// (Proteção extra mesmo que já tenham sido inicializadas acima)
+$aulasPraticas = isset($aulasPraticas) && is_array($aulasPraticas) ? $aulasPraticas : [];
+$aulasTeoricas = isset($aulasTeoricas) && is_array($aulasTeoricas) ? $aulasTeoricas : [];
+$aulas = array_merge($aulasPraticas, $aulasTeoricas);
+
+// Ordenar por data e horário
+usort($aulas, function($a, $b) {
+    $dataA = $a['data_aula'] . ' ' . ($a['hora_inicio'] ?? '00:00:00');
+    $dataB = $b['data_aula'] . ' ' . ($b['hora_inicio'] ?? '00:00:00');
+    return strtotime($dataB) - strtotime($dataA); // DESC
+});
+
+// FASE INSTRUTOR - AULAS TEORICAS - Estatísticas (práticas + teóricas)
 $stats = [
     'total' => count($aulas),
     'agendadas' => 0,
     'concluidas' => 0,
     'canceladas' => 0,
-    'em_andamento' => 0
+    'em_andamento' => 0,
+    'praticas' => count($aulasPraticas),
+    'teoricas' => count($aulasTeoricas)
 ];
 
 foreach ($aulas as $aula) {
-    if (isset($stats[$aula['status']])) {
-        $stats[$aula['status']]++;
+    $status = $aula['status'];
+    // Adaptar status de teóricas (realizada = concluida)
+    if ($aula['tipo_aula'] === 'teorica' && $status === 'realizada') {
+        $status = 'concluida';
+    }
+    
+    if (isset($stats[$status])) {
+        $stats[$status]++;
     }
 }
 
@@ -167,6 +241,19 @@ foreach ($aulas as $aula) {
                         style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;"
                     >
                 </div>
+                <!-- FASE 1 - PRESENCA TEORICA - Filtro por tipo -->
+                <div>
+                    <label for="tipo" style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;">Tipo</label>
+                    <select 
+                        id="tipo" 
+                        name="tipo" 
+                        style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px;"
+                    >
+                        <option value="">Todas</option>
+                        <option value="pratica" <?php echo $tipoFiltro === 'pratica' ? 'selected' : ''; ?>>Aulas Práticas</option>
+                        <option value="teorica" <?php echo $tipoFiltro === 'teorica' ? 'selected' : ''; ?>>Aulas Teóricas</option>
+                    </select>
+                </div>
                 <div>
                     <label for="status" style="display: block; margin-bottom: 4px; font-weight: 600; font-size: 14px;">Status</label>
                     <select 
@@ -177,6 +264,7 @@ foreach ($aulas as $aula) {
                         <option value="">Todos</option>
                         <option value="agendada" <?php echo $statusFiltro === 'agendada' ? 'selected' : ''; ?>>Agendada</option>
                         <option value="em_andamento" <?php echo $statusFiltro === 'em_andamento' ? 'selected' : ''; ?>>Em Andamento</option>
+                        <option value="realizada" <?php echo $statusFiltro === 'realizada' ? 'selected' : ''; ?>>Realizada</option>
                         <option value="concluida" <?php echo $statusFiltro === 'concluida' ? 'selected' : ''; ?>>Concluída</option>
                         <option value="cancelada" <?php echo $statusFiltro === 'cancelada' ? 'selected' : ''; ?>>Cancelada</option>
                     </select>
@@ -212,17 +300,28 @@ foreach ($aulas as $aula) {
             </div>
         </div>
 
-        <!-- Lista de Aulas -->
-        <div class="card" style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px;">
-            <?php if (empty($aulas)): ?>
+        <!-- FASE INSTRUTOR - AULAS TEORICAS - Lista de Aulas Práticas -->
+        <?php if ($tipoFiltro === '' || $tipoFiltro === 'pratica'): ?>
+        <div class="card" style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px; margin-bottom: 20px;">
+            <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #2563eb;">
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1e293b;">
+                    <i class="fas fa-car me-2" style="color: #10b981;"></i>
+                    Aulas Práticas
+                </h3>
+            </div>
+            <?php 
+            // FASE INSTRUTOR - AULAS TEORICAS - Filtrar apenas práticas para esta seção
+            $aulasPraticasFiltradas = array_filter($aulas, function($a) { return ($a['tipo_aula'] ?? 'pratica') === 'pratica'; });
+            ?>
+            <?php if (empty($aulasPraticasFiltradas)): ?>
             <div style="text-align: center; padding: 40px 20px;">
                 <i class="fas fa-calendar-times" style="font-size: 48px; color: #cbd5e1; margin-bottom: 16px;"></i>
-                <h3 style="color: #64748b; margin-bottom: 8px;">Nenhuma aula encontrada</h3>
-                <p style="color: #94a3b8;">Não há aulas no período selecionado.</p>
+                <h3 style="color: #64748b; margin-bottom: 8px;">Nenhuma aula prática encontrada</h3>
+                <p style="color: #94a3b8;">Não há aulas práticas no período selecionado.</p>
             </div>
             <?php else: ?>
             <div class="aula-list" style="display: flex; flex-direction: column; gap: 12px;">
-                <?php foreach ($aulas as $aula): ?>
+                <?php foreach ($aulasPraticasFiltradas as $aula): ?>
                 <div class="aula-item" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #f8fafc;">
                     <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
                         <div>
@@ -239,7 +338,7 @@ foreach ($aulas as $aula) {
                                 </span>
                             </div>
                             <div style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 4px;">
-                                <?php echo htmlspecialchars($aula['aluno_nome']); ?>
+                                <?php echo htmlspecialchars($aula['aluno_nome'] ?? 'Aluno não informado'); ?>
                             </div>
                             <div style="font-size: 14px; color: #64748b;">
                                 <i class="fas fa-calendar"></i> <?php echo date('d/m/Y', strtotime($aula['data_aula'])); ?>
@@ -256,22 +355,7 @@ foreach ($aulas as $aula) {
                     <!-- Ações -->
                     <?php if ($aula['status'] !== 'cancelada' && $aula['status'] !== 'concluida'): ?>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
-                        <?php if ($aula['tipo_aula'] === 'teorica'): ?>
-                        <button 
-                            class="btn btn-sm btn-primary" 
-                            onclick="window.location.href='chamada.php?aula_id=<?php echo $aula['id']; ?>'"
-                            style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"
-                        >
-                            <i class="fas fa-clipboard-list"></i> Chamada
-                        </button>
-                        <button 
-                            class="btn btn-sm btn-secondary" 
-                            onclick="window.location.href='diario.php?aula_id=<?php echo $aula['id']; ?>'"
-                            style="padding: 6px 12px; background: #64748b; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;"
-                        >
-                            <i class="fas fa-book"></i> Diário
-                        </button>
-                        <?php endif; ?>
+                        <!-- FASE INSTRUTOR - AULAS TEORICAS - Botões apenas para aulas práticas nesta seção -->
                         <button 
                             class="btn btn-sm btn-warning solicitar-transferencia" 
                             data-aula-id="<?php echo $aula['id']; ?>"
@@ -297,6 +381,86 @@ foreach ($aulas as $aula) {
             </div>
             <?php endif; ?>
         </div>
+        <?php endif; ?>
+
+        <!-- FASE 1 - PRESENCA TEORICA - Lista de Aulas Teóricas -->
+        <?php if ($tipoFiltro === '' || $tipoFiltro === 'teorica'): ?>
+        <div class="card" style="background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); padding: 20px;">
+            <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 2px solid #3b82f6;">
+                <h3 style="margin: 0; font-size: 18px; font-weight: 600; color: #1e293b;">
+                    <i class="fas fa-book me-2" style="color: #3b82f6;"></i>
+                    Aulas Teóricas
+                </h3>
+            </div>
+            <?php if (empty($aulasTeoricas)): ?>
+            <div style="text-align: center; padding: 40px 20px;">
+                <i class="fas fa-calendar-times" style="font-size: 48px; color: #cbd5e1; margin-bottom: 16px;"></i>
+                <h3 style="color: #64748b; margin-bottom: 8px;">Nenhuma aula teórica encontrada</h3>
+                <p style="color: #94a3b8;">Não há aulas teóricas no período selecionado.</p>
+            </div>
+            <?php else: ?>
+            <div class="aula-list" style="display: flex; flex-direction: column; gap: 12px;">
+                <?php foreach ($aulasTeoricas as $aula): ?>
+                    <?php 
+                    $nomesDisciplinas = [
+                        'legislacao_transito' => 'Legislação de Trânsito',
+                        'direcao_defensiva' => 'Direção Defensiva',
+                        'primeiros_socorros' => 'Primeiros Socorros',
+                        'meio_ambiente_cidadania' => 'Meio Ambiente e Cidadania',
+                        'mecanica_basica' => 'Mecânica Básica'
+                    ];
+                    $disciplinaNome = $nomesDisciplinas[$aula['disciplina']] ?? ucfirst(str_replace('_', ' ', $aula['disciplina']));
+                    ?>
+                    <div class="aula-item" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; background: #f8fafc;">
+                        <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 12px;">
+                            <div>
+                                <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
+                                    <span style="padding: 4px 8px; background: #3b82f6; color: white; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                        Teórica
+                                    </span>
+                                    <span style="padding: 4px 8px; background: <?php 
+                                        echo $aula['status'] === 'agendada' ? '#fbbf24' : 
+                                            ($aula['status'] === 'realizada' ? '#10b981' : '#ef4444'); 
+                                    ?>; color: white; border-radius: 4px; font-size: 12px; font-weight: 600;">
+                                        <?php echo ucfirst($aula['status']); ?>
+                                    </span>
+                                </div>
+                                <div style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 4px;">
+                                    <?php echo htmlspecialchars($aula['turma_nome']); ?>
+                                </div>
+                                <div style="font-size: 14px; color: #64748b; margin-bottom: 4px;">
+                                    <i class="fas fa-book"></i> <?php echo htmlspecialchars($disciplinaNome); ?>
+                                </div>
+                                <div style="font-size: 14px; color: #64748b;">
+                                    <i class="fas fa-calendar"></i> <?php echo date('d/m/Y', strtotime($aula['data_aula'])); ?>
+                                    <i class="fas fa-clock" style="margin-left: 12px;"></i> <?php echo date('H:i', strtotime($aula['hora_inicio'])); ?> - <?php echo date('H:i', strtotime($aula['hora_fim'])); ?>
+                                </div>
+                                <?php if ($aula['sala_nome']): ?>
+                                <div style="font-size: 14px; color: #64748b; margin-top: 4px;">
+                                    <i class="fas fa-door-open"></i> <?php echo htmlspecialchars($aula['sala_nome']); ?>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        
+                        <!-- Ações -->
+                        <?php if ($aula['status'] !== 'cancelada' && $aula['status'] !== 'realizada'): ?>
+                        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                            <a 
+                                href="../admin/index.php?page=turma-chamada&turma_id=<?php echo (int)($aula['turma_id'] ?? 0); ?>&aula_id=<?php echo (int)($aula['id'] ?? 0); ?>&origem=instrutor" 
+                                class="btn btn-sm btn-primary" 
+                                style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer; text-decoration: none; display: inline-block;"
+                            >
+                                <i class="fas fa-clipboard-check"></i> Abrir Chamada
+                            </a>
+                        </div>
+                        <?php endif; ?>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
     </div>
 
     <!-- Modal de Cancelamento/Transferência (reutilizado do dashboard) -->

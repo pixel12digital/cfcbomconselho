@@ -1,6 +1,40 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+    <?php 
+    // FASE CORREÇÃO ALUNO: $basePath sempre aponta para a raiz pública do projeto (ex.: /cfc-bom-conselho),
+    // evitando caminhos quebrados como /aluno/assets/... quando usado em aluno/dashboard.php
+    
+    // Se já existir BASE_PATH definido, verificar se precisa ajustar
+    if (defined('BASE_PATH')) {
+        $basePath = BASE_PATH;
+        
+        // Se BASE_PATH termina em '/aluno', subir um nível para a raiz
+        if (substr($basePath, -6) === '/aluno') {
+            $basePath = rtrim(dirname($basePath), '/');
+        }
+    } else {
+        // Fallback: calcular a partir do SCRIPT_NAME
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $scriptDir = dirname($scriptName);
+        
+        // Se o diretório do script termina em '/aluno', subir um nível para a raiz
+        if (substr($scriptDir, -6) === '/aluno') {
+            $basePath = rtrim(dirname($scriptDir), '/');
+        } else {
+            // Caso contrário, usar o diretório do script
+            $basePath = rtrim($scriptDir, '/');
+        }
+        
+        // Se for raiz, deixar vazio
+        if ($basePath === '/' || $basePath === '') {
+            $basePath = '';
+        }
+    }
+    
+    // Garantir que não tenha barra no final
+    $basePath = rtrim($basePath, '/');
+    ?>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#0d6efd">
@@ -11,8 +45,12 @@
     <title><?php echo $pageTitle ?? 'CFC Bom Conselho'; ?></title>
     
     <!-- PWA Manifest -->
-    <link rel="manifest" href="../pwa/manifest.json">
-    <link rel="apple-touch-icon" href="../pwa/icons/icon-192.png">
+    <?php 
+    $manifestPath = rtrim($basePath, '/') . '/pwa/manifest.json';
+    $iconPath = rtrim($basePath, '/') . '/pwa/icons/icon-192.png';
+    ?>
+    <link rel="manifest" href="<?php echo $manifestPath; ?>">
+    <link rel="apple-touch-icon" href="<?php echo $iconPath; ?>">
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -21,7 +59,10 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
     <!-- CSS Mobile-First Customizado -->
-    <link rel="stylesheet" href="/assets/css/mobile-first.css">
+    <?php 
+    $cssPath = rtrim($basePath, '/') . '/assets/css/mobile-first.css';
+    ?>
+    <link rel="stylesheet" href="<?php echo $cssPath; ?>">
     
     <!-- CSS específico da página -->
     <?php if (isset($pageCSS)): ?>
@@ -151,7 +192,7 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('../pwa/sw.js')
+                navigator.serviceWorker.register('<?php echo rtrim($basePath, '/') . '/pwa/sw.js'; ?>')
                     .then(registration => {
                         console.log('SW registered: ', registration);
                     })
@@ -163,7 +204,10 @@
     </script>
     
     <!-- JavaScript Mobile-First -->
-    <script src="/assets/js/mobile-first.js"></script>
+    <?php 
+    $jsPath = rtrim($basePath, '/') . '/assets/js/mobile-first.js';
+    ?>
+    <script src="<?php echo $jsPath; ?>"></script>
     
     <!-- JavaScript específico da página -->
     <?php if (isset($pageJS)): ?>

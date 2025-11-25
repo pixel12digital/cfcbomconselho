@@ -24,7 +24,10 @@ document.addEventListener('DOMContentLoaded', function() {
             title: 'Acadêmico',
             items: [
                 { icon: 'fas fa-chalkboard-teacher', text: 'Turmas Teóricas', href: 'index.php?page=turmas-teoricas' },
-                { icon: 'fas fa-check-square', text: 'Presenças Teóricas (Temporário)', href: 'index.php?page=turma-chamada', onclick: 'return confirm("Esta página ainda está em desenvolvimento. Deseja continuar?");' },
+                // AJUSTE MENU PRESENCA TEORICA - REMOVIDO ITEM TEMPORÁRIO (FLYOUT)
+                // O fluxo oficial de presença TEÓRICA é via:
+                // Acadêmico → Turmas Teóricas → Detalhes da Turma → Seleção da Aula → Chamada/Frequência
+                // O antigo menu "Presenças Teóricas (Temporário)" foi removido para evitar duplicidade de caminhos.
                 { icon: 'fas fa-car-side', text: 'Aulas Práticas (Temporário)', href: 'pages/listar-aulas.php' },
                 { icon: 'fas fa-calendar-alt', text: 'Agenda Geral', href: 'index.php?page=agendamento' },
                 { icon: 'fas fa-chalkboard-teacher', text: 'Instrutores', href: 'index.php?page=instrutores' },

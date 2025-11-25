@@ -32,28 +32,141 @@ if (!$aluno) {
     exit();
 }
 
-// Buscar o ID do aluno na tabela alunos usando o CPF
-$alunoDados = $db->fetch("SELECT id FROM alunos WHERE cpf = ?", [$aluno['cpf']]);
-$alunoId = $alunoDados ? $alunoDados['id'] : null;
+// AUDITORIA DASHBOARD PROXIMAS AULAS - Buscar o ID do aluno usando getCurrentAlunoId()
+$alunoId = getCurrentAlunoId($user['id']);
 
-// Buscar próximas aulas (próximos 14 dias) - apenas se aluno existe na tabela alunos
-$proximasAulas = [];
-if ($alunoId) {
-    $proximasAulas = $db->fetchAll("
+/**
+ * AUDITORIA DASHBOARD PROXIMAS AULAS - Função para buscar próximas aulas (práticas e teóricas) do aluno
+ * Reutiliza a lógica de aluno/aulas.php para garantir consistência
+ * 
+ * @param object $db Instância do banco de dados
+ * @param int $alunoId ID do aluno
+ * @param int $dias Número de dias para buscar (padrão: 14)
+ * @return array Array de aulas ordenadas por data/hora
+ */
+function obterProximasAulasAluno($db, $alunoId, $dias = 14) {
+    if (!$alunoId) {
+        return [];
+    }
+    
+    $dataInicio = date('Y-m-d');
+    $dataFim = date('Y-m-d', strtotime("+{$dias} days"));
+    $hoje = date('Y-m-d');
+    $agora = date('H:i:s');
+    
+    $todasAulas = [];
+    
+    // REFERENCIA PROXIMAS AULAS DASHBOARD - Buscar aulas práticas
+    $aulasPraticas = $db->fetchAll("
         SELECT a.*, 
                i.nome as instrutor_nome,
-               v.modelo as veiculo_modelo, v.placa as veiculo_placa
+               v.modelo as veiculo_modelo, 
+               v.placa as veiculo_placa,
+               'pratica' as tipo,
+               'Prática' as tipo_label
         FROM aulas a
         JOIN instrutores i ON a.instrutor_id = i.id
         LEFT JOIN veiculos v ON a.veiculo_id = v.id
         WHERE a.aluno_id = ?
-          AND a.data_aula >= CURDATE() 
-          AND a.data_aula <= DATE_ADD(CURDATE(), INTERVAL 14 DAY)
+          AND a.data_aula >= ?
+          AND a.data_aula <= ?
           AND a.status != 'cancelada'
         ORDER BY a.data_aula ASC, a.hora_inicio ASC
-        LIMIT 10
+    ", [$alunoId, $dataInicio, $dataFim]);
+    
+    foreach ($aulasPraticas as $aula) {
+        $todasAulas[] = $aula;
+    }
+    
+    // REFERENCIA PROXIMAS AULAS DASHBOARD - Buscar aulas teóricas das turmas do aluno
+    $turmasAluno = $db->fetchAll("
+        SELECT tm.turma_id
+        FROM turma_matriculas tm
+        WHERE tm.aluno_id = ?
+          AND tm.status IN ('matriculado', 'cursando', 'concluido')
     ", [$alunoId]);
+    
+    if (!empty($turmasAluno)) {
+        $turmaIds = array_column($turmasAluno, 'turma_id');
+        $placeholders = implode(',', array_fill(0, count($turmaIds), '?'));
+        
+        $aulasTeoricas = $db->fetchAll("
+            SELECT 
+                taa.id,
+                taa.turma_id,
+                taa.disciplina,
+                taa.nome_aula,
+                taa.data_aula,
+                taa.hora_inicio,
+                taa.hora_fim,
+                taa.status,
+                taa.observacoes,
+                tt.nome as turma_nome,
+                i.nome as instrutor_nome,
+                s.nome as sala_nome,
+                'teorica' as tipo,
+                'Teórica' as tipo_label
+            FROM turma_aulas_agendadas taa
+            JOIN turmas_teoricas tt ON taa.turma_id = tt.id
+            LEFT JOIN instrutores i ON taa.instrutor_id = i.id
+            LEFT JOIN salas s ON taa.sala_id = s.id
+            WHERE taa.turma_id IN ($placeholders)
+              AND taa.data_aula >= ?
+              AND taa.data_aula <= ?
+              AND taa.status IN ('agendada', 'realizada')
+            ORDER BY taa.data_aula ASC, taa.hora_inicio ASC
+        ", array_merge($turmaIds, [$dataInicio, $dataFim]));
+        
+        foreach ($aulasTeoricas as $aula) {
+            $todasAulas[] = $aula;
+        }
+    }
+    
+    // Ordenar por data e hora (mais próxima primeiro)
+    usort($todasAulas, function($a, $b) {
+        $dataA = $a['data_aula'] . ' ' . ($a['hora_inicio'] ?? '00:00:00');
+        $dataB = $b['data_aula'] . ' ' . ($b['hora_inicio'] ?? '00:00:00');
+        return strtotime($dataA) - strtotime($dataB);
+    });
+    
+    // Filtrar apenas aulas futuras (hoje com hora >= agora, ou datas futuras)
+    $aulasFuturas = [];
+    foreach ($todasAulas as $aula) {
+        $dataAula = $aula['data_aula'];
+        $horaAula = $aula['hora_inicio'] ?? '00:00:00';
+        
+        if ($dataAula > $hoje || ($dataAula === $hoje && $horaAula >= $agora)) {
+            $aulasFuturas[] = $aula;
+        }
+    }
+    
+    return $aulasFuturas;
 }
+
+// DASHBOARD ALUNO - BLOCO PROXIMAS AULAS - INÍCIO
+// AUDITORIA DASHBOARD PROXIMAS AULAS - Buscar próximas aulas (práticas e teóricas) usando a função unificada
+$proximasAulasBrutas = obterProximasAulasAluno($db, $alunoId, 14);
+
+// DASHBOARD ALUNO - PROXIMAS AULAS - EXIBINDO APENAS PRIMEIRO DIA COM AULAS
+// Filtrar para exibir apenas as aulas do primeiro dia com aula agendada
+$primeiraDataComAula = null;
+$proximasAulas = [];
+$aulasFuturasCount = 0;
+
+foreach ($proximasAulasBrutas as $aula) {
+    $dataAula = $aula['data_aula']; // Já vem no formato Y-m-d
+    
+    if ($primeiraDataComAula === null) {
+        $primeiraDataComAula = $dataAula;
+    }
+    
+    if ($dataAula === $primeiraDataComAula) {
+        $proximasAulas[] = $aula;
+    } else {
+        $aulasFuturasCount++;
+    }
+}
+// DASHBOARD ALUNO - BLOCO PROXIMAS AULAS - FIM
 
 // Buscar notificações não lidas
 $notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($user['id'], 'aluno');
@@ -87,167 +200,206 @@ $homeUrl = '/aluno/dashboard.php';
 // Incluir layout mobile-first
 ob_start();
 ?>
-<!-- Header com Logout -->
-<div class="row mb-3">
-    <div class="col-12">
+<!-- Card de Boas-Vindas (dentro do conteúdo, não como header) -->
+<div class="card card-aluno-dashboard mb-3">
+    <div class="card-body aluno-dashboard-header">
         <div class="d-flex justify-content-between align-items-center">
-            <h1 class="h3 mb-0">
-                <i class="fas fa-user-graduate me-2"></i>
-                Dashboard do Aluno
-            </h1>
-            <div class="d-flex gap-2">
-                <span class="badge bg-primary">
-                    <i class="fas fa-user me-1"></i>
-                    <?php echo htmlspecialchars($aluno['nome']); ?>
-                </span>
-                <a href="logout.php" class="btn btn-outline-danger btn-sm">
-                    <i class="fas fa-sign-out-alt me-1"></i>
-                    Sair
-                </a>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Conteúdo do Dashboard -->
-<div class="row">
-    <div class="col-12">
-        <div class="card card-mobile mb-mobile">
-            <div class="card-header">
-                <h2 class="card-title fs-mobile-2">
-                    <i class="fas fa-user-graduate me-2"></i>
+            <div>
+                <h3 class="mb-1">
+                    <i class="fas fa-user-graduate me-2 text-primary"></i>
                     Olá, <?php echo htmlspecialchars($aluno['nome']); ?>!
-                </h2>
-                <p class="card-subtitle text-muted mb-0">Acompanhe suas aulas e progresso</p>
+                </h3>
+                <p class="subtitle mb-0 text-muted">Acompanhe suas aulas e progresso</p>
             </div>
+            <a href="logout.php" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-sign-out-alt me-1"></i>
+                Sair
+            </a>
         </div>
     </div>
 </div>
 <!-- Notificações -->
 <?php if (!empty($notificacoesNaoLidas)): ?>
-<div class="row">
-    <div class="col-12">
-        <div class="card card-mobile mb-mobile">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h3 class="card-title fs-mobile-3 mb-0">
-                    <i class="fas fa-bell me-2"></i>
-                    Notificações
-                </h3>
-                <span class="badge bg-primary"><?php echo count($notificacoesNaoLidas); ?></span>
-            </div>
-            <div class="card-body p-0">
-                <?php foreach ($notificacoesNaoLidas as $notificacao): ?>
-                <div class="border-bottom p-3" data-id="<?php echo $notificacao['id']; ?>">
-                    <div class="d-flex justify-content-between align-items-start">
-                        <div class="flex-grow-1">
-                            <h6 class="mb-1"><?php echo htmlspecialchars($notificacao['titulo']); ?></h6>
-                            <p class="text-muted mb-1 fs-mobile-6"><?php echo htmlspecialchars($notificacao['mensagem']); ?></p>
-                            <small class="text-muted"><?php echo date('d/m/Y H:i', strtotime($notificacao['criado_em'])); ?></small>
-                        </div>
-                        <button class="btn btn-sm btn-outline-primary marcar-lida" data-id="<?php echo $notificacao['id']; ?>">
-                            <i class="fas fa-check"></i>
-                        </button>
-                    </div>
+<div class="card-aluno-dashboard mb-section">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0">
+            <i class="fas fa-bell me-2"></i>
+            Notificações
+        </h5>
+        <span class="badge bg-primary"><?php echo count($notificacoesNaoLidas); ?></span>
+    </div>
+    <div class="card-body p-0">
+        <?php foreach ($notificacoesNaoLidas as $notificacao): ?>
+        <div class="border-bottom p-3" data-id="<?php echo $notificacao['id']; ?>">
+            <div class="d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                    <h6 class="mb-1"><?php echo htmlspecialchars($notificacao['titulo']); ?></h6>
+                    <p class="text-muted mb-1"><?php echo htmlspecialchars($notificacao['mensagem']); ?></p>
+                    <small class="text-muted"><?php echo date('d/m/Y H:i', strtotime($notificacao['criado_em'])); ?></small>
                 </div>
-                <?php endforeach; ?>
+                <button class="btn btn-sm btn-outline-primary marcar-lida" data-id="<?php echo $notificacao['id']; ?>">
+                    <i class="fas fa-check"></i>
+                </button>
             </div>
         </div>
+        <?php endforeach; ?>
     </div>
 </div>
 <?php endif; ?>
 
-        <!-- Status do Processo -->
-        <div class="card">
+        <!-- Seu Progresso - Cards -->
+        <div class="card-aluno-dashboard mb-section">
             <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-route"></i>
+                <h5 class="mb-0">
+                    <i class="fas fa-route me-2"></i>
                     Seu Progresso
-                </h2>
+                </h5>
             </div>
-            <div class="progresso-timeline">
-                <div class="timeline-item <?php echo $guardaExames ? 'completed' : 'pending'; ?>">
-                    <div class="timeline-icon">
-                        <i class="fas fa-stethoscope"></i>
+            <div class="card-body">
+                <!-- LAYOUT DESKTOP DASHBOARD - Seu Progresso: 3 colunas no desktop (col-lg-4), 2 no tablet (col-md-6), 1 no mobile (col-12) -->
+                <div class="row g-3">
+                    <!-- Exames Médico e Psicológico -->
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="progresso-card d-flex align-items-center <?php echo $guardaExames ? 'completed' : 'pending'; ?>">
+                            <div class="progresso-card-icon">
+                                <i class="fas fa-stethoscope"></i>
+                            </div>
+                            <div class="progresso-card-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="progresso-card-title">Exames Médico e Psicológico</div>
+                                    </div>
+                                    <span class="progresso-card-badge <?php echo $guardaExames ? 'success' : 'secondary'; ?>">
+                                        <?php echo $guardaExames ? 'Aprovados' : 'Pendentes'; ?>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="timeline-content">
-                        <h4>Exames Médico e Psicológico</h4>
-                        <p><?php echo $guardaExames ? 'Aprovados' : 'Pendentes'; ?></p>
+                    
+                    <!-- Aulas Teóricas -->
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="progresso-card d-flex align-items-center <?php echo $guardaExames ? 'completed' : 'disabled'; ?>">
+                            <div class="progresso-card-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <div class="progresso-card-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="progresso-card-title">Aulas Teóricas</div>
+                                    </div>
+                                    <span class="progresso-card-badge <?php echo $guardaExames ? 'primary' : 'secondary'; ?>">
+                                        <?php echo $guardaExames ? 'Liberadas' : 'Bloqueadas'; ?>
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                </div>
-                
-                <div class="timeline-item <?php echo $guardaExames ? 'completed' : 'disabled'; ?>">
-                    <div class="timeline-icon">
-                        <i class="fas fa-book"></i>
-                    </div>
-                    <div class="timeline-content">
-                        <h4>Aulas Teóricas</h4>
-                        <p><?php echo $guardaExames ? 'Liberadas' : 'Bloqueadas'; ?></p>
-                    </div>
-                </div>
-                
-                <div class="timeline-item disabled">
-                    <div class="timeline-icon">
-                        <i class="fas fa-car"></i>
-                    </div>
-                    <div class="timeline-content">
-                        <h4>Aulas Práticas</h4>
-                        <p>Após prova teórica</p>
+                    
+                    <!-- Aulas Práticas -->
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <div class="progresso-card d-flex align-items-center disabled">
+                            <div class="progresso-card-icon">
+                                <i class="fas fa-car"></i>
+                            </div>
+                            <div class="progresso-card-content flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <div class="progresso-card-title">Aulas Práticas</div>
+                                    </div>
+                                    <span class="progresso-card-badge secondary">
+                                        Após prova teórica
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Próximas Aulas -->
-        <div class="card">
+        <div class="card-aluno-dashboard mb-section">
             <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-calendar-alt"></i>
+                <h5 class="mb-0">
+                    <i class="fas fa-calendar-alt me-2"></i>
                     Próximas Aulas
-                </h2>
+                </h5>
             </div>
-            
-            <?php if (empty($proximasAulas)): ?>
-            <div class="empty-state">
-                <div class="empty-state-icon">
-                    <i class="fas fa-calendar-times"></i>
+            <div class="card-body">
+                <?php if (empty($proximasAulas)): ?>
+                <div class="proximas-aulas-empty">
+                    <div class="proximas-aulas-empty-icon">
+                        <i class="fas fa-calendar-times"></i>
+                    </div>
+                    <h6 class="proximas-aulas-empty-title">Nenhuma aula agendada</h6>
+                    <p class="proximas-aulas-empty-text">Você não possui aulas agendadas para os próximos 14 dias.</p>
                 </div>
-                <h3 class="empty-state-title">Nenhuma aula agendada</h3>
-                <p class="empty-state-text">Você não possui aulas agendadas para os próximos 14 dias.</p>
-            </div>
-            <?php else: ?>
-            <div class="aula-list">
+                <?php else: ?>
+            <!-- LAYOUT DESKTOP DASHBOARD - Próximas Aulas: 2 colunas no desktop (col-md-6), 1 no mobile (col-12) -->
+            <div class="aula-list row g-3">
                 <?php foreach ($proximasAulas as $aula): ?>
-                <div class="aula-item" data-aula-id="<?php echo $aula['id']; ?>">
+                <div class="col-12 col-md-6">
+                    <div class="aula-item" data-aula-id="<?php echo $aula['id']; ?>">
                     <div class="aula-item-header">
                         <div>
-                            <div class="aula-tipo <?php echo $aula['tipo_aula']; ?>">
-                                <?php echo ucfirst($aula['tipo_aula']); ?>
+                            <div class="aula-tipo <?php echo $aula['tipo'] ?? 'pratica'; ?>">
+                                <?php echo htmlspecialchars($aula['tipo_label'] ?? ($aula['tipo'] === 'teorica' ? 'Teórica' : 'Prática')); ?>
                             </div>
                             <div class="aula-data">
                                 <?php echo date('d/m/Y', strtotime($aula['data_aula'])); ?>
                             </div>
                             <div class="aula-hora">
-                                <?php echo date('H:i', strtotime($aula['hora_inicio'])); ?> - 
-                                <?php echo date('H:i', strtotime($aula['hora_fim'])); ?>
+                                <?php 
+                                $horaInicio = $aula['hora_inicio'] ?? '00:00:00';
+                                $horaFim = $aula['hora_fim'] ?? null;
+                                echo date('H:i', strtotime($horaInicio));
+                                if ($horaFim) {
+                                    echo ' - ' . date('H:i', strtotime($horaFim));
+                                }
+                                ?>
                             </div>
+                            <?php if (isset($aula['turma_nome']) || isset($aula['disciplina'])): ?>
+                            <div class="aula-turma" style="font-size: 0.875rem; color: #64748b; margin-top: 0.25rem;">
+                                <?php if (isset($aula['turma_nome'])): ?>
+                                    <?php echo htmlspecialchars($aula['turma_nome']); ?>
+                                <?php endif; ?>
+                                <?php if (isset($aula['disciplina'])): ?>
+                                    <?php if (isset($aula['turma_nome'])): ?> - <?php endif; ?>
+                                    <?php echo htmlspecialchars($aula['disciplina']); ?>
+                                <?php endif; ?>
+                            </div>
+                            <?php endif; ?>
                         </div>
-                        <div class="aula-status <?php echo $aula['status']; ?>">
-                            <?php echo ucfirst($aula['status']); ?>
+                        <div class="aula-status <?php echo $aula['status'] ?? 'agendada'; ?>">
+                            <?php 
+                            $status = $aula['status'] ?? 'agendada';
+                            $statusLabel = $status === 'realizada' ? 'Realizada' : ucfirst($status);
+                            echo htmlspecialchars($statusLabel);
+                            ?>
                         </div>
                     </div>
                     
                     <div class="aula-detalhes">
+                        <?php if (!empty($aula['instrutor_nome'])): ?>
                         <div class="aula-detalhe">
                             <i class="fas fa-user aula-detalhe-icon"></i>
                             <?php echo htmlspecialchars($aula['instrutor_nome']); ?>
                         </div>
-                        <?php if ($aula['veiculo_modelo']): ?>
+                        <?php endif; ?>
+                        <?php if (!empty($aula['sala_nome'])): ?>
                         <div class="aula-detalhe">
-                            <i class="fas fa-car aula-detalhe-icon"></i>
-                            <?php echo htmlspecialchars($aula['veiculo_modelo']); ?> - <?php echo htmlspecialchars($aula['veiculo_placa']); ?>
+                            <i class="fas fa-door-open aula-detalhe-icon"></i>
+                            Sala: <?php echo htmlspecialchars($aula['sala_nome']); ?>
                         </div>
                         <?php endif; ?>
-                        <?php if ($aula['observacoes']): ?>
+                        <?php if (!empty($aula['veiculo_modelo'])): ?>
+                        <div class="aula-detalhe">
+                            <i class="fas fa-car aula-detalhe-icon"></i>
+                            <?php echo htmlspecialchars($aula['veiculo_modelo']); ?> - <?php echo htmlspecialchars($aula['veiculo_placa'] ?? ''); ?>
+                        </div>
+                        <?php endif; ?>
+                        <?php if (!empty($aula['observacoes'])): ?>
                         <div class="aula-detalhe">
                             <i class="fas fa-sticky-note aula-detalhe-icon"></i>
                             <?php echo htmlspecialchars($aula['observacoes']); ?>
@@ -255,6 +407,7 @@ ob_start();
                         <?php endif; ?>
                     </div>
                     
+                    <?php if (($aula['tipo'] ?? 'pratica') === 'pratica'): ?>
                     <div class="aula-actions">
                         <button class="btn btn-sm btn-outline solicitar-reagendamento" 
                                 data-aula-id="<?php echo $aula['id']; ?>"
@@ -271,42 +424,63 @@ ob_start();
                             Cancelar
                         </button>
                     </div>
+                    <?php endif; ?>
+                    </div>
                 </div>
                 <?php endforeach; ?>
             </div>
+            
+            <?php if ($aulasFuturasCount > 0): ?>
+            <div class="mt-3 pt-3 border-top text-center">
+                <p class="mb-2 text-muted" style="font-size: 0.875rem;">
+                    Você tem mais <strong><?php echo $aulasFuturasCount; ?></strong> aula(s) agendada(s) em datas futuras.
+                </p>
+                <a href="aulas.php" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-calendar-alt me-1"></i>
+                    Ver todas as aulas
+                </a>
+            </div>
             <?php endif; ?>
+                <?php endif; ?>
+            </div>
         </div>
 
         <!-- Ações Rápidas -->
-        <div class="card">
+        <div class="card-aluno-dashboard mb-section">
             <div class="card-header">
-                <h2 class="card-title">
-                    <i class="fas fa-bolt"></i>
+                <h5 class="mb-0">
+                    <i class="fas fa-bolt me-2"></i>
                     Ações Rápidas
-                </h2>
+                </h5>
             </div>
-            <div class="grid grid-2">
-                <button class="btn btn-primary btn-full" onclick="verTodasAulas()">
-                    <i class="fas fa-list"></i>
-                    Ver Todas as Aulas
-                </button>
-                <button class="btn btn-secondary btn-full" onclick="verNotificacoes()">
-                    <i class="fas fa-bell"></i>
-                    Central de Avisos
-                </button>
-                <button class="btn btn-outline btn-full" onclick="verFinanceiro()">
-                    <i class="fas fa-credit-card"></i>
-                    Financeiro
-                </button>
-                <button class="btn btn-outline btn-full" onclick="contatarCFC()">
-                    <i class="fas fa-phone"></i>
-                    Contatar CFC
-                </button>
+            <div class="card-body">
+                <div class="acoes-rapidas-wrapper">
+                    <button class="btn btn-outline-primary" onclick="verTodasAulas()">
+                        <i class="fas fa-list me-2"></i>
+                        Ver Todas as Aulas
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="verNotificacoes()">
+                        <i class="fas fa-bell me-2"></i>
+                        Central de Avisos
+                    </button>
+                    <!-- FASE 1 - PRESENCA TEORICA - Link para presenças teóricas com destaque -->
+                    <a href="presencas-teoricas.php" class="btn btn-presencas-teoricas">
+                        <i class="fas fa-clipboard-check me-2"></i>
+                        Minhas Presenças Teóricas
+                    </a>
+                    <button class="btn btn-outline-primary" onclick="verFinanceiro()">
+                        <i class="fas fa-credit-card me-2"></i>
+                        Financeiro
+                    </button>
+                    <button class="btn btn-outline-primary" onclick="contatarCFC()">
+                        <i class="fas fa-phone me-2"></i>
+                        Contatar CFC
+                    </button>
+                </div>
             </div>
         </div>
-    </div>
 
-    <!-- Modal de Solicitação -->
+<!-- Modal de Solicitação -->
     <div id="modalSolicitacao" class="modal-overlay hidden">
         <div class="modal">
             <div class="modal-header">
@@ -376,19 +550,22 @@ ob_start();
         // Variáveis globais
         let modalAberto = false;
 
-        // Funções de navegação
+        // FASE 1 - AREA ALUNO PENDENCIAS - Função de navegação para aulas
         function verTodasAulas() {
             window.location.href = 'aulas.php';
         }
 
+        // FASE 2 - NOTIFICACOES ALUNO - Redirecionar para página de notificações
         function verNotificacoes() {
             window.location.href = 'notificacoes.php';
         }
 
+        // FASE 3 - FINANCEIRO ALUNO - Redirecionar para página de financeiro
         function verFinanceiro() {
             window.location.href = 'financeiro.php';
         }
 
+        // FASE 4 - CONTATO ALUNO - Redirecionar para página de contato
         function contatarCFC() {
             window.location.href = 'contato.php';
         }
@@ -574,8 +751,11 @@ ob_start();
         });
     </script>
 
+    <!-- CSS específico do dashboard do aluno -->
+    <link rel="stylesheet" href="../assets/css/aluno-dashboard.css">
+    
     <style>
-        /* Estilos específicos para o dashboard do aluno */
+        /* Estilos específicos para notificações e aulas (mantidos do original) */
         .notificacao-item {
             display: flex;
             align-items: center;
@@ -605,73 +785,6 @@ ob_start();
 
         .notificacao-content small {
             font-size: 11px;
-            color: #94a3b8;
-        }
-
-        .progresso-timeline {
-            position: relative;
-        }
-
-        .timeline-item {
-            display: flex;
-            align-items: center;
-            margin-bottom: 20px;
-            position: relative;
-        }
-
-        .timeline-item:not(:last-child)::after {
-            content: '';
-            position: absolute;
-            left: 20px;
-            top: 40px;
-            width: 2px;
-            height: 20px;
-            background: #e2e8f0;
-        }
-
-        .timeline-item.completed::after {
-            background: #059669;
-        }
-
-        .timeline-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-right: 16px;
-            font-size: 16px;
-            color: white;
-            background: #e2e8f0;
-        }
-
-        .timeline-item.completed .timeline-icon {
-            background: #059669;
-        }
-
-        .timeline-item.disabled .timeline-icon {
-            background: #f1f5f9;
-            color: #94a3b8;
-        }
-
-        .timeline-content h4 {
-            font-size: 14px;
-            font-weight: 600;
-            margin-bottom: 4px;
-            color: #1e293b;
-        }
-
-        .timeline-item.disabled .timeline-content h4 {
-            color: #94a3b8;
-        }
-
-        .timeline-content p {
-            font-size: 12px;
-            color: #64748b;
-        }
-
-        .timeline-item.disabled .timeline-content p {
             color: #94a3b8;
         }
 
