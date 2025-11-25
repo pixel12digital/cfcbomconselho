@@ -381,6 +381,8 @@ if ($instrutorId) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - <?php echo htmlspecialchars($instrutor['nome'] ?? 'Instrutor'); ?></title>
+    <!-- Bootstrap 4 CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
     <link rel="stylesheet" href="../assets/css/mobile-first.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -432,15 +434,15 @@ if ($instrutorId) {
     <!-- Layout refinado: Container principal centralizado -->
     <div class="container my-4 instrutor-dashboard">
         <!-- PRIMEIRA SEÇÃO: Visão geral do dia (2 colunas) -->
-        <div class="row g-4 mb-4">
-            <!-- Coluna Esquerda: Próxima Aula (2/3 da largura) -->
-            <div class="col-lg-8 col-md-7 mb-3 mb-md-0">
+        <div class="row mb-4">
+            <!-- Coluna Esquerda: Próxima Aula -->
+            <div class="col-12 col-lg-7 col-xl-6 mb-4 mb-lg-0">
                 <?php if ($proximaAula): ?>
                 <!-- Ajuste visual: Card Próxima Aula - hierarquia e espaçamentos -->
                 <div class="card border-primary shadow-sm h-100">
                     <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
                         <div>
-                            <span class="badge bg-light text-primary me-2" style="font-size: 0.7rem; font-weight: 600;">PRÓXIMA AULA</span>
+                            <span class="badge bg-light text-primary mr-2" style="font-size: 0.7rem; font-weight: 600;">PRÓXIMA AULA</span>
                             <strong style="font-size: 1.3rem; font-weight: 700;"><?php echo date('H:i', strtotime($proximaAula['hora_inicio'])); ?> - <?php echo date('H:i', strtotime($proximaAula['hora_fim'])); ?></strong>
                         </div>
                         <span class="badge bg-<?php echo $proximaAula['tipo_aula'] === 'teorica' ? 'info' : 'success'; ?>" style="font-size: 0.75rem; opacity: 0.9; font-weight: 500;">
@@ -468,7 +470,7 @@ if ($instrutorId) {
                             <?php if (!empty($proximaAula['sala_nome'])): ?>
                             <!-- Ajuste visual: Espaçamento correto entre ícone e texto da Sala -->
                             <div class="mb-2 text-muted small">
-                                <i class="fas fa-door-open me-2"></i><?php echo htmlspecialchars((string)($proximaAula['sala_nome'] ?? '')); ?>
+                                <i class="fas fa-door-open mr-2"></i><?php echo htmlspecialchars((string)($proximaAula['sala_nome'] ?? '')); ?>
                             </div>
                             <?php endif; ?>
                         <?php else: ?>
@@ -477,7 +479,7 @@ if ($instrutorId) {
                             </div>
                             <?php if (!empty($proximaAula['veiculo_modelo'])): ?>
                             <div class="mb-2 text-muted small">
-                                <i class="fas fa-car me-1"></i><?php echo htmlspecialchars($proximaAula['veiculo_modelo'] ?? ''); ?> - <?php echo htmlspecialchars($proximaAula['veiculo_placa'] ?? ''); ?>
+                                <i class="fas fa-car mr-1"></i><?php echo htmlspecialchars($proximaAula['veiculo_modelo'] ?? ''); ?> - <?php echo htmlspecialchars($proximaAula['veiculo_placa'] ?? ''); ?>
                             </div>
                             <?php endif; ?>
                         <?php endif; ?>
@@ -487,11 +489,11 @@ if ($instrutorId) {
                             <?php if ($proximaAula['tipo_aula'] === 'teorica'): ?>
                                 <?php if ($proximaAula['chamada_registrada'] ?? false): ?>
                                     <span class="badge bg-success-subtle text-success border border-success">
-                                        <i class="fas fa-check-circle me-1"></i>Chamada concluída
+                                        <i class="fas fa-check-circle mr-1"></i>Chamada concluída
                                     </span>
                                 <?php else: ?>
                                     <span class="badge bg-warning-subtle text-warning border border-warning">
-                                        <i class="fas fa-exclamation-circle me-1"></i>Chamada pendente para esta aula
+                                        <i class="fas fa-exclamation-circle mr-1"></i>Chamada pendente para esta aula
                                     </span>
                                 <?php endif; ?>
                             <?php else: ?>
@@ -500,7 +502,7 @@ if ($instrutorId) {
                         </div>
                         
                         <!-- Ajuste visual: Botões com largura mínima confortável e espaçamento -->
-                        <div class="d-flex gap-2">
+                        <div class="d-flex" style="gap: 0.5rem;">
                             <?php if ($proximaAula['tipo_aula'] === 'teorica'): ?>
                             <?php 
                             $baseAdmin = (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '') . '/admin/index.php';
@@ -510,23 +512,23 @@ if ($instrutorId) {
                             $urlDiario = $baseAdmin . '?page=turma-diario&turma_id=' . $turmaIdAula . '&aula_id=' . $aulaIdAula . '&origem=instrutor';
                             ?>
                             <a href="<?php echo htmlspecialchars($urlChamada); ?>" class="btn btn-primary flex-fill" style="min-height: 44px;">
-                                <i class="fas fa-clipboard-list me-2"></i>Chamada
+                                <i class="fas fa-clipboard-list mr-2"></i>Chamada
                             </a>
                             <a href="<?php echo htmlspecialchars($urlDiario); ?>" class="btn btn-secondary flex-fill" style="min-height: 44px;">
-                                <i class="fas fa-book me-2"></i>Diário
+                                <i class="fas fa-book mr-2"></i>Diário
                             </a>
                             <?php else: ?>
                             <button class="btn btn-warning flex-fill solicitar-transferencia" 
                                     data-aula-id="<?php echo $proximaAula['id']; ?>"
                                     data-data="<?php echo $proximaAula['data_aula']; ?>"
                                     data-hora="<?php echo $proximaAula['hora_inicio']; ?>">
-                                <i class="fas fa-exchange-alt me-2"></i>Transferir
+                                <i class="fas fa-exchange-alt mr-2"></i>Transferir
                             </button>
                             <button class="btn btn-danger flex-fill cancelar-aula" 
                                     data-aula-id="<?php echo $proximaAula['id']; ?>"
                                     data-data="<?php echo $proximaAula['data_aula']; ?>"
                                     data-hora="<?php echo $proximaAula['hora_inicio']; ?>">
-                                <i class="fas fa-times me-2"></i>Cancelar
+                                <i class="fas fa-times mr-2"></i>Cancelar
                             </button>
                             <?php endif; ?>
                         </div>
@@ -543,17 +545,17 @@ if ($instrutorId) {
                 <?php endif; ?>
             </div>
             
-            <!-- Coluna Direita: Resumo + Pendências (1/3 da largura) -->
-            <div class="col-lg-4 col-md-5">
+            <!-- Coluna Direita: Resumo + Pendências -->
+            <div class="col-12 col-lg-5 col-xl-6">
                 <!-- RESUMO DE HOJE - NOVO LAYOUT (Bootstrap 4) -->
                 <div class="card mb-4 instrutor-resumo-hoje">
                     <div class="card-header d-flex justify-content-between align-items-center">
-                        <span><i class="fas fa-chart-bar me-2"></i>Resumo de Hoje</span>
+                        <span><i class="fas fa-chart-bar mr-2"></i>Resumo de Hoje</span>
                     </div>
                     <div class="card-body">
                         <div class="row">
                             <!-- Aulas hoje -->
-                            <div class="col-12 col-md-4 mb-3 mb-md-0">
+                            <div class="col-12 col-lg-4 mb-3 mb-lg-0">
                                 <div class="resumo-card card h-100 text-center py-3">
                                     <i class="fas fa-calendar-alt text-primary mb-2 resumo-icon"></i>
                                     <div class="resumo-valor text-primary">
@@ -563,7 +565,7 @@ if ($instrutorId) {
                                 </div>
                             </div>
                             <!-- Pendentes -->
-                            <div class="col-12 col-md-4 mb-3 mb-md-0">
+                            <div class="col-12 col-lg-4 mb-3 mb-lg-0">
                                 <div class="resumo-card card h-100 text-center py-3">
                                     <i class="fas fa-exclamation-circle text-warning mb-2 resumo-icon"></i>
                                     <div class="resumo-valor text-warning">
@@ -573,7 +575,7 @@ if ($instrutorId) {
                                 </div>
                             </div>
                             <!-- Concluídas -->
-                            <div class="col-12 col-md-4">
+                            <div class="col-12 col-lg-4">
                                 <div class="resumo-card card h-100 text-center py-3">
                                     <i class="fas fa-check-circle text-success mb-2 resumo-icon"></i>
                                     <div class="resumo-valor text-success">
@@ -591,7 +593,7 @@ if ($instrutorId) {
                 <div class="card">
                     <div class="card-header bg-white border-0 pb-0">
                         <h5 class="card-title mb-0">
-                            <i class="fas fa-exclamation-triangle me-2"></i>Pendências
+                            <i class="fas fa-exclamation-triangle mr-2"></i>Pendências
                         </h5>
                     </div>
                     <div class="card-body d-flex flex-column align-items-center justify-content-center text-center py-4">
@@ -617,29 +619,30 @@ if ($instrutorId) {
         
         <!-- ACOES RAPIDAS - NOVO LAYOUT (Bootstrap 4) -->
         <div class="card mb-4 instrutor-acoes-rapidas">
-            <div class="card-header">
-                <i class="fas fa-bolt me-2"></i>Ações Rápidas
+            <div class="card-header d-flex justify-content-center align-items-center text-center">
+                <i class="fas fa-bolt mr-2"></i>
+                <span>Ações Rápidas</span>
             </div>
             <div class="card-body">
                 <div class="row">
-                    <div class="col-12 col-sm-6 col-lg-3 mb-3 mb-lg-0">
+                    <div class="col-12 col-sm-6 col-lg-3 mb-3 mb-lg-0 d-flex">
                         <button class="btn btn-primary w-100 btn-acao-rapida" onclick="verTodasAulas()">
-                            <i class="fas fa-list me-2"></i>Ver Todas as Aulas
+                            <i class="fas fa-list mr-2"></i>Ver Todas as Aulas
                         </button>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-3 mb-3 mb-lg-0">
+                    <div class="col-12 col-sm-6 col-lg-3 mb-3 mb-lg-0 d-flex">
                         <button class="btn btn-secondary w-100 btn-acao-rapida" onclick="verNotificacoes()">
-                            <i class="fas fa-bell me-2"></i>Central de Avisos
+                            <i class="fas fa-bell mr-2"></i>Central de Avisos
                         </button>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-3 mb-3 mb-sm-0">
+                    <div class="col-12 col-sm-6 col-lg-3 mb-3 mb-sm-0 d-flex">
                         <button class="btn btn-outline-primary w-100 btn-acao-rapida" onclick="registrarOcorrencia()">
-                            <i class="fas fa-exclamation-triangle me-2"></i>Registrar Ocorrência
+                            <i class="fas fa-exclamation-triangle mr-2"></i>Registrar Ocorrência
                         </button>
                     </div>
-                    <div class="col-12 col-sm-6 col-lg-3">
+                    <div class="col-12 col-sm-6 col-lg-3 d-flex">
                         <button class="btn btn-outline-secondary w-100 btn-acao-rapida" onclick="contatarSecretaria()">
-                            <i class="fas fa-phone me-2"></i>Contatar Secretaria
+                            <i class="fas fa-phone mr-2"></i>Contatar Secretaria
                         </button>
                     </div>
                 </div>
@@ -651,7 +654,7 @@ if ($instrutorId) {
         <div class="card mb-4 dashboard-aulas-hoje">
             <div class="card-header d-flex justify-content-between align-items-center">
                 <h5 class="card-title mb-0">
-                    <i class="fas fa-calendar-day me-2"></i>Aulas de Hoje
+                    <i class="fas fa-calendar-day mr-2"></i>Aulas de Hoje
                 </h5>
                 <span class="text-muted small">
                     <?php echo count($aulasHoje); ?> aula(s) agendada(s) hoje
@@ -807,7 +810,7 @@ if ($instrutorId) {
         <div class="card mb-4">
             <div class="card-header py-2">
                 <h6 class="card-title mb-0" style="font-size: 0.9rem; font-weight: 600;">
-                    <i class="fas fa-bell me-2"></i>Avisos
+                    <i class="fas fa-bell mr-2"></i>Avisos
                 </h6>
             </div>
             <div class="card-body py-2">
@@ -831,7 +834,7 @@ if ($instrutorId) {
                 </div>
                 <?php else: ?>
                 <p class="text-muted mb-0 text-center py-2">
-                    <i class="fas fa-check-circle text-success me-1"></i>
+                    <i class="fas fa-check-circle text-success mr-1"></i>
                     Você não possui avisos novos.
                 </p>
                 <?php endif; ?>
@@ -880,16 +883,16 @@ if ($instrutorId) {
                                     <?php echo htmlspecialchars((string)($turma['nome'] ?? '')); ?>
                                 </h6>
                                 <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">
-                                    <i class="fas fa-graduation-cap me-1"></i>
+                                    <i class="fas fa-graduation-cap mr-1"></i>
                                     <?php echo htmlspecialchars((string)($nomesCursos[$turma['curso_tipo'] ?? ''] ?? $turma['curso_tipo'] ?? '')); ?>
                                 </div>
                                 <div style="font-size: 13px; color: #64748b; margin-bottom: 4px;">
-                                    <i class="fas fa-calendar me-1"></i>
+                                    <i class="fas fa-calendar mr-1"></i>
                                     <?php echo date('d/m/Y', strtotime($turma['data_inicio'])); ?> - 
                                     <?php echo date('d/m/Y', strtotime($turma['data_fim'])); ?>
                                 </div>
                                 <div style="font-size: 12px; color: #94a3b8; margin-top: 4px;">
-                                    <i class="fas fa-users me-1"></i>
+                                    <i class="fas fa-users mr-1"></i>
                                     <?php echo $turma['total_alunos']; ?> aluno(s)
                                 </div>
                             </div>
@@ -901,7 +904,7 @@ if ($instrutorId) {
                                     <a href="../admin/index.php?page=turmas-teoricas&acao=detalhes&turma_id=<?php echo $turma['id']; ?>" 
                                        class="btn btn-sm btn-outline-primary" 
                                        style="text-decoration: none; font-size: 11px; padding: 4px 8px;">
-                                        <i class="fas fa-eye me-1"></i>
+                                        <i class="fas fa-eye mr-1"></i>
                                         Detalhes
                                     </a>
                                     <?php if ($turma['proxima_aula']): ?>
@@ -915,7 +918,7 @@ if ($instrutorId) {
                                     <a href="<?php echo htmlspecialchars($urlChamadaTurma); ?>" 
                                        class="btn btn-sm btn-primary" 
                                        style="text-decoration: none; font-size: 11px; padding: 4px 8px;">
-                                        <i class="fas fa-clipboard-check me-1"></i>
+                                        <i class="fas fa-clipboard-check mr-1"></i>
                                         Chamada
                                     </a>
                                     <?php endif; ?>
@@ -932,7 +935,7 @@ if ($instrutorId) {
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center py-2">
                 <h6 class="card-title mb-0" style="font-size: 0.9rem; font-weight: 600;">
-                    <i class="fas fa-calendar-alt me-2"></i>Próximas Aulas (7 dias)
+                    <i class="fas fa-calendar-alt mr-2"></i>Próximas Aulas (7 dias)
                 </h6>
                 <a href="aulas.php?periodo=proximos_7_dias" class="btn btn-sm btn-outline-primary">
                     Ver todas as aulas
@@ -959,7 +962,7 @@ if ($instrutorId) {
                 $aulasPorData = array_slice($aulasPorData, 0, 3, true);
                 ?>
                 <!-- Ajuste visual: Próximas Aulas - cada dia em card com borda leve e espaçamento melhorado -->
-                <div class="d-flex flex-column gap-2 proximas-aulas-list">
+                <div class="d-flex flex-column proximas-aulas-list">
                     <?php foreach ($aulasPorData as $data => $aulasDoDia): ?>
                     <div class="card border proximas-aulas-dia-card">
                         <div class="card-body py-2 px-3">
@@ -967,9 +970,9 @@ if ($instrutorId) {
                                 <strong style="font-size: 0.9rem; font-weight: 600;"><?php echo date('d/m/Y', strtotime($data)); ?></strong>
                                 <span class="text-muted small" style="font-size: 0.75rem;">· <?php echo count($aulasDoDia); ?> aula(s)</span>
                             </div>
-                            <div class="ms-2">
+                            <div class="ml-2">
                                 <?php foreach (array_slice($aulasDoDia, 0, 2) as $aula): ?>
-                                <div class="d-flex align-items-center gap-2 mb-2 proximas-aulas-item">
+                                <div class="d-flex align-items-center mb-2 proximas-aulas-item" style="gap: 0.5rem;">
                                     <span class="badge bg-<?php echo $aula['tipo_aula'] === 'teorica' ? 'info' : 'success'; ?>" style="font-size: 0.7rem; padding: 0.2rem 0.4rem;">
                                         <?php echo $aula['tipo_aula'] === 'teorica' ? 'TEOR' : 'PRAT'; ?>
                                     </span>
@@ -1322,6 +1325,19 @@ if ($instrutorId) {
         /* RESUMO DE HOJE - LAYOUT DOS CARDS (Bootstrap 4) */
         /* CORREÇÃO: Removidas classes row-cols-* (Bootstrap 5) que não existem no Bootstrap 4.
            Agora usando grid clássico: row + col-12 col-md-4 */
+        /* IMPORTANTE: Garantir que nenhuma regra CSS quebre o grid do Bootstrap 4 */
+        .instrutor-dashboard .instrutor-resumo-hoje .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-right: -15px;
+            margin-left: -15px;
+        }
+        
+        .instrutor-dashboard .instrutor-resumo-hoje .row > [class*="col-"] {
+            padding-right: 15px;
+            padding-left: 15px;
+        }
+        
         .instrutor-dashboard .resumo-card {
             border-radius: 0.5rem;
             border: 1px solid #f0f0f0;
@@ -1346,22 +1362,43 @@ if ($instrutorId) {
         }
         
         .instrutor-dashboard .resumo-card .resumo-label {
-            font-size: 0.9rem;
+            font-size: 0.8rem;
             color: #666;
+            white-space: nowrap;
         }
         
         /* ACOES RAPIDAS - Botões estilo card clicável */
+        /* IMPORTANTE: Garantir que o grid do Bootstrap 4 funcione corretamente */
+        .instrutor-dashboard .instrutor-acoes-rapidas .row {
+            display: flex;
+            flex-wrap: wrap;
+            margin-right: -15px;
+            margin-left: -15px;
+        }
+        
+        .instrutor-dashboard .instrutor-acoes-rapidas .row > [class*="col-"] {
+            padding-right: 15px;
+            padding-left: 15px;
+            display: flex;
+        }
+        
         .instrutor-dashboard .btn-acao-rapida {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 0.5rem;
-            min-height: 52px;
+            padding: 0.85rem 1rem;
+            min-height: 60px;
             border-radius: 0.5rem;
             font-weight: 500;
             text-align: center;
             white-space: normal;
+            line-height: 1.2;
             transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+        
+        .instrutor-dashboard .btn-acao-rapida i {
+            margin-right: 0.5rem;
         }
         
         .instrutor-dashboard .btn-acao-rapida:hover {
