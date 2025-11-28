@@ -5666,6 +5666,62 @@ function excluirAluno(id) {
  * Alinhado com o fluxo do modal de edição
  */
 /**
+ * Helper para chamadas seguras de atualização de resumo
+ * Torna as chamadas "best effort" - se falhar, não trava o fluxo
+ * @param {string} nomeResumo - Nome do resumo para logs (ex: 'provas', 'financeiro')
+ * @param {Function} fn - Função async a ser executada
+ */
+async function tentarAtualizarResumoAluno(nomeResumo, fn) {
+    try {
+        await fn();
+    } catch (error) {
+        console.error(`[RESUMO] Falha ao atualizar resumo de ${nomeResumo}:`, error);
+        
+        // Opcional: mostrar um aviso suave, sem bloquear o fluxo
+        if (typeof mostrarAlerta === 'function') {
+            mostrarAlerta(
+                `Aluno atualizado, mas não foi possível atualizar o resumo de ${nomeResumo}.`,
+                'warning'
+            );
+        } else if (typeof window.mostrarToast === 'function') {
+            window.mostrarToast(
+                'warning',
+                `Aluno atualizado, mas não foi possível atualizar o resumo de ${nomeResumo}.`
+            );
+        }
+    }
+}
+
+/**
+ * Função para finalizar salvamento do aluno com sucesso
+ * Garante que o fluxo sempre finalize, mesmo se algum resumo falhar
+ * @param {Object} alunoAtualizado - Objeto aluno retornado pela API
+ * @param {boolean} silencioso - Se true, não mostra mensagens nem fecha modal
+ */
+function finalizarSalvamentoAlunoComSucesso(alunoAtualizado, silencioso = false) {
+    const btnSalvar = document.getElementById('btnSalvarAluno');
+    const textoOriginal = btnSalvar ? btnSalvar.getAttribute('data-texto-original') : null;
+    
+    // Restaurar botão
+    if (btnSalvar && textoOriginal) {
+        btnSalvar.innerHTML = textoOriginal;
+        btnSalvar.disabled = false;
+    }
+    
+    if (!silencioso) {
+        // Mostrar notificação
+        if (typeof mostrarAlerta === 'function') {
+            mostrarAlerta('Aluno atualizado com sucesso!', 'success');
+        }
+        
+        // Fechar modal
+        if (typeof fecharModalAluno === 'function') {
+            fecharModalAluno();
+        }
+    }
+}
+
+/**
  * Função para atualizar aluno na listagem após edição
  * @param {Object} alunoAtualizado - Objeto aluno retornado pela API
  */
@@ -7258,9 +7314,13 @@ async function saveAlunoDados(silencioso = false) {
     
     // Mostrar loading no botão
     const btnSalvar = document.getElementById('btnSalvarAluno');
-    const textoOriginal = btnSalvar.innerHTML;
-    btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando Dados...';
-    btnSalvar.disabled = true;
+    const textoOriginal = btnSalvar ? btnSalvar.innerHTML : '';
+    // Salvar texto original para usar na finalização
+    if (btnSalvar) {
+        btnSalvar.setAttribute('data-texto-original', textoOriginal);
+        btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>Salvando Dados...';
+        btnSalvar.disabled = true;
+    }
     
     // Preparar dados apenas da aba Dados
     const dadosFormData = new FormData();
@@ -7490,18 +7550,42 @@ async function saveAlunoDados(silencioso = false) {
                 atualizarAlunoNaListagem(data.aluno);
             }
             
-            // Restaurar botão antes de fechar modal
-            btnSalvar.innerHTML = textoOriginal;
-            btnSalvar.disabled = false;
+            // Salvar texto original do botão para usar na finalização
+            if (btnSalvar && !btnSalvar.getAttribute('data-texto-original')) {
+                btnSalvar.setAttribute('data-texto-original', textoOriginal);
+            }
             
-            if (!silencioso) {
-                // Mostrar notificação discreta (sem alert)
-                mostrarAlerta(data.message || 'Aluno atualizado com sucesso!', 'success');
-                
-                // Fechar modal automaticamente
-                fecharModalAluno();
-                
-                // Não recarregar a página - a listagem já foi atualizada acima
+            // Atualizar resumos de forma segura (best effort)
+            // Se algum resumo falhar, não trava o fluxo
+            try {
+                await Promise.all([
+                    tentarAtualizarResumoAluno('financeiro', async () => {
+                        if (typeof atualizarResumoFinanceiroAluno === 'function') {
+                            await atualizarResumoFinanceiroAluno(alunoId, null);
+                        }
+                    }),
+                    tentarAtualizarResumoAluno('provas', async () => {
+                        if (typeof atualizarResumoProvasAluno === 'function') {
+                            await atualizarResumoProvasAluno(alunoId);
+                        }
+                    }),
+                    tentarAtualizarResumoAluno('teórico', async () => {
+                        if (typeof atualizarResumoTeoricoAluno === 'function') {
+                            await atualizarResumoTeoricoAluno(alunoId);
+                        }
+                    }),
+                    tentarAtualizarResumoAluno('prático', async () => {
+                        if (typeof atualizarResumoPraticoAluno === 'function') {
+                            await atualizarResumoPraticoAluno(alunoId);
+                        }
+                    })
+                ]);
+            } catch (error) {
+                // Erro já foi tratado em tentarAtualizarResumoAluno
+                console.warn('[saveAlunoDados] Algum resumo falhou, mas continuando o fluxo:', error);
+            } finally {
+                // GARANTIR que o fluxo sempre finalize, mesmo se algum resumo falhar
+                finalizarSalvamentoAlunoComSucesso(data.aluno, silencioso);
             }
             
             return { success: true, aluno_id: alunoId, aluno: data.aluno };
@@ -9202,16 +9286,42 @@ async function atualizarResumoProvasAluno(alunoId) {
             return;
         }
         
+        console.log('[RESUMO PROVAS] Atualizando para aluno:', alunoId);
+        
+        // Detectar caminho da API
+        const baseUrl = window.location.origin;
+        const pathname = window.location.pathname;
+        let apiUrl;
+        
+        if (pathname.includes('/admin/')) {
+            const pathParts = pathname.split('/');
+            const projectIndex = pathParts.findIndex(part => part === 'admin');
+            if (projectIndex > 0) {
+                const basePath = pathParts.slice(0, projectIndex).join('/');
+                apiUrl = baseUrl + basePath + '/admin/api/exames.php';
+            } else {
+                apiUrl = baseUrl + '/admin/api/exames.php';
+            }
+        } else {
+            apiUrl = baseUrl + '/admin/api/exames.php';
+        }
+        
+        const url = `${apiUrl}?aluno_id=${encodeURIComponent(alunoId)}&resumo=1`;
+        console.log('[RESUMO PROVAS] URL chamada:', url);
+        
         logModalAluno('📝 Carregando resumo de provas do aluno:', alunoId);
         
         // Buscar exames do aluno (todos os tipos)
-        const response = await fetch(`api/exames.php?aluno_id=${alunoId}`);
+        const response = await fetch(url);
+        
+        console.log('[RESUMO PROVAS] Status HTTP:', response.status);
         
         if (!response.ok) {
-            console.error('❌ Erro HTTP ao buscar exames:', response.status);
+            const text = await response.text().catch(() => '');
+            console.error('[RESUMO PROVAS] Erro HTTP ao buscar exames:', response.status, text.substring(0, 200));
             atualizarCardsProvasResumo('Não iniciado');
             atualizarSecaoProvasMatricula(null, null);
-            return;
+            throw new Error(`Erro ao buscar exames: ${response.status}`);
         }
         
         const data = await response.json();
