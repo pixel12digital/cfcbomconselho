@@ -1,0 +1,170 @@
+═══════════════════════════════════════════════════════════════════════════════
+  CORREÇÃO: RG_DATA_EMISSAO E CPF DUPLICADO
+═══════════════════════════════════════════════════════════════════════════════
+
+Data: 2025-01-27
+Problemas corrigidos:
+  1. Front-end reclamando de rg_data_emissao com valor "0000-00-00"
+  2. Back-end bloqueando update com erro "Duplicate entry 'cpf' for key 'cpf'"
+
+───────────────────────────────────────────────────────────────────────────────
+CORREÇÕES IMPLEMENTADAS
+───────────────────────────────────────────────────────────────────────────────
+
+1. ✅ TRATAMENTO DE RG_DATA_EMISSAO NO FRONTEND (JS)
+   Arquivo: admin/pages/alunos.php
+   
+   a) Função preencherFormularioAluno (linha ~4357):
+      • Trata valores "0000-00-00" e "0000-00-00 00:00:00" convertendo para vazio
+      • Evita erro no console ao tentar preencher input type="date" com data inválida
+   
+   b) Função saveAlunoDados (linha ~7133):
+      • Trata rg_data_emissao antes de enviar: se vazio ou "0000-00-00", envia string vazia
+      • No JSON (linha ~7263): converte string vazia para null
+   
+   Código aplicado:
+   ```javascript
+   // No preencherFormularioAluno
+   'rg_data_emissao': (() => {
+       const valorAPI = (aluno.rg_data_emissao || '').trim();
+       if (valorAPI === '' || valorAPI === '0000-00-00' || valorAPI === '0000-00-00 00:00:00') {
+           return ''; // Data inválida ou vazia
+       }
+       return valorAPI.split(' ')[0]; // Formato YYYY-MM-DD
+   })(),
+   
+   // No saveAlunoDados (FormData)
+   const campoRgDataEmissao = form.querySelector('input[name="rg_data_emissao"]');
+   const rgDataEmissaoValor = campoRgDataEmissao ? campoRgDataEmissao.value.trim() : '';
+   if (rgDataEmissaoValor === '' || rgDataEmissaoValor === '0000-00-00') {
+       dadosFormData.append('rg_data_emissao', '');
+   } else {
+       dadosFormData.append('rg_data_emissao', rgDataEmissaoValor);
+   }
+   
+   // No saveAlunoDados (JSON)
+   if (key === 'rg_data_emissao' && (value === '' || value === '0000-00-00')) {
+       data[key] = null;
+   }
+   ```
+
+2. ✅ TRATAMENTO DE CPF DUPLICADO NO BACKEND (PHP)
+   Arquivo: admin/api/alunos.php
+   
+   a) Case 'PUT' (linha ~1293):
+      • Busca dados atuais do aluno antes do UPDATE
+      • Verifica se CPF novo é diferente do atual
+      • Se CPF novo já existe em outro aluno, preserva CPF original
+      • Permite que outros campos (como status) sejam atualizados mesmo com CPF duplicado
+      • Registra aviso em log quando há tentativa de CPF duplicado
+   
+   b) Case 'POST' UPDATE (linha ~610):
+      • Mesma lógica aplicada no POST UPDATE
+      • Garante consistência entre PUT e POST
+   
+   Código aplicado:
+   ```php
+   // Buscar dados atuais do aluno
+   $alunoExistente = $db->findWhere('alunos', 'id = ?', [$id], '*', null, 1);
+   $alunoExistente = $alunoExistente[0] ?? null;
+   
+   // Tratamento do CPF
+   $cpfNovo = isset($data['cpf']) ? trim($data['cpf']) : null;
+   $cpfAtual = $alunoExistente['cpf'] ?? '';
+   
+   if ($cpfNovo !== null && $cpfNovo !== '') {
+       if ($cpfNovo !== $cpfAtual) {
+           $cpfExistente = $db->findWhere('alunos', 'cpf = ? AND id != ?', [$cpfNovo, $id], '*', null, 1);
+           if ($cpfExistente && count($cpfExistente) > 0) {
+               // Preservar CPF original
+               error_log('[API Alunos] Aviso: tentativa de salvar CPF duplicado...');
+               $cpfNovo = $cpfAtual;
+           }
+       }
+   } else {
+       $cpfNovo = $cpfAtual;
+   }
+   
+   // Usar $cpfNovo no UPDATE
+   if ($campo === 'cpf') {
+       $alunoData[$campo] = $cpfNovo;
+   }
+   ```
+
+3. ✅ TRATAMENTO DE RG_DATA_EMISSAO NO BACKEND (PHP)
+   Arquivo: admin/api/alunos.php
+   
+   • Converte valores vazios ou "0000-00-00" para null antes do UPDATE
+   • Aplicado tanto no PUT quanto no POST UPDATE
+   
+   Código aplicado:
+   ```php
+   $rgDataEmissao = $data['rg_data_emissao'] ?? null;
+   if ($rgDataEmissao === '' || $rgDataEmissao === '0000-00-00' || $rgDataEmissao === '0000-00-00 00:00:00') {
+       $rgDataEmissao = null;
+   }
+   
+   // Usar $rgDataEmissao no UPDATE
+   if ($campo === 'rg_data_emissao') {
+       $alunoData[$campo] = $rgDataEmissao;
+   }
+   ```
+
+───────────────────────────────────────────────────────────────────────────────
+COMPORTAMENTO ESPERADO
+───────────────────────────────────────────────────────────────────────────────
+
+1. Modal de edição:
+   ✅ Não mostra mais erros no console sobre rg_data_emissao
+   ✅ Campo rg_data_emissao fica vazio quando valor é "0000-00-00"
+
+2. Salvamento de aluno:
+   ✅ Permite atualizar status mesmo se CPF vier errado no payload
+   ✅ Preserva CPF original quando há conflito
+   ✅ Registra aviso em log quando há tentativa de CPF duplicado
+   ✅ rg_data_emissao é salvo como null quando vazio ou "0000-00-00"
+
+3. Regra de CPF único:
+   ✅ Continua intacta (não permite criar aluno com CPF duplicado)
+   ✅ Permite atualizar outros campos mesmo se CPF vier errado no payload
+
+───────────────────────────────────────────────────────────────────────────────
+ARQUIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. admin/pages/alunos.php
+   • Função preencherFormularioAluno: Tratamento de rg_data_emissao
+   • Função saveAlunoDados: Tratamento de rg_data_emissao no envio
+
+2. admin/api/alunos.php
+   • Case 'PUT': Tratamento de CPF duplicado e rg_data_emissao
+   • Case 'POST' UPDATE: Tratamento de CPF duplicado e rg_data_emissao
+
+───────────────────────────────────────────────────────────────────────────────
+TESTES RECOMENDADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. Testar modal de edição:
+   [ ] Abrir modal de aluno com rg_data_emissao = "0000-00-00"
+   [ ] Verificar que campo fica vazio (sem erro no console)
+   [ ] Verificar que não há logs de erro sobre rg_data_emissao
+
+2. Testar salvamento com CPF duplicado:
+   [ ] Editar aluno ID 168 (José Edilson)
+   [ ] Alterar status para "Inativo"
+   [ ] Salvar (mesmo que payload venha com CPF errado)
+   [ ] Verificar que status é atualizado no banco
+   [ ] Verificar que CPF original é preservado
+   [ ] Verificar log de aviso sobre CPF duplicado
+
+3. Testar salvamento com rg_data_emissao vazio:
+   [ ] Editar aluno com rg_data_emissao vazio
+   [ ] Salvar
+   [ ] Verificar que rg_data_emissao é salvo como null no banco
+
+───────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ CORREÇÕES IMPLEMENTADAS
+───────────────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════════════
+

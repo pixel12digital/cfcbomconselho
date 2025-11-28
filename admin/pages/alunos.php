@@ -1660,19 +1660,15 @@ input.form-control.invalid {
                                         <i class="fas fa-dollar-sign" style="display: inline-block !important; visibility: visible !important; opacity: 1 !important;"></i>
                                     </button>
                                     <?php endif; ?>
-                                    <?php if ($aluno['status'] === 'ativo'): ?>
-                                    <button type="button" class="btn btn-sm btn-outline-secondary action-icon-btn" 
-                                            onclick="desativarAluno(<?php echo $aluno['id']; ?>)" 
-                                            title="Desativar aluno (não poderá agendar aulas)" data-bs-toggle="tooltip">
-                                        <i class="fas fa-ban"></i>
+                                    <button type="button" 
+                                            class="btn btn-sm btn-toggle-status action-icon-btn <?php echo $aluno['status'] === 'ativo' ? 'btn-outline-secondary' : 'btn-outline-success'; ?>" 
+                                            data-aluno-id="<?php echo (int)$aluno['id']; ?>"
+                                            data-status="<?php echo htmlspecialchars($aluno['status']); ?>"
+                                            onclick="toggleStatusAluno(this)"
+                                            title="<?php echo $aluno['status'] === 'ativo' ? 'Desativar aluno (não poderá agendar aulas)' : 'Reativar aluno para agendamento de aulas'; ?>" 
+                                            data-bs-toggle="tooltip">
+                                        <i class="fas <?php echo $aluno['status'] === 'ativo' ? 'fa-ban' : 'fa-check'; ?>"></i>
                                     </button>
-                                    <?php else: ?>
-                                    <button type="button" class="btn btn-sm btn-outline-success action-icon-btn" 
-                                            onclick="ativarAluno(<?php echo $aluno['id']; ?>)" 
-                                            title="Reativar aluno para agendamento de aulas" data-bs-toggle="tooltip">
-                                        <i class="fas fa-check"></i>
-                                    </button>
-                                    <?php endif; ?>
                                 </div>
                             </td>
                         </tr>
@@ -1741,15 +1737,14 @@ input.form-control.invalid {
                         <button type="button" class="btn btn-sm btn-secondary" onclick="historicoAluno(<?php echo $aluno['id']; ?>)" title="Histórico de aulas">
                             <i class="fas fa-history"></i>
                         </button>
-                        <?php if ($aluno['status'] === 'ativo'): ?>
-                        <button type="button" class="btn btn-sm btn-outline-secondary" onclick="desativarAluno(<?php echo $aluno['id']; ?>)" title="Desativar aluno">
-                            <i class="fas fa-ban"></i>
+                        <button type="button" 
+                                class="btn btn-sm btn-toggle-status <?php echo $aluno['status'] === 'ativo' ? 'btn-outline-secondary' : 'btn-outline-success'; ?>" 
+                                data-aluno-id="<?php echo (int)$aluno['id']; ?>"
+                                data-status="<?php echo htmlspecialchars($aluno['status']); ?>"
+                                onclick="toggleStatusAluno(this)"
+                                title="<?php echo $aluno['status'] === 'ativo' ? 'Desativar aluno (não poderá agendar aulas)' : 'Reativar aluno para agendamento de aulas'; ?>">
+                            <i class="fas <?php echo $aluno['status'] === 'ativo' ? 'fa-ban' : 'fa-check'; ?>"></i>
                         </button>
-                        <?php else: ?>
-                        <button type="button" class="btn btn-sm btn-outline-success" onclick="ativarAluno(<?php echo $aluno['id']; ?>)" title="Ativar aluno">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <?php endif; ?>
                         <!-- Botão de excluir desativado por segurança -->
                         <!-- <button type="button" class="btn btn-sm btn-danger" onclick="excluirAluno(<?php echo $aluno['id']; ?>)">
                             <i class="fas fa-trash"></i>
@@ -4354,7 +4349,18 @@ function preencherFormularioAluno(aluno) {
         'rg': aluno.rg || '',
         'rg_orgao_emissor': aluno.rg_orgao_emissor || '',
         'rg_uf': aluno.rg_uf || '',
-        'rg_data_emissao': aluno.rg_data_emissao ? aluno.rg_data_emissao.split(' ')[0] : '', // Formato YYYY-MM-DD para input date
+        'rg_data_emissao': (() => {
+            // Tratar rg_data_emissao: converter "0000-00-00" para vazio
+            const valorAPI = (aluno.rg_data_emissao || '').trim();
+            if (valorAPI === '' || valorAPI === '0000-00-00' || valorAPI === '0000-00-00 00:00:00') {
+                return ''; // Data inválida ou vazia
+            }
+            // Se já está em formato YYYY-MM-DD, retornar direto
+            if (typeof valorAPI === 'string' && /^\d{4}-\d{2}-\d{2}/.test(valorAPI)) {
+                return valorAPI.split(' ')[0]; // Pegar apenas a parte da data (ignorar hora se houver)
+            }
+            return valorAPI;
+        })(),
         'renach': aluno.renach || '',
         'data_nascimento': (() => {
             // Tratar data de nascimento: converter para formato YYYY-MM-DD se válida
@@ -5546,16 +5552,48 @@ function abrirFinanceiroAluno(id) {
     window.location.href = `?page=financeiro-faturas&aluno_id=${id}`;
 }
 
+/**
+ * Função para alternar status do aluno (botão rápido)
+ * Lê o status atual do botão e alterna entre ativo/inativo
+ * @param {HTMLElement} button - Botão clicado com data-aluno-id e data-status
+ */
+function toggleStatusAluno(button) {
+    if (!button) {
+        console.warn('[toggleStatusAluno] Botão não fornecido');
+        return;
+    }
+    
+    const alunoId = button.getAttribute('data-aluno-id');
+    if (!alunoId) {
+        console.warn('[toggleStatusAluno] ID do aluno não encontrado no botão');
+        return;
+    }
+    
+    const currentStatus = button.getAttribute('data-status') || 'ativo';
+    const newStatus = currentStatus === 'ativo' ? 'inativo' : 'ativo';
+    
+    console.log('📡 Alterando status do aluno:', { id: alunoId, currentStatus, newStatus });
+    
+    // Chamar alterarStatusAluno com o novo status
+    alterarStatusAluno(parseInt(alunoId, 10), newStatus);
+}
+
+/**
+ * Função para ativar aluno (mantida para compatibilidade)
+ * @deprecated Use toggleStatusAluno() ao invés desta função
+ */
 function ativarAluno(id) {
     if (confirm('Deseja realmente ativar este aluno?')) {
         alterarStatusAluno(id, 'ativo');
     }
 }
 
+/**
+ * Função para desativar aluno (mantida para compatibilidade)
+ * @deprecated Use toggleStatusAluno() ao invés desta função
+ */
 function desativarAluno(id) {
-    if (confirm('Deseja realmente desativar este aluno? Esta ação pode afetar o histórico de aulas.')) {
-        alterarStatusAluno(id, 'inativo');
-    }
+    alterarStatusAluno(id, 'inativo');
 }
 function excluirAluno(id) {
     const mensagem = '⚠️ ATENÇÃO: Esta ação não pode ser desfeita!\n\nDeseja realmente excluir este aluno?';
@@ -5622,7 +5660,128 @@ function excluirAluno(id) {
     }
 }
 
-function alterarStatusAluno(id, status) {
+/**
+ * Função para alterar status do aluno usando a API unificada
+ * CORREÇÃO: Agora usa admin/api/alunos.php em vez de pages/alunos.php
+ * Alinhado com o fluxo do modal de edição
+ */
+/**
+ * Função para atualizar aluno na listagem após edição
+ * @param {Object} alunoAtualizado - Objeto aluno retornado pela API
+ */
+function atualizarAlunoNaListagem(alunoAtualizado) {
+    if (!alunoAtualizado || !alunoAtualizado.id) {
+        console.warn('[atualizarAlunoNaListagem] Aluno inválido:', alunoAtualizado);
+        return;
+    }
+    
+    const alunoId = String(alunoAtualizado.id);
+    const status = alunoAtualizado.status || 'ativo';
+    
+    console.log('[atualizarAlunoNaListagem] Atualizando aluno ID:', alunoId, 'Status:', status);
+    
+    // Mapeamentos de status (alinhados com o PHP)
+    const statusClassMap = {
+        'ativo': 'success',
+        'inativo': 'danger',
+        'concluido': 'info'
+    };
+    const statusTextMap = {
+        'ativo': 'Ativo',
+        'inativo': 'Inativo',
+        'concluido': 'Concluído'
+    };
+    
+    const statusClass = statusClassMap[status] || 'secondary';
+    const statusText = statusTextMap[status] || status.charAt(0).toUpperCase() + status.slice(1);
+    
+    // 1) Atualizar linha desktop
+    const row = document.querySelector(`tr[data-aluno-id="${alunoId}"]`);
+    if (row) {
+        // Atualizar data-status da linha (se existir)
+        if (row.dataset) {
+            row.dataset.status = status;
+        }
+        
+        // Atualizar badge de status (4ª coluna)
+        const statusCell = row.querySelector('td:nth-child(4)');
+        if (statusCell) {
+            const badge = statusCell.querySelector('.badge');
+            if (badge) {
+                badge.className = `badge bg-${statusClass}`;
+                badge.textContent = statusText;
+                console.log('[atualizarAlunoNaListagem] Badge atualizado:', { status, statusClass, statusText });
+            }
+        }
+        
+        // Atualizar botão de ação rápida na linha
+        const btnToggle = row.querySelector('.btn-toggle-status');
+        if (btnToggle) {
+            btnToggle.dataset.status = status;
+            
+            // Atualizar classes e ícone do botão
+            btnToggle.classList.remove('btn-outline-secondary', 'btn-outline-success');
+            if (status === 'ativo') {
+                btnToggle.classList.add('btn-outline-secondary');
+                btnToggle.setAttribute('title', 'Desativar aluno (não poderá agendar aulas)');
+                const icon = btnToggle.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-ban';
+                }
+            } else if (status === 'inativo') {
+                btnToggle.classList.add('btn-outline-success');
+                btnToggle.setAttribute('title', 'Reativar aluno para agendamento de aulas');
+                const icon = btnToggle.querySelector('i');
+                if (icon) {
+                    icon.className = 'fas fa-check';
+                }
+            }
+        }
+    }
+    
+    // 2) Atualizar card mobile (se existir)
+    const mobileCard = document.querySelector(`.mobile-aluno-card[data-aluno-id="${alunoId}"]`);
+    if (mobileCard) {
+        // Atualizar data-status do card
+        if (mobileCard.dataset) {
+            mobileCard.dataset.status = status;
+        }
+        
+        const mobileBadge = mobileCard.querySelector('.badge');
+        if (mobileBadge) {
+            mobileBadge.className = `badge bg-${statusClass}`;
+            mobileBadge.textContent = statusText;
+        }
+        
+        // Atualizar botão no card mobile
+        const btnToggleMobile = mobileCard.querySelector('.btn-toggle-status');
+        if (btnToggleMobile) {
+            btnToggleMobile.dataset.status = status;
+            
+            if (status === 'ativo') {
+                btnToggleMobile.setAttribute('title', 'Desativar aluno (não poderá agendar aulas)');
+            } else if (status === 'inativo') {
+                btnToggleMobile.setAttribute('title', 'Reativar aluno para agendamento de aulas');
+            }
+        }
+    }
+    
+    console.log('[atualizarAlunoNaListagem] Atualização completa');
+}
+
+async function alterarStatusAluno(id, status) {
+    // Validar valores permitidos (alinhado com ENUM do banco)
+    const statusValidos = ['ativo', 'inativo', 'concluido'];
+    if (!statusValidos.includes(status)) {
+        console.error('Status inválido:', status);
+        if (typeof notifications !== 'undefined') {
+            notifications.error('Status inválido. Use: ativo, inativo ou concluido');
+        } else {
+            alert('Status inválido. Use: ativo, inativo ou concluido');
+        }
+        return;
+    }
+    
     const mensagem = `Deseja realmente ${status === 'ativo' ? 'ativar' : 'desativar'} este aluno?`;
     
     if (confirm(mensagem)) {
@@ -5630,36 +5789,96 @@ function alterarStatusAluno(id, status) {
             loading.showGlobal('Alterando status...');
         }
         
-        const formData = new FormData();
-        formData.append('acao', 'alterar_status');
-        formData.append('aluno_id', id);
-        formData.append('status', status);
-        
-        fetch('pages/alunos.php', {
-            method: 'POST',
-            body: formData
-        })
-        .then(response => response.text())
-        .then(data => {
-            if (typeof loading !== 'undefined') {
-                loading.hideGlobal();
-            }
-            if (typeof notifications !== 'undefined') {
-                notifications.success(`Status do aluno alterado para ${status} com sucesso!`);
-            }
-            location.reload();
-        })
-        .catch(error => {
-            if (typeof loading !== 'undefined') {
-                loading.hideGlobal();
-            }
-            console.error('Erro:', error);
-            if (typeof notifications !== 'undefined') {
-                notifications.error('Erro ao alterar status do aluno');
+        try {
+            // Detectar caminho da API (mesma lógica de alunos.js)
+            const baseUrl = window.location.origin;
+            const pathname = window.location.pathname;
+            let apiUrl;
+            
+            if (pathname.includes('/admin/')) {
+                const pathParts = pathname.split('/');
+                const projectIndex = pathParts.findIndex(part => part === 'admin');
+                if (projectIndex > 0) {
+                    const basePath = pathParts.slice(0, projectIndex).join('/');
+                    apiUrl = baseUrl + basePath + '/admin/api/alunos.php';
+                } else {
+                    apiUrl = baseUrl + '/admin/api/alunos.php';
+                }
             } else {
-                mostrarAlerta('Erro ao alterar status do aluno', 'danger');
+                apiUrl = baseUrl + '/admin/api/alunos.php';
             }
-        });
+            
+            const url = `${apiUrl}?id=${id}`;
+            
+            console.log('📡 Alterando status do aluno:', { id, status, url });
+            console.log('📡 Payload enviado:', JSON.stringify({ status: status }));
+            
+            // Fazer PUT para a API com apenas o campo status (mesmo padrão usado pelo salvarAluno em edição)
+            const response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify({ status: status })
+            });
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                throw new Error(`HTTP ${response.status}: ${errorText}`);
+            }
+            
+            const data = await response.json();
+            
+            console.log('[alterarStatusAluno] Resposta da API:', data);
+            
+            if (typeof loading !== 'undefined') {
+                loading.hideGlobal();
+            }
+            
+            if (data.success) {
+                // Se a API retornou o aluno atualizado, atualizar a listagem
+                if (data.aluno) {
+                    console.log('[alterarStatusAluno] Atualizando listagem com aluno:', data.aluno);
+                    atualizarAlunoNaListagem(data.aluno);
+                } else {
+                    console.warn('[alterarStatusAluno] API não retornou aluno atualizado');
+                }
+                
+                let mensagemSucesso;
+                if (status === 'inativo') {
+                    mensagemSucesso = 'Aluno desativado com sucesso!';
+                } else if (status === 'ativo') {
+                    mensagemSucesso = 'Aluno reativado com sucesso!';
+                } else {
+                    mensagemSucesso = `Status do aluno alterado para ${status} com sucesso!`;
+                }
+                
+                if (typeof notifications !== 'undefined') {
+                    notifications.success(mensagemSucesso);
+                } else {
+                    alert(mensagemSucesso);
+                }
+                
+                // Não recarregar a página - a listagem já foi atualizada acima
+                // location.reload(); // Removido para manter consistência com o modal
+            } else {
+                throw new Error(data.error || 'Erro ao alterar status do aluno');
+            }
+        } catch (error) {
+            if (typeof loading !== 'undefined') {
+                loading.hideGlobal();
+            }
+            console.error('❌ Erro ao alterar status:', error);
+            
+            const mensagemErro = error.message || 'Erro ao alterar status do aluno';
+            if (typeof notifications !== 'undefined') {
+                notifications.error(mensagemErro);
+            } else {
+                alert('Erro ao alterar status do aluno: ' + mensagemErro);
+            }
+        }
     }
 }
 
@@ -6994,6 +7213,14 @@ window.addEventListener('load', () => {
  * @param {boolean} silencioso - Se true, não mostra mensagens de sucesso nem fecha modal
  * @returns {Promise<{success: boolean, aluno_id?: number, error?: string}>}
  */
+/**
+ * Função para salvar dados do aluno (aba Dados)
+ * 
+ * FLUXO ANTIGO (CORRIGIDO): Usava POST com FormData para api/alunos.php (relativo)
+ * FLUXO NOVO (UNIFICADO): Usa PUT com JSON para admin/api/alunos.php (mesmo padrão do botão rápido)
+ * 
+ * IMPORTANTE: Agora envia o campo 'status' corretamente e usa a mesma API que o botão rápido
+ */
 async function saveAlunoDados(silencioso = false) {
     console.log('[DEBUG] saveAlunoDados iniciado');
     
@@ -7042,7 +7269,15 @@ async function saveAlunoDados(silencioso = false) {
     dadosFormData.append('rg', formData.get('rg') || '');
     dadosFormData.append('rg_orgao_emissor', formData.get('rg_orgao_emissor') || '');
     dadosFormData.append('rg_uf', formData.get('rg_uf') || '');
-    dadosFormData.append('rg_data_emissao', formData.get('rg_data_emissao') || '');
+    
+    // Tratar rg_data_emissao: enviar null se vazio
+    const campoRgDataEmissao = form.querySelector('input[name="rg_data_emissao"]');
+    let rgDataEmissaoValor = campoRgDataEmissao ? campoRgDataEmissao.value.trim() : '';
+    if (rgDataEmissaoValor === '' || rgDataEmissaoValor === '0000-00-00') {
+        dadosFormData.append('rg_data_emissao', '');
+    } else {
+        dadosFormData.append('rg_data_emissao', rgDataEmissaoValor);
+    }
     dadosFormData.append('data_nascimento', formData.get('data_nascimento') || '');
     dadosFormData.append('estado_civil', formData.get('estado_civil') || '');
     dadosFormData.append('profissao', formData.get('profissao') || '');
@@ -7071,7 +7306,12 @@ async function saveAlunoDados(silencioso = false) {
     dadosFormData.append('telefone_secundario', formData.get('telefone_secundario') || '');
     dadosFormData.append('contato_emergencia_nome', formData.get('contato_emergencia_nome') || '');
     dadosFormData.append('contato_emergencia_telefone', formData.get('contato_emergencia_telefone') || '');
-    dadosFormData.append('status', formData.get('status') || 'ativo');
+    // IMPORTANTE: Status do aluno - deve ser enviado e atualizado no banco
+    const statusValue = formData.get('status') || 'ativo';
+    dadosFormData.append('status', statusValue);
+    
+    // LOG TEMPORÁRIO: Status sendo enviado (remover após validação)
+    console.log('[DEBUG STATUS MODAL] Status no FormData:', statusValue);
     dadosFormData.append('cfc_id', formData.get('cfc_id') || '');
     dadosFormData.append('atividade_remunerada', formData.get('atividade_remunerada') ? 1 : 0);
     dadosFormData.append('cep', formData.get('cep') || '');
@@ -7090,50 +7330,141 @@ async function saveAlunoDados(silencioso = false) {
     // Se LGPD está marcado e não há data de consentimento salva, será definida no backend
     // Se já existe data, manter (não enviar lgpd_consentimento_em aqui, deixar backend decidir)
     
-    // Adicionar ID do aluno se for edição
+    // Detectar se estamos editando (usar aluno_id_hidden que é o campo real)
     const alunoIdHidden = document.getElementById('aluno_id_hidden');
-    const acaoAluno = document.getElementById('acaoAluno');
-    const isEditing = acaoAluno && acaoAluno.value === 'editar';
+    const alunoId = alunoIdHidden?.value;
+    const isEditing = !!alunoId && alunoId.trim() !== '';
     
-    if (isEditing && alunoIdHidden && alunoIdHidden.value) {
-        dadosFormData.append('id', alunoIdHidden.value);
-    }
+    // IMPORTANTE: Ler status DIRETAMENTE do select, não do FormData (pode estar desatualizado)
+    const statusSelect = document.getElementById('status');
+    const status = statusSelect ? statusSelect.value : (formData.get('status') || 'ativo');
+    
+    // LOG TEMPORÁRIO: Status sendo lido
+    console.log('[DEBUG STATUS MODAL] Status no FormData:', formData.get('status'));
+    console.log('[DEBUG STATUS MODAL] Status lido do select (direto):', status);
+    console.log('[DEBUG STATUS MODAL] isEditing:', isEditing);
+    console.log('[DEBUG STATUS MODAL] alunoId:', alunoId);
     
     // Adicionar foto se houver
     const fotoInput = document.getElementById('foto');
-    if (fotoInput && fotoInput.files && fotoInput.files[0]) {
-        dadosFormData.append('foto', fotoInput.files[0]);
-    }
+    const temFoto = fotoInput && fotoInput.files && fotoInput.files[0];
     
     // Marcar que é salvamento apenas de Dados (não incluir matrícula)
     dadosFormData.append('salvar_apenas_dados', '1');
     
+    // GARANTIR que status está no FormData com o valor correto
+    dadosFormData.set('status', status);
+    
     try {
-        const timestamp = new Date().getTime();
-        // Sempre usar POST (tanto para criar quanto para editar)
-        const method = 'POST';
-        const alunoId = alunoIdHidden?.value;
-        const url = alunoId
-            ? `api/alunos.php?id=${alunoId}&t=${timestamp}`
-            : `api/alunos.php?t=${timestamp}`;
+        // Detectar caminho da API (mesma lógica de alunos.js)
+        const baseUrl = window.location.origin;
+        const pathname = window.location.pathname;
+        let apiBaseUrl;
         
-        // Log do payload para debug
-        console.log('📤 Enviando dados do aluno:', {
-            method: method,
-            url: url,
-            isEditing: isEditing,
-            alunoId: alunoId,
-            camposEnviados: Array.from(dadosFormData.keys()),
-            temFoto: fotoInput && fotoInput.files && fotoInput.files[0] ? true : false
-        });
+        if (pathname.includes('/admin/')) {
+            const pathParts = pathname.split('/');
+            const projectIndex = pathParts.findIndex(part => part === 'admin');
+            if (projectIndex > 0) {
+                const basePath = pathParts.slice(0, projectIndex).join('/');
+                apiBaseUrl = baseUrl + basePath + '/admin/api/alunos.php';
+            } else {
+                apiBaseUrl = baseUrl + '/admin/api/alunos.php';
+            }
+        } else {
+            apiBaseUrl = baseUrl + '/admin/api/alunos.php';
+        }
         
-        // IMPORTANTE: Não definir Content-Type manualmente para FormData
-        // O navegador define automaticamente com o boundary correto
-        const response = await fetch(url, {
-            method: method,
-            body: dadosFormData
-            // Não definir headers['Content-Type'] - deixar o navegador fazer isso
-        });
+        let response;
+        
+        if (isEditing) {
+            // EDIÇÃO: Usar PUT (mesmo padrão do botão rápido)
+            const endpoint = `?id=${alunoId}`;
+            const url = apiBaseUrl + endpoint;
+            
+            if (temFoto) {
+                // Se houver foto, usar FormData com method override
+                console.log('[DEBUG STATUS MODAL] Modo: EDIÇÃO com FOTO - usando FormData');
+                console.log('[DEBUG STATUS MODAL] Status garantido no FormData:', dadosFormData.get('status'));
+                
+                // Adicionar method override para PUT via POST
+                dadosFormData.append('_method', 'PUT');
+                
+                response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    body: dadosFormData
+                    // Não definir Content-Type - navegador define com boundary
+                });
+            } else {
+                // Se não houver foto, usar JSON (mais eficiente e alinhado com botão rápido)
+                console.log('[DEBUG STATUS MODAL] Modo: EDIÇÃO sem FOTO - usando JSON');
+                
+                // Converter FormData para objeto JSON
+                const data = {};
+                for (let [key, value] of dadosFormData.entries()) {
+                    // Ignorar arquivo de foto se não houver
+                    if (!(value instanceof File)) {
+                        // Tratar rg_data_emissao: enviar null se vazio
+                        if (key === 'rg_data_emissao' && (value === '' || value === '0000-00-00')) {
+                            data[key] = null;
+                        } else {
+                            data[key] = value;
+                        }
+                    }
+                }
+                
+                // GARANTIR que status está presente e correto
+                data.status = status;
+                
+                // LOG TEMPORÁRIO: Payload enviado para API
+                console.log('[DEBUG STATUS MODAL] Modo edição, payload enviado:', data);
+                console.log('[DEBUG STATUS MODAL] Status no payload (garantido):', data.status);
+                
+                response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(data)
+                });
+            }
+        } else {
+            // CRIAÇÃO: Usar POST
+            if (temFoto) {
+                console.log('[DEBUG STATUS MODAL] Modo: CRIAÇÃO com FOTO - usando FormData');
+                response = await fetch(apiBaseUrl, {
+                    method: 'POST',
+                    body: dadosFormData
+                });
+            } else {
+                console.log('[DEBUG STATUS MODAL] Modo: CRIAÇÃO sem FOTO - usando JSON');
+                
+                // Converter FormData para objeto JSON
+                const alunoData = {};
+                for (let [key, value] of dadosFormData.entries()) {
+                    if (key !== 'foto') {
+                        alunoData[key] = value;
+                    }
+                }
+                
+                console.log('[DEBUG STATUS MODAL] Payload enviado para API:', alunoData);
+                
+                response = await fetch(apiBaseUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    credentials: 'same-origin',
+                    body: JSON.stringify(alunoData)
+                });
+            }
+        }
         
         const text = await response.text();
         let data;
@@ -7144,12 +7475,19 @@ async function saveAlunoDados(silencioso = false) {
             throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
         }
         
+        console.log('[DEBUG STATUS MODAL] Resposta da API ao salvar aluno:', data);
+        
         if (data.success) {
-            const alunoId = data.aluno_id || data.id;
+            const alunoId = data.aluno_id || data.id || (data.aluno ? data.aluno.id : null);
             
             // Atualizar ID do aluno no formulário
             if (alunoId && alunoIdHidden) {
                 alunoIdHidden.value = alunoId;
+            }
+            
+            // Se a API retornou o aluno atualizado, atualizar a listagem
+            if (data.aluno) {
+                atualizarAlunoNaListagem(data.aluno);
             }
             
             // Restaurar botão antes de fechar modal
@@ -7163,13 +7501,10 @@ async function saveAlunoDados(silencioso = false) {
                 // Fechar modal automaticamente
                 fecharModalAluno();
                 
-                // Atualizar lista de alunos silenciosamente (sem mostrar "Filtro aplicado...")
-                if (typeof filtrarAlunos === 'function') {
-                    filtrarAlunos({ silencioso: true });
-                }
+                // Não recarregar a página - a listagem já foi atualizada acima
             }
             
-            return { success: true, aluno_id: alunoId };
+            return { success: true, aluno_id: alunoId, aluno: data.aluno };
         } else {
             throw new Error(data.error || 'Erro desconhecido');
         }

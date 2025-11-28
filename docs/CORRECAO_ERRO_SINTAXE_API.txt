@@ -1,0 +1,159 @@
+═══════════════════════════════════════════════════════════════════════════════
+  CORREÇÃO: ERRO DE SINTAXE PHP EM admin/api/alunos.php
+═══════════════════════════════════════════════════════════════════════════════
+
+Data: 2025-01-27
+Erro: Parse error: syntax error, unexpected token "case" in .../admin/api/alunos.php on line 1250
+
+───────────────────────────────────────────────────────────────────────────────
+PROBLEMA IDENTIFICADO
+───────────────────────────────────────────────────────────────────────────────
+
+O erro ocorria na linha 1250 (case 'PUT':) porque havia um problema de indentação
+e estrutura de chaves no bloco do case 'POST', especificamente na região da linha 574-595.
+
+O problema estava aqui:
+
+    } else {
+        // Tentar decodificar JSON primeiro (PUT normal)
+    if (!empty($rawInput)) {  // ← INDENTAÇÃO INCORRETA! Este if estava fora do else
+        $jsonData = json_decode($rawInput, true);
+        ...
+    } else {
+        $data = $_POST;
+        ...
+    }
+    
+    // LOG TEMPORÁRIO: Status recebido na API (remover após validação)
+    // ← Este código estava FORA do else, causando confusão na estrutura
+
+───────────────────────────────────────────────────────────────────────────────
+CORREÇÃO APLICADA
+───────────────────────────────────────────────────────────────────────────────
+
+Arquivo: admin/api/alunos.php (linha ~574-596)
+
+ANTES (INCORRETO):
+    } else {
+        // Tentar decodificar JSON primeiro (PUT normal)
+    if (!empty($rawInput)) {  // ← Indentação errada
+        ...
+    } else {
+        ...
+    }
+    
+    // LOG TEMPORÁRIO: Status recebido na API
+    ...
+
+DEPOIS (CORRIGIDO):
+    } else {
+        // Tentar decodificar JSON primeiro (PUT normal)
+        if (!empty($rawInput)) {  // ← Indentação correta
+            $jsonData = json_decode($rawInput, true);
+            if ($jsonData && json_last_error() === JSON_ERROR_NONE) {
+                $data = $jsonData;
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] POST UPDATE - Dados recebidos via JSON (PUT)');
+                }
+            } else {
+                // Fallback para POST (FormData)
+                $data = $_POST;
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] POST UPDATE - Dados recebidos via FormData (POST)');
+                }
+            }
+        } else {
+            $data = $_POST;
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] POST UPDATE - Dados recebidos via $_POST');
+            }
+        }
+    }  // ← Fechamento correto do else
+
+───────────────────────────────────────────────────────────────────────────────
+ESTRUTURA DO SWITCH (CONFIRMADA)
+───────────────────────────────────────────────────────────────────────────────
+
+O switch está estruturado corretamente:
+
+    switch ($method) {
+        case 'GET':
+            ...
+            break;
+        
+        case 'POST':
+            ...
+            break;
+        
+        case 'PUT':
+            ...
+            break;
+        
+        case 'DELETE':
+            ...
+            break;
+        
+        default:
+            ...
+    }  // ← Linha 1488
+
+Todos os cases estão dentro do switch principal (linha 390-1488).
+
+───────────────────────────────────────────────────────────────────────────────
+VALIDAÇÕES ADICIONAIS
+───────────────────────────────────────────────────────────────────────────────
+
+✅ Header JSON já está definido no início do arquivo (linha 30):
+   header('Content-Type: application/json; charset=utf-8');
+
+✅ Função sendJsonResponse() garante respostas JSON válidas
+
+✅ Todos os erros usam sendJsonResponse() ou json_encode() + exit
+
+✅ Switch está fechado corretamente antes do catch (linha 1488)
+
+───────────────────────────────────────────────────────────────────────────────
+TESTES RECOMENDADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. Validar sintaxe PHP:
+   php -l admin/api/alunos.php
+   (Deve retornar: "No syntax errors detected")
+
+2. Testar GET (abrir modal de edição):
+   - Clicar no ícone de edição de um aluno
+   - Modal deve abrir e carregar dados normalmente
+   - Console não deve mostrar erros de JSON
+
+3. Testar PUT (status rápido):
+   - Clicar no botão de ação rápida para alterar status
+   - Status deve ser atualizado
+   - Console não deve mostrar "Unexpected token '<'"
+
+4. Testar PUT (salvar modal sem foto):
+   - Editar aluno no modal
+   - Alterar status para "Inativo"
+   - Salvar
+   - Status deve ser atualizado no banco
+   - Console não deve mostrar erros
+
+5. Testar POST com _method=PUT (salvar modal com foto):
+   - Editar aluno no modal
+   - Fazer upload de foto
+   - Salvar
+   - Deve funcionar normalmente
+
+───────────────────────────────────────────────────────────────────────────────
+ARQUIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. admin/api/alunos.php
+   • Linha ~574-596: Corrigida indentação e estrutura de chaves no bloco else
+   • Estrutura do switch confirmada como correta
+
+───────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ CORREÇÃO APLICADA
+───────────────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════════════
+

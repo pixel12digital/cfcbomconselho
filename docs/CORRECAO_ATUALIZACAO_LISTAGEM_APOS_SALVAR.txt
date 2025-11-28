@@ -1,0 +1,183 @@
+═══════════════════════════════════════════════════════════════════════════════
+  CORREÇÃO: ATUALIZAÇÃO DA LISTAGEM APÓS SALVAR ALUNO NO MODAL
+═══════════════════════════════════════════════════════════════════════════════
+
+Data: 2025-01-27
+Problema: Status não era atualizado na listagem após salvar pelo modal
+
+───────────────────────────────────────────────────────────────────────────────
+PROBLEMA IDENTIFICADO
+───────────────────────────────────────────────────────────────────────────────
+
+1. API não retornava o aluno atualizado após o UPDATE
+   • PUT e POST UPDATE retornavam apenas { success: true, message: ... }
+   • Frontend não tinha dados atualizados para atualizar a listagem
+
+2. Frontend não atualizava a listagem após salvar
+   • saveAlunoDados() chamava filtrarAlunos() que recarregava tudo
+   • Mas não atualizava a linha específica do aluno editado
+   • Badge de status permanecia com valor antigo
+
+───────────────────────────────────────────────────────────────────────────────
+CORREÇÕES IMPLEMENTADAS
+───────────────────────────────────────────────────────────────────────────────
+
+1. ✅ API RETORNA ALUNO ATUALIZADO
+   Arquivo: admin/api/alunos.php
+   
+   a) Case 'PUT' (linha ~1479):
+      • Após UPDATE bem-sucedido, busca aluno atualizado do banco
+      • Inclui dados do CFC e matrícula ativa (mesmo formato do GET)
+      • Retorna { success: true, message: ..., aluno: {...} }
+   
+   b) Case 'POST' UPDATE (linha ~935):
+      • Mesma lógica aplicada no POST UPDATE
+      • Retorna aluno completo atualizado
+   
+   Código aplicado:
+   ```php
+   // Buscar aluno atualizado para retornar no response
+   $alunoAtualizado = $db->findWhere('alunos', 'id = ?', [$id], '*', null, 1);
+   if ($alunoAtualizado && is_array($alunoAtualizado)) {
+       $alunoAtualizado = $alunoAtualizado[0];
+   }
+   
+   // Buscar dados do CFC e matrícula ativa (mesmo formato do GET)
+   // ...
+   
+   sendJsonResponse([
+       'success' => true, 
+       'message' => 'Aluno atualizado com sucesso',
+       'aluno' => $alunoAtualizado
+   ]);
+   ```
+
+2. ✅ FUNÇÃO PARA ATUALIZAR LISTAGEM
+   Arquivo: admin/pages/alunos.php (linha ~5640)
+   
+   Criada função atualizarAlunoNaListagem(alunoAtualizado):
+   • Atualiza badge de status na linha da tabela
+   • Atualiza badge no card mobile (se existir)
+   • Usa mapeamentos de status alinhados com o PHP
+   • Não recarrega a página inteira
+   
+   Código aplicado:
+   ```javascript
+   function atualizarAlunoNaListagem(alunoAtualizado) {
+       const statusClass = {
+           'ativo': 'success',
+           'inativo': 'danger',
+           'concluido': 'info'
+       };
+       const statusText = {
+           'ativo': 'Ativo',
+           'inativo': 'Inativo',
+           'concluido': 'Concluído'
+       };
+       
+       const row = document.querySelector(`tr[data-aluno-id="${alunoId}"]`);
+       if (row) {
+           const badge = row.querySelector('td:nth-child(4) .badge');
+           if (badge) {
+               const status = alunoAtualizado.status || 'ativo';
+               badge.className = `badge bg-${statusClass[status]}`;
+               badge.textContent = statusText[status];
+           }
+       }
+   }
+   ```
+
+3. ✅ INTEGRAÇÃO NO saveAlunoDados
+   Arquivo: admin/pages/alunos.php (linha ~7339)
+   
+   • Verifica se API retornou aluno atualizado
+   • Chama atualizarAlunoNaListagem() se houver
+   • Remove chamada a filtrarAlunos() (não recarrega página)
+   • Adiciona log de debug da resposta da API
+   
+   Código aplicado:
+   ```javascript
+   console.log('[DEBUG STATUS MODAL] Resposta da API ao salvar aluno:', data);
+   
+   if (data.success) {
+       // Se a API retornou o aluno atualizado, atualizar a listagem
+       if (data.aluno) {
+           atualizarAlunoNaListagem(data.aluno);
+       }
+       
+       // Fechar modal e mostrar notificação
+       // Não recarregar a página
+   }
+   ```
+
+4. ✅ INTEGRAÇÃO NO alterarStatusAluno (botão rápido)
+   Arquivo: admin/pages/alunos.php (linha ~5775)
+   
+   • Também usa atualizarAlunoNaListagem() quando API retorna aluno
+   • Remove location.reload() para manter consistência
+   • Mesma experiência do modal (atualização sem recarregar)
+
+───────────────────────────────────────────────────────────────────────────────
+COMPORTAMENTO ESPERADO
+───────────────────────────────────────────────────────────────────────────────
+
+1. Salvar aluno pelo modal:
+   ✅ Status é atualizado no banco
+   ✅ API retorna aluno completo atualizado
+   ✅ Badge na listagem é atualizado imediatamente
+   ✅ Modal fecha sem recarregar página
+
+2. Alterar status pelo botão rápido:
+   ✅ Status é atualizado no banco
+   ✅ API retorna aluno completo atualizado
+   ✅ Badge na listagem é atualizado imediatamente
+   ✅ Não recarrega página
+
+3. Consistência entre fluxos:
+   ✅ Modal e botão rápido usam mesma função de atualização
+   ✅ Mesma experiência de usuário (sem reload)
+   ✅ Mesma resposta da API (com aluno completo)
+
+───────────────────────────────────────────────────────────────────────────────
+TESTES RECOMENDADOS
+───────────────────────────────────────────────────────────────────────────────
+
+TESTE 1 - SALVAR ALUNO PELO MODAL:
+  [ ] Abrir modal de edição do aluno ID 168 (José Edilson)
+  [ ] Alterar status de "Ativo" para "Inativo"
+  [ ] Clicar em "Salvar Aluno"
+  [ ] Verificar console: "[DEBUG STATUS MODAL] Resposta da API ao salvar aluno: { success: true, aluno: {... status: 'inativo' ...} }"
+  [ ] Verificar que badge na listagem muda para "INATIVO" imediatamente
+  [ ] Verificar que modal fecha sem recarregar página
+  [ ] Abrir modal novamente - status deve estar como "Inativo"
+
+TESTE 2 - ALTERAR STATUS PELO BOTÃO RÁPIDO:
+  [ ] Clicar no botão de ação rápida para reativar aluno inativo
+  [ ] Confirmar ação
+  [ ] Verificar que badge muda para "ATIVO" imediatamente
+  [ ] Verificar que não recarrega página
+
+TESTE 3 - TESTE CRUZADO:
+  [ ] Inativar pelo modal → badge deve mudar
+  [ ] Reativar pelo botão rápido → badge deve mudar
+  [ ] Ambos devem funcionar sem recarregar página
+
+───────────────────────────────────────────────────────────────────────────────
+ARQUIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. admin/api/alunos.php
+   • Case 'PUT': Retorna aluno completo após UPDATE
+   • Case 'POST' UPDATE: Retorna aluno completo após UPDATE
+
+2. admin/pages/alunos.php
+   • Função atualizarAlunoNaListagem(): Nova função para atualizar listagem
+   • Função saveAlunoDados(): Integra atualização da listagem
+   • Função alterarStatusAluno(): Integra atualização da listagem
+
+───────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ CORREÇÕES IMPLEMENTADAS
+───────────────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════════════
+

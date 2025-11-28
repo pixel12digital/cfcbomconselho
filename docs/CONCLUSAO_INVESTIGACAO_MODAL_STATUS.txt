@@ -1,0 +1,115 @@
+═══════════════════════════════════════════════════════════════════════════════
+  CONCLUSÃO: INVESTIGAÇÃO E CORREÇÃO DO FLUXO MODAL - STATUS DO ALUNO
+═══════════════════════════════════════════════════════════════════════════════
+
+Data: 2025-01-27
+Problema: Status do aluno não atualiza quando salvo pelo modal "Editar Aluno"
+
+───────────────────────────────────────────────────────────────────────────────
+PROBLEMAS IDENTIFICADOS E CORRIGIDOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. ✅ LEITURA DE CAMPOS HIDDEN - CORRIGIDO
+   Problema: FormData pode não capturar valores de campos hidden corretamente
+   Solução: Ler acao e aluno_id diretamente dos elementos DOM
+   Arquivo: admin/assets/js/alunos.js (função salvarAluno)
+   Mudança:
+     - Antes: const acao = formData.get('acao');
+     - Depois: const acao = acaoEl ? acaoEl.value : formData.get('acao') || 'criar';
+
+2. ✅ PREENCHIMENTO DE CAMPOS HIDDEN NA EDIÇÃO - GARANTIDO
+   Problema: Campos hidden podem não estar preenchidos quando o modal abre
+   Solução: Garantir preenchimento explícito na função editarAluno()
+   Arquivo: admin/assets/js/alunos.js (função editarAluno)
+   Mudança: Adicionado setTimeout que força preenchimento de acaoAluno e aluno_id_hidden
+
+3. ✅ REMOÇÃO DO CAMPO 'id' DO BODY - CORRIGIDO
+   Problema: Campo 'id' sendo enviado no body JSON (desnecessário e pode causar confusão)
+   Solução: Removido alunoData.id (id vai na query string, não no body)
+   Arquivo: admin/assets/js/alunos.js (função salvarAluno)
+   Mudança: Comentado código que adicionava alunoData.id
+
+4. ✅ PROTEÇÃO CONTRA 'id' NO UPDATE - ADICIONADO
+   Problema: Se 'id' vier no body, pode causar problemas no UPDATE
+   Solução: unset($alunoData['id']) antes do UPDATE
+   Arquivo: admin/api/alunos.php (case 'PUT')
+   Mudança: Adicionado unset($alunoData['id']) após montar $alunoData
+
+5. ✅ LOGS TEMPORÁRIOS ADICIONADOS - PARA VALIDAÇÃO
+   Frontend: Logs detalhados de acao, aluno_id, status, método e endpoint
+   Backend: Logs de status recebido, dados que serão atualizados, e status após UPDATE
+
+───────────────────────────────────────────────────────────────────────────────
+ARQUIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. admin/assets/js/alunos.js
+   • Função salvarAluno(): Leitura robusta de campos hidden
+   • Função editarAluno(): Garantia de preenchimento de campos hidden
+   • Logs temporários adicionados para validação
+
+2. admin/api/alunos.php
+   • Case 'PUT': Logs temporários adicionados
+   • Case 'PUT': Proteção contra campo 'id' no body
+   • Comentários explicativos sobre o campo 'status'
+
+───────────────────────────────────────────────────────────────────────────────
+CHECKLIST DE VALIDAÇÃO
+───────────────────────────────────────────────────────────────────────────────
+
+TESTE 1 - EDITAR ALUNO E ALTERAR STATUS PARA INATIVO:
+  [ ] Abrir modal "Editar Aluno" para um aluno ativo
+  [ ] Verificar console - campos hidden devem estar preenchidos:
+      - acaoAluno.value = 'editar'
+      - aluno_id_hidden.value = {id do aluno}
+  [ ] Alterar "Status do Aluno" de "Ativo" para "Inativo"
+  [ ] Clicar em "Salvar"
+  [ ] Verificar console - logs devem mostrar:
+      - Status enviado: "inativo"
+      - Método HTTP: "PUT"
+      - Endpoint: "?id={id}"
+  [ ] Verificar Network tab:
+      - Requisição PUT para admin/api/alunos.php?id={id}
+      - Body JSON contém "status": "inativo"
+  [ ] Verificar resposta da API: {"success": true, ...}
+  [ ] Verificar logs do PHP:
+      - Status recebido: "inativo"
+      - Status no $alunoData: "inativo"
+      - UPDATE executado com sucesso
+      - Status no banco após UPDATE: "inativo"
+  [ ] Verificar banco: SELECT status FROM alunos WHERE id = {id} → "inativo"
+  [ ] Verificar listagem - badge deve aparecer como "INATIVO"
+
+TESTE 2 - REATIVAR ALUNO:
+  [ ] Editar aluno inativo e alterar para "Ativo"
+  [ ] Salvar e verificar que status volta para "ativo" no banco e listagem
+
+───────────────────────────────────────────────────────────────────────────────
+PAYLOAD ESPERADO NA EDIÇÃO
+───────────────────────────────────────────────────────────────────────────────
+
+method: PUT
+endpoint: admin/api/alunos.php?id=167
+body JSON: {
+  "nome": "Nome do Aluno",
+  "cpf": "123.456.789-00",
+  ... (outros campos) ...,
+  "status": "inativo",  ← Este campo deve estar presente
+  ...
+}
+
+───────────────────────────────────────────────────────────────────────────────
+PRÓXIMOS PASSOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. Executar testes manuais seguindo o checklist
+2. Verificar logs temporários no console e logs do PHP
+3. Validar que o status está sendo atualizado no banco
+4. Remover logs temporários após validação completa
+
+───────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ CORREÇÕES IMPLEMENTADAS - AGUARDANDO VALIDAÇÃO
+───────────────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════════════
+

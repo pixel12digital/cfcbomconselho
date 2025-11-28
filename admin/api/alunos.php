@@ -9,6 +9,13 @@
  *   - Admin Global: exige seleção explícita do CFC (não assume valores)
  * - Migração CFC 1 → 36 é SEMPRE manual, via script documentado em docs/MIGRACAO_CFC_1_PARA_36.md
  * - Nenhuma rotina automática (cron, API, página web) deve disparar UPDATEs de CFC em massa
+ * 
+ * NOTA SOBRE STATUS DO ALUNO:
+ * - O campo alunos.status (ENUM: 'ativo', 'inativo', 'concluido') é o ÚNICO campo usado para controlar
+ *   se o aluno pode agendar aulas no sistema
+ * - Este campo é independente do status da matrícula (matriculas.status)
+ * - Quando alunos.status = 'inativo', o aluno NÃO pode agendar aulas, independente do status da matrícula
+ * - A listagem de alunos usa alunos.status para exibir o badge de status na interface
  */
 // Configuração para produção
 ini_set('display_errors', 0); // Não mostrar erros na tela para API
@@ -525,9 +532,22 @@ try {
             break;
             
         case 'POST':
-            // Determinar se é CREATE ou UPDATE baseado na presença de ID na query string
+            // Verificar se há method override (PUT via POST com _method=PUT)
+            $methodOverride = $_POST['_method'] ?? null;
+            $isPutOverride = strtoupper($methodOverride) === 'PUT';
+            
+            // Determinar se é CREATE ou UPDATE baseado na presença de ID na query string ou method override
             $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
-            $isUpdate = $id !== null && $id > 0;
+            $isUpdate = ($id !== null && $id > 0) || $isPutOverride;
+            
+            // Se for PUT override, usar o ID da query string
+            if ($isPutOverride && $id) {
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] POST com _method=PUT (override) - ID: ' . $id);
+                }
+                // Redirecionar para lógica de PUT
+                // Continuar no fluxo abaixo que trata como UPDATE
+            }
             
             if (LOG_ENABLED) {
                 error_log('[API Alunos] POST - Modo: ' . ($isUpdate ? 'UPDATE (id=' . $id . ')' : 'CREATE'));
@@ -537,15 +557,57 @@ try {
             if ($isUpdate) {
                 // ========== FLUXO DE UPDATE ==========
                 
-                // Ler dados do FormData (POST)
-                $data = $_POST;
+                // Ler dados do FormData (POST) ou JSON (PUT)
+                // Se for PUT override (_method=PUT), ler do $_POST (FormData)
+                // Se for PUT normal, ler do body JSON
+                // Se for POST normal, ler do $_POST
+                $rawInput = file_get_contents('php://input');
+                $data = [];
+                
+                // Verificar se é PUT override (POST com _method=PUT)
+                if ($isPutOverride) {
+                    // Ler do $_POST (FormData)
+                    $data = $_POST;
+                    if (LOG_ENABLED) {
+                        error_log('[API Alunos] POST UPDATE (PUT override) - Dados recebidos via FormData (POST)');
+                    }
+                } else {
+                    // Tentar decodificar JSON primeiro (PUT normal)
+                    if (!empty($rawInput)) {
+                        $jsonData = json_decode($rawInput, true);
+                        if ($jsonData && json_last_error() === JSON_ERROR_NONE) {
+                            $data = $jsonData;
+                            if (LOG_ENABLED) {
+                                error_log('[API Alunos] POST UPDATE - Dados recebidos via JSON (PUT)');
+                            }
+                        } else {
+                            // Fallback para POST (FormData)
+                            $data = $_POST;
+                            if (LOG_ENABLED) {
+                                error_log('[API Alunos] POST UPDATE - Dados recebidos via FormData (POST)');
+                            }
+                        }
+                    } else {
+                        $data = $_POST;
+                        if (LOG_ENABLED) {
+                            error_log('[API Alunos] POST UPDATE - Dados recebidos via $_POST');
+                        }
+                    }
+                }
+                
+                // LOG TEMPORÁRIO: Status recebido na API (remover após validação)
+                $statusRecebido = $data['status'] ?? 'NÃO DEFINIDO';
+                error_log('[LOG TEMPORÁRIO API] Status recebido na API de alunos: ' . $statusRecebido);
+                error_log('[LOG TEMPORÁRIO API] ID do aluno: ' . $id);
+                error_log('[LOG TEMPORÁRIO API] Dados completos recebidos: ' . print_r($data, true));
                 
                 if (LOG_ENABLED) {
                     error_log('[API Alunos] POST UPDATE - $_POST: ' . print_r($_POST, true));
                     error_log('[API Alunos] POST UPDATE - $_FILES: ' . print_r($_FILES, true));
+                    error_log('[API Alunos] POST UPDATE - Raw input: ' . $rawInput);
                 }
                 
-                // Verificar se aluno existe
+                // Verificar se aluno existe e buscar dados atuais
                 $alunoExistente = $db->findWhere('alunos', 'id = ?', [$id], '*', null, 1);
                 if ($alunoExistente && is_array($alunoExistente)) {
                     $alunoExistente = $alunoExistente[0];
@@ -555,6 +617,34 @@ try {
                     http_response_code(404);
                     echo json_encode(['success' => false, 'error' => 'Aluno não encontrado']);
                     exit;
+                }
+                
+                // --- TRATAMENTO DO CPF ---
+                // Preservar CPF original se houver conflito
+                $cpfNovo = isset($data['cpf']) ? trim($data['cpf']) : null;
+                $cpfAtual = $alunoExistente['cpf'] ?? '';
+                
+                if ($cpfNovo !== null && $cpfNovo !== '') {
+                    // Se for diferente do CPF atual, verificar se já existe em outro aluno
+                    if ($cpfNovo !== $cpfAtual) {
+                        $cpfExistente = $db->findWhere('alunos', 'cpf = ? AND id != ?', [$cpfNovo, $id], '*', null, 1);
+                        if ($cpfExistente && is_array($cpfExistente) && count($cpfExistente) > 0) {
+                            // CPF já está em outro aluno: preserva CPF original para não travar o update
+                            if (LOG_ENABLED) {
+                                error_log('[API Alunos] POST UPDATE - Aviso: tentativa de salvar CPF duplicado (' . $cpfNovo . ') no aluno ' . $id . '. Preservando CPF original: ' . $cpfAtual);
+                            }
+                            $cpfNovo = $cpfAtual;
+                        }
+                    }
+                } else {
+                    // Se não veio CPF, mantém o atual
+                    $cpfNovo = $cpfAtual;
+                }
+                
+                // --- TRATAMENTO DO RG_DATA_EMISSAO ---
+                $rgDataEmissao = $data['rg_data_emissao'] ?? null;
+                if ($rgDataEmissao === '' || $rgDataEmissao === '0000-00-00' || $rgDataEmissao === '0000-00-00 00:00:00') {
+                    $rgDataEmissao = null;
                 }
                 
                 // Processar upload de foto APENAS se houver arquivo realmente enviado
@@ -744,7 +834,15 @@ try {
                 $alunoData = [];
                 foreach ($camposPermitidos as $campo) {
                     if (isset($data[$campo])) {
-                        $alunoData[$campo] = $data[$campo];
+                        // Usar CPF tratado se for o campo cpf
+                        if ($campo === 'cpf') {
+                            $alunoData[$campo] = $cpfNovo;
+                        } elseif ($campo === 'rg_data_emissao') {
+                            // Usar rg_data_emissao tratado
+                            $alunoData[$campo] = $rgDataEmissao;
+                        } else {
+                            $alunoData[$campo] = $data[$campo];
+                        }
                     }
                 }
                 
@@ -807,9 +905,26 @@ try {
                     }
                 }
                 
+                // LOG TEMPORÁRIO: Dados que serão atualizados (remover após validação)
+                error_log('[LOG TEMPORÁRIO API] Dados que serão atualizados no banco: ' . print_r($alunoData, true));
+                error_log('[LOG TEMPORÁRIO API] Status no $alunoData: ' . ($alunoData['status'] ?? 'NÃO DEFINIDO'));
+                
                 // Executar UPDATE
                 try {
                     $resultado = $db->update('alunos', $alunoData, 'id = ?', [$id]);
+                    
+                    // LOG TEMPORÁRIO: Verificar se o UPDATE foi executado (remover após validação)
+                    if ($resultado) {
+                        error_log('[LOG TEMPORÁRIO API] UPDATE executado com sucesso para aluno ID: ' . $id);
+                        // Verificar valor no banco após UPDATE
+                        $alunoAtualizado = $db->findWhere('alunos', 'id = ?', [$id], 'status', null, 1);
+                        if ($alunoAtualizado && is_array($alunoAtualizado) && count($alunoAtualizado) > 0) {
+                            $statusNoBanco = $alunoAtualizado[0]['status'] ?? 'NÃO ENCONTRADO';
+                            error_log('[LOG TEMPORÁRIO API] Status no banco após UPDATE: ' . $statusNoBanco);
+                        }
+                    } else {
+                        error_log('[LOG TEMPORÁRIO API] UPDATE retornou false para aluno ID: ' . $id);
+                    }
                     
                     if (!$resultado) {
                         http_response_code(500);
@@ -817,7 +932,50 @@ try {
                         exit;
                     }
                     
-                    $response = ['success' => true, 'message' => 'Aluno atualizado com sucesso'];
+                    // Buscar aluno atualizado para retornar no response
+                    $alunoAtualizado = $db->findWhere('alunos', 'id = ?', [$id], '*', null, 1);
+                    if ($alunoAtualizado && is_array($alunoAtualizado)) {
+                        $alunoAtualizado = $alunoAtualizado[0];
+                    }
+                    
+                    // Buscar dados do CFC
+                    if ($alunoAtualizado) {
+                        $cfc = $db->findWhere('cfcs', 'id = ?', [$alunoAtualizado['cfc_id']], '*', null, 1);
+                        if ($cfc && is_array($cfc)) {
+                            $cfc = $cfc[0];
+                        }
+                        $alunoAtualizado['cfc_nome'] = $cfc ? $cfc['nome'] : 'N/A';
+                        
+                        // Buscar matrícula ativa se houver
+                        try {
+                            $matriculaAtiva = $db->fetch("
+                                SELECT 
+                                    renach, 
+                                    status, 
+                                    categoria_cnh,
+                                    tipo_servico
+                                FROM matriculas 
+                                WHERE aluno_id = ? AND status = 'ativa' 
+                                LIMIT 1
+                            ", [$id]);
+                            
+                            if ($matriculaAtiva && is_array($matriculaAtiva) && count($matriculaAtiva) > 0) {
+                                $mat = $matriculaAtiva[0];
+                                if (!empty($mat['renach'])) {
+                                    $alunoAtualizado['renach'] = $mat['renach'];
+                                }
+                                $alunoAtualizado['status_matricula'] = $mat['status'] ?? null;
+                            }
+                        } catch (Exception $e) {
+                            // Ignorar erro se tabela não existir ou coluna não existir
+                        }
+                    }
+                    
+                    $response = [
+                        'success' => true, 
+                        'message' => 'Aluno atualizado com sucesso',
+                        'aluno' => $alunoAtualizado
+                    ];
                     if (isset($responseWarning) && $responseWarning) {
                         $response['warning'] = $responseWarning;
                         if (LOG_ENABLED) {
@@ -1164,6 +1322,251 @@ try {
             } catch (Exception $e) {
                 if (LOG_ENABLED) {
                     error_log('[API Alunos] Erro ao inserir aluno: ' . $e->getMessage());
+                }
+                sendJsonResponse(['success' => false, 'error' => 'Erro interno: ' . $e->getMessage()], 500);
+            }
+            break;
+            
+        case 'PUT':
+            // PUT é tratado como UPDATE (mesma lógica do POST com id)
+            $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+            
+            if (!$id || $id <= 0) {
+                sendJsonResponse(['success' => false, 'error' => 'ID é obrigatório para atualização'], 400);
+            }
+            
+            // Ler dados do JSON ou FormData (se houver upload de foto)
+            $rawInput = file_get_contents('php://input');
+            $data = [];
+            
+            // Verificar se há arquivo sendo enviado (FormData)
+            $temFoto = isset($_FILES['foto']) && $_FILES['foto']['error'] === UPLOAD_ERR_OK && $_FILES['foto']['size'] > 0;
+            
+            if ($temFoto || !empty($_POST)) {
+                // Se houver FormData (foto ou POST), usar $_POST
+                $data = $_POST;
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] PUT - Dados recebidos via FormData (POST)');
+                }
+            } else {
+                // Se não houver FormData, tentar JSON
+                $data = json_decode($rawInput, true);
+                if (!$data || json_last_error() !== JSON_ERROR_NONE) {
+                    sendJsonResponse(['success' => false, 'error' => 'Dados JSON inválidos'], 400);
+                }
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] PUT - Dados recebidos via JSON');
+                }
+            }
+            
+            // LOG TEMPORÁRIO: Status recebido na API PUT (remover após validação)
+            error_log('[LOG TEMP STATUS PUT] Dados recebidos no PUT: ' . print_r($data, true));
+            error_log('[LOG TEMP STATUS PUT] Status recebido: ' . ($data['status'] ?? 'NULO'));
+            error_log('[LOG TEMP STATUS PUT] ID do aluno: ' . $id);
+            
+            if (LOG_ENABLED) {
+                error_log('[API Alunos] PUT - ID: ' . $id);
+                error_log('[API Alunos] PUT - Dados recebidos: ' . print_r($data, true));
+            }
+            
+            // Verificar se aluno existe e buscar dados atuais
+            $alunoExistente = $db->findWhere('alunos', 'id = ?', [$id], '*', null, 1);
+            if ($alunoExistente && is_array($alunoExistente)) {
+                $alunoExistente = $alunoExistente[0];
+            }
+            
+            if (!$alunoExistente) {
+                sendJsonResponse(['success' => false, 'error' => 'Aluno não encontrado'], 404);
+            }
+            
+            // --- TRATAMENTO DO CPF ---
+            // Preservar CPF original se houver conflito
+            $cpfNovo = isset($data['cpf']) ? trim($data['cpf']) : null;
+            $cpfAtual = $alunoExistente['cpf'] ?? '';
+            
+            if ($cpfNovo !== null && $cpfNovo !== '') {
+                // Se for diferente do CPF atual, verificar se já existe em outro aluno
+                if ($cpfNovo !== $cpfAtual) {
+                    $cpfExistente = $db->findWhere('alunos', 'cpf = ? AND id != ?', [$cpfNovo, $id], '*', null, 1);
+                    if ($cpfExistente && is_array($cpfExistente) && count($cpfExistente) > 0) {
+                        // CPF já está em outro aluno: preserva CPF original para não travar o update
+                        if (LOG_ENABLED) {
+                            error_log('[API Alunos] PUT - Aviso: tentativa de salvar CPF duplicado (' . $cpfNovo . ') no aluno ' . $id . '. Preservando CPF original: ' . $cpfAtual);
+                        }
+                        $cpfNovo = $cpfAtual;
+                    }
+                }
+            } else {
+                // Se não veio CPF, mantém o atual
+                $cpfNovo = $cpfAtual;
+            }
+            
+            // --- TRATAMENTO DO RG_DATA_EMISSAO ---
+            $rgDataEmissao = $data['rg_data_emissao'] ?? null;
+            if ($rgDataEmissao === '' || $rgDataEmissao === '0000-00-00' || $rgDataEmissao === '0000-00-00 00:00:00') {
+                $rgDataEmissao = null;
+            }
+            
+            // Processar upload de foto se houver (mesma lógica do POST UPDATE)
+            $caminhoFoto = '';
+            if ($temFoto) {
+                // Reutilizar lógica de upload do POST UPDATE
+                $uploadDir = __DIR__ . '/../uploads/alunos/';
+                
+                if (!is_dir($uploadDir)) {
+                    if (!mkdir($uploadDir, 0755, true)) {
+                        if (LOG_ENABLED) {
+                            error_log('[API Alunos] PUT - Erro ao criar diretório: ' . $uploadDir);
+                        }
+                    }
+                }
+                
+                if (is_dir($uploadDir) && is_writable($uploadDir)) {
+                    $fileInfo = pathinfo($_FILES['foto']['name']);
+                    $extension = strtolower($fileInfo['extension'] ?? '');
+                    $allowedExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+                    
+                    if (!empty($extension) && in_array($extension, $allowedExtensions) && $_FILES['foto']['size'] <= 2 * 1024 * 1024) {
+                        // Remover foto antiga se existir
+                        if (!empty($alunoExistente['foto'])) {
+                            $caminhoFotoAntiga = __DIR__ . '/../' . $alunoExistente['foto'];
+                            if (file_exists($caminhoFotoAntiga)) {
+                                @unlink($caminhoFotoAntiga);
+                            }
+                        }
+                        
+                        $nomeArquivo = 'aluno_' . time() . '_' . uniqid() . '.' . $extension;
+                        $caminhoCompleto = $uploadDir . $nomeArquivo;
+                        
+                        if (move_uploaded_file($_FILES['foto']['tmp_name'], $caminhoCompleto)) {
+                            $caminhoFoto = 'admin/uploads/alunos/' . $nomeArquivo;
+                        }
+                    }
+                }
+            }
+            
+            // Lista de campos permitidos para atualização
+            // IMPORTANTE: 'status' está na lista e será atualizado se presente em $data
+            $camposPermitidos = [
+                'nome', 'cpf', 'rg', 'rg_orgao_emissor', 'rg_uf', 'rg_data_emissao', 'renach',
+                'data_nascimento', 'estado_civil', 'profissao', 'escolaridade',
+                'naturalidade', 'nacionalidade', 'telefone', 'telefone_secundario',
+                'contato_emergencia_nome', 'contato_emergencia_telefone', 'email',
+                'endereco', 'numero', 'bairro', 'cidade', 'estado', 'cep',
+                'categoria_cnh', 'tipo_servico', 'status', 'observacoes',  // ✅ 'status' está aqui
+                'atividade_remunerada', 'lgpd_consentimento', 'lgpd_consentimento_em',
+                'numero_processo', 'detran_numero', 'status_matricula', 'processo_situacao',
+                'status_pagamento'
+            ];
+            
+            // Montar array de campos para atualização
+            // IMPORTANTE: Se $data['status'] estiver presente, será incluído em $alunoData
+            $alunoData = [];
+            foreach ($camposPermitidos as $campo) {
+                if (isset($data[$campo])) {
+                    // Usar CPF tratado se for o campo cpf
+                    if ($campo === 'cpf') {
+                        $alunoData[$campo] = $cpfNovo;
+                    } elseif ($campo === 'rg_data_emissao') {
+                        // Usar rg_data_emissao tratado
+                        $alunoData[$campo] = $rgDataEmissao;
+                    } else {
+                        $alunoData[$campo] = $data[$campo];
+                    }
+                }
+            }
+            
+            // Garantir que o campo 'id' não seja incluído (vem da query string)
+            unset($alunoData['id']);
+            unset($alunoData['_method']); // Remover method override se presente
+            
+            // LOG TEMPORÁRIO: Dados que serão atualizados (remover após validação)
+            error_log('[LOG TEMP STATUS PUT] Dados que serão atualizados no banco: ' . print_r($alunoData, true));
+            error_log('[LOG TEMP STATUS PUT] Status no $alunoData: ' . ($alunoData['status'] ?? 'NÃO DEFINIDO'));
+            
+            // Montar SQL UPDATE para log (apenas para debug)
+            $sqlMontado = "UPDATE alunos SET ";
+            $camposSql = [];
+            foreach ($alunoData as $campo => $valor) {
+                $camposSql[] = "`{$campo}` = ?";
+            }
+            $sqlMontado .= implode(', ', $camposSql) . " WHERE id = ?";
+            error_log('[LOG TEMP STATUS PUT] SQL UPDATE montado: ' . $sqlMontado);
+            
+            // Validar que há campos para atualizar
+            if (empty($alunoData)) {
+                sendJsonResponse(['success' => false, 'error' => 'Nenhum campo para atualizar'], 400);
+            }
+            
+            // Executar UPDATE
+            try {
+                $resultado = $db->update('alunos', $alunoData, 'id = ?', [$id]);
+                
+                // LOG TEMPORÁRIO: Verificar se o UPDATE foi executado (remover após validação)
+                if ($resultado) {
+                    error_log('[LOG TEMPORÁRIO API PUT] UPDATE executado com sucesso para aluno ID: ' . $id);
+                    // Verificar valor no banco após UPDATE
+                    $alunoAtualizado = $db->findWhere('alunos', 'id = ?', [$id], 'status', null, 1);
+                    if ($alunoAtualizado && is_array($alunoAtualizado) && count($alunoAtualizado) > 0) {
+                        $statusNoBanco = $alunoAtualizado[0]['status'] ?? 'NÃO ENCONTRADO';
+                        error_log('[LOG TEMPORÁRIO API PUT] Status no banco após UPDATE: ' . $statusNoBanco);
+                    }
+                } else {
+                    error_log('[LOG TEMPORÁRIO API PUT] UPDATE retornou false para aluno ID: ' . $id);
+                }
+                
+                if (!$resultado) {
+                    sendJsonResponse(['success' => false, 'error' => 'Erro ao atualizar aluno'], 500);
+                }
+                
+                // Buscar aluno atualizado para retornar no response
+                $alunoAtualizado = $db->findWhere('alunos', 'id = ?', [$id], '*', null, 1);
+                if ($alunoAtualizado && is_array($alunoAtualizado)) {
+                    $alunoAtualizado = $alunoAtualizado[0];
+                }
+                
+                // Buscar dados do CFC
+                if ($alunoAtualizado) {
+                    $cfc = $db->findWhere('cfcs', 'id = ?', [$alunoAtualizado['cfc_id']], '*', null, 1);
+                    if ($cfc && is_array($cfc)) {
+                        $cfc = $cfc[0];
+                    }
+                    $alunoAtualizado['cfc_nome'] = $cfc ? $cfc['nome'] : 'N/A';
+                    
+                    // Buscar matrícula ativa se houver
+                    try {
+                        $matriculaAtiva = $db->fetch("
+                            SELECT 
+                                renach, 
+                                status, 
+                                categoria_cnh,
+                                tipo_servico
+                            FROM matriculas 
+                            WHERE aluno_id = ? AND status = 'ativa' 
+                            LIMIT 1
+                        ", [$id]);
+                        
+                        if ($matriculaAtiva && is_array($matriculaAtiva) && count($matriculaAtiva) > 0) {
+                            $mat = $matriculaAtiva[0];
+                            if (!empty($mat['renach'])) {
+                                $alunoAtualizado['renach'] = $mat['renach'];
+                            }
+                            $alunoAtualizado['status_matricula'] = $mat['status'] ?? null;
+                        }
+                    } catch (Exception $e) {
+                        // Ignorar erro se tabela não existir ou coluna não existir
+                    }
+                }
+                
+                sendJsonResponse([
+                    'success' => true, 
+                    'message' => 'Aluno atualizado com sucesso',
+                    'aluno' => $alunoAtualizado
+                ]);
+                
+            } catch (Exception $e) {
+                if (LOG_ENABLED) {
+                    error_log('[API Alunos] PUT - Erro: ' . $e->getMessage());
                 }
                 sendJsonResponse(['success' => false, 'error' => 'Erro interno: ' . $e->getMessage()], 500);
             }
