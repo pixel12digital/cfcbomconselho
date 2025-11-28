@@ -3607,8 +3607,22 @@ function extrairMunicipioNaturalidade(naturalidade) {
     return municipio.trim();
 }
 // Lista estática de municípios por estado (principais municípios)
+/**
+ * FALLBACK: Lista hardcoded de municípios (PLANO B)
+ * 
+ * ⚠️ ATENÇÃO: Esta função é apenas um FALLBACK caso a API falhe.
+ * A fonte oficial de municípios é a API: admin/api/municipios.php
+ * que carrega dados de admin/data/municipios_br.php (base completa do IBGE).
+ * 
+ * Esta lista contém apenas municípios principais e deve ser usada
+ * APENAS em caso de falha na requisição da API.
+ * 
+ * @param {string} estado - Sigla do estado (ex: 'PE', 'SP')
+ * @returns {Array} Array de nomes de municípios
+ */
 function getMunicipiosPorEstado(estado) {
-    console.log('Buscando municípios para estado:', estado); // Debug
+    console.log('⚠️ FALLBACK: Usando lista hardcoded para estado:', estado);
+    console.warn('A API de municípios falhou. Esta é uma lista parcial apenas para emergência.');
     
     const municipios = {
         'PE': [

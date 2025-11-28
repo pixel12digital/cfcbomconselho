@@ -1,10 +1,34 @@
 <?php
 /**
- * API para retornar municípios brasileiros por UF
- * Fonte centralizada de dados de municípios do Brasil
+ * ============================================================================
+ * API PARA RETORNAR MUNICÍPIOS BRASILEIROS POR UF
+ * ============================================================================
  * 
- * Endpoint: GET admin/api/municipios.php?uf=SC
- * Retorna: JSON com lista de municípios do estado solicitado
+ * FONTE OFICIAL DE DADOS:
+ * Esta API usa EXCLUSIVAMENTE admin/data/municipios_br.php como fonte de dados.
+ * 
+ * O arquivo municipios_br.php é gerado pelos scripts:
+ * - admin/data/gerar_municipios_alternativo.php (via API IBGE)
+ * - admin/data/importar_municipios_ibge.php (via CSV local)
+ * 
+ * Ambos os scripts geram o mesmo formato, garantindo que esta API funcione
+ * independentemente da fonte de geração (API ou CSV).
+ * 
+ * ENDPOINT:
+ * GET admin/api/municipios.php?uf={SIGLA_ESTADO}
+ * 
+ * EXEMPLO:
+ * GET admin/api/municipios.php?uf=PE
+ * 
+ * RESPOSTA:
+ * {
+ *   "success": true,
+ *   "uf": "PE",
+ *   "total": 185,
+ *   "municipios": ["Abreu e Lima", "Afogados da Ingazeira", ...]
+ * }
+ * 
+ * ============================================================================
  */
 
 header('Content-Type: application/json; charset=utf-8');
