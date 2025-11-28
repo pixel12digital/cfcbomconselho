@@ -1,0 +1,123 @@
+═══════════════════════════════════════════════════════════════════════════════
+  RESUMO FINAL: CORREÇÃO DEFINITIVA DO TRAVAMENTO DO MODAL AO SALVAR ALUNO
+═══════════════════════════════════════════════════════════════════════════════
+
+PROBLEMA IDENTIFICADO:
+----------------------
+O modal de edição de aluno travava em "Salvando Dados..." em produção quando:
+1. A API de exames.php retornava erro 500
+2. As chamadas de resumo (provas, financeiro, etc.) bloqueavam o fluxo com await
+3. O finally não era executado porque as Promises ficavam pendentes
+
+ANÁLISE DOS LOGS:
+------------------
+✅ Ações rápidas funcionam perfeitamente (mesmo endpoint)
+✅ Save via API funciona (aluno é salvo com sucesso)
+❌ Travamento ocorre na etapa pós-save (atualização de resumos)
+❌ Logs mostram que resumos são chamados mas não completam
+❌ Erro 404 de foto: /admin/${fotoUrl} (template literal não processado)
+
+SOLUÇÃO IMPLEMENTADA:
+----------------------
+
+1. REFATORAÇÃO DO FLUXO DE SALVAMENTO
+   - Modal fecha IMEDIATAMENTE após save bem-sucedido
+   - Resumos são disparados em BACKGROUND (fire and forget)
+   - Removido await/Promise.all que bloqueavam o fluxo
+   - finally sempre executa para garantir restauração do botão
+
+2. RESUMOS COMO "BEST EFFORT"
+   - Chamadas de resumo não bloqueiam mais o fechamento do modal
+   - Cada resumo tem seu próprio .catch() para tratamento de erro
+   - Erros são logados mas não impedem o fluxo principal
+   - Toast de aviso opcional se algum resumo falhar
+
+3. LOGS MELHORADOS
+   - [SAVE ALUNO] - Logs do fluxo principal de salvamento
+   - [RESUMO PROVAS] - Logs detalhados da atualização de provas
+   - [FOTO] - Logs da construção e carregamento de foto
+   - Facilita debug em produção
+
+4. CORREÇÃO DO PROBLEMA DA FOTO
+   - Validação para detectar ${fotoUrl} literal não processado
+   - Fallback para placeholder se houver erro na construção
+   - Logs de erro específicos para facilitar debug
+
+CÓDIGO IMPLEMENTADO:
+--------------------
+
+saveAlunoDados() - Fluxo principal:
+```javascript
+// Após save bem-sucedido:
+if (data.success) {
+    // 1. Atualizar listagem
+    if (data.aluno) {
+        atualizarAlunoNaListagem(data.aluno);
+    }
+    
+    // 2. FECHAR MODAL IMEDIATAMENTE (não esperar resumos)
+    finalizarSalvamentoAlunoComSucesso(data.aluno, silencioso);
+    
+    // 3. Disparar resumos em BACKGROUND (fire and forget)
+    if (alunoId) {
+        atualizarResumoProvasAluno(alunoId).catch(err => {
+            console.error('[RESUMO PROVAS] Erro:', err);
+        });
+        // ... outros resumos
+    }
+}
+```
+
+finalizarSalvamentoAlunoComSucesso() - Garante finalização:
+```javascript
+function finalizarSalvamentoAlunoComSucesso(alunoAtualizado, silencioso = false) {
+    // Restaurar botão
+    // Fechar modal
+    // Mostrar notificação
+    // SEMPRE executa, independente de erros
+}
+```
+
+atualizarResumoProvasAluno() - Logs melhorados:
+```javascript
+console.log('[RESUMO PROVAS] Atualizando para aluno:', alunoId);
+console.log('[RESUMO PROVAS] URL chamada:', url);
+console.log('[RESUMO PROVAS] Status HTTP:', response.status);
+// Lança erro se falhar (capturado pelo .catch() no background)
+```
+
+RESULTADO ESPERADO:
+-------------------
+✅ Modal fecha IMEDIATAMENTE após save bem-sucedido
+✅ Botão é restaurado mesmo se resumos falharem
+✅ Resumos são atualizados em background (não bloqueiam)
+✅ Erros de resumo são logados mas não travam a UI
+✅ Erro 404 de foto é tratado (placeholder mostrado)
+✅ Logs detalhados facilitam debug em produção
+
+ARQUIVOS MODIFICADOS:
+---------------------
+- admin/pages/alunos.php
+  • Função saveAlunoDados() - Refatorada completamente
+  • Função finalizarSalvamentoAlunoComSucesso() - Garante finalização
+  • Função atualizarResumoProvasAluno() - Logs melhorados
+  • Função carregarFotoExistenteAluno() - Validação de URL
+
+COMMITS:
+--------
+- 9e86c84: fix: Corrigir fluxo de alteração de status do aluno
+- 8c4156f: fix: Corrigir travamento do modal ao salvar aluno (erro 500 em exames.php)
+- [PRÓXIMO]: fix: Refatorar saveAlunoDados para fechar modal imediatamente
+
+TESTES EM PRODUÇÃO:
+-------------------
+[ ] Editar aluno, alterar status para "Inativo", salvar
+[ ] Verificar que modal fecha imediatamente
+[ ] Verificar que botão é restaurado
+[ ] Verificar que listagem é atualizada
+[ ] Verificar logs no console ([SAVE ALUNO], [RESUMO PROVAS])
+[ ] Verificar que erro 404 de foto não aparece mais
+
+STATUS: ✅ IMPLEMENTADO - PRONTO PARA COMMIT E TESTE EM PRODUÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+

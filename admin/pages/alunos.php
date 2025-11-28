@@ -5110,8 +5110,8 @@ function preencherModalVisualizacao(aluno) {
         <div class="row mb-4 pb-3 border-bottom">
             <div class="col-12">
                 <div class="d-flex align-items-center">
-                    ${fotoUrl ? `
-                        <img src="${fotoUrl}" 
+                    ${fotoUrl && fotoUrl.trim() !== '' ? `
+                        <img src="${fotoUrl.replace(/^\/+/, '')}" 
                              alt="Foto do aluno" class="rounded-circle me-3" 
                              style="width: 80px; height: 80px; object-fit: cover; border: 3px solid #dee2e6;">
                     ` : `
@@ -7479,9 +7479,15 @@ async function saveAlunoDados(silencioso = false) {
                 // GARANTIR que status está presente e correto
                 data.status = status;
                 
-                // LOG TEMPORÁRIO: Payload enviado para API
-                console.log('[DEBUG STATUS MODAL] Modo edição, payload enviado:', data);
-                console.log('[DEBUG STATUS MODAL] Status no payload (garantido):', data.status);
+                // Log do payload enviado
+                console.log('[SAVE ALUNO] Enviando payload para API (EDIÇÃO):', {
+                    method: 'PUT',
+                    url: url,
+                    alunoId: alunoId,
+                    status: data.status,
+                    hasFoto: false
+                });
+                console.log('[SAVE ALUNO] Payload completo:', data);
                 
                 response = await fetch(url, {
                     method: 'PUT',
@@ -7512,7 +7518,12 @@ async function saveAlunoDados(silencioso = false) {
                     }
                 }
                 
-                console.log('[DEBUG STATUS MODAL] Payload enviado para API:', alunoData);
+                console.log('[SAVE ALUNO] Enviando payload para API (CRIAÇÃO):', {
+                    method: 'POST',
+                    url: apiBaseUrl,
+                    hasFoto: false
+                });
+                console.log('[SAVE ALUNO] Payload completo:', alunoData);
                 
                 response = await fetch(apiBaseUrl, {
                     method: 'POST',
@@ -7535,10 +7546,17 @@ async function saveAlunoDados(silencioso = false) {
             throw new Error('Resposta não é JSON válido: ' + text.substring(0, 100));
         }
         
-        console.log('[DEBUG STATUS MODAL] Resposta da API ao salvar aluno:', data);
+        console.log('[SAVE ALUNO] Resposta recebida da API:', {
+            success: data.success,
+            status: response.status,
+            alunoId: data.aluno_id || data.id || (data.aluno ? data.aluno.id : null),
+            hasAluno: !!data.aluno
+        });
         
         if (data.success) {
             const alunoId = data.aluno_id || data.id || (data.aluno ? data.aluno.id : null);
+            
+            console.log('[SAVE ALUNO] Salvamento bem-sucedido, alunoId:', alunoId);
             
             // Atualizar ID do aluno no formulário
             if (alunoId && alunoIdHidden) {
@@ -7547,45 +7565,50 @@ async function saveAlunoDados(silencioso = false) {
             
             // Se a API retornou o aluno atualizado, atualizar a listagem
             if (data.aluno) {
+                console.log('[SAVE ALUNO] Atualizando listagem com aluno:', data.aluno.id, 'status:', data.aluno.status);
                 atualizarAlunoNaListagem(data.aluno);
             }
             
-            // Salvar texto original do botão para usar na finalização
-            if (btnSalvar && !btnSalvar.getAttribute('data-texto-original')) {
-                btnSalvar.setAttribute('data-texto-original', textoOriginal);
-            }
+            // FECHAR MODAL E RESTAURAR BOTÃO IMEDIATAMENTE (não esperar resumos)
+            console.log('[SAVE ALUNO] Finalizando fluxo principal (fechando modal, restaurando botão)');
+            finalizarSalvamentoAlunoComSucesso(data.aluno, silencioso);
             
-            // Atualizar resumos de forma segura (best effort)
-            // Se algum resumo falhar, não trava o fluxo
-            try {
-                await Promise.all([
-                    tentarAtualizarResumoAluno('financeiro', async () => {
-                        if (typeof atualizarResumoFinanceiroAluno === 'function') {
-                            await atualizarResumoFinanceiroAluno(alunoId, null);
-                        }
-                    }),
-                    tentarAtualizarResumoAluno('provas', async () => {
-                        if (typeof atualizarResumoProvasAluno === 'function') {
-                            await atualizarResumoProvasAluno(alunoId);
-                        }
-                    }),
-                    tentarAtualizarResumoAluno('teórico', async () => {
-                        if (typeof atualizarResumoTeoricoAluno === 'function') {
-                            await atualizarResumoTeoricoAluno(alunoId);
-                        }
-                    }),
-                    tentarAtualizarResumoAluno('prático', async () => {
-                        if (typeof atualizarResumoPraticoAluno === 'function') {
-                            await atualizarResumoPraticoAluno(alunoId);
-                        }
-                    })
-                ]);
-            } catch (error) {
-                // Erro já foi tratado em tentarAtualizarResumoAluno
-                console.warn('[saveAlunoDados] Algum resumo falhou, mas continuando o fluxo:', error);
-            } finally {
-                // GARANTIR que o fluxo sempre finalize, mesmo se algum resumo falhar
-                finalizarSalvamentoAlunoComSucesso(data.aluno, silencioso);
+            // Disparar resumos em BACKGROUND (fire and forget - não bloqueiam o fluxo)
+            if (alunoId) {
+                console.log('[SAVE ALUNO] Disparando atualizações de resumo em background (não bloqueante)');
+                
+                // Resumos são "best effort" - executam em background sem travar a UI
+                try {
+                    // Financeiro
+                    if (typeof atualizarResumoFinanceiroAluno === 'function') {
+                        atualizarResumoFinanceiroAluno(alunoId, null).catch(err => {
+                            console.error('[RESUMO FINANCEIRO] Erro ao atualizar resumo após salvar aluno:', err);
+                        });
+                    }
+                    
+                    // Provas
+                    if (typeof atualizarResumoProvasAluno === 'function') {
+                        atualizarResumoProvasAluno(alunoId).catch(err => {
+                            console.error('[RESUMO PROVAS] Erro ao atualizar resumo após salvar aluno:', err);
+                        });
+                    }
+                    
+                    // Teórico
+                    if (typeof atualizarResumoTeoricoAluno === 'function') {
+                        atualizarResumoTeoricoAluno(alunoId).catch(err => {
+                            console.error('[RESUMO TEÓRICO] Erro ao atualizar resumo após salvar aluno:', err);
+                        });
+                    }
+                    
+                    // Prático
+                    if (typeof atualizarResumoPraticoAluno === 'function') {
+                        atualizarResumoPraticoAluno(alunoId).catch(err => {
+                            console.error('[RESUMO PRÁTICO] Erro ao atualizar resumo após salvar aluno:', err);
+                        });
+                    }
+                } catch (err) {
+                    console.warn('[SAVE ALUNO] Exceção inesperada ao disparar atualizações de resumo em background:', err);
+                }
             }
             
             return { success: true, aluno_id: alunoId, aluno: data.aluno };
@@ -7593,11 +7616,32 @@ async function saveAlunoDados(silencioso = false) {
             throw new Error(data.error || 'Erro desconhecido');
         }
     } catch (error) {
-        console.error('Erro ao salvar dados do aluno:', error);
-        alert('Erro ao salvar dados do aluno: ' + error.message);
-        btnSalvar.innerHTML = textoOriginal;
-        btnSalvar.disabled = false;
+        console.error('[SAVE ALUNO] Erro ao salvar dados do aluno:', error);
+        
+        // Sempre restaurar botão, mesmo em caso de erro
+        if (btnSalvar) {
+            const textoOriginalRestore = btnSalvar.getAttribute('data-texto-original') || textoOriginal;
+            btnSalvar.innerHTML = textoOriginalRestore;
+            btnSalvar.disabled = false;
+        }
+        
+        // Mostrar erro amigável
+        if (typeof mostrarAlerta === 'function') {
+            mostrarAlerta('Erro ao salvar dados do aluno: ' + error.message, 'error');
+        } else {
+            alert('Erro ao salvar dados do aluno: ' + error.message);
+        }
+        
         return { success: false, error: error.message };
+    } finally {
+        // GARANTIR que o botão sempre seja restaurado, mesmo se houver exceção não capturada
+        console.log('[SAVE ALUNO] Finalizando fluxo (finally)');
+        const btnSalvarFinally = document.getElementById('btnSalvarAluno');
+        if (btnSalvarFinally && btnSalvarFinally.disabled) {
+            const textoOriginalFinally = btnSalvarFinally.getAttribute('data-texto-original') || textoOriginal;
+            btnSalvarFinally.innerHTML = textoOriginalFinally;
+            btnSalvarFinally.disabled = false;
+        }
     }
 }
 
@@ -11283,35 +11327,50 @@ function carregarFotoExistenteAluno(caminhoFoto) {
             }
         }
         
-        console.log('📷 URL da foto do aluno construída:', urlFoto);
-        console.log('📷 Base URL usada:', window.location.origin + (window.location.pathname.split('/admin/')[0] || ''));
+        // Validar que urlFoto foi construída corretamente (não pode ter ${fotoUrl} literal)
+        if (urlFoto && (urlFoto.includes('${fotoUrl}') || urlFoto.includes('${') || urlFoto.trim() === '')) {
+            console.error('[FOTO] Erro: URL da foto inválida ou contém template literal não processado:', urlFoto);
+            // Usar placeholder se houver erro na construção
+            urlFoto = null;
+        }
         
-        // Limpar handlers anteriores para evitar múltiplos eventos
-        preview.onload = null;
-        preview.onerror = null;
-        
-        // Definir handlers antes de definir src
-        preview.onload = function() {
-            console.log('✅ Foto existente do aluno carregada com sucesso');
-            container.style.display = 'block';
-            placeholder.style.display = 'none';
-        };
-        
-        preview.onerror = function() {
-            console.warn('⚠️ Erro ao carregar foto do aluno (404 ou outro erro):', urlFoto);
-            // Se der erro, mostrar placeholder e esconder preview
-            // Não tentar carregar novamente para evitar loop de 404
+        if (urlFoto) {
+            console.log('[FOTO] URL da foto do aluno construída:', urlFoto);
+            console.log('[FOTO] Base URL usada:', window.location.origin + (window.location.pathname.split('/admin/')[0] || ''));
+            
+            // Limpar handlers anteriores para evitar múltiplos eventos
+            preview.onload = null;
+            preview.onerror = null;
+            
+            // Definir handlers antes de definir src
+            preview.onload = function() {
+                console.log('[FOTO] Foto existente do aluno carregada com sucesso');
+                container.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            
+            preview.onerror = function() {
+                console.warn('[FOTO] Erro ao carregar foto do aluno (404 ou outro erro):', urlFoto);
+                // Se der erro, mostrar placeholder e esconder preview
+                // Não tentar carregar novamente para evitar loop de 404
+                container.style.display = 'none';
+                placeholder.style.display = 'block';
+                // Limpar src para evitar tentativas repetidas
+                preview.src = '';
+                preview.onerror = null; // Remover handler para evitar loops
+            };
+            
+            // Definir src por último para disparar o carregamento
+            preview.src = urlFoto;
+        } else {
+            // Sem foto ou erro na construção - mostrar placeholder
+            console.log('[FOTO] Sem foto ou erro na construção, mostrando placeholder');
             container.style.display = 'none';
             placeholder.style.display = 'block';
-            // Limpar src para evitar tentativas repetidas
-            preview.src = '';
-            preview.onerror = null; // Remover handler para evitar loops
-        };
-        
-        // Definir src por último para disparar o carregamento
-        preview.src = urlFoto;
+        }
     } else {
-        // Se não há foto, mostrar placeholder
+        // Caminho vazio ou inválido
+        console.log('[FOTO] Caminho da foto vazio ou inválido:', caminhoFoto);
         container.style.display = 'none';
         placeholder.style.display = 'block';
         
