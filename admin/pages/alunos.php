@@ -8286,9 +8286,12 @@ async function carregarMatriculaPrincipal(alunoId, dadosFallback = null) {
             contextoAlunoAtual.matriculaId = null;
             limparAbaMatricula();
             atualizarResumoProcessoHistorico(null);
-            atualizarResumoTeoricoAluno(alunoId);
-            atualizarResumoPraticoAluno(alunoId);
-            atualizarResumoProvasAluno(alunoId);
+            // Atualizar resumos em background (não bloquear)
+            setTimeout(() => {
+                atualizarResumoTeoricoAluno(alunoId).catch(() => {});
+                atualizarResumoPraticoAluno(alunoId).catch(() => {});
+                atualizarResumoProvasAluno(alunoId).catch(() => {});
+            }, 100);
             
             // Registrar eventos dos atalhos mesmo com erro
             setTimeout(() => {
@@ -8304,9 +8307,12 @@ async function carregarMatriculaPrincipal(alunoId, dadosFallback = null) {
             contextoAlunoAtual.matriculaId = null;
             limparAbaMatricula();
             atualizarResumoProcessoHistorico(null);
-            atualizarResumoTeoricoAluno(alunoId);
-            atualizarResumoPraticoAluno(alunoId);
-            atualizarResumoProvasAluno(alunoId);
+            // Atualizar resumos em background (não bloquear)
+            setTimeout(() => {
+                atualizarResumoTeoricoAluno(alunoId).catch(() => {});
+                atualizarResumoPraticoAluno(alunoId).catch(() => {});
+                atualizarResumoProvasAluno(alunoId).catch(() => {});
+            }, 100);
             
             // Registrar eventos dos atalhos mesmo sem matrícula
             setTimeout(() => {
@@ -8383,11 +8389,14 @@ async function carregarMatriculaPrincipal(alunoId, dadosFallback = null) {
         // Não bloquear o fluxo - apenas logar o erro
         limparAbaMatricula();
         atualizarResumoProcessoHistorico(null);
-        atualizarResumoFinanceiroAluno(alunoId, null);
-        atualizarResumoFinanceiroMatricula(alunoId);
-        atualizarResumoTeoricoAluno(alunoId);
-        atualizarResumoPraticoAluno(alunoId);
-        atualizarResumoProvasAluno(alunoId);
+        // Atualizar resumos em background (não bloquear)
+        setTimeout(() => {
+            atualizarResumoFinanceiroAluno(alunoId, null).catch(() => {});
+            atualizarResumoFinanceiroMatricula(alunoId).catch(() => {});
+            atualizarResumoTeoricoAluno(alunoId).catch(() => {});
+            atualizarResumoPraticoAluno(alunoId).catch(() => {});
+            atualizarResumoProvasAluno(alunoId).catch(() => {});
+        }, 100);
     }
 }
 
@@ -8618,6 +8627,33 @@ function limparAbaMatricula() {
 }
 
 /**
+ * Helper para fazer fetch com timeout
+ * @param {string} url - URL para fazer fetch
+ * @param {Object} options - Opções do fetch (method, headers, body, etc)
+ * @param {number} timeout - Timeout em milissegundos (padrão: 10000 = 10s)
+ * @returns {Promise<Response>}
+ */
+async function fetchWithTimeout(url, options = {}, timeout = 10000) {
+    const controller = new AbortController();
+    const id = setTimeout(() => controller.abort(), timeout);
+    
+    try {
+        const response = await fetch(url, {
+            ...options,
+            signal: controller.signal
+        });
+        clearTimeout(id);
+        return response;
+    } catch (error) {
+        clearTimeout(id);
+        if (error.name === 'AbortError') {
+            throw new Error(`Timeout: A requisição demorou mais de ${timeout}ms`);
+        }
+        throw error;
+    }
+}
+
+/**
  * Atualiza o card "Situação Financeira" na aba Histórico e no modal de visualização
  * Atualiza TODOS os elementos com data-field="financeiro_resumo"
  * Usa a nova API financeiro-resumo-aluno.php que retorna resumo completo
@@ -8628,9 +8664,9 @@ async function atualizarResumoFinanceiroAluno(alunoId, matricula = null) {
     try {
         logModalAluno('💰 Carregando resumo financeiro para aluno:', alunoId);
         
-        // Usar nova API de resumo financeiro
+        // Usar nova API de resumo financeiro com timeout de 8 segundos
         const url = `api/financeiro-resumo-aluno.php?aluno_id=${alunoId}`;
-        const response = await fetch(url);
+        const response = await fetchWithTimeout(url, {}, 8000);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -8681,35 +8717,42 @@ async function atualizarResumoFinanceiroAluno(alunoId, matricula = null) {
         atualizarCardsFinanceiroResumo(resumo, alunoId);
         
     } catch (error) {
-        console.error('❌ Erro ao carregar resumo financeiro:', error);
+        // Log apenas se não for timeout (timeouts são esperados e não devem poluir o console)
+        if (!error.message || !error.message.includes('Timeout')) {
+            console.warn('⚠️ Erro ao carregar resumo financeiro (não bloqueante):', error.message || error);
+        }
         
-        // Log detalhado do erro para debug
+        // Log detalhado do erro para debug apenas se for erro de servidor
         if (error.message && error.message.includes('HTML')) {
             console.error('⚠️ A API retornou HTML em vez de JSON. Isso geralmente indica um erro PHP no servidor.');
         }
         
-        // Em caso de erro, mostrar mensagem de erro nos cards
-        const cardElements = document.querySelectorAll('[data-field="financeiro_resumo"]');
-        cardElements.forEach((cardEl) => {
-            const isCardHistorico = cardEl.id === 'card-situacao-financeira-historico';
-            if (isCardHistorico) {
-                cardEl.innerHTML = `
-                    <div class="text-center">
-                        <p class="text-muted small mb-0" style="font-size: 0.7rem;">
-                            Não foi possível carregar a situação financeira.
-                        </p>
-                    </div>
-                `;
-            } else {
-                cardEl.innerHTML = `
-                    <div class="text-center">
-                        <p class="text-muted small mb-0" style="font-size: 0.75rem;">
-                            Não foi possível carregar a situação financeira.
-                        </p>
-                    </div>
-                `;
-            }
-        });
+        // Em caso de erro, mostrar mensagem de erro nos cards (silenciosamente)
+        try {
+            const cardElements = document.querySelectorAll('[data-field="financeiro_resumo"]');
+            cardElements.forEach((cardEl) => {
+                const isCardHistorico = cardEl.id === 'card-situacao-financeira-historico';
+                if (isCardHistorico) {
+                    cardEl.innerHTML = `
+                        <div class="text-center">
+                            <p class="text-muted small mb-0" style="font-size: 0.7rem;">
+                                Não foi possível carregar a situação financeira.
+                            </p>
+                        </div>
+                    `;
+                } else {
+                    cardEl.innerHTML = `
+                        <div class="text-center">
+                            <p class="text-muted small mb-0" style="font-size: 0.75rem;">
+                                Não foi possível carregar a situação financeira.
+                            </p>
+                        </div>
+                    `;
+                }
+            });
+        } catch (domError) {
+            // Ignorar erros de DOM silenciosamente
+        }
     }
 }
 
@@ -8730,9 +8773,9 @@ async function atualizarResumoFinanceiroMatricula(alunoId) {
             // Mostrar loading
             cardContainer.innerHTML = '<div class="text-center text-muted small"><i class="fas fa-spinner fa-spin"></i> Carregando resumo financeiro...</div>';
             
-            // Buscar dados detalhados do resumo financeiro da matrícula
+            // Buscar dados detalhados do resumo financeiro da matrícula com timeout de 8 segundos
             const url = `api/financeiro-resumo-matricula.php?aluno_id=${alunoId}`;
-            const response = await fetch(url);
+            const response = await fetchWithTimeout(url, {}, 8000);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -9193,11 +9236,20 @@ async function atualizarResumoTeoricoAluno(alunoId) {
             return;
         }
         
-        const response = await fetch(`api/progresso_teorico.php?aluno_id=${encodeURIComponent(alunoId)}`);
+        const response = await fetchWithTimeout(`api/progresso_teorico.php?aluno_id=${encodeURIComponent(alunoId)}`, {}, 8000);
+        
+        if (!response.ok) {
+            // Não bloquear se houver erro - apenas atualizar UI
+            atualizarCardsTeoricoResumo('Não iniciado');
+            atualizarVinculacaoTeoricaUI(null, 'Não iniciado');
+            contextoAlunoAtual.turmaTeoricaId = null;
+            return;
+        }
+        
         const data = await response.json();
         
         if (!data.success) {
-            console.error('❌ Erro na API de progresso_teorico:', data.error);
+            // Não logar erro se for esperado (não bloquear)
             atualizarCardsTeoricoResumo('Não iniciado');
             atualizarVinculacaoTeoricaUI(null, 'Não iniciado');
             contextoAlunoAtual.turmaTeoricaId = null;
@@ -9330,11 +9382,19 @@ async function atualizarResumoPraticoAluno(alunoId) {
             return;
         }
         
-        const response = await fetch(`api/progresso_pratico.php?aluno_id=${encodeURIComponent(alunoId)}`);
+        const response = await fetchWithTimeout(`api/progresso_pratico.php?aluno_id=${encodeURIComponent(alunoId)}`, {}, 8000);
+        
+        if (!response.ok) {
+            // Não bloquear se houver erro - apenas atualizar UI
+            atualizarCardsPraticoResumo('Não iniciado');
+            atualizarVinculacaoPraticaUI(null, 'Não iniciado');
+            return;
+        }
+        
         const data = await response.json();
         
         if (!data.success) {
-            console.error('❌ Erro na API de progresso_pratico:', data.error);
+            // Não logar erro se for esperado (não bloquear)
             atualizarCardsPraticoResumo('Não iniciado');
             atualizarVinculacaoPraticaUI(null, 'Não iniciado');
             return;
@@ -9422,17 +9482,20 @@ async function atualizarResumoProvasAluno(alunoId) {
         
         logModalAluno('📝 Carregando resumo de provas do aluno:', alunoId);
         
-        // Buscar exames do aluno (todos os tipos)
-        const response = await fetch(url);
+        // Buscar exames do aluno (todos os tipos) com timeout de 8 segundos
+        const response = await fetchWithTimeout(url, {}, 8000);
         
         console.log('[RESUMO PROVAS] Status HTTP:', response.status);
         
         if (!response.ok) {
-            const text = await response.text().catch(() => '');
-            console.error('[RESUMO PROVAS] Erro HTTP ao buscar exames:', response.status, text.substring(0, 200));
+            // Não logar erro se for timeout ou erro esperado (não bloquear)
+            if (response.status !== 500 && response.status !== 503) {
+                const text = await response.text().catch(() => '');
+                console.warn('[RESUMO PROVAS] Erro HTTP ao buscar exames (não bloqueante):', response.status);
+            }
             atualizarCardsProvasResumo('Não iniciado');
             atualizarSecaoProvasMatricula(null, null);
-            throw new Error(`Erro ao buscar exames: ${response.status}`);
+            return; // Retornar silenciosamente em vez de lançar erro
         }
         
         const data = await response.json();
@@ -10601,12 +10664,29 @@ async function carregarHistoricoAluno(alunoId, options = { modoVisualizacao: fal
         
         logModalAluno('📜 Carregando histórico do aluno:', alunoId);
         
-        const response = await fetch(`api/historico_aluno.php?aluno_id=${encodeURIComponent(alunoId)}`);
+        const response = await fetchWithTimeout(`api/historico_aluno.php?aluno_id=${encodeURIComponent(alunoId)}`, {}, 8000);
+        
+        if (!response.ok) {
+            // Não bloquear se houver erro - apenas mostrar placeholder
+            container.innerHTML = `
+                <ul class="aluno-timeline-list">
+                    <li class="aluno-timeline-empty">
+                        <div class="aluno-timeline-empty-icon">
+                            <i class="fas fa-history fa-2x text-muted"></i>
+                        </div>
+                        <p class="text-muted mb-0">
+                            Os eventos mais recentes do aluno aparecerão aqui.
+                        </p>
+                    </li>
+                </ul>
+            `;
+            return;
+        }
+        
         const data = await response.json();
         
         if (!data.success) {
-            console.error('❌ Erro na API de historico_aluno:', data.error);
-            // Mostrar placeholder vazio
+            // Não logar erro se for esperado (não bloquear)
             container.innerHTML = `
                 <ul class="aluno-timeline-list">
                     <li class="aluno-timeline-empty">
