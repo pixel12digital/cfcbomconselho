@@ -50,8 +50,25 @@ try {
     }
     
 } catch (Exception $e) {
+    error_log("Erro em historico_aluno.php: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
     http_response_code(500);
-    echo json_encode(['success' => false, 'error' => 'Erro interno: ' . $e->getMessage()]);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false, 
+        'error' => 'Erro interno ao buscar histórico',
+        'message' => $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+} catch (Error $e) {
+    error_log("Erro fatal em historico_aluno.php: " . $e->getMessage());
+    error_log("Stack trace: " . $e->getTraceAsString());
+    http_response_code(500);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'success' => false, 
+        'error' => 'Erro fatal ao buscar histórico',
+        'message' => $e->getMessage()
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
 
 /**
@@ -98,12 +115,13 @@ function handleGet($db) {
             ];
         }
         
-        // 2. Eventos: Matrículas
+        // 2. Eventos: Matrículas (limitar para evitar timeout)
         $matriculas = $db->fetchAll("
             SELECT id, aluno_id, categoria_cnh, tipo_servico, status, data_inicio, data_fim, criado_em
             FROM matriculas
             WHERE aluno_id = ?
             ORDER BY data_inicio DESC, id DESC
+            LIMIT 50
         ", [$alunoId]);
         
         foreach ($matriculas as $matricula) {
@@ -148,13 +166,14 @@ function handleGet($db) {
             }
         }
         
-        // 3. Eventos: Exames Médico, Psicotécnico e Provas (Teórica/Prática)
+        // 3. Eventos: Exames Médico, Psicotécnico e Provas (Teórica/Prática) (limitar para evitar timeout)
         $exames = $db->fetchAll("
             SELECT id, aluno_id, tipo, status, resultado, data_agendada, data_resultado, protocolo, clinica_nome
             FROM exames
             WHERE aluno_id = ?
             AND tipo IN ('medico', 'psicotecnico', 'teorico', 'pratico')
             ORDER BY data_agendada DESC, data_resultado DESC
+            LIMIT 100
         ", [$alunoId]);
         
         foreach ($exames as $exame) {
@@ -309,13 +328,14 @@ function handleGet($db) {
         // Vamos tentar ambas para compatibilidade
         $faturas = [];
         
-        // Tentar tabela 'faturas' primeiro (usada em admin/api/faturas.php)
+        // Tentar tabela 'faturas' primeiro (usada em admin/api/faturas.php) (limitar para evitar timeout)
         try {
             $faturas = $db->fetchAll("
                 SELECT id, aluno_id, matricula_id, descricao, valor, vencimento, status, criado_em
                 FROM faturas
                 WHERE aluno_id = ?
                 ORDER BY vencimento DESC, criado_em DESC
+                LIMIT 100
             ", [$alunoId]);
         } catch (Exception $e) {
             // Se não existir, tentar 'financeiro_faturas'
@@ -326,6 +346,7 @@ function handleGet($db) {
                     FROM financeiro_faturas
                     WHERE aluno_id = ?
                     ORDER BY data_vencimento DESC, criado_em DESC
+                    LIMIT 100
                 ", [$alunoId]);
             } catch (Exception $e2) {
                 // Se nenhuma tabela existir, continuar sem faturas
@@ -613,11 +634,25 @@ function handleGet($db) {
         ]);
         
     } catch (Exception $e) {
+        error_log("Erro em handleGet historico_aluno.php (aluno_id={$alunoId}): " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
         http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
         echo json_encode([
             'success' => false,
-            'error' => 'Erro ao buscar histórico do aluno: ' . $e->getMessage()
-        ]);
+            'error' => 'Erro ao buscar histórico do aluno',
+            'message' => $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    } catch (Error $e) {
+        error_log("Erro fatal em handleGet historico_aluno.php (aluno_id={$alunoId}): " . $e->getMessage());
+        error_log("Stack trace: " . $e->getTraceAsString());
+        http_response_code(500);
+        header('Content-Type: application/json; charset=utf-8');
+        echo json_encode([
+            'success' => false,
+            'error' => 'Erro fatal ao buscar histórico do aluno',
+            'message' => $e->getMessage()
+        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     }
 }
 

@@ -69,6 +69,7 @@ function handleGet($db) {
     
     try {
         // Buscar a matrícula teórica mais recente do aluno com dados da turma
+        // Usar índice em aluno_id para melhor performance
         $matricula = $db->fetch("
             SELECT 
                 tm.status,
@@ -78,7 +79,7 @@ function handleGet($db) {
                 tm.turma_id,
                 t.nome AS turma_nome
             FROM turma_matriculas tm
-            JOIN turmas_teoricas t ON tm.turma_id = t.id
+            INNER JOIN turmas_teoricas t ON tm.turma_id = t.id
             WHERE tm.aluno_id = ?
             ORDER BY tm.data_matricula DESC, tm.id DESC
             LIMIT 1

@@ -192,6 +192,7 @@ function handleGet($db, $canWrite) {
     $alunoId = $_GET['aluno_id'] ?? null;
     $tipo = $_GET['tipo'] ?? null;
     $status = $_GET['status'] ?? null;
+    $resumo = isset($_GET['resumo']) && $_GET['resumo'] == '1';
     
     if (!$alunoId) {
         http_response_code(400);
@@ -205,7 +206,54 @@ function handleGet($db, $canWrite) {
         returnJsonResponse(['error' => 'Aluno não encontrado', 'code' => 'ALUNO_NOT_FOUND']);
     }
     
-    // Construir query
+    // Se for resumo, retornar apenas dados resumidos (mais rápido)
+    if ($resumo) {
+        try {
+            // Buscar apenas exames relevantes para resumo (provas teóricas e práticas)
+            $exames = $db->fetchAll("
+                SELECT 
+                    id,
+                    tipo,
+                    status,
+                    resultado,
+                    data_agendada,
+                    data_resultado,
+                    protocolo,
+                    clinica_nome
+                FROM exames
+                WHERE aluno_id = ?
+                AND tipo IN ('teorico', 'pratico')
+                ORDER BY 
+                    CASE tipo 
+                        WHEN 'teorico' THEN 1 
+                        WHEN 'pratico' THEN 2 
+                        ELSE 3 
+                    END,
+                    data_agendada DESC,
+                    data_resultado DESC
+                LIMIT 10
+            ", [$alunoId]);
+            
+            returnJsonResponse([
+                'success' => true,
+                'aluno' => $aluno,
+                'exames' => $exames,
+                'can_write' => $canWrite
+            ]);
+            return;
+        } catch (Exception $e) {
+            error_log("[EXAMES API] Erro ao buscar resumo: " . $e->getMessage());
+            http_response_code(500);
+            returnJsonResponse([
+                'success' => false,
+                'error' => 'Erro ao buscar resumo de exames',
+                'code' => 'INTERNAL_ERROR'
+            ]);
+            return;
+        }
+    }
+    
+    // Construir query completa
     $sql = "SELECT * FROM exames WHERE aluno_id = ?";
     $params = [$alunoId];
     
@@ -221,17 +269,28 @@ function handleGet($db, $canWrite) {
     
     $sql .= " ORDER BY tipo, data_agendada DESC";
     
-    $exames = $db->fetchAll($sql, $params);
-    
-    // Adicionar informações do aluno
-    $response = [
-        'aluno' => $aluno,
-        'exames' => $exames,
-        'can_write' => $canWrite,
-        'exames_ok' => calcularExamesOK($exames)
-    ];
-    
-    returnJsonResponse($response);
+    try {
+        $exames = $db->fetchAll($sql, $params);
+        
+        // Adicionar informações do aluno
+        $response = [
+            'success' => true,
+            'aluno' => $aluno,
+            'exames' => $exames,
+            'can_write' => $canWrite,
+            'exames_ok' => calcularExamesOK($exames)
+        ];
+        
+        returnJsonResponse($response);
+    } catch (Exception $e) {
+        error_log("[EXAMES API] Erro ao buscar exames: " . $e->getMessage());
+        http_response_code(500);
+        returnJsonResponse([
+            'success' => false,
+            'error' => 'Erro ao buscar exames',
+            'code' => 'INTERNAL_ERROR'
+        ]);
+    }
 }
 
 /**

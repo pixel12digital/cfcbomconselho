@@ -57,17 +57,17 @@ if (file_exists($financeiroServicePath)) {
     echo json_encode([
         'success' => false,
         'error' => 'Serviço financeiro não disponível (FinanceiroService.php não encontrado)'
-    ]);
+    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
 }
 
 try {
     $db = Database::getInstance();
     
-    // Verificar se sistema financeiro está habilitado
-    if (!defined('FINANCEIRO_ENABLED') || !FINANCEIRO_ENABLED) {
+    // Verificar se sistema financeiro está habilitado (opcional - não bloquear se não estiver definido)
+    if (defined('FINANCEIRO_ENABLED') && !FINANCEIRO_ENABLED) {
         http_response_code(503);
-        echo json_encode(['success' => false, 'error' => 'Sistema financeiro desabilitado']);
+        echo json_encode(['success' => false, 'error' => 'Sistema financeiro desabilitado'], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
         exit;
     }
     

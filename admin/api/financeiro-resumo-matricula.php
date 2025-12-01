@@ -58,7 +58,7 @@ try {
     
     $db = Database::getInstance();
     
-    // Buscar todas as faturas não canceladas do aluno
+    // Buscar todas as faturas não canceladas do aluno (limitado para performance)
     $faturas = $db->fetchAll("
         SELECT 
             id,
@@ -72,6 +72,7 @@ try {
         WHERE aluno_id = ?
         AND status != 'cancelada'
         ORDER BY data_vencimento ASC
+        LIMIT 500
     ", [$alunoId]);
     
     // Se não houver faturas, retornar estado vazio

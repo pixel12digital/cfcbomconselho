@@ -46,7 +46,7 @@ class FinanceiroService {
         $hoje = date('Y-m-d');
         
         try {
-            // Buscar todas as faturas não canceladas do aluno
+            // Buscar todas as faturas não canceladas do aluno (limitado para performance)
             $faturas = $db->fetchAll("
                 SELECT 
                     id,
@@ -57,6 +57,7 @@ class FinanceiroService {
                 WHERE aluno_id = ?
                 AND status != 'cancelada'
                 ORDER BY data_vencimento ASC
+                LIMIT 500
             ", [$alunoId]);
             
             // Calcular total contratado (soma de valor_total de todas as faturas não canceladas)
@@ -92,7 +93,9 @@ class FinanceiroService {
             $ultimoPagamento = null;
             
             if (!empty($faturaIds)) {
-                $placeholders = implode(',', array_fill(0, count($faturaIds), '?'));
+                // Limitar número de faturas para evitar queries muito grandes
+                $faturaIdsLimitados = array_slice($faturaIds, 0, 500);
+                $placeholders = implode(',', array_fill(0, count($faturaIdsLimitados), '?'));
                 $pagamentos = $db->fetchAll("
                     SELECT 
                         valor_pago,
@@ -101,7 +104,8 @@ class FinanceiroService {
                     FROM pagamentos
                     WHERE fatura_id IN ($placeholders)
                     ORDER BY data_pagamento DESC, criado_em DESC
-                ", $faturaIds);
+                    LIMIT 1000
+                ", $faturaIdsLimitados);
                 
                 foreach ($pagamentos as $pagamento) {
                     $totalPago += (float)($pagamento['valor_pago'] ?? 0);

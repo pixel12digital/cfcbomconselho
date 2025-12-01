@@ -4058,23 +4058,36 @@ function inicializarModalAluno() {
 function abrirModalEdicao() {
     logModalAluno('🚀 Abrindo modal para edição...');
     const modal = document.getElementById('modalAluno');
-    if (modal) {
-        if (modal.parentNode !== document.body) {
-            document.body.appendChild(modal);
-            logModalAluno('📦 modalAluno realocado diretamente no body.');
-        }
+    if (!modal) {
+        console.error('❌ Modal não encontrado!');
+        return;
+    }
+    
+    // Garantir que o modal está no body
+    if (modal.parentNode !== document.body) {
+        document.body.appendChild(modal);
+        logModalAluno('📦 modalAluno realocado diretamente no body.');
+    }
 
-        modal.classList.add('custom-modal');
-        // FORÇAR abertura do modal para edição
-        modal.setAttribute('data-opened', 'true'); // Marcar como aberto intencionalmente
-        modal.style.removeProperty('display');
-        modal.style.removeProperty('visibility');
-        modal.style.setProperty('display', 'flex', 'important');
-        modal.style.setProperty('align-items', 'center', 'important');
-        modal.style.setProperty('justify-content', 'center', 'important');
-        modal.setAttribute('data-opened', 'true'); // Marcar como aberto intencionalmente
-        document.body.style.overflow = 'hidden'; // Prevenir scroll do body
-        reforcarEstruturaModalAluno();
+    // Limpar qualquer estado anterior que possa interferir
+    modal.classList.add('custom-modal');
+    
+    // FORÇAR abertura do modal para edição - garantir que está visível
+    modal.style.removeProperty('display');
+    modal.style.removeProperty('visibility');
+    modal.style.setProperty('display', 'flex', 'important');
+    modal.style.setProperty('visibility', 'visible', 'important');
+    modal.style.setProperty('align-items', 'center', 'important');
+    modal.style.setProperty('justify-content', 'center', 'important');
+    
+    // Marcar como aberto
+    modal.setAttribute('data-opened', 'true');
+    
+    // Prevenir scroll do body
+    document.body.style.overflow = 'hidden';
+    
+    // Reforçar estrutura do modal
+    reforcarEstruturaModalAluno();
 
         const dialog = modal.querySelector('.custom-modal-dialog');
         if (dialog) {
@@ -4111,6 +4124,31 @@ function abrirModalEdicao() {
 }
 window.editarAluno = function(id) {
     logModalAluno('🚀 editarAluno chamada com ID:', id);
+    
+    // Garantir que o modal anterior está completamente fechado antes de abrir novamente
+    const modalAnterior = document.getElementById('modalAluno');
+    if (modalAnterior) {
+        const modalDisplay = window.getComputedStyle(modalAnterior).display;
+        const dataOpened = modalAnterior.getAttribute('data-opened');
+        
+        // Se o modal ainda está aberto ou em estado inconsistente, forçar fechamento
+        if (modalDisplay !== 'none' || dataOpened === 'true') {
+            logModalAluno('⚠️ Modal ainda aberto ou em estado inconsistente, forçando fechamento...');
+            fecharModalAluno();
+            
+            // Aguardar um pouco para garantir que o fechamento foi processado
+            setTimeout(() => {
+                executarEdicaoAluno(id);
+            }, 100);
+            return;
+        }
+    }
+    
+    executarEdicaoAluno(id);
+}
+
+function executarEdicaoAluno(id) {
+    logModalAluno('🚀 executarEdicaoAluno chamada com ID:', id);
     
     // Preencher contexto do aluno atual
     contextoAlunoAtual.alunoId = id;
@@ -6826,19 +6864,29 @@ function fecharModalAluno() {
     logModalAluno('🚪 Fechando modal customizado...');
     const modal = document.getElementById('modalAluno');
     if (modal) {
-        // FORÇAR fechamento do modal
-        const propsToClear = ['display', 'visibility', 'position', 'inset', 'width', 'min-height', 'background', 'z-index', 'padding', 'align-items', 'justify-content', 'box-sizing'];
+        // FORÇAR fechamento do modal - garantir que está completamente oculto
+        modal.style.setProperty('display', 'none', 'important');
+        modal.style.setProperty('visibility', 'hidden', 'important');
+        
+        // Limpar outras propriedades que podem interferir
+        const propsToClear = ['position', 'inset', 'width', 'min-height', 'background', 'z-index', 'padding', 'align-items', 'justify-content', 'box-sizing'];
         propsToClear.forEach(prop => modal.style.removeProperty(prop));
+        
+        // Remover atributos de estado
         modal.removeAttribute('data-opened'); // Remover marcação de aberto
         modal.removeAttribute('data-matricula-carregada'); // Resetar flag de matrícula carregada
-        document.body.style.overflow = 'auto'; // Restaurar scroll do body
+        
+        // Restaurar scroll do body
+        document.body.style.overflow = 'auto';
+        document.body.style.removeProperty('overflow');
         
         // Zerar contexto do aluno atual
         contextoAlunoAtual = { alunoId: null, matriculaId: null, turmaTeoricaId: null };
 
+        // Limpar estilos do dialog
         const dialog = modal.querySelector('.custom-modal-dialog');
         if (dialog) {
-            ['position', 'left', 'transform', 'margin', 'width'].forEach(prop => dialog.style.removeProperty(prop));
+            ['position', 'left', 'right', 'transform', 'margin', 'width', 'max-width'].forEach(prop => dialog.style.removeProperty(prop));
         }
         
         // CORREÇÃO: Restaurar z-index dos ícones de ação quando modal de edição fechar
@@ -6847,7 +6895,18 @@ function fecharModalAluno() {
         // Resetar campos de naturalidade para evitar problemas
         resetFormulario();
         
-        logModalAluno('✅ Modal customizado fechado!');
+        // Limpar ID do aluno do formulário para garantir estado limpo
+        const alunoIdHidden = document.getElementById('aluno_id_hidden');
+        if (alunoIdHidden) {
+            alunoIdHidden.value = '';
+        }
+        
+        const acaoAluno = document.getElementById('acaoAluno');
+        if (acaoAluno) {
+            acaoAluno.value = '';
+        }
+        
+        logModalAluno('✅ Modal customizado fechado completamente!');
     }
 }
 // Função para resetar o formulário de alunos
