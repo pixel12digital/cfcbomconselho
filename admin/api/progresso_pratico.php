@@ -77,7 +77,8 @@ function handleGet($db) {
     $alunoId = (int)$alunoId;
     
     try {
-        // Buscar todas as aulas práticas do aluno (com timeout implícito via LIMIT)
+        // Buscar todas as aulas práticas do aluno (limitado para performance)
+        // Usar índices em aluno_id e tipo_aula para melhor performance
         $aulas = $db->fetchAll("
             SELECT 
                 id,
@@ -88,7 +89,7 @@ function handleGet($db) {
             AND tipo_aula = 'pratica'
             AND status != 'cancelada'
             ORDER BY data_aula ASC
-            LIMIT 1000
+            LIMIT 500
         ", [$alunoId]);
         
         if (empty($aulas)) {

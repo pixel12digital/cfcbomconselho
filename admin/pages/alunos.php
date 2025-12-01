@@ -4089,38 +4089,37 @@ function abrirModalEdicao() {
     // Reforçar estrutura do modal
     reforcarEstruturaModalAluno();
 
-        const dialog = modal.querySelector('.custom-modal-dialog');
-        if (dialog) {
-            ['left', 'right', 'transform', 'margin', 'position', 'width', 'max-width', 'display', 'justify-content', 'align-items'].forEach(prop => dialog.style.removeProperty(prop));
-            dialog.style.setProperty('width', 'min(95vw, 1080px)', 'important');
-            dialog.style.setProperty('max-width', '1080px', 'important');
-        }
-
-        requestAnimationFrame(() => {
-            const overlayRect = modal.getBoundingClientRect();
-            const dialogRect = dialog ? dialog.getBoundingClientRect() : null;
-            const gapLeft = dialogRect ? Math.round(dialogRect.left - overlayRect.left) : null;
-            const gapRight = dialogRect ? Math.round(overlayRect.right - dialogRect.right) : null;
-            logModalAluno('[modalAluno debug] overlay:', overlayRect);
-            logModalAluno('[modalAluno debug] dialog :', dialogRect);
-            logModalAluno('[modalAluno debug] gaps   -> esquerda:', gapLeft, 'direita:', gapRight);
-        });
-        
-        // Configurar para edição
-        const acaoAluno = document.getElementById('acaoAluno');
-        if (acaoAluno) {
-            acaoAluno.value = 'editar';
-            logModalAluno('✅ Campo acaoAluno definido como: editar');
-        }
-        
-        const modalTitle = document.getElementById('modalTitle');
-        if (modalTitle) {
-            modalTitle.innerHTML = '<i class="fas fa-user-edit me-2"></i>Editar Aluno';
-        }
-        
-        logModalAluno('🔍 Modal aberto - Editando? true');
-        logModalAluno('📝 Formulário mantido para edição');
+    const dialog = modal.querySelector('.custom-modal-dialog');
+    if (dialog) {
+        ['left', 'right', 'transform', 'margin', 'position', 'width', 'max-width', 'display', 'justify-content', 'align-items'].forEach(prop => dialog.style.removeProperty(prop));
+        dialog.style.setProperty('width', 'min(95vw, 1080px)', 'important');
+        dialog.style.setProperty('max-width', '1080px', 'important');
     }
+
+    requestAnimationFrame(() => {
+        const overlayRect = modal.getBoundingClientRect();
+        const dialogRect = dialog ? dialog.getBoundingClientRect() : null;
+        const gapLeft = dialogRect ? Math.round(dialogRect.left - overlayRect.left) : null;
+        const gapRight = dialogRect ? Math.round(overlayRect.right - dialogRect.right) : null;
+        logModalAluno('[modalAluno debug] overlay:', overlayRect);
+        logModalAluno('[modalAluno debug] dialog :', dialogRect);
+        logModalAluno('[modalAluno debug] gaps   -> esquerda:', gapLeft, 'direita:', gapRight);
+    });
+    
+    // Configurar para edição
+    const acaoAluno = document.getElementById('acaoAluno');
+    if (acaoAluno) {
+        acaoAluno.value = 'editar';
+        logModalAluno('✅ Campo acaoAluno definido como: editar');
+    }
+    
+    const modalTitle = document.getElementById('modalTitle');
+    if (modalTitle) {
+        modalTitle.innerHTML = '<i class="fas fa-user-edit me-2"></i>Editar Aluno';
+    }
+    
+    logModalAluno('🔍 Modal aberto - Editando? true');
+    logModalAluno('📝 Formulário mantido para edição');
 }
 window.editarAluno = function(id) {
     logModalAluno('🚀 editarAluno chamada com ID:', id);
@@ -4804,7 +4803,7 @@ function preencherFormularioAluno(aluno) {
     
     // Observações já foi preenchido acima no tratamento especial após o loop de campos
 }
-function visualizarAluno(id) {
+window.visualizarAluno = function(id) {
     console.log('🚀 visualizandoAluno chamada com ID:', id);
 
     // Preencher contexto do aluno atual
@@ -5549,7 +5548,7 @@ function preencherAlunoSelecionado(id) {
     }
 }
 
-function historicoAluno(id) {
+window.historicoAluno = function(id) {
     // Debug: verificar se a função está sendo chamada
     console.log('Função historicoAluno chamada com ID:', id);
     
