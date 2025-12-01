@@ -2532,69 +2532,45 @@ input.form-control.invalid {
                       </div>
                     </div>
                     
-                    <!-- MATRÍCULA: Seção 6 - Financeiro da Matrícula -->
+                    <!-- MATRÍCULA: Seção 6 - Resumo financeiro da matrícula -->
                     <div class="row mb-2">
                       <div class="col-12">
                         <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
-                          <i class="fas fa-money-bill-wave me-1"></i>Financeiro da Matrícula
+                          <i class="fas fa-money-bill-wave me-1"></i>Resumo financeiro da matrícula
                         </h6>
-                      </div>
-                      <!-- Linha 1 - Dados básicos -->
-                      <div class="col-md-4">
-                        <div class="mb-1">
-                          <label for="valor_curso" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Valor do Curso</label>
-                          <input type="text" class="form-control" id="valor_curso" name="valor_curso" 
-                                 placeholder="Ex.: 1.500,00" style="padding: 0.4rem; font-size: 0.85rem;">
+                        <p class="text-muted small mb-2" style="font-size: 0.75rem;">
+                          Essas informações vêm do Financeiro do Aluno e são usadas na emissão do contrato.<br>
+                          Não é possível editar o financeiro por aqui.
+                        </p>
+                        
+                        <!-- Campo oculto para armazenar aluno_id para uso no resumo -->
+                        <input type="hidden" id="editar_aluno_id" value="">
+                        
+                        <!-- Card de resumo financeiro da matrícula -->
+                        <div class="card border" style="background-color: #f8f9fa;">
+                          <div class="card-body p-3">
+                            <div id="resumo-financeiro-matricula-card">
+                              <div class="text-center text-muted small">
+                                <i class="fas fa-spinner fa-spin"></i> Carregando resumo financeiro...
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div class="col-md-4">
-                        <div class="mb-1">
-                          <label for="forma_pagamento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Forma de Pagamento</label>
-                          <select class="form-select" id="forma_pagamento" name="forma_pagamento" style="padding: 0.4rem; font-size: 0.85rem;">
-                            <option value="">Selecione...</option>
-                            <option value="nao_informado">Não informado</option>
-                            <option value="a_vista">À vista</option>
-                            <option value="cartao_credito">Cartão de crédito</option>
-                            <option value="boleto">Boleto</option>
-                            <option value="pix">PIX</option>
-                            <option value="carne_parcelado">Carnê / Parcelado</option>
-                            <option value="outro">Outro</option>
-                          </select>
-                        </div>
-                      </div>
-                      <div class="col-md-4">
-                        <div class="mb-1">
-                          <label for="status_pagamento" class="form-label" style="font-size: 0.8rem; margin-bottom: 0.1rem;">Status de Pagamento</label>
-                          <select class="form-select" id="status_pagamento" name="status_pagamento" style="padding: 0.4rem; font-size: 0.85rem;">
-                            <option value="">Selecione...</option>
-                            <option value="nao_lancado">Não lançado</option>
-                            <option value="em_aberto">Em aberto</option>
-                            <option value="em_dia">Em dia</option>
-                            <option value="em_atraso">Em atraso</option>
-                            <option value="quitado">Quitado</option>
-                            <option value="cancelado">Cancelado</option>
-                          </select>
-                        </div>
+                        
+                        <!-- Texto informativo abaixo do card -->
+                        <p class="text-muted small mt-2 mb-0" style="font-size: 0.75rem;">
+                          <i class="fas fa-info-circle me-1"></i>
+                          Lançamentos de cobrança, alterações de parcelas e situação de pagamento ficam apenas no Financeiro do Aluno.
+                        </p>
                       </div>
                     </div>
                     
-                    <!-- Linha 2 - Atalho -->
-                    <div class="row mb-2">
-                      <div class="col-12">
-                        <a href="#" class="btn btn-link p-0 aluno-btn-financeiro" style="font-size: 0.85rem; text-decoration: none; pointer-events: none; opacity: 0.5;">
-                          <i class="fas fa-dollar-sign me-1"></i>Ver Financeiro do Aluno
-                        </a>
-                      </div>
-                    </div>
-                    
-                    <!-- Resumo Financeiro do Aluno (somente leitura) -->
+                    <!-- Resumo Financeiro do Aluno (somente leitura) - Mantido para compatibilidade -->
                     <div class="row mb-2">
                       <div class="col-12">
                         <h6 class="text-primary border-bottom pb-1 mb-2" style="font-size: 0.9rem; margin-bottom: 0.5rem !important;">
                           <i class="fas fa-calculator me-1"></i>Resumo Financeiro do Aluno
                         </h6>
-                        <!-- Campo oculto para armazenar aluno_id para uso no resumo -->
-                        <input type="hidden" id="editar_aluno_id" value="">
                         <div id="resumo-financeiro-matricula" class="p-2" style="background-color: #f8f9fa; border-radius: 0.25rem; min-height: 80px;">
                           <div class="text-center text-muted small">
                             <i class="fas fa-spinner fa-spin"></i> Carregando resumo financeiro...
@@ -4271,9 +4247,8 @@ window.editarAluno = function(id) {
                 const dadosMatriculaDoAluno = {
                     aulas_praticas_contratadas: data.aluno.aulas_praticas_contratadas,
                     aulas_praticas_extras: data.aluno.aulas_praticas_extras,
-                    forma_pagamento: data.aluno.forma_pagamento ?? data.aluno.forma_pagamento_matricula,
-                    status_pagamento: data.aluno.status_pagamento_matricula,
-                    valor_total: data.aluno.valor_total_matricula,
+                    // Campos financeiros removidos - forma_pagamento, status_pagamento, valor_total
+                    // Agora os dados financeiros vêm apenas do módulo Financeiro do Aluno
                     previsao_conclusao: data.aluno.previsao_conclusao,
                     processo_numero: data.aluno.numero_processo,
                     processo_numero_detran: data.aluno.detran_numero,
@@ -7759,51 +7734,13 @@ async function saveAlunoMatricula() {
         data_fim: formData.get('data_conclusao') || null,
         previsao_conclusao: formData.get('previsao_conclusao') || null,
         status: formData.get('status_matricula') || 'ativa',
-        valor_total: (() => {
-            const valorStr = formData.get('valor_curso');
-            if (!valorStr) return null;
-            // Remover tudo exceto números, vírgula e ponto
-            let valorLimpo = valorStr.replace(/[^\d,.-]/g, '');
-            // Se tiver ponto e vírgula, o ponto é separador de milhar (formato brasileiro: 3.500,00)
-            if (valorLimpo.includes('.') && valorLimpo.includes(',')) {
-                // Remover pontos (separadores de milhar) e substituir vírgula por ponto
-                valorLimpo = valorLimpo.replace(/\./g, '').replace(',', '.');
-            } else if (valorLimpo.includes(',')) {
-                // Apenas vírgula, substituir por ponto
-                valorLimpo = valorLimpo.replace(',', '.');
-            }
-            const valorNum = parseFloat(valorLimpo);
-            return isNaN(valorNum) ? null : valorNum;
-        })(),
-        forma_pagamento: (() => {
-            const valor = formData.get('forma_pagamento');
-            console.log('[DEBUG SAVE] forma_pagamento do formData:', valor, 'tipo:', typeof valor);
-            if (valor && valor.trim() !== '' && valor.trim() !== 'Selecione...') {
-                console.log('[DEBUG SAVE] forma_pagamento válido:', valor.trim());
-                return valor.trim();
-            }
-            console.log('[DEBUG SAVE] forma_pagamento vazio ou inválido, retornando null');
-            return null;
-        })(),
-        status_pagamento: (() => {
-            const valor = formData.get('status_pagamento');
-            return valor && valor.trim() !== '' ? valor.trim() : null;
-        })(),
+        // Campos financeiros removidos - valor_total, forma_pagamento e status_pagamento
+        // Agora os dados financeiros vêm apenas do módulo Financeiro do Aluno (faturas/parcelas)
         observacoes: formData.get('observacoes') || null,
         renach: renach || null,
         processo_numero: formData.get('processo_numero') || null,
         processo_numero_detran: formData.get('processo_numero_detran') || null,
         processo_situacao: formData.get('processo_situacao') || null,
-        forma_pagamento: (() => {
-            const valor = formData.get('forma_pagamento');
-            console.log('[DEBUG SAVE] forma_pagamento do formData:', valor, 'tipo:', typeof valor);
-            if (valor && valor.trim() !== '' && valor.trim() !== 'Selecione...') {
-                console.log('[DEBUG SAVE] forma_pagamento válido:', valor.trim());
-                return valor.trim();
-            }
-            console.log('[DEBUG SAVE] forma_pagamento vazio ou inválido, retornando null');
-            return null;
-        })(),
         aulas_praticas_contratadas: (() => {
             const valor = formData.get('aulas_praticas_contratadas');
             console.log('[DEBUG SAVE] aulas_praticas_contratadas do formData:', valor, 'tipo:', typeof valor);
@@ -8148,8 +8085,8 @@ async function sincronizarMatriculaPrincipal(alunoId, formData) {
         const dataMatricula = formData.get('data_matricula') || '';
         const dataConclusao = formData.get('data_conclusao') || null;
         const statusMatricula = formData.get('status_matricula') || 'ativa';
-        const valorCurso = formData.get('valor_curso') || null;
-        const formaPagamento = formData.get('forma_pagamento') || null;
+        // Campos financeiros removidos - valorCurso e formaPagamento
+        // Agora os dados financeiros vêm apenas do módulo Financeiro do Aluno
         
         // Verificar se já existe matrícula para este aluno
         const responseGet = await fetch(`api/matriculas.php?aluno_id=${alunoId}`);
@@ -8171,8 +8108,8 @@ async function sincronizarMatriculaPrincipal(alunoId, formData) {
             data_inicio: dataMatricula || null,
             data_fim: dataConclusao || null,
             status: statusMatricula,
-            valor_total: valorCurso ? parseFloat(valorCurso.replace(/[^\d,.-]/g, '').replace(',', '.')) : null,
-            forma_pagamento: formaPagamento || null,
+            // Campos financeiros removidos - valor_total e forma_pagamento
+            // Agora os dados financeiros vêm apenas do módulo Financeiro do Aluno
             observacoes: 'Criado via formulário de aluno'
         };
         
@@ -8392,18 +8329,14 @@ async function carregarMatriculaPrincipal(alunoId, dadosFallback = null) {
                 matricula.aulas_praticas_extras = dadosFallback.aulas_praticas_extras;
                 console.log('[DEBUG MATRICULA] Usando fallback para aulas_praticas_extras:', dadosFallback.aulas_praticas_extras);
             }
-            if ((matricula.forma_pagamento === undefined || matricula.forma_pagamento === null || matricula.forma_pagamento === '') && dadosFallback.forma_pagamento !== undefined && dadosFallback.forma_pagamento !== null && dadosFallback.forma_pagamento !== '') {
-                matricula.forma_pagamento = dadosFallback.forma_pagamento;
-                console.log('[DEBUG MATRICULA] Usando fallback para forma_pagamento:', dadosFallback.forma_pagamento);
-            }
+            // Campos financeiros removidos - forma_pagamento não é mais usado
         }
         
         // Log completo para debug dos campos problemáticos
         console.log('[DEBUG MATRICULA] Dados recebidos da API matriculas.php (APÓS FALLBACK):', {
             aulas_praticas_contratadas: matricula.aulas_praticas_contratadas,
             aulas_praticas_extras: matricula.aulas_praticas_extras,
-            forma_pagamento: matricula.forma_pagamento,
-            forma_pagamento_matricula: matricula.forma_pagamento_matricula,
+            // Campos financeiros removidos - forma_pagamento não é mais usado
             matricula_completa: matricula,
             todas_as_chaves: Object.keys(matricula)
         });
@@ -8415,10 +8348,8 @@ async function carregarMatriculaPrincipal(alunoId, dadosFallback = null) {
             'aulas_praticas_contratadas in matricula': 'aulas_praticas_contratadas' in matricula,
             'matricula.aulas_praticas_extras': matricula.aulas_praticas_extras,
             'typeof aulas_praticas_extras': typeof matricula.aulas_praticas_extras,
-            'aulas_praticas_extras in matricula': 'aulas_praticas_extras' in matricula,
-            'matricula.forma_pagamento': matricula.forma_pagamento,
-            'typeof forma_pagamento': typeof matricula.forma_pagamento,
-            'forma_pagamento in matricula': 'forma_pagamento' in matricula
+            'aulas_praticas_extras in matricula': 'aulas_praticas_extras' in matricula
+            // Campos financeiros removidos - forma_pagamento não é mais usado
         });
         
         // Preencher contexto com matrícula
@@ -8623,72 +8554,8 @@ function preencherAbaMatriculaComDados(matricula) {
             }
         }
         
-        // 4) Preencher financeiro
-        if (matricula.valor_total !== null && matricula.valor_total !== undefined) {
-            const valorCursoInput = document.getElementById('valor_curso');
-            if (valorCursoInput) {
-                // Formatar valor para exibição no formato brasileiro (1.500,00)
-                let valorFormatado = '';
-                if (typeof matricula.valor_total === 'number') {
-                    // Converter número para formato brasileiro: 3500.00 -> 3.500,00
-                    const valorStr = matricula.valor_total.toFixed(2);
-                    const partes = valorStr.split('.');
-                    const inteiro = partes[0];
-                    const decimal = partes[1] || '00';
-                    // Adicionar separador de milhar
-                    const inteiroFormatado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                    valorFormatado = `${inteiroFormatado},${decimal}`;
-                } else {
-                    // Se já vier como string, tentar formatar
-                    const valorNum = parseFloat(matricula.valor_total);
-                    if (!isNaN(valorNum)) {
-                        const valorStr = valorNum.toFixed(2);
-                        const partes = valorStr.split('.');
-                        const inteiro = partes[0];
-                        const decimal = partes[1] || '00';
-                        const inteiroFormatado = inteiro.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-                        valorFormatado = `${inteiroFormatado},${decimal}`;
-                    } else {
-                        valorFormatado = matricula.valor_total.toString();
-                    }
-                }
-                valorCursoInput.value = valorFormatado;
-                logModalAluno('✅ Valor curso preenchido:', valorFormatado);
-            }
-        }
-        
-        // Preencher Forma de Pagamento
-        // Aceitar tanto forma_pagamento quanto forma_pagamento_matricula (vindo de diferentes APIs)
-        // Tratar string vazia como null
-        let formaPagamento = matricula.forma_pagamento ?? matricula.forma_pagamento_matricula ?? null;
-        if (formaPagamento === '' || formaPagamento === 'Selecione...') {
-            formaPagamento = null;
-        }
-        console.log('[DEBUG MATRICULA FILL] forma_pagamento recebido:', {
-            forma_pagamento: matricula.forma_pagamento,
-            forma_pagamento_matricula: matricula.forma_pagamento_matricula,
-            valor_final: formaPagamento
-        });
-        if (formaPagamento && formaPagamento !== '' && formaPagamento !== 'Selecione...') {
-            const formaPagamentoSelect = document.getElementById('forma_pagamento');
-            if (formaPagamentoSelect) {
-                formaPagamentoSelect.value = formaPagamento;
-                logModalAluno('✅ Forma pagamento preenchida:', formaPagamento);
-            } else {
-                console.warn('[DEBUG MATRICULA] Campo forma_pagamento não encontrado no DOM');
-            }
-        } else {
-            console.log('[DEBUG MATRICULA] forma_pagamento está vazio ou null');
-        }
-        
-        // Preencher Status de Pagamento
-        if (matricula.status_pagamento) {
-            const statusPagamentoSelect = document.getElementById('status_pagamento');
-            if (statusPagamentoSelect) {
-                statusPagamentoSelect.value = matricula.status_pagamento;
-                logModalAluno('✅ Status pagamento preenchido:', matricula.status_pagamento);
-            }
-        }
+        // 4) Campos financeiros removidos - agora o resumo é carregado via API financeiro-resumo-matricula.php
+        // Os dados financeiros vêm diretamente do módulo Financeiro do Aluno (faturas/parcelas)
         
         // 5) Carregar resumo financeiro do aluno na aba Matrícula
         // Obter alunoId do campo hidden ou da matrícula
@@ -8741,12 +8608,7 @@ function limparAbaMatricula() {
         const statusSelect = document.getElementById('status_matricula');
         if (statusSelect) statusSelect.value = '';
         
-        // Limpar financeiro
-        const valorCursoInput = document.getElementById('valor_curso');
-        if (valorCursoInput) valorCursoInput.value = '';
-        
-        const formaPagamentoSelect = document.getElementById('forma_pagamento');
-        if (formaPagamentoSelect) formaPagamentoSelect.value = '';
+        // Campos financeiros removidos - não há mais campos para limpar
         
         logModalAluno('✅ Aba Matrícula limpa');
         
@@ -8862,36 +8724,241 @@ async function atualizarResumoFinanceiroMatricula(alunoId) {
             return;
         }
         
-        const container = document.getElementById('resumo-financeiro-matricula');
-        if (!container) {
-            return;
+        // Atualizar o card de resumo financeiro da matrícula (novo)
+        const cardContainer = document.getElementById('resumo-financeiro-matricula-card');
+        if (cardContainer) {
+            // Mostrar loading
+            cardContainer.innerHTML = '<div class="text-center text-muted small"><i class="fas fa-spinner fa-spin"></i> Carregando resumo financeiro...</div>';
+            
+            // Buscar dados detalhados do resumo financeiro da matrícula
+            const url = `api/financeiro-resumo-matricula.php?aluno_id=${alunoId}`;
+            const response = await fetch(url);
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const data = await response.json();
+            
+            if (!data.success) {
+                throw new Error(data.error || 'Erro ao buscar resumo financeiro');
+            }
+            
+            // Renderizar o card baseado no estado (com ou sem financeiro)
+            if (!data.tem_financeiro || !data.resumo) {
+                // Estado sem plano financeiro configurado
+                cardContainer.innerHTML = `
+                    <div class="text-center">
+                        <div class="alert alert-warning mb-3" role="alert">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            <strong>Nenhum plano financeiro foi configurado para esta matrícula ainda.</strong>
+                        </div>
+                        <p class="text-muted small mb-3">
+                            Para gerar o contrato, é necessário configurar primeiro o financeiro do aluno.
+                        </p>
+                        <div class="d-flex gap-2 justify-content-center">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="abrirFinanceiroAluno(${alunoId})">
+                                <i class="fas fa-cog me-1"></i>Configurar financeiro da matrícula
+                            </button>
+                            <a href="index.php?page=financeiro-faturas&aluno_id=${alunoId}" target="_blank" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-external-link-alt me-1"></i>Ver Financeiro do Aluno
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Estado com plano financeiro configurado
+                const resumo = data.resumo;
+                
+                // Formatar valores monetários
+                const formatarMoeda = (valor) => {
+                    return new Intl.NumberFormat('pt-BR', {
+                        style: 'currency',
+                        currency: 'BRL'
+                    }).format(valor || 0);
+                };
+                
+                // Formatar data
+                const formatarData = (data) => {
+                    if (!data) return null;
+                    const d = new Date(data);
+                    return d.toLocaleDateString('pt-BR');
+                };
+                
+                let html = '<div>';
+                
+                // Valor total do curso
+                html += `<p class="mb-2"><strong>Valor total do curso:</strong> ${formatarMoeda(resumo.valor_total)}</p>`;
+                
+                // Entrada (se existir)
+                if (resumo.tem_entrada && resumo.valor_entrada > 0) {
+                    html += `<p class="mb-2"><strong>Entrada:</strong> ${formatarMoeda(resumo.valor_entrada)}</p>`;
+                }
+                
+                // Parcelas (se existirem)
+                if (resumo.qtd_parcelas > 0) {
+                    html += `<p class="mb-2"><strong>Parcelas:</strong> ${resumo.qtd_parcelas}× de ${formatarMoeda(resumo.valor_parcela)}</p>`;
+                }
+                
+                // Forma de pagamento predominante
+                html += `<p class="mb-2"><strong>Forma de pagamento predominante:</strong> ${resumo.forma_pagamento_texto || 'Não informado'}</p>`;
+                
+                // Primeiro vencimento (se aplicável)
+                if (resumo.primeiro_vencimento) {
+                    html += `<p class="mb-2"><strong>Primeiro vencimento:</strong> ${formatarData(resumo.primeiro_vencimento)}</p>`;
+                }
+                
+                html += '</div>';
+                
+                // Link para ver detalhes
+                html += `
+                    <div class="mt-3 pt-3 border-top">
+                        <a href="index.php?page=financeiro-faturas&aluno_id=${alunoId}" target="_blank" class="btn btn-link btn-sm p-0" style="font-size: 0.85rem;">
+                            <i class="fas fa-external-link-alt me-1"></i>Ver detalhes no Financeiro do Aluno
+                        </a>
+                    </div>
+                `;
+                
+                cardContainer.innerHTML = html;
+            }
         }
         
-        // Mostrar loading
-        container.innerHTML = '<div class="text-center text-muted small"><i class="fas fa-spinner fa-spin"></i> Carregando resumo financeiro...</div>';
+        // Atualizar também o resumo financeiro antigo (para compatibilidade)
+        const container = document.getElementById('resumo-financeiro-matricula');
+        if (container) {
+            // Buscar HTML renderizado diretamente do PHP
+            const url = `api/financeiro-resumo-aluno-html.php?aluno_id=${alunoId}`;
+            const response = await fetch(url);
+            
+            if (response.ok) {
+                const html = await response.text();
+                container.innerHTML = html;
+            } else {
+                container.innerHTML = '<div class="text-center text-danger small">Erro ao carregar resumo financeiro.</div>';
+            }
+        }
         
-        // Buscar HTML renderizado diretamente do PHP
-        const url = `api/financeiro-resumo-aluno-html.php?aluno_id=${alunoId}`;
+        logModalAluno('✅ Resumo financeiro carregado na aba Matrícula');
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar resumo financeiro na aba Matrícula:', error);
+        const cardContainer = document.getElementById('resumo-financeiro-matricula-card');
+        if (cardContainer) {
+            cardContainer.innerHTML = '<div class="text-center text-danger small">Erro ao carregar resumo financeiro.</div>';
+        }
+        const container = document.getElementById('resumo-financeiro-matricula');
+        if (container) {
+            container.innerHTML = '<div class="text-center text-danger small">Erro ao carregar resumo financeiro.</div>';
+        }
+    }
+}
+
+/**
+ * Função para abrir a tela de financeiro do aluno
+ * @param {number} alunoId - ID do aluno
+ */
+function abrirFinanceiroAluno(alunoId) {
+    if (!alunoId) {
+        mostrarAlerta('ID do aluno não encontrado', 'danger');
+        return;
+    }
+    
+    // Abrir em nova aba
+    const url = `index.php?page=financeiro-faturas&aluno_id=${alunoId}`;
+    window.open(url, '_blank');
+    
+    // Opcional: mostrar mensagem
+    mostrarAlerta('Abrindo tela de Financeiro do Aluno em nova aba...', 'info');
+}
+
+/**
+ * Verifica se o aluno tem financeiro configurado (pré-requisito para gerar contrato)
+ * @param {number} alunoId - ID do aluno
+ * @returns {Promise<{temFinanceiro: boolean, resumo: Object|null, mensagem: string}>}
+ */
+async function verificarFinanceiroParaContrato(alunoId) {
+    try {
+        if (!alunoId) {
+            return {
+                temFinanceiro: false,
+                resumo: null,
+                mensagem: 'ID do aluno não fornecido'
+            };
+        }
+        
+        const url = `api/financeiro-resumo-matricula.php?aluno_id=${alunoId}`;
         const response = await fetch(url);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
         
-        // Obter HTML diretamente (não é JSON)
-        const html = await response.text();
+        const data = await response.json();
         
-        // Inserir HTML renderizado no container
-        container.innerHTML = html;
+        if (!data.success) {
+            return {
+                temFinanceiro: false,
+                resumo: null,
+                mensagem: data.error || 'Erro ao verificar financeiro'
+            };
+        }
         
-        logModalAluno('✅ Resumo financeiro carregado na aba Matrícula');
+        if (!data.tem_financeiro || !data.resumo) {
+            return {
+                temFinanceiro: false,
+                resumo: null,
+                mensagem: 'Não foi possível gerar o contrato.\nConfigure primeiro o financeiro da matrícula no módulo Financeiro do Aluno.'
+            };
+        }
+        
+        return {
+            temFinanceiro: true,
+            resumo: data.resumo,
+            mensagem: 'Financeiro configurado'
+        };
         
     } catch (error) {
-        console.error('❌ Erro ao carregar resumo financeiro na aba Matrícula:', error);
-        const container = document.getElementById('resumo-financeiro-matricula');
-        if (container) {
-            container.innerHTML = '<div class="text-center text-danger small">Erro ao carregar resumo financeiro.</div>';
+        console.error('❌ Erro ao verificar financeiro para contrato:', error);
+        return {
+            temFinanceiro: false,
+            resumo: null,
+            mensagem: 'Erro ao verificar financeiro do aluno'
+        };
+    }
+}
+
+/**
+ * Função helper para gerar contrato (deve ser chamada quando o botão de gerar contrato for clicado)
+ * Esta função verifica o pré-requisito de financeiro configurado antes de permitir a geração
+ * @param {number} alunoId - ID do aluno
+ * @param {Function} callbackGerarContrato - Função que será chamada se o financeiro estiver OK
+ */
+async function gerarContratoComValidacao(alunoId, callbackGerarContrato) {
+    if (!alunoId) {
+        mostrarAlerta('ID do aluno não encontrado', 'danger');
+        return;
+    }
+    
+    // Verificar se tem financeiro configurado
+    const verificacao = await verificarFinanceiroParaContrato(alunoId);
+    
+    if (!verificacao.temFinanceiro) {
+        // Mostrar mensagem de erro e opção para configurar financeiro
+        mostrarAlerta(verificacao.mensagem, 'warning');
+        
+        // Opcional: perguntar se quer abrir a tela de financeiro
+        if (confirm('Deseja abrir a tela de Financeiro do Aluno para configurar?')) {
+            abrirFinanceiroAluno(alunoId);
         }
+        
+        return;
+    }
+    
+    // Se chegou aqui, tem financeiro configurado - chamar callback
+    if (typeof callbackGerarContrato === 'function') {
+        callbackGerarContrato(alunoId, verificacao.resumo);
+    } else {
+        console.warn('⚠️ Função de gerar contrato não fornecida');
     }
 }
 

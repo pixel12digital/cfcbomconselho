@@ -2160,6 +2160,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     try {
                         // Construir query base com JOIN para matrícula ativa (priorizar categoria/tipo da matrícula)
                         // REGRA DE PADRONIZAÇÃO: Sempre priorizar dados da matrícula ativa quando existir
+                        // 
+                        // IMPORTANTE: O campo a.status é o status da tabela alunos (ENUM: 'ativo', 'inativo', 'concluido')
+                        // Este é o campo usado para controlar se o aluno pode agendar aulas e é exibido na listagem
+                        // NÃO confundir com matriculas.status que é o status da matrícula (ativa, concluida, etc.)
                         $sql = "
                             SELECT DISTINCT 
                                 a.id, a.nome, a.cpf, a.rg, a.data_nascimento, a.endereco, 
@@ -2234,6 +2238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                         error_log("ERRO na query principal de alunos: " . $e->getMessage());
                         
                         // Query mais simples como fallback
+                        // IMPORTANTE: Esta query também usa alunos.status (campo status da tabela alunos)
                         try {
                             $alunos = $db->fetchAll("SELECT DISTINCT * FROM alunos ORDER BY nome ASC");
                             // Decodificar operações para cada aluno no fallback também

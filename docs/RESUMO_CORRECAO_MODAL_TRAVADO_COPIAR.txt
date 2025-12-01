@@ -1,0 +1,51 @@
+═══════════════════════════════════════════════════════════════════════════════
+  RESUMO: CORREÇÃO DO TRAVAMENTO DO MODAL AO SALVAR ALUNO
+═══════════════════════════════════════════════════════════════════════════════
+
+PROBLEMA:
+---------
+O modal de edição de aluno travava em "Salvando Dados..." quando a API de exames
+retornava erro 500. O aluno era salvo com sucesso, mas a UI ficava travada porque
+a Promise rejeitava e o fluxo de finalização não era executado.
+
+SOLUÇÃO IMPLEMENTADA:
+---------------------
+1. Criada função helper tentarAtualizarResumoAluno() que envolve chamadas de
+   resumo em try/catch, tornando-as "best effort" (não travam o fluxo se falharem).
+
+2. Criada função finalizarSalvamentoAlunoComSucesso() que garante que o modal
+   sempre fecha e o botão sempre é restaurado, mesmo se algum resumo falhar.
+
+3. Refatorada função saveAlunoDados() para:
+   - Atualizar resumos em paralelo usando Promise.all com tentarAtualizarResumoAluno
+   - Chamar finalizarSalvamentoAlunoComSucesso no bloco finally
+   - Garantir que o fluxo sempre finalize, independente de erros nos resumos
+
+4. Melhorados logs em atualizarResumoProvasAluno() para facilitar debug:
+   - Log da URL chamada
+   - Log do status HTTP
+   - Log detalhado do erro
+
+RESULTADO:
+----------
+✅ Modal não trava mais quando exames.php retorna 500
+✅ Aluno é salvo com sucesso mesmo se resumos falharem
+✅ Toast de aviso é mostrado se algum resumo não puder ser atualizado
+✅ Fluxo sempre finaliza corretamente (modal fecha, botão restaurado)
+
+ARQUIVOS MODIFICADOS:
+---------------------
+- admin/pages/alunos.php
+  • Função tentarAtualizarResumoAluno() - Nova
+  • Função finalizarSalvamentoAlunoComSucesso() - Nova
+  • Função saveAlunoDados() - Refatorada
+  • Função atualizarResumoProvasAluno() - Logs melhorados
+
+COMMITS:
+--------
+- 9e86c84: fix: Corrigir fluxo de alteração de status do aluno
+- 8c4156f: fix: Corrigir travamento do modal ao salvar aluno (erro 500 em exames.php)
+
+STATUS: ✅ IMPLEMENTADO E EM PRODUÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+

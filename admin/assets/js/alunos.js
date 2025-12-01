@@ -246,6 +246,12 @@ window.salvarAluno = async function() {
             observacoes: (formData.get('observacoes') || '').trim()
         };
         
+        // LOG TEMPORÁRIO: Status enviado no salvarAluno (remover após validação)
+        console.log('🔍 [LOG TEMPORÁRIO] Status enviado no salvarAluno:', alunoData.status);
+        console.log('🔍 [LOG TEMPORÁRIO] Valor do campo status no FormData:', formData.get('status'));
+        console.log('🔍 [LOG TEMPORÁRIO] Ação (editar/criar):', formData.get('acao'));
+        console.log('🔍 [LOG TEMPORÁRIO] ID do aluno:', formData.get('aluno_id'));
+        
         // Debug: verificar dados antes de enviar
         console.log('🔧 Dados do formulário (FormData):');
         for (let [key, value] of formData.entries()) {
@@ -255,12 +261,31 @@ window.salvarAluno = async function() {
         console.log('🔧 Dados preparados para API:');
         console.log(alunoData);
         
-        const acao = formData.get('acao');
-        const aluno_id = formData.get('aluno_id');
+        // IMPORTANTE: Ler acao e aluno_id diretamente dos elementos DOM para garantir valores corretos
+        // O FormData pode não capturar valores de campos hidden em alguns casos
+        const acaoEl = document.getElementById('acaoAluno');
+        const alunoIdEl = document.getElementById('aluno_id_hidden');
+        const acao = acaoEl ? acaoEl.value : formData.get('acao') || 'criar';
+        const aluno_id = alunoIdEl ? alunoIdEl.value : formData.get('aluno_id') || null;
         
-        if (acao === 'editar' && aluno_id) {
-            alunoData.id = aluno_id;
-        }
+        // LOG TEMPORÁRIO: Verificar valores lidos
+        console.log('🔍 [LOG TEMPORÁRIO] acao (do DOM):', acaoEl ? acaoEl.value : 'campo não encontrado');
+        console.log('🔍 [LOG TEMPORÁRIO] acao (do FormData):', formData.get('acao'));
+        console.log('🔍 [LOG TEMPORÁRIO] aluno_id (do DOM):', alunoIdEl ? alunoIdEl.value : 'campo não encontrado');
+        console.log('🔍 [LOG TEMPORÁRIO] aluno_id (do FormData):', formData.get('aluno_id'));
+        console.log('🔍 [LOG TEMPORÁRIO] acao final usada:', acao);
+        console.log('🔍 [LOG TEMPORÁRIO] aluno_id final usado:', aluno_id);
+        
+        // Garantir que aluno_id seja número se existir
+        const alunoIdNum = aluno_id ? parseInt(aluno_id) : null;
+        
+        // IMPORTANTE: Na edição, o id NÃO deve ser enviado no body JSON
+        // O id é enviado apenas na query string (?id={id})
+        // A API PUT usa o id da query string, não do body
+        // Por isso NÃO incluímos alunoData.id aqui
+        // if (acao === 'editar' && alunoIdNum) {
+        //     alunoData.id = alunoIdNum;  // REMOVIDO - id vai na query string, não no body
+        // }
         
         // Mostrar loading no botão
         const btnSalvar = document.getElementById('btnSalvarAluno');
@@ -270,8 +295,18 @@ window.salvarAluno = async function() {
             btnSalvar.disabled = true;
             
             try {
+                // IMPORTANTE: Na edição, usar PUT com ?id={id} e enviar status junto com outros dados
+                // Exemplo de payload esperado na edição:
+                // method: PUT
+                // endpoint: admin/api/alunos.php?id=167
+                // body JSON: { "nome": "...", "cpf": "...", ..., "status": "inativo", ... }
                 const method = acao === 'editar' ? 'PUT' : 'POST';
-                const endpoint = acao === 'editar' ? `?id=${aluno_id}` : '';
+                const endpoint = acao === 'editar' ? `?id=${alunoIdNum}` : '';
+                
+                // LOG TEMPORÁRIO: Verificar método e endpoint
+                console.log('🔍 [LOG TEMPORÁRIO] Método HTTP:', method);
+                console.log('🔍 [LOG TEMPORÁRIO] Endpoint:', endpoint);
+                console.log('🔍 [LOG TEMPORÁRIO] Status no alunoData antes de enviar:', alunoData.status);
                 
                 const response = await fetchAPIAlunos(endpoint, {
                     method: method,
@@ -347,8 +382,24 @@ window.editarAluno = async function(id) {
             // Preencher formulário DEPOIS de abrir o modal
             console.log('📝 Preenchendo campos do formulário...');
             
-            // Aguardar um pouco para garantir que o DOM esteja pronto
+            // IMPORTANTE: Garantir que os campos hidden estão preenchidos corretamente
+            // Isso é crítico para o salvarAluno() identificar que é uma edição
             setTimeout(() => {
+                // Garantir que acaoAluno está como 'editar'
+                const acaoEl = document.getElementById('acaoAluno');
+                const alunoIdEl = document.getElementById('aluno_id_hidden');
+                if (acaoEl) {
+                    acaoEl.value = 'editar';
+                    console.log('✅ Campo acaoAluno definido como:', acaoEl.value);
+                } else {
+                    console.error('❌ Campo acaoAluno não encontrado!');
+                }
+                if (alunoIdEl) {
+                    alunoIdEl.value = id;
+                    console.log('✅ Campo aluno_id_hidden definido como:', alunoIdEl.value);
+                } else {
+                    console.error('❌ Campo aluno_id_hidden não encontrado!');
+                }
                 // Campos básicos
                 const nomeField = document.getElementById('nome');
                 const cpfField = document.getElementById('cpf');
