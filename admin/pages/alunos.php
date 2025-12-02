@@ -6080,16 +6080,28 @@ async function alterarStatusAluno(id, status) {
                 throw new Error(data.error || 'Erro ao alterar status do aluno');
             }
         } catch (error) {
+            // Remover controller da lista mesmo em caso de erro
+            if (typeof controller !== 'undefined') {
+                const index = activeAbortControllers.indexOf(controller);
+                if (index > -1) {
+                    activeAbortControllers.splice(index, 1);
+                }
+            }
+            
             if (typeof loading !== 'undefined') {
                 loading.hideGlobal();
             }
+            
             console.error('❌ Erro ao alterar status:', error);
             
-            const mensagemErro = error.message || 'Erro ao alterar status do aluno';
-            if (typeof notifications !== 'undefined') {
-                notifications.error(mensagemErro);
-            } else {
-                alert('Erro ao alterar status do aluno: ' + mensagemErro);
+            // Se não foi cancelamento intencional, mostrar erro
+            if (error.name !== 'AbortError') {
+                const mensagemErro = error.message || 'Erro ao alterar status do aluno';
+                if (typeof notifications !== 'undefined') {
+                    notifications.error(mensagemErro);
+                } else {
+                    alert('Erro ao alterar status do aluno: ' + mensagemErro);
+                }
             }
         }
     }
