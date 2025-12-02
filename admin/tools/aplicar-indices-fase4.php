@@ -13,10 +13,24 @@ require_once '../../includes/config.php';
 require_once '../../includes/database.php';
 require_once '../../includes/auth.php';
 
-// Apenas administradores podem executar
-if (!isLoggedIn() || ($_SESSION['user_type'] ?? '') !== 'admin') {
+// Verificar se está logado
+if (!isLoggedIn()) {
     http_response_code(403);
-    die('Acesso negado. Apenas administradores podem executar este script.');
+    die('Acesso negado. Faça login para executar este script.');
+}
+
+// Obter dados do usuário atual
+$currentUser = getCurrentUser();
+if (!$currentUser) {
+    http_response_code(403);
+    die('Acesso negado. Não foi possível obter dados do usuário.');
+}
+
+// Verificar se é administrador (usar mesma lógica do sistema)
+$isAdmin = ($currentUser['tipo'] ?? '') === 'admin';
+if (!$isAdmin) {
+    http_response_code(403);
+    die('Acesso negado. Apenas administradores podem executar este script.<br>Seu tipo de usuário: ' . htmlspecialchars($currentUser['tipo'] ?? 'desconhecido'));
 }
 
 // Verificar se é POST (confirmação de execução)
