@@ -283,6 +283,12 @@ $alunoId = (int)$alunoId;
                             $totalHttpTime = 0;
                             $slowHttpRequests = [];
                             
+                            // IMPORTANTE: Fechar sessão antes de fazer requisições cURL
+                            // Isso evita bloqueio de sessão (session locking) que causa deadlock
+                            if (session_status() === PHP_SESSION_ACTIVE) {
+                                session_write_close();
+                            }
+                            
                             foreach ($httpEndpoints as $nome => $url) {
                                 echo '<div class="log-info" style="color: #569cd6;">📡 Testando HTTP: ' . $nome . '</div>';
                                 echo '<div class="log-info" style="color: #569cd6; font-size: 10px;">   URL: ' . htmlspecialchars($url) . '</div>';
@@ -295,13 +301,16 @@ $alunoId = (int)$alunoId;
                                     $host = $_SERVER['HTTP_HOST'];
                                     $fullUrl = $protocol . '://' . $host . $url;
                                     
+                                    // Obter cookie de sessão ANTES de fechar a sessão
+                                    $sessionCookie = session_name() . '=' . session_id();
+                                    
                                     $ch = curl_init($fullUrl);
                                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
                                     curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
-                                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                                    curl_setopt($ch, CURLOPT_TIMEOUT, 15); // Aumentar timeout para 15s
                                     curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
                                     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-                                        'Cookie: ' . session_name() . '=' . session_id()
+                                        'Cookie: ' . $sessionCookie
                                     ]);
                                     
                                     $response = curl_exec($ch);
