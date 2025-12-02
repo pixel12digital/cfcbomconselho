@@ -248,15 +248,21 @@ $alunoId = (int)$alunoId;
                             echo '<hr style="border-color: #555;">';
                             
                             // Testar chamadas HTTP reais
-                            // Nota: URLs devem ser relativas ao diretório admin, como o JavaScript faz
-                            $basePath = dirname($_SERVER['SCRIPT_NAME']); // Ex: /admin/pages
-                            $adminBase = dirname($basePath); // Ex: /admin
+                            // Construir caminho correto para admin/api
+                            // O script está em admin/pages/, então precisamos voltar 1 nível para admin/
+                            $scriptPath = $_SERVER['SCRIPT_NAME']; // Ex: /admin/pages/diagnostico-queries.php
+                            $adminPath = dirname(dirname($scriptPath)); // Ex: /admin
+                            
+                            // Garantir que o caminho começa com /
+                            if (!str_starts_with($adminPath, '/')) {
+                                $adminPath = '/' . $adminPath;
+                            }
                             
                             $httpEndpoints = [
-                                'progresso_pratico' => $adminBase . '/api/progresso_pratico.php?aluno_id=' . $alunoId,
-                                'progresso_teorico' => $adminBase . '/api/progresso_teorico.php?aluno_id=' . $alunoId,
-                                'exames_resumo' => $adminBase . '/api/exames.php?aluno_id=' . $alunoId . '&resumo=1',
-                                'historico_aluno' => $adminBase . '/api/historico_aluno.php?aluno_id=' . $alunoId
+                                'progresso_pratico' => $adminPath . '/api/progresso_pratico.php?aluno_id=' . $alunoId,
+                                'progresso_teorico' => $adminPath . '/api/progresso_teorico.php?aluno_id=' . $alunoId,
+                                'exames_resumo' => $adminPath . '/api/exames.php?aluno_id=' . $alunoId . '&resumo=1',
+                                'historico_aluno' => $adminPath . '/api/historico_aluno.php?aluno_id=' . $alunoId
                             ];
                             
                             $totalHttpTime = 0;
