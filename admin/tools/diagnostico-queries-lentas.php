@@ -6,8 +6,10 @@
  * Analisa queries dos endpoints que estão dando timeout
  */
 
+// Verificar autenticação
 session_start();
 
+// Ajustar caminhos para funcionar tanto localmente quanto em produção
 $rootPath = dirname(__DIR__, 2);
 require_once $rootPath . '/includes/config.php';
 require_once $rootPath . '/includes/database.php';
@@ -15,21 +17,26 @@ require_once $rootPath . '/includes/auth.php';
 
 // Verificar se está logado
 if (!isLoggedIn()) {
-    header('Location: ../index.php');
-    exit;
+    http_response_code(403);
+    die('Acesso negado. Faça login para executar este script.');
 }
 
 // Obter dados do usuário atual
 $currentUser = getCurrentUser();
 if (!$currentUser) {
-    die('Erro: Não foi possível obter dados do usuário.');
+    http_response_code(403);
+    die('Acesso negado. Não foi possível obter dados do usuário.');
 }
 
-// Verificar se é administrador
+// Verificar se é administrador (usar mesma lógica do sistema)
 $isAdmin = ($currentUser['tipo'] ?? '') === 'admin';
 if (!$isAdmin) {
-    die('Acesso negado. Apenas administradores podem executar este script.<br>Seu tipo: ' . htmlspecialchars($currentUser['tipo'] ?? 'desconhecido'));
+    http_response_code(403);
+    die('Acesso negado. Apenas administradores podem executar este script.<br>Seu tipo de usuário: ' . htmlspecialchars($currentUser['tipo'] ?? 'desconhecido'));
 }
+
+// Headers
+header('Content-Type: text/html; charset=utf-8');
 
 $alunoId = $_GET['aluno_id'] ?? 170; // ID padrão para teste
 $alunoId = (int)$alunoId;
