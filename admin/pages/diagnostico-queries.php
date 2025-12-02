@@ -249,22 +249,26 @@ $alunoId = (int)$alunoId;
                             
                             // Testar chamadas HTTP reais
                             // Construir caminho correto para admin/api
-                            // O script está em admin/pages/, então precisamos voltar 1 nível para admin/
+                            // Como a página é acessada via index.php?page=diagnostico-queries,
+                            // o SCRIPT_NAME aponta para /admin/index.php
                             $scriptPath = $_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '';
                             
-                            // Debug: mostrar caminho calculado
-                            $adminPath = dirname(dirname($scriptPath)); // Ex: /admin
-                            
-                            // Se o caminho não começar com /, adicionar
-                            if (empty($adminPath) || $adminPath === '.' || $adminPath === '..') {
-                                // Fallback: usar caminho fixo
+                            // Extrair o caminho base do admin a partir do SCRIPT_NAME
+                            // Ex: /admin/index.php -> /admin
+                            if (strpos($scriptPath, '/admin/') !== false) {
+                                // Se contém /admin/, extrair até /admin
                                 $adminPath = '/admin';
-                            } elseif (!str_starts_with($adminPath, '/')) {
-                                $adminPath = '/' . $adminPath;
+                            } else {
+                                // Fallback: tentar calcular a partir do diretório atual
+                                $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+                                if (preg_match('#(/admin/)#', $requestUri, $matches)) {
+                                    $adminPath = $matches[1];
+                                    $adminPath = rtrim($adminPath, '/');
+                                } else {
+                                    // Último fallback: usar caminho fixo
+                                    $adminPath = '/admin';
+                                }
                             }
-                            
-                            // Garantir que não tenha barras duplas
-                            $adminPath = rtrim($adminPath, '/');
                             
                             $httpEndpoints = [
                                 'progresso_pratico' => $adminPath . '/api/progresso_pratico.php?aluno_id=' . $alunoId,
