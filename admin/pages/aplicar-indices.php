@@ -93,6 +93,9 @@ $rootPath = dirname(__DIR__, 2);
                                 $db = Database::getInstance();
                                 $pdo = $db->getConnection();
                                 
+                                // Configurar PDO para usar queries bufferizadas (necessário para ANALYZE TABLE)
+                                $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+                                
                                 // Determinar arquivo SQL
                                 $arquivoSQL = '';
                                 $docsPath = $rootPath . '/docs/';
@@ -148,7 +151,18 @@ $rootPath = dirname(__DIR__, 2);
                                     }
                                     
                                     try {
-                                        $pdo->exec($comando . ';');
+                                        // Para ANALYZE TABLE, garantir que não há queries pendentes
+                                        if (stripos($comando, 'ANALYZE TABLE') !== false) {
+                                            // Fechar qualquer statement pendente
+                                            $pdo->setAttribute(PDO::MYSQL_ATTR_USE_BUFFERED_QUERY, true);
+                                            // Executar com statement preparado para garantir isolamento
+                                            $stmt = $pdo->prepare($comando);
+                                            $stmt->execute();
+                                            $stmt->closeCursor();
+                                        } else {
+                                            // Para CREATE INDEX, usar exec normalmente
+                                            $pdo->exec($comando . ';');
+                                        }
                                         $sucesso++;
                                         echo '<div class="log-success" style="color: #4ec9b0;">   ✅ Sucesso!</div>';
                                     } catch (PDOException $e) {
@@ -164,7 +178,9 @@ $rootPath = dirname(__DIR__, 2);
                                         }
                                     }
                                     
-                                    usleep(100000);
+                                    // Delay maior para ANALYZE TABLE para garantir processamento completo
+                                    $delay = stripos($comando, 'ANALYZE TABLE') !== false ? 200000 : 100000;
+                                    usleep($delay);
                                     if (ob_get_level() > 0) ob_flush();
                                     flush();
                                 }
