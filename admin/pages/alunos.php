@@ -5417,12 +5417,26 @@ function abrirModalVisualizarAluno(alunoId) {
   logModalAluno('[modalVisualizarAluno] abrir', { alunoId });
 }
 
+// Controle global de requisições pendentes para cancelamento
+let activeAbortControllers = [];
+
 function fecharModalVisualizarAluno() {
   const modal = document.getElementById('modalVisualizarAluno');
   if (!modal) {
     logModalAluno('[modalVisualizarAluno] Elemento #modalVisualizarAluno não encontrado (fechar).');
     return;
   }
+
+  // CANCELAR TODAS AS REQUISIÇÕES PENDENTES
+  logModalAluno('🛑 Cancelando ' + activeAbortControllers.length + ' requisições pendentes...');
+  activeAbortControllers.forEach(controller => {
+    try {
+      controller.abort();
+    } catch (e) {
+      // Ignorar erros ao cancelar
+    }
+  });
+  activeAbortControllers = [];
 
   // CORRIGIDO: Remover classe is-open e ocultar modal corretamente
   modal.classList.remove('is-open');
@@ -5433,7 +5447,7 @@ function fecharModalVisualizarAluno() {
   // Zerar contexto do aluno atual
   contextoAlunoAtual = { alunoId: null, matriculaId: null, turmaTeoricaId: null };
 
-  logModalAluno('[modalVisualizarAluno] fechar');
+  logModalAluno('[modalVisualizarAluno] fechado e requisições canceladas');
 }
 
 // expõe explicitamente no escopo global
@@ -8718,15 +8732,28 @@ async function fetchWithTimeout(url, options = {}, timeout = 10000) {
     const controller = new AbortController();
     const id = setTimeout(() => controller.abort(), timeout);
     
+    // Registrar controller para possível cancelamento quando modal fechar
+    activeAbortControllers.push(controller);
+    
     try {
         const response = await fetch(url, {
             ...options,
             signal: controller.signal
         });
         clearTimeout(id);
+        // Remover controller da lista quando requisição completar
+        const index = activeAbortControllers.indexOf(controller);
+        if (index > -1) {
+            activeAbortControllers.splice(index, 1);
+        }
         return response;
     } catch (error) {
         clearTimeout(id);
+        // Remover controller da lista mesmo em caso de erro
+        const index = activeAbortControllers.indexOf(controller);
+        if (index > -1) {
+            activeAbortControllers.splice(index, 1);
+        }
         if (error.name === 'AbortError') {
             throw new Error(`Timeout: A requisição demorou mais de ${timeout}ms`);
         }
