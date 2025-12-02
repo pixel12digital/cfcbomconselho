@@ -51,6 +51,10 @@ $alunoId = (int)$alunoId;
                         </div>
                     </form>
 
+                    <div class="alert alert-info">
+                        <strong>💡 Diagnóstico Completo:</strong> Este script testa tanto as queries SQL isoladas quanto as chamadas HTTP reais dos endpoints para identificar onde está o gargalo.
+                    </div>
+
                     <div class="log-box" id="logBox" style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 5px; font-family: 'Courier New', monospace; font-size: 12px; max-height: 600px; overflow-y: auto;">
                         <?php
                         try {
@@ -59,6 +63,9 @@ $alunoId = (int)$alunoId;
                             
                             echo '<div class="log-info" style="color: #569cd6;">🚀 Iniciando diagnóstico para aluno ID: ' . $alunoId . '</div>';
                             echo '<div class="log-info" style="color: #569cd6;">⏰ ' . date('Y-m-d H:i:s') . '</div>';
+                            echo '<hr style="border-color: #555;">';
+                            
+                            echo '<div class="log-info" style="color: #569cd6;"><strong>📊 FASE 1: Testando Queries SQL Isoladas</strong></div>';
                             echo '<hr style="border-color: #555;">';
                             
                             // Testar cada endpoint problemático
@@ -220,8 +227,8 @@ $alunoId = (int)$alunoId;
                                 flush();
                             }
                             
-                            echo '<div class="log-success" style="color: #4ec9b0;"><strong>✅ Diagnóstico concluído!</strong></div>';
-                            echo '<div class="log-info" style="color: #569cd6;">⏱️ Tempo total: ' . number_format($totalTime, 2) . ' ms</div>';
+                            echo '<div class="log-success" style="color: #4ec9b0;"><strong>✅ FASE 1 concluída!</strong></div>';
+                            echo '<div class="log-info" style="color: #569cd6;">⏱️ Tempo total SQL: ' . number_format($totalTime, 2) . ' ms</div>';
                             
                             if (!empty($slowQueries)) {
                                 echo '<div class="log-error" style="color: #f48771;"><strong>⚠️ Queries lentas encontradas:</strong></div>';
@@ -233,6 +240,109 @@ $alunoId = (int)$alunoId;
                                 }
                             } else {
                                 echo '<div class="log-success" style="color: #4ec9b0;">✅ Nenhuma query muito lenta encontrada (todas < 1000ms)</div>';
+                            }
+                            
+                            echo '<hr style="border-color: #555;">';
+                            echo '<div class="log-info" style="color: #569cd6;"><strong>📡 FASE 2: Testando Chamadas HTTP Reais</strong></div>';
+                            echo '<div class="log-warning" style="color: #dcdcaa;">⚠️ Isso simula o que o frontend faz - inclui latência de rede HTTP</div>';
+                            echo '<hr style="border-color: #555;">';
+                            
+                            // Testar chamadas HTTP reais
+                            $httpEndpoints = [
+                                'progresso_pratico' => 'api/progresso_pratico.php?aluno_id=' . $alunoId,
+                                'progresso_teorico' => 'api/progresso_teorico.php?aluno_id=' . $alunoId,
+                                'exames_resumo' => 'api/exames.php?aluno_id=' . $alunoId . '&resumo=1',
+                                'historico_aluno' => 'api/historico_aluno.php?aluno_id=' . $alunoId
+                            ];
+                            
+                            $totalHttpTime = 0;
+                            $slowHttpRequests = [];
+                            
+                            foreach ($httpEndpoints as $nome => $url) {
+                                echo '<div class="log-info" style="color: #569cd6;">📡 Testando HTTP: ' . $nome . '</div>';
+                                echo '<div class="log-info" style="color: #569cd6; font-size: 10px;">   URL: ' . htmlspecialchars($url) . '</div>';
+                                
+                                $startTime = microtime(true);
+                                
+                                try {
+                                    // Simular chamada HTTP real usando curl ou file_get_contents
+                                    $fullUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/' . $url;
+                                    
+                                    $ch = curl_init($fullUrl);
+                                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                                    curl_setopt($ch, CURLOPT_TIMEOUT, 10);
+                                    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+                                    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+                                        'Cookie: ' . session_name() . '=' . session_id()
+                                    ]);
+                                    
+                                    $response = curl_exec($ch);
+                                    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                                    $curlError = curl_error($ch);
+                                    curl_close($ch);
+                                    
+                                    $endTime = microtime(true);
+                                    $httpTime = ($endTime - $startTime) * 1000; // em ms
+                                    $totalHttpTime += $httpTime;
+                                    
+                                    $timeClass = $httpTime > 1000 ? 'log-error' : ($httpTime > 500 ? 'log-warning' : 'log-success');
+                                    echo '<div class="' . $timeClass . '" style="color: ' . ($httpTime > 1000 ? '#f48771' : ($httpTime > 500 ? '#dcdcaa' : '#4ec9b0')) . ';">   ⏱️ Tempo HTTP: ' . number_format($httpTime, 2) . ' ms</div>';
+                                    echo '<div class="log-info" style="color: #569cd6;">   📊 Status HTTP: ' . $httpCode . '</div>';
+                                    
+                                    if ($curlError) {
+                                        echo '<div class="log-error" style="color: #f48771;">   ❌ Erro cURL: ' . htmlspecialchars($curlError) . '</div>';
+                                    }
+                                    
+                                    if ($httpTime > 1000) {
+                                        $slowHttpRequests[] = [
+                                            'nome' => $nome,
+                                            'tempo' => $httpTime,
+                                            'url' => $url
+                                        ];
+                                    }
+                                    
+                                } catch (Exception $e) {
+                                    $endTime = microtime(true);
+                                    $httpTime = ($endTime - $startTime) * 1000;
+                                    echo '<div class="log-error" style="color: #f48771;">   ❌ Erro: ' . htmlspecialchars($e->getMessage()) . '</div>';
+                                    echo '<div class="log-error" style="color: #f48771;">   ⏱️ Tempo até erro: ' . number_format($httpTime, 2) . ' ms</div>';
+                                }
+                                
+                                echo '<hr style="border-color: #555;">';
+                                
+                                usleep(200000); // Delay maior entre requisições HTTP
+                                if (ob_get_level() > 0) ob_flush();
+                                flush();
+                            }
+                            
+                            echo '<div class="log-success" style="color: #4ec9b0;"><strong>✅ FASE 2 concluída!</strong></div>';
+                            echo '<div class="log-info" style="color: #569cd6;">⏱️ Tempo total HTTP: ' . number_format($totalHttpTime, 2) . ' ms</div>';
+                            
+                            if (!empty($slowHttpRequests)) {
+                                echo '<div class="log-error" style="color: #f48771;"><strong>⚠️ Requisições HTTP lentas encontradas:</strong></div>';
+                                foreach ($slowHttpRequests as $slow) {
+                                    echo '<div style="background: #3a1f1f; padding: 5px; margin: 5px 0;">';
+                                    echo '<div class="log-error" style="color: #f48771;">   ' . $slow['nome'] . ': ' . number_format($slow['tempo'], 2) . ' ms</div>';
+                                    echo '<div class="log-info" style="font-size: 10px; color: #569cd6;">   URL: ' . htmlspecialchars($slow['url']) . '</div>';
+                                    echo '</div>';
+                                }
+                            } else {
+                                echo '<div class="log-success" style="color: #4ec9b0;">✅ Nenhuma requisição HTTP muito lenta encontrada (todas < 1000ms)</div>';
+                            }
+                            
+                            echo '<hr style="border-color: #555;">';
+                            echo '<div class="log-success" style="color: #4ec9b0;"><strong>✅ Diagnóstico completo concluído!</strong></div>';
+                            echo '<div class="log-info" style="color: #569cd6;">⏱️ Tempo total SQL: ' . number_format($totalTime, 2) . ' ms</div>';
+                            echo '<div class="log-info" style="color: #569cd6;">⏱️ Tempo total HTTP: ' . number_format($totalHttpTime, 2) . ' ms</div>';
+                            echo '<div class="log-info" style="color: #569cd6;">⏱️ Diferença (latência de rede + overhead): ' . number_format($totalHttpTime - $totalTime, 2) . ' ms</div>';
+                            
+                            if (($totalHttpTime - $totalTime) > 2000) {
+                                echo '<div class="log-warning" style="color: #dcdcaa;"><strong>⚠️ ATENÇÃO: Grande diferença entre tempo SQL e HTTP!</strong></div>';
+                                echo '<div class="log-warning" style="color: #dcdcaa;">   Isso indica que o problema pode ser:</div>';
+                                echo '<div class="log-warning" style="color: #dcdcaa;">   - Latência de rede alta (banco remoto)</div>';
+                                echo '<div class="log-warning" style="color: #dcdcaa;">   - Processamento PHP adicional após queries</div>';
+                                echo '<div class="log-warning" style="color: #dcdcaa;">   - Overhead de requisições HTTP</div>';
                             }
                             
                         } catch (Exception $e) {
