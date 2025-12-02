@@ -40,6 +40,12 @@ try {
         exit;
     }
     
+    // FECHAR SESSÃO APÓS AUTENTICAÇÃO para evitar bloqueio de sessão em requisições simultâneas
+    // Isso permite que múltiplas requisições AJAX sejam processadas em paralelo
+    if (session_status() === PHP_SESSION_ACTIVE) {
+        session_write_close();
+    }
+    
     $method = $_SERVER['REQUEST_METHOD'];
     
     if ($method === 'GET') {

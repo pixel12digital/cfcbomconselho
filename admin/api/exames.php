@@ -97,6 +97,12 @@ if (!$canRead) {
     returnJsonResponse(['error' => 'Sem permissão para acessar exames', 'code' => 'FORBIDDEN']);
 }
 
+// FECHAR SESSÃO APÓS AUTENTICAÇÃO para evitar bloqueio de sessão em requisições simultâneas
+// Isso permite que múltiplas requisições AJAX sejam processadas em paralelo
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
+
 $db = db();
 $method = $_SERVER['REQUEST_METHOD'];
 
