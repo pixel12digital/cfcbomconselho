@@ -9,9 +9,12 @@
 
 // Verificar autenticação
 session_start();
-require_once '../../includes/config.php';
-require_once '../../includes/database.php';
-require_once '../../includes/auth.php';
+
+// Ajustar caminhos para funcionar tanto localmente quanto em produção
+$rootPath = dirname(__DIR__, 2);
+require_once $rootPath . '/includes/config.php';
+require_once $rootPath . '/includes/database.php';
+require_once $rootPath . '/includes/auth.php';
 
 // Verificar se está logado
 if (!isLoggedIn()) {
@@ -113,7 +116,7 @@ header('Content-Type: text/html; charset=utf-8');
                                 <button type="submit" class="btn btn-primary btn-lg">
                                     ▶️ Executar Script
                                 </button>
-                                <a href="../../admin/index.php" class="btn btn-secondary btn-lg">Cancelar</a>
+                                <a href="../index.php" class="btn btn-secondary btn-lg">Cancelar</a>
                             </form>
 
                         <?php else: ?>
@@ -130,18 +133,19 @@ header('Content-Type: text/html; charset=utf-8');
                                     
                                     // Determinar arquivo SQL baseado na prioridade
                                     $arquivoSQL = '';
+                                    $docsPath = $rootPath . '/docs/';
                                     switch ($prioridade) {
                                         case 'alta':
-                                            $arquivoSQL = __DIR__ . '/../../docs/FASE4_INDICES_PRIORIDADE_ALTA.sql';
+                                            $arquivoSQL = $docsPath . 'FASE4_INDICES_PRIORIDADE_ALTA.sql';
                                             break;
                                         case 'media':
-                                            $arquivoSQL = __DIR__ . '/../../docs/FASE4_INDICES_PRIORIDADE_MEDIA.sql';
+                                            $arquivoSQL = $docsPath . 'FASE4_INDICES_PRIORIDADE_MEDIA.sql';
                                             break;
                                         case 'complementares':
-                                            $arquivoSQL = __DIR__ . '/../../docs/FASE4_INDICES_COMPLEMENTARES.sql';
+                                            $arquivoSQL = $docsPath . 'FASE4_INDICES_COMPLEMENTARES.sql';
                                             break;
                                         case 'analyze':
-                                            $arquivoSQL = __DIR__ . '/../../docs/FASE4_ANALYZE_TABLES.sql';
+                                            $arquivoSQL = $docsPath . 'FASE4_ANALYZE_TABLES.sql';
                                             break;
                                     }
                                     
@@ -235,8 +239,8 @@ header('Content-Type: text/html; charset=utf-8');
 
                             <div class="mt-4">
                                 <a href="aplicar-indices-fase4.php" class="btn btn-primary">🔄 Executar Outro Script</a>
-                                <a href="../../admin/index.php" class="btn btn-secondary">🏠 Voltar ao Admin</a>
-                                <a href="../../docs/FASE4_VERIFICAR_INDICES.sql" target="_blank" class="btn btn-info">🔍 Verificar Índices</a>
+                                <a href="../index.php" class="btn btn-secondary">🏠 Voltar ao Admin</a>
+                                <a href="<?php echo $rootPath; ?>/docs/FASE4_VERIFICAR_INDICES.sql" target="_blank" class="btn btn-info">🔍 Verificar Índices</a>
                             </div>
                         <?php endif; ?>
                     </div>
