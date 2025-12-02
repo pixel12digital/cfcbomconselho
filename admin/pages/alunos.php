@@ -5609,6 +5609,27 @@ window.historicoAluno = function(id) {
     // Debug: verificar se a função está sendo chamada
     console.log('Função historicoAluno chamada com ID:', id);
     
+    // CANCELAR TODAS AS REQUISIÇÕES PENDENTES ANTES DE REDIRECIONAR
+    // Isso evita que requisições pendentes do modal bloqueiem o carregamento da página de histórico
+    const numRequests = activeAbortControllers.length;
+    if (numRequests > 0) {
+        console.log('🛑 Cancelando ' + numRequests + ' requisições pendentes antes de abrir histórico...');
+        activeAbortControllers.forEach(controller => {
+            try {
+                controller.abort();
+            } catch (e) {
+                // Ignorar erros ao cancelar
+            }
+        });
+        activeAbortControllers = [];
+        
+        // Pequeno delay para garantir que requisições sejam canceladas antes de redirecionar
+        setTimeout(() => {
+            window.location.href = `?page=historico-aluno&id=${id}`;
+        }, 150);
+        return;
+    }
+    
     // Redirecionar para página de histórico usando o sistema de roteamento do admin
     window.location.href = `?page=historico-aluno&id=${id}`;
 }
