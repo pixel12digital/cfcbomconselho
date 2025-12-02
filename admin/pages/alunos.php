@@ -4124,6 +4124,20 @@ function abrirModalEdicao() {
 window.editarAluno = function(id) {
     logModalAluno('🚀 editarAluno chamada com ID:', id);
     
+    // CANCELAR TODAS AS REQUISIÇÕES PENDENTES ANTES DE ABRIR EDIÇÃO
+    const numRequests = activeAbortControllers.length;
+    if (numRequests > 0) {
+        logModalAluno('🛑 Cancelando ' + numRequests + ' requisições pendentes antes de editar aluno...');
+        activeAbortControllers.forEach(controller => {
+            try {
+                controller.abort();
+            } catch (e) {
+                // Ignorar erros ao cancelar
+            }
+        });
+        activeAbortControllers = [];
+    }
+    
     // Garantir que o modal anterior está completamente fechado antes de abrir novamente
     const modalAnterior = document.getElementById('modalAluno');
     if (modalAnterior) {
@@ -4138,7 +4152,7 @@ window.editarAluno = function(id) {
             // Aguardar um pouco para garantir que o fechamento foi processado
             setTimeout(() => {
                 executarEdicaoAluno(id);
-            }, 100);
+            }, 150);
             return;
         }
     }
@@ -4807,16 +4821,29 @@ window.visualizarAluno = function(id) {
     console.log('🚀 visualizandoAluno chamada com ID:', id);
 
     // CANCELAR TODAS AS REQUISIÇÕES PENDENTES ANTES DE ABRIR NOVO MODAL
-    logModalAluno('🛑 Cancelando ' + activeAbortControllers.length + ' requisições pendentes antes de abrir modal...');
-    activeAbortControllers.forEach(controller => {
-        try {
-            controller.abort();
-        } catch (e) {
-            // Ignorar erros ao cancelar
-        }
-    });
-    activeAbortControllers = [];
+    const numRequests = activeAbortControllers.length;
+    if (numRequests > 0) {
+        logModalAluno('🛑 Cancelando ' + numRequests + ' requisições pendentes antes de abrir modal...');
+        activeAbortControllers.forEach(controller => {
+            try {
+                controller.abort();
+            } catch (e) {
+                // Ignorar erros ao cancelar
+            }
+        });
+        activeAbortControllers = [];
+        
+        // Pequeno delay para garantir que requisições sejam canceladas antes de iniciar novas
+        setTimeout(() => {
+            executarVisualizacaoAluno(id);
+        }, 150);
+        return;
+    }
+    
+    executarVisualizacaoAluno(id);
+}
 
+function executarVisualizacaoAluno(id) {
     // Preencher contexto do aluno atual
     contextoAlunoAtual.alunoId = id;
     contextoAlunoAtual.matriculaId = null;
@@ -6869,6 +6896,20 @@ document.addEventListener('keydown', function(e) {
 window.abrirModalAluno = function abrirModalAluno() {
     logModalAluno('🚀 Abrindo modal customizado...');
     
+    // CANCELAR TODAS AS REQUISIÇÕES PENDENTES ANTES DE ABRIR MODAL DE EDIÇÃO
+    const numRequests = activeAbortControllers.length;
+    if (numRequests > 0) {
+        logModalAluno('🛑 Cancelando ' + numRequests + ' requisições pendentes antes de abrir modal de edição...');
+        activeAbortControllers.forEach(controller => {
+            try {
+                controller.abort();
+            } catch (e) {
+                // Ignorar erros ao cancelar
+            }
+        });
+        activeAbortControllers = [];
+    }
+    
     logModalAluno('🔒 Verificando conflitos com modal de visualização...');
     const modalVisualizar = document.getElementById('modalVisualizarAluno');
     if (modalVisualizar && modalVisualizar.classList.contains('is-open')) {
@@ -6939,6 +6980,21 @@ window.abrirModalAluno = function abrirModalAluno() {
 
 function fecharModalAluno() {
     logModalAluno('🚪 Fechando modal customizado...');
+    
+    // CANCELAR TODAS AS REQUISIÇÕES PENDENTES AO FECHAR MODAL DE EDIÇÃO
+    const numRequests = activeAbortControllers.length;
+    if (numRequests > 0) {
+        logModalAluno('🛑 Cancelando ' + numRequests + ' requisições pendentes ao fechar modal de edição...');
+        activeAbortControllers.forEach(controller => {
+            try {
+                controller.abort();
+            } catch (e) {
+                // Ignorar erros ao cancelar
+            }
+        });
+        activeAbortControllers = [];
+    }
+    
     const modal = document.getElementById('modalAluno');
     if (modal) {
         // FORÇAR fechamento do modal - garantir que está completamente oculto
