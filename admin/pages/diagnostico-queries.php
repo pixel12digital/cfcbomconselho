@@ -250,13 +250,21 @@ $alunoId = (int)$alunoId;
                             // Testar chamadas HTTP reais
                             // Construir caminho correto para admin/api
                             // O script está em admin/pages/, então precisamos voltar 1 nível para admin/
-                            $scriptPath = $_SERVER['SCRIPT_NAME']; // Ex: /admin/pages/diagnostico-queries.php
+                            $scriptPath = $_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '';
+                            
+                            // Debug: mostrar caminho calculado
                             $adminPath = dirname(dirname($scriptPath)); // Ex: /admin
                             
-                            // Garantir que o caminho começa com /
-                            if (!str_starts_with($adminPath, '/')) {
+                            // Se o caminho não começar com /, adicionar
+                            if (empty($adminPath) || $adminPath === '.' || $adminPath === '..') {
+                                // Fallback: usar caminho fixo
+                                $adminPath = '/admin';
+                            } elseif (!str_starts_with($adminPath, '/')) {
                                 $adminPath = '/' . $adminPath;
                             }
+                            
+                            // Garantir que não tenha barras duplas
+                            $adminPath = rtrim($adminPath, '/');
                             
                             $httpEndpoints = [
                                 'progresso_pratico' => $adminPath . '/api/progresso_pratico.php?aluno_id=' . $alunoId,
@@ -264,6 +272,9 @@ $alunoId = (int)$alunoId;
                                 'exames_resumo' => $adminPath . '/api/exames.php?aluno_id=' . $alunoId . '&resumo=1',
                                 'historico_aluno' => $adminPath . '/api/historico_aluno.php?aluno_id=' . $alunoId
                             ];
+                            
+                            // Debug: mostrar caminho calculado
+                            echo '<div class="log-info" style="color: #569cd6; font-size: 10px;">   🔍 Debug: scriptPath=' . htmlspecialchars($scriptPath) . ', adminPath=' . htmlspecialchars($adminPath) . '</div>';
                             
                             $totalHttpTime = 0;
                             $slowHttpRequests = [];
