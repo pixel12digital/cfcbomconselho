@@ -13,10 +13,22 @@ require_once $rootPath . '/includes/config.php';
 require_once $rootPath . '/includes/database.php';
 require_once $rootPath . '/includes/auth.php';
 
-// Verificar se é administrador
+// Verificar se está logado
+if (!isLoggedIn()) {
+    header('Location: ../index.php');
+    exit;
+}
+
+// Obter dados do usuário atual
 $currentUser = getCurrentUser();
-if (!$currentUser || ($currentUser['tipo'] ?? '') !== 'admin') {
-    die('Acesso negado. Apenas administradores podem executar este script.');
+if (!$currentUser) {
+    die('Erro: Não foi possível obter dados do usuário.');
+}
+
+// Verificar se é administrador
+$isAdmin = ($currentUser['tipo'] ?? '') === 'admin';
+if (!$isAdmin) {
+    die('Acesso negado. Apenas administradores podem executar este script.<br>Seu tipo: ' . htmlspecialchars($currentUser['tipo'] ?? 'desconhecido'));
 }
 
 $alunoId = $_GET['aluno_id'] ?? 170; // ID padrão para teste
