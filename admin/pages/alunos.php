@@ -9740,7 +9740,19 @@ async function atualizarResumoProvasAluno(alunoId) {
         logModalAluno('📝 Carregando resumo de provas do aluno:', alunoId);
         
         // Buscar exames do aluno (todos os tipos) com timeout de 15 segundos
-        const response = await fetchWithTimeout(url, {}, 15000);
+        // IMPORTANTE: Esta função não bloqueia o fluxo principal - erros são tratados silenciosamente
+        const response = await fetchWithTimeout(url, {}, 15000).catch(error => {
+            // Se houver timeout ou erro de rede, apenas logar e retornar valores padrão
+            console.warn('[RESUMO PROVAS] Timeout ou erro ao buscar exames (não bloqueante):', error.message);
+            atualizarCardsProvasResumo('Não iniciado');
+            atualizarSecaoProvasMatricula(null, null);
+            return null; // Retornar null para indicar que não houve resposta
+        });
+        
+        // Se a requisição falhou ou retornou null, não continuar
+        if (!response) {
+            return;
+        }
         
         console.log('[RESUMO PROVAS] Status HTTP:', response.status);
         

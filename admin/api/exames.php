@@ -216,7 +216,8 @@ function handleGet($db, $canWrite) {
     if ($resumo) {
         try {
             // Buscar apenas exames relevantes para resumo (provas teóricas e práticas)
-            // OTIMIZADO: Removido ORDER BY CASE para melhor performance
+            // OTIMIZADO: ORDER BY simplificado apenas por data_agendada DESC para melhor performance
+            // O processamento de tipo será feito em PHP para reduzir complexidade da query
             $exames = $db->fetchAll("
                 SELECT 
                     id,
@@ -230,9 +231,21 @@ function handleGet($db, $canWrite) {
                 FROM exames
                 WHERE aluno_id = ?
                 AND tipo IN ('teorico', 'pratico')
-                ORDER BY tipo ASC, data_agendada DESC, data_resultado DESC
+                ORDER BY data_agendada DESC, data_resultado DESC
                 LIMIT 10
             ", [$alunoId]);
+            
+            // Ordenar por tipo após buscar (processamento em PHP é mais rápido que ORDER BY complexo no SQL)
+            usort($exames, function($a, $b) {
+                // Primeiro ordenar por tipo (teorico vem antes de pratico)
+                $tipoOrder = ['teorico' => 1, 'pratico' => 2];
+                $tipoCmp = ($tipoOrder[$a['tipo']] ?? 999) <=> ($tipoOrder[$b['tipo']] ?? 999);
+                if ($tipoCmp !== 0) {
+                    return $tipoCmp;
+                }
+                // Se mesmo tipo, ordenar por data_agendada DESC
+                return strtotime($b['data_agendada'] ?? '1970-01-01') <=> strtotime($a['data_agendada'] ?? '1970-01-01');
+            });
             
             returnJsonResponse([
                 'success' => true,
