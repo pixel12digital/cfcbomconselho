@@ -8745,9 +8745,9 @@ async function atualizarResumoFinanceiroAluno(alunoId, matricula = null) {
     try {
         logModalAluno('💰 Carregando resumo financeiro para aluno:', alunoId);
         
-        // Usar nova API de resumo financeiro com timeout de 8 segundos
+        // Usar nova API de resumo financeiro com timeout de 15 segundos
         const url = `api/financeiro-resumo-aluno.php?aluno_id=${alunoId}`;
-        const response = await fetchWithTimeout(url, {}, 8000);
+        const response = await fetchWithTimeout(url, {}, 15000);
         
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}: ${response.statusText}`);
@@ -8854,9 +8854,9 @@ async function atualizarResumoFinanceiroMatricula(alunoId) {
             // Mostrar loading
             cardContainer.innerHTML = '<div class="text-center text-muted small"><i class="fas fa-spinner fa-spin"></i> Carregando resumo financeiro...</div>';
             
-            // Buscar dados detalhados do resumo financeiro da matrícula com timeout de 8 segundos
+            // Buscar dados detalhados do resumo financeiro da matrícula com timeout de 15 segundos
             const url = `api/financeiro-resumo-matricula.php?aluno_id=${alunoId}`;
-            const response = await fetchWithTimeout(url, {}, 8000);
+            const response = await fetchWithTimeout(url, {}, 15000);
             
             if (!response.ok) {
                 throw new Error(`HTTP ${response.status}: ${response.statusText}`);
