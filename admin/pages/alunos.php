@@ -6023,6 +6023,12 @@ async function alterarStatusAluno(id, status) {
             
             const data = await response.json();
             
+            // Remover controller da lista quando requisição completar
+            const index = activeAbortControllers.indexOf(controller);
+            if (index > -1) {
+                activeAbortControllers.splice(index, 1);
+            }
+            
             console.log('[alterarStatusAluno] Resposta da API:', data);
             
             if (typeof loading !== 'undefined') {
@@ -6030,6 +6036,21 @@ async function alterarStatusAluno(id, status) {
             }
             
             if (data.success) {
+                // CANCELAR TODAS AS REQUISIÇÕES PENDENTES APÓS ALTERAR STATUS COM SUCESSO
+                // Isso garante que não há requisições antigas interferindo em novas ações
+                const remainingRequests = activeAbortControllers.length;
+                if (remainingRequests > 0) {
+                    console.log('🛑 Cancelando ' + remainingRequests + ' requisições pendentes após alterar status...');
+                    activeAbortControllers.forEach(ctrl => {
+                        try {
+                            ctrl.abort();
+                        } catch (e) {
+                            // Ignorar erros
+                        }
+                    });
+                    activeAbortControllers = [];
+                }
+                
                 // Se a API retornou o aluno atualizado, atualizar a listagem
                 if (data.aluno) {
                     console.log('[alterarStatusAluno] Atualizando listagem com aluno:', data.aluno);
