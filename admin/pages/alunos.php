@@ -4806,6 +4806,17 @@ function preencherFormularioAluno(aluno) {
 window.visualizarAluno = function(id) {
     console.log('🚀 visualizandoAluno chamada com ID:', id);
 
+    // CANCELAR TODAS AS REQUISIÇÕES PENDENTES ANTES DE ABRIR NOVO MODAL
+    logModalAluno('🛑 Cancelando ' + activeAbortControllers.length + ' requisições pendentes antes de abrir modal...');
+    activeAbortControllers.forEach(controller => {
+        try {
+            controller.abort();
+        } catch (e) {
+            // Ignorar erros ao cancelar
+        }
+    });
+    activeAbortControllers = [];
+
     // Preencher contexto do aluno atual
     contextoAlunoAtual.alunoId = id;
     contextoAlunoAtual.matriculaId = null;
@@ -5428,20 +5439,29 @@ function fecharModalVisualizarAluno() {
   }
 
   // CANCELAR TODAS AS REQUISIÇÕES PENDENTES
-  logModalAluno('🛑 Cancelando ' + activeAbortControllers.length + ' requisições pendentes...');
-  activeAbortControllers.forEach(controller => {
-    try {
-      controller.abort();
-    } catch (e) {
-      // Ignorar erros ao cancelar
-    }
-  });
-  activeAbortControllers = [];
+  const numRequests = activeAbortControllers.length;
+  if (numRequests > 0) {
+    logModalAluno('🛑 Cancelando ' + numRequests + ' requisições pendentes...');
+    activeAbortControllers.forEach(controller => {
+      try {
+        controller.abort();
+      } catch (e) {
+        // Ignorar erros ao cancelar
+      }
+    });
+    activeAbortControllers = [];
+    
+    // Pequeno delay para garantir que requisições sejam canceladas e sessão liberada
+    // Isso evita que novas requisições sejam bloqueadas por requisições antigas
+    setTimeout(() => {
+      logModalAluno('✅ Requisições canceladas, sessão liberada');
+    }, 100);
+  }
 
   // CORRIGIDO: Remover classe is-open e ocultar modal corretamente
   modal.classList.remove('is-open');
   modal.dataset.opened = 'false';
-  modal.style.display = 'none';
+  modal.style.setProperty('display', 'none', 'important');
   document.body.style.overflow = '';
   
   // Zerar contexto do aluno atual
