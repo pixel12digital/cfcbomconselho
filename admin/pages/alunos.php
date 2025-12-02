@@ -4821,6 +4821,14 @@ window.visualizarAluno = function(id) {
         modalAlunoParaVisualizacao.removeAttribute('data-opened');
     }
 
+    // CORRIGIDO: Garantir que modal de visualização anterior está fechado
+    const modalVisualizarAnterior = document.getElementById('modalVisualizarAluno');
+    if (modalVisualizarAnterior) {
+        modalVisualizarAnterior.classList.remove('is-open');
+        modalVisualizarAnterior.dataset.opened = 'false';
+        modalVisualizarAnterior.style.display = 'none';
+    }
+
     const modalElement = document.getElementById('modalVisualizarAluno');
     const modalBody = document.getElementById('modalVisualizarAlunoBody');
 
@@ -4843,7 +4851,16 @@ window.visualizarAluno = function(id) {
         </div>
     `;
 
+    // CORRIGIDO: Abrir modal ANTES de fazer a requisição para garantir que aparece imediatamente
     abrirModalVisualizarAluno(id);
+    
+    // Garantir que o modal está visível após um pequeno delay (para casos de timing)
+    setTimeout(() => {
+        if (modalElement && !modalElement.classList.contains('is-open')) {
+            console.log('⚠️ Modal não abriu, forçando abertura...');
+            abrirModalVisualizarAluno(id);
+        }
+    }, 50);
     aplicarCorrecaoZIconsAction('open');
 
     const fecharModalVisualizacao = (event) => {
@@ -5384,8 +5401,11 @@ function abrirModalVisualizarAluno(alunoId) {
     return;
   }
 
-  // visibilidade e centralização (mesmo padrão do #modalAluno)
+  // CORRIGIDO: Adicionar classe is-open para exibir o modal (necessário para CSS)
+  modal.classList.add('is-open');
   modal.dataset.opened = 'true';
+  modal.style.display = 'flex'; // Forçar display para garantir visibilidade
+  
   document.body.style.overflow = 'hidden';
 
   // garante que o conteúdo do modal começa no topo
@@ -5404,7 +5424,10 @@ function fecharModalVisualizarAluno() {
     return;
   }
 
+  // CORRIGIDO: Remover classe is-open e ocultar modal corretamente
+  modal.classList.remove('is-open');
   modal.dataset.opened = 'false';
+  modal.style.display = 'none';
   document.body.style.overflow = '';
   
   // Zerar contexto do aluno atual
