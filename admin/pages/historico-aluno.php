@@ -132,7 +132,8 @@ if (!$alunoData) {
     }
 }
 
-// Buscar histórico de aulas
+// Buscar histórico de aulas (OTIMIZADO: limitado para melhor performance)
+// Limite de 500 aulas é suficiente para histórico completo de qualquer aluno
 $aulas = $db->fetchAll("
     SELECT a.*, i.credencial, COALESCE(u.nome, i.nome) as instrutor_nome, v.placa, v.modelo, v.marca
     FROM aulas a
@@ -141,19 +142,33 @@ $aulas = $db->fetchAll("
     LEFT JOIN veiculos v ON a.veiculo_id = v.id
     WHERE a.aluno_id = ?
     ORDER BY a.data_aula DESC, a.hora_inicio DESC
+    LIMIT 500
 ", [$alunoId]);
 
-// Calcular estatísticas gerais
-$totalAulas = count($aulas);
-$aulasConcluidas = count(array_filter($aulas, fn($a) => $a['status'] === 'concluida'));
-$aulasCanceladas = count(array_filter($aulas, fn($a) => $a['status'] === 'cancelada'));
-$aulasAgendadas = count(array_filter($aulas, fn($a) => $a['status'] === 'agendada'));
+// Calcular estatísticas gerais (OTIMIZADO: usar SQL COUNT ao invés de array_filter)
+// Buscar estatísticas via SQL é muito mais rápido que processar em PHP
+$estatisticasAulas = $db->fetch("
+    SELECT 
+        COUNT(*) as total_aulas,
+        COUNT(CASE WHEN status = 'concluida' THEN 1 END) as aulas_concluidas,
+        COUNT(CASE WHEN status = 'cancelada' THEN 1 END) as aulas_canceladas,
+        COUNT(CASE WHEN status = 'agendada' THEN 1 END) as aulas_agendadas
+    FROM aulas
+    WHERE aluno_id = ?
+", [$alunoId]);
 
-// Buscar exames do aluno
+$totalAulas = (int)($estatisticasAulas['total_aulas'] ?? count($aulas));
+$aulasConcluidas = (int)($estatisticasAulas['aulas_concluidas'] ?? 0);
+$aulasCanceladas = (int)($estatisticasAulas['aulas_canceladas'] ?? 0);
+$aulasAgendadas = (int)($estatisticasAulas['aulas_agendadas'] ?? 0);
+
+// Buscar exames do aluno (OTIMIZADO: limitado para melhor performance)
+// Limite de 100 exames é suficiente para histórico completo
 $exames = $db->fetchAll("
     SELECT * FROM exames 
     WHERE aluno_id = ? 
     ORDER BY tipo, data_agendada DESC
+    LIMIT 100
 ", [$alunoId]);
 
 // Separar exames por tipo
@@ -304,16 +319,25 @@ foreach ($aulas as $aula) {
         }
     }
 }
-$aulasPraticasConcluidas = count(array_filter($aulas, fn($a) => $a['status'] === 'concluida' && $a['tipo_aula'] === 'pratica'));
-
-// Calcular estatísticas por categoria de veículo (para aulas práticas)
+// OTIMIZADO: Calcular estatísticas de aulas práticas em uma única passada
+$aulasPraticasConcluidas = 0;
 $aulasPraticasPorTipo = [
-    'moto' => count(array_filter($aulas, fn($a) => $a['status'] === 'concluida' && $a['tipo_aula'] === 'pratica' && $a['tipo_veiculo'] === 'moto')),
-    'carro' => count(array_filter($aulas, fn($a) => $a['status'] === 'concluida' && $a['tipo_aula'] === 'pratica' && $a['tipo_veiculo'] === 'carro')),
-    'carga' => count(array_filter($aulas, fn($a) => $a['status'] === 'concluida' && $a['tipo_aula'] === 'pratica' && $a['tipo_veiculo'] === 'carga')),
-    'passageiros' => count(array_filter($aulas, fn($a) => $a['status'] === 'concluida' && $a['tipo_aula'] === 'pratica' && $a['tipo_veiculo'] === 'passageiros')),
-    'combinacao' => count(array_filter($aulas, fn($a) => $a['status'] === 'concluida' && $a['tipo_aula'] === 'pratica' && $a['tipo_veiculo'] === 'combinacao'))
+    'moto' => 0,
+    'carro' => 0,
+    'carga' => 0,
+    'passageiros' => 0,
+    'combinacao' => 0
 ];
+
+foreach ($aulas as $aula) {
+    if ($aula['status'] === 'concluida' && $aula['tipo_aula'] === 'pratica') {
+        $aulasPraticasConcluidas++;
+        $tipoVeiculo = $aula['tipo_veiculo'] ?? '';
+        if (isset($aulasPraticasPorTipo[$tipoVeiculo])) {
+            $aulasPraticasPorTipo[$tipoVeiculo]++;
+        }
+    }
+}
 
 // Incluir classe de configurações
 require_once __DIR__ . '/../includes/configuracoes_categorias.php';
@@ -408,59 +432,70 @@ if ($ehCategoriaCombinada) {
     $aulasTeoricasNecessarias = $cargaCategoria['total_horas_teoricas']; // Teoria única (ex: 45, não 90)
     $progressoDetalhado = [];
     
+    // OTIMIZADO: Calcular todas as estatísticas em uma única passada pelo array de aulas
+    // ao invés de múltiplos array_filter dentro do loop
+    $estatisticasPorCategoria = [];
+    foreach ($configuracoesCategorias as $categoria => $config) {
+        $estatisticasPorCategoria[$categoria] = [
+            'teoricas' => ['disciplinas' => []],
+            'praticas_moto' => 0,
+            'praticas_carro' => 0,
+            'praticas_carga' => 0,
+            'praticas_passageiros' => 0,
+            'praticas_combinacao' => 0
+        ];
+    }
+    
+    // Uma única passada pelo array de aulas para calcular todas as estatísticas
+    foreach ($aulas as $aula) {
+        if ($aula['status'] !== 'concluida') {
+            continue;
+        }
+        
+        $categoria = $aula['categoria_veiculo'] ?? null;
+        if (!$categoria || !isset($estatisticasPorCategoria[$categoria])) {
+            continue;
+        }
+        
+        if ($aula['tipo_aula'] === 'teorica') {
+            // Para teóricas, contar apenas disciplinas únicas
+            $disciplina = $aula['disciplina'] ?? 'geral';
+            if (!isset($estatisticasPorCategoria[$categoria]['teoricas']['disciplinas'][$disciplina])) {
+                $estatisticasPorCategoria[$categoria]['teoricas']['disciplinas'][$disciplina] = true;
+            }
+        } elseif ($aula['tipo_aula'] === 'pratica') {
+            // Para práticas, contar por tipo de veículo
+            $tipoVeiculo = $aula['tipo_veiculo'] ?? '';
+            switch ($tipoVeiculo) {
+                case 'moto':
+                    $estatisticasPorCategoria[$categoria]['praticas_moto']++;
+                    break;
+                case 'carro':
+                    $estatisticasPorCategoria[$categoria]['praticas_carro']++;
+                    break;
+                case 'carga':
+                    $estatisticasPorCategoria[$categoria]['praticas_carga']++;
+                    break;
+                case 'passageiros':
+                    $estatisticasPorCategoria[$categoria]['praticas_passageiros']++;
+                    break;
+                case 'combinacao':
+                    $estatisticasPorCategoria[$categoria]['praticas_combinacao']++;
+                    break;
+            }
+        }
+    }
+    
     foreach ($configuracoesCategorias as $categoria => $config) {
         // NÃO somar aqui - já foi calculado pela função centralizada
         
-        // Calcular aulas concluídas por tipo para esta categoria específica
-        // Para teóricas, contar apenas disciplinas únicas para evitar duplicação
-        $disciplinasTeoricasUnicas = [];
-        $teoricasConcluidas = 0;
-        foreach ($aulas as $aula) {
-            if ($aula['status'] === 'concluida' && 
-                $aula['tipo_aula'] === 'teorica' && 
-                $aula['categoria_veiculo'] === $categoria) {
-                $disciplina = $aula['disciplina'] ?? 'geral';
-                if (!isset($disciplinasTeoricasUnicas[$disciplina])) {
-                    $disciplinasTeoricasUnicas[$disciplina] = true;
-                    $teoricasConcluidas++;
-                }
-            }
-        }
-        
-        $praticasMotoConcluidas = count(array_filter($aulas, function($a) use ($categoria) {
-            return $a['status'] === 'concluida' && 
-                   $a['tipo_aula'] === 'pratica' && 
-                   $a['categoria_veiculo'] === $categoria &&
-                   $a['tipo_veiculo'] === 'moto';
-        }));
-        
-        $praticasCarroConcluidas = count(array_filter($aulas, function($a) use ($categoria) {
-            return $a['status'] === 'concluida' && 
-                   $a['tipo_aula'] === 'pratica' && 
-                   $a['categoria_veiculo'] === $categoria &&
-                   $a['tipo_veiculo'] === 'carro';
-        }));
-        
-        $praticasCargaConcluidas = count(array_filter($aulas, function($a) use ($categoria) {
-            return $a['status'] === 'concluida' && 
-                   $a['tipo_aula'] === 'pratica' && 
-                   $a['categoria_veiculo'] === $categoria &&
-                   $a['tipo_veiculo'] === 'carga';
-        }));
-        
-        $praticasPassageirosConcluidas = count(array_filter($aulas, function($a) use ($categoria) {
-            return $a['status'] === 'concluida' && 
-                   $a['tipo_aula'] === 'pratica' && 
-                   $a['categoria_veiculo'] === $categoria &&
-                   $a['tipo_veiculo'] === 'passageiros';
-        }));
-        
-        $praticasCombinacaoConcluidas = count(array_filter($aulas, function($a) use ($categoria) {
-            return $a['status'] === 'concluida' && 
-                   $a['tipo_aula'] === 'pratica' && 
-                   $a['categoria_veiculo'] === $categoria &&
-                   $a['tipo_veiculo'] === 'combinacao';
-        }));
+        // Usar estatísticas pré-calculadas
+        $teoricasConcluidas = count($estatisticasPorCategoria[$categoria]['teoricas']['disciplinas']);
+        $praticasMotoConcluidas = $estatisticasPorCategoria[$categoria]['praticas_moto'];
+        $praticasCarroConcluidas = $estatisticasPorCategoria[$categoria]['praticas_carro'];
+        $praticasCargaConcluidas = $estatisticasPorCategoria[$categoria]['praticas_carga'];
+        $praticasPassageirosConcluidas = $estatisticasPorCategoria[$categoria]['praticas_passageiros'];
+        $praticasCombinacaoConcluidas = $estatisticasPorCategoria[$categoria]['praticas_combinacao'];
 
         $progressoDetalhado[$categoria] = [
             'config' => $config,
