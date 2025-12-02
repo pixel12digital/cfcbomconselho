@@ -5943,6 +5943,20 @@ function atualizarAlunoNaListagem(alunoAtualizado) {
 }
 
 async function alterarStatusAluno(id, status) {
+    // CANCELAR TODAS AS REQUISIÇÕES PENDENTES ANTES DE ALTERAR STATUS
+    const numRequests = activeAbortControllers.length;
+    if (numRequests > 0) {
+        console.log('🛑 Cancelando ' + numRequests + ' requisições pendentes antes de alterar status...');
+        activeAbortControllers.forEach(controller => {
+            try {
+                controller.abort();
+            } catch (e) {
+                // Ignorar erros ao cancelar
+            }
+        });
+        activeAbortControllers = [];
+    }
+    
     // Validar valores permitidos (alinhado com ENUM do banco)
     const statusValidos = ['ativo', 'inativo', 'concluido'];
     if (!statusValidos.includes(status)) {
@@ -5986,6 +6000,10 @@ async function alterarStatusAluno(id, status) {
             console.log('📡 Alterando status do aluno:', { id, status, url });
             console.log('📡 Payload enviado:', JSON.stringify({ status: status }));
             
+            // Criar AbortController para esta requisição
+            const controller = new AbortController();
+            activeAbortControllers.push(controller);
+            
             // Fazer PUT para a API com apenas o campo status (mesmo padrão usado pelo salvarAluno em edição)
             const response = await fetch(url, {
                 method: 'PUT',
@@ -5994,6 +6012,7 @@ async function alterarStatusAluno(id, status) {
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 credentials: 'same-origin',
+                signal: controller.signal,
                 body: JSON.stringify({ status: status })
             });
             
