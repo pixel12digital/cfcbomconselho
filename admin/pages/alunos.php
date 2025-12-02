@@ -9317,7 +9317,7 @@ async function atualizarResumoTeoricoAluno(alunoId) {
             return;
         }
         
-        const response = await fetchWithTimeout(`api/progresso_teorico.php?aluno_id=${encodeURIComponent(alunoId)}`, {}, 8000);
+        const response = await fetchWithTimeout(`api/progresso_teorico.php?aluno_id=${encodeURIComponent(alunoId)}`, {}, 15000);
         
         if (!response.ok) {
             // Não bloquear se houver erro - apenas atualizar UI
@@ -9463,7 +9463,7 @@ async function atualizarResumoPraticoAluno(alunoId) {
             return;
         }
         
-        const response = await fetchWithTimeout(`api/progresso_pratico.php?aluno_id=${encodeURIComponent(alunoId)}`, {}, 8000);
+        const response = await fetchWithTimeout(`api/progresso_pratico.php?aluno_id=${encodeURIComponent(alunoId)}`, {}, 15000);
         
         if (!response.ok) {
             // Não bloquear se houver erro - apenas atualizar UI
@@ -9563,8 +9563,8 @@ async function atualizarResumoProvasAluno(alunoId) {
         
         logModalAluno('📝 Carregando resumo de provas do aluno:', alunoId);
         
-        // Buscar exames do aluno (todos os tipos) com timeout de 8 segundos
-        const response = await fetchWithTimeout(url, {}, 8000);
+        // Buscar exames do aluno (todos os tipos) com timeout de 15 segundos
+        const response = await fetchWithTimeout(url, {}, 15000);
         
         console.log('[RESUMO PROVAS] Status HTTP:', response.status);
         
@@ -10745,7 +10745,7 @@ async function carregarHistoricoAluno(alunoId, options = { modoVisualizacao: fal
         
         logModalAluno('📜 Carregando histórico do aluno:', alunoId);
         
-        const response = await fetchWithTimeout(`api/historico_aluno.php?aluno_id=${encodeURIComponent(alunoId)}`, {}, 8000);
+        const response = await fetchWithTimeout(`api/historico_aluno.php?aluno_id=${encodeURIComponent(alunoId)}`, {}, 15000);
         
         if (!response.ok) {
             // Não bloquear se houver erro - apenas mostrar placeholder
