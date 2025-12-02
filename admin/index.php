@@ -1764,6 +1764,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <i class="fas fa-database"></i>
                             <span>Otimizar Banco (Índices)</span>
                         </a>
+                        <a href="index.php?page=diagnostico-queries" class="nav-sublink <?php echo $page === 'diagnostico-queries' ? 'active' : ''; ?>">
+                            <i class="fas fa-search"></i>
+                            <span>Diagnóstico de Queries</span>
+                        </a>
                         <?php endif; ?>
                         <!-- TODO: Verificar se configuracoes.php aceita action=geral ou criar página específica -->
                         <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
@@ -2071,6 +2075,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                 <a href="index.php?page=aplicar-indices" class="mobile-nav-sublink <?php echo $page === 'aplicar-indices' ? 'active' : ''; ?>">
                                     <i class="fas fa-database"></i>
                                     <span>Otimizar Banco (Índices)</span>
+                                </a>
+                                <a href="index.php?page=diagnostico-queries" class="mobile-nav-sublink <?php echo $page === 'diagnostico-queries' ? 'active' : ''; ?>">
+                                    <i class="fas fa-search"></i>
+                                    <span>Diagnóstico de Queries</span>
                                 </a>
                                 <?php endif; ?>
                                 <!-- TODO: Verificar se configuracoes.php aceita action=geral ou criar página específica -->

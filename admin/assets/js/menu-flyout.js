@@ -69,6 +69,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 { icon: 'fas fa-layer-group', text: 'Cursos / Categorias', href: 'index.php?page=configuracoes-categorias' },
                 { icon: 'fas fa-book', text: 'Disciplinas', href: 'index.php?page=configuracoes-disciplinas' },
                 { icon: 'fas fa-database', text: 'Otimizar Banco (Índices)', href: 'index.php?page=aplicar-indices' },
+                { icon: 'fas fa-search', text: 'Diagnóstico de Queries', href: 'index.php?page=diagnostico-queries' },
                 { icon: 'fas fa-sliders-h', text: 'Configurações Gerais', href: '#', onclick: 'alert("Página em desenvolvimento"); return false;' }
             ]
         },
