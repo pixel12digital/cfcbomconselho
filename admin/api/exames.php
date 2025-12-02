@@ -210,6 +210,7 @@ function handleGet($db, $canWrite) {
     if ($resumo) {
         try {
             // Buscar apenas exames relevantes para resumo (provas teóricas e práticas)
+            // OTIMIZADO: Removido ORDER BY CASE para melhor performance
             $exames = $db->fetchAll("
                 SELECT 
                     id,
@@ -223,14 +224,7 @@ function handleGet($db, $canWrite) {
                 FROM exames
                 WHERE aluno_id = ?
                 AND tipo IN ('teorico', 'pratico')
-                ORDER BY 
-                    CASE tipo 
-                        WHEN 'teorico' THEN 1 
-                        WHEN 'pratico' THEN 2 
-                        ELSE 3 
-                    END,
-                    data_agendada DESC,
-                    data_resultado DESC
+                ORDER BY tipo ASC, data_agendada DESC, data_resultado DESC
                 LIMIT 10
             ", [$alunoId]);
             

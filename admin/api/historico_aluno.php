@@ -341,53 +341,140 @@ function handleGet($db) {
         $faturas = [];
         $hoje = date('Y-m-d');
         
-        // Tentar tabela 'faturas' primeiro com LEFT JOIN em pagamentos
+        // Primeiro, buscar apenas as faturas (mais rápido)
+        // Depois, buscar pagamentos apenas para faturas pagas do aluno
         try {
             $faturas = $db->fetchAll("
                 SELECT 
-                    f.id,
-                    f.aluno_id,
-                    f.matricula_id,
-                    f.descricao,
-                    f.valor,
-                    f.vencimento,
-                    f.status,
-                    f.criado_em,
-                    p.data_pagamento
-                FROM faturas f
-                LEFT JOIN (
-                    SELECT fatura_id, MAX(data_pagamento) as data_pagamento
-                    FROM pagamentos
-                    GROUP BY fatura_id
-                ) p ON f.id = p.fatura_id
-                WHERE f.aluno_id = ?
-                ORDER BY f.vencimento DESC, f.criado_em DESC
+                    id,
+                    aluno_id,
+                    matricula_id,
+                    descricao,
+                    valor,
+                    vencimento,
+                    status,
+                    criado_em
+                FROM faturas
+                WHERE aluno_id = ?
+                ORDER BY vencimento DESC, criado_em DESC
                 LIMIT 100
             ", [$alunoId]);
+            
+            // Se houver faturas, buscar pagamentos apenas para faturas pagas (otimizado)
+            if (!empty($faturas)) {
+                // Filtrar apenas faturas pagas para reduzir busca
+                $faturasPagasIds = [];
+                foreach ($faturas as $fatura) {
+                    if (isset($fatura['status']) && strtolower($fatura['status']) === 'paga') {
+                        $faturasPagasIds[] = $fatura['id'];
+                    }
+                }
+                
+                // Buscar pagamentos apenas para faturas pagas
+                if (!empty($faturasPagasIds)) {
+                    $faturaIdsPlaceholders = implode(',', array_fill(0, count($faturasPagasIds), '?'));
+                    
+                    try {
+                        $pagamentos = $db->fetchAll("
+                            SELECT fatura_id, MAX(data_pagamento) as data_pagamento
+                            FROM pagamentos
+                            WHERE fatura_id IN ($faturaIdsPlaceholders)
+                            GROUP BY fatura_id
+                        ", $faturasPagasIds);
+                        
+                        // Criar mapa de pagamentos por fatura_id
+                        $pagamentosMap = [];
+                        foreach ($pagamentos as $pagamento) {
+                            $pagamentosMap[$pagamento['fatura_id']] = $pagamento['data_pagamento'];
+                        }
+                        
+                        // Adicionar data_pagamento às faturas pagas
+                        foreach ($faturas as &$fatura) {
+                            $fatura['data_pagamento'] = $pagamentosMap[$fatura['id']] ?? null;
+                        }
+                        unset($fatura);
+                    } catch (Exception $e) {
+                        // Se não houver tabela pagamentos, continuar sem data_pagamento
+                        foreach ($faturas as &$fatura) {
+                            $fatura['data_pagamento'] = null;
+                        }
+                        unset($fatura);
+                    }
+                } else {
+                    // Nenhuma fatura paga, não precisa buscar pagamentos
+                    foreach ($faturas as &$fatura) {
+                        $fatura['data_pagamento'] = null;
+                    }
+                    unset($fatura);
+                }
+            }
         } catch (Exception $e) {
-            // Se não existir, tentar 'financeiro_faturas' com LEFT JOIN
+            // Se não existir, tentar 'financeiro_faturas'
             try {
                 $faturas = $db->fetchAll("
                     SELECT 
-                        f.id,
-                        f.aluno_id,
-                        f.matricula_id,
-                        f.titulo as descricao,
-                        f.valor_total as valor,
-                        f.data_vencimento as vencimento,
-                        f.status,
-                        f.criado_em,
-                        p.data_pagamento
-                    FROM financeiro_faturas f
-                    LEFT JOIN (
-                        SELECT fatura_id, MAX(data_pagamento) as data_pagamento
-                        FROM pagamentos
-                        GROUP BY fatura_id
-                    ) p ON f.id = p.fatura_id
-                    WHERE f.aluno_id = ?
-                    ORDER BY f.data_vencimento DESC, f.criado_em DESC
+                        id,
+                        aluno_id,
+                        matricula_id,
+                        titulo as descricao,
+                        valor_total as valor,
+                        data_vencimento as vencimento,
+                        status,
+                        criado_em
+                    FROM financeiro_faturas
+                    WHERE aluno_id = ?
+                    ORDER BY data_vencimento DESC, criado_em DESC
                     LIMIT 100
                 ", [$alunoId]);
+                
+                // Se houver faturas, buscar pagamentos apenas para faturas pagas (otimizado)
+                if (!empty($faturas)) {
+                    // Filtrar apenas faturas pagas para reduzir busca
+                    $faturasPagasIds = [];
+                    foreach ($faturas as $fatura) {
+                        if (isset($fatura['status']) && strtolower($fatura['status']) === 'paga') {
+                            $faturasPagasIds[] = $fatura['id'];
+                        }
+                    }
+                    
+                    // Buscar pagamentos apenas para faturas pagas
+                    if (!empty($faturasPagasIds)) {
+                        $faturaIdsPlaceholders = implode(',', array_fill(0, count($faturasPagasIds), '?'));
+                        
+                        try {
+                            $pagamentos = $db->fetchAll("
+                                SELECT fatura_id, MAX(data_pagamento) as data_pagamento
+                                FROM pagamentos
+                                WHERE fatura_id IN ($faturaIdsPlaceholders)
+                                GROUP BY fatura_id
+                            ", $faturasPagasIds);
+                            
+                            // Criar mapa de pagamentos por fatura_id
+                            $pagamentosMap = [];
+                            foreach ($pagamentos as $pagamento) {
+                                $pagamentosMap[$pagamento['fatura_id']] = $pagamento['data_pagamento'];
+                            }
+                            
+                            // Adicionar data_pagamento às faturas pagas
+                            foreach ($faturas as &$fatura) {
+                                $fatura['data_pagamento'] = $pagamentosMap[$fatura['id']] ?? null;
+                            }
+                            unset($fatura);
+                        } catch (Exception $e2) {
+                            // Se não houver tabela pagamentos, continuar sem data_pagamento
+                            foreach ($faturas as &$fatura) {
+                                $fatura['data_pagamento'] = null;
+                            }
+                            unset($fatura);
+                        }
+                    } else {
+                        // Nenhuma fatura paga, não precisa buscar pagamentos
+                        foreach ($faturas as &$fatura) {
+                            $fatura['data_pagamento'] = null;
+                        }
+                        unset($fatura);
+                    }
+                }
             } catch (Exception $e2) {
                 // Se nenhuma tabela existir, continuar sem faturas
                 $faturas = [];
