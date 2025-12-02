@@ -248,11 +248,15 @@ $alunoId = (int)$alunoId;
                             echo '<hr style="border-color: #555;">';
                             
                             // Testar chamadas HTTP reais
+                            // Nota: URLs devem ser relativas ao diretório admin, como o JavaScript faz
+                            $basePath = dirname($_SERVER['SCRIPT_NAME']); // Ex: /admin/pages
+                            $adminBase = dirname($basePath); // Ex: /admin
+                            
                             $httpEndpoints = [
-                                'progresso_pratico' => 'api/progresso_pratico.php?aluno_id=' . $alunoId,
-                                'progresso_teorico' => 'api/progresso_teorico.php?aluno_id=' . $alunoId,
-                                'exames_resumo' => 'api/exames.php?aluno_id=' . $alunoId . '&resumo=1',
-                                'historico_aluno' => 'api/historico_aluno.php?aluno_id=' . $alunoId
+                                'progresso_pratico' => $adminBase . '/api/progresso_pratico.php?aluno_id=' . $alunoId,
+                                'progresso_teorico' => $adminBase . '/api/progresso_teorico.php?aluno_id=' . $alunoId,
+                                'exames_resumo' => $adminBase . '/api/exames.php?aluno_id=' . $alunoId . '&resumo=1',
+                                'historico_aluno' => $adminBase . '/api/historico_aluno.php?aluno_id=' . $alunoId
                             ];
                             
                             $totalHttpTime = 0;
@@ -265,8 +269,10 @@ $alunoId = (int)$alunoId;
                                 $startTime = microtime(true);
                                 
                                 try {
-                                    // Simular chamada HTTP real usando curl ou file_get_contents
-                                    $fullUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'] . '/' . $url;
+                                    // Construir URL completa
+                                    $protocol = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http');
+                                    $host = $_SERVER['HTTP_HOST'];
+                                    $fullUrl = $protocol . '://' . $host . $url;
                                     
                                     $ch = curl_init($fullUrl);
                                     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
