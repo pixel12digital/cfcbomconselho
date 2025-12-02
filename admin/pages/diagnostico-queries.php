@@ -144,6 +144,14 @@ $alunoId = (int)$alunoId;
                                     WHERE aluno_id = ?
                                     ORDER BY vencimento DESC, criado_em DESC
                                     LIMIT 100
+                                ",
+                                'progresso_pratico_matriculas' => "
+                                    SELECT aulas_praticas_contratadas
+                                    FROM matriculas
+                                    WHERE aluno_id = ? 
+                                    AND status = 'ativa'
+                                    ORDER BY data_inicio DESC
+                                    LIMIT 1
                                 "
                             ];
                             
