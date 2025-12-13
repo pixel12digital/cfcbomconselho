@@ -39,15 +39,18 @@ if (!isset($db)) {
 
 // Verificar se ID do aluno foi fornecido
 $alunoId = null;
+$turmaIdFoco = null; // AJUSTE 2025-12 - Turma para destacar quando vindo do Diário
 if (defined('ADMIN_ROUTING')) {
     // Se estamos no sistema de roteamento, usar variável global
     $alunoId = $aluno_id ?? null;
+    $turmaIdFoco = $_GET['turma_id'] ?? null;
 } else {
     // Se acessado diretamente, usar GET
     if (!isset($_GET['id']) || !is_numeric($_GET['id'])) {
         header('Location: alunos.php');
         exit;
     }
+    $turmaIdFoco = $_GET['turma_id'] ?? null;
     $alunoId = (int)$_GET['id'];
 }
 
@@ -132,8 +135,9 @@ if (!$alunoData) {
     }
 }
 
-// Buscar histórico de aulas (OTIMIZADO: limitado para melhor performance)
+// Buscar histórico de aulas práticas (OTIMIZADO: limitado para melhor performance)
 // Limite de 500 aulas é suficiente para histórico completo de qualquer aluno
+// CORREÇÃO 2025-12: Histórico Completo de Aulas exibe apenas aulas práticas
 $aulas = $db->fetchAll("
     SELECT a.*, i.credencial, COALESCE(u.nome, i.nome) as instrutor_nome, v.placa, v.modelo, v.marca
     FROM aulas a
@@ -306,19 +310,47 @@ error_log('[HISTORICO ALUNO] Aluno ' . $alunoId .
          ' - Verificação Financeira: ' . json_encode($verificacaoFinanceiraExames) . 
          ' - Origem: Histórico do Aluno');
 
-// Calcular estatísticas por tipo de aula
-// Para teóricas, contar apenas disciplinas únicas para evitar duplicação
-$disciplinasTeoricasUnicasGerais = [];
+// CORREÇÃO 2025-12: Calcular aulas teóricas concluídas a partir de turma_presencas + turma_aulas_agendadas
+// Fonte de verdade: turma_presencas com presente = 1 e turma_aulas_agendadas com status válido
+// REGRA: Contar aulas teóricas onde o aluno está presente (presente = 1) em aulas válidas (agendada ou realizada)
 $aulasTeoricasConcluidas = 0;
-foreach ($aulas as $aula) {
-    if ($aula['status'] === 'concluida' && $aula['tipo_aula'] === 'teorica') {
-        $disciplina = $aula['disciplina'] ?? 'geral';
-        if (!isset($disciplinasTeoricasUnicasGerais[$disciplina])) {
-            $disciplinasTeoricasUnicasGerais[$disciplina] = true;
-            $aulasTeoricasConcluidas++;
-        }
+$disciplinasTeoricasUnicasGerais = [];
+
+// Buscar todas as presenças teóricas do aluno em todas as turmas
+$presencasTeoricas = $db->fetchAll("
+    SELECT 
+        tp.turma_aula_id,
+        tp.presente,
+        taa.disciplina,
+        taa.turma_id,
+        taa.status as aula_status
+    FROM turma_presencas tp
+    INNER JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
+    WHERE tp.aluno_id = ?
+    AND tp.presente = 1
+    AND taa.status IN ('agendada', 'realizada')
+    ORDER BY taa.data_aula ASC
+", [$alunoId]);
+
+// Contar aulas teóricas concluídas (apenas presentes em aulas válidas)
+// CORREÇÃO 2025-12: Contar cada presença individual, não por disciplina única
+// Cada registro em turma_presencas com presente=1 representa uma aula teórica concluída
+foreach ($presencasTeoricas as $presenca) {
+    // Contar cada presença individual (cada aula assistida)
+    $aulasTeoricasConcluidas++;
+    // Manter registro de disciplinas para outros cálculos se necessário
+    $disciplina = $presenca['disciplina'] ?? 'geral';
+    if (!isset($disciplinasTeoricasUnicasGerais[$disciplina])) {
+        $disciplinasTeoricasUnicasGerais[$disciplina] = true;
     }
 }
+
+// Log para debug
+error_log('[HISTORICO] Aulas teóricas concluídas (turma_presencas): ' . $aulasTeoricasConcluidas);
+
+// CORREÇÃO 2025-12: Somar aulas teóricas concluídas ao total de aulas concluídas
+// $aulasConcluidas conta apenas práticas, então adicionamos as teóricas
+$aulasConcluidas = $aulasConcluidas + $aulasTeoricasConcluidas;
 // OTIMIZADO: Calcular estatísticas de aulas práticas em uma única passada
 $aulasPraticasConcluidas = 0;
 $aulasPraticasPorTipo = [
@@ -446,7 +478,38 @@ if ($ehCategoriaCombinada) {
         ];
     }
     
-    // Uma única passada pelo array de aulas para calcular todas as estatísticas
+    // CORREÇÃO 2025-12: Para teóricas, usar turma_presencas em vez de tabela aulas
+    // Buscar presenças teóricas do aluno em todas as turmas
+    $presencasTeoricasDetalhadas = $db->fetchAll("
+        SELECT 
+            tp.turma_aula_id,
+            tp.presente,
+            taa.disciplina,
+            taa.turma_id
+        FROM turma_presencas tp
+        INNER JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
+        WHERE tp.aluno_id = ?
+        AND tp.presente = 1
+        AND taa.status IN ('agendada', 'realizada')
+    ", [$alunoId]);
+    
+    // CORREÇÃO 2025-12: Contar cada presença individual, não por disciplina única
+    // Cada registro em turma_presencas com presente=1 representa uma aula teórica concluída
+    $totalPresencasTeoricasDetalhadas = 0;
+    foreach ($presencasTeoricasDetalhadas as $presenca) {
+        // Contar cada presença individual (cada aula assistida)
+        $totalPresencasTeoricasDetalhadas++;
+        $disciplina = $presenca['disciplina'] ?? 'geral';
+        // Manter registro de disciplinas para outros cálculos se necessário
+        // Para categorias combinadas, teoria é compartilhada entre categorias combinadas
+        foreach ($estatisticasPorCategoria as $cat => $estat) {
+            if (!isset($estatisticasPorCategoria[$cat]['teoricas']['disciplinas'][$disciplina])) {
+                $estatisticasPorCategoria[$cat]['teoricas']['disciplinas'][$disciplina] = true;
+            }
+        }
+    }
+    
+    // Uma única passada pelo array de aulas para calcular estatísticas de práticas
     foreach ($aulas as $aula) {
         if ($aula['status'] !== 'concluida') {
             continue;
@@ -457,13 +520,9 @@ if ($ehCategoriaCombinada) {
             continue;
         }
         
-        if ($aula['tipo_aula'] === 'teorica') {
-            // Para teóricas, contar apenas disciplinas únicas
-            $disciplina = $aula['disciplina'] ?? 'geral';
-            if (!isset($estatisticasPorCategoria[$categoria]['teoricas']['disciplinas'][$disciplina])) {
-                $estatisticasPorCategoria[$categoria]['teoricas']['disciplinas'][$disciplina] = true;
-            }
-        } elseif ($aula['tipo_aula'] === 'pratica') {
+        // CORREÇÃO 2025-12: Teóricas já foram contadas acima usando turma_presencas
+        // Agora só processar práticas
+        if ($aula['tipo_aula'] === 'pratica') {
             // Para práticas, contar por tipo de veículo
             $tipoVeiculo = $aula['tipo_veiculo'] ?? '';
             switch ($tipoVeiculo) {
@@ -489,8 +548,11 @@ if ($ehCategoriaCombinada) {
     foreach ($configuracoesCategorias as $categoria => $config) {
         // NÃO somar aqui - já foi calculado pela função centralizada
         
-        // Usar estatísticas pré-calculadas
-        $teoricasConcluidas = count($estatisticasPorCategoria[$categoria]['teoricas']['disciplinas']);
+        // CORREÇÃO 2025-12: Usar contagem de presenças individuais, não por disciplina única
+        // Para categorias combinadas, teoria é compartilhada, então usar o total de presenças
+        $teoricasConcluidas = $totalPresencasTeoricasDetalhadas > 0 
+            ? $totalPresencasTeoricasDetalhadas 
+            : $aulasTeoricasConcluidas;
         $praticasMotoConcluidas = $estatisticasPorCategoria[$categoria]['praticas_moto'];
         $praticasCarroConcluidas = $estatisticasPorCategoria[$categoria]['praticas_carro'];
         $praticasCargaConcluidas = $estatisticasPorCategoria[$categoria]['praticas_carga'];
@@ -532,26 +594,40 @@ if ($ehCategoriaCombinada) {
         ];
     }
     
-    // Contar aulas concluídas por tipo para categorias mudanca_categorias
-    $aulasTeoricasContadas = []; // Para evitar duplicação de aulas teóricas
+    // CORREÇÃO 2025-12: Atualizar contagem de teóricas usando turma_presencas
+    // Contar cada presença individual, não por disciplina única
+    // Cada registro em turma_presencas com presente=1 representa uma aula teórica concluída
+    $presencasTeoricasParaProgresso = $db->fetchAll("
+        SELECT tp.id, taa.disciplina
+        FROM turma_presencas tp
+        INNER JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
+        WHERE tp.aluno_id = ?
+        AND tp.presente = 1
+        AND taa.status IN ('agendada', 'realizada')
+    ", [$alunoId]);
     
+    // Contar cada presença individual (cada aula assistida)
+    $totalDisciplinasTeoricas = count($presencasTeoricasParaProgresso);
+    
+    // Atualizar progresso detalhado com contagem real de teóricas
+    foreach ($progressoDetalhado as $categoria => $dados) {
+        if (isset($progressoDetalhado[$categoria]['teoricas'])) {
+            // Usar contagem real de presenças teóricas
+            $progressoDetalhado[$categoria]['teoricas']['concluidas'] = $totalDisciplinasTeoricas;
+            // Recalcular percentual
+            $necessarias = $progressoDetalhado[$categoria]['teoricas']['necessarias'] ?? 0;
+            if ($necessarias > 0) {
+                $progressoDetalhado[$categoria]['teoricas']['percentual'] = min(100, ($totalDisciplinasTeoricas / $necessarias) * 100);
+            }
+        }
+    }
+    
+    // Contar aulas práticas concluídas por tipo para categorias mudanca_categorias
     foreach ($aulas as $aula) {
         if ($aula['status'] === 'concluida') {
-            if ($aula['tipo_aula'] === 'teorica') {
-                // Para teóricas, contar apenas uma vez para categorias mudanca_categorias
-                // Usar disciplina como identificador único para evitar duplicação
-                $disciplina = $aula['disciplina'] ?? 'geral';
-                if (!isset($aulasTeoricasContadas[$disciplina])) {
-                    $aulasTeoricasContadas[$disciplina] = true;
-                    
-                    // Distribuir entre todas as categorias apenas uma vez
-                    foreach ($progressoDetalhado as $categoria => $dados) {
-                        if (isset($progressoDetalhado[$categoria]['teoricas'])) {
-                            $progressoDetalhado[$categoria]['teoricas']['concluidas']++;
-                        }
-                    }
-                }
-            } elseif ($aula['tipo_aula'] === 'pratica') {
+            // CORREÇÃO 2025-12: Teóricas já foram processadas acima usando turma_presencas
+            // Agora só processar práticas
+            if ($aula['tipo_aula'] === 'pratica') {
                 $tipoVeiculo = $aula['tipo_veiculo'] ?? 'carro';
                 // Mapear tipo de veículo para categoria
                 $categoriaVeiculo = '';
@@ -601,9 +677,12 @@ if ($ehCategoriaCombinada) {
         $aulasNecessarias = $cargaCategoria['total_aulas_praticas'];
         $aulasTeoricasNecessarias = $cargaCategoria['total_horas_teoricas'];
         
+        // CORREÇÃO 2025-12: $aulasTeoricasConcluidas já foi calculado usando turma_presencas acima
+        // Usar o valor já calculado corretamente
+        
         $progressoDetalhado = [
             'teoricas' => [
-                'concluidas' => $aulasTeoricasConcluidas,
+                'concluidas' => $aulasTeoricasConcluidas, // Já calculado usando turma_presencas
                 'necessarias' => $aulasTeoricasNecessarias,
                 'percentual' => $aulasTeoricasNecessarias > 0 ? min(100, ($aulasTeoricasConcluidas / $aulasTeoricasNecessarias) * 100) : 0
             ],
@@ -637,9 +716,10 @@ if ($ehCategoriaCombinada) {
         // Fallback para valores padrão se não encontrar configuração
         $aulasNecessarias = 25;
         $aulasTeoricasNecessarias = 45;
+        // CORREÇÃO 2025-12: $aulasTeoricasConcluidas já foi calculado usando turma_presencas acima
         $progressoDetalhado = [
             'teoricas' => [
-                'concluidas' => $aulasTeoricasConcluidas,
+                'concluidas' => $aulasTeoricasConcluidas, // Já calculado usando turma_presencas
                 'necessarias' => $aulasTeoricasNecessarias,
                 'percentual' => $aulasTeoricasNecessarias > 0 ? min(100, ($aulasTeoricasConcluidas / $aulasTeoricasNecessarias) * 100) : 0
             ],
@@ -1015,10 +1095,13 @@ $proximasAulas = $db->fetchAll("
                             $totalTeoricasGeral = $cargaCategoria['total_horas_teoricas']; // Teoria única (não somada)
                             $totalPraticasGeral = $cargaCategoria['total_aulas_praticas']; // Práticas somadas (ex: 40)
                             
+                            // CORREÇÃO 2025-12: Para teóricas, NÃO somar - teoria é única e compartilhada
+                            // Pegar o valor de qualquer categoria (todas têm o mesmo valor)
+                            $primeiraCategoria = array_key_first($configuracoesCategorias);
+                            $totalTeoricasConcluidasGeral = $progressoDetalhado[$primeiraCategoria]['teoricas']['concluidas'] ?? $aulasTeoricasConcluidas;
+                            
+                            // Somar apenas práticas (que são por categoria)
                             foreach ($configuracoesCategorias as $categoria => $config) {
-                                $totalTeoricasConcluidasGeral += $progressoDetalhado[$categoria]['teoricas']['concluidas'];
-                                // NÃO somar práticas aqui - já foi calculado pela função centralizada
-                                
                                 foreach (['praticas_moto', 'praticas_carro', 'praticas_carga', 'praticas_passageiros', 'praticas_combinacao'] as $tipo) {
                                     $totalPraticasConcluidasGeral += $progressoDetalhado[$categoria][$tipo]['concluidas'];
                                 }
@@ -1059,12 +1142,13 @@ $proximasAulas = $db->fetchAll("
                                     </h6>
                                     <div class="d-flex justify-content-between align-items-center mb-2">
                                         <span class="fw-bold">Progresso Geral</span>
-                                        <span class="badge bg-info fs-6">
+                                        <span class="badge bg-info fs-6" id="total-aulas-teoricas-badge">
                                             <?php echo $totalTeoricasConcluidasGeral; ?>/<?php echo $totalTeoricasGeral; ?>
                                         </span>
                                     </div>
                                     <div class="progress" style="height: 10px;">
                                         <div class="progress-bar bg-info" role="progressbar" 
+                                             id="total-aulas-teoricas-progress"
                                              style="width: <?php echo $percentualTeoricasGeral; ?>%">
                                         </div>
                                     </div>
@@ -1113,19 +1197,19 @@ $proximasAulas = $db->fetchAll("
                                     </div>
                                     <div class="col-md-3">
                                         <div class="p-2">
-                                            <h4 class="text-success mb-1"><?php echo $totalTeoricasConcluidasGeral + $totalPraticasConcluidasGeral; ?></h4>
+                                            <h4 class="text-success mb-1" id="horas-concluidas-total"><?php echo $totalTeoricasConcluidasGeral + $totalPraticasConcluidasGeral; ?></h4>
                                             <small class="text-muted">Horas Concluídas</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="p-2">
-                                            <h4 class="text-warning mb-1"><?php echo ($totalTeoricasGeral + $totalPraticasGeral) - ($totalTeoricasConcluidasGeral + $totalPraticasConcluidasGeral); ?></h4>
+                                            <h4 class="text-warning mb-1" id="horas-restantes-total"><?php echo ($totalTeoricasGeral + $totalPraticasGeral) - ($totalTeoricasConcluidasGeral + $totalPraticasConcluidasGeral); ?></h4>
                                             <small class="text-muted">Horas Restantes</small>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="p-2">
-                                            <h4 class="text-info mb-1"><?php echo number_format((($totalTeoricasConcluidasGeral + $totalPraticasConcluidasGeral) / ($totalTeoricasGeral + $totalPraticasGeral)) * 100, 1); ?>%</h4>
+                                            <h4 class="text-info mb-1" id="progresso-geral-percentual"><?php echo number_format((($totalTeoricasConcluidasGeral + $totalPraticasConcluidasGeral) / ($totalTeoricasGeral + $totalPraticasGeral)) * 100, 1); ?>%</h4>
                                             <small class="text-muted">Progresso Geral</small>
                                         </div>
                                     </div>
@@ -1508,49 +1592,181 @@ $proximasAulas = $db->fetchAll("
         // Para cada turma, buscar aulas e presenças
         $presencaTeoricaDetalhada = [];
         foreach ($turmasTeoricasAluno as $turma) {
-            // Buscar aulas agendadas da turma
-            $aulasTurma = $db->fetchAll("
-                SELECT 
-                    taa.id as aula_id,
-                    taa.nome_aula,
-                    taa.disciplina,
-                    taa.data_aula,
-                    taa.hora_inicio,
-                    taa.hora_fim,
-                    taa.status as aula_status,
-                    taa.ordem_global
-                FROM turma_aulas_agendadas taa
-                WHERE taa.turma_id = ?
-                AND taa.status IN ('agendada', 'realizada')
-                ORDER BY taa.ordem_global ASC
-            ", [$turma['turma_id']]);
-            
-            // Buscar presenças do aluno nesta turma
-            $presencasAluno = $db->fetchAll("
-                SELECT 
-                    tp.aula_id,
-                    tp.presente,
-                    tp.justificativa,
-                    tp.registrado_em
-                FROM turma_presencas tp
-                WHERE tp.turma_id = ? AND tp.aluno_id = ?
-            ", [$turma['turma_id'], $alunoId]);
-            
-            // Criar mapa de presenças por aula_id
-            $presencasMap = [];
-            foreach ($presencasAluno as $presenca) {
-                $presencasMap[$presenca['aula_id']] = $presenca;
-            }
-            
-            // Montar lista de aulas com status de presença
+            // AJUSTE 2025-12 - Presenças teóricas alinhadas com turma_presencas (turma_aula_id)
+            // Buscar presenças do aluno nesta turma usando JOIN direto para garantir match correto
             $aulasComPresenca = [];
-            foreach ($aulasTurma as $aula) {
-                $presenca = $presencasMap[$aula['aula_id']] ?? null;
-                $aulasComPresenca[] = [
-                    'aula' => $aula,
-                    'presenca' => $presenca,
-                    'status_presenca' => $presenca ? ($presenca['presente'] ? 'presente' : 'ausente') : 'nao_registrado'
-                ];
+            $totalAulasValidas = 0;
+            $totalPresentes = 0;
+            
+            try {
+                // AJUSTE 2025-12 - Buscar presenças usando JOIN direto com turma_aulas_agendadas
+                // Debug: Log dos parâmetros
+                error_log("[Histórico] Buscando presenças - turma_id: {$turma['turma_id']}, aluno_id: {$alunoId}");
+                
+                // AJUSTE 2025-12 - Query melhorada com mais campos para debug
+                // NOTA: justificativa removida - coluna não existe na tabela turma_presencas
+                $presencasComAulas = $db->fetchAll("
+                    SELECT 
+                        taa.id as aula_id,
+                        taa.nome_aula,
+                        taa.disciplina,
+                        taa.data_aula,
+                        taa.hora_inicio,
+                        taa.hora_fim,
+                        taa.status as aula_status,
+                        taa.ordem_global,
+                        tp.id as presenca_id,
+                        tp.presente,
+                        tp.registrado_em,
+                        tp.turma_id as presenca_turma_id,
+                        tp.turma_aula_id as presenca_turma_aula_id,
+                        tp.aluno_id as presenca_aluno_id
+                    FROM turma_aulas_agendadas taa
+                    LEFT JOIN turma_presencas tp ON (
+                        tp.turma_aula_id = taa.id 
+                        AND tp.turma_id = taa.turma_id
+                        AND tp.aluno_id = ?
+                    )
+                    WHERE taa.turma_id = ?
+                    AND taa.status IN ('agendada', 'realizada')
+                    ORDER BY taa.ordem_global ASC
+                ", [$alunoId, $turma['turma_id']]);
+                
+                // Debug: Log detalhado dos resultados
+                error_log("[Histórico] Query executada - turma_id: {$turma['turma_id']}, aluno_id: {$alunoId}");
+                error_log("[Histórico] Total de linhas retornadas: " . count($presencasComAulas));
+                if (count($presencasComAulas) > 0) {
+                    $primeiraLinha = $presencasComAulas[0];
+                    error_log("[Histórico] Primeira linha - aula_id: {$primeiraLinha['aula_id']}, presenca_id: " . ($primeiraLinha['presenca_id'] ?? 'NULL') . ", presente: " . var_export($primeiraLinha['presente'], true));
+                }
+                
+                error_log("[Histórico] Aulas encontradas: " . count($presencasComAulas));
+                
+                // Processar resultados
+                foreach ($presencasComAulas as $row) {
+                    // Contar aulas válidas (todas as aulas retornadas pelo LEFT JOIN)
+                    $totalAulasValidas++;
+                    
+                    $presenca = null;
+                    $statusPresenca = 'nao_registrado';
+                    
+                    // AJUSTE 2025-12 - Verificar se presente não é null (pode ser 0 ou 1)
+                    // Debug detalhado do valor de presente
+                    $presenteRaw = $row['presente'];
+                    $presencaId = $row['presenca_id'] ?? null;
+                    $presenteTipo = gettype($presenteRaw);
+                    
+                    // Debug completo da linha
+                    error_log("[Histórico] Processando aula_id: {$row['aula_id']}, presenca_id: " . ($presencaId ?? 'NULL') . ", presente (raw): " . var_export($presenteRaw, true) . ", tipo: {$presenteTipo}, presenca_turma_id: " . ($row['presenca_turma_id'] ?? 'NULL') . ", presenca_turma_aula_id: " . ($row['presenca_turma_aula_id'] ?? 'NULL'));
+                    
+                    // Verificar se há registro de presença
+                    // Critério 1: Se presenca_id existe, há registro (mesmo que presente seja null)
+                    // Critério 2: Se presente não é null e não é string vazia, há registro
+                    $temRegistro = false;
+                    
+                    if ($presencaId !== null) {
+                        // Se há presenca_id, definitivamente há registro
+                        $temRegistro = true;
+                        error_log("[Histórico] Presença detectada por presenca_id: {$presencaId}");
+                    } elseif ($presenteRaw !== null && $presenteRaw !== '') {
+                        // Se presente tem valor (mesmo que seja 0 ou '0'), há registro
+                        $temRegistro = true;
+                        error_log("[Histórico] Presença detectada por valor de presente: " . var_export($presenteRaw, true));
+                    }
+                    
+                    // Se presente é '0' (string) ou 0 (int), também há registro (ausente)
+                    if ($presenteRaw === '0' || $presenteRaw === 0) {
+                        $temRegistro = true;
+                    }
+                    
+                    if ($temRegistro) {
+                        // Normalizar presente para int (0 ou 1)
+                        $presenteInt = (int)$presenteRaw;
+                        if ($presenteRaw === null && $presencaId !== null) {
+                            // Se presente é null mas há presenca_id, assumir que precisa buscar do banco
+                            // Por enquanto, vamos tratar como ausente (0) se presente é null
+                            $presenteInt = 0;
+                            error_log("[Histórico] AVISO: presenca_id existe mas presente é null, assumindo 0 (ausente)");
+                        }
+                        
+                        $presenca = [
+                            'presente' => $presenteInt,
+                            'registrado_em' => $row['registrado_em']
+                        ];
+                        $statusPresenca = ($presenteInt == 1) ? 'presente' : 'ausente';
+                        
+                        // Contar presentes para cálculo de frequência
+                        if ($presenteInt == 1) {
+                            $totalPresentes++;
+                        }
+                        
+                        // Debug: Log de presença encontrada
+                        error_log("[Histórico] Presença encontrada - aula_id: {$row['aula_id']}, presenca_id: {$presencaId}, presente: {$presenteInt}, status: {$statusPresenca}");
+                    } else {
+                        // Debug: Log de aula sem presença com detalhes
+                        error_log("[Histórico] Aula sem presença - aula_id: {$row['aula_id']}, presenca_id: " . ($presencaId ?? 'NULL') . ", presente: " . var_export($presenteRaw, true) . " (tipo: {$presenteTipo})");
+                    }
+                    
+                    $aulasComPresenca[] = [
+                        'aula' => [
+                            'aula_id' => $row['aula_id'],
+                            'nome_aula' => $row['nome_aula'],
+                            'disciplina' => $row['disciplina'],
+                            'data_aula' => $row['data_aula'],
+                            'hora_inicio' => $row['hora_inicio'],
+                            'hora_fim' => $row['hora_fim'],
+                            'aula_status' => $row['aula_status'],
+                            'ordem_global' => $row['ordem_global']
+                        ],
+                        'presenca' => $presenca,
+                        'status_presenca' => $statusPresenca
+                    ];
+                }
+                
+                // Calcular frequência percentual baseado em presenças reais
+                $frequenciaCalculada = 0.0;
+                if ($totalAulasValidas > 0) {
+                    $frequenciaCalculada = ($totalPresentes / $totalAulasValidas) * 100;
+                    $frequenciaCalculada = round($frequenciaCalculada, 1);
+                }
+                
+                // Debug: Log do cálculo
+                error_log("[Histórico] Frequência calculada - presentes: {$totalPresentes}, total: {$totalAulasValidas}, percentual: {$frequenciaCalculada}%");
+                
+                // Atualizar frequência na turma para exibição
+                $turma['frequencia_percentual'] = $frequenciaCalculada;
+                
+            } catch (Exception $e) {
+                error_log("Erro ao buscar presenças no histórico: " . $e->getMessage());
+                // Fallback: buscar apenas aulas sem presenças
+                try {
+                    $aulasTurma = $db->fetchAll("
+                        SELECT 
+                            taa.id as aula_id,
+                            taa.nome_aula,
+                            taa.disciplina,
+                            taa.data_aula,
+                            taa.hora_inicio,
+                            taa.hora_fim,
+                            taa.status as aula_status,
+                            taa.ordem_global
+                        FROM turma_aulas_agendadas taa
+                        WHERE taa.turma_id = ?
+                        AND taa.status IN ('agendada', 'realizada')
+                        ORDER BY taa.ordem_global ASC
+                    ", [$turma['turma_id']]);
+                    
+                    $totalAulasValidas = count($aulasTurma);
+                    foreach ($aulasTurma as $aula) {
+                        $aulasComPresenca[] = [
+                            'aula' => $aula,
+                            'presenca' => null,
+                            'status_presenca' => 'nao_registrado'
+                        ];
+                    }
+                } catch (Exception $e2) {
+                    error_log("Erro ao buscar aulas no fallback: " . $e2->getMessage());
+                }
             }
             
             $presencaTeoricaDetalhada[] = [
@@ -1585,6 +1801,13 @@ $proximasAulas = $db->fetchAll("
                             $aulas = $item['aulas'];
                             $frequencia = (float)($turma['frequencia_percentual'] ?? 0);
                             
+                            // AJUSTE 2025-12 - Destacar turma quando vindo do Diário
+                            $isTurmaFoco = ($turmaIdFoco && (int)$turmaIdFoco === (int)$turma['turma_id']);
+                            $turmaCardClass = $isTurmaFoco ? 'border-primary border-2 shadow-sm' : '';
+                            
+                            // CORREÇÃO 2025-12: Adicionar data-turma-id para atualização via AJAX
+                            $turmaCardId = 'turma-card-' . $turma['turma_id'];
+                            
                             // Determinar status da matrícula
                             $statusMatricula = $turma['status_matricula'];
                             $statusLabel = [
@@ -1603,7 +1826,9 @@ $proximasAulas = $db->fetchAll("
                                 $freqBadgeClass = 'bg-warning';
                             }
                             ?>
-                            <div class="mb-4 pb-3 border-bottom">
+                            <div class="mb-4 pb-3 border-bottom <?= $turmaCardClass ?>" 
+                                 <?= $isTurmaFoco ? 'id="turma-foco"' : '' ?>
+                                 data-turma-id="<?php echo (int)$turma['turma_id']; ?>">
                                 <div class="d-flex justify-content-between align-items-start mb-3">
                                     <div>
                                         <h6 class="mb-1">
@@ -1618,7 +1843,9 @@ $proximasAulas = $db->fetchAll("
                                     </div>
                                     <div class="text-end">
                                         <div>
-                                            <span class="badge <?php echo $freqBadgeClass; ?>">
+                                            <span class="badge <?php echo $freqBadgeClass; ?>" 
+                                                  data-turma-frequencia="<?php echo (int)$turma['turma_id']; ?>"
+                                                  data-turma-id="<?php echo (int)$turma['turma_id']; ?>">
                                                 Frequência: <?php echo number_format($frequencia, 1); ?>%
                                             </span>
                                         </div>
@@ -1637,6 +1864,9 @@ $proximasAulas = $db->fetchAll("
                                                 <th>Disciplina</th>
                                                 <th>Horário</th>
                                                 <th>Presença</th>
+                                                <?php if ($isAdmin || $isSecretaria): ?>
+                                                <th>Ações</th>
+                                                <?php endif; ?>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -1644,14 +1874,17 @@ $proximasAulas = $db->fetchAll("
                                                 <?php 
                                                 $aula = $itemAula['aula'];
                                                 $statusPresenca = $itemAula['status_presenca'];
+                                                $presencaId = $itemAula['presenca_id'] ?? null;
+                                                $presencaAtual = $itemAula['presenca']['presente'] ?? null;
+                                                $turmaIdAula = $itemAula['turma_id'] ?? $turma['turma_id'];
                                                 
                                                 $presencaBadge = '';
                                                 if ($statusPresenca === 'presente') {
-                                                    $presencaBadge = '<span class="badge bg-success"><i class="fas fa-check me-1"></i>Presente</span>';
+                                                    $presencaBadge = '<span class="badge bg-success"><i class="fas fa-check me-1"></i>PRESENTE</span>';
                                                 } elseif ($statusPresenca === 'ausente') {
-                                                    $presencaBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>Ausente</span>';
+                                                    $presencaBadge = '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>AUSENTE</span>';
                                                 } else {
-                                                    $presencaBadge = '<span class="badge bg-secondary"><i class="fas fa-minus me-1"></i>Não registrado</span>';
+                                                    $presencaBadge = '<span class="badge bg-secondary"><i class="fas fa-minus me-1"></i>NÃO REGISTRADO</span>';
                                                 }
                                                 
                                                 // Nome da disciplina
@@ -1672,13 +1905,41 @@ $proximasAulas = $db->fetchAll("
                                                         <?php echo date('H:i', strtotime($aula['hora_fim'])); ?>
                                                     </td>
                                                     <td>
+                                                        <?php if ($isAdmin || $isSecretaria): ?>
+                                                        <!-- CORREÇÃO 2025-12: Badge clicável para editar presença -->
+                                                        <span class="js-editar-presenca-badge d-inline-block" 
+                                                              data-turma-id="<?php echo (int)$turmaIdAula; ?>"
+                                                              data-turma-aula-id="<?php echo (int)$aula['aula_id']; ?>"
+                                                              data-aluno-id="<?php echo (int)$alunoId; ?>"
+                                                              data-presenca-id="<?php echo $presencaId ? (int)$presencaId : ''; ?>"
+                                                              data-presente="<?php echo ($presencaAtual === 1) ? '1' : ($presencaAtual === 0 ? '0' : ''); ?>"
+                                                              data-aula-nome="<?php echo htmlspecialchars($aula['nome_aula']); ?>"
+                                                              data-disciplina="<?php echo htmlspecialchars($disciplinaNome); ?>"
+                                                              data-data-aula="<?php echo date('d/m/Y', strtotime($aula['data_aula'])); ?>"
+                                                              title="Clique para editar presença desta aula">
+                                                            <?php echo $presencaBadge; ?>
+                                                        </span>
+                                                        <?php else: ?>
                                                         <?php echo $presencaBadge; ?>
-                                                        <?php if ($itemAula['presenca'] && !empty($itemAula['presenca']['justificativa'])): ?>
-                                                            <i class="fas fa-comment-alt text-info ms-2" 
-                                                               data-bs-toggle="tooltip" 
-                                                               title="<?php echo htmlspecialchars($itemAula['presenca']['justificativa']); ?>"></i>
                                                         <?php endif; ?>
                                                     </td>
+                                                    <?php if ($isAdmin || $isSecretaria): ?>
+                                                    <td>
+                                                        <button type="button" 
+                                                                class="btn btn-sm btn-link text-primary p-0 js-editar-presenca" 
+                                                                data-turma-id="<?php echo (int)$turmaIdAula; ?>"
+                                                                data-turma-aula-id="<?php echo (int)$aula['aula_id']; ?>"
+                                                                data-aluno-id="<?php echo (int)$alunoId; ?>"
+                                                                data-presenca-id="<?php echo $presencaId ? (int)$presencaId : ''; ?>"
+                                                                data-presente="<?php echo ($presencaAtual === 1) ? '1' : ($presencaAtual === 0 ? '0' : ''); ?>"
+                                                                data-aula-nome="<?php echo htmlspecialchars($aula['nome_aula']); ?>"
+                                                                data-disciplina="<?php echo htmlspecialchars($disciplinaNome); ?>"
+                                                                data-data-aula="<?php echo date('d/m/Y', strtotime($aula['data_aula'])); ?>"
+                                                                title="Editar presença">
+                                                            <i class="fas fa-edit"></i>
+                                                        </button>
+                                                    </td>
+                                                    <?php endif; ?>
                                                 </tr>
                                             <?php endforeach; ?>
                                         </tbody>
@@ -1711,9 +1972,13 @@ $proximasAulas = $db->fetchAll("
             $totalTeoricasGeralDetalhado = $cargaCategoria['total_horas_teoricas']; // Teoria única (não somada)
             $totalPraticasGeralDetalhado = $cargaCategoria['total_aulas_praticas']; // Práticas somadas (ex: 40)
             
+            // CORREÇÃO 2025-12: Para teóricas, NÃO somar - teoria é única e compartilhada
+            // Pegar o valor de qualquer categoria (todas têm o mesmo valor)
+            $primeiraCategoria = array_key_first($configuracoesCategorias);
+            $totalTeoricasConcluidasGeralDetalhado = $progressoDetalhado[$primeiraCategoria]['teoricas']['concluidas'] ?? $aulasTeoricasConcluidas;
+            
+            // Somar apenas práticas (que são por categoria)
             foreach ($configuracoesCategorias as $categoria => $config) {
-                $totalTeoricasConcluidasGeralDetalhado += $progressoDetalhado[$categoria]['teoricas']['concluidas'];
-                
                 foreach (['praticas_moto', 'praticas_carro', 'praticas_carga', 'praticas_passageiros', 'praticas_combinacao'] as $tipo) {
                     $totalPraticasConcluidasGeralDetalhado += $progressoDetalhado[$categoria][$tipo]['concluidas'];
                 }
@@ -1771,11 +2036,11 @@ $proximasAulas = $db->fetchAll("
                                         </small>
                                     </div>
                                     <div class="text-end">
-                                        <div class="fw-bold">
+                                        <div class="fw-bold" id="resumo-teorico-curso-badge">
                                             <?php echo $totalTeoricasConcluidasGeralDetalhado; ?> / <?php echo $totalTeoricasGeralDetalhado; ?>
                                         </div>
                                         <small class="text-muted">
-                                            Total necessário: <?php echo $totalTeoricasGeralDetalhado; ?> aulas teóricas
+                                            Total necessário: <span id="resumo-teorico-curso-total"><?php echo $totalTeoricasGeralDetalhado; ?></span> aulas teóricas
                                         </small>
                                     </div>
                                 </div>
@@ -2015,7 +2280,7 @@ $proximasAulas = $db->fetchAll("
                 <div class="card bg-success text-white">
                     <div class="card-body text-center">
                         <i class="fas fa-check-circle fa-2x mb-2"></i>
-                        <h4><?php echo $aulasConcluidas; ?></h4>
+                        <h4 id="card-aulas-concluidas"><?php echo $aulasConcluidas; ?></h4>
                         <p class="mb-0">Aulas Concluídas</p>
                     </div>
                 </div>
@@ -2067,28 +2332,80 @@ $proximasAulas = $db->fetchAll("
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <?php foreach ($aulas as $aula): ?>
+                                    <?php 
+                                    // CORREÇÃO 2025-12: Filtrar apenas aulas práticas com dados válidos (sem N/A)
+                                    // Histórico Completo de Aulas exibe apenas aulas práticas
+                                    $aulasValidas = array_filter($aulas, function($aula) {
+                                        // Apenas aulas práticas (tipo_aula = 'pratica' ou não definido como 'teorica')
+                                        $tipoAula = $aula['tipo_aula'] ?? 'pratica';
+                                        if ($tipoAula === 'teorica') {
+                                            return false; // Excluir teóricas
+                                        }
+                                        
+                                        // Verificar se tem ID numérico válido
+                                        $id = $aula['id'] ?? null;
+                                        $temId = ($id !== null && is_numeric($id) && $id > 0);
+                                        
+                                        // Verificar se tem data válida
+                                        $temData = !empty($aula['data_aula']);
+                                        
+                                        return $temId && $temData;
+                                    });
+                                    
+                                    if (count($aulasValidas) > 0):
+                                        foreach ($aulasValidas as $aula): 
+                                    ?>
                                     <tr>
                                         <td><?php echo date('d/m/Y', strtotime($aula['data_aula'])); ?></td>
-                                        <td><?php echo date('H:i', strtotime($aula['hora_inicio'])) . ' - ' . date('H:i', strtotime($aula['hora_fim'])); ?></td>
+                                        <td><?php 
+                                            $horaInicio = $aula['hora_inicio'] ?? null;
+                                            $horaFim = $aula['hora_fim'] ?? null;
+                                            if ($horaInicio && $horaFim) {
+                                                echo date('H:i', strtotime($horaInicio)) . ' - ' . date('H:i', strtotime($horaFim));
+                                            } else {
+                                                echo '<span class="text-muted">Não informado</span>';
+                                            }
+                                        ?></td>
                                         <td>
-                                            <span class="badge bg-<?php echo $aula['tipo_aula'] === 'teorica' ? 'info' : 'primary'; ?>">
-                                                <?php echo ucfirst(htmlspecialchars($aula['tipo_aula'])); ?>
+                                            <?php $tipoAula = $aula['tipo_aula'] ?? 'pratica'; ?>
+                                            <span class="badge bg-<?php echo $tipoAula === 'teorica' ? 'info' : 'primary'; ?>">
+                                                <?php echo strtoupper($tipoAula === 'teorica' ? 'TEÓRICA' : 'PRÁTICA'); ?>
                                             </span>
                                         </td>
                                         <td>
+                                            <?php if (!empty($aula['instrutor_nome']) && $aula['instrutor_nome'] !== 'N/A'): ?>
                                             <div>
                                                 <strong><?php echo htmlspecialchars($aula['instrutor_nome']); ?></strong>
+                                                <?php if (!empty($aula['credencial']) && $aula['credencial'] !== 'N/A'): ?>
                                                 <br>
-                                                <small class="text-muted"><?php echo htmlspecialchars($aula['credencial'] ?? 'N/A'); ?></small>
+                                                <small class="text-muted"><?php echo htmlspecialchars($aula['credencial']); ?></small>
+                                                <?php endif; ?>
                                             </div>
+                                            <?php else: ?>
+                                            <span class="text-muted">Não informado</span>
+                                            <?php endif; ?>
                                         </td>
                                         <td>
-                                            <?php if ($aula['veiculo_id']): ?>
+                                            <?php 
+                                            $isTeorica = ($aula['tipo_aula'] ?? '') === 'teorica';
+                                            if ($isTeorica): 
+                                                // Para teóricas, mostrar turma
+                                                $turmaNome = $aula['turma_nome'] ?? 'Turma não informada';
+                                            ?>
                                             <div>
-                                                <strong><?php echo htmlspecialchars($aula['placa']); ?></strong>
+                                                <strong><?php echo htmlspecialchars($turmaNome); ?></strong>
+                                                <?php if (!empty($aula['disciplina'])): ?>
                                                 <br>
-                                                <small class="text-muted"><?php echo htmlspecialchars($aula['marca'] . ' ' . $aula['modelo']); ?></small>
+                                                <small class="text-muted"><?php echo htmlspecialchars($aula['disciplina']); ?></small>
+                                                <?php endif; ?>
+                                            </div>
+                                            <?php elseif (!empty($aula['veiculo_id'])): ?>
+                                            <div>
+                                                <strong><?php echo htmlspecialchars($aula['placa'] ?? 'N/A'); ?></strong>
+                                                <?php if (!empty($aula['marca']) || !empty($aula['modelo'])): ?>
+                                                <br>
+                                                <small class="text-muted"><?php echo htmlspecialchars(trim(($aula['marca'] ?? '') . ' ' . ($aula['modelo'] ?? ''))); ?></small>
+                                                <?php endif; ?>
                                             </div>
                                             <?php else: ?>
                                             <span class="text-muted">Não aplicável</span>
@@ -2096,6 +2413,7 @@ $proximasAulas = $db->fetchAll("
                                         </td>
                                         <td>
                                             <?php
+                                            $status = $aula['status'] ?? 'agendada';
                                             $statusClass = [
                                                 'agendada' => 'warning',
                                                 'em_andamento' => 'info',
@@ -2103,18 +2421,18 @@ $proximasAulas = $db->fetchAll("
                                                 'cancelada' => 'danger'
                                             ];
                                             $statusText = [
-                                                'agendada' => 'Agendada',
-                                                'em_andamento' => 'Em Andamento',
-                                                'concluida' => 'Concluída',
-                                                'cancelada' => 'Cancelada'
+                                                'agendada' => 'AGENDADA',
+                                                'em_andamento' => 'EM ANDAMENTO',
+                                                'concluida' => 'CONCLUÍDA',
+                                                'cancelada' => 'CANCELADA'
                                             ];
                                             ?>
-                                            <span class="badge bg-<?php echo $statusClass[$aula['status']] ?? 'secondary'; ?>">
-                                                <?php echo $statusText[$aula['status']] ?? ucfirst($aula['status']); ?>
+                                            <span class="badge bg-<?php echo $statusClass[$status] ?? 'secondary'; ?>">
+                                                <?php echo $statusText[$status] ?? strtoupper($status); ?>
                                             </span>
                                         </td>
                                         <td>
-                                            <?php if ($aula['observacoes']): ?>
+                                            <?php if (!empty($aula['observacoes'])): ?>
                                             <span class="text-truncate d-inline-block" style="max-width: 200px;" 
                                                   title="<?php echo htmlspecialchars($aula['observacoes']); ?>">
                                                 <?php echo htmlspecialchars($aula['observacoes']); ?>
@@ -2125,27 +2443,41 @@ $proximasAulas = $db->fetchAll("
                                         </td>
                                         <td>
                                             <div class="btn-group" role="group">
+                                                <?php if (!empty($aula['id']) && $aula['id'] > 0): ?>
                                                 <button type="button" class="btn btn-sm btn-outline-primary" 
                                                         title="Ver detalhes da aula"
-                                                        onclick="verDetalhesAula(<?php echo $aula['id']; ?>)">
+                                                        onclick="verDetalhesAula(<?php echo (int)$aula['id']; ?>)">
                                                     <i class="fas fa-eye"></i>
                                                 </button>
-                                                <?php if ($aula['status'] === 'agendada'): ?>
+                                                <?php if (($aula['status'] ?? '') === 'agendada'): ?>
                                                 <button type="button" class="btn btn-sm btn-outline-warning" 
                                                         title="Editar aula"
-                                                        onclick="editarAula(<?php echo $aula['id']; ?>)">
+                                                        onclick="editarAula(<?php echo (int)$aula['id']; ?>)">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                                 <button type="button" class="btn btn-sm btn-outline-danger" 
                                                         title="Cancelar aula"
-                                                        onclick="cancelarAula(<?php echo $aula['id']; ?>)">
+                                                        onclick="cancelarAula(<?php echo (int)$aula['id']; ?>)">
                                                     <i class="fas fa-times"></i>
                                                 </button>
+                                                <?php endif; ?>
+                                                <?php else: ?>
+                                                <span class="text-muted small">Sem ações</span>
                                                 <?php endif; ?>
                                             </div>
                                         </td>
                                     </tr>
-                                    <?php endforeach; ?>
+                                    <?php 
+                                        endforeach;
+                                    else:
+                                    ?>
+                                    <tr>
+                                        <td colspan="8" class="text-center py-4">
+                                            <i class="fas fa-info-circle text-muted me-2"></i>
+                                            <span class="text-muted">Nenhuma aula registrada até o momento</span>
+                                        </td>
+                                    </tr>
+                                    <?php endif; ?>
                                 </tbody>
                             </table>
                         </div>
@@ -2184,6 +2516,58 @@ $proximasAulas = $db->fetchAll("
             </div>
         </div>
     </div>
+
+    <!-- Modal de Edição de Presença Teórica - Padrão Bootstrap (igual aos outros modais do sistema) -->
+    <?php if ($isAdmin || $isSecretaria): ?>
+    <div class="modal fade" id="modalEditarPresenca" tabindex="-1" aria-labelledby="modalEditarPresencaLabel" aria-hidden="true" data-bs-backdrop="true" data-bs-keyboard="true" style="display: none;">
+        <div class="modal-dialog modal-dialog-centered modal-md">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalEditarPresencaLabel">
+                        <i class="fas fa-edit me-2"></i>Editar Presença
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <p class="mb-1"><strong>Aluno:</strong> <span id="ep-aluno-nome"><?php echo htmlspecialchars($alunoData['nome'] ?? 'N/A'); ?></span></p>
+                        <p class="mb-1"><strong>Aula:</strong> <span id="ep-aula-info"></span></p>
+                        <p class="mb-3 text-muted small"><strong>Data:</strong> <span id="ep-data-aula"></span></p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label fw-bold">Status de Presença:</label>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="ep_presente" id="ep_presente_sim" value="1">
+                            <label class="form-check-label" for="ep_presente_sim">
+                                <span class="badge bg-success"><i class="fas fa-check me-1"></i>Presente</span>
+                            </label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="radio" name="ep_presente" id="ep_presente_nao" value="0">
+                            <label class="form-check-label" for="ep_presente_nao">
+                                <span class="badge bg-danger"><i class="fas fa-times me-1"></i>Ausente</span>
+                            </label>
+                        </div>
+                    </div>
+                    
+                    <input type="hidden" id="ep-turma-id">
+                    <input type="hidden" id="ep-turma-aula-id">
+                    <input type="hidden" id="ep-aluno-id">
+                    <input type="hidden" id="ep-presenca-id">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times me-1"></i>Cancelar
+                    </button>
+                    <button type="button" class="btn btn-primary" id="ep-btn-salvar">
+                        <i class="fas fa-save me-1"></i>Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
 
     <!-- Modal de Cancelamento de Aula -->
     <div class="modal fade" id="modalCancelarAula" tabindex="-1" aria-labelledby="modalCancelarAulaLabel" aria-hidden="true">
@@ -2233,6 +2617,600 @@ $proximasAulas = $db->fetchAll("
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <?php if ($isAdmin || $isSecretaria): ?>
+    <?php
+    // CORREÇÃO 2025-12: Calcular URL da API (mesmo padrão usado em turma-chamada.php)
+    $scriptPath = $_SERVER['SCRIPT_NAME'] ?? '/admin/index.php';
+    $baseRoot = '';
+    
+    // Detectar caminho base a partir do SCRIPT_NAME
+    if (preg_match('#^/([^/]+)/admin/#', $scriptPath, $matches)) {
+        $baseRoot = '/' . $matches[1];
+    } elseif (strpos($scriptPath, '/admin/') !== false) {
+        $parts = explode('/admin/', $scriptPath);
+        $baseRoot = $parts[0] ?: '/cfc-bom-conselho';
+    } else {
+        $baseRoot = '/cfc-bom-conselho'; // Fallback
+    }
+    
+    // Garantir que baseRoot não esteja vazio
+    if (empty($baseRoot) || $baseRoot === '/') {
+        $baseRoot = '/cfc-bom-conselho';
+    }
+    
+    $apiTurmaPresencasUrl = $baseRoot . '/admin/api/turma-presencas.php';
+    ?>
+    <script>
+        // CORREÇÃO 2025-12: Edição de presença teórica pelo histórico do aluno
+        (function() {
+            const API_TURMA_PRESENCAS = <?php echo json_encode($apiTurmaPresencasUrl); ?>;
+            
+            // Log da URL da API para debug
+            console.log('[HistoricoPresenca] API URL configurada:', API_TURMA_PRESENCAS);
+            
+            // Função para mostrar toast
+            function mostrarToast(mensagem, tipo = 'success') {
+                // Verificar se já existe container de toast
+                let toastContainer = document.getElementById('toastContainer');
+                if (!toastContainer) {
+                    toastContainer = document.createElement('div');
+                    toastContainer.id = 'toastContainer';
+                    toastContainer.className = 'toast-container position-fixed top-0 end-0 p-3';
+                    toastContainer.style.zIndex = '9999';
+                    document.body.appendChild(toastContainer);
+                }
+                
+                const toastId = 'toast-' + Date.now();
+                const toastHtml = `
+                    <div class="toast" id="${toastId}" role="alert">
+                        <div class="toast-header">
+                            <i class="fas fa-${tipo === 'success' ? 'check-circle text-success' : 'exclamation-triangle text-warning'} me-2"></i>
+                            <strong class="me-auto">Sistema</strong>
+                            <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+                        </div>
+                        <div class="toast-body">${mensagem}</div>
+                    </div>
+                `;
+                
+                toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+                
+                const toast = new bootstrap.Toast(document.getElementById(toastId));
+                toast.show();
+                
+                setTimeout(() => {
+                    const toastElement = document.getElementById(toastId);
+                    if (toastElement) {
+                        toastElement.remove();
+                    }
+                }, 5000);
+            }
+            
+            // Função para abrir modal de edição de presença
+            function abrirModalEditarPresenca(dados) {
+                const { turmaId, turmaAulaId, alunoId, presencaId, presenteAtual, aulaNome, disciplina, dataAula } = dados;
+                
+                // Preencher campos do modal
+                document.getElementById('ep-turma-id').value = turmaId;
+                document.getElementById('ep-turma-aula-id').value = turmaAulaId;
+                document.getElementById('ep-aluno-id').value = alunoId;
+                document.getElementById('ep-presenca-id').value = presencaId || '';
+                document.getElementById('ep-aula-info').textContent = disciplina + (aulaNome ? ' - ' + aulaNome : '');
+                document.getElementById('ep-data-aula').textContent = dataAula;
+                
+                // Marcar radio conforme estado atual
+                if (presencaId || presenteAtual !== null) {
+                    document.getElementById('ep_presente_sim').checked = (presenteAtual === '1' || presenteAtual === 1);
+                    document.getElementById('ep_presente_nao').checked = (presenteAtual === '0' || presenteAtual === 0);
+                } else {
+                    // Aula sem presença: não marcar nenhum radio
+                    document.getElementById('ep_presente_sim').checked = false;
+                    document.getElementById('ep_presente_nao').checked = false;
+                }
+                
+                // Abrir modal usando Bootstrap padrão (sem mover para body - manter no lugar)
+                const modalElement = document.getElementById('modalEditarPresenca');
+                if (modalElement) {
+                    // NÃO mover o modal para o body - deixar onde está no HTML
+                    // O Bootstrap gerencia isso automaticamente
+                    
+                    // Verificar se já existe instância do modal
+                    let modal = bootstrap.Modal.getInstance(modalElement);
+                    if (!modal) {
+                        // Criar nova instância Bootstrap do modal
+                        modal = new bootstrap.Modal(modalElement, {
+                            backdrop: true,  // Mostrar backdrop escuro
+                            keyboard: true,  // Permitir fechar com ESC
+                            focus: true      // Focar no modal ao abrir
+                        });
+                    }
+                    
+                    // Event listeners para garantir comportamento correto (apenas uma vez)
+                    const cleanupHandler = function() {
+                        // Limpar estado quando fechar
+                        const radioSim = document.getElementById('ep_presente_sim');
+                        const radioNao = document.getElementById('ep_presente_nao');
+                        if (radioSim) radioSim.checked = false;
+                        if (radioNao) radioNao.checked = false;
+                    };
+                    
+                    // Remover listener anterior se existir e adicionar novo
+                    modalElement.removeEventListener('hidden.bs.modal', cleanupHandler);
+                    modalElement.addEventListener('hidden.bs.modal', cleanupHandler);
+                    
+                    // Mostrar modal
+                    modal.show();
+                }
+            }
+            
+            // Listener para botão de editar presença e badge clicável
+            document.addEventListener('click', function(e) {
+                // Verificar se clicou no badge clicável
+                const badge = e.target.closest('.js-editar-presenca-badge');
+                if (badge) {
+                    e.preventDefault();
+                    const dados = {
+                        turmaId: badge.dataset.turmaId,
+                        turmaAulaId: badge.dataset.turmaAulaId,
+                        alunoId: badge.dataset.alunoId,
+                        presencaId: badge.dataset.presencaId || '',
+                        presenteAtual: badge.dataset.presente || '',
+                        aulaNome: badge.dataset.aulaNome || '',
+                        disciplina: badge.dataset.disciplina || '',
+                        dataAula: badge.dataset.dataAula || ''
+                    };
+                    abrirModalEditarPresenca(dados);
+                    return;
+                }
+                
+                // Verificar se clicou no botão de editar
+                const btn = e.target.closest('.js-editar-presenca');
+                if (!btn) return;
+                
+                e.preventDefault();
+                
+                // Ler data-atributos
+                const dados = {
+                    turmaId: btn.dataset.turmaId,
+                    turmaAulaId: btn.dataset.turmaAulaId,
+                    alunoId: btn.dataset.alunoId,
+                    presencaId: btn.dataset.presencaId || '',
+                    presenteAtual: btn.dataset.presente || '',
+                    aulaNome: btn.dataset.aulaNome || '',
+                    disciplina: btn.dataset.disciplina || '',
+                    dataAula: btn.dataset.dataAula || ''
+                };
+                abrirModalEditarPresenca(dados);
+            });
+            
+            // Listener para salvar presença
+            document.getElementById('ep-btn-salvar').addEventListener('click', function() {
+                const turmaId = document.getElementById('ep-turma-id').value;
+                const turmaAulaId = document.getElementById('ep-turma-aula-id').value;
+                const alunoId = document.getElementById('ep-aluno-id').value;
+                const presencaId = document.getElementById('ep-presenca-id').value;
+                const presente = document.querySelector('input[name="ep_presente"]:checked')?.value;
+                
+                if (!presente) {
+                    mostrarToast('Selecione uma opção de presença', 'error');
+                    return;
+                }
+                
+                const presenteInt = parseInt(presente);
+                
+                // Desabilitar botão durante requisição
+                const btnSalvar = document.getElementById('ep-btn-salvar');
+                btnSalvar.disabled = true;
+                btnSalvar.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Salvando...';
+                
+                if (presencaId) {
+                    // Atualizar presença existente
+                    const params = { id: presencaId, origem: 'admin' };
+                    const url = API_TURMA_PRESENCAS + '?' + new URLSearchParams(params).toString();
+                    
+                    console.log('[HistoricoPresenca] Atualizando presença:', { url, presencaId, presenteInt });
+                    
+                    // Criar AbortController para timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos
+                    
+                    fetch(url, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            presente: presenteInt,
+                            origem: 'admin'
+                        }),
+                        signal: controller.signal
+                    })
+                    .then(async response => {
+                        // Verificar status HTTP primeiro
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('[HistoricoPresenca] HTTP Error:', response.status, errorText);
+                            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const text = await response.text();
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            console.error('[HistoricoPresenca] Erro ao parsear JSON:', text);
+                            throw new Error('Erro de comunicação com o servidor. Resposta inválida.');
+                        }
+                        if (!data.success) {
+                            throw new Error(data.message || 'Erro ao atualizar presença.');
+                        }
+                        return data;
+                    })
+                    .then(data => {
+                        clearTimeout(timeoutId);
+                        console.log('[HistoricoPresenca] Presença atualizada com sucesso:', data);
+                        mostrarToast('Presença atualizada com sucesso!', 'success');
+                        
+                        // Fechar modal corretamente
+                        const modalElement = document.getElementById('modalEditarPresenca');
+                        const modal = bootstrap.Modal.getInstance(modalElement);
+                        if (modal) {
+                            modal.hide();
+                        } else {
+                            // Fallback: esconder manualmente se não houver instância
+                            if (modalElement) {
+                                modalElement.classList.remove('show');
+                                modalElement.style.display = 'none';
+                                document.body.classList.remove('modal-open');
+                                const backdrop = document.querySelector('.modal-backdrop');
+                                if (backdrop) backdrop.remove();
+                            }
+                        }
+                        
+                        // Obter estado anterior da presença antes de atualizar
+                        const badgeClicavel = document.querySelector(`.js-editar-presenca-badge[data-turma-aula-id="${turmaAulaId}"][data-aluno-id="${alunoId}"]`);
+                        const estadoAnterior = badgeClicavel ? (badgeClicavel.dataset.presente === '1') : false;
+                        const estadoNovo = presenteInt === 1;
+                        
+                        // Atualizar UI sem reload
+                        atualizarPresencaNaUI(turmaId, turmaAulaId, alunoId, presenteInt, presencaId);
+                        // Atualizar todos os campos que dependem da presença teórica (só se mudou)
+                        if (estadoAnterior !== estadoNovo) {
+                            atualizarTodosCamposPresenca(alunoId, estadoNovo, estadoAnterior);
+                        }
+                        
+                        // Reabilitar botão
+                        btnSalvar.disabled = false;
+                        btnSalvar.innerHTML = '<i class="fas fa-save me-1"></i>Salvar';
+                    })
+                    .catch(error => {
+                        clearTimeout(timeoutId);
+                        if (error.name === 'AbortError') {
+                            console.error('[HistoricoPresenca] Timeout na requisição');
+                            mostrarToast('A requisição demorou muito. Verifique sua conexão e tente novamente.', 'error');
+                        } else {
+                            console.error('[HistoricoPresenca] Erro ao atualizar presença:', error);
+                            mostrarToast(error.message || 'Erro ao atualizar presença. Tente novamente.', 'error');
+                        }
+                        btnSalvar.disabled = false;
+                        btnSalvar.innerHTML = '<i class="fas fa-save me-1"></i>Salvar';
+                    });
+                } else {
+                    // Criar nova presença
+                    console.log('[HistoricoPresenca] Criando nova presença:', { url: API_TURMA_PRESENCAS, turmaId, turmaAulaId, alunoId, presenteInt });
+                    
+                    // Criar AbortController para timeout
+                    const controller = new AbortController();
+                    const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 segundos
+                    
+                    fetch(API_TURMA_PRESENCAS, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            turma_id: parseInt(turmaId),
+                            turma_aula_id: parseInt(turmaAulaId),
+                            aluno_id: parseInt(alunoId),
+                            presente: presenteInt,
+                            origem: 'admin'
+                        }),
+                        signal: controller.signal
+                    })
+                    .then(async response => {
+                        clearTimeout(timeoutId);
+                        // Verificar status HTTP primeiro
+                        if (!response.ok) {
+                            const errorText = await response.text();
+                            console.error('[HistoricoPresenca] HTTP Error:', response.status, errorText);
+                            throw new Error(`Erro ${response.status}: ${response.statusText}`);
+                        }
+                        
+                        const text = await response.text();
+                        let data;
+                        try {
+                            data = JSON.parse(text);
+                        } catch (e) {
+                            console.error('[HistoricoPresenca] Erro ao parsear JSON:', text);
+                            throw new Error('Erro de comunicação com o servidor. Resposta inválida.');
+                        }
+                        if (!data.success) {
+                            throw new Error(data.message || 'Erro ao criar presença.');
+                        }
+                        return data;
+                    })
+                    .then(data => {
+                        clearTimeout(timeoutId);
+                        console.log('[HistoricoPresenca] Presença criada com sucesso:', data);
+                        mostrarToast('Presença registrada com sucesso!', 'success');
+                        
+                        // Fechar modal corretamente
+                        const modalElement = document.getElementById('modalEditarPresenca');
+                        const modal = bootstrap.Modal.getInstance(modalElement);
+                        if (modal) {
+                            modal.hide();
+                        } else {
+                            // Fallback: esconder manualmente se não houver instância
+                            if (modalElement) {
+                                modalElement.classList.remove('show');
+                                modalElement.style.display = 'none';
+                                document.body.classList.remove('modal-open');
+                                const backdrop = document.querySelector('.modal-backdrop');
+                                if (backdrop) backdrop.remove();
+                            }
+                        }
+                        
+                        // Obter estado anterior da presença antes de atualizar
+                        const badgeClicavel = document.querySelector(`.js-editar-presenca-badge[data-turma-aula-id="${turmaAulaId}"][data-aluno-id="${alunoId}"]`);
+                        const estadoAnterior = badgeClicavel ? (badgeClicavel.dataset.presente === '1') : false;
+                        const estadoNovo = presenteInt === 1;
+                        
+                        // Atualizar UI sem reload
+                        const novoPresencaId = data.presenca_id || data.data?.id || '';
+                        atualizarPresencaNaUI(turmaId, turmaAulaId, alunoId, presenteInt, novoPresencaId);
+                        // Atualizar todos os campos que dependem da presença teórica (só se mudou)
+                        if (estadoAnterior !== estadoNovo) {
+                            atualizarTodosCamposPresenca(alunoId, estadoNovo, estadoAnterior);
+                        }
+                        
+                        // Reabilitar botão
+                        btnSalvar.disabled = false;
+                        btnSalvar.innerHTML = '<i class="fas fa-save me-1"></i>Salvar';
+                    })
+                    .catch(error => {
+                        clearTimeout(timeoutId);
+                        if (error.name === 'AbortError') {
+                            console.error('[HistoricoPresenca] Timeout na requisição');
+                            mostrarToast('A requisição demorou muito. Verifique sua conexão e tente novamente.', 'error');
+                        } else {
+                            console.error('[HistoricoPresenca] Erro ao criar presença:', error);
+                            mostrarToast(error.message || 'Erro ao registrar presença. Tente novamente.', 'error');
+                        }
+                        btnSalvar.disabled = false;
+                        btnSalvar.innerHTML = '<i class="fas fa-save me-1"></i>Salvar';
+                    });
+                }
+            });
+            
+            // Função para atualizar UI após salvar presença (sem reload)
+            function atualizarPresencaNaUI(turmaId, turmaAulaId, alunoId, presenteInt, presencaId) {
+                // Atualizar badge de presença na linha da tabela
+                // Procurar pelo badge clicável que tem os data-attributes corretos
+                const badgeClicavel = document.querySelector(`.js-editar-presenca-badge[data-turma-aula-id="${turmaAulaId}"][data-aluno-id="${alunoId}"]`);
+                if (badgeClicavel) {
+                    const novoBadge = presenteInt === 1 
+                        ? '<span class="badge bg-success"><i class="fas fa-check me-1"></i>PRESENTE</span>'
+                        : '<span class="badge bg-danger"><i class="fas fa-times me-1"></i>AUSENTE</span>';
+                    
+                    badgeClicavel.innerHTML = novoBadge;
+                    badgeClicavel.dataset.presente = presenteInt;
+                    if (presencaId) {
+                        badgeClicavel.dataset.presencaId = presencaId;
+                    }
+                    
+                    // Adicionar estilo de hover se ainda não tiver
+                    if (!badgeClicavel.style.textDecoration) {
+                        badgeClicavel.style.textDecoration = 'underline';
+                        badgeClicavel.style.textDecorationStyle = 'dotted';
+                    }
+                }
+                
+                // Atualizar também o botão de editar se existir na mesma linha
+                const linha = badgeClicavel ? badgeClicavel.closest('tr') : null;
+                if (linha) {
+                    const btnEditar = linha.querySelector('.js-editar-presenca');
+                    if (btnEditar) {
+                        btnEditar.dataset.presente = presenteInt;
+                        if (presencaId) {
+                            btnEditar.dataset.presencaId = presencaId;
+                        }
+                    }
+                }
+                
+                // Atualizar frequência da turma via API
+                atualizarFrequenciaTurma(turmaId, alunoId);
+            }
+            
+            // Função para atualizar todos os campos que dependem da presença teórica
+            function atualizarTodosCamposPresenca(alunoId, estadoNovo, estadoAnterior) {
+                // Determinar se estamos adicionando ou removendo presença
+                const adicionarPresenca = estadoNovo && !estadoAnterior;
+                const removerPresenca = !estadoNovo && estadoAnterior;
+                
+                // Se não houve mudança real, não fazer nada
+                if (!adicionarPresenca && !removerPresenca) {
+                    return;
+                }
+                // Obter valores atuais dos elementos
+                const totalTeoricasBadge = document.getElementById('total-aulas-teoricas-badge');
+                const resumoTeoricoBadge = document.getElementById('resumo-teorico-curso-badge');
+                const horasConcluidas = document.getElementById('horas-concluidas-total');
+                const horasRestantes = document.getElementById('horas-restantes-total');
+                const progressoGeral = document.getElementById('progresso-geral-percentual');
+                const cardAulasConcluidas = document.getElementById('card-aulas-concluidas');
+                const progressBar = document.getElementById('total-aulas-teoricas-progress');
+                
+                if (!totalTeoricasBadge || !resumoTeoricoBadge) {
+                    console.warn('[HistoricoPresenca] Elementos não encontrados para atualização');
+                    return;
+                }
+                
+                // Extrair valores atuais
+                const badgeText = totalTeoricasBadge.textContent.trim();
+                const match = badgeText.match(/(\d+)\/(\d+)/);
+                if (!match) {
+                    console.warn('[HistoricoPresenca] Não foi possível extrair valores do badge');
+                    return;
+                }
+                
+                let teoricasConcluidas = parseInt(match[1]);
+                const teoricasTotal = parseInt(match[2]);
+                
+                // Ajustar contador baseado na ação (adicionar ou remover presença)
+                if (adicionarPresenca) {
+                    teoricasConcluidas = Math.min(teoricasConcluidas + 1, teoricasTotal);
+                } else {
+                    teoricasConcluidas = Math.max(teoricasConcluidas - 1, 0);
+                }
+                
+                // Calcular percentual
+                const percentualTeoricas = teoricasTotal > 0 ? Math.min(100, (teoricasConcluidas / teoricasTotal) * 100) : 0;
+                
+                // Atualizar badge de Total Aulas Teóricas
+                totalTeoricasBadge.textContent = `${teoricasConcluidas}/${teoricasTotal}`;
+                
+                // Atualizar barra de progresso
+                if (progressBar) {
+                    progressBar.style.width = `${percentualTeoricas}%`;
+                }
+                
+                // Atualizar Resumo Teórico do Curso
+                resumoTeoricoBadge.textContent = `${teoricasConcluidas} / ${teoricasTotal}`;
+                
+                // Atualizar Horas Concluídas e Restantes (assumindo que cada aula teórica = 1 hora)
+                if (horasConcluidas && horasRestantes) {
+                    const horasConcluidasAtual = parseInt(horasConcluidas.textContent) || 0;
+                    const horasRestantesAtual = parseInt(horasRestantes.textContent) || 0;
+                    
+                    let novasHorasConcluidas, novasHorasRestantes;
+                    if (adicionarPresenca) {
+                        novasHorasConcluidas = horasConcluidasAtual + 1;
+                        novasHorasRestantes = Math.max(0, horasRestantesAtual - 1);
+                    } else {
+                        novasHorasConcluidas = Math.max(0, horasConcluidasAtual - 1);
+                        novasHorasRestantes = horasRestantesAtual + 1;
+                    }
+                    
+                    horasConcluidas.textContent = novasHorasConcluidas;
+                    horasRestantes.textContent = novasHorasRestantes;
+                    
+                    // Atualizar Progresso Geral
+                    if (progressoGeral) {
+                        // Calcular percentual geral (assumindo total de 85 horas)
+                        const totalHoras = 85; // Valor fixo baseado no sistema
+                        const percentualGeral = totalHoras > 0 ? (novasHorasConcluidas / totalHoras) * 100 : 0;
+                        progressoGeral.textContent = `${percentualGeral.toFixed(1)}%`;
+                    }
+                }
+                
+                // Atualizar card "Aulas Concluídas"
+                if (cardAulasConcluidas) {
+                    const aulasConcluidasAtual = parseInt(cardAulasConcluidas.textContent) || 0;
+                    const novasAulasConcluidas = adicionarPresenca 
+                        ? aulasConcluidasAtual + 1 
+                        : Math.max(0, aulasConcluidasAtual - 1);
+                    cardAulasConcluidas.textContent = novasAulasConcluidas;
+                }
+                
+                console.log('[HistoricoPresenca] Campos atualizados:', {
+                    teoricasConcluidas,
+                    teoricasTotal,
+                    percentualTeoricas,
+                    adicionarPresenca
+                });
+            }
+            
+            // Função para atualizar frequência da turma
+            function atualizarFrequenciaTurma(turmaId, alunoId) {
+                // Calcular URL da API de frequência
+                const scriptPath = '<?php echo $_SERVER['SCRIPT_NAME'] ?? '/admin/index.php'; ?>';
+                let baseRoot = '';
+                
+                if (scriptPath.match(/^\/([^\/]+)\/admin\//)) {
+                    baseRoot = '/' + scriptPath.match(/^\/([^\/]+)\/admin\//)[1];
+                } else if (scriptPath.indexOf('/admin/') !== -1) {
+                    const parts = scriptPath.split('/admin/');
+                    baseRoot = parts[0] || '/cfc-bom-conselho';
+                } else {
+                    baseRoot = '/cfc-bom-conselho';
+                }
+                
+                const API_TURMA_FREQUENCIA = baseRoot + '/admin/api/turma-frequencia.php';
+                const url = `${API_TURMA_FREQUENCIA}?turma_id=${turmaId}&aluno_id=${alunoId}`;
+                
+                fetch(url)
+                    .then(async response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP ${response.status}`);
+                        }
+                        const contentType = response.headers.get('content-type') || '';
+                        if (!contentType.includes('application/json')) {
+                            throw new Error('Resposta não é JSON');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        if (data.success && data.data && data.data.estatisticas) {
+                            const percentual = data.data.estatisticas.percentual_frequencia;
+                            
+                            // Atualizar badge de frequência da turma
+                            // Procurar pelo badge de frequência usando data-turma-frequencia
+                            const frequenciaBadges = document.querySelectorAll(`[data-turma-frequencia="${turmaId}"]`);
+                            frequenciaBadges.forEach(badge => {
+                                badge.textContent = `Frequência: ${percentual.toFixed(1)}%`;
+                                
+                                // Atualizar classe do badge conforme frequência
+                                badge.className = 'badge ';
+                                if (percentual >= 75) {
+                                    badge.className += 'bg-success';
+                                } else if (percentual >= 65) {
+                                    badge.className += 'bg-warning';
+                                } else {
+                                    badge.className += 'bg-danger';
+                                }
+                            });
+                            
+                            // Fallback: atualizar também badges que contenham "Frequência:" no texto dentro do card da turma
+                            const cardTurma = document.querySelector(`[data-turma-id="${turmaId}"]`);
+                            if (cardTurma) {
+                                const todosBadges = cardTurma.querySelectorAll('.badge');
+                                todosBadges.forEach(badge => {
+                                    if (badge.textContent.includes('Frequência:')) {
+                                        badge.textContent = `Frequência: ${percentual.toFixed(1)}%`;
+                                        
+                                        // Atualizar classe
+                                        badge.className = 'badge ';
+                                        if (percentual >= 75) {
+                                            badge.className += 'bg-success';
+                                        } else if (percentual >= 65) {
+                                            badge.className += 'bg-warning';
+                                        } else {
+                                            badge.className += 'bg-danger';
+                                        }
+                                    }
+                                });
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('[HistoricoPresenca] Erro ao atualizar frequência:', error);
+                        // Não mostrar erro ao usuário - a presença já foi salva
+                    });
+            }
+        })();
+    </script>
+    <?php endif; ?>
+    
     <style>
         /* Estilos para cards compactos do Progresso Detalhado por Categoria */
         .card-progresso-teorico,
@@ -2250,6 +3228,57 @@ $proximasAulas = $db->fetchAll("
         @media (min-width: 992px) {
             .card-progresso-categoria {
                 margin-bottom: 0.75rem;
+            }
+        }
+        
+        /* CORREÇÃO 2025-12: Estilos para badge clicável de presença */
+        .js-editar-presenca-badge {
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .js-editar-presenca-badge:hover {
+            opacity: 0.8;
+            transform: scale(1.05);
+        }
+        
+        .js-editar-presenca-badge:active {
+            transform: scale(0.95);
+        }
+        
+        /* CORREÇÃO 2025-12: Garantir que modal apareça corretamente sobre o layout (sem tela branca) */
+        /* Sobrescrever estilos globais que forçam background branco nos modais */
+        
+        /* Remover background branco forçado pelo CSS global (.modal { background: var(--white); }) */
+        #modalEditarPresenca.modal {
+            background-color: transparent !important;
+            background: transparent !important;
+        }
+        
+        /* Garantir que o modal-content tenha o background branco (não o modal em si) */
+        #modalEditarPresenca .modal-content {
+            background-color: #fff;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+        }
+        
+        /* Garantir que o backdrop apareça corretamente (Bootstrap padrão) */
+        body.modal-open .modal-backdrop {
+            z-index: 1040;
+            background-color: rgba(0, 0, 0, 0.5) !important;
+        }
+        
+        /* Garantir que o dialog esteja centralizado e com tamanho adequado */
+        #modalEditarPresenca .modal-dialog {
+            margin: 1.75rem auto;
+            max-width: 500px;
+        }
+        
+        /* Responsivo para telas menores */
+        @media (max-width: 576px) {
+            #modalEditarPresenca .modal-dialog {
+                margin: 0.5rem;
+                max-width: calc(100% - 1rem);
             }
         }
     </style>
@@ -2615,4 +3644,28 @@ $proximasAulas = $db->fetchAll("
             const bsToast = new bootstrap.Toast(toast);
             bsToast.show();
         }
+        
+        // AJUSTE 2025-12 - Scroll até turma destacada quando vindo do Diário
+        <?php if ($turmaIdFoco): ?>
+        document.addEventListener('DOMContentLoaded', function() {
+            const turmaFoco = document.getElementById('turma-foco');
+            if (turmaFoco) {
+                // Scroll suave até a turma destacada
+                setTimeout(() => {
+                    turmaFoco.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    // Adicionar animação de destaque
+                    turmaFoco.style.transition = 'all 0.3s ease';
+                    turmaFoco.style.animation = 'pulse 2s ease-in-out';
+                }, 300);
+            }
+        });
+        <?php endif; ?>
     </script>
+    
+    <style>
+        /* AJUSTE 2025-12 - Animação de destaque para turma foco */
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(0, 123, 255, 0.4); }
+            50% { box-shadow: 0 0 0 10px rgba(0, 123, 255, 0); }
+        }
+    </style>

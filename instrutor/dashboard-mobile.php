@@ -9,6 +9,8 @@ require_once __DIR__ . '/../includes/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/services/SistemaNotificacoes.php';
 
+// DEBUG: dashboard instrutor carregado (instrutor/dashboard-mobile.php)
+
 // Verificar autenticação
 $user = getCurrentUser();
 if (!$user || $user['tipo'] !== 'instrutor') {
@@ -19,39 +21,137 @@ if (!$user || $user['tipo'] !== 'instrutor') {
 $db = db();
 $notificacoes = new SistemaNotificacoes();
 
-// Buscar dados do instrutor
-$instrutor = $db->fetch("SELECT * FROM instrutores WHERE id = ?", [$user['id']]);
+// Resumo rápido (desktop x mobile):
+// - Desktop (instrutor/dashboard.php) usa instrutores.id e combina aulas (prática) + turma_aulas_agendadas (teórica) com filtros por data/status.
+// - Mobile (esta página) usava usuarios.id e apenas tabela aulas. Ajuste abaixo alinha com o desktop sem alterar o layout/HTML.
 
-// Buscar aulas do dia
+// Buscar dados do instrutor via usuario_id -> instrutores.id
+$instrutorId = getCurrentInstrutorId($user['id']);
+$instrutor = $instrutorId ? $db->fetch("SELECT * FROM instrutores WHERE id = ?", [$instrutorId]) : null;
+if (!$instrutor) {
+    // Fallback seguro se não encontrar instrutor vinculado
+    $instrutor = [
+        'id' => null,
+        'usuario_id' => $user['id'],
+        'nome' => $user['nome'] ?? 'Instrutor',
+        'email' => $user['email'] ?? '',
+        'cfc_id' => null
+    ];
+}
+
+// Log leve para homolog
+error_log('[DEBUG AULAS PWA] user_id=' . ($user['id'] ?? 'null') . ' instrutor_id=' . ($instrutor['id'] ?? 'null'));
+
+// Buscar aulas do dia (práticas + teóricas)
 $hoje = date('Y-m-d');
-$aulasHoje = $db->fetchAll("
-    SELECT a.*, 
-           al.nome as aluno_nome, al.telefone as aluno_telefone,
-           v.modelo as veiculo_modelo, v.placa as veiculo_placa
-    FROM aulas a
-    JOIN alunos al ON a.aluno_id = al.id
-    LEFT JOIN veiculos v ON a.veiculo_id = v.id
-    WHERE a.instrutor_id = ? 
-      AND a.data_aula = ?
-      AND a.status != 'cancelada'
-    ORDER BY a.hora_inicio ASC
-", [$user['id'], $hoje]);
+$aulasPraticasHoje = [];
+$aulasTeoricasHoje = [];
+$proximasAulasPraticas = [];
+$proximasAulasTeoricas = [];
 
-// Buscar próximas aulas (próximos 7 dias)
-$proximasAulas = $db->fetchAll("
-    SELECT a.*, 
-           al.nome as aluno_nome, al.telefone as aluno_telefone,
-           v.modelo as veiculo_modelo, v.placa as veiculo_placa
-    FROM aulas a
-    JOIN alunos al ON a.aluno_id = al.id
-    LEFT JOIN veiculos v ON a.veiculo_id = v.id
-    WHERE a.instrutor_id = ? 
-      AND a.data_aula > ?
-      AND a.data_aula <= DATE_ADD(?, INTERVAL 7 DAY)
-      AND a.status != 'cancelada'
-    ORDER BY a.data_aula ASC, a.hora_inicio ASC
-    LIMIT 10
-", [$user['id'], $hoje, $hoje]);
+if ($instrutor['id']) {
+    $aulasPraticasHoje = $db->fetchAll("
+        SELECT a.*, 
+               al.nome as aluno_nome, al.telefone as aluno_telefone,
+               v.modelo as veiculo_modelo, v.placa as veiculo_placa,
+               'pratica' as tipo_aula
+        FROM aulas a
+        JOIN alunos al ON a.aluno_id = al.id
+        LEFT JOIN veiculos v ON a.veiculo_id = v.id
+        WHERE a.instrutor_id = ? 
+          AND a.data_aula = ?
+          AND a.status != 'cancelada'
+        ORDER BY a.hora_inicio ASC
+    ", [$instrutor['id'], $hoje]);
+
+    $aulasTeoricasHoje = $db->fetchAll("
+        SELECT 
+            taa.id,
+            taa.turma_id,
+            taa.disciplina,
+            taa.nome_aula,
+            taa.data_aula,
+            taa.hora_inicio,
+            taa.hora_fim,
+            taa.status,
+            taa.observacoes,
+            tt.nome as turma_nome,
+            s.nome as sala_nome,
+            'teorica' as tipo_aula,
+            NULL as aluno_nome,
+            NULL as aluno_telefone,
+            NULL as veiculo_modelo,
+            NULL as veiculo_placa
+        FROM turma_aulas_agendadas taa
+        JOIN turmas_teoricas tt ON taa.turma_id = tt.id
+        LEFT JOIN salas s ON taa.sala_id = s.id
+        WHERE taa.instrutor_id = ?
+          AND taa.data_aula = ?
+          AND taa.status != 'cancelada'
+        ORDER BY taa.hora_inicio ASC
+    ", [$instrutor['id'], $hoje]);
+
+    // Próximas aulas (7 dias) - práticas
+    $proximasAulasPraticas = $db->fetchAll("
+        SELECT a.*, 
+               al.nome as aluno_nome, al.telefone as aluno_telefone,
+               v.modelo as veiculo_modelo, v.placa as veiculo_placa,
+               'pratica' as tipo_aula
+        FROM aulas a
+        JOIN alunos al ON a.aluno_id = al.id
+        LEFT JOIN veiculos v ON a.veiculo_id = v.id
+        WHERE a.instrutor_id = ? 
+          AND a.data_aula > ?
+          AND a.data_aula <= DATE_ADD(?, INTERVAL 7 DAY)
+          AND a.status != 'cancelada'
+        ORDER BY a.data_aula ASC, a.hora_inicio ASC
+        LIMIT 10
+    ", [$instrutor['id'], $hoje, $hoje]);
+
+    // Próximas aulas (7 dias) - teóricas
+    $proximasAulasTeoricas = $db->fetchAll("
+        SELECT 
+            taa.id,
+            taa.turma_id,
+            taa.disciplina,
+            taa.nome_aula,
+            taa.data_aula,
+            taa.hora_inicio,
+            taa.hora_fim,
+            taa.status,
+            taa.observacoes,
+            tt.nome as turma_nome,
+            s.nome as sala_nome,
+            'teorica' as tipo_aula,
+            NULL as aluno_nome,
+            NULL as aluno_telefone,
+            NULL as veiculo_modelo,
+            NULL as veiculo_placa
+        FROM turma_aulas_agendadas taa
+        JOIN turmas_teoricas tt ON taa.turma_id = tt.id
+        LEFT JOIN salas s ON taa.sala_id = s.id
+        WHERE taa.instrutor_id = ?
+          AND taa.data_aula > ?
+          AND taa.data_aula <= DATE_ADD(?, INTERVAL 7 DAY)
+          AND taa.status != 'cancelada'
+        ORDER BY taa.data_aula ASC, taa.hora_inicio ASC
+        LIMIT 10
+    ", [$instrutor['id'], $hoje, $hoje]);
+}
+
+// Normalizar listas unificadas
+$aulasHoje = array_merge($aulasPraticasHoje, $aulasTeoricasHoje);
+usort($aulasHoje, function($a, $b) {
+    return strcmp($a['hora_inicio'] ?? '00:00:00', $b['hora_inicio'] ?? '00:00:00');
+});
+
+$proximasAulas = array_merge($proximasAulasPraticas, $proximasAulasTeoricas);
+usort($proximasAulas, function($a, $b) {
+    $dataA = $a['data_aula'] . ' ' . ($a['hora_inicio'] ?? '00:00:00');
+    $dataB = $b['data_aula'] . ' ' . ($b['hora_inicio'] ?? '00:00:00');
+    return strcmp($dataA, $dataB);
+});
+$proximasAulas = array_slice($proximasAulas, 0, 10);
 
 // Buscar notificações não lidas
 $notificacoesNaoLidas = $notificacoes->buscarNotificacoesNaoLidas($user['id'], 'instrutor');

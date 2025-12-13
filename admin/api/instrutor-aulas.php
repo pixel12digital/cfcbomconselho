@@ -10,6 +10,17 @@
  * - Apenas usuários com tipo = 'instrutor' podem usar
  * - Valida se a aula pertence ao instrutor logado (aulas.instrutor_id = instrutor_atual)
  * - Registra motivo/justificativa em log de ações
+ * 
+ * AÇÕES SUPORTADAS ATUALMENTE:
+ * - cancelamento: Cancela uma aula prática (requer justificativa)
+ * - transferencia: Transfere uma aula prática para outra data/hora (requer justificativa, nova_data, nova_hora)
+ * 
+ * AÇÕES QUE SERÃO ADICIONADAS (Tarefa 2.2 - Fase 2):
+ * - iniciar: Inicia uma aula prática (status 'agendada' → 'em_andamento', registra hora_inicio_real)
+ * - finalizar: Finaliza uma aula prática (status 'em_andamento' → 'concluida', registra hora_fim_real)
+ * 
+ * NOTA: Para Tarefa 2.2, campos hora_inicio_real e hora_fim_real devem existir na tabela aulas.
+ * Se não existirem, será necessário criar migration ou usar alternativa (observacoes/campos existentes).
  */
 
 require_once __DIR__ . '/../../includes/config.php';
@@ -93,25 +104,35 @@ try {
                 returnJsonError('ID da aula é obrigatório');
             }
             if (empty($input['tipo_acao'])) {
-                returnJsonError('Tipo de ação é obrigatório (cancelamento ou transferencia)');
-            }
-            if (empty($input['justificativa'])) {
-                returnJsonError('Justificativa é obrigatória');
+                returnJsonError('Tipo de ação é obrigatório');
             }
 
             $aulaId = (int)$input['aula_id'];
-            $tipoAcao = $input['tipo_acao']; // 'cancelamento' ou 'transferencia'
-            $justificativa = trim($input['justificativa']);
+            $tipoAcao = $input['tipo_acao']; // 'cancelamento', 'transferencia', 'iniciar' ou 'finalizar'
+            $justificativa = isset($input['justificativa']) ? trim($input['justificativa']) : null;
             $motivo = $input['motivo'] ?? null;
             $novaData = $input['nova_data'] ?? null;
             $novaHora = $input['nova_hora'] ?? null;
 
             // Validar tipo de ação
-            if (!in_array($tipoAcao, ['cancelamento', 'transferencia'])) {
-                returnJsonError('Tipo de ação inválido. Use "cancelamento" ou "transferencia"');
+            if (!in_array($tipoAcao, ['cancelamento', 'transferencia', 'iniciar', 'finalizar'])) {
+                returnJsonError('Tipo de ação inválido. Use "cancelamento", "transferencia", "iniciar" ou "finalizar"');
+            }
+            
+            // Justificativa é obrigatória apenas para cancelamento e transferência
+            if (in_array($tipoAcao, ['cancelamento', 'transferencia']) && empty($justificativa)) {
+                returnJsonError('Justificativa é obrigatória para ' . $tipoAcao);
             }
 
             // VALIDAÇÃO CRÍTICA: Verificar se a aula pertence ao instrutor logado
+            // Para cancelamento/transferência: excluir canceladas
+            // Para iniciar/finalizar: pode estar em qualquer status (será validado depois)
+            $whereStatus = "a.status != 'cancelada'";
+            if (in_array($tipoAcao, ['iniciar', 'finalizar'])) {
+                // Para iniciar/finalizar, permitir buscar mesmo se estiver cancelada (validação de status será feita depois)
+                $whereStatus = "1=1"; // Não filtrar por status aqui
+            }
+            
             $aula = $db->fetch("
                 SELECT a.*, 
                        al.nome as aluno_nome, al.telefone as aluno_telefone,
@@ -119,7 +140,7 @@ try {
                 FROM aulas a
                 JOIN alunos al ON a.aluno_id = al.id
                 LEFT JOIN veiculos v ON a.veiculo_id = v.id
-                WHERE a.id = ? AND a.instrutor_id = ? AND a.status != 'cancelada'
+                WHERE a.id = ? AND a.instrutor_id = ? AND $whereStatus
             ", [$aulaId, $instrutorId]);
 
             if (!$aula) {
@@ -174,12 +195,25 @@ try {
                 returnJsonError('Ação só pode ser realizada com pelo menos 2 horas de antecedência');
             }
 
-            // Verificar status da aula
-            if ($aula['status'] === 'concluida') {
-                returnJsonError('Aula já foi concluída e não pode ser alterada');
-            }
-            if ($aula['status'] === 'em_andamento') {
-                returnJsonError('Aula em andamento não pode ser alterada');
+            // Validações de status específicas por tipo de ação
+            if ($tipoAcao === 'cancelamento' || $tipoAcao === 'transferencia') {
+                // Para cancelamento e transferência, validar status como antes
+                if ($aula['status'] === 'concluida') {
+                    returnJsonError('Aula já foi concluída e não pode ser alterada');
+                }
+                if ($aula['status'] === 'em_andamento') {
+                    returnJsonError('Aula em andamento não pode ser alterada');
+                }
+            } elseif ($tipoAcao === 'iniciar') {
+                // Para iniciar, a aula deve estar agendada
+                if ($aula['status'] !== 'agendada') {
+                    returnJsonError('Apenas aulas agendadas podem ser iniciadas');
+                }
+            } elseif ($tipoAcao === 'finalizar') {
+                // Para finalizar, a aula deve estar em andamento
+                if ($aula['status'] !== 'em_andamento') {
+                    returnJsonError('Apenas aulas em andamento podem ser finalizadas');
+                }
             }
 
             // Processar ação
@@ -258,6 +292,110 @@ try {
                     'data_nova' => $novaData,
                     'hora_nova' => $novaHora
                 ], 'Aula transferida com sucesso');
+
+            } else if ($tipoAcao === 'iniciar') {
+                // TAREFA 2.2 - Iniciar aula prática
+                // Atualizar status para 'em_andamento' e registrar hora_inicio_real
+                $horaInicioReal = date('H:i:s');
+                $observacoesAtualizadas = ($aula['observacoes'] ?? '') . "\n\n[INICIADA POR INSTRUTOR] " . date('d/m/Y H:i:s');
+                
+                // Verificar se campo hora_inicio_real existe, caso contrário usar observacoes
+                $checkColumn = $db->fetch("SHOW COLUMNS FROM aulas LIKE 'hora_inicio_real'");
+                if ($checkColumn) {
+                    $result = $db->query("
+                        UPDATE aulas 
+                        SET status = 'em_andamento', 
+                            hora_inicio_real = NOW(),
+                            observacoes = ?,
+                            atualizado_em = NOW()
+                        WHERE id = ? AND instrutor_id = ?
+                    ", [$observacoesAtualizadas, $aulaId, $instrutorId]);
+                } else {
+                    // Fallback: usar observacoes para registrar hora real
+                    $observacoesComHora = $observacoesAtualizadas . "\nHora início real: " . date('H:i:s');
+                    $result = $db->query("
+                        UPDATE aulas 
+                        SET status = 'em_andamento', 
+                            observacoes = ?,
+                            atualizado_em = NOW()
+                        WHERE id = ? AND instrutor_id = ?
+                    ", [$observacoesComHora, $aulaId, $instrutorId]);
+                }
+
+                if (!$result) {
+                    returnJsonError('Erro ao iniciar aula', 500);
+                }
+
+                // Log de auditoria
+                if (defined('LOG_ENABLED') && LOG_ENABLED) {
+                    error_log(sprintf(
+                        '[INSTRUTOR_INICIAR_AULA] instrutor_id=%d, usuario_id=%d, aula_id=%d, timestamp=%s, ip=%s',
+                        $instrutorId,
+                        $user['id'],
+                        $aulaId,
+                        date('Y-m-d H:i:s'),
+                        $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+                    ));
+                }
+
+                returnJsonSuccess([
+                    'aula_id' => $aulaId,
+                    'acao' => 'iniciar',
+                    'status' => 'em_andamento',
+                    'hora_inicio_real' => $horaInicioReal
+                ], 'Aula iniciada com sucesso');
+
+            } else if ($tipoAcao === 'finalizar') {
+                // TAREFA 2.2 - Finalizar aula prática
+                // Atualizar status para 'concluida' e registrar hora_fim_real
+                $horaFimReal = date('H:i:s');
+                $observacoesAtualizadas = ($aula['observacoes'] ?? '') . "\n\n[FINALIZADA POR INSTRUTOR] " . date('d/m/Y H:i:s');
+                
+                // Verificar se campo hora_fim_real existe, caso contrário usar observacoes
+                $checkColumn = $db->fetch("SHOW COLUMNS FROM aulas LIKE 'hora_fim_real'");
+                if ($checkColumn) {
+                    $result = $db->query("
+                        UPDATE aulas 
+                        SET status = 'concluida', 
+                            hora_fim_real = NOW(),
+                            observacoes = ?,
+                            atualizado_em = NOW()
+                        WHERE id = ? AND instrutor_id = ?
+                    ", [$observacoesAtualizadas, $aulaId, $instrutorId]);
+                } else {
+                    // Fallback: usar observacoes para registrar hora real
+                    $observacoesComHora = $observacoesAtualizadas . "\nHora fim real: " . date('H:i:s');
+                    $result = $db->query("
+                        UPDATE aulas 
+                        SET status = 'concluida', 
+                            observacoes = ?,
+                            atualizado_em = NOW()
+                        WHERE id = ? AND instrutor_id = ?
+                    ", [$observacoesComHora, $aulaId, $instrutorId]);
+                }
+
+                if (!$result) {
+                    returnJsonError('Erro ao finalizar aula', 500);
+                }
+
+                // Log de auditoria
+                if (defined('LOG_ENABLED') && LOG_ENABLED) {
+                    error_log(sprintf(
+                        '[INSTRUTOR_FINALIZAR_AULA] instrutor_id=%d, usuario_id=%d, aula_id=%d, timestamp=%s, ip=%s',
+                        $instrutorId,
+                        $user['id'],
+                        $aulaId,
+                        date('Y-m-d H:i:s'),
+                        $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
+                    ));
+                }
+
+                returnJsonSuccess([
+                    'aula_id' => $aulaId,
+                    'acao' => 'finalizar',
+                    'status' => 'concluida',
+                    'hora_fim_real' => $horaFimReal
+                ], 'Aula finalizada com sucesso');
             }
 
             break;

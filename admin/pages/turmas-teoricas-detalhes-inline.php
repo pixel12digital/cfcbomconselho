@@ -148,62 +148,65 @@ $disciplinasCurso = $turmaManager->obterDisciplinasParaAgendamento($turmaId);
 
 // Obter instrutores disponíveis para agendamento (após ter $turma definido)
 try {
-    $cfcId = $turma['cfc_id'] ?? $user['cfc_id'] ?? 1;
+    // CORREÇÃO (12/12/2025): Usar CFC da turma, não fallback para CFC 1 (inexistente)
+    // Se turma não tiver CFC definido, usar CFC do usuário (só se existir e estiver ativo)
+    $cfcId = null;
     
-    // Primeiro tentar buscar instrutores do CFC da turma com ativo = 1 ou ativo = true
-    $instrutores = $db->fetchAll("
-        SELECT i.id, 
-               COALESCE(u.nome, i.nome, 'Instrutor sem nome') as nome,
-               i.categoria_habilitacao 
-        FROM instrutores i 
-        LEFT JOIN usuarios u ON i.usuario_id = u.id 
-        WHERE (i.ativo = 1 OR i.ativo = TRUE OR i.ativo IS NULL) AND i.cfc_id = ?
-        ORDER BY COALESCE(u.nome, i.nome, '') ASC
-    ", [$cfcId]);
+    if (!empty($turma['cfc_id'])) {
+        // Validar se o CFC da turma existe e está ativo
+        $cfcTurma = $db->fetch("SELECT id, ativo FROM cfcs WHERE id = ?", [$turma['cfc_id']]);
+        if ($cfcTurma && $cfcTurma['ativo']) {
+            $cfcId = $turma['cfc_id'];
+        }
+    }
     
-    // Se não encontrou instrutores, buscar todos os ativos do CFC (sem filtro de ativo)
-    if (empty($instrutores)) {
+    // Se não encontrou CFC válido da turma, tentar usar CFC do usuário
+    if (!$cfcId && !empty($user['cfc_id'])) {
+        $cfcUsuario = $db->fetch("SELECT id, ativo FROM cfcs WHERE id = ?", [$user['cfc_id']]);
+        if ($cfcUsuario && $cfcUsuario['ativo']) {
+            $cfcId = $user['cfc_id'];
+        }
+    }
+    
+    // Se ainda não encontrou, buscar primeiro CFC ativo
+    if (!$cfcId) {
+        $primeiroCfcAtivo = $db->fetch("SELECT id FROM cfcs WHERE ativo = 1 ORDER BY id LIMIT 1");
+        if ($primeiroCfcAtivo) {
+            $cfcId = $primeiroCfcAtivo['id'];
+            error_log("[Turmas Teoricas Detalhes] CFC não encontrado, usando primeiro CFC ativo: {$cfcId}");
+        }
+    }
+    
+    // Se ainda não tem CFC, não buscar instrutores (vai dar erro claro)
+    if (!$cfcId) {
+        error_log("[Turmas Teoricas Detalhes] ERRO: Nenhum CFC válido encontrado para buscar instrutores");
+        $instrutores = [];
+    } else {
+        // CORREÇÃO (12/12/2025): Query robusta para lidar com diferentes tipos de campo ativo
+        // Suporta: TINYINT(1) (0/1), BOOLEAN (TRUE/FALSE), e valores NULL
         $instrutores = $db->fetchAll("
             SELECT i.id, 
-                   COALESCE(u.nome, i.nome, 'Instrutor sem nome') as nome,
+                   COALESCE(i.nome, u.nome, 'Instrutor sem nome') as nome,
                    i.categoria_habilitacao 
             FROM instrutores i 
             LEFT JOIN usuarios u ON i.usuario_id = u.id 
-            WHERE i.cfc_id = ?
+            WHERE (i.ativo = 1 OR i.ativo = TRUE OR (i.ativo IS NOT NULL AND i.ativo != 0))
+              AND i.cfc_id = ?
             ORDER BY COALESCE(u.nome, i.nome, '') ASC
         ", [$cfcId]);
     }
     
-    // Se ainda não encontrou, buscar todos os ativos independente do CFC
-    if (empty($instrutores)) {
-        $instrutores = $db->fetchAll("
-            SELECT i.id, 
-                   COALESCE(u.nome, i.nome, 'Instrutor sem nome') as nome,
-                   i.categoria_habilitacao 
-            FROM instrutores i 
-            LEFT JOIN usuarios u ON i.usuario_id = u.id 
-            WHERE (i.ativo = 1 OR i.ativo = TRUE OR i.ativo IS NULL)
-            ORDER BY COALESCE(u.nome, i.nome, '') ASC
-        ");
-    }
-    
-    // Último fallback: buscar TODOS os instrutores
-    if (empty($instrutores)) {
-        $instrutores = $db->fetchAll("
-            SELECT i.id, 
-                   COALESCE(u.nome, i.nome, 'Instrutor sem nome') as nome,
-                   i.categoria_habilitacao 
-            FROM instrutores i 
-            LEFT JOIN usuarios u ON i.usuario_id = u.id 
-            ORDER BY COALESCE(u.nome, i.nome, '') ASC
-        ");
-    }
+    // CORREÇÃO (12/12/2025): Removidos fallbacks que buscam instrutores de outros CFCs
+    // Instrutores devem ser do mesmo CFC da turma. Se não houver instrutores ativos no CFC,
+    // a lista ficará vazia e o usuário será informado.
     
     // Log para debug
-    if (empty($instrutores)) {
-        error_log("Nenhum instrutor encontrado no banco. CFC ID usado: " . $cfcId);
+    if (!$cfcId) {
+        error_log("[Turmas Teoricas Detalhes] Nenhum CFC válido encontrado - não foi possível buscar instrutores");
+    } else if (empty($instrutores)) {
+        error_log("[Turmas Teoricas Detalhes] Nenhum instrutor ativo encontrado no CFC {$cfcId}. Verifique se há instrutores cadastrados neste CFC.");
     } else {
-        error_log("Instrutores encontrados: " . count($instrutores) . " para CFC ID: " . $cfcId);
+        error_log("[Turmas Teoricas Detalhes] Instrutores encontrados: " . count($instrutores) . " para CFC ID: {$cfcId}");
     }
 } catch (Exception $e) {
     error_log("Erro ao buscar instrutores: " . $e->getMessage());
@@ -3564,6 +3567,13 @@ function updateTurmaHeaderName(newName) {
             <i class="fas fa-chart-bar"></i>
             <span>Estatísticas</span>
         </button>
+        <?php if ($isAdmin || hasPermission('secretaria')): ?>
+        <!-- AJUSTE 2025-12 - Aba Diário / Presenças para admin/secretaria -->
+        <button class="tab-button" onclick="window.location.href='?page=turma-diario&turma_id=<?= $turmaId ?>'">
+            <i class="fas fa-book-open"></i>
+            <span>Diário / Presenças</span>
+        </button>
+        <?php endif; ?>
     </div>
 
     <!-- Aba Resumo -->
@@ -12492,14 +12502,26 @@ function carregarDadosSelects(instrutorId = null, salaId = null) {
     return new Promise((resolve) => {
         console.log('🔧 [DEBUG] Carregando dados dos selects...');
         
+        // CORREÇÃO (12/12/2025): Passar turma_id para filtrar por CFC da turma
+        const turmaIdParam = TURMA_ID_DETALHES || (new URLSearchParams(window.location.search).get('turma_id'));
+        
+        // #region agent log
+        fetch('http://127.0.0.1:7242/ingest/8f119121-d835-49f7-9624-6efdbdcd4639',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'turmas-teoricas-detalhes-inline.php:12499',message:'Carregando instrutores - antes do fetch',data:{turmaIdParam: turmaIdParam, TURMA_ID_DETALHES: typeof TURMA_ID_DETALHES !== 'undefined' ? TURMA_ID_DETALHES : 'undefined', urlParams: new URLSearchParams(window.location.search).get('turma_id')},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'B'})}).catch(()=>{});
+        // #endregion
+        
         // Carregar instrutores - usar o select do modal unificado
-        fetch('api/instrutores-real.php')
+        fetch('api/instrutores-real.php' + (turmaIdParam ? `?turma_id=${turmaIdParam}` : ''))
             .then(response => {
                 console.log('🔧 [DEBUG] Resposta instrutores:', response.status);
                 return response.json();
             })
             .then(data => {
                 console.log('🔧 [DEBUG] Dados instrutores:', data);
+                
+                // #region agent log
+                fetch('http://127.0.0.1:7242/ingest/8f119121-d835-49f7-9624-6efdbdcd4639',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'turmas-teoricas-detalhes-inline.php:12507',message:'Resposta da API recebida',data:{success: data.success, total: data.total, instrutor_ids: data.instrutores ? data.instrutores.map(i => i.id) : [], instrutor_nomes: data.instrutores ? data.instrutores.map(i => i.nome) : [], tem_carlos: data.instrutores ? data.instrutores.some(i => i.nome && i.nome.toLowerCase().includes('carlos')) : false},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'A,C,D,E'})}).catch(()=>{});
+                // #endregion
+                
                 if (data.success) {
                     // Usar o select do modal unificado
                     const selectInstrutor = document.getElementById('modal_instrutor_id');
@@ -12517,6 +12539,10 @@ function carregarDadosSelects(instrutorId = null, salaId = null) {
                             }
                             selectInstrutor.appendChild(option);
                         });
+                        
+                        // #region agent log
+                        fetch('http://127.0.0.1:7242/ingest/8f119121-d835-49f7-9624-6efdbdcd4639',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'turmas-teoricas-detalhes-inline.php:12525',message:'Opções adicionadas ao select',data:{total_opcoes: selectInstrutor.options.length, opcoes_texto: Array.from(selectInstrutor.options).map(o => o.textContent)},timestamp:Date.now(),sessionId:'debug-session',runId:'run1',hypothesisId:'E'})}).catch(()=>{});
+                        // #endregion
                         
                         // Definir valor selecionado se fornecido
                         if (instrutorId) {
@@ -12671,7 +12697,9 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Carregar instrutores
     console.log('🔧 [DEBUG] Carregando instrutores...');
-    fetch('api/instrutores-real.php')
+    // CORREÇÃO (12/12/2025): Passar turma_id para filtrar por CFC da turma
+    const turmaIdParam = TURMA_ID_DETALHES || (new URLSearchParams(window.location.search).get('turma_id'));
+    fetch('api/instrutores-real.php' + (turmaIdParam ? `?turma_id=${turmaIdParam}` : ''))
         .then(response => {
             console.log('🔧 [DEBUG] Resposta instrutores:', response.status);
             return response.json();

@@ -217,13 +217,13 @@ try {
                                         </div>
                                     </div>
                                     <div>
-                                        <strong><?php echo htmlspecialchars($veiculo['marca'] . ' ' . $veiculo['modelo']); ?></strong>
-                                        <br><small class="text-muted">Ano/Modelo: <?php echo htmlspecialchars($veiculo['ano']); ?></small>
+                                        <strong><?php echo htmlspecialchars(($veiculo['marca'] ?? '') . ' ' . ($veiculo['modelo'] ?? '')); ?></strong>
+                                        <br><small class="text-muted">Ano/Modelo: <?php echo htmlspecialchars($veiculo['ano'] ?? ''); ?></small>
                                     </div>
                                 </div>
                             </td>
                             <td>
-                                <code class="fs-6"><?php echo htmlspecialchars($veiculo['placa']); ?></code>
+                                <code class="fs-6"><?php echo htmlspecialchars($veiculo['placa'] ?? ''); ?></code>
                             </td>
                             <td>
                                 <?php
@@ -323,10 +323,10 @@ try {
                 </div>
                 <div class="mobile-veiculo-info">
                     <div class="mobile-veiculo-title">
-                        <?php echo htmlspecialchars($veiculo['marca'] . ' ' . $veiculo['modelo']); ?>
+                        <?php echo htmlspecialchars(($veiculo['marca'] ?? '') . ' ' . ($veiculo['modelo'] ?? '')); ?>
                     </div>
                     <div class="mobile-veiculo-subtitle">
-                        ID: <?php echo $veiculo['id']; ?> • Ano/Modelo: <?php echo htmlspecialchars($veiculo['ano']); ?>
+                        ID: <?php echo $veiculo['id']; ?> • Ano/Modelo: <?php echo htmlspecialchars($veiculo['ano'] ?? ''); ?>
                     </div>
                 </div>
             </div>
@@ -335,7 +335,7 @@ try {
                 <div class="mobile-veiculo-field">
                     <span class="mobile-veiculo-label">Placa:</span>
                     <span class="mobile-veiculo-value">
-                        <code><?php echo htmlspecialchars($veiculo['placa']); ?></code>
+                        <code><?php echo htmlspecialchars($veiculo['placa'] ?? ''); ?></code>
                     </span>
                 </div>
                 

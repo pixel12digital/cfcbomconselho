@@ -1,9 +1,32 @@
 <?php
 /**
- * API simplificada para buscar alunos aptos para matrícula em turmas teóricas
+ * API de Alunos Aptos para Matrícula em Turma Teórica
  * 
- * USO: Função centralizada GuardsExames::alunoComExamesOkParaTeoricas()
- * para garantir consistência com histórico do aluno
+ * RESPONSABILIDADE:
+ * Retornar lista de alunos elegíveis para matrícula em uma turma teórica específica,
+ * aplicando todas as regras de negócio (CFC, status, exames, financeiro).
+ * 
+ * REGRAS DE SELEÇÃO (Pseudo-SQL):
+ * 
+ * SELECT alunos.*
+ * FROM alunos
+ * JOIN cfcs ON alunos.cfc_id = cfcs.id
+ * LEFT JOIN turma_matriculas ON alunos.id = turma_matriculas.aluno_id 
+ *     AND turma_matriculas.turma_id = :turma_id
+ *     AND turma_matriculas.status IN ('matriculado', 'cursando')
+ * WHERE 
+ *     alunos.status IN (:status_permitidos)  -- ['ativo', 'em_andamento']
+ *     AND alunos.cfc_id = :cfc_turma         -- CFC da turma (não da sessão)
+ *     AND turma_matriculas.id IS NULL        -- Não está já matriculado nesta turma
+ * 
+ * Para cada candidato retornado, aplicar filtros adicionais:
+ * - Exames OK: GuardsExames::alunoComExamesOkParaTeoricas()
+ * - Financeiro OK: FinanceiroAlunoHelper::verificarPermissaoFinanceiraAluno()
+ * - Status matrícula: 'disponivel' (não matriculado nesta turma)
+ * 
+ * REGRA DE CFC:
+ * - Admin Global (cfc_sessao = 0): filtra alunos por cfc_turma
+ * - Admin CFC específico (cfc_sessao > 0): filtra alunos por cfc_turma (que deve = cfc_sessao)
  * 
  * NOTA SOBRE CFC:
  * - CFC canônico do CFC Bom Conselho é ID 36 (não mais 1)
@@ -11,7 +34,20 @@
  * - NÃO assume valores fixos de CFC
  * - Migração CFC 1 → 36 é SEMPRE manual, via script documentado em docs/MIGRACAO_CFC_1_PARA_36.md
  * - Nenhuma rotina automática deve disparar UPDATEs de CFC
+ * 
+ * CORREÇÃO ROBUSTA (12/12/2025):
+ * - Status permitidos agora são configuráveis via constante
+ * - Query usa IN (...) ao invés de = 'ativo' hardcoded
+ * - Mantém uso de funções centralizadas para exames e financeiro
+ * - Ver documentação completa em: docs/AUDITORIA_API_ALUNOS_APTOS_TURMA.md
  */
+
+// =====================================================
+// CONFIGURAÇÃO: Status de Aluno Permitidos
+// =====================================================
+// Alunos com estes status podem aparecer na lista de candidatos
+// Status excluídos: 'concluido', 'cancelado', 'inativo'
+define('STATUS_ALUNO_PERMITIDOS_TURMA_TEORICA', ['ativo', 'em_andamento']);
 
 header('Content-Type: application/json; charset=utf-8');
 
@@ -84,14 +120,33 @@ try {
     error_log("[TURMAS TEORICAS API] CFC da Turma: {$cfcIdTurma}, CFC da Sessão: {$cfcIdSessao} ({$sessionCfcLabel}), Admin Global: " . ($isAdminGlobal ? 'Sim' : 'Não'));
     
     // =====================================================
-    // BUSCAR TODOS OS ALUNOS ATIVOS DO CFC
+    // BUSCAR CANDIDATOS BRUTOS DO CFC
     // =====================================================
-    // Não filtrar por exames na query inicial
-    // A verificação será feita usando a função centralizada
+    // CORREÇÃO ROBUSTA (12/12/2025): Status permitidos agora são configuráveis
+    // 
+    // CRITÉRIO DE SELEÇÃO INICIAL:
+    // - alunos.status IN (STATUS_ALUNO_PERMITIDOS_TURMA_TEORICA) - ['ativo', 'em_andamento']
+    // - alunos.cfc_id = cfcIdTurma (CFC da turma, NÃO da sessão)
+    // - LEFT JOIN com turma_matriculas para determinar status_matricula:
+    //   - 'matriculado' se já está matriculado nesta turma (status IN ('matriculado', 'cursando'))
+    //   - 'disponivel' caso contrário
+    //
     // IMPORTANTE: Usar $cfcIdTurma (não $cfcIdSessao) para filtrar alunos
-    error_log("[TURMAS TEORICAS API] Executando query - turma_id={$turmaId}, cfc_id_turma={$cfcIdTurma}");
+    // Isso garante que apenas alunos do mesmo CFC da turma sejam considerados,
+    // mesmo quando o usuário é admin_global (cfc_id = 0)
+    //
+    // Não filtrar por exames na query inicial - a verificação será feita usando
+    // a função centralizada GuardsExames::alunoComExamesOkParaTeoricas()
+    
+    // Preparar lista de status permitidos para a query
+    $statusPermitidos = STATUS_ALUNO_PERMITIDOS_TURMA_TEORICA;
+    $placeholdersStatus = implode(',', array_fill(0, count($statusPermitidos), '?'));
+    
+    error_log("[TURMAS TEORICAS API] Executando query - turma_id={$turmaId}, cfc_id_turma={$cfcIdTurma}, status_permitidos=" . implode(',', $statusPermitidos));
     
     try {
+        // Montar query com status permitidos dinâmicos
+        $params = array_merge([$turmaId], $statusPermitidos, [$cfcIdTurma]);
         $alunosCandidatos = $db->fetchAll("
             SELECT 
                 a.id,
@@ -118,10 +173,10 @@ try {
                 FROM matriculas
                 WHERE status = 'ativa'
             ) m_ativa ON a.id = m_ativa.aluno_id
-            WHERE a.status = 'ativo'
+            WHERE a.status IN ({$placeholdersStatus})
                 AND a.cfc_id = ?
             ORDER BY a.nome
-        ", [$turmaId, $cfcIdTurma]);
+        ", $params);
     } catch (Exception $e) {
         error_log("[TURMAS TEORICAS API] ERRO na query de candidatos: " . $e->getMessage());
         error_log("[TURMAS TEORICAS API] Stack trace: " . $e->getTraceAsString());
@@ -131,6 +186,46 @@ try {
     // Logs detalhados após a query
     error_log("[TURMAS TEORICAS API] Turma {$turmaId} - CFC Turma: {$cfcIdTurma}, CFC Sessao: {$cfcIdSessao} ({$sessionCfcLabel}), AdminGlobal=" . ($isAdminGlobal ? 'true' : 'false'));
     error_log("[TURMAS TEORICAS API] Turma {$turmaId} - Total candidatos brutos (antes de qualquer filtro): " . count($alunosCandidatos));
+    
+    // Se não retornou candidatos, fazer diagnóstico detalhado
+    if (count($alunosCandidatos) === 0) {
+        error_log("[TURMAS TEORICAS API] ⚠️ NENHUM CANDIDATO ENCONTRADO - Iniciando diagnóstico...");
+        
+        // Diagnóstico 1: Quantos alunos existem com os status permitidos neste CFC?
+        $totalAlunosStatusOK = $db->fetchColumn("
+            SELECT COUNT(*) 
+            FROM alunos 
+            WHERE cfc_id = ? 
+            AND status IN (" . implode(',', array_fill(0, count($statusPermitidos), '?')) . ")
+        ", array_merge([$cfcIdTurma], $statusPermitidos), 0);
+        
+        error_log("[TURMAS TEORICAS API] DIAGNÓSTICO: Total de alunos com status permitidos no CFC {$cfcIdTurma}: {$totalAlunosStatusOK}");
+        
+        // Diagnóstico 2: Quantos alunos existem neste CFC (qualquer status)?
+        $totalAlunosCfc = $db->fetchColumn("SELECT COUNT(*) FROM alunos WHERE cfc_id = ?", [$cfcIdTurma], 0);
+        error_log("[TURMAS TEORICAS API] DIAGNÓSTICO: Total de alunos no CFC {$cfcIdTurma} (qualquer status): {$totalAlunosCfc}");
+        
+        // Diagnóstico 3: Verificar se o CFC existe (pode estar faltando e causar problema no JOIN)
+        $cfcExiste = $db->fetch("SELECT id, nome FROM cfcs WHERE id = ?", [$cfcIdTurma]);
+        if (!$cfcExiste) {
+            error_log("[TURMAS TEORICAS API] DIAGNÓSTICO: ⚠️ CFC {$cfcIdTurma} NÃO EXISTE na tabela cfcs - isso causaria exclusão no JOIN!");
+        } else {
+            error_log("[TURMAS TEORICAS API] DIAGNÓSTICO: CFC {$cfcIdTurma} existe: '{$cfcExiste['nome']}'");
+        }
+        
+        // Diagnóstico 3: Status dos alunos neste CFC
+        $statusAlunos = $db->fetchAll("
+            SELECT status, COUNT(*) as total 
+            FROM alunos 
+            WHERE cfc_id = ? 
+            GROUP BY status
+        ", [$cfcIdTurma]);
+        
+        error_log("[TURMAS TEORICAS API] DIAGNÓSTICO: Distribuição de status dos alunos no CFC {$cfcIdTurma}:");
+        foreach ($statusAlunos as $stat) {
+            error_log("[TURMAS TEORICAS API]   - Status '{$stat['status']}': {$stat['total']} aluno(s)");
+        }
+    }
     
     // Log de cada candidato bruto encontrado
     foreach ($alunosCandidatos as $c) {
@@ -187,6 +282,23 @@ try {
     // =====================================================
     // FILTRAR ALUNOS USANDO FUNÇÃO CENTRALIZADA
     // =====================================================
+    // AUDITORIA (12/12/2025): Loop de validação aplica 5 filtros sequenciais
+    // 
+    // Para cada aluno retornado pela query inicial, são aplicados:
+    // 1. Verificação de CFC (blindagem extra - linha 200)
+    // 2. Verificação de Exames (GuardsExames::alunoComExamesOkParaTeoricas)
+    // 3. Verificação Financeira (FinanceiroAlunoHelper::verificarPermissaoFinanceiraAluno)
+    // 4. Verificação de Categoria (sempre true por enquanto)
+    // 5. Verificação de Status de Matrícula (deve ser 'disponivel')
+    //
+    // ALUNO É ELEGÍVEL SE TODAS AS CONDIÇÕES FOREM TRUE:
+    // - examesOK === true
+    // - financeiroOK === true  
+    // - categoriaOK === true (sempre true hoje)
+    // - status_matricula === 'disponivel' (não pode estar já matriculado nesta turma)
+    //
+    // Ver documentação completa em: docs/AUDITORIA_TURMAS_TEORICAS_MATRICULA.md
+    
     $alunosAptos = [];
     $debugInfo = [];
     
@@ -194,7 +306,7 @@ try {
         $alunoId = (int)$aluno['id'];
         $alunoCfcId = (int)($aluno['cfc_id'] ?? 0);
         
-        // BLINDAGEM EXTRA: Verificar se CFC do aluno corresponde ao CFC da turma
+        // FILTRO 1: BLINDAGEM EXTRA - Verificar se CFC do aluno corresponde ao CFC da turma
         // Mesmo que a query já filtre por CFC, esta verificação garante que nenhum aluno
         // de outra origem (ex: importação, migração) seja considerado incorretamente
         if ($alunoCfcId !== $cfcIdTurma) {
@@ -202,20 +314,29 @@ try {
             continue; // Não considera este aluno
         }
         
-        // Verificar exames usando função centralizada
+        // FILTRO 2: Verificar exames usando função centralizada
+        // Retorna true se ambos exames (médico e psicotécnico) têm resultado 'apto'/'aprovado'
+        // CORREÇÃO ROBUSTA (12/12/2025): Usa mesma função do histórico do aluno
         $examesOK = GuardsExames::alunoComExamesOkParaTeoricas($alunoId);
         
-        // Verificar financeiro usando helper centralizado
+        // FILTRO 3: Verificar financeiro usando helper centralizado
+        // Retorna true se: tem matrícula ativa + pelo menos uma fatura paga + sem faturas vencidas
+        // CORREÇÃO ROBUSTA (12/12/2025): Usa mesma função do histórico do aluno
+        // Esta função é mais completa que verificarInadimplencia() pois também verifica:
+        // - Existência de matrícula ativa
+        // - Pelo menos uma fatura paga
+        // - Faturas vencidas (considerando data de vencimento)
         $verificacaoFinanceira = FinanceiroAlunoHelper::verificarPermissaoFinanceiraAluno($alunoId);
         $financeiroOK = $verificacaoFinanceira['liberado'];
         
-        // Verificar categoria (por enquanto, não filtrar por categoria)
+        // FILTRO 4: Verificar categoria (por enquanto, não filtrar por categoria)
         // NOTA: A turma não tem campo categoria_cnh direto.
         // Se houver necessidade de filtrar por categoria, verificar através da matrícula ativa do aluno.
         // Por enquanto, aceitar qualquer categoria.
         $categoriaOK = true; // TODO: Implementar filtro de categoria se necessário
         
-        // Determinar elegibilidade
+        // FILTRO 5: Determinar elegibilidade final
+        // Aluno só é elegível se NÃO estiver já matriculado nesta turma (status_matricula === 'disponivel')
         $elegivel = ($examesOK && $financeiroOK && $categoriaOK && $aluno['status_matricula'] === 'disponivel');
         
         // Log específico para aluno 167 (Charles) - DETALHADO
@@ -269,16 +390,34 @@ try {
         ];
     }
     
-    // Montar debug_info com informações de CFC
+    // Calcular contadores intermediários
+    $totalComExamesOK = 0;
+    $totalComFinanceiroOK = 0;
+    $totalComCategoriaOK = 0;
+    $totalDisponivel = 0;
+    
+    foreach ($debugInfo as $info) {
+        if ($info['exames_ok']) $totalComExamesOK++;
+        if ($info['financeiro_ok']) $totalComFinanceiroOK++;
+        if ($info['categoria_ok']) $totalComCategoriaOK++;
+        if ($info['status_matricula'] === 'disponivel') $totalDisponivel++;
+    }
+    
+    // Montar debug_info com informações de CFC e contadores intermediários
     $debugInfoCompleto = [
         'turma_cfc_id' => $cfcIdTurma,
         'session_cfc_id' => $cfcIdSessao,
         'session_cfc_label' => $sessionCfcLabel,
         'is_admin_global' => $isAdminGlobal,
         'cfc_ids_match' => $cfcIdsCoincidem,
+        'cfc_usado_na_query' => $cfcIdTurma, // CFC efetivamente usado na query (sempre o da turma)
         'turma_id' => $turmaId,
-        'total_candidatos' => count($alunosCandidatos),
-        'total_aptos' => count($alunosAptos),
+        'total_candidatos' => count($alunosCandidatos), // Total retornado pela query (antes de filtros de exames/financeiro)
+        'total_com_exames_ok' => $totalComExamesOK,
+        'total_com_financeiro_ok' => $totalComFinanceiroOK,
+        'total_com_categoria_ok' => $totalComCategoriaOK,
+        'total_disponivel' => $totalDisponivel, // Não matriculado nesta turma
+        'total_aptos' => count($alunosAptos), // Total final após todos os filtros
         'alunos_detalhados' => $debugInfo
     ];
     

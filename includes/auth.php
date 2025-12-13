@@ -817,9 +817,12 @@ function getCurrentInstrutorId($userId = null) {
     }
     
     $db = db();
-    $instrutor = $db->fetch("SELECT id FROM instrutores WHERE usuario_id = ?", [$userId]);
+    // Tentativa primária: buscar por usuario_id ativo
+    $instrutor = $db->fetch("SELECT id FROM instrutores WHERE usuario_id = ? AND ativo = 1 LIMIT 1", [$userId]);
     
     if (!$instrutor) {
+        error_log("[WARN] getCurrentInstrutorId: nenhum instrutor vinculado ao usuario_id={$userId}");
+        // Opcional: tentativas adicionais (email/nome) poderiam ser adicionadas aqui; por ora apenas logamos.
         return null;
     }
     

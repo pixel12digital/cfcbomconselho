@@ -22,7 +22,7 @@ require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
 // Verificar se o usuário está logado e tem permissão de admin ou instrutor
-if (!isLoggedIn() || (!hasPermission('admin') && !hasPermission('instrutor'))) {
+if (!isLoggedIn()) {
     echo '<div class="alert alert-danger">Você não tem permissão para acessar esta página.</div>';
     exit;
 }
@@ -32,7 +32,15 @@ $user = getCurrentUser();
 $userType = $user['tipo'] ?? 'admin';
 $userId = $user['id'] ?? null;
 $isAdmin = hasPermission('admin');
-$isInstrutor = hasPermission('instrutor');
+// CORREÇÃO 2025-01: Usar verificação de tipo em vez de hasPermission('instrutor')
+// porque 'instrutor' não está na lista de permissões do tipo 'instrutor'
+$isInstrutor = ($userType === 'instrutor') || isInstructor();
+
+// Verificar se tem permissão de acesso (admin ou instrutor)
+if (!$isAdmin && !$isInstrutor) {
+    echo '<div class="alert alert-danger">Você não tem permissão para acessar esta página.</div>';
+    exit;
+}
 
 // Definir instância do banco de dados
 $db = Database::getInstance();
@@ -43,9 +51,53 @@ require_once __DIR__ . '/../includes/TurmaTeoricaManager.php';
 // Instanciar o gerenciador
 $turmaManager = new TurmaTeoricaManager();
 
+/**
+ * Helper: Obter CFC ID válido para criar turmas
+ * CORREÇÃO (12/12/2025): Sempre usar apenas CFCs existentes e ativos
+ * 
+ * Regra:
+ * - Se admin tem cfc_id válido (existe e está ativo) → usar esse
+ * - Se admin não tem cfc_id ou é inválido → usar primeiro CFC ativo
+ * - Se não-admin → usar cfc_id da sessão (já validado no login)
+ */
+function obterCfcIdValidoParaTurma($db, $user, $isAdmin) {
+    if ($isAdmin) {
+        // Admin: tentar usar CFC da sessão se for válido
+        if (!empty($user['cfc_id'])) {
+            $cfcAdmin = $db->fetch("SELECT id, ativo FROM cfcs WHERE id = ?", [$user['cfc_id']]);
+            if ($cfcAdmin && $cfcAdmin['ativo']) {
+                return $user['cfc_id'];
+            }
+        }
+        
+        // Se não encontrou CFC válido, buscar primeiro CFC ativo
+        $primeiroCfcAtivo = $db->fetch("SELECT id FROM cfcs WHERE ativo = 1 ORDER BY id LIMIT 1");
+        if ($primeiroCfcAtivo) {
+            error_log("[Turmas Teoricas] Admin sem CFC válido - usando primeiro CFC ativo: {$primeiroCfcAtivo['id']}");
+            return $primeiroCfcAtivo['id'];
+        }
+        
+        throw new Exception("Não foi possível determinar CFC: nenhum CFC ativo encontrado no sistema.");
+    } else {
+        // Não-admin: usar CFC da sessão (já validado no login)
+        if (empty($user['cfc_id'])) {
+            throw new Exception("Não foi possível criar turma: usuário não possui CFC associado.");
+        }
+        return $user['cfc_id'];
+    }
+}
+
+// Obter CFC ID válido
+try {
+    $cfcIdValido = obterCfcIdValidoParaTurma($db, $user, $isAdmin);
+} catch (Exception $e) {
+    $erro = $e->getMessage();
+    $cfcIdValido = null;
+}
+
 // Obter dados para os dropdowns
 $cursosDisponiveis = $turmaManager->obterCursosDisponiveis();
-$salasDisponiveis = $turmaManager->obterSalasDisponiveis($user['cfc_id'] ?? 1);
+$salasDisponiveis = $turmaManager->obterSalasDisponiveis($cfcIdValido);
 
 
 // Buscar instrutores
@@ -106,7 +158,7 @@ if ($acao === 'salvar_rascunho' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'data_fim' => $_POST['data_fim'] ?? '',
         'observacoes' => $_POST['observacoes'] ?? '',
         'max_alunos' => $_POST['max_alunos'] ?? 30,
-        'cfc_id' => $isAdmin ? ($user['cfc_id'] ?? 1) : $user['cfc_id'],
+        'cfc_id' => $cfcIdValido,
         'criado_por' => $user['id']
     ];
     
@@ -135,7 +187,7 @@ if ($acao === 'criar_basica' && $_SERVER['REQUEST_METHOD'] === 'POST') {
         'data_fim' => $_POST['data_fim'] ?? '',
         'observacoes' => $_POST['observacoes'] ?? '',
         'max_alunos' => $_POST['max_alunos'] ?? 30,
-        'cfc_id' => $isAdmin ? ($user['cfc_id'] ?? 1) : $user['cfc_id'],
+        'cfc_id' => $cfcIdValido,
         'criado_por' => $user['id']
     ];
     
@@ -251,7 +303,7 @@ if ($turmaId) {
 } else {
     // Tentar carregar rascunho se não há turma específica
     $rascunho = $turmaManager->carregarRascunho(
-        $isAdmin ? ($user['cfc_id'] ?? 1) : $user['cfc_id'],
+        $cfcIdValido ?? null,
         $user['id']
     );
     

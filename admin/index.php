@@ -35,6 +35,56 @@ $isAdmin = ($user['tipo'] === 'admin');
 $isInstrutor = ($user['tipo'] === 'instrutor');
 $db = Database::getInstance();
 
+// AJUSTE IDENTIDADE INSTRUTOR - Detectar se estamos em fluxo de instrutor
+$origem = $_GET['origem'] ?? ($_REQUEST['origem'] ?? '');
+$isFluxoInstrutor = ($origem === 'instrutor') || ($userType === 'instrutor');
+
+// Variáveis para exibição de identidade no topbar
+$userDisplayName = $user['nome'] ?? 'Usuário';
+$userDisplayRole = 'Administrador';
+
+// Se for fluxo de instrutor, buscar dados do instrutor
+$instrutorId = null;
+if ($isFluxoInstrutor) {
+    $instrutorId = getCurrentInstrutorId($userId);
+    
+    // Log de debug para diagnóstico (apenas em desenvolvimento)
+    if (defined('DEBUG_MODE') && DEBUG_MODE) {
+        error_log("[TOPBAR] Fluxo instrutor detectado - user_id={$userId}, user_type={$userType}, origem={$origem}, instrutor_id=" . ($instrutorId ?? 'null'));
+    }
+    
+    if ($instrutorId) {
+        $instrutorData = $db->fetch("SELECT nome FROM instrutores WHERE id = ?", [$instrutorId]);
+        if ($instrutorData && !empty($instrutorData['nome'])) {
+            $userDisplayName = $instrutorData['nome'];
+        } else {
+            // Se não encontrou nome do instrutor, usar nome do usuário
+            $userDisplayName = $user['nome'] ?? 'Instrutor';
+        }
+        $userDisplayRole = 'Instrutor';
+    } else {
+        // CORREÇÃO 2025-01: Se não encontrou instrutor_id mas userType é 'instrutor',
+        // ainda assim exibir como Instrutor (pode ser problema de vínculo no banco)
+        if ($userType === 'instrutor') {
+            $userDisplayName = $user['nome'] ?? 'Instrutor';
+            $userDisplayRole = 'Instrutor';
+            
+            // Log de aviso
+            if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                error_log("[TOPBAR WARN] Usuário tipo 'instrutor' (user_id={$userId}) mas getCurrentInstrutorId() retornou null. Verificar vínculo em instrutores.usuario_id");
+            }
+        } else {
+            // Se origem=instrutor mas userType não é 'instrutor', pode ser acesso direto via URL
+            $userDisplayName = $user['nome'] ?? 'Usuário';
+            $userDisplayRole = 'Instrutor'; // Manter como Instrutor se origem=instrutor
+        }
+    }
+} else {
+    // Fluxo admin normal
+    $userDisplayName = $user['nome'] ?? 'Administrador';
+    $userDisplayRole = ($userType === 'secretaria') ? 'Secretaria' : 'Administrador';
+}
+
 // Obter estatísticas para o dashboard
 try {
     $stats = [
@@ -81,6 +131,31 @@ try {
 
 $page = $_GET['page'] ?? 'dashboard';
 $action = $_GET['action'] ?? 'list';
+
+// BLOQUEIO DE ROTAS ADMINISTRATIVAS PARA INSTRUTOR
+// Instrutor não pode acessar rotas de gestão geral de alunos
+if ($userType === 'instrutor') {
+    $rotasBloqueadas = ['alunos', 'historico-aluno'];
+    
+    // Verificar se a página está bloqueada
+    if (in_array($page, $rotasBloqueadas)) {
+        // Redirecionar para dashboard do instrutor com mensagem
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+        $_SESSION['flash_message'] = 'Você não tem permissão para acessar esta área.';
+        $_SESSION['flash_type'] = 'warning';
+        header('Location: ' . $basePath . '/instrutor/dashboard.php');
+        exit();
+    }
+    
+    // Bloquear também ações específicas de alunos
+    if ($page === 'alunos' && isset($_GET['action']) && in_array($_GET['action'], ['view', 'edit', 'create'])) {
+        $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+        $_SESSION['flash_message'] = 'Você não tem permissão para acessar esta área.';
+        $_SESSION['flash_type'] = 'warning';
+        header('Location: ' . $basePath . '/instrutor/dashboard.php');
+        exit();
+    }
+}
 
 // Verificação ANTECIPADA para turma-chamada (ANTES de qualquer output HTML)
 // Isso evita o erro "headers already sent" quando a página requer turma_id
@@ -1463,13 +1538,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                     </div>
                 </div>
                 
+                <!-- DEBUG_TOPBAR:
+                     origem=<?php echo htmlspecialchars($origem); ?>;
+                     user_type=<?php echo htmlspecialchars($userType); ?>;
+                     isFluxoInstrutor=<?php echo $isFluxoInstrutor ? '1' : '0'; ?>;
+                     user_id=<?php echo (int)$userId; ?>;
+                     instrutor_id=<?php echo isset($instrutorId) ? (int)$instrutorId : 0; ?>;
+                -->
                 <!-- Perfil do Usuário -->
                 <div class="topbar-profile">
                     <button class="profile-button" id="profile-button" aria-label="Perfil do usuário">
-                        <div class="profile-avatar" id="profile-avatar"><?php echo strtoupper(substr($user['nome'], 0, 1)); ?></div>
+                        <div class="profile-avatar" id="profile-avatar"><?php echo strtoupper(substr($userDisplayName, 0, 1)); ?></div>
                         <div class="profile-info">
-                            <div class="profile-name" id="profile-name"><?php echo htmlspecialchars($user['nome']); ?></div>
-                            <div class="profile-role" id="profile-role">Administrador</div>
+                            <div class="profile-name" id="profile-name"><?php echo htmlspecialchars($userDisplayName); ?></div>
+                            <div class="profile-role" id="profile-role"><?php echo htmlspecialchars($userDisplayRole); ?></div>
                         </div>
                         <i class="fas fa-chevron-down profile-dropdown-icon"></i>
                     </button>

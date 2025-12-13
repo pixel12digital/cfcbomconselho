@@ -38,6 +38,18 @@ class TurmaTeoricaManager {
                 throw new Exception('CFC ID e Usuário são obrigatórios para salvar rascunho');
             }
             
+            // VALIDAÇÃO (12/12/2025): Verificar se CFC existe e está ativo
+            // Regra de negócio: Rascunhos só podem ser salvos com CFCs existentes e ativos
+            $cfc = $this->db->fetch("SELECT id, nome, ativo FROM cfcs WHERE id = ?", [$dados['cfc_id']]);
+            
+            if (!$cfc) {
+                throw new Exception("Não é possível salvar rascunho: CFC ID {$dados['cfc_id']} não existe na tabela cfcs. Use apenas CFCs existentes e ativos.");
+            }
+            
+            if (!$cfc['ativo']) {
+                throw new Exception("Não é possível salvar rascunho: CFC '{$cfc['nome']}' (ID {$cfc['id']}) existe mas NÃO está ativo. Use apenas CFCs ativos.");
+            }
+            
             // Verificar se já existe um rascunho
             $rascunhoExistente = $this->db->fetch("
                 SELECT id FROM turmas_teoricas 
@@ -346,6 +358,21 @@ class TurmaTeoricaManager {
             
             // Calcular carga horária total baseada no curso
             $cargaHoraria = $this->calcularCargaHorariaCurso($dados['curso_tipo']);
+            
+            // VALIDAÇÃO CRÍTICA (12/12/2025): Verificar se CFC existe e está ativo
+            // Regra de negócio: Turmas só podem ser criadas em CFCs existentes e ativos
+            $cfc = $this->db->fetch("SELECT id, nome, ativo FROM cfcs WHERE id = ?", [$dados['cfc_id']]);
+            
+            if (!$cfc) {
+                throw new Exception("Não é possível criar turma: CFC ID {$dados['cfc_id']} não existe na tabela cfcs. Use apenas CFCs existentes e ativos.");
+            }
+            
+            if (!$cfc['ativo']) {
+                throw new Exception("Não é possível criar turma: CFC '{$cfc['nome']}' (ID {$cfc['id']}) existe mas NÃO está ativo. Use apenas CFCs ativos.");
+            }
+            
+            // Log da validação bem-sucedida
+            error_log("[TurmaTeoricaManager] Validação CFC OK - ID: {$cfc['id']}, Nome: {$cfc['nome']}, Ativo: Sim");
             
             // Inserir turma
             $turmaId = $this->db->insert('turmas_teoricas', [
@@ -2089,10 +2116,11 @@ class TurmaTeoricaManager {
             }
             
             // Contar presenças do aluno (apenas onde presente = 1)
+            // CORRIGIDO: Usar turma_aula_id (nome correto do campo)
             $presencas = $this->db->fetch(
                 "SELECT COUNT(*) as total_presentes
                  FROM turma_presencas tp
-                 INNER JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
+                 INNER JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
                  WHERE tp.turma_id = ? 
                  AND tp.aluno_id = ? 
                  AND tp.presente = 1

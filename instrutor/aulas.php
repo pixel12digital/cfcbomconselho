@@ -356,6 +356,24 @@ foreach ($aulas as $aula) {
                     <?php if ($aula['status'] !== 'cancelada' && $aula['status'] !== 'concluida'): ?>
                     <div style="display: flex; gap: 8px; flex-wrap: wrap;">
                         <!-- FASE INSTRUTOR - AULAS TEORICAS - Botões apenas para aulas práticas nesta seção -->
+                        <?php 
+                        // TAREFA 2.2 - Adicionar botões de iniciar/finalizar aula
+                        $statusAula = $aula['status'] ?? 'agendada';
+                        ?>
+                        <?php if ($statusAula === 'agendada'): ?>
+                        <button class="btn btn-sm btn-success iniciar-aula" 
+                                data-aula-id="<?php echo $aula['id']; ?>"
+                                style="padding: 6px 12px; background: #10b981; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                            <i class="fas fa-play"></i> Iniciar
+                        </button>
+                        <?php elseif ($statusAula === 'em_andamento'): ?>
+                        <button class="btn btn-sm btn-primary finalizar-aula" 
+                                data-aula-id="<?php echo $aula['id']; ?>"
+                                style="padding: 6px 12px; background: #3b82f6; color: white; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;">
+                            <i class="fas fa-stop"></i> Finalizar
+                        </button>
+                        <?php endif; ?>
+                        <?php if ($statusAula === 'agendada'): ?>
                         <button 
                             class="btn btn-sm btn-warning solicitar-transferencia" 
                             data-aula-id="<?php echo $aula['id']; ?>"
@@ -374,6 +392,7 @@ foreach ($aulas as $aula) {
                         >
                             <i class="fas fa-times"></i> Cancelar
                         </button>
+                        <?php endif; ?>
                     </div>
                     <?php endif; ?>
                 </div>
@@ -640,6 +659,80 @@ foreach ($aulas as $aula) {
                     const data = this.dataset.data;
                     const hora = this.dataset.hora;
                     abrirModal('transferencia', aulaId, data, hora);
+                });
+            });
+
+            // TAREFA 2.2 - Botões de iniciar aula
+            document.querySelectorAll('.iniciar-aula').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const aulaId = this.dataset.aulaId;
+                    if (!confirm('Deseja iniciar esta aula?')) {
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('../admin/api/instrutor-aulas.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                aula_id: aulaId,
+                                tipo_acao: 'iniciar'
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            alert('Aula iniciada com sucesso!');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            alert(result.message || 'Erro ao iniciar aula.');
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        alert('Erro de conexão. Tente novamente.');
+                    }
+                });
+            });
+
+            // TAREFA 2.2 - Botões de finalizar aula
+            document.querySelectorAll('.finalizar-aula').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const aulaId = this.dataset.aulaId;
+                    if (!confirm('Deseja finalizar esta aula?')) {
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('../admin/api/instrutor-aulas.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                aula_id: aulaId,
+                                tipo_acao: 'finalizar'
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            alert('Aula finalizada com sucesso!');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 500);
+                        } else {
+                            alert(result.message || 'Erro ao finalizar aula.');
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        alert('Erro de conexão. Tente novamente.');
+                    }
                 });
             });
 

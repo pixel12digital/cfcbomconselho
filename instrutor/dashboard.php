@@ -75,6 +75,8 @@ require_once __DIR__ . '/../includes/database.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/services/SistemaNotificacoes.php';
 
+// DEBUG: dashboard instrutor carregado (instrutor/dashboard.php)
+
 // Verificar autenticação
 $user = getCurrentUser();
 if (!$user || $user['tipo'] !== 'instrutor') {
@@ -82,10 +84,22 @@ if (!$user || $user['tipo'] !== 'instrutor') {
     $basePath = defined('BASE_PATH') ? BASE_PATH : '';
     header('Location: ' . $basePath . '/login.php');
     exit();
+} else {
+    // Sem instrutor_id: evitar uso de arrays não inicializados
+    $aulasHoje = [];
+    $proximasAulas = [];
+    $statsHoje = [
+        'total_aulas' => 0,
+        'agendadas' => 0,
+        'confirmadas' => 0,
+        'concluidas' => 0
+    ];
+    error_log("[WARN] Dashboard instrutor: sem aulas porque instrutor_id é null para usuario_id={$user['id']}");
 }
 
 $db = db();
 $notificacoes = new SistemaNotificacoes();
+$proximaAula = null;
 
 // Verificar se precisa trocar senha - se sim, forçar redirecionamento
 // Esta verificação deve estar em TODAS as páginas do instrutor
@@ -137,7 +151,11 @@ $instrutor['nome'] = $instrutor['nome'] ?? $instrutor['nome_usuario'] ?? $user['
 
 // Obter o ID do instrutor (da tabela instrutores) para usar nas queries de aulas
 // Se não tiver registro na tabela instrutores, não terá aulas
-$instrutorId = $instrutor['id'] ?? null;
+$instrutorId = getCurrentInstrutorId($user['id']);
+if (!$instrutorId) {
+    error_log("[WARN] Dashboard instrutor: instrutor_id não encontrado para usuario_id={$user['id']}");
+    $instrutorId = null;
+}
 
 // FASE INSTRUTOR - AULAS TEORICAS - Buscar aulas do dia (práticas + teóricas)
 $hoje = date('Y-m-d');
@@ -505,7 +523,9 @@ if ($instrutorId) {
                         <div class="d-flex" style="gap: 0.5rem;">
                             <?php if ($proximaAula['tipo_aula'] === 'teorica'): ?>
                             <?php 
-                            $baseAdmin = (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '') . '/admin/index.php';
+                            // Usar caminho relativo para evitar 404 em ambientes sem BASE_PATH
+                            // Base do admin sem prefixo /instrutor
+                            $baseAdmin = preg_replace('#/instrutor$#', '', (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : rtrim(dirname($_SERVER['SCRIPT_NAME']), '/'))) . '/admin/index.php';
                             $turmaIdAula = (int)($proximaAula['turma_id'] ?? 0);
                             $aulaIdAula = (int)($proximaAula['id'] ?? 0);
                             $urlChamada = $baseAdmin . '?page=turma-chamada&turma_id=' . $turmaIdAula . '&aula_id=' . $aulaIdAula . '&origem=instrutor';
@@ -705,7 +725,7 @@ if ($instrutorId) {
                                         }
                                     }
                                     
-                                    $baseAdmin = (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '') . '/admin/index.php';
+                                    $baseAdmin = preg_replace('#/instrutor$#', '', (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : rtrim(dirname($_SERVER['SCRIPT_NAME']), '/'))) . '/admin/index.php';
                                     $turmaIdAula = (int)($aula['turma_id'] ?? 0);
                                     $aulaIdAula = (int)($aula['id'] ?? 0);
                                     $urlChamada = $baseAdmin . '?page=turma-chamada&turma_id=' . $turmaIdAula . '&aula_id=' . $aulaIdAula . '&origem=instrutor';
@@ -776,6 +796,28 @@ if ($instrutorId) {
                                                 <i class="fas fa-book"></i>
                                             </a>
                                             <?php else: ?>
+                                            <?php 
+                                            // TAREFA 2.2 - Adicionar botões de iniciar/finalizar aula
+                                            $statusAula = $aula['status'] ?? 'agendada';
+                                            ?>
+                                            <?php if ($statusAula === 'agendada'): ?>
+                                            <button class="btn btn-success btn-sm iniciar-aula" 
+                                                    style="padding: 0.35rem 0.6rem; min-width: 38px;"
+                                                    data-aula-id="<?php echo $aula['id']; ?>"
+                                                    title="Iniciar aula"
+                                                    data-bs-toggle="tooltip">
+                                                <i class="fas fa-play"></i>
+                                            </button>
+                                            <?php elseif ($statusAula === 'em_andamento'): ?>
+                                            <button class="btn btn-primary btn-sm finalizar-aula" 
+                                                    style="padding: 0.35rem 0.6rem; min-width: 38px;"
+                                                    data-aula-id="<?php echo $aula['id']; ?>"
+                                                    title="Finalizar aula"
+                                                    data-bs-toggle="tooltip">
+                                                <i class="fas fa-stop"></i>
+                                            </button>
+                                            <?php endif; ?>
+                                            <?php if ($statusAula === 'agendada'): ?>
                                             <button class="btn btn-warning btn-sm solicitar-transferencia" 
                                                     style="padding: 0.35rem 0.6rem; min-width: 38px;"
                                                     data-aula-id="<?php echo $aula['id']; ?>"
@@ -794,6 +836,7 @@ if ($instrutorId) {
                                                     data-bs-toggle="tooltip">
                                                 <i class="fas fa-times"></i>
                                             </button>
+                                            <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
                                     </td>
@@ -910,7 +953,7 @@ if ($instrutorId) {
                                     <?php if ($turma['proxima_aula']): ?>
                                     <?php 
                                     // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Link para chamada da próxima aula
-                                    $baseAdmin = (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '') . '/admin/index.php';
+                                    $baseAdmin = preg_replace('#/instrutor$#', '', (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : rtrim(dirname($_SERVER['SCRIPT_NAME']), '/'))) . '/admin/index.php';
                                     $turmaIdTurma = (int)($turma['id'] ?? 0);
                                     $aulaIdTurma = (int)($turma['proxima_aula']['id'] ?? 0);
                                     $urlChamadaTurma = $baseAdmin . '?page=turma-chamada&turma_id=' . $turmaIdTurma . '&aula_id=' . $aulaIdTurma . '&origem=instrutor';
@@ -1156,18 +1199,96 @@ if ($instrutorId) {
                 });
             });
 
+            // TAREFA 2.2 - Botões de iniciar aula
+            document.querySelectorAll('.iniciar-aula').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const aulaId = this.dataset.aulaId;
+                    if (!confirm('Deseja iniciar esta aula?')) {
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('../admin/api/instrutor-aulas.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                aula_id: aulaId,
+                                tipo_acao: 'iniciar'
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            mostrarToast('Aula iniciada com sucesso!', 'success');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            mostrarToast(result.message || 'Erro ao iniciar aula.', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        mostrarToast('Erro de conexão. Tente novamente.', 'error');
+                    }
+                });
+            });
+
+            // TAREFA 2.2 - Botões de finalizar aula
+            document.querySelectorAll('.finalizar-aula').forEach(btn => {
+                btn.addEventListener('click', async function() {
+                    const aulaId = this.dataset.aulaId;
+                    if (!confirm('Deseja finalizar esta aula?')) {
+                        return;
+                    }
+                    
+                    try {
+                        const response = await fetch('../admin/api/instrutor-aulas.php', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                aula_id: aulaId,
+                                tipo_acao: 'finalizar'
+                            })
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            mostrarToast('Aula finalizada com sucesso!', 'success');
+                            setTimeout(() => {
+                                window.location.reload();
+                            }, 1500);
+                        } else {
+                            mostrarToast(result.message || 'Erro ao finalizar aula.', 'error');
+                        }
+                    } catch (error) {
+                        console.error('Erro:', error);
+                        mostrarToast('Erro de conexão. Tente novamente.', 'error');
+                    }
+                });
+            });
+
             // Botões de chamada e diário
             document.querySelectorAll('.fazer-chamada').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    const aulaId = this.dataset.aulaId;
-                    window.location.href = `chamada.php?aula_id=${aulaId}`;
+                    const target = this.dataset.url || this.getAttribute('href');
+                    if (target) {
+                        window.location.href = target;
+                    }
                 });
             });
 
             document.querySelectorAll('.fazer-diario').forEach(btn => {
                 btn.addEventListener('click', function() {
-                    const aulaId = this.dataset.aulaId;
-                    window.location.href = `diario.php?aula_id=${aulaId}`;
+                    const target = this.dataset.url || this.getAttribute('href');
+                    if (target) {
+                        window.location.href = target;
+                    }
                 });
             });
 

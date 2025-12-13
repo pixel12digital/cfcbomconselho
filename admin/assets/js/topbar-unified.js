@@ -713,6 +713,16 @@ class TopbarUnified {
     
     async loadUserProfile() {
         try {
+            // Verificar se os valores já foram preenchidos pelo PHP
+            // Se sim, não sobrescrever (PHP já controla origem=instrutor)
+            const name = document.getElementById('profile-name');
+            const role = document.getElementById('profile-role');
+            
+            if (name && name.textContent.trim() && role && role.textContent.trim()) {
+                // Valores já preenchidos pelo PHP, não sobrescrever
+                return;
+            }
+            
             // Simular dados do usuário (substituir por API real)
             const userData = {
                 name: 'Administrador Sistema',
@@ -732,9 +742,17 @@ class TopbarUnified {
         const name = document.getElementById('profile-name');
         const role = document.getElementById('profile-role');
         
-        if (avatar) avatar.textContent = userData.initials || userData.name.charAt(0);
-        if (name) name.textContent = userData.name;
-        if (role) role.textContent = userData.role;
+        // Não sobrescrever valores já preenchidos pelo PHP
+        // O PHP já controla a exibição correta baseada em origem=instrutor
+        if (avatar && !avatar.textContent.trim()) {
+            avatar.textContent = userData.initials || userData.name.charAt(0);
+        }
+        if (name && !name.textContent.trim()) {
+            name.textContent = userData.name;
+        }
+        if (role && !role.textContent.trim()) {
+            role.textContent = userData.role;
+        }
     }
     
     toggleProfileDropdown() {

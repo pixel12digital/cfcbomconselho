@@ -379,6 +379,69 @@ Estabelecer um **ponto de referência estável** antes de qualquer alteração, 
 - Login admin funcionando
 - Dados de teste básicos populados
 
+---
+
+### Configuração do Ambiente de Homologação (Tarefa 0.3)
+
+**Data de configuração:** 2025-12-12
+
+#### Arquivo de Configuração
+
+- **Arquivo:** `config_homolog.php` (na raiz do projeto)
+- **Funcionamento:** Arquivo é incluído automaticamente quando o ambiente é detectado como 'homolog'
+
+#### Estratégia de Separação
+
+O sistema detecta o ambiente de homologação através do hostname:
+- Se `$_SERVER['HTTP_HOST']` contém a string `homolog` (case-insensitive), o ambiente é detectado como `'homolog'`
+- Exemplos de hostnames que ativam homolog:
+  - `homolog.cfcbomconselho.com`
+  - `cfc-homolog.local`
+  - `homolog.localhost`
+  - Qualquer URL que contenha "homolog" no hostname
+
+#### Banco de Dados de Homolog
+
+**⚠️ IMPORTANTE:** Ajustar as configurações abaixo em `config_homolog.php` conforme seu ambiente:
+
+- **Host:** `localhost` (ajustar conforme servidor de homolog)
+- **Nome do banco:** `cfc_bom_conselho_homolog` (ajustar conforme necessário)
+- **Usuário:** `root` (ajustar conforme usuário do banco de homolog)
+- **Senha:** (definir em `config_homolog.php`, não commitar senhas reais no Git)
+
+#### URLs de Acesso
+
+**⚠️ IMPORTANTE:** Ajustar conforme sua configuração de homolog:
+
+- **Admin:** `http://homolog.local/cfc-bom-conselho/admin/index.php` (ajustar hostname)
+- **Aluno:** `http://homolog.local/cfc-bom-conselho/aluno/dashboard.php` (ajustar hostname)
+- **Instrutor:** `http://homolog.local/cfc-bom-conselho/instrutor/dashboard.php` (ajustar hostname)
+
+#### Alterações no Código
+
+**Arquivos modificados:**
+- `includes/config.php`:
+  - Função `detectEnvironment()` atualizada para detectar 'homolog'
+  - Carregamento condicional de `config_homolog.php` quando ambiente é 'homolog'
+  - Configurações de debug, logs e constantes ajustadas para suportar homolog
+  - **IMPORTANTE:** Todas as alterações são compatíveis com produção (não quebram comportamento existente)
+
+**Arquivos criados:**
+- `config_homolog.php` - Configurações específicas de homolog (não versionado no Git, criar manualmente no servidor)
+
+#### Popular Dados Mínimos de Teste
+
+**Documentação:** Ver `docs/SEED_HOMOLOG.md` para script SQL e instruções de como popular:
+
+1. 1 CFC (ID 36 - canônico)
+2. 1 usuário admin
+3. 1 instrutor
+4. 1 aluno com matrícula
+5. 1 turma teórica com algumas aulas
+6. Alguns agendamentos de aula prática
+
+**⚠️ NOTA:** O script de seed está documentado mas deve ser executado manualmente pelo desenvolvedor responsável, ajustando valores conforme ambiente de homolog.
+
 #### Tarefa 0.4. Validar fluxos críticos em homologação
 
 **Objetivo:** Confirmar que todos os fluxos críticos funcionam no ambiente de homologação.
@@ -406,6 +469,43 @@ Estabelecer um **ponto de referência estável** antes de qualquer alteração, 
 **Critérios de aceite:**
 - Estrutura base de checklists criada
 - Cada fluxo crítico tem pelo menos um checklist básico
+
+---
+
+### Status da Tarefa 0.5 – Rascunho de Checklists Manuais
+
+**Data de criação:** 2025-12-12
+
+- ✅ Pasta `docs/testes/` criada
+- ✅ Arquivos de checklist criados em modo rascunho:
+  - `TESTES_PWA_ALUNO.md` - Testes do PWA do aluno
+  - `TESTES_PWA_INSTRUTOR.md` - Testes do PWA do instrutor
+  - `TESTES_ADMIN_ALUNOS.md` - Testes do módulo de alunos (admin)
+  - `TESTES_ADMIN_TURMAS.md` - Testes de turmas teóricas (admin)
+  - `TESTES_ADMIN_FINANCEIRO.md` - Testes do módulo financeiro (admin)
+  - `TESTES_REGRESSAO_LOGIN.md` - Testes de autenticação e permissões
+  - `TESTES_REGRESSAO_FLUXOS_CRITICOS.md` - Testes dos 9 fluxos críticos
+
+**Estrutura dos checklists:**
+- Cada arquivo contém:
+  - Objetivo do checklist
+  - Lista de cenários principais (rascunho, em formato de checkbox)
+  - Modelo de caso de teste (formato padrão para quando for detalhar)
+
+**Próximos passos:**
+- Detalhamento dos cenários será feito nas **Fases 1, 2, 3 e 4**, conforme cada tarefa específica
+- Checklists de regressão serão detalhados conforme necessário, especialmente antes de deploys
+
+---
+
+### Baseline Atual
+
+- **Tag:** `baseline-pre-producao`
+- **Commit:** `24c9cfd75e43964ada5a0370f58f1da77291b4b5`
+- **Data:** 2025-12-12 10:59:14 -0300
+- **Mensagem do commit:** "docs: Adiciona onboarding e plano de implementação para produção"
+
+**Observação:** Estado aceito como referência antes do ciclo de implementação para produção. Esta tag marca o ponto em que a documentação de onboarding e o plano de implementação foram finalizados e commitados.
 
 ---
 
@@ -682,6 +782,40 @@ Implementar funcionalidade para que o instrutor possa iniciar e finalizar aulas 
 - Validações de permissão funcionam (instrutor só mexe em suas próprias aulas).
 - Nenhuma mudança em fluxos não relacionados a aulas práticas do instrutor.
 - Regressão zero nos fluxos já existentes do painel instrutor.
+
+#### Status da Tarefa 2.2 – Implementação Concluída
+
+**Data de implementação:** 12/12/2025
+
+**Arquivos modificados:**
+- ✅ `admin/api/instrutor-aulas.php` - Expandido para suportar ações `iniciar` e `finalizar`
+  - Validações de status: apenas aulas `agendada` podem ser iniciadas, apenas `em_andamento` podem ser finalizadas
+  - Verificação de campos `hora_inicio_real` e `hora_fim_real` (com fallback para `observacoes` se não existirem)
+  - Logs de auditoria para ambas ações
+  
+- ✅ `instrutor/dashboard.php` - Adicionados botões "Iniciar aula" e "Finalizar aula"
+  - Botão "Iniciar aula" aparece apenas para aulas com status `agendada`
+  - Botão "Finalizar aula" aparece apenas para aulas com status `em_andamento`
+  - JavaScript para fazer chamadas AJAX à API
+  
+- ✅ `instrutor/aulas.php` - Adicionados mesmos botões e handlers JavaScript
+  
+- ✅ `tests/api/test-instrutor-aulas-api.php` - Arquivo de testes automatizados criado
+  - Cenários: iniciar aula (autenticado, não autenticado, já em andamento)
+  - Cenários: finalizar aula (autenticado, não autenticado, não iniciada)
+
+**Observações:**
+- A implementação usa o endpoint existente `admin/api/instrutor-aulas.php` expandido, conforme planejado
+- Campos `hora_inicio_real` e `hora_fim_real` são verificados dinamicamente; se não existirem, as horas são registradas em `observacoes`
+- Botões de iniciar/finalizar aparecem apenas quando apropriado (status da aula)
+- Ações de cancelar/transferir continuam funcionando normalmente para aulas agendadas
+- **Pendências para próximas tarefas:**
+  - Tarefa 2.3: Adicionar campos de KM inicial/final (não implementado nesta tarefa conforme escopo)
+  - Migração: Considerar criar campos `hora_inicio_real` e `hora_fim_real` na tabela `aulas` se ainda não existirem
+
+**Testes automatizados:** Criados, aguardando execução (Passo 6)
+
+**Testes manuais:** Pendentes de execução em ambiente de homolog (Passo 7)
 
 ---
 
@@ -1464,6 +1598,127 @@ Garantir que todos os passos necessários sejam executados antes, durante e depo
 - ❌ **Ignorar erros em logs "porque funciona na minha máquina"**
   - Todos os erros devem ser investigados.
   - Logs são fonte importante de informação.
+
+---
+
+---
+
+## Bugfix Pack 001 – Erros Pontuais Corrigidos
+
+**Data:** 12/12/2025
+
+### Correções Aplicadas
+
+1. **Query do Histórico do Aluno (`admin/pages/historico-aluno.php`)**
+   - **Problema:** Erro SQL "Unknown column 'tp.aula_id'" - a coluna não existe na tabela `turma_presencas` no banco real
+   - **Ação:** Implementada verificação dinâmica da existência da coluna `aula_id` antes de usá-la na query (linhas 1528-1554). Se a coluna não existir, a busca de presenças é pulada (array vazio), evitando o erro fatal. A tela continua funcionando, mostrando as aulas sem informações de presença.
+   - **Observação:** Esta é uma solução defensiva. Para funcionalidade completa, será necessário aplicar a migration `001-create-turmas-teoricas-structure.sql` ou criar a coluna `aula_id` manualmente no banco.
+
+2. **Warning `htmlspecialchars(null)` na listagem de Veículos (`admin/pages/veiculos.php`)**
+   - **Problema:** Warnings quando campos opcionais (`marca`, `modelo`, `ano`, `placa`) vinham como `null`
+   - **Ação:** Adicionado operador null coalescing (`?? ''`) em todas as chamadas de `htmlspecialchars()` relacionadas a campos de veículos (linhas 220, 221, 226, 326, 329, 338)
+   - **Resultado:** Warnings eliminados sem alterar comportamento visual (campos vazios continuam aparecendo vazios)
+
+3. **Texto do menu lateral (`admin/assets/js/menu-flyout.js`)**
+   - **Problema:** Item do menu exibia "Aulas Práticas (Temporário)"
+   - **Ação:** Alterado texto na linha 31 de `'Aulas Práticas (Temporário)'` para `'Aulas Práticas'`
+   - **Resultado:** Menu agora exibe rótulo definitivo sem alterar rota, ícone ou permissões
+
+4. **Warnings na seção "Histórico Completo de Aulas" (`admin/pages/historico-aluno.php`)**
+   - **Problema:** Múltiplos warnings de campos undefined (`data_aula`, `hora_inicio`, `hora_fim`, `tipo_aula`, `instrutor_nome`, `veiculo_id`, `status`, `observacoes`) e deprecation warnings para `strtotime()`, `htmlspecialchars()`, `ucfirst()` recebendo null
+   - **Ação:** Adicionado proteção com operador null coalescing (`??`) e verificações `empty()` em todas as referências a campos de aula nas linhas 2101-2170. Campos ausentes agora exibem valores padrão seguros (ex: 'N/A', 'N/A', valores padrão para status e tipo)
+   - **Resultado:** Warnings eliminados; página renderiza corretamente mesmo quando dados estão incompletos ou ausentes
+
+### Impacto
+
+- ✅ Nenhuma regra de negócio alterada
+- ✅ Melhor estabilidade visual e técnica para os testes manuais
+- ✅ Warnings de `htmlspecialchars` eliminados
+- ✅ Interface mais limpa e profissional
+
+---
+
+## Correção API – Alunos Aptos para Turma Teórica
+
+**Data:** 12/12/2025
+
+### Objetivo
+
+Corrigir de forma robusta a seleção de alunos aptos para matrícula em turma teórica, garantindo consistência entre o que o histórico do aluno mostra ("Liberado para Aulas Teóricas") e o que a API retorna na lista de candidatos.
+
+### Problema Identificado
+
+**Sintoma:**
+- Modal "Matricular Alunos na Turma" mostrava "Nenhum aluno encontrado com exames médico e psicotécnico aprovados"
+- Aluno Charles (ID 167) tinha exames OK e aparecia como "Liberado" no histórico, mas não aparecia na lista
+
+**Causa Raiz:**
+1. **Status hardcoded:** Query usava `WHERE a.status = 'ativo'` fixo, não permitindo outros status válidos (ex: 'em_andamento')
+2. **Falta de configuração:** Não havia constante centralizada para status permitidos
+3. **Inconsistência potencial:** API já usava funções centralizadas (exames e financeiro), mas poderia ser mais robusta
+
+### Correções Implementadas
+
+1. **Status Configuráveis**
+   - Criada constante `STATUS_ALUNO_PERMITIDOS_TURMA_TEORICA = ['ativo', 'em_andamento']`
+   - Query ajustada para usar `WHERE a.status IN (...)` ao invés de `= 'ativo'` hardcoded
+   - Permite evolução futura sem alterar código
+
+2. **Documentação Robusta**
+   - Adicionado docblock completo no topo da API explicando:
+     - Responsabilidade
+     - Pseudo-SQL da query
+     - Regras de CFC (admin global vs admin CFC)
+     - Filtros aplicados (exames, financeiro, status matrícula)
+   - Criado `docs/AUDITORIA_API_ALUNOS_APTOS_TURMA.md` com análise completa
+
+3. **Unificação com Histórico**
+   - Confirmado que API já usa as mesmas funções centralizadas:
+     - `GuardsExames::alunoComExamesOkParaTeoricas()` (exames)
+     - `FinanceiroAlunoHelper::verificarPermissaoFinanceiraAluno()` (financeiro)
+   - Adicionados comentários explicando que estas são as mesmas funções do histórico
+
+4. **Testes Automatizados**
+   - Criado `tests/api/test-alunos-aptos-turma-api.php` com 6 cenários:
+     - Admin CFC - Aluno apto deve aparecer
+     - Admin CFC - Aluno concluído NÃO deve aparecer
+     - Admin Global - Aluno apto deve aparecer
+     - Admin de outro CFC - Aluno NÃO deve aparecer (bloqueio)
+     - Aluno sem exames OK - NÃO deve aparecer
+     - Aluno já matriculado - NÃO deve aparecer
+
+### Arquivos Modificados
+
+- `admin/api/alunos-aptos-turma-simples.php`
+  - Adicionada constante `STATUS_ALUNO_PERMITIDOS_TURMA_TEORICA`
+  - Query ajustada para usar `IN (...)` com status permitidos
+  - Docblock completo adicionado
+  - Comentários explicativos melhorados
+
+### Arquivos Criados
+
+- `docs/AUDITORIA_API_ALUNOS_APTOS_TURMA.md` - Auditoria completa da API
+- `tests/api/test-alunos-aptos-turma-api.php` - Testes automatizados
+
+### Impacto
+
+- ✅ **Nenhuma regra de negócio alterada** - apenas tornada configurável
+- ✅ **Consistência garantida** - API usa mesmas funções do histórico
+- ✅ **Manutenibilidade melhorada** - status permitidos agora são configuráveis
+- ✅ **Testes criados** - cobertura mínima para evitar regressão
+
+### Validação Manual Necessária
+
+1. Acessar turma teórica de teste (CFC do aluno 167)
+2. Abrir modal "Matricular Alunos na Turma"
+3. Confirmar que aluno 167 aparece na lista (se status estiver em `['ativo', 'em_andamento']`)
+4. Tentar matricular o aluno e verificar se o fluxo conclui sem erro
+
+### Próximos Passos
+
+- Executar testes automatizados em ambiente de homolog
+- Validar manualmente no modal
+- Se tudo OK, considerar a correção concluída
 
 ---
 

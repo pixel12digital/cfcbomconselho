@@ -186,6 +186,13 @@ $cardsResumo = [
                                     <i class="fas fa-external-link-alt"></i>
                                     Gerenciar turma
                                 </a>
+                                <?php if ($isAdmin || hasPermission('secretaria')): ?>
+                                    <!-- AJUSTE 2025-12 - Link para Diário da Turma (admin/secretaria) -->
+                                    <a href="?page=turma-diario&turma_id=<?= $turma['id'] ?>" onclick="closeTurmaCardMenusImmediate()">
+                                        <i class="fas fa-book-open"></i>
+                                        Ver Diário
+                                    </a>
+                                <?php endif; ?>
                                 <?php if ($isAdmin): ?>
                                     <button type="button" onclick="excluirTurmaCompleta(this, <?= $turma['id'] ?>, '<?= $turmaNomeJs ?>')">
                                         <i class="fas fa-trash-alt"></i>

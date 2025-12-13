@@ -331,7 +331,7 @@ O sistema detecta automaticamente o ambiente através de `includes/config.php`:
 - API: `admin/api/financeiro-faturas.php`
 - Service: `admin/includes/FinanceiroService.php` - Lógica financeira
 - Helper: `admin/includes/FinanceiroAlunoHelper.php` - Resumo por aluno
-- Guards: `admin/includes/guards/FinanceiroRulesService.php` - Validações
+- Guards: `admin/includes/FinanceiroRulesService.php` - Validações
 
 **Tabelas principais:**
 - `financeiro_faturas` - Faturas (receitas)
@@ -1302,5 +1302,52 @@ Antes de começar a implementar novas funcionalidades, complete este checklist:
 
 **Desenvolvido para a equipe do CFC Bom Conselho**  
 **Última atualização:** Janeiro 2025
+
+---
+
+## Validação de Coerência (Fase 0.2)
+
+**Data:** 2025-12-12  
+**Responsável:** Execução da Tarefa 0.2 do Plano de Implementação para Produção
+
+### Verificações Realizadas
+
+- [x] **Arquivos citados existem**
+  - Arquivos principais mencionados no onboarding foram verificados e existem no repositório
+  - Arquivos de APIs em `admin/api/` verificados (78 arquivos encontrados)
+  - Arquivos de controllers, services e helpers verificados
+
+- [x] **APIs citadas existem**
+  - `admin/api/alunos.php` - ✅ Existe
+  - `admin/api/agendamento.php` - ✅ Existe
+  - `admin/api/turma-presencas.php` - ✅ Existe
+  - `admin/api/financeiro-faturas.php` - ✅ Existe
+  - `admin/api/exames.php` - ✅ Existe
+  - `admin/api/turmas-teoricas.php` - ✅ Existe
+  - `admin/api/matriculas.php` - ✅ Existe
+  - APIs do PWA (aluno/instrutor) - ✅ Páginas existem em `aluno/` e `instrutor/`
+
+- [x] **Descrição dos fluxos principais está coerente**
+  - Fluxos descritos (Nova Matrícula, Aulas Teóricas, Aulas Práticas, Presenças, Provas, Financeiro) estão alinhados com a estrutura de código encontrada
+  - Tabelas mencionadas correspondem às migrations existentes
+
+### Ajustes Realizados
+
+1. **Correção de caminho de arquivo:**
+   - ❌ **Antes:** `admin/includes/guards/FinanceiroRulesService.php`
+   - ✅ **Depois:** `admin/includes/FinanceiroRulesService.php`
+   - **Motivo:** O arquivo está diretamente em `admin/includes/`, não dentro de subpasta `guards/`
+
+### Pontos a Investigar em Fases Futuras
+
+- ⚠️ **Estrutura de guards:** Existem arquivos `guards_exames.php` e `FinanceiroRulesService.php` em `admin/includes/`, mas também existe pasta `includes/guards/` com outros arquivos (`AgendamentoGuards.php`, etc.). Investigar padrão de organização e possível padronização futura.
+
+- ⚠️ **APIs duplicadas/legadas:** Foram encontradas múltiplas versões de algumas APIs (ex.: `instrutores-real.php`, `instrutores-simple.php`, `instrutores_simplificado.php`). Identificar quais estão em uso ativo e documentar legadas.
+
+- ⚠️ **Documentação de migrations:** Algumas migrations mencionadas no onboarding podem não estar listadas completamente. Verificar se todas as migrations existentes estão documentadas.
+
+- ⚠️ **PWA Aluno/Instrutor:** Validação de que as páginas mencionadas (`aluno/dashboard.php`, `instrutor/dashboard.php`, etc.) realmente existem e estão funcionais será feita durante testes manuais nas próximas fases.
+
+- ⚠️ **Caminhos de includes:** Verificar se há inconsistências entre `admin/includes/` e `includes/` (ex.: `guards_exames.php` está em `admin/includes/`, mas `includes/guards/` também existe).
 
 

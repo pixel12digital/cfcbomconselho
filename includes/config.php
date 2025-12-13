@@ -24,6 +24,11 @@ function detectEnvironment() {
     $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
     $port = $_SERVER['SERVER_PORT'] ?? '80';
     
+    // Detectar homolog antes de outros ambientes (mais específico)
+    if (stripos($host, 'homolog') !== false) {
+        return 'homolog';
+    }
+    
     if (in_array($host, ['localhost', '127.0.0.1']) || strpos($host, 'localhost') !== false) {
         return 'local';
     } elseif (strpos($host, 'hostinger') !== false || strpos($host, 'hstgr.io') !== false) {
@@ -45,6 +50,17 @@ if ($environment === 'local') {
     
     define('APP_URL', 'http://localhost' . $port_suffix . $base_path);
     define('BASE_PATH', $base_path);
+} elseif ($environment === 'homolog') {
+    // URL de homolog será definida em config_homolog.php se necessário
+    // Fallback padrão abaixo (será sobrescrito se config_homolog.php definir APP_URL)
+    if (!defined('APP_URL')) {
+        $script_name = $_SERVER['SCRIPT_NAME'] ?? '';
+        $base_path = dirname($script_name);
+        if ($base_path === '/') $base_path = '';
+        $host = $_SERVER['HTTP_HOST'] ?? 'homolog.local';
+        define('APP_URL', 'http://' . $host . $base_path);
+        define('BASE_PATH', $base_path);
+    }
 } else {
     define('APP_URL', 'https://linen-mantis-198436.hostingersite.com');
     define('BASE_PATH', '');
@@ -55,9 +71,10 @@ define('ENVIRONMENT', $environment);
 
 // Configurações de Segurança baseadas no ambiente
 define('JWT_SECRET', 'sua_chave_secreta_muito_segura_aqui');
-define('SESSION_TIMEOUT', $environment === 'production' ? 3600 : 7200); // 1 hora para produção, 2 horas para local
-define('MAX_LOGIN_ATTEMPTS', $environment === 'production' ? 3 : 10); // 3 para produção, 10 para local
-define('LOGIN_TIMEOUT', $environment === 'production' ? 900 : 1800); // 15 minutos para produção, 30 para local
+// Homolog usa configurações similares a local (mais permissivo para testes)
+define('SESSION_TIMEOUT', ($environment === 'production') ? 3600 : 7200); // 1 hora para produção, 2 horas para local/homolog
+define('MAX_LOGIN_ATTEMPTS', ($environment === 'production') ? 3 : 10); // 3 para produção, 10 para local/homolog
+define('LOGIN_TIMEOUT', ($environment === 'production') ? 900 : 1800); // 15 minutos para produção, 30 para local/homolog
 
 // Configurações de Upload baseadas no ambiente
 define('UPLOAD_MAX_SIZE', $environment === 'production' ? 5242880 : 10485760); // 5MB para produção, 10MB para local
@@ -71,7 +88,7 @@ define('SMTP_PASS', 'sua_senha_smtp');
 
 // Configurações de Log baseadas no ambiente
 define('LOG_ENABLED', true);
-define('LOG_LEVEL', $environment === 'production' ? 'INFO' : 'DEBUG'); // INFO para produção, DEBUG para local
+define('LOG_LEVEL', ($environment === 'production') ? 'INFO' : 'DEBUG'); // INFO para produção, DEBUG para local/homolog
 
 // Configurações de API baseadas no ambiente
 define('API_VERSION', 'v1');
@@ -93,8 +110,9 @@ define('CACHE_ENABLED', $environment === 'production');
 define('CACHE_DURATION', $environment === 'production' ? 3600 : 0); // 1 hora para produção, 0 para local
 
 // Configurações de Debug baseadas no ambiente
-define('DEBUG_MODE', $environment === 'local');
-define('SHOW_ERRORS', $environment === 'local');
+// Debug ativo em local e homolog (para facilitar testes)
+define('DEBUG_MODE', ($environment === 'local' || $environment === 'homolog'));
+define('SHOW_ERRORS', ($environment === 'local' || $environment === 'homolog'));
 
 // Configurações de Idioma
 define('DEFAULT_LANGUAGE', 'pt-BR');
@@ -259,9 +277,9 @@ define('STAGING_EMAIL', 'staging@seudominio.com');
 define('STAGING_NOTIFICATIONS', false);
 
 // Configurações de Homologação
-define('HOMOLOG_MODE', false);
+define('HOMOLOG_MODE', $environment === 'homolog');
 define('HOMOLOG_EMAIL', 'homolog@seudominio.com');
-define('HOMOLOG_NOTIFICATIONS', false);
+define('HOMOLOG_NOTIFICATIONS', $environment === 'homolog');
 
 // Configurações de Local
 define('LOCAL_MODE', $environment === 'local');
@@ -283,9 +301,14 @@ if (DEBUG_MODE) {
     ini_set('display_errors', 0);
 }
 
-// CARREGAR CONFIGURAÇÕES LOCAIS ANTES da sessão ser iniciada
+// CARREGAR CONFIGURAÇÕES ESPECÍFICAS POR AMBIENTE ANTES da sessão ser iniciada
 if ($environment === 'local' && file_exists(__DIR__ . '/../config_local.php')) {
     require_once __DIR__ . '/../config_local.php';
+}
+
+// Carregar configurações de homologação (sobrescreve configurações padrão)
+if ($environment === 'homolog' && file_exists(__DIR__ . '/../config_homolog.php')) {
+    require_once __DIR__ . '/../config_homolog.php';
 }
 
 // Configurações de Sessão ANTES de iniciar a sessão
@@ -372,11 +395,19 @@ if (!headers_sent()) {
         }
     }
     
-    // Headers para desenvolvimento
+    // Headers para desenvolvimento e homologação
     if ($environment === 'local') {
         header('X-Environment: LOCAL');
         header('X-Debug: ENABLED');
         header('X-Development: TRUE');
+    } elseif ($environment === 'homolog') {
+        header('X-Environment: HOMOLOG');
+        header('X-Debug: ENABLED');
+        header('X-Testing: TRUE');
+    } elseif ($environment === 'homolog') {
+        header('X-Environment: HOMOLOG');
+        header('X-Debug: ENABLED');
+        header('X-Testing: TRUE');
         
         // CSP para desenvolvimento local - TEMPORARIAMENTE DESABILITADO PARA DEBUG
         // header('Content-Security-Policy: default-src \'self\'; script-src \'self\' \'unsafe-inline\' \'unsafe-eval\' https://www.google.com https://www.gstatic.com https://cdn.jsdelivr.net https://kit.fontawesome.com https://unpkg.com; style-src \'self\' \'unsafe-inline\' https://fonts.googleapis.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com; font-src \'self\' data: https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src \'self\' data: https:; connect-src \'self\' https://viacep.com.br https://cdn.jsdelivr.net https://unpkg.com; object-src \'none\'; base-uri \'self\';');
@@ -448,14 +479,17 @@ if (!function_exists('cfc_get_base_path')) {
 
 // Configurações de Constantes de Ambiente
 define('IS_PRODUCTION', $environment === 'production');
-define('IS_DEVELOPMENT', $environment === 'local');
+define('IS_DEVELOPMENT', ($environment === 'local' || $environment === 'homolog'));
 define('IS_LOCAL', $environment === 'local');
+define('IS_HOMOLOG', $environment === 'homolog');
 
 // Configurações de Log de Inicialização baseadas no ambiente
 if (LOG_ENABLED) {
     $log_message = 'Sistema CFC inicializado com sucesso em ' . date('Y-m-d H:i:s') . ' - Ambiente: ' . $environment;
     if ($environment === 'local') {
         error_log('[LOCAL] ' . $log_message);
+    } elseif ($environment === 'homolog') {
+        error_log('[HOMOLOG] ' . $log_message);
     } else {
         error_log('[PROD] ' . $log_message);
     }
@@ -478,6 +512,8 @@ register_shutdown_function(function() use ($environment) {
         $log_message = 'Sistema CFC finalizado em ' . date('Y-m-d H:i:s') . ' - Ambiente: ' . $environment;
         if ($environment === 'local') {
             error_log('[LOCAL] ' . $log_message);
+        } elseif ($environment === 'homolog') {
+            error_log('[HOMOLOG] ' . $log_message);
         } else {
             error_log('[PROD] ' . $log_message);
         }

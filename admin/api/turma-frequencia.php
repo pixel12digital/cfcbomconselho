@@ -192,14 +192,14 @@ function calcularFrequenciaAluno($db, $alunoId, $turmaId) {
     
     $totalAulas = $aulasProgramadas['total'];
     
-    // Contar presenças do aluno (CORRIGIDO: considerar apenas aulas válidas)
+    // Contar presenças do aluno (CORRIGIDO: usar turma_aula_id, nome correto do campo)
     $presencas = $db->fetch("
         SELECT 
             COUNT(*) as total_registradas,
             COUNT(CASE WHEN tp.presente = 1 THEN 1 END) as presentes,
             COUNT(CASE WHEN tp.presente = 0 THEN 1 END) as ausentes
         FROM turma_presencas tp
-        INNER JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
+        INNER JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
         WHERE tp.turma_id = ? 
         AND tp.aluno_id = ?
         AND taa.status IN ('agendada', 'realizada')
@@ -228,17 +228,18 @@ function calcularFrequenciaAluno($db, $alunoId, $turmaId) {
         }
     }
     
-    // Buscar histórico de presenças (CORRIGIDO: usar turma_aulas_agendadas e aula_id)
+    // Buscar histórico de presenças (CORRIGIDO: usar turma_aulas_agendadas e turma_aula_id)
+    // CORREÇÃO 2025-01: Removida referência a tp.justificativa (coluna não existe na tabela turma_presencas)
     $historicoPresencas = $db->fetchAll("
         SELECT 
             tp.presente,
-            tp.justificativa as observacao,
+            NULL as observacao,
             tp.registrado_em,
             taa.nome_aula,
             taa.data_aula,
             taa.ordem_global as ordem
         FROM turma_presencas tp
-        JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
+        JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
         WHERE tp.turma_id = ? AND tp.aluno_id = ?
         ORDER BY taa.ordem_global ASC
     ", [$turmaId, $alunoId]);
@@ -332,7 +333,7 @@ function calcularFrequenciaTurma($db, $turmaId) {
                 COUNT(CASE WHEN tp.presente = 1 THEN 1 END) as presentes,
                 COUNT(CASE WHEN tp.presente = 0 THEN 1 END) as ausentes
             FROM turma_presencas tp
-            INNER JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
+            INNER JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
             WHERE tp.turma_id = ? 
             AND tp.aluno_id = ?
             AND taa.status IN ('agendada', 'realizada')
@@ -442,7 +443,7 @@ function calcularFrequenciaTempoReal($db, $turmaId, $aulaId) {
             a.nome as aluno_nome
         FROM turma_presencas tp
         JOIN alunos a ON tp.aluno_id = a.id
-        WHERE tp.turma_id = ? AND tp.aula_id = ?
+        WHERE tp.turma_id = ? AND tp.turma_aula_id = ?
         ORDER BY a.nome ASC
     ", [$turmaId, $aulaId]);
     

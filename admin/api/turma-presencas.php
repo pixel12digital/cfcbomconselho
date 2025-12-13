@@ -25,19 +25,41 @@ require_once __DIR__ . '/../../includes/config.php';
 require_once __DIR__ . '/../../includes/database.php';
 require_once __DIR__ . '/../../includes/auth.php';
 
-// Verificar autenticação
-if (!isLoggedIn()) {
-    http_response_code(401);
-    echo json_encode([
+/**
+ * Função helper para responder erros sempre em JSON
+ * Garante que este endpoint NUNCA devolva HTML, apenas JSON
+ */
+function responderJsonErro($mensagem, $statusCode = 400, array $extra = []) {
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=utf-8');
+    $payload = array_merge([
         'success' => false,
-        'message' => 'Usuário não autenticado'
-    ], JSON_UNESCAPED_UNICODE);
-    exit();
+        'message' => $mensagem,
+    ], $extra);
+    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Guard explícito de sessão/autenticação para este endpoint
+$userId    = $_SESSION['user_id']   ?? null;
+$userType  = $_SESSION['user_type'] ?? null;
+$origem    = $_GET['origem']       ?? ($_POST['origem'] ?? '');
+
+if (!$userId || !$userType) {
+    responderJsonErro('Sessão expirada. Faça login novamente.', 401, [
+        'code' => 'AUTH_NO_SESSION',
+    ]);
+}
+
+// Verificar autenticação (compatibilidade com código existente)
+if (!isLoggedIn()) {
+    responderJsonErro('Usuário não autenticado', 401, [
+        'code' => 'AUTH_NOT_LOGGED_IN',
+    ]);
 }
 
 // FASE 1 - PRESENCA TEORICA - Ajustar permissões para incluir aluno (apenas leitura)
 // Arquivo: admin/api/turma-presencas.php (linha ~38)
-require_once __DIR__ . '/../../includes/auth.php';
 $currentUser = getCurrentUser();
 $isAdmin = ($currentUser['tipo'] ?? '') === 'admin';
 $isSecretaria = ($currentUser['tipo'] ?? '') === 'secretaria';
@@ -46,17 +68,13 @@ $isAluno = ($currentUser['tipo'] ?? '') === 'aluno';
 
 // Aluno pode apenas ler suas próprias presenças (GET), não pode criar/editar/excluir
 if (!$isAdmin && !$isSecretaria && !$isInstrutor && !$isAluno) {
-    http_response_code(403);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Permissão negada - Apenas administradores, secretaria, instrutores e alunos podem acessar presenças'
-    ], JSON_UNESCAPED_UNICODE);
-    exit();
+    responderJsonErro('Permissão negada - Apenas administradores, secretaria, instrutores e alunos podem acessar presenças', 403, [
+        'code' => 'PERMISSAO_NEGADA',
+    ]);
 }
 
 $db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
-$userId = $_SESSION['user_id'] ?? 1;
 
 try {
     switch ($method) {
@@ -77,21 +95,17 @@ try {
             break;
             
         default:
-            http_response_code(405);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Método não permitido'
-            ], JSON_UNESCAPED_UNICODE);
+            responderJsonErro('Método não permitido', 405, [
+                'code' => 'METHOD_NOT_ALLOWED',
+            ]);
             break;
     }
     
-} catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Erro interno do servidor: ' . $e->getMessage()
-    ], JSON_UNESCAPED_UNICODE);
-}
+    } catch (Exception $e) {
+        responderJsonErro('Erro interno do servidor: ' . $e->getMessage(), 500, [
+            'code' => 'INTERNAL_ERROR',
+        ]);
+    }
 
 /**
  * Manipular requisições GET
@@ -104,22 +118,16 @@ function handleGetRequest($db) {
     if ($isAluno) {
         $currentAlunoId = getCurrentAlunoId();
         if (!$currentAlunoId) {
-            http_response_code(403);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Aluno não encontrado ou não autenticado'
-            ], JSON_UNESCAPED_UNICODE);
-            exit();
+            responderJsonErro('Aluno não encontrado ou não autenticado', 403, [
+                'code' => 'ALUNO_NOT_FOUND',
+            ]);
         }
         
         // Aluno só pode ver suas próprias presenças
         if (isset($_GET['aluno_id']) && (int)$_GET['aluno_id'] !== $currentAlunoId) {
-            http_response_code(403);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Permissão negada - Você só pode ver suas próprias presenças'
-            ], JSON_UNESCAPED_UNICODE);
-            exit();
+            responderJsonErro('Permissão negada - Você só pode ver suas próprias presenças', 403, [
+                'code' => 'PERMISSAO_NEGADA_ALUNO',
+            ]);
         }
         
         // Se não especificou aluno_id mas especificou turma_id, usar o ID do aluno logado
@@ -129,31 +137,22 @@ function handleGetRequest($db) {
         
         // Aluno não pode ver presenças de uma aula específica (todos os alunos) ou de toda a turma
         if (isset($_GET['turma_id']) && isset($_GET['aula_id'])) {
-            http_response_code(403);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Permissão negada - Alunos não podem ver presenças de outros alunos'
-            ], JSON_UNESCAPED_UNICODE);
-            exit();
+            responderJsonErro('Permissão negada - Alunos não podem ver presenças de outros alunos', 403, [
+                'code' => 'PERMISSAO_NEGADA_ALUNO',
+            ]);
         }
         
         if (isset($_GET['turma_id']) && !isset($_GET['aluno_id'])) {
-            http_response_code(403);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Permissão negada - Alunos não podem ver presenças de toda a turma'
-            ], JSON_UNESCAPED_UNICODE);
-            exit();
+            responderJsonErro('Permissão negada - Alunos não podem ver presenças de toda a turma', 403, [
+                'code' => 'PERMISSAO_NEGADA_ALUNO',
+            ]);
         }
         
         // Aluno não pode listar todas as presenças
         if (!isset($_GET['turma_id']) && !isset($_GET['aluno_id'])) {
-            http_response_code(403);
-            echo json_encode([
-                'success' => false,
-                'message' => 'Permissão negada - Alunos não podem listar todas as presenças'
-            ], JSON_UNESCAPED_UNICODE);
-            exit();
+            responderJsonErro('Permissão negada - Alunos não podem listar todas as presenças', 403, [
+                'code' => 'PERMISSAO_NEGADA_ALUNO',
+            ]);
         }
     }
     
@@ -200,12 +199,9 @@ function handlePostRequest($db, $userId) {
     
     // FASE 1 - PRESENCA TEORICA - Aluno não pode criar presenças
     if ($isAluno) {
-        http_response_code(403);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Permissão negada - Alunos não podem criar presenças'
-        ], JSON_UNESCAPED_UNICODE);
-        exit();
+        responderJsonErro('Permissão negada - Alunos não podem criar presenças', 403, [
+            'code' => 'PERMISSAO_NEGADA_ALUNO',
+        ]);
     }
     
     $input = json_decode(file_get_contents('php://input'), true);
@@ -244,12 +240,9 @@ function handlePutRequest($db, $userId) {
     
     // FASE 1 - PRESENCA TEORICA - Aluno não pode editar presenças
     if ($isAluno) {
-        http_response_code(403);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Permissão negada - Alunos não podem editar presenças'
-        ], JSON_UNESCAPED_UNICODE);
-        exit();
+        responderJsonErro('Permissão negada - Alunos não podem editar presenças', 403, [
+            'code' => 'PERMISSAO_NEGADA_ALUNO',
+        ]);
     }
     
     $presencaId = $_GET['id'] ?? null;
@@ -293,12 +286,9 @@ function handleDeleteRequest($db) {
     
     // FASE 1 - PRESENCA TEORICA - Aluno não pode excluir presenças
     if ($isAluno) {
-        http_response_code(403);
-        echo json_encode([
-            'success' => false,
-            'message' => 'Permissão negada - Alunos não podem excluir presenças'
-        ], JSON_UNESCAPED_UNICODE);
-        exit();
+        responderJsonErro('Permissão negada - Alunos não podem excluir presenças', 403, [
+            'code' => 'PERMISSAO_NEGADA_ALUNO',
+        ]);
     }
     
     $presencaId = $_GET['id'] ?? null;
@@ -324,17 +314,17 @@ function handleDeleteRequest($db) {
 
 /**
  * Buscar presenças de uma aula específica
- * CORRIGIDO: Usa aula_id (nome correto do campo) e justificativa (nome correto do campo)
+ * CORRIGIDO: Usa turma_aula_id (nome correto do campo)
+ * NOTA: justificativa removida - coluna não existe na tabela turma_presencas
  */
 function buscarPresencasAula($db, $turmaId, $aulaId) {
     $sql = "
         SELECT 
             tp.id,
             tp.turma_id,
-            tp.aula_id,
+            tp.turma_aula_id,
             tp.aluno_id,
             tp.presente,
-            tp.justificativa,
             tp.registrado_por,
             tp.registrado_em,
             a.nome as aluno_nome,
@@ -343,7 +333,7 @@ function buscarPresencasAula($db, $turmaId, $aulaId) {
         FROM turma_presencas tp
         JOIN alunos a ON tp.aluno_id = a.id
         LEFT JOIN usuarios u ON tp.registrado_por = u.id
-        WHERE tp.turma_id = ? AND tp.aula_id = ?
+        WHERE tp.turma_id = ? AND tp.turma_aula_id = ?
         ORDER BY a.nome ASC
     ";
     
@@ -352,23 +342,23 @@ function buscarPresencasAula($db, $turmaId, $aulaId) {
 
 /**
  * Buscar presenças de um aluno em uma turma
- * CORRIGIDO: Usa aula_id e turma_aulas_agendadas (tabela correta)
+ * CORRIGIDO: Usa turma_aula_id e turma_aulas_agendadas (tabela correta)
+ * NOTA: justificativa removida - coluna não existe na tabela turma_presencas
  */
 function buscarPresencasAluno($db, $alunoId, $turmaId) {
     $sql = "
         SELECT 
             tp.id,
             tp.turma_id,
-            tp.aula_id,
+            tp.turma_aula_id,
             tp.aluno_id,
             tp.presente,
-            tp.justificativa,
             tp.registrado_em,
             taa.nome_aula,
             taa.data_aula,
             taa.ordem_global as ordem
         FROM turma_presencas tp
-        JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
+        JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
         WHERE tp.aluno_id = ? AND tp.turma_id = ?
         ORDER BY taa.ordem_global ASC
     ";
@@ -378,17 +368,17 @@ function buscarPresencasAluno($db, $alunoId, $turmaId) {
 
 /**
  * Buscar todas as presenças de uma turma
- * CORRIGIDO: Usa aula_id, justificativa e turma_aulas_agendadas (tabela correta)
+ * CORRIGIDO: Usa turma_aula_id e turma_aulas_agendadas (tabela correta)
+ * NOTA: justificativa removida - coluna não existe na tabela turma_presencas
  */
 function buscarPresencasTurma($db, $turmaId) {
     $sql = "
         SELECT 
             tp.id,
             tp.turma_id,
-            tp.aula_id,
+            tp.turma_aula_id,
             tp.aluno_id,
             tp.presente,
-            tp.justificativa,
             tp.registrado_em,
             a.nome as aluno_nome,
             taa.nome_aula,
@@ -396,7 +386,7 @@ function buscarPresencasTurma($db, $turmaId) {
             taa.ordem_global as ordem
         FROM turma_presencas tp
         JOIN alunos a ON tp.aluno_id = a.id
-        JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
+        JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
         WHERE tp.turma_id = ?
         ORDER BY taa.ordem_global ASC, a.nome ASC
     ";
@@ -406,24 +396,24 @@ function buscarPresencasTurma($db, $turmaId) {
 
 /**
  * Listar presenças com filtros
- * CORRIGIDO: Usa aula_id, justificativa, turma_aulas_agendadas e turmas_teoricas (tabelas corretas)
+ * CORRIGIDO: Usa turma_aula_id, turma_aulas_agendadas e turmas_teoricas (tabelas corretas)
+ * NOTA: justificativa removida - coluna não existe na tabela turma_presencas
  */
 function listarPresencas($db) {
     $sql = "
         SELECT 
             tp.id,
             tp.turma_id,
-            tp.aula_id,
+            tp.turma_aula_id,
             tp.aluno_id,
             tp.presente,
-            tp.justificativa,
             tp.registrado_em,
             a.nome as aluno_nome,
             taa.nome_aula,
             tt.nome as turma_nome
         FROM turma_presencas tp
         JOIN alunos a ON tp.aluno_id = a.id
-        JOIN turma_aulas_agendadas taa ON tp.aula_id = taa.id
+        JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
         JOIN turmas_teoricas tt ON tp.turma_id = tt.id
         ORDER BY tp.registrado_em DESC
         LIMIT 100
@@ -449,6 +439,8 @@ function listarPresencas($db) {
  * @return array ['permitido' => bool, 'motivo' => string]
  */
 function validarRegrasEdicaoPresenca($db, $turmaId, $aulaId, $userId, $isAdmin, $isSecretaria, $isInstrutor) {
+    global $origem, $userType;
+    
     // Buscar dados da turma
     // CORREÇÃO: turmas_teoricas não tem instrutor_id - o instrutor está em turma_aulas_agendadas
     $turma = $db->fetch(
@@ -473,7 +465,26 @@ function validarRegrasEdicaoPresenca($db, $turmaId, $aulaId, $userId, $isAdmin, 
     
     // Regra 2: Instrutor só pode editar se for instrutor da aula específica
     // CORREÇÃO: Verificar instrutor através da aula agendada, não da turma
+    // CORREÇÃO: Usar getCurrentInstrutorId() para obter o instrutor_id real, não comparar com userId
     if ($isInstrutor && !$isAdmin && !$isSecretaria) {
+        // Obter o instrutor_id real do usuário logado
+        $instrutorAtualId = getCurrentInstrutorId($userId);
+        
+        // Logging de debug para facilitar diagnóstico
+        error_log('[turma-presencas] debug perm: user_id=' . (int)$userId .
+                  ' user_type=' . $userType .
+                  ' origem=' . $origem .
+                  ' instrutorAtualId=' . (int)$instrutorAtualId .
+                  ' aulaId=' . (int)$aulaId .
+                  ' turmaId=' . (int)$turmaId);
+        
+        if (!$instrutorAtualId) {
+            return [
+                'permitido' => false,
+                'motivo' => 'Instrutor não encontrado ou não vinculado ao usuário'
+            ];
+        }
+        
         if ($aulaId) {
             // Buscar o instrutor da aula específica
             $aula = $db->fetch(
@@ -481,7 +492,7 @@ function validarRegrasEdicaoPresenca($db, $turmaId, $aulaId, $userId, $isAdmin, 
                 [$aulaId, $turmaId]
             );
             
-            if (!$aula || $aula['instrutor_id'] != $userId) {
+            if (!$aula || $aula['instrutor_id'] != $instrutorAtualId) {
                 return [
                     'permitido' => false,
                     'motivo' => 'Você não é o instrutor desta aula'
@@ -491,7 +502,7 @@ function validarRegrasEdicaoPresenca($db, $turmaId, $aulaId, $userId, $isAdmin, 
             // Se não há aula_id, verificar se o instrutor tem alguma aula nesta turma
             $temAula = $db->fetch(
                 "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND instrutor_id = ?",
-                [$turmaId, $userId]
+                [$turmaId, $instrutorAtualId]
             );
             
             if (!$temAula || $temAula['total'] == 0) {
@@ -553,8 +564,8 @@ function marcarPresencaIndividual($db, $dados, $userId) {
     }
     
     // Normalizar nome do campo: aceitar tanto aula_id quanto turma_aula_id (compatibilidade)
-    $aulaId = $dados['aula_id'] ?? $dados['turma_aula_id'] ?? null;
-    if (!$aulaId) {
+    $turmaAulaId = (int)($dados['turma_aula_id'] ?? $dados['aula_id'] ?? 0);
+    if (!$turmaAulaId) {
         return [
             'success' => false,
             'message' => 'ID da aula é obrigatório (aula_id ou turma_aula_id)'
@@ -562,11 +573,24 @@ function marcarPresencaIndividual($db, $dados, $userId) {
     }
     
     // Validar regras de edição
-    $validacaoEdicao = validarRegrasEdicaoPresenca($db, $dados['turma_id'], $aulaId, $userId, $isAdmin, $isSecretaria, $isInstrutor);
+    $validacaoEdicao = validarRegrasEdicaoPresenca($db, $dados['turma_id'], $turmaAulaId, $userId, $isAdmin, $isSecretaria, $isInstrutor);
     if (!$validacaoEdicao['permitido']) {
         return [
             'success' => false,
             'message' => $validacaoEdicao['motivo']
+        ];
+    }
+    
+    // Verificar se a turma existe (tabela correta: turmas_teoricas)
+    $turma = $db->fetch(
+        "SELECT id FROM turmas_teoricas WHERE id = ?",
+        [$dados['turma_id']]
+    );
+    
+    if (!$turma) {
+        return [
+            'success' => false,
+            'message' => 'Turma não encontrada. Verifique se a turma existe em turmas_teoricas.'
         ];
     }
     
@@ -583,35 +607,31 @@ function marcarPresencaIndividual($db, $dados, $userId) {
         ];
     }
     
-    // Verificar se já existe presença para esta aula (usando aula_id, nome correto do campo)
+    // AJUSTE 2025-12 - Verificar se já existe presença para esta aula
+    // Se existir, atualizar em vez de criar nova (permite admin corrigir presenças)
     $presencaExistente = $db->fetch(
-        "SELECT id FROM turma_presencas WHERE turma_id = ? AND aula_id = ? AND aluno_id = ?",
-        [$dados['turma_id'], $aulaId, $dados['aluno_id']]
+        "SELECT id FROM turma_presencas WHERE turma_id = ? AND turma_aula_id = ? AND aluno_id = ?",
+        [$dados['turma_id'], $turmaAulaId, $dados['aluno_id']]
     );
     
     if ($presencaExistente) {
-        return [
-            'success' => false,
-            'message' => 'Presença já registrada para este aluno nesta aula'
-        ];
+        // Se já existe, atualizar em vez de criar nova
+        return atualizarPresenca($db, $presencaExistente['id'], $dados, $userId);
     }
     
     try {
         $db->beginTransaction();
         
-        // Normalizar nome do campo: aceitar tanto aula_id quanto turma_aula_id (compatibilidade)
-        $aulaId = $dados['aula_id'] ?? $dados['turma_aula_id'] ?? null;
-        if (!$aulaId) {
-            throw new Exception('ID da aula é obrigatório');
-        }
+        // TODO: implementar coluna justificativa na tabela turma_presencas
+        // Por enquanto, justificativa é lida do payload mas não é gravada no banco
+        $justificativa = $dados['justificativa'] ?? $dados['observacao'] ?? null;
         
-        // Inserir presença (usando aula_id e justificativa, nomes corretos dos campos)
+        // Inserir presença (usando turma_aula_id, nomes corretos dos campos)
         $presencaId = $db->insert('turma_presencas', [
             'turma_id' => $dados['turma_id'],
-            'aula_id' => $aulaId,
+            'turma_aula_id' => $turmaAulaId,
             'aluno_id' => $dados['aluno_id'],
             'presente' => $dados['presente'] ? 1 : 0,
-            'justificativa' => $dados['justificativa'] ?? $dados['observacao'] ?? null, // Compatibilidade: aceita ambos
             'registrado_por' => $userId
         ]);
         
@@ -621,7 +641,7 @@ function marcarPresencaIndividual($db, $dados, $userId) {
             $db,
             $presencaId,
             $dados['turma_id'],
-            $aulaId,
+            $turmaAulaId,
             $dados['aluno_id'],
             'create',
             $userId,
@@ -668,8 +688,8 @@ function marcarPresencasLote($db, $dados, $userId) {
     
     $turmaId = $dados['turma_id'];
     // Normalizar nome do campo: aceitar tanto aula_id quanto turma_aula_id
-    $aulaId = $dados['aula_id'] ?? $dados['turma_aula_id'] ?? null;
-    if (!$aulaId) {
+    $turmaAulaId = (int)($dados['turma_aula_id'] ?? $dados['aula_id'] ?? 0);
+    if (!$turmaAulaId) {
         return [
             'success' => false,
             'message' => 'ID da aula é obrigatório (aula_id ou turma_aula_id)'
@@ -677,7 +697,7 @@ function marcarPresencasLote($db, $dados, $userId) {
     }
     
     // Validar regras de edição uma vez para o lote
-    $validacaoEdicao = validarRegrasEdicaoPresenca($db, $turmaId, $aulaId, $userId, $isAdmin, $isSecretaria, $isInstrutor);
+    $validacaoEdicao = validarRegrasEdicaoPresenca($db, $turmaId, $turmaAulaId, $userId, $isAdmin, $isSecretaria, $isInstrutor);
     if (!$validacaoEdicao['permitido']) {
         return [
             'success' => false,
@@ -704,11 +724,22 @@ function marcarPresencasLote($db, $dados, $userId) {
         foreach ($presencas as $index => $presenca) {
             // Validar dados da presença
             $presenca['turma_id'] = $turmaId;
-            $presenca['aula_id'] = $aulaId; // Normalizar para aula_id
+            $presenca['turma_aula_id'] = $turmaAulaId; // Normalizar para turma_aula_id
             
             $validacao = validarDadosPresenca($presenca);
             if (!$validacao['success']) {
                 $erros[] = "Presença " . ($index + 1) . ": " . $validacao['message'];
+                continue;
+            }
+            
+            // Verificar se a turma existe (tabela correta: turmas_teoricas)
+            $turma = $db->fetch(
+                "SELECT id FROM turmas_teoricas WHERE id = ?",
+                [$turmaId]
+            );
+            
+            if (!$turma) {
+                $erros[] = "Presença " . ($index + 1) . ": Turma não encontrada (ID: $turmaId)";
                 continue;
             }
             
@@ -723,10 +754,10 @@ function marcarPresencasLote($db, $dados, $userId) {
                 continue;
             }
             
-            // Verificar duplicidade (usando aula_id, nome correto do campo)
+            // Verificar duplicidade (usando turma_aula_id, nome correto do campo)
             $presencaExistente = $db->fetch(
-                "SELECT id FROM turma_presencas WHERE turma_id = ? AND aula_id = ? AND aluno_id = ?",
-                [$turmaId, $aulaId, $presenca['aluno_id']]
+                "SELECT id FROM turma_presencas WHERE turma_id = ? AND turma_aula_id = ? AND aluno_id = ?",
+                [$turmaId, $turmaAulaId, $presenca['aluno_id']]
             );
             
             if ($presencaExistente) {
@@ -734,13 +765,16 @@ function marcarPresencasLote($db, $dados, $userId) {
                 continue;
             }
             
-            // Inserir presença (usando aula_id e justificativa, nomes corretos)
+            // TODO: implementar coluna justificativa na tabela turma_presencas
+            // Por enquanto, justificativa é lida do payload mas não é gravada no banco
+            $justificativa = $presenca['justificativa'] ?? $presenca['observacao'] ?? null;
+            
+            // Inserir presença (usando turma_aula_id, nomes corretos)
             $presencaId = $db->insert('turma_presencas', [
                 'turma_id' => $turmaId,
-                'aula_id' => $aulaId,
+                'turma_aula_id' => $turmaAulaId,
                 'aluno_id' => $presenca['aluno_id'],
                 'presente' => $presenca['presente'] ? 1 : 0,
-                'justificativa' => $presenca['justificativa'] ?? $presenca['observacao'] ?? null, // Compatibilidade
                 'registrado_por' => $userId
             ]);
             
@@ -750,7 +784,7 @@ function marcarPresencasLote($db, $dados, $userId) {
                 $db,
                 $presencaId,
                 $turmaId,
-                $aulaId,
+                $turmaAulaId,
                 $presenca['aluno_id'],
                 'create',
                 $userId,
@@ -783,7 +817,7 @@ function marcarPresencasLote($db, $dados, $userId) {
         // Log de auditoria
         logAuditoria($db, $userId, 'presencas_lote', null, [
             'turma_id' => $turmaId,
-            'aula_id' => $aulaId,
+            'turma_aula_id' => $turmaAulaId,
             'total_presencas' => count($presencas),
             'sucessos' => $sucessos,
             'erros' => count($erros)
@@ -823,7 +857,7 @@ function atualizarPresenca($db, $presencaId, $dados, $userId) {
     }
     
     // Validar regras de edição
-    $validacaoEdicao = validarRegrasEdicaoPresenca($db, $presenca['turma_id'], $presenca['aula_id'], $userId, $isAdmin, $isSecretaria, $isInstrutor);
+    $validacaoEdicao = validarRegrasEdicaoPresenca($db, $presenca['turma_id'], $presenca['turma_aula_id'], $userId, $isAdmin, $isSecretaria, $isInstrutor);
     if (!$validacaoEdicao['permitido']) {
         return [
             'success' => false,
@@ -846,7 +880,7 @@ function atualizarPresenca($db, $presencaId, $dados, $userId) {
             $db,
             $presencaId,
             $presenca['turma_id'],
-            $presenca['aula_id'],
+            $presenca['turma_aula_id'],
             $presenca['aluno_id'],
             'update',
             $userId,
@@ -855,10 +889,13 @@ function atualizarPresenca($db, $presencaId, $dados, $userId) {
         );
         // FASE 1 - LOG PRESENCA TEORICA - FIM
         
-        // Atualizar presença (usando justificativa, nome correto do campo)
+        // TODO: implementar coluna justificativa na tabela turma_presencas
+        // Por enquanto, justificativa é lida do payload mas não é gravada no banco
+        $justificativa = $dados['justificativa'] ?? $dados['observacao'] ?? null;
+        
+        // Atualizar presença
         $db->update('turma_presencas', [
-            'presente' => $dados['presente'] ? 1 : 0,
-            'justificativa' => $dados['justificativa'] ?? $dados['observacao'] ?? null // Compatibilidade
+            'presente' => $dados['presente'] ? 1 : 0
         ], 'id = ?', [$presencaId]);
         
         // Log de auditoria (mantido para compatibilidade)
@@ -910,7 +947,7 @@ function excluirPresenca($db, $presencaId) {
     }
     
     // Validar regras de edição
-    $validacaoEdicao = validarRegrasEdicaoPresenca($db, $presenca['turma_id'], $presenca['aula_id'], $userId, $isAdmin, $isSecretaria, $isInstrutor);
+    $validacaoEdicao = validarRegrasEdicaoPresenca($db, $presenca['turma_id'], $presenca['turma_aula_id'], $userId, $isAdmin, $isSecretaria, $isInstrutor);
     if (!$validacaoEdicao['permitido']) {
         return [
             'success' => false,
@@ -927,7 +964,7 @@ function excluirPresenca($db, $presencaId) {
             $db,
             $presencaId,
             $presenca['turma_id'],
-            $presenca['aula_id'],
+            $presenca['turma_aula_id'],
             $presenca['aluno_id'],
             'delete',
             $userId,
@@ -971,11 +1008,29 @@ function excluirPresenca($db, $presencaId) {
 /**
  * Validar dados da presença
  * CORRIGIDO: Aceita tanto aula_id quanto turma_aula_id (compatibilidade)
+ * AJUSTE 2025-12: Para atualização (quando presencaId existe), apenas presente é obrigatório
  */
 function validarDadosPresenca($dados, $presencaId = null) {
     $erros = [];
     
-    // Campos obrigatórios
+    // Se é atualização (presencaId existe), apenas presente é obrigatório
+    if ($presencaId !== null) {
+        if (!isset($dados['presente'])) {
+            $erros[] = 'Status de presença é obrigatório';
+        }
+        
+        if (!empty($erros)) {
+            return [
+                'success' => false,
+                'message' => 'Dados inválidos',
+                'errors' => $erros
+            ];
+        }
+        
+        return ['success' => true];
+    }
+    
+    // Se é criação, todos os campos são obrigatórios
     if (empty($dados['turma_id'])) {
         $erros[] = 'ID da turma é obrigatório';
     }

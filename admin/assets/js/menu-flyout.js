@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // O fluxo oficial de presença TEÓRICA é via:
                 // Acadêmico → Turmas Teóricas → Detalhes da Turma → Seleção da Aula → Chamada/Frequência
                 // O antigo menu "Presenças Teóricas (Temporário)" foi removido para evitar duplicidade de caminhos.
-                { icon: 'fas fa-car-side', text: 'Aulas Práticas (Temporário)', href: 'pages/listar-aulas.php' },
+                { icon: 'fas fa-car-side', text: 'Aulas Práticas', href: 'pages/listar-aulas.php' },
                 { icon: 'fas fa-calendar-alt', text: 'Agenda Geral', href: 'index.php?page=agendamento' },
                 { icon: 'fas fa-chalkboard-teacher', text: 'Instrutores', href: 'index.php?page=instrutores' },
                 { icon: 'fas fa-car', text: 'Veículos', href: 'index.php?page=veiculos' },

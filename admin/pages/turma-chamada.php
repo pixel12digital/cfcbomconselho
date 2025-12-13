@@ -29,6 +29,13 @@ if (!defined('ADMIN_ROUTING')) {
 $db = Database::getInstance();
 $userId = $_SESSION['user_id'];
 $userType = $_SESSION['user_type'] ?? 'aluno';
+$origem = $_GET['origem'] ?? '';
+// CORREÇÃO 2025-01: Inicializar variável de mensagem de alerta
+$mensagemAlertaInstrutor = 'Você não é o instrutor desta aula. Apenas visualização.';
+// Base da aplicação (raiz do projeto, sem /admin)
+$baseApp = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/');
+// URL padrão de volta para o dashboard do instrutor
+$backUrlInstrutor = $baseApp . '/instrutor/dashboard.php';
 
 // Verificar permissões
 $canEdit = ($userType === 'admin' || $userType === 'instrutor');
@@ -37,17 +44,14 @@ $canEdit = ($userType === 'admin' || $userType === 'instrutor');
 $turmaId = $_GET['turma_id'] ?? null;
 $aulaId = $_GET['aula_id'] ?? null;
 
+// Redirecionamentos iniciais
 if (!$turmaId) {
-    // Se já houve output (página incluída via router), usar JavaScript para redirecionar
-    if (headers_sent()) {
-        echo '<div class="alert alert-warning m-3"><p>É necessário selecionar uma turma para acessar a chamada. Redirecionando...</p></div>';
-        echo '<script>setTimeout(function(){ window.location.href = "index.php?page=turmas-teoricas"; }, 1000);</script>';
-        exit();
+    if ($origem === 'instrutor') {
+        header('Location: ' . $backUrlInstrutor);
     } else {
-        // Caso contrário, usar header redirect normal
         header('Location: index.php?page=turmas-teoricas');
-        exit();
     }
+    exit();
 }
 
 // Buscar dados da turma (CORRIGIDO: usar turmas_teoricas em vez de turmas)
@@ -62,16 +66,12 @@ $turma = $db->fetch("
 ", [$turmaId]);
 
 if (!$turma) {
-    // Se já houve output (página incluída via router), usar JavaScript para redirecionar
-    if (headers_sent()) {
-        echo '<div class="alert alert-danger m-3"><p>Turma não encontrada. Redirecionando...</p></div>';
-        echo '<script>setTimeout(function(){ window.location.href = "index.php?page=turmas-teoricas"; }, 1000);</script>';
-        exit();
+    if ($origem === 'instrutor') {
+        header('Location: ' . $backUrlInstrutor);
     } else {
-        // Caso contrário, usar header redirect normal
         header('Location: index.php?page=turmas-teoricas');
-        exit();
     }
+    exit();
 }
 
 // Buscar instrutor da aula se aula_id fornecido, ou primeiro instrutor da turma
@@ -97,36 +97,112 @@ if ($aulaId) {
 }
 $turma['instrutor_nome'] = $instrutorNome;
 
-// Verificar se usuário tem permissão para esta turma/aula
-if ($userType === 'instrutor') {
+// AJUSTE IDENTIDADE INSTRUTOR - Lógica de permissão refinada
+// Variáveis de controle claras
+$modoSomenteLeitura = false;
+$mostrarAlertaInstrutor = false;
+
+// Quando origem=instrutor, usar identidade do instrutor para verificar permissão
+if ($origem === 'instrutor' || $userType === 'instrutor') {
+    // Obter instrutor_id real do usuário logado
+    $instrutorAtualId = getCurrentInstrutorId($userId);
+    
+    // CORREÇÃO 2025-01: Variável para mensagem de alerta mais específica
+    $mensagemAlertaInstrutor = 'Você não é o instrutor desta aula. Apenas visualização.';
+    
+    // CORREÇÃO 2025-01: Log de debug para diagnóstico
+    if (defined('DEBUG_MODE') && DEBUG_MODE) {
+        error_log("[TURMA-CHAMADA] Fluxo instrutor - user_id={$userId}, user_type={$userType}, origem={$origem}, instrutor_atual_id=" . ($instrutorAtualId ?? 'null') . ", aula_id={$aulaId}, turma_id={$turmaId}");
+    }
+    
     if ($aulaId) {
         // Verificar se é instrutor da aula específica
         $aulaInstrutor = $db->fetch(
             "SELECT instrutor_id FROM turma_aulas_agendadas WHERE id = ? AND turma_id = ?",
             [$aulaId, $turmaId]
         );
-        if (!$aulaInstrutor || $aulaInstrutor['instrutor_id'] != $userId) {
-            $canEdit = false;
+        $instrutorDaAulaId = $aulaInstrutor['instrutor_id'] ?? null;
+        
+        // CORREÇÃO 2025-01: Log de debug para diagnóstico
+        if (defined('DEBUG_MODE') && DEBUG_MODE) {
+            error_log("[TURMA-CHAMADA] Aula {$aulaId} - instrutor_da_aula_id=" . ($instrutorDaAulaId ?? 'null') . ", instrutor_atual_id=" . ($instrutorAtualId ?? 'null') . ", match=" . ($instrutorAtualId && $instrutorDaAulaId && $instrutorAtualId == $instrutorDaAulaId ? 'SIM' : 'NÃO'));
+        }
+        
+        if ($instrutorAtualId && $instrutorDaAulaId && $instrutorAtualId == $instrutorDaAulaId) {
+            // Instrutor logado É o instrutor da aula
+            $modoSomenteLeitura = false;
+            $mostrarAlertaInstrutor = false;
+        } else {
+            // Instrutor logado NÃO é o instrutor da aula
+            $modoSomenteLeitura = true;
+            $mostrarAlertaInstrutor = true;
+            
+            // CORREÇÃO 2025-01: Mensagem mais específica baseada no problema
+            if (!$instrutorAtualId) {
+                $mensagemAlertaInstrutor = 'Não foi possível identificar seu vínculo como instrutor. Entre em contato com o administrador.';
+                if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                    error_log("[TURMA-CHAMADA WARN] getCurrentInstrutorId() retornou null para user_id={$userId}. Verificar vínculo em instrutores.usuario_id");
+                }
+            } elseif (!$instrutorDaAulaId) {
+                $mensagemAlertaInstrutor = 'Esta aula não possui instrutor atribuído. Entre em contato com o administrador.';
+                if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                    error_log("[TURMA-CHAMADA WARN] Aula {$aulaId} não tem instrutor_id definido");
+                }
+            } else {
+                $mensagemAlertaInstrutor = 'Você não é o instrutor desta aula. Apenas visualização.';
+                if (defined('DEBUG_MODE') && DEBUG_MODE) {
+                    error_log("[TURMA-CHAMADA WARN] Instrutor atual ({$instrutorAtualId}) não corresponde ao instrutor da aula ({$instrutorDaAulaId})");
+                }
+            }
         }
     } else {
-        // Verificar se tem alguma aula nesta turma
-        $temAula = $db->fetch(
-            "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND instrutor_id = ?",
-            [$turmaId, $userId]
-        );
-        if (!$temAula || $temAula['total'] == 0) {
-            $canEdit = false;
+        // Sem aula_id, verificar se tem alguma aula nesta turma
+        if ($instrutorAtualId) {
+            $temAula = $db->fetch(
+                "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND instrutor_id = ?",
+                [$turmaId, $instrutorAtualId]
+            );
+            if (!$temAula || $temAula['total'] == 0) {
+                $modoSomenteLeitura = true;
+                $mostrarAlertaInstrutor = true;
+                $mensagemAlertaInstrutor = 'Você não possui aulas atribuídas nesta turma. Apenas visualização.';
+            } else {
+                $modoSomenteLeitura = false;
+                $mostrarAlertaInstrutor = false;
+            }
+        } else {
+            // Não encontrou instrutor_id, modo somente leitura
+            $modoSomenteLeitura = true;
+            $mostrarAlertaInstrutor = true;
+            $mensagemAlertaInstrutor = 'Não foi possível identificar seu vínculo como instrutor. Entre em contato com o administrador.';
         }
     }
-}
-
-// Verificar regras adicionais: turma concluída/cancelada
-if ($turma['status'] === 'cancelada') {
-    // Ninguém pode editar turmas canceladas
-    $canEdit = false;
-} elseif ($turma['status'] === 'concluida' && $userType === 'instrutor') {
-    // Instrutor não pode editar turmas concluídas (apenas admin/secretaria)
-    $canEdit = false;
+    
+    // Verificar regras adicionais: turma concluída/cancelada
+    if ($turma['status'] === 'cancelada') {
+        // Ninguém pode editar turmas canceladas
+        $modoSomenteLeitura = true;
+        $mostrarAlertaInstrutor = false; // Não mostrar alerta de instrutor, mostrar alerta de turma cancelada
+    } elseif ($turma['status'] === 'concluida') {
+        // Instrutor não pode editar turmas concluídas (apenas admin/secretaria)
+        $modoSomenteLeitura = true;
+        $mostrarAlertaInstrutor = false; // Não mostrar alerta de instrutor, mostrar alerta de turma concluída
+    }
+    
+    // Aplicar modo somente leitura ao canEdit
+    if ($modoSomenteLeitura) {
+        $canEdit = false;
+    }
+} else {
+    // Fluxo admin normal - sempre pode editar (exceto turmas canceladas)
+    $modoSomenteLeitura = false;
+    $mostrarAlertaInstrutor = false;
+    
+    // Verificar regras adicionais: turma cancelada
+    if ($turma['status'] === 'cancelada') {
+        $modoSomenteLeitura = true;
+        $canEdit = false;
+    }
 }
 
 // Buscar aulas da turma (CORRIGIDO: usar turma_aulas_agendadas e aula_id)
@@ -136,12 +212,13 @@ try {
     $tabelaExiste = $db->fetch("SHOW TABLES LIKE 'turma_presencas'");
     if ($tabelaExiste) {
         // Tabela existe, fazer JOIN normal
+        // AJUSTE 2025-12 - Presenças teóricas alinhadas com turma_presencas (turma_aula_id)
         $aulas = $db->fetchAll("
             SELECT 
                 taa.*,
                 COUNT(DISTINCT tp.id) as presencas_registradas
             FROM turma_aulas_agendadas taa
-            LEFT JOIN turma_presencas tp ON taa.id = tp.aula_id AND tp.turma_id = taa.turma_id
+            LEFT JOIN turma_presencas tp ON taa.id = tp.turma_aula_id AND tp.turma_id = taa.turma_id
             WHERE taa.turma_id = ?
             GROUP BY taa.id
             ORDER BY taa.ordem_global ASC
@@ -183,10 +260,11 @@ if ($aulaId) {
 }
 
 // AJUSTE DASHBOARD INSTRUTOR - Buscar alunos matriculados na turma
+// AJUSTE 2025-12 - Presenças teóricas alinhadas com turma_presencas (turma_aula_id)
 // Verificar se a tabela turma_presencas existe e quais colunas tem
 $tabelaPresencasExiste = false;
 $colunaJustificativaExiste = false;
-$colunaAulaIdExiste = false;
+$colunaTurmaAulaIdExiste = false;
 
 try {
     $tabelaPresencasExiste = $db->fetch("SHOW TABLES LIKE 'turma_presencas'");
@@ -197,8 +275,8 @@ try {
             if ($col['Field'] === 'justificativa') {
                 $colunaJustificativaExiste = true;
             }
-            if ($col['Field'] === 'aula_id') {
-                $colunaAulaIdExiste = true;
+            if ($col['Field'] === 'turma_aula_id') {
+                $colunaTurmaAulaIdExiste = true;
             }
         }
     }
@@ -206,8 +284,8 @@ try {
     // Tabela não existe ou erro ao verificar
 }
 
-if ($tabelaPresencasExiste && $colunaAulaIdExiste) {
-    // Tabela existe com estrutura esperada
+if ($tabelaPresencasExiste && $colunaTurmaAulaIdExiste && $aulaId) {
+    // Tabela existe com estrutura esperada e temos aula_id
     if ($colunaJustificativaExiste) {
         // Coluna justificativa existe
         $alunos = $db->fetchAll("
@@ -225,7 +303,7 @@ if ($tabelaPresencasExiste && $colunaAulaIdExiste) {
             LEFT JOIN turma_presencas tp ON (
                 a.id = tp.aluno_id 
                 AND tp.turma_id = ? 
-                AND tp.aula_id = ?
+                AND tp.turma_aula_id = ?
             )
             WHERE tm.turma_id = ? 
             AND tm.status IN ('matriculado', 'cursando', 'concluido')
@@ -248,7 +326,7 @@ if ($tabelaPresencasExiste && $colunaAulaIdExiste) {
             LEFT JOIN turma_presencas tp ON (
                 a.id = tp.aluno_id 
                 AND tp.turma_id = ? 
-                AND tp.aula_id = ?
+                AND tp.turma_aula_id = ?
             )
             WHERE tm.turma_id = ? 
             AND tm.status IN ('matriculado', 'cursando', 'concluido')
@@ -256,7 +334,7 @@ if ($tabelaPresencasExiste && $colunaAulaIdExiste) {
         ", [$turmaId, $aulaId, $turmaId]);
     }
 } else {
-    // Tabela não existe ou não tem aula_id, buscar apenas alunos sem presenças
+    // Tabela não existe ou não tem turma_aula_id, buscar apenas alunos sem presenças
     $alunos = $db->fetchAll("
         SELECT 
             a.*,
@@ -318,6 +396,43 @@ if ($aulaId) {
     if ($response && $response['success']) {
         $frequenciaGeral = $response['data'];
     }
+}
+
+// AJUSTE 2025-12 - URL base da API de presenças da turma
+// Calcular caminho base relativo ao projeto de forma robusta
+$scriptPath = $_SERVER['SCRIPT_NAME'] ?? '/admin/index.php';
+$baseRoot = '';
+
+// Detectar caminho base a partir do SCRIPT_NAME
+// Exemplo: /cfc-bom-conselho/admin/index.php -> /cfc-bom-conselho
+if (preg_match('#^/([^/]+)/admin/#', $scriptPath, $matches)) {
+    $baseRoot = '/' . $matches[1];
+} elseif (strpos($scriptPath, '/admin/') !== false) {
+    // Se não conseguir extrair, usar tudo antes de /admin/
+    $parts = explode('/admin/', $scriptPath);
+    $baseRoot = $parts[0] ?: '/cfc-bom-conselho';
+} else {
+    // Fallback: tentar detectar do REQUEST_URI
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+    if (preg_match('#^/([^/]+)/admin/#', $requestUri, $matches)) {
+        $baseRoot = '/' . $matches[1];
+    } else {
+        $baseRoot = '/cfc-bom-conselho'; // Fallback padrão
+    }
+}
+
+// Garantir que baseRoot não esteja vazio
+if (empty($baseRoot) || $baseRoot === '/') {
+    $baseRoot = '/cfc-bom-conselho';
+}
+
+$apiTurmaPresencasUrl = $baseRoot . '/admin/api/turma-presencas.php';
+$apiTurmaFrequenciaUrl = $baseRoot . '/admin/api/turma-frequencia.php';
+
+// AJUSTE 2025-12 - Debug: Log do caminho calculado (útil para diagnóstico)
+// Remover em produção se necessário, mas manter para troubleshooting
+if (defined('DEBUG_MODE') && DEBUG_MODE) {
+    error_log("[turma-chamada] baseRoot calculado: {$baseRoot}, API URL: {$apiTurmaFrequenciaUrl}");
 }
 
 ?>
@@ -554,10 +669,10 @@ if ($aulaId) {
                         <i class="fas fa-exclamation-triangle me-2"></i>
                         <strong>Turma cancelada:</strong> Não é possível editar presenças de turmas canceladas.
                     </div>
-                    <?php elseif ($userType === 'instrutor' && !$canEdit): ?>
+                    <?php elseif ($mostrarAlertaInstrutor): ?>
                     <div class="alert alert-info mb-3" role="alert">
                         <i class="fas fa-lock me-2"></i>
-                        <strong>Sem permissão:</strong> Você não é o instrutor desta aula. Apenas visualização.
+                        <strong>Sem permissão:</strong> <?php echo htmlspecialchars($mensagemAlertaInstrutor ?? 'Você não é o instrutor desta aula. Apenas visualização.'); ?>
                     </div>
                     <?php endif; ?>
                 <?php endif; ?>
@@ -585,8 +700,7 @@ if ($aulaId) {
                         <!-- Links Contextuais -->
                         <div class="btn-group" role="group">
                             <?php 
-                            // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Link para diário usando roteador admin
-                            $origem = $_GET['origem'] ?? null;
+                            // Link para diário usando roteador admin
                             $origemParam = $origem ? '&origem=' . urlencode($origem) : '';
                             $urlDiario = 'index.php?page=turma-diario&turma_id=' . (int)$turmaId . ($aulaId ? '&aula_id=' . (int)$aulaId : '') . $origemParam;
                             ?>
@@ -595,27 +709,32 @@ if ($aulaId) {
                                 <i class="fas fa-book-open"></i> Diário
                             </a>
                             <?php if ($userType === 'admin'): ?>
+                                <!-- AJUSTE 2025-12 - Botão Relatório temporariamente desabilitado (página não existe) -->
+                                <!-- TODO: Implementar página de relatórios ou remover botão permanentemente -->
+                                <!--
                                 <a href="turma-relatorios.php?turma_id=<?= $turmaId ?>" 
                                    class="btn btn-outline-success btn-sm" title="Relatórios da turma">
                                     <i class="fas fa-chart-bar"></i> Relatórios
                                 </a>
+                                -->
                             <?php endif; ?>
                             <?php 
-                            // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Botão Voltar respeitando origem
-                            $origem = $_GET['origem'] ?? null;
+                            // Botão Voltar respeitando origem
+                            $backUrl   = 'index.php?page=turmas-teoricas&acao=detalhes&turma_id=' . (int)$turmaId;
+                            $backTitle = 'Voltar para Gestão de Turmas';
+
                             if ($origem === 'instrutor') {
-                                $backUrl = (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '') . '/instrutor/dashboard.php';
+                                $backUrl   = $backUrlInstrutor;
                                 $backTitle = 'Voltar para Dashboard do Instrutor';
-                            } else {
-                                $backUrl = 'index.php?page=turmas-teoricas&acao=detalhes&turma_id=' . (int)$turmaId;
-                                $backTitle = 'Voltar para Gestão de Turmas';
                             }
                             ?>
-                            <a href="<?php echo htmlspecialchars($backUrl); ?>" class="btn btn-outline-secondary btn-sm" title="<?php echo htmlspecialchars($backTitle); ?>">
+                            <a href="<?php echo htmlspecialchars($backUrl); ?>"
+                               class="btn btn-outline-secondary btn-sm"
+                               title="<?php echo htmlspecialchars($backTitle); ?>">
                                 <i class="fas fa-arrow-left"></i> Voltar
                             </a>
                         </div>
-                        <?php if ($canEdit): ?>
+                        <?php if (!$modoSomenteLeitura && $canEdit): ?>
                         <button class="btn btn-primary ms-2" onclick="salvarChamada()">
                             <i class="fas fa-save"></i> Salvar Chamada
                         </button>
@@ -682,7 +801,7 @@ if ($aulaId) {
             </div>
 
             <!-- Ações em Lote -->
-            <?php if ($canEdit && !empty($alunos)): ?>
+            <?php if (!$modoSomenteLeitura && $canEdit && !empty($alunos)): ?>
             <div class="chamada-card">
                 <div class="card-header">
                     <h5 class="mb-0">
@@ -710,7 +829,7 @@ if ($aulaId) {
                 <div class="card-header">
                     <h5 class="mb-0">
                         <i class="fas fa-users"></i> Lista de Chamada
-                        <?php if (!$canEdit): ?>
+                        <?php if ($modoSomenteLeitura): ?>
                         <span class="badge bg-warning ms-2">Somente Leitura</span>
                         <?php endif; ?>
                     </h5>
@@ -752,15 +871,11 @@ if ($aulaId) {
                                 </div>
                                 <div class="col-6 col-md-2 mb-2 mb-md-0">
                                     <?php 
-                                    // Buscar frequência do aluno (priorizar frequencia_percentual direto do aluno, depois da API)
+                                    // AJUSTE 2025-12 - Buscar frequência do aluno (priorizar API, depois frequencia_percentual)
                                     $percentualFreq = null;
                                     
-                                    // Primeiro, tentar usar frequencia_percentual direto do aluno (já vem na query)
-                                    if (isset($aluno['frequencia_percentual']) && $aluno['frequencia_percentual'] !== null) {
-                                        $percentualFreq = (float)$aluno['frequencia_percentual'];
-                                    } 
-                                    // Se não tiver, tentar buscar da API de frequência
-                                    elseif ($frequenciaGeral && isset($frequenciaGeral['frequencias_alunos'])) {
+                                    // Primeiro, tentar buscar da API de frequência (mais confiável e atualizado)
+                                    if ($frequenciaGeral && isset($frequenciaGeral['frequencias_alunos'])) {
                                         foreach ($frequenciaGeral['frequencias_alunos'] as $freq) {
                                             if ($freq['aluno']['id'] == $aluno['id']) {
                                                 $percentualFreq = (float)$freq['estatisticas']['percentual_frequencia'];
@@ -769,7 +884,37 @@ if ($aulaId) {
                                         }
                                     }
                                     
-                                    if ($percentualFreq !== null):
+                                    // Se não encontrou na API, usar frequencia_percentual direto do aluno (fallback)
+                                    if ($percentualFreq === null && isset($aluno['frequencia_percentual']) && $aluno['frequencia_percentual'] !== null) {
+                                        $percentualFreq = (float)$aluno['frequencia_percentual'];
+                                    }
+                                    
+                                    // Se ainda não tem, calcular diretamente das presenças (último recurso)
+                                    if ($percentualFreq === null && $aulaId) {
+                                        try {
+                                            $presencasAluno = $db->fetch("
+                                                SELECT 
+                                                    COUNT(CASE WHEN tp.presente = 1 THEN 1 END) as total_presentes,
+                                                    COUNT(DISTINCT taa.id) as total_aulas
+                                                FROM turma_aulas_agendadas taa
+                                                LEFT JOIN turma_presencas tp ON (
+                                                    tp.turma_aula_id = taa.id 
+                                                    AND tp.turma_id = ? 
+                                                    AND tp.aluno_id = ?
+                                                )
+                                                WHERE taa.turma_id = ? 
+                                                AND taa.status IN ('agendada', 'realizada')
+                                            ", [$turmaId, $aluno['id'], $turmaId]);
+                                            
+                                            if ($presencasAluno && $presencasAluno['total_aulas'] > 0) {
+                                                $percentualFreq = ($presencasAluno['total_presentes'] / $presencasAluno['total_aulas']) * 100;
+                                            }
+                                        } catch (Exception $e) {
+                                            error_log("Erro ao calcular frequência do aluno {$aluno['id']}: " . $e->getMessage());
+                                        }
+                                    }
+                                    
+                                    if ($percentualFreq !== null && $percentualFreq >= 0):
                                         $frequenciaMinima = isset($turma['frequencia_minima']) ? (float)$turma['frequencia_minima'] : 75.0;
                                         $classe = 'baixo';
                                         if ($percentualFreq >= $frequenciaMinima) {
@@ -783,23 +928,21 @@ if ($aulaId) {
                                         </span>
                                     <?php else: ?>
                                         <span class="frequencia-badge baixo" id="freq-badge-<?= $aluno['id'] ?>">
-                                            N/A
+                                            0,0%
                                         </span>
                                     <?php endif; ?>
                                 </div>
                                 
                                 <!-- Botões de Presença -->
                                 <div class="col-12 col-md-4 mt-2 mt-md-0">
-                                    <?php if ($canEdit): ?>
+                                    <?php if (!$modoSomenteLeitura): ?>
                                     <div class="btn-group w-100 w-md-auto" role="group">
                                         <button class="btn btn-sm btn-outline-success btn-presenca <?= $aluno['presenca_id'] && $aluno['presente'] ? 'active' : '' ?>" 
-                                                onclick="marcarPresenca(<?= $aluno['id'] ?>, true)"
-                                                <?= !$canEdit ? 'disabled' : '' ?>>
+                                                onclick="marcarPresenca(<?= $aluno['id'] ?>, true)">
                                             <i class="fas fa-check"></i> <span class="d-none d-md-inline">Presente</span>
                                         </button>
                                         <button class="btn btn-sm btn-outline-danger btn-presenca <?= $aluno['presenca_id'] && !$aluno['presente'] ? 'active' : '' ?>" 
-                                                onclick="marcarPresenca(<?= $aluno['id'] ?>, false)"
-                                                <?= !$canEdit ? 'disabled' : '' ?>>
+                                                onclick="marcarPresenca(<?= $aluno['id'] ?>, false)">
                                             <i class="fas fa-times"></i> <span class="d-none d-md-inline">Ausente</span>
                                         </button>
                                     </div>
@@ -877,8 +1020,27 @@ if ($aulaId) {
         let turmaId = <?= $turmaId ?>;
         let aulaId = <?= $aulaId ?>;
         let canEdit = <?= $canEdit ? 'true' : 'false' ?>;
+        let modoSomenteLeitura = <?= $modoSomenteLeitura ? 'true' : 'false' ?>;
         let presencaPendente = null;
         let alteracoesPendentes = false;
+        const API_TURMA_PRESENCAS = <?php echo json_encode($apiTurmaPresencasUrl); ?>;
+        const API_TURMA_FREQUENCIA = <?php echo json_encode($apiTurmaFrequenciaUrl); ?>;
+        const ORIGEM_FLUXO = <?php echo json_encode($origem); ?>;
+        
+        // AJUSTE 2025-12 - Debug: Verificar constantes
+        console.log('[Frequência] Constantes definidas:', {
+            API_TURMA_PRESENCAS: API_TURMA_PRESENCAS,
+            API_TURMA_FREQUENCIA: API_TURMA_FREQUENCIA,
+            turmaId: turmaId,
+            aulaId: aulaId
+        });
+        
+        // Validar que API_TURMA_FREQUENCIA está definida e não vazia
+        if (typeof API_TURMA_FREQUENCIA === 'undefined' || !API_TURMA_FREQUENCIA) {
+            console.error('[Frequência] ERRO CRÍTICO: API_TURMA_FREQUENCIA não está definida ou está vazia!');
+        } else {
+            console.log('[Frequência] API_TURMA_FREQUENCIA válida:', API_TURMA_FREQUENCIA);
+        }
 
         // Função para mostrar toast
         function mostrarToast(mensagem, tipo = 'success') {
@@ -912,7 +1074,7 @@ if ($aulaId) {
 
         // Função para marcar presença individual
         function marcarPresenca(alunoId, presente) {
-            if (!canEdit) {
+            if (modoSomenteLeitura || !canEdit) {
                 mostrarToast('Você não tem permissão para editar presenças', 'error');
                 return;
             }
@@ -932,82 +1094,164 @@ if ($aulaId) {
 
         // Função para criar nova presença
         function criarPresenca(alunoId, presente) {
+            // AJUSTE 2025-12 - Garantir que admin/secretaria sempre enviem origem correta
             const dados = {
                 turma_id: turmaId,
                 turma_aula_id: aulaId,
                 aluno_id: alunoId,
                 presente: presente
             };
+            
+            // Incluir origem: se ORIGEM_FLUXO existe e não está vazio, usar; senão, usar 'admin' para admin/secretaria
+            if (ORIGEM_FLUXO && ORIGEM_FLUXO.trim() !== '') {
+                dados.origem = ORIGEM_FLUXO;
+            } else {
+                // Admin/secretaria sem origem explícita: usar 'admin'
+                dados.origem = 'admin';
+            }
 
-            fetch('/admin/api/turma-presencas.php', {
+            fetch(API_TURMA_PRESENCAS, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(dados)
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    mostrarToast('Presença registrada com sucesso!');
-                    atualizarInterfaceAluno(alunoId, presente, data.presenca_id);
-                    alteracoesPendentes = true;
-                } else {
-                    mostrarToast('Erro ao registrar presença: ' + data.message, 'error');
+            .then(async response => {
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Resposta não é JSON válido:', text);
+                    throw new Error('Erro de comunicação com o servidor. Tente novamente.');
                 }
+                if (!data.success) {
+                    throw new Error(data.message || 'Erro ao registrar presença.');
+                }
+                return data;
+            })
+            .then(data => {
+                mostrarToast('Presença registrada com sucesso!');
+                atualizarInterfaceAluno(alunoId, presente, data.presenca_id);
+                alteracoesPendentes = true;
+                // AJUSTE 2025-12 - Atualizar frequência do aluno após criar presença
+                atualizarFrequenciaAluno(alunoId);
             })
             .catch(error => {
                 console.error('Erro:', error);
-                mostrarToast('Erro de conexão. Tente novamente.', 'error');
+                mostrarToast(error.message || 'Erro de conexão. Tente novamente.', 'error');
             });
         }
 
         // Função para atualizar presença existente
         function atualizarPresenca(presencaId, presente) {
+            // AJUSTE 2025-12 - Garantir que admin/secretaria sempre enviem origem correta
             const dados = {
                 presente: presente
             };
+            
+            // Incluir origem: se ORIGEM_FLUXO existe e não está vazio, usar; senão, usar 'admin' para admin/secretaria
+            const origemParaEnvio = (ORIGEM_FLUXO && ORIGEM_FLUXO.trim() !== '') ? ORIGEM_FLUXO : 'admin';
+            dados.origem = origemParaEnvio;
+            
+            // Montar URL com query string
+            const params = { id: presencaId };
+            params.origem = origemParaEnvio;
+            const url = API_TURMA_PRESENCAS + '?' + new URLSearchParams(params).toString();
 
-            fetch(`/admin/api/turma-presencas.php?id=${presencaId}`, {
+            fetch(url, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(dados)
             })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    mostrarToast('Presença atualizada com sucesso!');
-                    const alunoItem = document.querySelector(`[data-presenca-id="${presencaId}"]`);
-                    const alunoId = alunoItem.dataset.alunoId;
-                    atualizarInterfaceAluno(alunoId, presente, presencaId);
-                    alteracoesPendentes = true;
-                    // Atualizar frequência do aluno após atualizar presença
-                    atualizarFrequenciaAluno(alunoId);
-                } else {
-                    mostrarToast('Erro ao atualizar presença: ' + data.message, 'error');
+            .then(async response => {
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Resposta não é JSON válido:', text);
+                    throw new Error('Erro de comunicação com o servidor. Tente novamente.');
                 }
+                if (!data.success) {
+                    throw new Error(data.message || 'Erro ao atualizar presença.');
+                }
+                return data;
+            })
+            .then(data => {
+                mostrarToast('Presença atualizada com sucesso!');
+                const alunoItem = document.querySelector(`[data-presenca-id="${presencaId}"]`);
+                const alunoId = alunoItem.dataset.alunoId;
+                atualizarInterfaceAluno(alunoId, presente, presencaId);
+                alteracoesPendentes = true;
+                // Atualizar frequência do aluno após atualizar presença
+                atualizarFrequenciaAluno(alunoId);
             })
             .catch(error => {
                 console.error('Erro:', error);
-                mostrarToast('Erro de conexão. Tente novamente.', 'error');
+                mostrarToast(error.message || 'Erro de conexão. Tente novamente.', 'error');
             });
         }
         
-        // Função para atualizar frequência do aluno após marcar presença
+        // AJUSTE 2025-12 - Função para atualizar frequência do aluno após marcar presença
         function atualizarFrequenciaAluno(alunoId) {
-            // Buscar frequência atualizada via API
-            fetch(`/admin/api/turma-frequencia.php?turma_id=${turmaId}&aluno_id=${alunoId}`)
-                .then(response => response.json())
+            console.log('[Frequência] Iniciando atualização para aluno:', alunoId, 'turma:', turmaId);
+            
+            if (!turmaId || !alunoId) {
+                console.warn('[Frequência] Turma ID ou Aluno ID não disponível:', { turmaId, alunoId });
+                return;
+            }
+            
+            // Verificar se a constante está definida
+            if (typeof API_TURMA_FREQUENCIA === 'undefined') {
+                console.error('[Frequência] API_TURMA_FREQUENCIA não está definida!');
+                return;
+            }
+            
+            // Buscar frequência atualizada via API usando caminho correto
+            const url = `${API_TURMA_FREQUENCIA}?turma_id=${turmaId}&aluno_id=${alunoId}`;
+            console.log('[Frequência] Fazendo requisição para:', url);
+            
+            fetch(url)
+                .then(async response => {
+                    console.log('[Frequência] Resposta recebida:', response.status, response.statusText);
+                    
+                    // AJUSTE 2025-12 - Verificar status HTTP primeiro
+                    if (!response.ok) {
+                        const text = await response.text();
+                        console.error('[Frequência] Erro HTTP:', response.status, text.substring(0, 200));
+                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                    }
+                    
+                    // Verificar se a resposta é JSON válido
+                    const contentType = response.headers.get('content-type') || '';
+                    if (!contentType.includes('application/json')) {
+                        const text = await response.text();
+                        console.error('[Frequência] Resposta não é JSON. Content-Type:', contentType);
+                        console.error('[Frequência] Resposta completa:', text.substring(0, 500));
+                        throw new Error(`Resposta não é JSON (status: ${response.status}, Content-Type: ${contentType})`);
+                    }
+                    
+                    return response.json();
+                })
                 .then(data => {
+                    console.log('[Frequência] Dados recebidos:', data);
+                    
                     if (data.success && data.data && data.data.estatisticas) {
                         const percentual = data.data.estatisticas.percentual_frequencia;
+                        console.log('[Frequência] Percentual calculado:', percentual);
+                        
                         const badgeElement = document.getElementById(`freq-badge-${alunoId}`);
+                        console.log('[Frequência] Elemento badge encontrado:', badgeElement);
                         
                         if (badgeElement) {
-                            // Atualizar valor
-                            badgeElement.textContent = percentual.toFixed(1) + '%';
+                            // Atualizar valor - usar formatação brasileira (vírgula)
+                            const novoValor = percentual.toFixed(1).replace('.', ',') + '%';
+                            console.log('[Frequência] Atualizando badge de', badgeElement.textContent, 'para', novoValor);
+                            badgeElement.textContent = novoValor;
                             
                             // Atualizar classe (alto/médio/baixo)
                             badgeElement.className = 'frequencia-badge ';
@@ -1020,12 +1264,28 @@ if ($aulaId) {
                             } else {
                                 badgeElement.className += 'baixo';
                             }
+                            
+                            console.log('[Frequência] Badge atualizado com sucesso!');
+                        } else {
+                            console.warn('[Frequência] Elemento badge não encontrado para aluno:', alunoId, 'ID esperado: freq-badge-' + alunoId);
                         }
+                    } else {
+                        console.warn('[Frequência] Resposta da API não contém dados de frequência:', data);
                     }
                 })
                 .catch(error => {
-                    console.error('Erro ao atualizar frequência:', error);
-                    // Não mostrar erro ao usuário, apenas logar
+                    console.error('[Frequência] Erro ao atualizar frequência do aluno:', error);
+                    console.error('[Frequência] URL tentada:', url);
+                    // Não mostrar erro ao usuário para não poluir a interface
+                    // A presença já foi registrada com sucesso, a frequência pode ser atualizada depois
+                    // Tentar recarregar a página após um delay para pegar frequência atualizada
+                    // setTimeout(() => {
+                    //     const badgeElement = document.getElementById(`freq-badge-${alunoId}`);
+                    //     if (badgeElement && badgeElement.textContent === '0,0%') {
+                    //         console.log('[Frequência] Tentando recarregar frequência após erro...');
+                    //         // Não recarregar automaticamente, deixar usuário recarregar se necessário
+                    //     }
+                    // }, 2000);
                 });
         }
 
@@ -1057,7 +1317,7 @@ if ($aulaId) {
 
         // Função para marcar todos os alunos
         function marcarTodos(tipo) {
-            if (!canEdit) {
+            if (modoSomenteLeitura || !canEdit) {
                 mostrarToast('Você não tem permissão para editar presenças', 'error');
                 return;
             }
@@ -1084,45 +1344,58 @@ if ($aulaId) {
 
             // Processar novas presenças em lote
             if (presencas.length > 0) {
+                // AJUSTE 2025-12 - Garantir origem correta para admin/secretaria
+                const origemParaEnvio = (ORIGEM_FLUXO && ORIGEM_FLUXO.trim() !== '') ? ORIGEM_FLUXO : 'admin';
+                
                 const dados = {
                     turma_id: turmaId,
-                    aula_id: aulaId, // Usar aula_id (nome correto)
-                    presencas: presencas
+                    turma_aula_id: aulaId, // AJUSTE: usar turma_aula_id (nome correto)
+                    presencas: presencas,
+                    origem: origemParaEnvio
                 };
 
-                fetch('/admin/api/turma-presencas.php', {
+                fetch(API_TURMA_PRESENCAS, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify(dados)
                 })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        mostrarToast(`Presenças processadas: ${data.sucessos} sucessos`);
-                        if (data.erros && data.erros.length > 0) {
-                            mostrarToast('Alguns erros: ' + data.erros.join(', '), 'error');
-                        }
-                        // Atualizar frequências de todos os alunos processados
-                        presencas.forEach(presenca => {
-                            atualizarFrequenciaAluno(presenca.aluno_id);
-                        });
-                        recarregarPagina();
-                    } else {
-                        mostrarToast('Erro ao processar presenças: ' + data.message, 'error');
+                .then(async response => {
+                    const text = await response.text();
+                    let data;
+                    try {
+                        data = JSON.parse(text);
+                    } catch (e) {
+                        console.error('Resposta não é JSON válido:', text);
+                        throw new Error('Erro de comunicação com o servidor. Tente novamente.');
                     }
+                    if (!data.success) {
+                        throw new Error(data.message || 'Erro ao processar presenças.');
+                    }
+                    return data;
+                })
+                .then(data => {
+                    mostrarToast(`Presenças processadas: ${data.sucessos} sucessos`);
+                    if (data.erros && data.erros.length > 0) {
+                        mostrarToast('Alguns erros: ' + data.erros.join(', '), 'error');
+                    }
+                    // Atualizar frequências de todos os alunos processados
+                    presencas.forEach(presenca => {
+                        atualizarFrequenciaAluno(presenca.aluno_id);
+                    });
+                    recarregarPagina();
                 })
                 .catch(error => {
                     console.error('Erro:', error);
-                    mostrarToast('Erro de conexão. Tente novamente.', 'error');
+                    mostrarToast(error.message || 'Erro de conexão. Tente novamente.', 'error');
                 });
             }
         }
 
         // Função para limpar todas as marcações
         function limparTodos() {
-            if (!canEdit) {
+            if (modoSomenteLeitura || !canEdit) {
                 mostrarToast('Você não tem permissão para editar presenças', 'error');
                 return;
             }
@@ -1137,8 +1410,14 @@ if ($aulaId) {
             alunos.forEach(aluno => {
                 const presencaId = aluno.dataset.presencaId;
                 if (presencaId) {
+                    // Montar URL com query string
+                    const params = { id: presencaId };
+                    if (ORIGEM_FLUXO) {
+                        params.origem = ORIGEM_FLUXO;
+                    }
+                    const url = API_TURMA_PRESENCAS + '?' + new URLSearchParams(params).toString();
                     promises.push(
-                        fetch(`/admin/api/turma-presencas.php?id=${presencaId}`, {
+                        fetch(url, {
                             method: 'DELETE'
                         })
                     );
@@ -1146,9 +1425,17 @@ if ($aulaId) {
             });
 
             Promise.all(promises)
-            .then(responses => {
-                const results = responses.map(r => r.json());
-                return Promise.all(results);
+            .then(async responses => {
+                const results = await Promise.all(responses.map(async r => {
+                    const text = await r.text();
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        console.error('Resposta não é JSON válido:', text);
+                        throw new Error('Erro de comunicação com o servidor.');
+                    }
+                }));
+                return results;
             })
             .then(data => {
                 mostrarToast('Todas as marcações foram removidas!');
@@ -1156,7 +1443,7 @@ if ($aulaId) {
             })
             .catch(error => {
                 console.error('Erro:', error);
-                mostrarToast('Erro ao limpar marcações', 'error');
+                mostrarToast(error.message || 'Erro ao limpar marcações', 'error');
             });
         }
 

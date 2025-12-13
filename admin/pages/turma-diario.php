@@ -16,11 +16,20 @@ if (!defined('ADMIN_ROUTING')) {
 // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Parâmetros da URL
 $turmaId = $_GET['turma_id'] ?? null;
 $aulaId = $_GET['aula_id'] ?? null;
-$origem = $_GET['origem'] ?? null;
+$origem = $_GET['origem'] ?? '';
+
+// Base da aplicação (raiz do projeto, sem /admin)
+$baseApp = rtrim(dirname(dirname($_SERVER['SCRIPT_NAME'])), '/');
+// URL padrão de volta para o dashboard do instrutor
+$backUrlInstrutor = $baseApp . '/instrutor/dashboard.php';
 
 if (!$turmaId) {
-    echo '<div class="alert alert-danger">ID da turma não informado.</div>';
-    return;
+    if ($origem === 'instrutor') {
+        header('Location: ' . $backUrlInstrutor);
+    } else {
+        header('Location: index.php?page=turmas-teoricas');
+    }
+    exit();
 }
 
 // Buscar dados da turma
@@ -36,62 +45,133 @@ $turma = $db->fetch("
 ", [$turmaId]);
 
 if (!$turma) {
-    // Buscar turmas disponíveis para mostrar opções
-    $turmasDisponiveis = $db->fetchAll("
-        SELECT 
-            t.id,
-            t.nome,
-            t.status,
-            t.curso_tipo,
-            s.nome as sala_nome,
-            c.nome as cfc_nome
-        FROM turmas_teoricas t
-        LEFT JOIN salas s ON t.sala_id = s.id
-        LEFT JOIN cfcs c ON t.cfc_id = c.id
-        ORDER BY t.nome ASC
-    ");
-    
-    echo '<div class="alert alert-danger">
-        <h5><i class="fas fa-exclamation-triangle"></i> Turma não encontrada</h5>
-        <p>Não foi possível encontrar a turma com ID ' . htmlspecialchars($turmaId) . '.</p>';
-    
-    if (!empty($turmasDisponiveis)) {
-        echo '<h6>Turmas disponíveis:</h6>
-        <div class="row">';
-        
-        foreach ($turmasDisponiveis as $turmaDisponivel) {
-            echo '<div class="col-md-6 mb-2">
-                <div class="card">
-                    <div class="card-body p-2">
-                        <h6 class="card-title mb-1">
-                            <a href="?page=turma-diario&turma_id=' . $turmaDisponivel['id'] . '" class="text-decoration-none">
-                                ' . htmlspecialchars($turmaDisponivel['nome']) . '
-                            </a>
-                        </h6>
-                        <small class="text-muted">
-                            Curso: ' . htmlspecialchars($turmaDisponivel['curso_tipo'] ?? 'Não definido') . '<br>
-                            Sala: ' . htmlspecialchars($turmaDisponivel['sala_nome'] ?? 'Não definida') . '<br>
-                            CFC: ' . htmlspecialchars($turmaDisponivel['cfc_nome'] ?? 'Não definido') . '<br>
-                            Status: <span class="badge bg-' . ($turmaDisponivel['status'] === 'ativo' ? 'success' : 'info') . '">' . ucfirst($turmaDisponivel['status']) . '</span>
-                        </small>
-                    </div>
-                </div>
-            </div>';
-        }
-        
-        echo '</div>';
+    if ($origem === 'instrutor') {
+        header('Location: ' . $backUrlInstrutor);
     } else {
-        echo '<p><i class="fas fa-info-circle"></i> Nenhuma turma cadastrada no sistema ainda.</p>';
+        header('Location: index.php?page=turmas-teoricas');
     }
-    
-    echo '</div>';
-    return;
+    exit();
 }
 
-// Verificar se usuário tem permissão para esta turma
-$canEdit = ($userType === 'admin' || $userType === 'instrutor');
-if ($userType === 'instrutor' && $turma['criado_por'] != $userId) {
-    $canEdit = false;
+// AJUSTE IDENTIDADE INSTRUTOR - Lógica de permissão refinada (mesma de turma-chamada.php)
+// Variáveis de controle claras
+$modoSomenteLeitura = false;
+$mostrarAlertaInstrutor = false;
+$canEdit = true; // Valor padrão: pode editar
+
+// Quando origem=instrutor, usar identidade do instrutor para verificar permissão
+if ($origem === 'instrutor' || $userType === 'instrutor') {
+    // Obter instrutor_id real do usuário logado
+    $instrutorAtualId = getCurrentInstrutorId($userId);
+    
+    // Verificar se o instrutor tem aulas nesta turma
+    if ($instrutorAtualId) {
+        $temAula = $db->fetch(
+            "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND instrutor_id = ?",
+            [$turmaId, $instrutorAtualId]
+        );
+        if (!$temAula || $temAula['total'] == 0) {
+            $modoSomenteLeitura = true;
+            $mostrarAlertaInstrutor = true;
+            $canEdit = false;
+        } else {
+            $modoSomenteLeitura = false;
+            $mostrarAlertaInstrutor = false;
+            $canEdit = true;
+        }
+    } else {
+        // Não encontrou instrutor_id, modo somente leitura
+        $modoSomenteLeitura = true;
+        $mostrarAlertaInstrutor = true;
+        $canEdit = false;
+    }
+    
+    // Verificar regras adicionais: turma concluída/cancelada
+    if ($turma['status'] === 'cancelada') {
+        $modoSomenteLeitura = true;
+        $mostrarAlertaInstrutor = false;
+        $canEdit = false;
+    } elseif ($turma['status'] === 'concluida') {
+        $modoSomenteLeitura = true;
+        $mostrarAlertaInstrutor = false;
+        $canEdit = false;
+    }
+} else {
+    // Fluxo admin normal - sempre pode editar (exceto turmas canceladas)
+    $modoSomenteLeitura = false;
+    $mostrarAlertaInstrutor = false;
+    $canEdit = true;
+    
+    // Verificar regras adicionais: turma cancelada
+    if ($turma['status'] === 'cancelada') {
+        $modoSomenteLeitura = true;
+        $canEdit = false;
+    }
+}
+
+// AJUSTE 2025-12 - Buscar aulas agendadas da turma para exibir no diário
+// Enriquecido com informações de presença
+$aulasAgendadas = [];
+try {
+    // Buscar total de alunos matriculados na turma
+    $totalAlunosTurma = $db->fetch("
+        SELECT COUNT(*) as total
+        FROM turma_matriculas
+        WHERE turma_id = ? 
+        AND status IN ('matriculado', 'cursando', 'concluido')
+    ", [$turmaId]);
+    $totalAlunos = (int)($totalAlunosTurma['total'] ?? 0);
+    
+    // Buscar aulas com contagem de presenças
+    $aulasAgendadas = $db->fetchAll("
+        SELECT 
+            taa.id,
+            taa.nome_aula,
+            taa.disciplina,
+            taa.data_aula,
+            taa.hora_inicio,
+            taa.hora_fim,
+            taa.status as aula_status,
+            taa.ordem_global,
+            i.nome as instrutor_nome,
+            COUNT(DISTINCT CASE WHEN tp.presente = 1 THEN tp.id END) as total_presentes,
+            COUNT(DISTINCT CASE WHEN tp.presente = 0 THEN tp.id END) as total_ausentes,
+            COUNT(DISTINCT tp.id) as total_registrados
+        FROM turma_aulas_agendadas taa
+        LEFT JOIN instrutores i ON taa.instrutor_id = i.id
+        LEFT JOIN turma_presencas tp ON (
+            tp.turma_aula_id = taa.id 
+            AND tp.turma_id = taa.turma_id
+        )
+        WHERE taa.turma_id = ?
+        GROUP BY taa.id, taa.nome_aula, taa.disciplina, taa.data_aula, 
+                 taa.hora_inicio, taa.hora_fim, taa.status, taa.ordem_global, i.nome
+        ORDER BY taa.ordem_global ASC, taa.data_aula ASC, taa.hora_inicio ASC
+    ", [$turmaId]);
+    
+    // Adicionar total de alunos e calcular status da chamada para cada aula
+    foreach ($aulasAgendadas as &$aula) {
+        $aula['total_alunos'] = $totalAlunos;
+        $aula['total_presentes'] = (int)($aula['total_presentes'] ?? 0);
+        $aula['total_ausentes'] = (int)($aula['total_ausentes'] ?? 0);
+        $aula['total_registrados'] = (int)($aula['total_registrados'] ?? 0);
+        
+        // Determinar status da chamada
+        if ($aula['total_registrados'] == 0) {
+            $aula['status_chamada'] = 'nao_iniciada';
+            $aula['status_chamada_label'] = 'Não iniciada';
+        } elseif ($aula['total_registrados'] < $totalAlunos) {
+            $aula['status_chamada'] = 'em_andamento';
+            $aula['status_chamada_label'] = 'Em andamento';
+        } else {
+            $aula['status_chamada'] = 'concluida';
+            $aula['status_chamada_label'] = 'Concluída';
+        }
+    }
+    unset($aula); // Limpar referência
+} catch (Exception $e) {
+    error_log("Erro ao buscar aulas agendadas: " . $e->getMessage());
+    $aulasAgendadas = [];
 }
 
 // Buscar alunos matriculados na turma
@@ -128,7 +208,9 @@ try {
 }
 
 // Processar formulário de edição
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
+// CORREÇÃO 2025-01: Apenas admin/secretaria podem editar turma
+$podeEditarTurma = ($userType === 'admin' || $userType === 'secretaria') && $canEdit;
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $podeEditarTurma) {
     $action = $_POST['action'] ?? '';
     
     if ($action === 'editar_turma') {
@@ -186,13 +268,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
         </div>
         <nav aria-label="Navegação da página">
             <?php 
-            // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Botão Voltar respeitando origem
+            // Botão Voltar respeitando origem
+            $backUrl   = 'index.php?page=turmas-teoricas&acao=detalhes&turma_id=' . (int)$turmaId;
+            $backTitle = 'Voltar para Gestão de Turmas';
+            
             if ($origem === 'instrutor') {
-                $backUrl = (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '') . '/instrutor/dashboard.php';
+                $backUrl   = $backUrlInstrutor;
                 $backTitle = 'Voltar para Dashboard do Instrutor';
-            } else {
-                $backUrl = '?page=turmas-teoricas';
-                $backTitle = 'Voltar para a lista de turmas';
             }
             ?>
             <a href="<?php echo htmlspecialchars($backUrl); ?>" 
@@ -207,19 +289,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
     </div>
 </header>
 
+<!-- Aviso de turma concluída/cancelada ou permissão de instrutor -->
+<?php if (!$canEdit || $mostrarAlertaInstrutor): ?>
+    <?php if ($turma['status'] === 'concluida'): ?>
+    <div class="alert alert-warning mb-3" role="alert">
+        <i class="fas fa-info-circle me-2"></i>
+        <strong>Turma concluída:</strong> Esta turma está concluída. Apenas administração pode ajustar informações.
+    </div>
+    <?php elseif ($turma['status'] === 'cancelada'): ?>
+    <div class="alert alert-danger mb-3" role="alert">
+        <i class="fas fa-exclamation-triangle me-2"></i>
+        <strong>Turma cancelada:</strong> Não é possível editar informações de turmas canceladas.
+    </div>
+    <?php elseif ($mostrarAlertaInstrutor): ?>
+    <div class="alert alert-info mb-3" role="alert">
+        <i class="fas fa-lock me-2"></i>
+        <strong>Sem permissão:</strong> Você não é o instrutor desta turma. Apenas visualização.
+    </div>
+    <?php endif; ?>
+<?php endif; ?>
+
 <!-- Detalhes da Turma -->
 <section class="card mb-4" aria-labelledby="turma-detalhes-title">
     <div class="card-header d-flex justify-content-between align-items-center">
         <div class="d-flex align-items-center">
             <?php 
-            // AJUSTE INSTRUTOR - FLUXO CHAMADA/DIARIO - Botão Voltar respeitando origem (segundo botão)
-            if ($origem === 'instrutor') {
-                $backUrl2 = (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : '') . '/instrutor/dashboard.php';
-                $backTitle2 = 'Voltar para Dashboard do Instrutor';
-            } else {
-                $backUrl2 = '?page=turmas-teoricas';
-                $backTitle2 = 'Voltar para gestão de turmas';
-            }
+            // Segundo botão Voltar (reaproveita variáveis do primeiro)
+            $backUrl2   = $backUrl;
+            $backTitle2 = $backTitle;
             ?>
             <a href="<?php echo htmlspecialchars($backUrl2); ?>" 
                class="btn btn-outline-secondary btn-sm me-3" 
@@ -233,7 +330,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
                 Detalhes da Turma
             </h2>
         </div>
-        <?php if ($canEdit): ?>
+        <?php 
+        // CORREÇÃO 2025-01: Botão "Editar Turma" apenas para admin/secretaria
+        // Instrutores não devem editar informações da turma, apenas visualizar e marcar presenças
+        $podeEditarTurma = ($userType === 'admin' || $userType === 'secretaria') && $canEdit;
+        if ($podeEditarTurma): 
+        ?>
         <button type="button" 
                 class="btn btn-primary btn-sm" 
                 onclick="abrirModalEditarTurma()"
@@ -397,17 +499,150 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
                                 <?= ucfirst($aluno['status_matricula']) ?>
                             </span>
                         </td>
-                        <?php if ($canEdit): ?>
                         <td role="cell" class="text-center">
-                            <a href="?page=alunos&action=view&id=<?= $aluno['id'] ?>" 
-                               class="btn btn-sm btn-outline-primary" 
-                               title="Ver detalhes do aluno <?= htmlspecialchars($aluno['nome']) ?>"
-                               aria-label="Ver detalhes do aluno <?= htmlspecialchars($aluno['nome']) ?>">
-                                <i class="fas fa-eye" aria-hidden="true"></i>
-                                <span class="visually-hidden">Ver detalhes</span>
-                            </a>
+                            <?php if ($origem === 'instrutor'): ?>
+                                <!-- Instrutor: usar modal AJAX com endpoint restrito -->
+                                <button type="button" 
+                                        class="btn btn-sm btn-outline-primary" 
+                                        onclick="visualizarAlunoInstrutor(<?= $aluno['id'] ?>, <?= $turmaId ?>)"
+                                        title="Ver detalhes do aluno <?= htmlspecialchars($aluno['nome']) ?>"
+                                        aria-label="Ver detalhes do aluno <?= htmlspecialchars($aluno['nome']) ?>">
+                                    <i class="fas fa-eye" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Ver detalhes</span>
+                                </button>
+                            <?php elseif ($canEdit): ?>
+                                <!-- AJUSTE 2025-12 - Admin/Secretaria: ir para histórico do aluno (com contexto da turma) -->
+                                <a href="?page=historico-aluno&id=<?= $aluno['id'] ?>&turma_id=<?= $turmaId ?>" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   title="Ver histórico do aluno <?= htmlspecialchars($aluno['nome']) ?>"
+                                   aria-label="Ver histórico do aluno <?= htmlspecialchars($aluno['nome']) ?>">
+                                    <i class="fas fa-eye" aria-hidden="true"></i>
+                                    <span class="visually-hidden">Ver histórico</span>
+                                </a>
+                            <?php endif; ?>
                         </td>
-                        <?php endif; ?>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+
+<!-- Aulas Agendadas -->
+<!-- AJUSTE 2025-12 - Seção para listar aulas e permitir acesso à chamada -->
+<section class="card mb-4" aria-labelledby="aulas-title">
+    <div class="card-header">
+        <h2 id="aulas-title" class="h5 mb-0">
+            <i class="fas fa-calendar-check" aria-hidden="true"></i> 
+            Aulas Agendadas 
+            <span class="badge bg-primary" aria-label="<?= count($aulasAgendadas) ?> aulas agendadas"><?= count($aulasAgendadas) ?></span>
+        </h2>
+    </div>
+    <div class="card-body">
+        <?php if (empty($aulasAgendadas)): ?>
+        <div class="alert alert-info" role="alert">
+            <i class="fas fa-info-circle" aria-hidden="true"></i> 
+            Nenhuma aula agendada para esta turma ainda.
+        </div>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table table-hover" role="table" aria-label="Lista de aulas agendadas">
+                <caption class="visually-hidden">Tabela com informações das aulas agendadas da turma</caption>
+                <thead>
+                    <tr role="row">
+                        <th scope="col" role="columnheader">Data</th>
+                        <th scope="col" role="columnheader">Horário</th>
+                        <th scope="col" role="columnheader">Aula</th>
+                        <th scope="col" role="columnheader">Disciplina</th>
+                        <th scope="col" role="columnheader">Instrutor</th>
+                        <th scope="col" role="columnheader">Status</th>
+                        <!-- AJUSTE 2025-12 - Colunas de presença -->
+                        <th scope="col" role="columnheader">Presenças</th>
+                        <th scope="col" role="columnheader">Chamada</th>
+                        <th scope="col" class="text-center" role="columnheader">Ações</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($aulasAgendadas as $aula): ?>
+                    <tr role="row">
+                        <td role="cell"><?= date('d/m/Y', strtotime($aula['data_aula'])) ?></td>
+                        <td role="cell">
+                            <?= date('H:i', strtotime($aula['hora_inicio'])) ?> - 
+                            <?= date('H:i', strtotime($aula['hora_fim'])) ?>
+                        </td>
+                        <td role="cell"><?= htmlspecialchars($aula['nome_aula'] ?? 'Aula ' . $aula['ordem_global']) ?></td>
+                        <td role="cell">
+                            <?php
+                            $nomesDisciplinas = [
+                                'legislacao_transito' => 'Legislação de Trânsito',
+                                'direcao_defensiva' => 'Direção Defensiva',
+                                'primeiros_socorros' => 'Primeiros Socorros',
+                                'meio_ambiente_cidadania' => 'Meio Ambiente e Cidadania',
+                                'mecanica_basica' => 'Mecânica Básica'
+                            ];
+                            $disciplinaNome = $nomesDisciplinas[$aula['disciplina']] ?? ucfirst(str_replace('_', ' ', $aula['disciplina']));
+                            echo htmlspecialchars($disciplinaNome);
+                            ?>
+                        </td>
+                        <td role="cell"><?= htmlspecialchars($aula['instrutor_nome'] ?? 'Não definido') ?></td>
+                        <td role="cell">
+                            <span class="badge bg-<?= $aula['aula_status'] === 'realizada' ? 'success' : ($aula['aula_status'] === 'cancelada' ? 'danger' : 'info') ?>" 
+                                  role="status" 
+                                  aria-label="Status da aula: <?= ucfirst($aula['aula_status']) ?>">
+                                <?= ucfirst($aula['aula_status']) ?>
+                            </span>
+                        </td>
+                        <!-- AJUSTE 2025-12 - Coluna de presenças -->
+                        <td role="cell">
+                            <?php if ($aula['total_alunos'] > 0): ?>
+                                <span class="badge bg-<?= $aula['total_presentes'] > 0 ? 'success' : 'secondary' ?>">
+                                    <?= $aula['total_presentes'] ?>/<?= $aula['total_alunos'] ?>
+                                </span>
+                                <small class="text-muted d-block mt-1">
+                                    <?= $aula['total_ausentes'] > 0 ? $aula['total_ausentes'] . ' ausente(s)' : '' ?>
+                                </small>
+                            <?php else: ?>
+                                <span class="text-muted">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <!-- AJUSTE 2025-12 - Coluna de status da chamada -->
+                        <td role="cell">
+                            <?php
+                            $statusChamadaClass = match($aula['status_chamada']) {
+                                'concluida' => 'success',
+                                'em_andamento' => 'warning',
+                                default => 'secondary'
+                            };
+                            ?>
+                            <span class="badge bg-<?= $statusChamadaClass ?>" 
+                                  role="status" 
+                                  aria-label="Status da chamada: <?= htmlspecialchars($aula['status_chamada_label']) ?>">
+                                <?= htmlspecialchars($aula['status_chamada_label']) ?>
+                            </span>
+                        </td>
+                        <td role="cell" class="text-center">
+                            <!-- AJUSTE 2025-12 - Link para Chamada (admin/secretaria sem origem=instrutor) -->
+                            <?php if ($origem !== 'instrutor'): ?>
+                                <a href="?page=turma-chamada&turma_id=<?= $turmaId ?>&aula_id=<?= $aula['id'] ?>" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   title="Abrir chamada da aula"
+                                   aria-label="Abrir chamada da aula de <?= htmlspecialchars($aula['nome_aula'] ?? 'Aula ' . $aula['ordem_global']) ?>">
+                                    <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+                                    <span class="d-none d-md-inline ms-1">Chamada</span>
+                                </a>
+                            <?php else: ?>
+                                <!-- Instrutor: usar link com origem=instrutor -->
+                                <a href="?page=turma-chamada&turma_id=<?= $turmaId ?>&aula_id=<?= $aula['id'] ?>&origem=instrutor" 
+                                   class="btn btn-sm btn-outline-primary" 
+                                   title="Abrir chamada da aula"
+                                   aria-label="Abrir chamada da aula de <?= htmlspecialchars($aula['nome_aula'] ?? 'Aula ' . $aula['ordem_global']) ?>">
+                                    <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+                                    <span class="d-none d-md-inline ms-1">Chamada</span>
+                                </a>
+                            <?php endif; ?>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -765,5 +1000,188 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canEdit) {
     window.salvarEdicaoTurma = salvarEdicaoTurma;
     
 })();
+</script>
+<?php endif; ?>
+
+<?php if ($origem === 'instrutor'): ?>
+<!-- Modal para Visualizar Aluno (Modo Instrutor) -->
+<div class="modal fade" id="modalAlunoInstrutor" tabindex="-1" aria-labelledby="modalAlunoInstrutorLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAlunoInstrutorLabel">
+                    <i class="fas fa-user"></i> Detalhes do Aluno
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body" id="modalAlunoInstrutorBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2">Carregando informações do aluno...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function visualizarAlunoInstrutor(alunoId, turmaId) {
+    const modal = new bootstrap.Modal(document.getElementById('modalAlunoInstrutor'));
+    const modalBody = document.getElementById('modalAlunoInstrutorBody');
+    
+    // Mostrar loading
+    modalBody.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2">Carregando informações do aluno...</p>
+        </div>
+    `;
+    
+    // Abrir modal
+    modal.show();
+    
+    // Buscar dados do aluno via endpoint restrito
+    fetch(`../admin/api/aluno-detalhes-instrutor.php?aluno_id=${alunoId}&turma_id=${turmaId}`)
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error('Você não tem permissão para visualizar este aluno');
+                }
+                throw new Error('Erro ao carregar dados do aluno');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const aluno = data.aluno;
+                const turma = data.turma;
+                const matricula = data.matricula;
+                const frequencia = data.frequencia;
+                
+                // Formatar data de nascimento
+                const dataNasc = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'N/A';
+                
+                // Formatar frequência
+                const freqPercent = frequencia.frequencia_percentual.toFixed(1);
+                const freqBadgeClass = freqPercent >= 75 ? 'bg-success' : (freqPercent >= 60 ? 'bg-warning' : 'bg-danger');
+                
+                // Montar HTML
+                let historicoHtml = '';
+                if (frequencia.historico && frequencia.historico.length > 0) {
+                    historicoHtml = `
+                        <h6 class="mt-3 mb-2">Últimas Presenças:</h6>
+                        <div class="table-responsive">
+                            <table class="table table-sm">
+                                <thead>
+                                    <tr>
+                                        <th>Data</th>
+                                        <th>Aula</th>
+                                        <th>Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${frequencia.historico.map(p => `
+                                        <tr>
+                                            <td>${new Date(p.data_aula).toLocaleDateString('pt-BR')}</td>
+                                            <td>${p.nome_aula || 'N/A'}</td>
+                                            <td>
+                                                <span class="badge ${p.presente ? 'bg-success' : 'bg-danger'}">
+                                                    ${p.presente ? 'PRESENTE' : 'AUSENTE'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    `).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    `;
+                } else {
+                    historicoHtml = '<p class="text-muted mt-3">Nenhuma presença registrada ainda.</p>';
+                }
+                
+                modalBody.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Dados Pessoais</h6>
+                            <dl class="row mb-3">
+                                <dt class="col-sm-4">Nome:</dt>
+                                <dd class="col-sm-8">${aluno.nome}</dd>
+                                
+                                <dt class="col-sm-4">CPF:</dt>
+                                <dd class="col-sm-8">${aluno.cpf || 'N/A'}</dd>
+                                
+                                <dt class="col-sm-4">Data Nascimento:</dt>
+                                <dd class="col-sm-8">${dataNasc}</dd>
+                                
+                                <dt class="col-sm-4">Categoria CNH:</dt>
+                                <dd class="col-sm-8">${aluno.categoria_cnh || 'N/A'}</dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Contato</h6>
+                            <dl class="row mb-3">
+                                <dt class="col-sm-4">E-mail:</dt>
+                                <dd class="col-sm-8">${aluno.email || 'N/A'}</dd>
+                                
+                                <dt class="col-sm-4">Telefone:</dt>
+                                <dd class="col-sm-8">${aluno.telefone || 'N/A'}</dd>
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    <hr>
+                    
+                    <div class="row">
+                        <div class="col-12">
+                            <h6>Matrícula na Turma</h6>
+                            <dl class="row mb-3">
+                                <dt class="col-sm-4">Turma:</dt>
+                                <dd class="col-sm-8">${turma.nome}</dd>
+                                
+                                <dt class="col-sm-4">Status:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-primary">${matricula.status}</span>
+                                </dd>
+                                
+                                <dt class="col-sm-4">Data Matrícula:</dt>
+                                <dd class="col-sm-8">${new Date(matricula.data_matricula).toLocaleDateString('pt-BR')}</dd>
+                                
+                                <dt class="col-sm-4">Frequência:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge ${freqBadgeClass}">${freqPercent}%</span>
+                                    <small class="text-muted ms-2">
+                                        (${frequencia.total_presentes} presentes / ${frequencia.total_aulas} aulas)
+                                    </small>
+                                </dd>
+                            </dl>
+                            
+                            ${historicoHtml}
+                        </div>
+                    </div>
+                `;
+            } else {
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> ${data.message || 'Erro ao carregar dados do aluno'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> ${error.message || 'Erro ao carregar dados do aluno'}
+                </div>
+            `;
+        });
+}
 </script>
 <?php endif; ?>

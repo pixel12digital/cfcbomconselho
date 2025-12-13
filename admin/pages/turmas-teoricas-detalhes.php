@@ -288,7 +288,12 @@ try {
         </a>
         <?php endif; ?>
         
-        <?php if ($turma['status'] === 'criando' || $turma['status'] === 'agendando'): ?>
+        <?php 
+        // CORREÇÃO 2025-01: Botão "Editar Turma" apenas para admin/secretaria
+        // Instrutores não devem editar informações da turma
+        $podeEditarTurma = (isset($userType) && ($userType === 'admin' || $userType === 'secretaria'));
+        if (($turma['status'] === 'criando' || $turma['status'] === 'agendando') && $podeEditarTurma): 
+        ?>
         <a href="?page=turmas-teoricas&acao=editar&step=1&turma_id=<?= $turma['id'] ?>" class="btn-primary" style="background: var(--warning-color); border-color: var(--warning-color); display: inline-flex; align-items: center; gap: 8px;">
             <i class="fas fa-edit icon icon-20"></i>Editar Turma
         </a>
