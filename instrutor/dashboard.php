@@ -521,6 +521,22 @@ if ($instrutorId && !empty($aulasHoje)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dashboard - <?php echo htmlspecialchars($instrutor['nome'] ?? 'Instrutor'); ?></title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+    
+    <!-- Meta tags PWA -->
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CFC Instrutor">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/pwa/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/pwa/icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/pwa/icons/icon-192.png">
+    
     <!-- Bootstrap 4 CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css" integrity="sha384-xOolHFLEh07PJGoPkLv1IbcEPTNtaed2xpHsD9ESMhqIYd0nLMwNLD69Npy4HI+N" crossorigin="anonymous">
     <link rel="stylesheet" href="../assets/css/mobile-first.css">
@@ -3134,131 +3150,247 @@ if ($instrutorId && !empty($aulasHoje)) {
         }
         
         /* ============================================
-           CORREÇÕES DESKTOP (min-width: 992px)
+           CORREÇÕES DESKTOP (min-width: 992px) - VERSÃO CIRÚRGICA
            ============================================ */
         @media (min-width: 992px) {
             /* 1) ENXUGAR ESPAÇO BRANCO DO CARD "PRÓXIMA AULA" */
-            /* Remover h-100 que força altura igual ao card ao lado */
-            .card.border-primary.h-100 {
+            /* Remover h-100 que força altura igual ao card ao lado - seletor mais específico */
+            .instrutor-dashboard .col-lg-7 .card.border-primary.h-100,
+            .instrutor-dashboard .col-xl-6 .card.border-primary.h-100 {
                 height: auto !important;
+                min-height: auto !important;
+                max-height: none !important;
             }
             
-            /* Reduzir padding e margens para card mais compacto */
+            /* Garantir que o row pai não force altura igual */
+            .instrutor-dashboard .row:first-of-type {
+                align-items: flex-start !important;
+            }
+            
+            /* Garantir que a coluna pai não force altura */
+            .instrutor-dashboard .col-lg-7,
+            .instrutor-dashboard .col-xl-6 {
+                align-items: flex-start !important;
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            
+            /* Garantir que o card dentro da coluna não estique */
+            .instrutor-dashboard .col-lg-7 > .card,
+            .instrutor-dashboard .col-xl-6 > .card {
+                flex: 0 1 auto !important;
+                width: 100% !important;
+            }
+            
+            /* Reduzir espaçamentos internos para card mais compacto */
             .card.border-primary .card-body {
                 padding-bottom: 0.75rem !important;
             }
             
-            /* Reduzir espaçamento do estado de chamada */
             .card.border-primary .mb-3:last-of-type {
                 margin-bottom: 0.5rem !important;
             }
             
             /* 2) GARANTIR VISIBILIDADE DAS INFOS (TELEFONE, CPF, VEÍCULO) NO DESKTOP */
-            /* Garantir que as linhas de informação apareçam no desktop */
-            .card-aluno-info .aluno-linha-3,
-            .card-aluno-info .aluno-linha-5,
-            .card-aluno-info .aluno-linha-6 {
+            /* Ajustar layout do card-aluno-info no desktop para não esticar */
+            .card.border-primary .card-aluno-info {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 0 !important;
+                margin-bottom: 0.75rem !important;
+            }
+            
+            /* Garantir que as linhas apareçam - sem quebra agressiva */
+            .card.border-primary .card-aluno-info .aluno-linha-3,
+            .card.border-primary .card-aluno-info .aluno-linha-5,
+            .card.border-primary .card-aluno-info .aluno-linha-6 {
                 display: flex !important;
                 visibility: visible !important;
                 opacity: 1 !important;
+                width: 100% !important;
+                margin-bottom: 0.5rem !important;
             }
             
-            /* Ajustar layout para acomodar informações sem quebrar */
-            .card-aluno-info .aluno-linha-3,
-            .card-aluno-info .aluno-linha-5 {
+            /* Permitir quebra natural de linha apenas quando necessário - SEM word-break agressivo */
+            .card.border-primary .card-aluno-info .aluno-linha-3,
+            .card.border-primary .card-aluno-info .aluno-linha-5 {
                 flex-wrap: wrap;
-                word-break: break-word;
+                overflow-wrap: normal;
+                word-break: normal;
             }
             
-            .card-aluno-info .aluno-linha-6 {
-                width: 100%;
-                word-break: break-word;
+            .card.border-primary .card-aluno-info .aluno-linha-6 {
+                overflow-wrap: normal;
+                word-break: normal;
             }
             
-            /* 3) CORRIGIR OVERFLOW DO TELEFONE NA TABELA "AULAS DE HOJE" */
-            /* Garantir que células da tabela não ultrapassem seus limites */
-            .instructor-aulas-table td {
+            /* Garantir que valores não quebrem caracter por caracter */
+            .card.border-primary .card-aluno-info .aluno-valor-telefone,
+            .card.border-primary .card-aluno-info .aluno-valor-cpf {
+                white-space: normal;
+                word-break: normal;
+                overflow-wrap: normal;
+            }
+            
+            /* 3) CORRIGIR OVERFLOW DO TELEFONE NA TABELA "AULAS DE HOJE" - APENAS TABELA */
+            /* Aplicar overflow e quebra APENAS nas células da tabela, não no card superior */
+            .dashboard-aulas-hoje .instructor-aulas-table td {
                 overflow: hidden;
                 word-wrap: break-word;
                 overflow-wrap: break-word;
+                position: relative;
             }
             
-            /* Garantir que informações dentro das células não vazem */
-            .instructor-aulas-table .d-flex {
+            /* Apenas na tabela: garantir que containers flex não ultrapassem */
+            .dashboard-aulas-hoje .instructor-aulas-table .d-flex {
                 flex-wrap: wrap;
                 max-width: 100%;
                 overflow: hidden;
             }
             
-            .instructor-aulas-table .flex-grow-1 {
+            .dashboard-aulas-hoje .instructor-aulas-table .flex-grow-1 {
                 min-width: 0;
                 max-width: 100%;
-                overflow: hidden;
             }
             
-            /* Permitir quebra de linha nos textos dentro da tabela */
-            .instructor-aulas-table .text-muted,
-            .instructor-aulas-table .fw-bold,
-            .instructor-aulas-table a {
+            /* Quebra de linha normal (não agressiva) apenas na tabela */
+            .dashboard-aulas-hoje .instructor-aulas-table .text-muted,
+            .dashboard-aulas-hoje .instructor-aulas-table .fw-bold,
+            .dashboard-aulas-hoje .instructor-aulas-table a {
                 word-break: break-word;
                 overflow-wrap: break-word;
                 white-space: normal;
             }
             
-            /* Especificamente para a coluna DISCIPLINA/TURMA que contém telefone */
-            .instructor-aulas-table td:nth-child(3) {
-                max-width: 35%;
+            /* 4) CORRIGIR AVATAR DUPLICADO NA TABELA "AULAS DE HOJE" */
+            /* Regra mais robusta: se imagem tem src e está visível, placeholder deve estar oculto */
+            .dashboard-aulas-hoje .instructor-aulas-table .mr-2.flex-shrink-0 img.aluno-foto-tabela[src]:not([src=""]) {
+                display: block !important;
             }
             
-            /* 4) CORRIGIR AVATAR DUPLICADO NA TABELA "AULAS DE HOJE" */
-            /* Quando há foto visível, ocultar o placeholder */
-            .instructor-aulas-table .aluno-foto-tabela[style*="display: none"] ~ .aluno-foto-placeholder-tabela {
+            .dashboard-aulas-hoje .instructor-aulas-table .mr-2.flex-shrink-0 img.aluno-foto-tabela[src]:not([src=""]) ~ .aluno-foto-placeholder-tabela {
+                display: none !important;
+            }
+            
+            /* Se imagem está oculta (onerror), mostrar placeholder */
+            .dashboard-aulas-hoje .instructor-aulas-table .mr-2.flex-shrink-0 img.aluno-foto-tabela[style*="display: none"] ~ .aluno-foto-placeholder-tabela {
                 display: flex !important;
             }
             
-            .instructor-aulas-table .aluno-foto-tabela:not([style*="display: none"]) ~ .aluno-foto-placeholder-tabela {
-                display: none !important;
-            }
-            
-            /* Garantir que apenas um avatar seja mostrado */
-            .instructor-aulas-table .mr-2.flex-shrink-0 {
-                position: relative;
-            }
-            
-            /* Se a imagem está visível, placeholder deve estar oculto */
-            .instructor-aulas-table img.aluno-foto-tabela {
-                display: block;
-            }
-            
-            .instructor-aulas-table img.aluno-foto-tabela:not([style*="display: none"]) + .aluno-foto-placeholder-tabela {
-                display: none !important;
-            }
+            /* Placeholder só aparece se não houver imagem válida (tratado via JS) */
         }
     </style>
     
     <!-- Script para Dropdown de Perfil e correção de avatares -->
     <script>
-        // Garantir que avatares duplicados não apareçam na tabela
-        document.addEventListener('DOMContentLoaded', function() {
-            // Corrigir avatares duplicados na tabela "Aulas de Hoje"
-            const fotosTabela = document.querySelectorAll('.instructor-aulas-table img.aluno-foto-tabela');
-            fotosTabela.forEach(function(img) {
-                // Quando a imagem carregar com sucesso, garantir que o placeholder fique oculto
-                img.addEventListener('load', function() {
-                    const placeholder = this.nextElementSibling;
-                    if (placeholder && placeholder.classList.contains('aluno-foto-placeholder-tabela')) {
-                        placeholder.style.display = 'none';
-                    }
-                });
+        // Função para corrigir avatares duplicados na tabela
+        function corrigirAvataresTabela() {
+            const containers = document.querySelectorAll('.instructor-aulas-table .mr-2.flex-shrink-0');
+            containers.forEach(function(container) {
+                const img = container.querySelector('img.aluno-foto-tabela');
+                const placeholder = container.querySelector('.aluno-foto-placeholder-tabela');
                 
-                // Verificar estado inicial (caso a imagem já tenha carregado)
-                if (img.complete && img.naturalHeight !== 0) {
-                    const placeholder = img.nextElementSibling;
-                    if (placeholder && placeholder.classList.contains('aluno-foto-placeholder-tabela')) {
-                        placeholder.style.display = 'none';
+                if (!container) return;
+                
+                // Se não há imagem, mostrar placeholder
+                if (!img) {
+                    if (placeholder) {
+                        placeholder.style.display = 'flex';
                     }
+                    return;
+                }
+                
+                // Se há imagem mas não há placeholder, não fazer nada
+                if (!placeholder) return;
+                
+                // Verificar se a imagem tem src válido
+                const hasValidSrc = img.src && 
+                                   img.src !== window.location.href && 
+                                   !img.src.endsWith('#') &&
+                                   !img.src.includes('undefined') &&
+                                   !img.src.includes('null');
+                
+                if (hasValidSrc) {
+                    // Verificar estado atual da imagem
+                    const computedStyle = window.getComputedStyle(img);
+                    const isHidden = img.style.display === 'none' || 
+                                    computedStyle.display === 'none' ||
+                                    img.offsetWidth === 0 ||
+                                    img.offsetHeight === 0;
+                    
+                    if (!isHidden && img.complete) {
+                        // Imagem carregou com sucesso
+                        if (img.naturalHeight !== 0 && img.naturalWidth !== 0) {
+                            // Imagem válida carregada
+                            placeholder.style.display = 'none';
+                            img.style.display = 'block';
+                            img.style.visibility = 'visible';
+                        } else {
+                            // Imagem inválida
+                            img.style.display = 'none';
+                            placeholder.style.display = 'flex';
+                        }
+                    } else if (!isHidden && !img.complete) {
+                        // Imagem ainda está carregando
+                        img.addEventListener('load', function() {
+                            if (this.naturalHeight !== 0 && this.naturalWidth !== 0) {
+                                placeholder.style.display = 'none';
+                                this.style.display = 'block';
+                                this.style.visibility = 'visible';
+                            } else {
+                                this.style.display = 'none';
+                                placeholder.style.display = 'flex';
+                            }
+                        }, { once: true });
+                        
+                        img.addEventListener('error', function() {
+                            this.style.display = 'none';
+                            placeholder.style.display = 'flex';
+                        }, { once: true });
+                    } else {
+                        // Imagem está oculta, mostrar placeholder
+                        placeholder.style.display = 'flex';
+                    }
+                } else {
+                    // Não há src válido, mostrar placeholder
+                    img.style.display = 'none';
+                    placeholder.style.display = 'flex';
                 }
             });
+        }
+        
+        // Garantir que avatares duplicados não apareçam na tabela
+        document.addEventListener('DOMContentLoaded', function() {
+            // Corrigir imediatamente
+            corrigirAvataresTabela();
+            
+            // Corrigir após um pequeno delay (para imagens que ainda estão carregando)
+            setTimeout(corrigirAvataresTabela, 100);
+            setTimeout(corrigirAvataresTabela, 500);
+            
+            // Observar mudanças no DOM (caso a tabela seja carregada dinamicamente)
+            const observer = new MutationObserver(function(mutations) {
+                let shouldCheck = false;
+                mutations.forEach(function(mutation) {
+                    if (mutation.addedNodes.length > 0) {
+                        mutation.addedNodes.forEach(function(node) {
+                            if (node.nodeType === 1 && 
+                                (node.classList && node.classList.contains('instructor-aulas-table') ||
+                                 node.querySelector && node.querySelector('.instructor-aulas-table'))) {
+                                shouldCheck = true;
+                            }
+                        });
+                    }
+                });
+                if (shouldCheck) {
+                    setTimeout(corrigirAvataresTabela, 100);
+                }
+            });
+            
+            const tableContainer = document.querySelector('.dashboard-aulas-hoje');
+            if (tableContainer) {
+                observer.observe(tableContainer, { childList: true, subtree: true });
+            }
             
             // Toggle do dropdown de perfil
             const profileButton = document.getElementById('instrutor-profile-button');
@@ -3282,5 +3414,8 @@ if ($instrutorId && !empty($aulasHoje)) {
             }
         });
     </script>
+    
+    <!-- PWA Registration Script -->
+    <script src="/pwa/pwa-register.js"></script>
 </body>
 </html>

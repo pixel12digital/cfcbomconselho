@@ -1,0 +1,623 @@
+/**
+ * PWA Install Footer Styles
+ * Estilos discretos para componente de instalação no footer
+ */
+
+/* Container do footer */
+.pwa-install-footer-container {
+    margin-top: 20px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Bloco principal */
+.pwa-install-footer {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 16px;
+    margin: 0 auto;
+    max-width: 600px;
+    position: relative;
+    z-index: 10;
+    pointer-events: auto;
+}
+
+.pwa-install-footer-content {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    align-items: center;
+}
+
+/* Título */
+.pwa-install-footer-title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.9);
+    margin-bottom: 8px;
+    pointer-events: auto;
+    user-select: none;
+}
+
+.pwa-install-footer-title:hover {
+    opacity: 0.8;
+}
+
+/* Status instalado */
+.pwa-install-footer-status {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.7);
+    margin-bottom: 8px;
+}
+
+.pwa-install-footer-status i {
+    color: #27ae60;
+}
+
+/* Hint de instalação */
+.pwa-install-hint {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.6);
+    padding: 6px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
+    margin-top: 4px;
+    pointer-events: auto;
+    user-select: none;
+    transition: all 0.2s ease;
+}
+
+.pwa-install-hint:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.pwa-install-hint i {
+    font-size: 12px;
+}
+
+.pwa-install-icon {
+    font-size: 18px;
+}
+
+/* Ações (botões) */
+.pwa-install-footer-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    width: 100%;
+}
+
+/* Botões */
+.pwa-install-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    text-decoration: none;
+    pointer-events: auto;
+    position: relative;
+    z-index: 1;
+}
+
+.pwa-install-btn i {
+    font-size: 14px;
+}
+
+/* Botão primário (Instalar) */
+.pwa-install-btn-primary {
+    background: #3498db;
+    color: white;
+}
+
+.pwa-install-btn-primary:hover {
+    background: #2980b9;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+}
+
+.pwa-install-btn-primary:active {
+    transform: translateY(0);
+}
+
+/* Botão secundário (Compartilhar) */
+.pwa-install-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pwa-install-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Botão iOS */
+.pwa-install-btn-ios {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.pwa-install-btn-ios:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+/* Modal de compartilhamento */
+.pwa-share-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+.pwa-share-modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+}
+
+.pwa-share-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid #e1e5e9;
+}
+
+.pwa-share-modal-header h4 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.pwa-share-modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #7f8c8d;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.pwa-share-modal-close:hover {
+    color: #2c3e50;
+}
+
+.pwa-share-modal-options {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.pwa-share-option {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: #f8f9fa;
+    border: 1px solid #e1e5e9;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+    font-size: 15px;
+    color: #2c3e50;
+}
+
+.pwa-share-option:hover {
+    background: #e9ecef;
+    border-color: #3498db;
+    transform: translateX(4px);
+}
+
+.pwa-share-option i {
+    font-size: 20px;
+    width: 24px;
+    text-align: center;
+}
+
+.pwa-share-option[data-action="whatsapp"] i {
+    color: #25d366;
+}
+
+/* Modal iOS */
+.pwa-ios-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+.pwa-ios-modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+}
+
+.pwa-ios-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid #e1e5e9;
+}
+
+.pwa-ios-modal-header h4 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.pwa-ios-modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #7f8c8d;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.pwa-ios-modal-close:hover {
+    color: #2c3e50;
+}
+
+.pwa-ios-modal-body {
+    padding: 20px;
+}
+
+.pwa-ios-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.pwa-ios-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+}
+
+.pwa-ios-step-number {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background: #3498db;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.pwa-ios-step-content {
+    flex: 1;
+    padding-top: 4px;
+}
+
+.pwa-ios-step-content p {
+    margin: 0;
+    color: #2c3e50;
+    line-height: 1.6;
+    font-size: 15px;
+}
+
+.pwa-ios-step-content strong {
+    color: #3498db;
+}
+
+.pwa-ios-note {
+    background: #e8f4f8;
+    border-left: 3px solid #3498db;
+    padding: 12px 16px;
+    border-radius: 6px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+}
+
+.pwa-ios-note i {
+    color: #3498db;
+    font-size: 18px;
+    margin-top: 2px;
+}
+
+.pwa-ios-note p {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 14px;
+    line-height: 1.5;
+}
+
+/* Toast messages */
+.pwa-toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: #2c3e50;
+    color: white;
+    padding: 14px 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    z-index: 10001;
+    opacity: 0;
+    transition: all 0.3s ease;
+    max-width: 90%;
+    text-align: center;
+    font-size: 14px;
+}
+
+.pwa-toast-show {
+    transform: translateX(-50%) translateY(0);
+    opacity: 1;
+}
+
+.pwa-toast-success {
+    background: #27ae60;
+}
+
+.pwa-toast-error {
+    background: #e74c3c;
+}
+
+/* Responsivo */
+@media (max-width: 768px) {
+    .pwa-install-footer {
+        padding: 12px;
+    }
+    
+    .pwa-install-footer-title {
+        font-size: 13px;
+    }
+    
+    .pwa-install-btn {
+        padding: 8px 12px;
+        font-size: 12px;
+    }
+    
+    .pwa-install-footer-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+    
+    .pwa-install-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .pwa-share-modal-content,
+    .pwa-ios-modal-content {
+        max-width: 100%;
+    }
+}
+
+/* Para login.php (footer claro) */
+.login-footer .pwa-install-footer {
+    background: rgba(44, 62, 80, 0.05);
+    border: 1px solid rgba(44, 62, 80, 0.1);
+}
+
+.login-footer .pwa-install-footer-title {
+    color: #2c3e50;
+}
+
+.login-footer .pwa-install-footer-status {
+    color: #7f8c8d;
+}
+
+.login-footer .pwa-install-btn-secondary,
+.login-footer .pwa-install-btn-ios {
+    background: rgba(44, 62, 80, 0.05);
+    color: #2c3e50;
+    border: 1px solid rgba(44, 62, 80, 0.2);
+}
+
+.login-footer .pwa-install-btn-secondary:hover,
+.login-footer .pwa-install-btn-ios:hover {
+    background: rgba(44, 62, 80, 0.1);
+    border-color: rgba(44, 62, 80, 0.3);
+}
+
+.login-footer .pwa-install-hint {
+    color: #7f8c8d;
+    background: rgba(44, 62, 80, 0.05);
+}
+
+/* Animações */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Modal de Ajuda */
+.pwa-help-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+    pointer-events: auto;
+}
+
+.pwa-help-modal-content {
+    background: white;
+    border-radius: 12px;
+    max-width: 500px;
+    width: 100%;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+    animation: slideUp 0.3s ease;
+    pointer-events: auto;
+}
+
+.pwa-help-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px;
+    border-bottom: 1px solid #e1e5e9;
+}
+
+.pwa-help-modal-header h4 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.pwa-help-modal-close {
+    background: none;
+    border: none;
+    font-size: 20px;
+    color: #7f8c8d;
+    cursor: pointer;
+    padding: 4px;
+    line-height: 1;
+    transition: color 0.2s ease;
+    pointer-events: auto;
+}
+
+.pwa-help-modal-close:hover {
+    color: #2c3e50;
+}
+
+.pwa-help-modal-body {
+    padding: 20px;
+}
+
+.pwa-help-step {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.pwa-help-step:last-child {
+    margin-bottom: 0;
+}
+
+.pwa-help-step-number {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    background: #3498db;
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 14px;
+}
+
+.pwa-help-step-content {
+    flex: 1;
+    padding-top: 4px;
+}
+
+.pwa-help-step-content p {
+    margin: 0;
+    color: #2c3e50;
+    line-height: 1.6;
+    font-size: 15px;
+}
+
+.pwa-help-step-content strong {
+    color: #3498db;
+}
+
+.pwa-help-note {
+    background: #e8f4f8;
+    border-left: 3px solid #3498db;
+    padding: 12px 16px;
+    border-radius: 6px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.pwa-help-note i {
+    color: #3498db;
+    font-size: 18px;
+    margin-top: 2px;
+}
+
+.pwa-help-note p {
+    margin: 0;
+    color: #2c3e50;
+    font-size: 14px;
+    line-height: 1.5;
+}

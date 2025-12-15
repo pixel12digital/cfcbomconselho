@@ -671,7 +671,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
     <meta name="description" content="Sistema administrativo para gerenciamento de CFC">
     <meta name="format-detection" content="telephone=no">
     <meta name="mobile-web-app-capable" content="yes">
-    <meta name="msapplication-config" content="../pwa/browserconfig.xml">
+    <meta name="msapplication-config" content="/pwa/browserconfig.xml">
     <meta name="msapplication-TileColor" content="#2c3e50">
     <meta name="msapplication-tap-highlight" content="no">
     <meta name="theme-color" content="#2c3e50">

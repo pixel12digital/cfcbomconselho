@@ -172,6 +172,21 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $currentConfig['title']; ?> | Sistema CFC</title>
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/pwa/manifest.json">
+    
+    <!-- Meta tags PWA -->
+    <meta name="theme-color" content="#2c3e50">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CFC Instrutor">
+    
+    <!-- Apple Touch Icons -->
+    <link rel="apple-touch-icon" href="/pwa/icons/icon-192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/pwa/icons/icon-152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/pwa/icons/icon-192.png">
     <style>
         * {
             margin: 0;
@@ -642,6 +657,9 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                 
                 <p>Problemas para acessar? Entre em contato com o suporte</p>
                 
+                <!-- PWA Install Footer Container -->
+                <div class="pwa-install-footer-container"></div>
+                
                 <div class="support-info">
                     <h4>📞 Suporte</h4>
                     <p>Segunda a Sexta, 8h às 18h</p>
@@ -671,6 +689,280 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         
         // Auto-focus no campo de entrada
         document.getElementById('email').focus();
+    </script>
+    
+    <!-- PWA Registration Script -->
+    <script src="/pwa/pwa-register.js"></script>
+    
+    <!-- PWA Install Footer Component -->
+    <?php
+    // Detectar base path dinamicamente
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+    $scriptDir = dirname($scriptName);
+    $basePath = rtrim($scriptDir, '/');
+    if ($basePath === '/' || $basePath === '') {
+        $basePath = '';
+    }
+    ?>
+    <link rel="stylesheet" href="<?php echo $basePath; ?>/pwa/install-footer.css">
+    <script>
+        // Definir base path para o componente
+        window.PWA_BASE_PATH = '<?php echo $basePath; ?>';
+    </script>
+    <script src="<?php echo $basePath; ?>/pwa/install-footer.js"></script>
+    
+    <!-- PWA Install Button Component -->
+    <script>
+        // Componente de instalação PWA discreto
+        class PWAInstallButton {
+            constructor() {
+                this.deferredPrompt = null;
+                this.init();
+            }
+            
+            init() {
+                // Verificar se já está instalado
+                if (window.matchMedia('(display-mode: standalone)').matches) {
+                    return; // Já instalado, não mostrar botão
+                }
+                
+                // Escutar evento beforeinstallprompt (Android/Desktop)
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    this.deferredPrompt = e;
+                    this.showInstallButton();
+                });
+                
+                // Escutar evento appinstalled (quando instala)
+                window.addEventListener('appinstalled', () => {
+                    this.hideInstallButton();
+                    this.deferredPrompt = null;
+                });
+                
+                // Verificar se é iOS e mostrar instruções
+                if (this.isIOS()) {
+                    this.showIOSInstructions();
+                }
+            }
+            
+            isIOS() {
+                return /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            }
+            
+            showInstallButton() {
+                // Verificar se já foi dispensado recentemente
+                const dismissed = localStorage.getItem('pwa-install-dismissed');
+                const dismissedTime = dismissed ? parseInt(dismissed) : 0;
+                const now = Date.now();
+                const sevenDays = 7 * 24 * 60 * 60 * 1000;
+                
+                if (dismissed && (now - dismissedTime) < sevenDays) {
+                    return; // Ainda dentro do período de repouso
+                }
+                
+                // Criar botão se não existir
+                if (document.getElementById('pwa-install-btn')) {
+                    return;
+                }
+                
+                const button = document.createElement('button');
+                button.id = 'pwa-install-btn';
+                button.className = 'pwa-install-button';
+                button.innerHTML = '<i class="fas fa-download"></i> Instalar App';
+                button.onclick = () => this.install();
+                
+                // Adicionar estilos
+                this.addStyles();
+                
+                // Adicionar ao formulário (antes do botão de login)
+                const loginForm = document.querySelector('form');
+                if (loginForm) {
+                    loginForm.insertBefore(button, loginForm.querySelector('.btn-login'));
+                }
+            }
+            
+            showIOSInstructions() {
+                // Verificar se já foi dispensado
+                const dismissed = localStorage.getItem('pwa-install-ios-dismissed');
+                const dismissedTime = dismissed ? parseInt(dismissed) : 0;
+                const now = Date.now();
+                const sevenDays = 7 * 24 * 60 * 60 * 1000;
+                
+                if (dismissed && (now - dismissedTime) < sevenDays) {
+                    return;
+                }
+                
+                // Criar instrução se não existir
+                if (document.getElementById('pwa-ios-instructions')) {
+                    return;
+                }
+                
+                const instructions = document.createElement('div');
+                instructions.id = 'pwa-ios-instructions';
+                instructions.className = 'pwa-ios-instructions';
+                instructions.innerHTML = `
+                    <div class="pwa-ios-content">
+                        <i class="fas fa-mobile-alt"></i>
+                        <div class="pwa-ios-text">
+                            <strong>Instalar App</strong>
+                            <p>Toque em <strong>Compartilhar</strong> <i class="fas fa-share"></i> e depois em <strong>Adicionar à Tela de Início</strong></p>
+                        </div>
+                        <button class="pwa-ios-close" onclick="this.parentElement.parentElement.remove(); localStorage.setItem('pwa-install-ios-dismissed', Date.now());">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                `;
+                
+                // Adicionar estilos iOS
+                this.addIOSStyles();
+                
+                // Adicionar após o formulário
+                const loginForm = document.querySelector('form');
+                if (loginForm) {
+                    loginForm.parentElement.insertBefore(instructions, loginForm.nextSibling);
+                }
+            }
+            
+            async install() {
+                if (!this.deferredPrompt) {
+                    return;
+                }
+                
+                try {
+                    this.deferredPrompt.prompt();
+                    const { outcome } = await this.deferredPrompt.userChoice;
+                    
+                    if (outcome === 'accepted') {
+                        console.log('[PWA] Usuário aceitou instalação');
+                    } else {
+                        console.log('[PWA] Usuário rejeitou instalação');
+                    }
+                    
+                    this.deferredPrompt = null;
+                    this.hideInstallButton();
+                } catch (error) {
+                    console.error('[PWA] Erro ao instalar:', error);
+                }
+            }
+            
+            hideInstallButton() {
+                const button = document.getElementById('pwa-install-btn');
+                if (button) {
+                    button.remove();
+                }
+            }
+            
+            addStyles() {
+                if (document.getElementById('pwa-install-styles')) return;
+                
+                const style = document.createElement('style');
+                style.id = 'pwa-install-styles';
+                style.textContent = `
+                    .pwa-install-button {
+                        width: 100%;
+                        padding: 12px 20px;
+                        background: linear-gradient(135deg, #27ae60 0%, #229954 100%);
+                        color: white;
+                        border: none;
+                        border-radius: 10px;
+                        font-size: 15px;
+                        font-weight: 500;
+                        cursor: pointer;
+                        transition: all 0.3s ease;
+                        margin-bottom: 15px;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        gap: 8px;
+                    }
+                    
+                    .pwa-install-button:hover {
+                        transform: translateY(-2px);
+                        box-shadow: 0 5px 15px rgba(39, 174, 96, 0.4);
+                    }
+                    
+                    .pwa-install-button:active {
+                        transform: translateY(0);
+                    }
+                    
+                    .pwa-install-button i {
+                        font-size: 16px;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+            
+            addIOSStyles() {
+                if (document.getElementById('pwa-ios-styles')) return;
+                
+                const style = document.createElement('style');
+                style.id = 'pwa-ios-styles';
+                style.textContent = `
+                    .pwa-ios-instructions {
+                        background: #f0f9ff;
+                        border: 2px solid #3498db;
+                        border-radius: 10px;
+                        padding: 15px;
+                        margin-top: 20px;
+                        margin-bottom: 20px;
+                    }
+                    
+                    .pwa-ios-content {
+                        display: flex;
+                        align-items: center;
+                        gap: 15px;
+                    }
+                    
+                    .pwa-ios-content i.fa-mobile-alt {
+                        font-size: 24px;
+                        color: #3498db;
+                        flex-shrink: 0;
+                    }
+                    
+                    .pwa-ios-text {
+                        flex: 1;
+                    }
+                    
+                    .pwa-ios-text strong {
+                        color: #2c3e50;
+                        display: block;
+                        margin-bottom: 5px;
+                        font-size: 15px;
+                    }
+                    
+                    .pwa-ios-text p {
+                        margin: 0;
+                        color: #7f8c8d;
+                        font-size: 13px;
+                        line-height: 1.5;
+                    }
+                    
+                    .pwa-ios-close {
+                        background: transparent;
+                        border: none;
+                        color: #7f8c8d;
+                        cursor: pointer;
+                        font-size: 18px;
+                        padding: 5px;
+                        flex-shrink: 0;
+                    }
+                    
+                    .pwa-ios-close:hover {
+                        color: #2c3e50;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // Inicializar quando DOM estiver pronto
+        document.addEventListener('DOMContentLoaded', () => {
+            // Só mostrar na página de login do instrutor ou admin
+            const userType = '<?php echo $userType; ?>';
+            if (userType === 'instrutor' || userType === 'admin') {
+                window.pwaInstallButton = new PWAInstallButton();
+            }
+        });
     </script>
 </body>
 </html>

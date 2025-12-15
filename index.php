@@ -4819,6 +4819,9 @@ require_once 'includes/config.php';
             <!-- Linha separadora -->
             <div class="footer-divider"></div>
             
+            <!-- PWA Install Footer Container -->
+            <div class="pwa-install-footer-container"></div>
+            
             <!-- Footer Bottom -->
             <div class="footer-bottom">
                 <p>&copy; 2024 CFC Bom Conselho | Todos os direitos Reservados | Criado por Pixel12Digital</p>
@@ -5502,5 +5505,22 @@ require_once 'includes/config.php';
             });
         }
     </script>
+    
+    <!-- PWA Install Footer Component -->
+    <?php
+    // Detectar base path dinamicamente
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+    $scriptDir = dirname($scriptName);
+    $basePath = rtrim($scriptDir, '/');
+    if ($basePath === '/' || $basePath === '') {
+        $basePath = '';
+    }
+    ?>
+    <link rel="stylesheet" href="<?php echo $basePath; ?>/pwa/install-footer.css">
+    <script>
+        // Definir base path para o componente
+        window.PWA_BASE_PATH = '<?php echo $basePath; ?>';
+    </script>
+    <script src="<?php echo $basePath; ?>/pwa/install-footer.js"></script>
 </body>
 </html>
