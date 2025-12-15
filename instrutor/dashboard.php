@@ -90,8 +90,7 @@ if (!$user || $user['tipo'] !== 'instrutor') {
     $proximasAulas = [];
     $statsHoje = [
         'total_aulas' => 0,
-        'agendadas' => 0,
-        'confirmadas' => 0,
+        'pendentes' => 0,
         'concluidas' => 0
     ];
     error_log("[WARN] Dashboard instrutor: sem aulas porque instrutor_id é null para usuario_id={$user['id']}");
@@ -124,7 +123,7 @@ try {
     }
 }
 
-// Buscar dados do instrutor
+// Buscar dados do instrutor (incluindo foto)
 // A tabela instrutores tem usuario_id que referencia usuarios.id
 $instrutor = $db->fetch("
     SELECT i.*, u.nome as nome_usuario, u.email as email_usuario 
@@ -164,7 +163,13 @@ if ($instrutorId) {
     // Buscar aulas práticas do dia
     $aulasPraticasHoje = $db->fetchAll("
         SELECT a.*, 
-               al.nome as aluno_nome, al.telefone as aluno_telefone,
+               a.aluno_id,
+               al.nome as aluno_nome, 
+               al.telefone as aluno_telefone,
+               al.cpf as aluno_cpf,
+               al.foto as aluno_foto,
+               al.categoria_cnh as aluno_categoria_cnh,
+               al.email as aluno_email,
                v.modelo as veiculo_modelo, v.placa as veiculo_placa,
                'pratica' as tipo_aula
         FROM aulas a
@@ -215,26 +220,131 @@ if ($instrutorId) {
         return strcmp($horaA, $horaB);
     });
     
-    // REFACTOR DASHBOARD INSTRUTOR - Extrair próxima aula (primeira do dia)
-    $proximaAula = !empty($aulasHoje) ? $aulasHoje[0] : null;
-    
-    // Verificar se a próxima aula (teórica) tem chamada registrada
-    if ($proximaAula && $proximaAula['tipo_aula'] === 'teorica' && isset($proximaAula['id'])) {
-        try {
-            $presencasCount = $db->fetch("
-                SELECT COUNT(*) as total
-                FROM turma_presencas
-                WHERE aula_id = ? AND turma_id = ?
-            ", [$proximaAula['id'], $proximaAula['turma_id'] ?? 0]);
-            $proximaAula['chamada_registrada'] = ($presencasCount['total'] ?? 0) > 0;
-        } catch (Exception $e) {
-            $proximaAula['chamada_registrada'] = false;
-        }
-    } else {
-        if ($proximaAula) {
-            $proximaAula['chamada_registrada'] = false; // Aulas práticas não têm chamada teórica
+    // Verificar chamada registrada para todas as aulas teóricas
+    // E buscar categoria CNH da matrícula ativa para aulas práticas
+    foreach ($aulasHoje as &$aula) {
+        if ($aula['tipo_aula'] === 'teorica' && isset($aula['id'])) {
+            try {
+                $presencasCount = $db->fetch("
+                    SELECT COUNT(*) as total
+                    FROM turma_presencas
+                    WHERE turma_aula_id = ? AND turma_id = ?
+                ", [$aula['id'], $aula['turma_id'] ?? 0]);
+                $aula['chamada_registrada'] = ($presencasCount['total'] ?? 0) > 0;
+            } catch (Exception $e) {
+                $aula['chamada_registrada'] = false;
+            }
+        } else {
+            $aula['chamada_registrada'] = false; // Aulas práticas não têm chamada teórica
+            
+            // Buscar categoria CNH da matrícula ativa (prioridade)
+            if (isset($aula['aluno_id'])) {
+                try {
+                    $matriculaAtiva = $db->fetch("
+                        SELECT categoria_cnh, tipo_servico
+                        FROM matriculas
+                        WHERE aluno_id = ? AND status = 'ativa'
+                        ORDER BY data_inicio DESC
+                        LIMIT 1
+                    ", [$aula['aluno_id']]);
+                    
+                    if ($matriculaAtiva && !empty($matriculaAtiva['categoria_cnh'])) {
+                        $aula['aluno_categoria_cnh'] = $matriculaAtiva['categoria_cnh'];
+                    }
+                } catch (Exception $e) {
+                    // Ignorar erro, usar categoria do aluno
+                }
+            }
         }
     }
+    unset($aula); // Remover referência do último elemento
+    
+    // CORREÇÃO: Selecionar primeira aula pendente (status IN ('agendada','em_andamento')) ordenada por horário
+    // Se não houver pendente, pode mostrar a última concluída SEM ações
+    $aulasPendentes = array_filter($aulasHoje, function($aula) {
+        if ($aula['tipo_aula'] === 'pratica') {
+            return in_array($aula['status'] ?? '', ['agendada', 'em_andamento']);
+        } else {
+            // Teórica: pendente se não tem chamada registrada E status não é 'realizada'
+            return !($aula['chamada_registrada'] ?? false) && ($aula['status'] ?? '') !== 'realizada';
+        }
+    });
+    
+    if (!empty($aulasPendentes)) {
+        // Primeira pendente ordenada por horário
+        $proximaAula = reset($aulasPendentes);
+    } else {
+        // Se não há pendentes, pode mostrar a última concluída apenas para visualização (sem ações)
+        $aulasConcluidas = array_filter($aulasHoje, function($aula) {
+            if ($aula['tipo_aula'] === 'pratica') {
+                return ($aula['status'] ?? '') === 'concluida';
+            } else {
+                return ($aula['chamada_registrada'] ?? false) || ($aula['status'] ?? '') === 'realizada';
+            }
+        });
+        $proximaAula = !empty($aulasConcluidas) ? end($aulasConcluidas) : null;
+    }
+}
+
+// Buscar dados completos do aluno para a próxima aula (se for prática)
+if ($proximaAula && $proximaAula['tipo_aula'] === 'pratica' && isset($proximaAula['aluno_id'])) {
+    // Buscar categoria CNH da matrícula ativa (prioridade)
+    $matriculaAtiva = $db->fetch("
+        SELECT categoria_cnh, tipo_servico
+        FROM matriculas
+        WHERE aluno_id = ? AND status = 'ativa'
+        ORDER BY data_inicio DESC
+        LIMIT 1
+    ", [$proximaAula['aluno_id']]);
+    
+    if ($matriculaAtiva && !empty($matriculaAtiva['categoria_cnh'])) {
+        $proximaAula['aluno_categoria_cnh'] = $matriculaAtiva['categoria_cnh'];
+    }
+}
+
+// Funções helper para formatação
+function formatarCPF($cpf) {
+    if (empty($cpf)) return 'Não informado';
+    $cpfLimpo = preg_replace('/\D/', '', $cpf);
+    if (strlen($cpfLimpo) === 11) {
+        return substr($cpfLimpo, 0, 3) . '.' . substr($cpfLimpo, 3, 3) . '.' . substr($cpfLimpo, 6, 3) . '-' . substr($cpfLimpo, 9, 2);
+    }
+    return $cpf;
+}
+
+// Função para mascarar CPF (mostrar só últimos dígitos)
+function mascararCPF($cpf) {
+    if (empty($cpf)) return 'Não informado';
+    $cpfLimpo = preg_replace('/\D/', '', $cpf);
+    if (strlen($cpfLimpo) === 11) {
+        return '***.***.***-' . substr($cpfLimpo, 9, 2);
+    }
+    return $cpf;
+}
+
+// Função para gerar iniciais do nome
+function gerarIniciais($nome) {
+    if (empty($nome)) return '?';
+    $palavras = explode(' ', trim($nome));
+    $iniciais = '';
+    foreach ($palavras as $palavra) {
+        if (!empty($palavra)) {
+            $iniciais .= strtoupper(substr($palavra, 0, 1));
+            if (strlen($iniciais) >= 2) break; // Máximo 2 iniciais
+        }
+    }
+    return $iniciais ?: '?';
+}
+
+function formatarTelefone($telefone) {
+    if (empty($telefone)) return 'Não informado';
+    $telLimpo = preg_replace('/\D/', '', $telefone);
+    if (strlen($telLimpo) === 11) {
+        return '(' . substr($telLimpo, 0, 2) . ') ' . substr($telLimpo, 2, 5) . '-' . substr($telLimpo, 7, 4);
+    } elseif (strlen($telLimpo) === 10) {
+        return '(' . substr($telLimpo, 0, 2) . ') ' . substr($telLimpo, 2, 4) . '-' . substr($telLimpo, 6, 4);
+    }
+    return $telefone;
 }
 
 // FASE INSTRUTOR - AULAS TEORICAS - Buscar próximas aulas (próximos 7 dias) - práticas + teóricas
@@ -243,7 +353,13 @@ if ($instrutorId) {
     // Buscar aulas práticas dos próximos 7 dias
     $aulasPraticasProximas = $db->fetchAll("
         SELECT a.*, 
-               al.nome as aluno_nome, al.telefone as aluno_telefone,
+               a.aluno_id,
+               al.nome as aluno_nome, 
+               al.telefone as aluno_telefone,
+               al.cpf as aluno_cpf,
+               al.foto as aluno_foto,
+               al.categoria_cnh as aluno_categoria_cnh,
+               al.email as aluno_email,
                v.modelo as veiculo_modelo, v.placa as veiculo_placa,
                'pratica' as tipo_aula
         FROM aulas a
@@ -352,43 +468,49 @@ if ($instrutorId) {
 }
 
 // FASE INSTRUTOR - AULAS TEORICAS - Estatísticas do dia (práticas + teóricas)
-// Inicializar com valores padrão para evitar erros quando não há registro na tabela instrutores
+// CORREÇÃO: Calcular contadores baseado no array $aulasHoje para garantir consistência
 $statsHoje = [
     'total_aulas' => 0,
-    'agendadas' => 0,
-    'confirmadas' => 0,
+    'pendentes' => 0,
     'concluidas' => 0
 ];
 
-if ($instrutorId) {
-    // Estatísticas de aulas práticas
-    $statsPraticas = $db->fetch("
-        SELECT 
-            COUNT(*) as total_aulas,
-            SUM(CASE WHEN status = 'agendada' THEN 1 ELSE 0 END) as agendadas,
-            SUM(CASE WHEN status = 'confirmada' THEN 1 ELSE 0 END) as confirmadas,
-            SUM(CASE WHEN status = 'concluida' THEN 1 ELSE 0 END) as concluidas
-        FROM aulas 
-        WHERE instrutor_id = ? AND data_aula = ? AND status != 'cancelada'
-    ", [$instrutorId, $hoje]);
+// CORREÇÃO: Contadores baseados APENAS nas aulas do array $aulasHoje (mesmo dataset da tabela)
+if ($instrutorId && !empty($aulasHoje)) {
+    $totalAulas = count($aulasHoje);
+    $concluidas = 0;
+    $pendentes = 0;
     
-    // FASE INSTRUTOR - AULAS TEORICAS - Estatísticas de aulas teóricas
-    $statsTeoricas = $db->fetch("
-        SELECT 
-            COUNT(*) as total_aulas,
-            SUM(CASE WHEN status = 'agendada' THEN 1 ELSE 0 END) as agendadas,
-            0 as confirmadas, -- Aulas teóricas não têm status 'confirmada'
-            SUM(CASE WHEN status = 'realizada' THEN 1 ELSE 0 END) as concluidas
-        FROM turma_aulas_agendadas 
-        WHERE instrutor_id = ? AND data_aula = ? AND status != 'cancelada'
-    ", [$instrutorId, $hoje]);
+    foreach ($aulasHoje as $aula) {
+        if ($aula['tipo_aula'] === 'pratica') {
+            // Aula prática: regras simples baseadas apenas em status
+            $status = $aula['status'] ?? '';
+            if ($status === 'concluida') {
+                $concluidas++;
+            } elseif (in_array($status, ['agendada', 'em_andamento'])) {
+                // NUNCA contar 'concluida' nem 'cancelada' como pendente
+                $pendentes++;
+            }
+            // 'cancelada' não conta em nenhum dos dois
+        } else {
+            // Aula teórica: considerar status do banco
+            $status = $aula['status'] ?? '';
+            // Concluída se status = 'realizada' (independente de chamada_registrada)
+            if ($status === 'realizada') {
+                $concluidas++;
+            } elseif ($status !== 'cancelada') {
+                // Pendente: qualquer outro status que não seja 'realizada' nem 'cancelada'
+                // (inclui 'agendada' e outros estados possíveis)
+                $pendentes++;
+            }
+            // 'cancelada' não conta em nenhum dos dois
+        }
+    }
     
-    // Combinar estatísticas
     $statsHoje = [
-        'total_aulas' => (int)($statsPraticas['total_aulas'] ?? 0) + (int)($statsTeoricas['total_aulas'] ?? 0),
-        'agendadas' => (int)($statsPraticas['agendadas'] ?? 0) + (int)($statsTeoricas['agendadas'] ?? 0),
-        'confirmadas' => (int)($statsPraticas['confirmadas'] ?? 0) + (int)($statsTeoricas['confirmadas'] ?? 0),
-        'concluidas' => (int)($statsPraticas['concluidas'] ?? 0) + (int)($statsTeoricas['concluidas'] ?? 0)
+        'total_aulas' => $totalAulas,
+        'pendentes' => $pendentes,
+        'concluidas' => $concluidas
     ];
 }
 
@@ -409,29 +531,51 @@ if ($instrutorId) {
     <div class="header">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <div>
-                <h1>Olá, <?php echo htmlspecialchars($instrutor['nome'] ?? 'Instrutor'); ?>!</h1>
+                <h1>Minhas aulas</h1>
                 <div class="subtitle">Gerencie suas aulas e turmas</div>
             </div>
             <!-- Dropdown de Usuário -->
             <div class="instrutor-profile-menu" style="position: relative;">
-                <button class="instrutor-profile-button" id="instrutor-profile-button" style="background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 8px; padding: 8px 12px; color: white; cursor: pointer; display: flex; align-items: center; gap: 8px;">
-                    <div class="instrutor-profile-avatar" style="width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.3); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 14px;">
-                        <?php 
-                        $iniciais = strtoupper(substr($instrutor['nome'], 0, 1));
-                        if (strpos($instrutor['nome'], ' ') !== false) {
-                            $nomes = explode(' ', $instrutor['nome']);
-                            $iniciais = strtoupper(substr($nomes[0], 0, 1) . substr(end($nomes), 0, 1));
-                        }
-                        echo htmlspecialchars($iniciais ?? 'IN');
-                        ?>
+                <button class="instrutor-profile-button" id="instrutor-profile-button" style="background: transparent; border: none; padding: 4px 8px; color: white; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: background-color 0.2s ease;">
+                    <div class="instrutor-profile-avatar" style="width: 32px; height: 32px; border-radius: 50%; overflow: hidden; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-weight: 600; font-size: 12px; position: relative; flex-shrink: 0; border: 1px solid rgba(255,255,255,0.15);">
+                        <?php if (!empty($instrutor['foto'])): ?>
+                            <img src="../<?php echo htmlspecialchars($instrutor['foto']); ?>" 
+                                 alt="Foto de <?php echo htmlspecialchars($instrutor['nome'] ?? ''); ?>" 
+                                 style="width: 100%; height: 100%; object-fit: cover;"
+                                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <div style="display: none; width: 100%; height: 100%; align-items: center; justify-content: center; background: rgba(255,255,255,0.2); color: white;">
+                                <?php 
+                                $iniciais = strtoupper(substr($instrutor['nome'], 0, 1));
+                                if (strpos($instrutor['nome'], ' ') !== false) {
+                                    $nomes = explode(' ', $instrutor['nome']);
+                                    $iniciais = strtoupper(substr($nomes[0], 0, 1) . substr(end($nomes), 0, 1));
+                                }
+                                echo htmlspecialchars($iniciais ?? 'IN');
+                                ?>
+                            </div>
+                        <?php else: ?>
+                            <?php 
+                            $iniciais = strtoupper(substr($instrutor['nome'], 0, 1));
+                            if (strpos($instrutor['nome'], ' ') !== false) {
+                                $nomes = explode(' ', $instrutor['nome']);
+                                $iniciais = strtoupper(substr($nomes[0], 0, 1) . substr(end($nomes), 0, 1));
+                            }
+                            echo htmlspecialchars($iniciais ?? 'IN');
+                            ?>
+                        <?php endif; ?>
                     </div>
-                    <div style="display: flex; flex-direction: column; align-items: flex-start; text-align: left;">
-                        <span style="font-size: 14px; font-weight: 600; line-height: 1.2;"><?php echo htmlspecialchars($instrutor['nome'] ?? 'Instrutor'); ?></span>
-                        <span style="font-size: 12px; opacity: 0.9; line-height: 1.2;">Instrutor</span>
+                    <div class="instrutor-profile-info" style="display: flex; flex-direction: column; align-items: flex-start; text-align: left; min-width: 0;">
+                        <span class="instrutor-profile-name" style="font-size: 14px; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100px; color: white;"><?php echo htmlspecialchars($instrutor['nome'] ?? 'Instrutor'); ?></span>
+                        <span class="instrutor-profile-role" style="font-size: 12px; opacity: 0.9; line-height: 1.2; color: white;">Instrutor</span>
                     </div>
-                    <i class="fas fa-chevron-down" style="font-size: 12px; margin-left: 4px;"></i>
+                    <i class="fas fa-chevron-down" style="font-size: 11px; margin-left: 4px; color: white; opacity: 0.9;"></i>
                 </button>
                 <div class="instrutor-profile-dropdown" id="instrutor-profile-dropdown" style="display: none; position: absolute; top: 100%; right: 0; margin-top: 8px; background: white; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15); min-width: 200px; z-index: 1000;">
+                    <!-- Informações do usuário no dropdown -->
+                    <div style="padding: 12px 16px; border-bottom: 1px solid #f0f0f0;">
+                        <div style="font-weight: 600; color: #333; font-size: 14px; margin-bottom: 2px;"><?php echo htmlspecialchars($instrutor['nome'] ?? 'Instrutor'); ?></div>
+                        <div style="font-size: 12px; color: #666;">Instrutor</div>
+                    </div>
                     <a href="perfil.php" class="instrutor-dropdown-item" style="display: flex; align-items: center; padding: 12px 16px; color: #333; text-decoration: none; border-bottom: 1px solid #f0f0f0;">
                         <i class="fas fa-user" style="width: 20px; margin-right: 12px; color: #666;"></i>
                         Meu Perfil
@@ -459,9 +603,9 @@ if ($instrutorId) {
                 <!-- Ajuste visual: Card Próxima Aula - hierarquia e espaçamentos -->
                 <div class="card border-primary shadow-sm h-100">
                     <div class="card-header bg-primary text-white py-2 d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="badge bg-light text-primary mr-2" style="font-size: 0.7rem; font-weight: 600;">PRÓXIMA AULA</span>
-                            <strong style="font-size: 1.3rem; font-weight: 700;"><?php echo date('H:i', strtotime($proximaAula['hora_inicio'])); ?> - <?php echo date('H:i', strtotime($proximaAula['hora_fim'])); ?></strong>
+                        <div class="flex-grow-1">
+                            <div class="small mb-1" style="font-size: 0.65rem; opacity: 0.9;">PRÓXIMA AULA</div>
+                            <strong style="font-size: 1.3rem; font-weight: 700; line-height: 1.2;"><?php echo date('H:i', strtotime($proximaAula['hora_inicio'])); ?>–<?php echo date('H:i', strtotime($proximaAula['hora_fim'])); ?></strong>
                         </div>
                         <span class="badge bg-<?php echo $proximaAula['tipo_aula'] === 'teorica' ? 'info' : 'success'; ?>" style="font-size: 0.75rem; opacity: 0.9; font-weight: 500;">
                             <?php echo strtoupper($proximaAula['tipo_aula']); ?>
@@ -492,14 +636,101 @@ if ($instrutorId) {
                             </div>
                             <?php endif; ?>
                         <?php else: ?>
-                            <div class="mb-2">
-                                <strong><?php echo htmlspecialchars($proximaAula['aluno_nome'] ?? 'Aluno não informado'); ?></strong>
+                            <!-- Informações do Aluno - Layout Otimizado Mobile -->
+                            <div class="card-aluno-info mb-3">
+                                <!-- Linha 1: Avatar + Nome (mesma linha, compacto) -->
+                                <div class="aluno-linha-1 d-flex align-items-center mb-2">
+                                    <!-- Avatar pequeno -->
+                                    <div class="aluno-foto-wrapper">
+                                        <?php if (!empty($proximaAula['aluno_foto'])): ?>
+                                        <img src="../<?php echo htmlspecialchars($proximaAula['aluno_foto']); ?>" 
+                                             alt="Foto de <?php echo htmlspecialchars($proximaAula['aluno_nome'] ?? ''); ?>" 
+                                             class="aluno-foto" 
+                                             onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                        <div class="aluno-foto-placeholder" style="display: none;" data-iniciais="<?php echo htmlspecialchars(gerarIniciais($proximaAula['aluno_nome'] ?? '')); ?>">
+                                            <span class="aluno-iniciais"><?php echo htmlspecialchars(gerarIniciais($proximaAula['aluno_nome'] ?? '')); ?></span>
+                                        </div>
+                                        <?php else: ?>
+                                        <div class="aluno-foto-placeholder" data-iniciais="<?php echo htmlspecialchars(gerarIniciais($proximaAula['aluno_nome'] ?? '')); ?>">
+                                            <span class="aluno-iniciais"><?php echo htmlspecialchars(gerarIniciais($proximaAula['aluno_nome'] ?? '')); ?></span>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+                                    
+                                    <!-- Nome -->
+                                    <div class="aluno-nome-wrapper flex-grow-1">
+                                        <strong class="aluno-nome-texto"><?php echo htmlspecialchars($proximaAula['aluno_nome'] ?? 'Aluno não informado'); ?></strong>
+                                    </div>
+                                </div>
+                                
+                                <!-- Linha 2: Comunicação (botões apenas, sem título/seletor) -->
+                                <div class="aluno-linha-comunicacao mb-2">
+                                    <!-- Botão principal: Mensagem (chat interno) -->
+                                    <div class="comunicacao-acao-principal mb-1">
+                                        <button type="button" 
+                                                class="btn-comunicacao-mensagem" 
+                                                onclick="alert('Chat interno em breve');"
+                                                title="Abrir chat interno">
+                                            <i class="fas fa-comment-dots"></i>
+                                            <span>Mensagem</span>
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Botões secundários: WhatsApp e Ligar -->
+                                    <?php if (!empty($proximaAula['aluno_telefone'])): ?>
+                                    <div class="comunicacao-acoes-secundarias">
+                                        <a href="https://wa.me/55<?php echo preg_replace('/\D/', '', $proximaAula['aluno_telefone']); ?>" 
+                                           target="_blank" 
+                                           class="btn-comunicacao-secundaria btn-comunicacao-whatsapp" 
+                                           title="Abrir WhatsApp">
+                                            <i class="fab fa-whatsapp"></i>
+                                            <span>WhatsApp</span>
+                                        </a>
+                                        <a href="tel:<?php echo preg_replace('/\D/', '', $proximaAula['aluno_telefone']); ?>" 
+                                           class="btn-comunicacao-secundaria btn-comunicacao-tel" 
+                                           title="Ligar para <?php echo formatarTelefone($proximaAula['aluno_telefone']); ?>">
+                                            <i class="fas fa-phone"></i>
+                                            <span>Ligar</span>
+                                        </a>
+                                    </div>
+                                    <?php endif; ?>
+                                </div>
+                                
+                                <!-- Linha 3: Telefone (linha de dado, discreto) -->
+                                <?php if (!empty($proximaAula['aluno_telefone'])): ?>
+                                <div class="aluno-linha-3 mb-2">
+                                    <i class="fas fa-phone text-muted"></i>
+                                    <span class="aluno-label">Telefone:</span>
+                                    <span class="aluno-valor-telefone"><?php echo formatarTelefone($proximaAula['aluno_telefone']); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <!-- Linha 4: CNH -->
+                                <?php if (!empty($proximaAula['aluno_categoria_cnh'])): ?>
+                                <div class="aluno-linha-4 mb-2">
+                                    <i class="fas fa-id-badge text-muted"></i>
+                                    <span class="aluno-label">CNH:</span>
+                                    <span class="badge bg-info aluno-badge-cnh"><?php echo htmlspecialchars($proximaAula['aluno_categoria_cnh']); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <!-- Linha 5: CPF Mascarado (pequeno, opcional) -->
+                                <?php if (!empty($proximaAula['aluno_cpf'])): ?>
+                                <div class="aluno-linha-5 mb-2">
+                                    <i class="fas fa-id-card text-muted"></i>
+                                    <span class="aluno-label">CPF:</span>
+                                    <span class="aluno-valor-cpf"><?php echo mascararCPF($proximaAula['aluno_cpf']); ?></span>
+                                </div>
+                                <?php endif; ?>
+                                
+                                <!-- Linha 6: Dados da Aula/Veículo (separado) -->
+                                <?php if (!empty($proximaAula['veiculo_modelo'])): ?>
+                                <div class="aluno-linha-6 mt-3 pt-2 border-top">
+                                    <i class="fas fa-car text-muted"></i>
+                                    <span class="text-muted small"><?php echo htmlspecialchars($proximaAula['veiculo_modelo'] ?? ''); ?> - <?php echo htmlspecialchars($proximaAula['veiculo_placa'] ?? ''); ?></span>
+                                </div>
+                                <?php endif; ?>
                             </div>
-                            <?php if (!empty($proximaAula['veiculo_modelo'])): ?>
-                            <div class="mb-2 text-muted small">
-                                <i class="fas fa-car mr-1"></i><?php echo htmlspecialchars($proximaAula['veiculo_modelo'] ?? ''); ?> - <?php echo htmlspecialchars($proximaAula['veiculo_placa'] ?? ''); ?>
-                            </div>
-                            <?php endif; ?>
                         <?php endif; ?>
                         
                         <!-- Estado de chamada -->
@@ -520,6 +751,17 @@ if ($instrutorId) {
                         </div>
                         
                         <!-- Ajuste visual: Botões com largura mínima confortável e espaçamento -->
+                        <?php 
+                        // CORREÇÃO: Só mostrar botões se a aula não estiver concluída ou cancelada
+                        $mostrarBotoes = true;
+                        if ($proximaAula['tipo_aula'] === 'pratica') {
+                            $mostrarBotoes = !in_array($proximaAula['status'] ?? '', ['concluida', 'cancelada']);
+                        } else {
+                            // Teórica: não mostrar botões se tem chamada registrada OU status = 'realizada'
+                            $mostrarBotoes = !($proximaAula['chamada_registrada'] ?? false) && ($proximaAula['status'] ?? '') !== 'realizada';
+                        }
+                        ?>
+                        <?php if ($mostrarBotoes): ?>
                         <div class="d-flex" style="gap: 0.5rem;">
                             <?php if ($proximaAula['tipo_aula'] === 'teorica'): ?>
                             <?php 
@@ -552,13 +794,16 @@ if ($instrutorId) {
                             </button>
                             <?php endif; ?>
                         </div>
+                        <?php else: ?>
+                        <!-- Status já aparece no badge acima, não precisa de caixa redundante -->
+                        <?php endif; ?>
                     </div>
                 </div>
                 <?php else: ?>
                 <div class="card h-100">
                     <div class="card-body text-center py-4">
-                        <i class="fas fa-calendar-times fa-2x text-muted mb-2"></i>
-                        <p class="text-muted mb-2">Você não possui próximas aulas agendadas</p>
+                        <i class="fas fa-calendar-check fa-2x text-success mb-2"></i>
+                        <p class="text-muted mb-2">Nenhuma aula pendente hoje</p>
                         <a href="aulas.php" class="btn btn-sm btn-outline-primary">Ver todas as aulas</a>
                     </div>
                 </div>
@@ -589,7 +834,7 @@ if ($instrutorId) {
                                 <div class="resumo-card card h-100 text-center py-3">
                                     <i class="fas fa-exclamation-circle text-warning mb-2 resumo-icon"></i>
                                     <div class="resumo-valor text-warning">
-                                        <?php echo $statsHoje['agendadas']; ?>
+                                        <?php echo $statsHoje['pendentes']; ?>
                                     </div>
                                     <div class="resumo-label">Pendentes</div>
                                 </div>
@@ -605,66 +850,55 @@ if ($instrutorId) {
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                <!-- FIM RESUMO DE HOJE -->
-                
-                <!-- Card Pendências - mais compacto -->
-                <div class="card">
-                    <div class="card-header bg-white border-0 pb-0">
-                        <h5 class="card-title mb-0">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>Pendências
-                        </h5>
-                    </div>
-                    <div class="card-body d-flex flex-column align-items-center justify-content-center text-center py-4">
+                        
+                        <!-- Pendências: linha compacta dentro do Resumo (só se não houver pendências) -->
                         <?php 
                         // TODO: Implementar lógica para contar aulas anteriores sem chamada
                         $aulasSemChamada = 0; // Placeholder
                         ?>
-                        <?php if ($aulasSemChamada === 0): ?>
-                        <div class="pendencias-status-icon mb-2">
-                            <i class="fas fa-check-circle text-success" style="font-size: 2rem;"></i>
+                        <?php if ($aulasSemChamada === 0 && $statsHoje['pendentes'] === 0): ?>
+                        <div class="resumo-pendencias-ok" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                            <div style="display: flex; align-items: center; justify-content: center; gap: 6px;">
+                                <i class="fas fa-check-circle text-success" style="font-size: 0.85rem;"></i>
+                                <span class="text-muted small mb-0" style="font-size: 0.8rem;">Todas as chamadas em dia</span>
+                            </div>
                         </div>
-                        <p class="mb-0 text-muted small">Todas as chamadas estão em dia</p>
-                        <?php else: ?>
-                        <div class="alert alert-warning py-2 mb-0 w-100">
-                            <strong><?php echo $aulasSemChamada; ?></strong> aula(s) anteriores sem chamada
-                            <br><a href="aulas.php?filtro=pendentes" class="small">Ver lista</a>
+                        <?php elseif ($statsHoje['pendentes'] > 0): ?>
+                        <div class="resumo-pendencias-alert" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e2e8f0;">
+                            <div class="alert alert-warning py-2 mb-0" style="font-size: 0.85rem;">
+                                <i class="fas fa-exclamation-triangle mr-1"></i>
+                                <strong><?php echo $statsHoje['pendentes']; ?></strong> aula(s) pendente(s) hoje
+                                <a href="#aulas-hoje" class="ml-2 small">Ver lista</a>
+                            </div>
                         </div>
                         <?php endif; ?>
                     </div>
                 </div>
+                <!-- FIM RESUMO DE HOJE -->
             </div>
         </div>
         
-        <!-- ACOES RAPIDAS - NOVO LAYOUT (Bootstrap 4) -->
+        <!-- ACOES RAPIDAS - COMPACTO (Mobile-first) -->
         <div class="card mb-4 instrutor-acoes-rapidas">
-            <div class="card-header d-flex justify-content-center align-items-center text-center">
+            <div class="card-header d-flex justify-content-center align-items-center text-center py-2">
                 <i class="fas fa-bolt mr-2"></i>
-                <span>Ações Rápidas</span>
+                <span style="font-size: 0.9rem;">Ações Rápidas</span>
             </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-12 col-sm-6 col-lg-3 mb-3 mb-lg-0 d-flex">
-                        <button class="btn btn-primary w-100 btn-acao-rapida" onclick="verTodasAulas()">
-                            <i class="fas fa-list mr-2"></i>Ver Todas as Aulas
-                        </button>
-                    </div>
-                    <div class="col-12 col-sm-6 col-lg-3 mb-3 mb-lg-0 d-flex">
-                        <button class="btn btn-secondary w-100 btn-acao-rapida" onclick="verNotificacoes()">
-                            <i class="fas fa-bell mr-2"></i>Central de Avisos
-                        </button>
-                    </div>
-                    <div class="col-12 col-sm-6 col-lg-3 mb-3 mb-sm-0 d-flex">
-                        <button class="btn btn-outline-primary w-100 btn-acao-rapida" onclick="registrarOcorrencia()">
-                            <i class="fas fa-exclamation-triangle mr-2"></i>Registrar Ocorrência
-                        </button>
-                    </div>
-                    <div class="col-12 col-sm-6 col-lg-3 d-flex">
-                        <button class="btn btn-outline-secondary w-100 btn-acao-rapida" onclick="contatarSecretaria()">
-                            <i class="fas fa-phone mr-2"></i>Contatar Secretaria
-                        </button>
-                    </div>
+            <div class="card-body py-2">
+                <!-- Grid 2 colunas no mobile, 3 colunas no desktop - 3 botões padronizados -->
+                <div class="acoes-rapidas-grid-padronizado">
+                    <button class="btn btn-secondary btn-acao-rapida-padronizado" onclick="verNotificacoes()">
+                        <i class="fas fa-bell"></i>
+                        <span>Avisos</span>
+                    </button>
+                    <button class="btn btn-secondary btn-acao-rapida-padronizado" onclick="registrarOcorrencia()">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>Registrar Ocorrência</span>
+                    </button>
+                    <button class="btn btn-secondary btn-acao-rapida-padronizado" onclick="contatarSecretaria()">
+                        <i class="fas fa-phone"></i>
+                        <span>Contatar Secretaria</span>
+                    </button>
                 </div>
             </div>
         </div>
@@ -676,9 +910,14 @@ if ($instrutorId) {
                 <h5 class="card-title mb-0">
                     <i class="fas fa-calendar-day mr-2"></i>Aulas de Hoje
                 </h5>
-                <span class="text-muted small">
-                    <?php echo count($aulasHoje); ?> aula(s) agendada(s) hoje
-                </span>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="text-muted small">
+                        <?php echo count($aulasHoje); ?> aula(s) agendada(s) hoje
+                    </span>
+                    <a href="aulas.php?periodo=hoje" class="btn btn-sm btn-outline-primary" style="padding: 4px 12px; font-size: 12px;">
+                        Ver todas
+                    </a>
+                </div>
             </div>
             <div class="card-body">
                 <?php if (empty($aulasHoje)): ?>
@@ -687,8 +926,139 @@ if ($instrutorId) {
                     <p class="text-muted mb-0">Você não possui aulas agendadas para hoje.</p>
                 </div>
                 <?php else: ?>
-                <!-- Ajuste visual: Tabela responsiva com fonte compacta e mais espaçamento -->
-                <div class="table-responsive">
+                <!-- Lista Mobile (esconder no desktop) -->
+                <div class="aulas-hoje-list-mobile">
+                    <?php 
+                    $disciplinas = [
+                        'legislacao_transito' => 'Legislação de Trânsito',
+                        'direcao_defensiva' => 'Direção Defensiva',
+                        'primeiros_socorros' => 'Primeiros Socorros',
+                        'meio_ambiente_cidadania' => 'Meio Ambiente e Cidadania',
+                        'mecanica_basica' => 'Mecânica Básica'
+                    ];
+                    foreach ($aulasHoje as $aula):
+                        // Usar chamada_registrada já calculada no array (evita query duplicada)
+                        $chamadaRegistrada = $aula['chamada_registrada'] ?? false;
+                        
+                        $baseAdmin = preg_replace('#/instrutor$#', '', (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : rtrim(dirname($_SERVER['SCRIPT_NAME']), '/'))) . '/admin/index.php';
+                        $turmaIdAula = (int)($aula['turma_id'] ?? 0);
+                        $aulaIdAula = (int)($aula['id'] ?? 0);
+                        $urlChamada = $baseAdmin . '?page=turma-chamada&turma_id=' . $turmaIdAula . '&aula_id=' . $aulaIdAula . '&origem=instrutor';
+                        $urlDiario = $baseAdmin . '?page=turma-diario&turma_id=' . $turmaIdAula . '&aula_id=' . $aulaIdAula . '&origem=instrutor';
+                        $statusAula = $aula['status'] ?? 'agendada';
+                    ?>
+                    <!-- Card padronizado de aula (hierarquia fixa - nunca estoura) -->
+                    <div class="aula-item-mobile aula-card-padronizado <?php echo $chamadaRegistrada ? 'aula-concluida' : ''; ?>" style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 12px; margin-bottom: 12px; background: <?php echo $chamadaRegistrada ? '#f0f9ff' : 'white'; ?>; width: 100%; max-width: 100%; overflow: hidden; box-sizing: border-box;">
+                        <!-- Linha 1: Hora + pill TEOR/PRAT + Status (flex-wrap para nunca estourar) -->
+                        <div class="aula-header" style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; flex-wrap: wrap; gap: 6px;">
+                            <div style="display: flex; align-items: center; gap: 8px; flex: 1; min-width: 0;">
+                                <strong style="font-size: 15px; font-weight: 600; color: #1e293b; white-space: nowrap; flex-shrink: 0;"><?php echo date('H:i', strtotime($aula['hora_inicio'])); ?>–<?php echo date('H:i', strtotime($aula['hora_fim'])); ?></strong>
+                                <span class="badge" style="background: <?php echo $aula['tipo_aula'] === 'teorica' ? '#3b82f6' : '#10b981'; ?>; color: white; font-size: 10px; padding: 4px 8px; font-weight: 600; white-space: nowrap; flex-shrink: 0;">
+                                    <?php echo $aula['tipo_aula'] === 'teorica' ? 'TEOR' : 'PRAT'; ?>
+                                </span>
+                            </div>
+                            <?php if ($aula['tipo_aula'] === 'teorica'): ?>
+                                <span class="badge" style="font-size: 10px; padding: 4px 8px; font-weight: 500; background: <?php echo $chamadaRegistrada ? '#d1fae5' : '#fef3c7'; ?>; color: <?php echo $chamadaRegistrada ? '#065f46' : '#92400e'; ?>; white-space: nowrap; flex-shrink: 0;">
+                                    <?php echo $chamadaRegistrada ? 'CONCLUÍDA' : 'PENDENTE'; ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="badge bg-secondary" style="font-size: 10px; padding: 4px 8px; font-weight: 500; white-space: nowrap; flex-shrink: 0;">
+                                    <?php echo strtoupper($statusAula); ?>
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- Linha 2: Título principal (Disciplina ou Nome do aluno) -->
+                        <div style="margin-bottom: 8px;">
+                            <?php if ($aula['tipo_aula'] === 'teorica'): ?>
+                                <div style="font-weight: 600; font-size: 15px; color: #1e293b; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
+                                    <?php echo htmlspecialchars((string)($disciplinas[$aula['disciplina'] ?? ''] ?? ucfirst(str_replace('_', ' ', (string)($aula['disciplina'] ?? '')) ?? 'Disciplina'))); ?>
+                                </div>
+                            <?php else: ?>
+                                <div style="font-weight: 600; font-size: 15px; color: #1e293b; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
+                                    <?php echo htmlspecialchars($aula['aluno_nome'] ?? 'Aluno não informado'); ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- Linha 3: Subinfo curta (Turma/Categoria/Veículo) -->
+                        <div style="margin-bottom: 10px;">
+                            <?php if ($aula['tipo_aula'] === 'teorica'): ?>
+                                <div style="font-size: 12px; color: #64748b; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
+                                    <?php echo htmlspecialchars((string)($aula['turma_nome'] ?? '')); ?>
+                                    <?php if (!empty($aula['sala_nome'])): ?>
+                                        · <?php echo htmlspecialchars((string)$aula['sala_nome']); ?>
+                                    <?php endif; ?>
+                                </div>
+                            <?php else: ?>
+                                <?php 
+                                $subinfo = [];
+                                if (!empty($aula['aluno_categoria_cnh'])) {
+                                    $subinfo[] = 'CNH ' . htmlspecialchars($aula['aluno_categoria_cnh']);
+                                }
+                                if (!empty($aula['veiculo_modelo'])) {
+                                    $subinfo[] = htmlspecialchars($aula['veiculo_modelo']);
+                                }
+                                ?>
+                                <?php if (!empty($subinfo)): ?>
+                                <div style="font-size: 12px; color: #64748b; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">
+                                    <?php echo implode(' · ', $subinfo); ?>
+                                </div>
+                                <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+                        
+                        <!-- Linha 4: Ações (botões compactos e consistentes - PADRÃO ÚNICO) -->
+                        <div style="display: flex; gap: 6px; flex-wrap: nowrap;">
+                            <?php if ($aula['tipo_aula'] === 'teorica'): ?>
+                            <!-- Ações para aula teórica: sempre Chamada + Diário -->
+                            <a href="<?php echo htmlspecialchars($urlChamada); ?>" 
+                               class="btn btn-primary btn-sm aula-acao-btn" 
+                               style="padding: 8px 12px; font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; height: 36px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-clipboard-list mr-1"></i> Chamada
+                            </a>
+                            <a href="<?php echo htmlspecialchars($urlDiario); ?>" 
+                               class="btn btn-secondary btn-sm aula-acao-btn" 
+                               style="padding: 8px 12px; font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; height: 36px; display: flex; align-items: center; justify-content: center;">
+                                <i class="fas fa-book mr-1"></i> Diário
+                            </a>
+                            <?php else: ?>
+                            <!-- Ações para aula prática: padronizar estrutura (sempre 2 botões principais) -->
+                            <?php if ($statusAula === 'agendada'): ?>
+                            <button class="btn btn-success btn-sm iniciar-aula aula-acao-btn" 
+                                    style="padding: 8px 12px; font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; height: 36px; display: flex; align-items: center; justify-content: center;"
+                                    data-aula-id="<?php echo $aula['id']; ?>">
+                                <i class="fas fa-play mr-1"></i> Iniciar
+                            </button>
+                            <!-- Segundo botão: Transferir (sempre presente para manter consistência) -->
+                            <button class="btn btn-warning btn-sm solicitar-transferencia aula-acao-btn" 
+                                    style="padding: 8px 12px; font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; height: 36px; display: flex; align-items: center; justify-content: center;"
+                                    data-aula-id="<?php echo $aula['id']; ?>"
+                                    data-data="<?php echo $aula['data_aula']; ?>"
+                                    data-hora="<?php echo $aula['hora_inicio']; ?>">
+                                <i class="fas fa-exchange-alt mr-1"></i> Transferir
+                            </button>
+                            <?php elseif ($statusAula === 'em_andamento'): ?>
+                            <button class="btn btn-primary btn-sm finalizar-aula aula-acao-btn" 
+                                    style="padding: 8px 12px; font-size: 12px; flex: 1; min-width: 0; white-space: nowrap; height: 36px; display: flex; align-items: center; justify-content: center;"
+                                    data-aula-id="<?php echo $aula['id']; ?>">
+                                <i class="fas fa-stop mr-1"></i> Finalizar
+                            </button>
+                            <!-- Segundo botão: placeholder invisível para manter consistência visual -->
+                            <div style="flex: 1; min-width: 0;"></div>
+                            <?php else: ?>
+                            <!-- Status concluída/cancelada: manter estrutura mas sem ações -->
+                            <div style="flex: 1; min-width: 0;"></div>
+                            <div style="flex: 1; min-width: 0;"></div>
+                            <?php endif; ?>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                
+                <!-- Tabela Desktop (esconder no mobile) -->
+                <div class="table-responsive aulas-hoje-table-desktop">
                     <table class="table table-hover align-middle mb-0 instructor-aulas-table">
                         <thead class="table-light">
                             <tr>
@@ -702,34 +1072,15 @@ if ($instrutorId) {
                         </thead>
                         <tbody>
                                 <?php 
-                                $disciplinas = [
-                                    'legislacao_transito' => 'Legislação de Trânsito',
-                                    'direcao_defensiva' => 'Direção Defensiva',
-                                    'primeiros_socorros' => 'Primeiros Socorros',
-                                    'meio_ambiente_cidadania' => 'Meio Ambiente e Cidadania',
-                                    'mecanica_basica' => 'Mecânica Básica'
-                                ];
                                 foreach ($aulasHoje as $aula): 
-                                    // Verificar se tem chamada registrada (apenas para teóricas)
-                                    $chamadaRegistrada = false;
-                                    if ($aula['tipo_aula'] === 'teorica' && isset($aula['id'])) {
-                                        try {
-                                            $presencasCount = $db->fetch("
-                                                SELECT COUNT(*) as total
-                                                FROM turma_presencas
-                                                WHERE aula_id = ? AND turma_id = ?
-                                            ", [$aula['id'], $aula['turma_id'] ?? 0]);
-                                            $chamadaRegistrada = ($presencasCount['total'] ?? 0) > 0;
-                                        } catch (Exception $e) {
-                                            $chamadaRegistrada = false;
-                                        }
-                                    }
-                                    
-                                    $baseAdmin = preg_replace('#/instrutor$#', '', (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : rtrim(dirname($_SERVER['SCRIPT_NAME']), '/'))) . '/admin/index.php';
-                                    $turmaIdAula = (int)($aula['turma_id'] ?? 0);
-                                    $aulaIdAula = (int)($aula['id'] ?? 0);
-                                    $urlChamada = $baseAdmin . '?page=turma-chamada&turma_id=' . $turmaIdAula . '&aula_id=' . $aulaIdAula . '&origem=instrutor';
-                                    $urlDiario = $baseAdmin . '?page=turma-diario&turma_id=' . $turmaIdAula . '&aula_id=' . $aulaIdAula . '&origem=instrutor';
+                                // Usar chamada_registrada já calculada no array (evita query duplicada)
+                                $chamadaRegistrada = $aula['chamada_registrada'] ?? false;
+                                
+                                $baseAdmin = preg_replace('#/instrutor$#', '', (defined('BASE_PATH') ? rtrim(BASE_PATH, '/') : rtrim(dirname($_SERVER['SCRIPT_NAME']), '/'))) . '/admin/index.php';
+                                $turmaIdAula = (int)($aula['turma_id'] ?? 0);
+                                $aulaIdAula = (int)($aula['id'] ?? 0);
+                                $urlChamada = $baseAdmin . '?page=turma-chamada&turma_id=' . $turmaIdAula . '&aula_id=' . $aulaIdAula . '&origem=instrutor';
+                                $urlDiario = $baseAdmin . '?page=turma-diario&turma_id=' . $turmaIdAula . '&aula_id=' . $aulaIdAula . '&origem=instrutor';
                                 ?>
                                 <!-- Ajuste visual: Hierarquia tipográfica da tabela de aulas de hoje -->
                                 <tr class="<?php echo $chamadaRegistrada ? 'table-success' : ''; ?>">
@@ -750,13 +1101,59 @@ if ($instrutorId) {
                                                 <?php echo htmlspecialchars((string)($aula['turma_nome'] ?? '')); ?>
                                             </div>
                                         <?php else: ?>
-                                            <div class="fw-bold" style="font-size: 0.875rem; line-height: 1.3;">
-                                                <?php echo htmlspecialchars($aula['aluno_nome'] ?? 'Aluno não informado'); ?>
+                                            <div class="d-flex align-items-center">
+                                                <!-- Foto pequena -->
+                                                <div class="mr-2 flex-shrink-0">
+                                                    <?php if (!empty($aula['aluno_foto'])): ?>
+                                                    <img src="../<?php echo htmlspecialchars($aula['aluno_foto']); ?>" 
+                                                         alt="Foto de <?php echo htmlspecialchars($aula['aluno_nome'] ?? ''); ?>" 
+                                                         class="rounded-circle aluno-foto-tabela" 
+                                                         style="width: 40px; height: 40px; object-fit: cover; border: 2px solid #dee2e6;"
+                                                         onerror="this.style.display='none'; if(this.nextElementSibling) this.nextElementSibling.style.display='flex';">
+                                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center aluno-foto-placeholder-tabela" 
+                                                         style="width: 40px; height: 40px; border: 2px solid #dee2e6; display: none;">
+                                                        <i class="fas fa-user text-white"></i>
+                                                    </div>
+                                                    <?php else: ?>
+                                                    <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" 
+                                                         style="width: 40px; height: 40px; border: 2px solid #dee2e6;">
+                                                        <i class="fas fa-user text-white"></i>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                </div>
+                                                
+                                                <!-- Nome e informações -->
+                                                <div class="flex-grow-1">
+                                                    <div class="fw-bold" style="font-size: 0.875rem; line-height: 1.3;">
+                                                        <?php echo htmlspecialchars($aula['aluno_nome'] ?? 'Aluno não informado'); ?>
+                                                    </div>
+                                                    <?php if (!empty($aula['aluno_telefone'])): ?>
+                                                    <div class="text-muted" style="font-size: 0.7rem;">
+                                                        <i class="fas fa-phone mr-1"></i>
+                                                        <a href="tel:<?php echo preg_replace('/\D/', '', $aula['aluno_telefone']); ?>" 
+                                                           class="text-muted text-decoration-none">
+                                                            <?php echo formatarTelefone($aula['aluno_telefone']); ?>
+                                                        </a>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                    <?php if (!empty($aula['veiculo_modelo'])): ?>
+                                                    <div class="text-muted small" style="font-size: 0.7rem; line-height: 1.2;">
+                                                        <i class="fas fa-car mr-1"></i><?php echo htmlspecialchars($aula['veiculo_modelo'] ?? ''); ?>
+                                                    </div>
+                                                    <?php endif; ?>
+                                                </div>
                                             </div>
-                                            <?php if (!empty($aula['veiculo_modelo'])): ?>
-                                            <div class="text-muted small" style="font-size: 0.75rem; line-height: 1.2;">
-                                                <?php echo htmlspecialchars($aula['veiculo_modelo'] ?? ''); ?>
-                                            </div>
+                                            <?php if ($aula['tipo_aula'] === 'pratica'): ?>
+                                                <?php if ($aula['status'] === 'em_andamento' && isset($aula['km_inicial']) && $aula['km_inicial'] !== null): ?>
+                                                <div class="text-muted small" style="font-size: 0.7rem; line-height: 1.2; margin-top: 2px;">
+                                                    KM inicial: <?php echo number_format($aula['km_inicial'], 0, ',', '.'); ?>
+                                                </div>
+                                                <?php elseif ($aula['status'] === 'concluida' && isset($aula['km_inicial']) && $aula['km_inicial'] !== null && isset($aula['km_final']) && $aula['km_final'] !== null): ?>
+                                                <?php $kmRodados = $aula['km_final'] - $aula['km_inicial']; ?>
+                                                <div class="text-muted small" style="font-size: 0.7rem; line-height: 1.2; margin-top: 2px;">
+                                                    KM: <?php echo number_format($aula['km_inicial'], 0, ',', '.'); ?> → <?php echo number_format($aula['km_final'], 0, ',', '.'); ?> (<?php echo $kmRodados >= 0 ? '+' : ''; ?><?php echo number_format($kmRodados, 0, ',', '.'); ?>)
+                                                </div>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         <?php endif; ?>
                                     </td>
@@ -842,14 +1239,15 @@ if ($instrutorId) {
                                     </td>
                                 </tr>
                                 <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                        <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
                     </div>
                 </div>
         
-        <!-- QUARTA SEÇÃO: Avisos (full width) -->
+        <!-- QUARTA SEÇÃO: Avisos (condicional - só mostrar se houver avisos) -->
+        <?php if (!empty($notificacoesNaoLidas)): ?>
         <div class="card mb-4">
             <div class="card-header py-2">
                 <h6 class="card-title mb-0" style="font-size: 0.9rem; font-weight: 600;">
@@ -857,7 +1255,6 @@ if ($instrutorId) {
                 </h6>
             </div>
             <div class="card-body py-2">
-                <?php if (!empty($notificacoesNaoLidas)): ?>
                 <div class="list-group list-group-flush">
                     <?php foreach (array_slice($notificacoesNaoLidas, 0, 3) as $notificacao): ?>
                     <div class="list-group-item px-0 py-2 border-0 border-bottom">
@@ -875,14 +1272,9 @@ if ($instrutorId) {
                     </div>
                     <?php endforeach; ?>
                 </div>
-                <?php else: ?>
-                <p class="text-muted mb-0 text-center py-2">
-                    <i class="fas fa-check-circle text-success mr-1"></i>
-                    Você não possui avisos novos.
-                </p>
-                <?php endif; ?>
             </div>
         </div>
+        <?php endif; ?>
 
         <!-- FASE 1 - PRESENCA TEORICA - Minhas Turmas Teóricas -->
         <?php if (!empty($turmasTeoricasInstrutor)): ?>
@@ -974,23 +1366,18 @@ if ($instrutorId) {
         </div>
         <?php endif; ?>
 
-        <!-- QUINTA SEÇÃO: Próximas Aulas (7 dias) - Compacto (2-3 dias) -->
+        <!-- QUINTA SEÇÃO: Próximas Aulas (7 dias) - Condicional (só renderizar se houver aulas) -->
+        <?php if (!empty($proximasAulas)): ?>
         <div class="card mb-4">
             <div class="card-header d-flex justify-content-between align-items-center py-2">
                 <h6 class="card-title mb-0" style="font-size: 0.9rem; font-weight: 600;">
                     <i class="fas fa-calendar-alt mr-2"></i>Próximas Aulas (7 dias)
                 </h6>
                 <a href="aulas.php?periodo=proximos_7_dias" class="btn btn-sm btn-outline-primary">
-                    Ver todas as aulas
+                    Ver todas
                 </a>
             </div>
             <div class="card-body py-2">
-                <?php if (empty($proximasAulas)): ?>
-                <div class="text-center py-3">
-                    <i class="fas fa-calendar-times fa-2x text-muted mb-2"></i>
-                    <p class="text-muted mb-0 small">Nenhuma aula agendada para os próximos 7 dias.</p>
-                </div>
-                <?php else: ?>
                 <?php 
                 // REFACTOR DASHBOARD INSTRUTOR - Agrupar próximas aulas por data (limitar a 2-3 dias)
                 $aulasPorData = [];
@@ -1039,9 +1426,9 @@ if ($instrutorId) {
                     </div>
                     <?php endforeach; ?>
                 </div>
-                <?php endif; ?>
             </div>
         </div>
+        <?php endif; ?>
     </div>
 
     <!-- Modal de Cancelamento/Transferência -->
@@ -1105,6 +1492,49 @@ if ($instrutorId) {
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" onclick="fecharModal()">Cancelar</button>
                 <button type="button" class="btn btn-primary" onclick="enviarAcao()">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Chat Interno (Seleção de Destino) -->
+    <div id="modalChat" class="modal-overlay hidden">
+        <div class="modal modal-chat" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-comment-dots mr-2"></i>Enviar Mensagem
+                </h3>
+                <button type="button" class="modal-close" onclick="fecharModalChat()" aria-label="Fechar">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group mb-3">
+                    <label class="form-label mb-2">Destino:</label>
+                    <div class="chat-destino-toggle">
+                        <button type="button" 
+                                class="chat-destino-btn active" 
+                                data-destino="aluno"
+                                onclick="selecionarDestinoChat('aluno')">
+                            <i class="fas fa-user-graduate mr-1"></i>Aluno
+                        </button>
+                        <button type="button" 
+                                class="chat-destino-btn" 
+                                data-destino="secretaria"
+                                onclick="selecionarDestinoChat('secretaria')">
+                            <i class="fas fa-building mr-1"></i>Secretaria
+                        </button>
+                    </div>
+                </div>
+                <div class="alert alert-info mb-0">
+                    <i class="fas fa-info-circle mr-2"></i>
+                    <small>Chat interno em desenvolvimento. Esta funcionalidade será implementada em breve.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="fecharModalChat()">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnAbrirChat" onclick="confirmarAbrirChat()">
+                    <i class="fas fa-comment-dots mr-1"></i>Abrir Chat
+                </button>
             </div>
         </div>
     </div>
@@ -1203,7 +1633,25 @@ if ($instrutorId) {
             document.querySelectorAll('.iniciar-aula').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const aulaId = this.dataset.aulaId;
-                    if (!confirm('Deseja iniciar esta aula?')) {
+                    
+                    // Coletar KM inicial via prompt
+                    const kmInicialStr = prompt('Informe o KM inicial do veículo:');
+                    
+                    // Se cancelou ou vazio, abortar
+                    if (kmInicialStr === null || kmInicialStr.trim() === '') {
+                        return;
+                    }
+                    
+                    // Validar numérico
+                    const kmInicial = Number(kmInicialStr.trim());
+                    if (isNaN(kmInicial)) {
+                        alert('KM inicial deve ser um número válido.');
+                        return;
+                    }
+                    
+                    // Validar >= 0
+                    if (kmInicial < 0) {
+                        alert('KM inicial deve ser maior ou igual a zero.');
                         return;
                     }
                     
@@ -1215,7 +1663,8 @@ if ($instrutorId) {
                             },
                             body: JSON.stringify({
                                 aula_id: aulaId,
-                                tipo_acao: 'iniciar'
+                                tipo_acao: 'iniciar',
+                                km_inicial: kmInicial
                             })
                         });
 
@@ -1240,7 +1689,25 @@ if ($instrutorId) {
             document.querySelectorAll('.finalizar-aula').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const aulaId = this.dataset.aulaId;
-                    if (!confirm('Deseja finalizar esta aula?')) {
+                    
+                    // Coletar KM final via prompt
+                    const kmFinalStr = prompt('Informe o KM final do veículo:');
+                    
+                    // Se cancelou ou vazio, abortar
+                    if (kmFinalStr === null || kmFinalStr.trim() === '') {
+                        return;
+                    }
+                    
+                    // Validar numérico
+                    const kmFinal = Number(kmFinalStr.trim());
+                    if (isNaN(kmFinal)) {
+                        alert('KM final deve ser um número válido.');
+                        return;
+                    }
+                    
+                    // Validar >= 0
+                    if (kmFinal < 0) {
+                        alert('KM final deve ser maior ou igual a zero.');
                         return;
                     }
                     
@@ -1252,7 +1719,8 @@ if ($instrutorId) {
                             },
                             body: JSON.stringify({
                                 aula_id: aulaId,
-                                tipo_acao: 'finalizar'
+                                tipo_acao: 'finalizar',
+                                km_final: kmFinal
                             })
                         });
 
@@ -1306,6 +1774,16 @@ if ($instrutorId) {
                     fecharModal();
                 }
             });
+            
+            // Fechar modal de chat ao clicar fora
+            const modalChat = document.getElementById('modalChat');
+            if (modalChat) {
+                modalChat.addEventListener('click', function(e) {
+                    if (e.target === this) {
+                        fecharModalChat();
+                    }
+                });
+            }
         });
 
         // Função para enviar ação
@@ -1396,6 +1874,11 @@ if ($instrutorId) {
         }
 
         // Função para mostrar toast
+        // Função placeholder para chat interno (a ser implementada)
+        function abrirModalChat(alunoId, aulaId) {
+            alert('Chat interno será implementado em breve. Aluno ID: ' + alunoId);
+        }
+        
         function mostrarToast(mensagem, tipo = 'info') {
             const toastContainer = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -1537,6 +2020,426 @@ if ($instrutorId) {
             font-size: 0.85rem;
         }
         
+        /* ============================================
+           ESTILOS - CARD DO ALUNO (Hierarquia Fixa)
+           ============================================ */
+        .card-aluno-info {
+            padding: 0;
+        }
+        
+        /* Container principal - flexbox */
+        .card-aluno-info {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        
+        
+        /* Linha 1: Avatar + Nome (compacto) */
+        .aluno-linha-1 {
+            display: flex;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        
+        .aluno-foto-wrapper {
+            flex-shrink: 0;
+            margin-right: 10px;
+        }
+        
+        .aluno-foto {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #dee2e6;
+            display: block;
+        }
+        
+        .aluno-foto-placeholder {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 2px solid #dee2e6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+        }
+        
+        .aluno-iniciais {
+            font-size: 0.85rem;
+            line-height: 1;
+        }
+        
+        .aluno-nome-wrapper {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .aluno-nome-texto {
+            font-size: 0.95rem;
+            font-weight: 600;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 100%;
+            text-align: left;
+        }
+        
+        /* Linha 2: Comunicação (botões apenas, otimizado) */
+        .aluno-linha-comunicacao {
+            margin-bottom: 6px;
+        }
+        
+        /* Botão principal: Mensagem (chat interno) - reduzido */
+        .comunicacao-acao-principal {
+            width: 100%;
+        }
+        
+        .btn-comunicacao-mensagem {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: all 0.2s;
+            min-height: 44px;
+            cursor: pointer;
+        }
+        
+        .btn-comunicacao-mensagem:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+        }
+        
+        .btn-comunicacao-mensagem:active {
+            transform: translateY(0);
+        }
+        
+        .btn-comunicacao-mensagem i {
+            font-size: 1rem;
+        }
+        
+        /* Botões secundários: WhatsApp e Ligar - reduzidos */
+        .comunicacao-acoes-secundarias {
+            display: flex;
+            gap: 6px;
+            width: 100%;
+        }
+        
+        .btn-comunicacao-secundaria {
+            flex: 1;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 5px;
+            padding: 8px 10px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 500;
+            font-size: 0.8rem;
+            transition: all 0.2s;
+            min-height: 40px;
+        }
+        
+        .btn-comunicacao-whatsapp {
+            background-color: #25d366;
+            color: white;
+            border: none;
+        }
+        
+        .btn-comunicacao-whatsapp:hover {
+            background-color: #20ba5a;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(37, 211, 102, 0.3);
+        }
+        
+        .btn-comunicacao-tel {
+            background-color: #0d6efd;
+            color: white;
+            border: none;
+        }
+        
+        .btn-comunicacao-tel:hover {
+            background-color: #0b5ed7;
+            color: white;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(13, 110, 253, 0.3);
+        }
+        
+        .btn-comunicacao-secundaria i {
+            font-size: 0.85rem;
+        }
+        
+        /* Modal de Chat - Toggle de Destino */
+        .chat-destino-toggle {
+            display: flex;
+            gap: 8px;
+            background-color: #f8f9fa;
+            border-radius: 8px;
+            padding: 4px;
+        }
+        
+        .chat-destino-btn {
+            flex: 1;
+            padding: 10px 16px;
+            border: none;
+            border-radius: 6px;
+            background-color: transparent;
+            color: #6c757d;
+            font-weight: 500;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .chat-destino-btn:hover {
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        
+        .chat-destino-btn.active {
+            background-color: #0d6efd;
+            color: white;
+            box-shadow: 0 2px 4px rgba(13, 110, 253, 0.2);
+        }
+        
+        .chat-destino-btn.active:hover {
+            background-color: #0b5ed7;
+        }
+        
+        .modal-chat .modal-body {
+            padding: 20px;
+        }
+        
+        /* Bloco de Dados Padronizado (Telefone, CNH, CPF, Veículo) - NOVO */
+        .aluno-dados-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
+        
+        .aluno-linha-dado {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #64748b;
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+        
+        .aluno-linha-dado:last-child {
+            margin-bottom: 0;
+        }
+        
+        .aluno-linha-dado i {
+            width: 18px;
+            text-align: center;
+            color: #94a3b8;
+            flex-shrink: 0;
+        }
+        
+        .aluno-linha-dado .aluno-label {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-right: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        
+        .aluno-linha-dado .aluno-valor-cpf,
+        .aluno-linha-dado .aluno-valor-telefone,
+        .aluno-linha-dado .aluno-valor-veiculo {
+            font-weight: 400;
+            color: #6c757d;
+            font-size: 0.8rem;
+            flex: 1;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        
+        /* Linhas 3, 4, 5: Informações secundárias (compatibilidade) */
+        .aluno-linha-3,
+        .aluno-linha-4,
+        .aluno-linha-5 {
+            display: flex;
+            align-items: center;
+            font-size: 0.85rem;
+            line-height: 1.5;
+        }
+        
+        .aluno-linha-3 i,
+        .aluno-linha-4 i,
+        .aluno-linha-5 i {
+            width: 18px;
+            text-align: center;
+            margin-right: 8px;
+            flex-shrink: 0;
+        }
+        
+        .aluno-label {
+            color: #6c757d;
+            font-size: 0.85rem;
+            margin-right: 6px;
+            white-space: nowrap;
+        }
+        
+        .aluno-valor-cpf,
+        .aluno-valor-telefone {
+            font-weight: 400;
+            color: #6c757d;
+            font-size: 0.8rem;
+        }
+        
+        .aluno-badge-cnh {
+            font-size: 0.75rem;
+            padding: 0.25rem 0.5rem;
+        }
+        
+        /* Linha 6: Dados do veículo (separado) */
+        .aluno-linha-6 {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        
+        .aluno-linha-6 i {
+            margin-right: 8px;
+        }
+        
+        /* Responsivo - Mobile */
+        @media (max-width: 767.98px) {
+            .card-aluno-info {
+                flex-direction: column;
+                margin-bottom: 12px !important; /* Reduzido de mb-3 (16px) */
+            }
+            
+            /* Linha 1: Avatar + Nome (compacto) */
+            .aluno-linha-1 {
+                margin-bottom: 8px !important; /* Reduzido de 12px */
+            }
+            
+            /* Reduzir espaçamentos verticais */
+            .aluno-linha-comunicacao {
+                margin-bottom: 8px !important; /* Reduzido de mb-2 (12px) */
+            }
+            
+            .aluno-linha-3,
+            .aluno-linha-4,
+            .aluno-linha-5,
+            .aluno-linha-6 {
+                margin-bottom: 6px !important; /* Reduzido de mb-2 (12px) */
+            }
+            
+            /* Reduzir padding do card-body da próxima aula (card com border-primary) */
+            .card.border-primary .card-body {
+                padding: 14px 16px !important; /* Reduzido de py-3 (16px) */
+            }
+            
+            /* Reduzir espaçamento do estado de chamada */
+            .card.border-primary .mb-3:last-of-type {
+                margin-bottom: 10px !important;
+            }
+            
+            .aluno-foto-wrapper {
+                margin-right: 10px;
+            }
+            
+            .aluno-foto,
+            .aluno-foto-placeholder {
+                width: 38px;
+                height: 38px;
+            }
+            
+            .aluno-iniciais {
+                font-size: 0.8rem;
+            }
+            
+            .aluno-nome-texto {
+                font-size: 0.9rem;
+            }
+            
+            /* Comunicação no mobile */
+            .comunicacao-header {
+                margin-bottom: 10px;
+            }
+            
+            .comunicacao-destino-select {
+                font-size: 0.7rem;
+                padding: 3px 6px;
+            }
+            
+            .btn-comunicacao-mensagem {
+                min-height: 48px;
+                font-size: 0.95rem;
+            }
+            
+            .btn-comunicacao-secundaria {
+                min-height: 44px;
+                font-size: 0.8rem;
+            }
+            
+            .aluno-linha-3,
+            .aluno-linha-4,
+            .aluno-linha-5 {
+                justify-content: flex-start;
+                text-align: left;
+                width: 100%;
+            }
+            
+            .aluno-linha-6 {
+                text-align: left;
+                width: 100%;
+            }
+        }
+        
+        /* Desktop: Layout em 2 colunas (foto esquerda, info direita) */
+        @media (min-width: 768px) {
+            .card-aluno-info {
+                flex-direction: row;
+                align-items: flex-start;
+                gap: 16px;
+            }
+            
+            .aluno-linha-1 {
+                display: flex;
+                align-items: center;
+            }
+            
+            .aluno-foto-wrapper {
+                margin-right: 12px;
+            }
+            
+            /* Comunicação no desktop */
+            .comunicacao-header {
+                margin-bottom: 10px;
+            }
+            
+            .btn-comunicacao-mensagem {
+                min-height: 44px;
+            }
+            
+            .btn-comunicacao-secundaria {
+                min-height: 40px;
+            }
+        }
+        
         /* Tabela de Aulas de Hoje - fonte compacta e espaçamento melhorado */
         .instructor-aulas-table {
             font-size: 0.9rem;
@@ -1561,6 +2464,13 @@ if ($instrutorId) {
         
         .instrutor-dashboard .dashboard-aulas-hoje .card-body {
             padding: 1.25rem 1.5rem;
+        }
+        
+        /* Mobile: ajustar padding para consistência com outros cards */
+        @media (max-width: 768px) {
+            .instrutor-dashboard .dashboard-aulas-hoje .card-body {
+                padding: 14px 16px !important; /* Mesmo padding do card "Próxima aula" */
+            }
         }
         
         .instrutor-dashboard .dashboard-aulas-hoje table th,
@@ -1837,12 +2747,520 @@ if ($instrutorId) {
                 margin-bottom: 8px !important;
             }
         }
+        
+        /* ============================================
+           ESTILOS DO HEADER - MOBILE (375x667)
+           ============================================ */
+        @media (max-width: 768px) {
+            /* Reduzir padding vertical do header */
+            .header {
+                padding: 12px 16px !important;
+            }
+            
+            /* Título mais compacto */
+            .header h1 {
+                font-size: 18px !important;
+                margin-bottom: 2px !important;
+            }
+            
+            /* Subtítulo mais discreto */
+            .header .subtitle {
+                font-size: 12px !important;
+                opacity: 0.85 !important;
+            }
+            
+            /* Chip do perfil ghost - mobile */
+            .instrutor-profile-button {
+                padding: 4px 6px !important;
+                gap: 6px !important;
+                background: transparent !important;
+                border: none !important;
+            }
+            
+            /* Hover/active discreto no mobile */
+            .instrutor-profile-button:hover,
+            .instrutor-profile-button:active,
+            .instrutor-profile-button.active {
+                background: rgba(255,255,255,0.1) !important;
+                border-radius: 6px !important;
+            }
+            
+            /* Avatar menor no mobile - sem moldura pesada */
+            .instrutor-profile-avatar {
+                width: 30px !important;
+                height: 30px !important;
+                font-size: 11px !important;
+                border: 1px solid rgba(255,255,255,0.2) !important;
+            }
+            
+            /* Nome em 1 linha no mobile (truncado) */
+            .instrutor-profile-info {
+                min-width: 0 !important;
+                flex: 1 !important;
+            }
+            
+            .instrutor-profile-name {
+                max-width: 90px !important;
+                font-size: 13px !important;
+                color: white !important;
+            }
+            
+            /* Esconder "Instrutor" no mobile (só mostrar no dropdown) */
+            .instrutor-profile-role {
+                display: none !important;
+            }
+            
+            /* Ajustar chevron no mobile */
+            .instrutor-profile-button .fa-chevron-down {
+                font-size: 10px !important;
+                margin-left: 2px !important;
+                opacity: 0.85 !important;
+            }
+        }
+        
+        /* Desktop: manter comportamento atual com hover discreto */
+        @media (min-width: 769px) {
+            .instrutor-profile-role {
+                display: block !important;
+            }
+            
+            /* Hover/active discreto no desktop */
+            .instrutor-profile-button:hover,
+            .instrutor-profile-button:active,
+            .instrutor-profile-button.active {
+                background: rgba(255,255,255,0.1) !important;
+                border-radius: 6px !important;
+            }
+            
+            /* Avatar no desktop - contorno sutil */
+            .instrutor-profile-avatar {
+                border: 1px solid rgba(255,255,255,0.2) !important;
+            }
+        }
+        
+        /* ============================================
+           MOBILE-FIRST: AULAS DE HOJE (PRIORIDADE)
+           ============================================ */
+        @media (max-width: 768px) {
+            /* Esconder tabela no mobile */
+            .aulas-hoje-table-desktop {
+                display: none !important;
+            }
+            
+            /* Mostrar lista no mobile */
+            .aulas-hoje-list-mobile {
+                display: block;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            /* Esconder lista no desktop */
+            .aulas-hoje-list-mobile {
+                display: none !important;
+            }
+            
+            /* Mostrar tabela no desktop */
+            .aulas-hoje-table-desktop {
+                display: block;
+            }
+        }
+        
+        /* ============================================
+           MOBILE-FIRST: RESUMO DE HOJE (COMPACTO)
+           ============================================ */
+        @media (max-width: 768px) {
+            /* Resumo de hoje: transformar cards em chips compactos */
+            .instrutor-resumo-hoje .card-body {
+                padding: 12px !important;
+            }
+            
+            .instrutor-resumo-hoje .row {
+                margin: 0 !important;
+                display: flex !important;
+                flex-wrap: nowrap !important;
+                gap: 8px !important;
+            }
+            
+            .instrutor-resumo-hoje .col-12.col-lg-4 {
+                flex: 1 !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+            
+            .instrutor-resumo-hoje .resumo-card {
+                padding: 10px 8px !important;
+                margin: 0 !important;
+                height: auto !important;
+            }
+            
+            .instrutor-resumo-hoje .resumo-icon {
+                font-size: 1rem !important;
+                margin-bottom: 4px !important;
+            }
+            
+            .instrutor-resumo-hoje .resumo-valor {
+                font-size: 1.3rem !important;
+                line-height: 1 !important;
+            }
+            
+            .instrutor-resumo-hoje .resumo-label {
+                font-size: 0.7rem !important;
+                margin-top: 4px !important;
+            }
+        }
+        
+        /* ============================================
+           MOBILE-FIRST: SEÇÕES VAZIAS CONDICIONAIS
+           ============================================ */
+        @media (max-width: 768px) {
+            /* Pendências em dia: linha compacta dentro do Resumo */
+            .resumo-pendencias-ok {
+                display: block !important;
+            }
+            
+            .resumo-pendencias-alert {
+                display: block !important;
+            }
+        }
+        
+        /* ============================================
+           MOBILE-FIRST: AÇÕES RÁPIDAS (3 BOTÕES PADRONIZADOS)
+           ============================================ */
+        .acoes-rapidas-grid-padronizado {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+        }
+        
+        .btn-acao-rapida-padronizado {
+            height: 44px !important;
+            min-height: 44px !important;
+            padding: 8px 12px !important;
+            font-size: 13px !important;
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+            gap: 6px !important;
+            white-space: normal !important;
+            line-height: 1.3 !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            border-radius: 6px !important;
+            font-weight: 500 !important;
+        }
+        
+        .btn-acao-rapida-padronizado i {
+            font-size: 14px !important;
+            flex-shrink: 0 !important;
+        }
+        
+        .btn-acao-rapida-padronizado span {
+            white-space: normal !important;
+            word-wrap: break-word !important;
+            overflow-wrap: break-word !important;
+            text-align: center !important;
+            /* Permitir até 2 linhas */
+            display: -webkit-box !important;
+            -webkit-line-clamp: 2 !important;
+            -webkit-box-orient: vertical !important;
+            overflow: hidden !important;
+        }
+        
+        /* Mobile: grid 2 colunas, terceiro botão vai para linha de baixo */
+        @media (max-width: 768px) {
+            .acoes-rapidas-grid-padronizado {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            
+            /* Terceiro botão ocupa 100% da largura na segunda linha */
+            .acoes-rapidas-grid-padronizado > button:nth-child(3) {
+                grid-column: 1 / -1;
+            }
+        }
+        
+        /* Desktop: 3 botões em linha */
+        @media (min-width: 769px) {
+            .acoes-rapidas-grid-padronizado {
+                grid-template-columns: repeat(3, 1fr);
+            }
+            
+            .acoes-rapidas-grid-padronizado > button:nth-child(3) {
+                grid-column: auto;
+            }
+        }
+        
+        /* ============================================
+           MOBILE-FIRST: CARDS DE AULA PADRONIZADOS (NUNCA ESTOURA)
+           ============================================ */
+        .aula-card-padronizado {
+            max-width: 100% !important;
+            overflow: hidden !important;
+            box-sizing: border-box !important;
+        }
+        
+        .aula-card-padronizado * {
+            box-sizing: border-box !important;
+        }
+        
+        /* Header com flex-wrap para badges nunca empurrarem layout */
+        .aula-header {
+            width: 100% !important;
+        }
+        
+        /* Garantir que nada quebre em colunas estranhas */
+        @media (max-width: 768px) {
+            .aula-card-padronizado {
+                width: 100% !important;
+                max-width: 100% !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+            }
+            
+            /* AJUSTE PROPORCIONALIDADE: Aulas Hoje - garantir largura útil igual ao restante do card */
+            /* Usar mesmo padding do card "Próxima aula" (14px 16px) para consistência visual */
+            .dashboard-aulas-hoje .card-body,
+            .instrutor-dashboard .dashboard-aulas-hoje .card-body {
+                padding: 14px 16px !important; /* Mesmo padding do card border-primary */
+            }
+            
+            /* Prevenir scroll horizontal e garantir largura total disponível */
+            /* CORREÇÃO: Forçar largura total do container, removendo qualquer limitação */
+            /* Garantir que o bloco ocupe exatamente a mesma largura útil do conteúdo do card */
+            .dashboard-aulas-hoje .card-body .aulas-hoje-list-mobile,
+            .aulas-hoje-list-mobile {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                overflow-x: hidden !important;
+                overflow-y: visible !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                padding-left: 0 !important;
+                padding-right: 0 !important;
+                box-sizing: border-box !important;
+                display: block !important;
+                /* Garantir que não haja nenhuma limitação de largura de containers pais */
+                flex: 1 1 100% !important;
+            }
+            
+            /* Garantir que o card-body não tenha limitações de largura e use padding consistente */
+            .dashboard-aulas-hoje .card-body {
+                width: 100% !important;
+                max-width: 100% !important;
+                box-sizing: border-box !important;
+                /* Padding já ajustado acima (14px 16px) para consistência com card "Próxima aula" */
+            }
+            
+            /* Garantir que os cards internos também ocupem toda a largura proporcionalmente */
+            .aulas-hoje-list-mobile .aula-card-padronizado,
+            .aulas-hoje-list-mobile .aula-item-mobile {
+                width: 100% !important;
+                max-width: 100% !important;
+                min-width: 0 !important;
+                margin-left: 0 !important;
+                margin-right: 0 !important;
+                box-sizing: border-box !important;
+            }
+            
+            /* Adicionar padding interno nos cards de aula para espaçamento visual (já que removemos do card-body) */
+            .aulas-hoje-list-mobile .aula-card-padronizado {
+                padding-left: 16px !important;
+                padding-right: 16px !important;
+            }
+            
+            /* Garantir que título e meta nunca estourem */
+            .aula-card-padronizado > div:nth-child(2),
+            .aula-card-padronizado > div:nth-child(3) {
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow: hidden !important;
+            }
+            
+            /* Botões sempre alinhados e sem overflow */
+            .aula-card-padronizado > div:last-child {
+                width: 100% !important;
+                max-width: 100% !important;
+                overflow: hidden !important;
+            }
+        }
+        
+        /* ============================================
+           MOBILE-FIRST: RESUMO SEM ALTURA EXCESSIVA
+           ============================================ */
+        @media (max-width: 768px) {
+            .instrutor-resumo-hoje .card-header {
+                padding: 8px 12px !important;
+                font-size: 0.9rem !important;
+            }
+            
+            .instrutor-resumo-hoje .card-body {
+                padding: 12px !important;
+            }
+            
+            .instrutor-resumo-hoje .resumo-card {
+                padding: 10px 8px !important;
+                min-height: auto !important;
+            }
+            
+            .instrutor-resumo-hoje .resumo-icon {
+                font-size: 1rem !important;
+                margin-bottom: 4px !important;
+            }
+            
+            .instrutor-resumo-hoje .resumo-valor {
+                font-size: 1.3rem !important;
+                line-height: 1 !important;
+                margin-bottom: 2px !important;
+            }
+            
+            .instrutor-resumo-hoje .resumo-label {
+                font-size: 0.7rem !important;
+                margin-top: 0 !important;
+            }
+        }
+        
+        /* ============================================
+           MOBILE-FIRST: SEÇÕES VAZIAS NÃO OCUPAM ESPAÇO
+           ============================================ */
+        @media (max-width: 768px) {
+            /* Pendências em dia: linha compacta */
+            .pendencias-ok-mobile {
+                display: block !important;
+            }
+            
+            .pendencias-ok-mobile .card-body {
+                padding: 8px 12px !important;
+            }
+        }
+        
+        /* ============================================
+           CORREÇÕES DESKTOP (min-width: 992px)
+           ============================================ */
+        @media (min-width: 992px) {
+            /* 1) ENXUGAR ESPAÇO BRANCO DO CARD "PRÓXIMA AULA" */
+            /* Remover h-100 que força altura igual ao card ao lado */
+            .card.border-primary.h-100 {
+                height: auto !important;
+            }
+            
+            /* Reduzir padding e margens para card mais compacto */
+            .card.border-primary .card-body {
+                padding-bottom: 0.75rem !important;
+            }
+            
+            /* Reduzir espaçamento do estado de chamada */
+            .card.border-primary .mb-3:last-of-type {
+                margin-bottom: 0.5rem !important;
+            }
+            
+            /* 2) GARANTIR VISIBILIDADE DAS INFOS (TELEFONE, CPF, VEÍCULO) NO DESKTOP */
+            /* Garantir que as linhas de informação apareçam no desktop */
+            .card-aluno-info .aluno-linha-3,
+            .card-aluno-info .aluno-linha-5,
+            .card-aluno-info .aluno-linha-6 {
+                display: flex !important;
+                visibility: visible !important;
+                opacity: 1 !important;
+            }
+            
+            /* Ajustar layout para acomodar informações sem quebrar */
+            .card-aluno-info .aluno-linha-3,
+            .card-aluno-info .aluno-linha-5 {
+                flex-wrap: wrap;
+                word-break: break-word;
+            }
+            
+            .card-aluno-info .aluno-linha-6 {
+                width: 100%;
+                word-break: break-word;
+            }
+            
+            /* 3) CORRIGIR OVERFLOW DO TELEFONE NA TABELA "AULAS DE HOJE" */
+            /* Garantir que células da tabela não ultrapassem seus limites */
+            .instructor-aulas-table td {
+                overflow: hidden;
+                word-wrap: break-word;
+                overflow-wrap: break-word;
+            }
+            
+            /* Garantir que informações dentro das células não vazem */
+            .instructor-aulas-table .d-flex {
+                flex-wrap: wrap;
+                max-width: 100%;
+                overflow: hidden;
+            }
+            
+            .instructor-aulas-table .flex-grow-1 {
+                min-width: 0;
+                max-width: 100%;
+                overflow: hidden;
+            }
+            
+            /* Permitir quebra de linha nos textos dentro da tabela */
+            .instructor-aulas-table .text-muted,
+            .instructor-aulas-table .fw-bold,
+            .instructor-aulas-table a {
+                word-break: break-word;
+                overflow-wrap: break-word;
+                white-space: normal;
+            }
+            
+            /* Especificamente para a coluna DISCIPLINA/TURMA que contém telefone */
+            .instructor-aulas-table td:nth-child(3) {
+                max-width: 35%;
+            }
+            
+            /* 4) CORRIGIR AVATAR DUPLICADO NA TABELA "AULAS DE HOJE" */
+            /* Quando há foto visível, ocultar o placeholder */
+            .instructor-aulas-table .aluno-foto-tabela[style*="display: none"] ~ .aluno-foto-placeholder-tabela {
+                display: flex !important;
+            }
+            
+            .instructor-aulas-table .aluno-foto-tabela:not([style*="display: none"]) ~ .aluno-foto-placeholder-tabela {
+                display: none !important;
+            }
+            
+            /* Garantir que apenas um avatar seja mostrado */
+            .instructor-aulas-table .mr-2.flex-shrink-0 {
+                position: relative;
+            }
+            
+            /* Se a imagem está visível, placeholder deve estar oculto */
+            .instructor-aulas-table img.aluno-foto-tabela {
+                display: block;
+            }
+            
+            .instructor-aulas-table img.aluno-foto-tabela:not([style*="display: none"]) + .aluno-foto-placeholder-tabela {
+                display: none !important;
+            }
+        }
     </style>
     
-    <!-- Script para Dropdown de Perfil -->
+    <!-- Script para Dropdown de Perfil e correção de avatares -->
     <script>
-        // Toggle do dropdown de perfil
+        // Garantir que avatares duplicados não apareçam na tabela
         document.addEventListener('DOMContentLoaded', function() {
+            // Corrigir avatares duplicados na tabela "Aulas de Hoje"
+            const fotosTabela = document.querySelectorAll('.instructor-aulas-table img.aluno-foto-tabela');
+            fotosTabela.forEach(function(img) {
+                // Quando a imagem carregar com sucesso, garantir que o placeholder fique oculto
+                img.addEventListener('load', function() {
+                    const placeholder = this.nextElementSibling;
+                    if (placeholder && placeholder.classList.contains('aluno-foto-placeholder-tabela')) {
+                        placeholder.style.display = 'none';
+                    }
+                });
+                
+                // Verificar estado inicial (caso a imagem já tenha carregado)
+                if (img.complete && img.naturalHeight !== 0) {
+                    const placeholder = img.nextElementSibling;
+                    if (placeholder && placeholder.classList.contains('aluno-foto-placeholder-tabela')) {
+                        placeholder.style.display = 'none';
+                    }
+                }
+            });
+            
+            // Toggle do dropdown de perfil
             const profileButton = document.getElementById('instrutor-profile-button');
             const profileDropdown = document.getElementById('instrutor-profile-dropdown');
             
