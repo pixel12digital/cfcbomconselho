@@ -147,12 +147,12 @@ class PWAInstallFooter {
             this.updateInstallButton();
         });
         
-        // Log se o evento não disparar após um tempo
+        // Log se o evento não disparar após um tempo (apenas para log, não trava botão)
         setTimeout(() => {
             if (!this.deferredPrompt) {
-                console.warn('[PWA Footer] ⚠️ beforeinstallprompt não foi disparado após 3 segundos');
-                console.warn('[PWA Footer] Isso geralmente significa que o PWA não está elegível para instalação');
-                console.warn('[PWA Footer] Verifique: Service Worker controlando, manifest válido, HTTPS');
+                console.log('[PWA Footer] ℹ️ beforeinstallprompt ainda não foi disparado após 3 segundos');
+                console.log('[PWA Footer] Isso pode ser normal - o evento pode demorar mais');
+                console.log('[PWA Footer] O botão continuará funcionando e mostrará diagnóstico se necessário');
             }
         }, 3000);
         
@@ -602,77 +602,183 @@ class PWAInstallFooter {
     }
     
     /**
-     * Diagnosticar por que PWA não está elegível
+     * Coletar relatório completo de Installability
      */
-    async diagnosePWA() {
-        const diagnostics = [];
+    async collectInstallabilityReport() {
+        const report = {
+            manifest: null,
+            manifestUrl: null,
+            manifestData: null,
+            currentUrl: window.location.href,
+            currentPath: window.location.pathname,
+            isSecureContext: window.isSecureContext,
+            hasServiceWorkerController: !!navigator.serviceWorker.controller,
+            serviceWorkerScope: null,
+            isStandalone: window.matchMedia('(display-mode: standalone)').matches,
+            installedRelatedApps: null,
+            currentUrlInScope: false,
+            issues: [],
+            recommendations: []
+        };
         
-        // 1. Verificar Service Worker
-        const hasController = !!navigator.serviceWorker.controller;
-        if (!hasController) {
-            diagnostics.push('Service Worker não está controlando esta página');
+        // 1. Buscar manifest
+        const manifestLink = document.querySelector('link[rel="manifest"]');
+        if (manifestLink) {
+            report.manifest = manifestLink;
+            report.manifestUrl = manifestLink.href;
             
-            // Verificar se está registrado
+            try {
+                const res = await fetch(report.manifestUrl, {cache: 'no-store'});
+                if (res.status === 200) {
+                    const contentType = res.headers.get('content-type');
+                    if (contentType && contentType.includes('json')) {
+                        report.manifestData = await res.json();
+                        
+                        // Verificar se URL atual está no scope
+                        const scope = report.manifestData.scope || '/';
+                        const currentUrlObj = new URL(report.currentUrl);
+                        const scopeUrlObj = new URL(scope, currentUrlObj.origin);
+                        report.currentUrlInScope = currentUrlObj.pathname.startsWith(scopeUrlObj.pathname);
+                    } else {
+                        report.issues.push(`Manifest Content-Type incorreto: ${contentType}`);
+                    }
+                } else {
+                    report.issues.push(`Manifest retornou status ${res.status}`);
+                }
+            } catch (e) {
+                report.issues.push(`Erro ao carregar manifest: ${e.message}`);
+            }
+        } else {
+            report.issues.push('Manifest não encontrado no HTML');
+        }
+        
+        // 2. Verificar Service Worker
+        if (report.hasServiceWorkerController) {
+            report.serviceWorkerScope = navigator.serviceWorker.controller.scriptURL;
+        } else {
             try {
                 const regs = await navigator.serviceWorker.getRegistrations();
-                if (regs.length === 0) {
-                    diagnostics.push('Nenhum Service Worker registrado');
-                    diagnostics.push('SOLUÇÃO: Acesse login.php?type=aluno ou login.php?type=instrutor para registrar o SW');
+                if (regs.length > 0) {
+                    report.serviceWorkerScope = regs[0].scope;
+                    const state = regs[0].active?.state || regs[0].installing?.state || regs[0].waiting?.state || 'unknown';
+                    report.issues.push(`Service Worker registrado mas não controlando (estado: ${state})`);
+                    report.recommendations.push('Recarregue a página (F5) para o SW assumir controle');
                 } else {
-                    const reg = regs[0];
-                    const state = reg.active?.state || reg.installing?.state || reg.waiting?.state || 'unknown';
-                    diagnostics.push(`Service Worker registrado mas não ativo (estado: ${state})`);
-                    diagnostics.push('SOLUÇÃO: Recarregue a página (F5) para o SW assumir controle');
+                    report.issues.push('Nenhum Service Worker registrado');
+                    report.recommendations.push('Acesse login.php?type=aluno ou login.php?type=instrutor para registrar o SW');
                 }
             } catch (e) {
-                diagnostics.push('Erro ao verificar registros do Service Worker');
+                report.issues.push(`Erro ao verificar SW: ${e.message}`);
             }
-        } else {
-            diagnostics.push('✅ Service Worker está controlando a página');
         }
         
-        // 2. Verificar manifest
-        const manifestLink = document.querySelector('link[rel="manifest"]');
-        if (!manifestLink) {
-            diagnostics.push('Manifest não encontrado no HTML');
-            diagnostics.push('SOLUÇÃO: Acesse login.php?type=aluno ou login.php?type=instrutor (páginas com manifest)');
-        } else {
+        // 3. Verificar getInstalledRelatedApps
+        if ('getInstalledRelatedApps' in navigator) {
             try {
-                const manifestUrl = manifestLink.href;
-                const res = await fetch(manifestUrl, {cache: 'no-store'});
-                if (res.status !== 200) {
-                    diagnostics.push(`Manifest retornou status ${res.status}`);
-                } else {
-                    const contentType = res.headers.get('content-type');
-                    if (!contentType || !contentType.includes('json')) {
-                        diagnostics.push(`Manifest com Content-Type incorreto: ${contentType}`);
-                    } else {
-                        const json = await res.json();
-                        if (!json.name || !json.start_url) {
-                            diagnostics.push('Manifest JSON inválido ou incompleto');
-                        } else {
-                            diagnostics.push(`✅ Manifest válido: ${json.name}`);
-                        }
-                    }
+                const apps = await navigator.getInstalledRelatedApps();
+                report.installedRelatedApps = apps;
+                if (apps && apps.length > 0) {
+                    report.issues.push(`App relacionado já instalado: ${JSON.stringify(apps)}`);
                 }
             } catch (e) {
-                diagnostics.push(`Erro ao carregar manifest: ${e.message}`);
+                console.warn('[PWA Footer] Erro ao verificar getInstalledRelatedApps:', e);
             }
         }
         
-        // 3. Verificar HTTPS
-        if (!window.isSecureContext) {
-            diagnostics.push('Não está em contexto seguro (HTTPS)');
-        } else {
-            diagnostics.push('✅ HTTPS ativo');
+        // 4. Verificar HTTPS
+        if (!report.isSecureContext) {
+            report.issues.push('Não está em contexto seguro (HTTPS)');
+            report.recommendations.push('PWA requer HTTPS');
         }
         
-        // 4. Verificar se já está instalado
-        if (window.matchMedia('(display-mode: standalone)').matches) {
-            diagnostics.push('App já está instalado');
+        // 5. Verificar se já está instalado
+        if (report.isStandalone) {
+            report.issues.push('App já está instalado como PWA');
         }
         
-        return diagnostics;
+        // 6. Verificar manifest data
+        if (report.manifestData) {
+            if (!report.manifestData.start_url) {
+                report.issues.push('Manifest sem start_url');
+            }
+            if (!report.manifestData.scope) {
+                report.issues.push('Manifest sem scope');
+            }
+            if (!report.manifestData.id) {
+                report.issues.push('Manifest sem id (pode causar conflito)');
+            }
+            if (!report.manifestData.icons || report.manifestData.icons.length === 0) {
+                report.issues.push('Manifest sem ícones');
+            } else {
+                // Verificar se tem ícones 192 e 512
+                const has192 = report.manifestData.icons.some(i => i.sizes === '192x192' || i.sizes.includes('192'));
+                const has512 = report.manifestData.icons.some(i => i.sizes === '512x512' || i.sizes.includes('512'));
+                if (!has192) report.issues.push('Manifest sem ícone 192x192');
+                if (!has512) report.issues.push('Manifest sem ícone 512x512');
+            }
+        }
+        
+        return report;
+    }
+    
+    /**
+     * Diagnosticar por que PWA não está elegível (usando relatório completo)
+     */
+    async diagnosePWA() {
+        const report = await this.collectInstallabilityReport();
+        const diagnostics = [];
+        const successes = [];
+        const solutions = [];
+        
+        // Adicionar sucessos
+        if (report.hasServiceWorkerController) {
+            successes.push('Service Worker está controlando a página');
+        }
+        if (report.isSecureContext) {
+            successes.push('HTTPS ativo');
+        }
+        if (report.manifestData) {
+            successes.push(`Manifest válido: ${report.manifestData.name || 'N/A'}`);
+        }
+        if (report.currentUrlInScope && report.manifestData) {
+            successes.push(`URL atual está no scope (${report.manifestData.scope})`);
+        }
+        
+        // Adicionar problemas
+        report.issues.forEach(issue => {
+            diagnostics.push(issue);
+        });
+        
+        // Adicionar soluções
+        report.recommendations.forEach(rec => {
+            solutions.push(rec);
+        });
+        
+        // Adicionar informações do manifest
+        if (report.manifestData) {
+            console.log('[PWA Footer] 📋 Relatório de Installability:');
+            console.log('  Manifest URL:', report.manifestUrl);
+            console.log('  start_url:', report.manifestData.start_url);
+            console.log('  scope:', report.manifestData.scope);
+            console.log('  id:', report.manifestData.id);
+            console.log('  display:', report.manifestData.display);
+            console.log('  icons:', report.manifestData.icons?.map(i => `${i.sizes} (${i.purpose || 'any'})`).join(', ') || 'nenhum');
+            console.log('  currentUrlInScope:', report.currentUrlInScope);
+            console.log('  isSecureContext:', report.isSecureContext);
+            console.log('  hasServiceWorkerController:', report.hasServiceWorkerController);
+            console.log('  serviceWorkerScope:', report.serviceWorkerScope);
+            console.log('  isStandalone:', report.isStandalone);
+            if (report.installedRelatedApps) {
+                console.log('  installedRelatedApps:', report.installedRelatedApps);
+            }
+        }
+        
+        return {
+            diagnostics,
+            successes,
+            solutions,
+            report
+        };
     }
     
     /**
@@ -687,15 +793,11 @@ class PWAInstallFooter {
         console.log('[PWA Footer] beforeinstallprompt disponível:', hasPrompt);
         
         if (!this.deferredPrompt) {
-            console.warn('[PWA Footer] Deferred prompt não disponível, diagnosticando...');
+            console.log('[PWA Footer] Deferred prompt não disponível, coletando relatório de installability...');
             
-            // Diagnosticar problema
-            const diagnostics = await this.diagnosePWA();
-            if (diagnostics.length > 0) {
-                this.showDiagnostics(diagnostics);
-            } else {
-                this.showInstallHelp();
-            }
+            // Coletar relatório completo e mostrar diagnóstico
+            const diagnosis = await this.diagnosePWA();
+            this.showDiagnostics(diagnosis.diagnostics, diagnosis.successes, diagnosis.solutions, diagnosis.report);
             return;
         }
         
@@ -801,65 +903,135 @@ class PWAInstallFooter {
     }
     
     /**
-     * Mostrar diagnóstico real do PWA
+     * Mostrar diagnóstico completo de Installability
      */
-    showDiagnostics(diagnostics) {
-        // Separar problemas de soluções
-        const problems = diagnostics.filter(d => !d.startsWith('✅') && !d.startsWith('SOLUÇÃO:'));
-        const solutions = diagnostics.filter(d => d.startsWith('SOLUÇÃO:'));
-        const successes = diagnostics.filter(d => d.startsWith('✅'));
-        
+    showDiagnostics(diagnostics = [], successes = [], solutions = [], report = null) {
         const modal = document.createElement('div');
         modal.className = 'pwa-help-modal';
+        
+        // Construir seção de informações do manifest
+        let manifestInfo = '';
+        if (report && report.manifestData) {
+            const iconsList = report.manifestData.icons?.map(i => 
+                `${i.sizes} (${i.purpose || 'any'}) - ${i.src}`
+            ).join('<br>') || 'Nenhum';
+            
+            manifestInfo = `
+                <div class="pwa-help-note" style="background: #e8f4f8; border-left-color: #3498db; margin-top: 20px;">
+                    <i class="fas fa-file-code" style="color: #3498db;"></i>
+                    <p><strong>Informações do Manifest:</strong></p>
+                    <div style="margin-top: 10px; font-size: 13px; line-height: 1.8;">
+                        <strong>URL:</strong> ${report.manifestUrl || 'N/A'}<br>
+                        <strong>Nome:</strong> ${report.manifestData.name || 'N/A'}<br>
+                        <strong>start_url:</strong> ${report.manifestData.start_url || 'N/A'}<br>
+                        <strong>scope:</strong> ${report.manifestData.scope || 'N/A'}<br>
+                        <strong>id:</strong> ${report.manifestData.id || 'N/A'}<br>
+                        <strong>display:</strong> ${report.manifestData.display || 'N/A'}<br>
+                        <strong>currentUrlInScope:</strong> ${report.currentUrlInScope ? '✅ true' : '❌ false'}<br>
+                        <strong>Ícones:</strong><br>
+                        <div style="margin-left: 20px; font-family: monospace; font-size: 11px;">
+                            ${iconsList}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Construir seção de motivos prováveis
+        let probableReasons = '';
+        if (report) {
+            const reasons = [];
+            
+            if (!report.hasServiceWorkerController) {
+                reasons.push('Service Worker não está controlando a página (requisito obrigatório)');
+            }
+            if (!report.currentUrlInScope && report.manifestData) {
+                reasons.push(`URL atual (${report.currentPath}) não está no scope do manifest (${report.manifestData.scope})`);
+            }
+            if (!report.isSecureContext) {
+                reasons.push('Não está em contexto seguro (HTTPS obrigatório)');
+            }
+            if (report.isStandalone) {
+                reasons.push('App já está instalado como PWA');
+            }
+            if (report.installedRelatedApps && report.installedRelatedApps.length > 0) {
+                reasons.push('App relacionado já está instalado');
+            }
+            if (report.manifestData && !report.manifestData.id) {
+                reasons.push('Manifest sem id (pode causar conflito com outras instalações)');
+            }
+            if (report.manifestData && (!report.manifestData.icons || report.manifestData.icons.length === 0)) {
+                reasons.push('Manifest sem ícones válidos');
+            }
+            
+            if (reasons.length > 0) {
+                probableReasons = `
+                    <div class="pwa-help-note" style="background: #fff3cd; border-left-color: #ffc107; margin-top: 20px;">
+                        <i class="fas fa-search" style="color: #ffc107;"></i>
+                        <p><strong>Motivos Prováveis:</strong></p>
+                        <ul style="list-style: none; padding: 0; margin: 10px 0 0 0;">
+                            ${reasons.map(r => `<li style="padding: 6px 0; color: #856404;">
+                                • ${r}
+                            </li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+        }
+        
         modal.innerHTML = `
-            <div class="pwa-help-modal-content">
+            <div class="pwa-help-modal-content" style="max-width: 600px;">
                 <div class="pwa-help-modal-header">
-                    <h4>Diagnóstico PWA</h4>
+                    <h4>Diagnóstico PWA - Installability Report</h4>
                     <button class="pwa-help-modal-close" type="button">
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-                <div class="pwa-help-modal-body">
-                    ${problems.length > 0 ? `
-                    <div class="pwa-help-note" style="background: #fff3cd; border-left-color: #ffc107;">
-                        <i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i>
-                        <p><strong>O app não está elegível para instalação:</strong></p>
-                    </div>
-                    <ul style="list-style: none; padding: 0; margin: 20px 0;">
-                        ${problems.map(d => `<li style="padding: 8px 0; border-bottom: 1px solid #e1e5e9;">
-                            <i class="fas fa-times-circle" style="color: #e74c3c; margin-right: 8px;"></i>
-                            ${d}
-                        </li>`).join('')}
-                    </ul>
-                    ` : ''}
-                    
-                    ${solutions.length > 0 ? `
-                    <div class="pwa-help-note" style="background: #d1ecf1; border-left-color: #0c5460;">
-                        <i class="fas fa-lightbulb" style="color: #0c5460;"></i>
-                        <p><strong>Soluções:</strong></p>
-                        <ul style="list-style: none; padding: 0; margin: 10px 0 0 0;">
-                            ${solutions.map(s => `<li style="padding: 6px 0; color: #0c5460;">
-                                ${s.replace('SOLUÇÃO: ', '')}
-                            </li>`).join('')}
-                        </ul>
-                    </div>
-                    ` : ''}
-                    
+                <div class="pwa-help-modal-body" style="max-height: 70vh; overflow-y: auto;">
                     ${successes.length > 0 ? `
                     <div class="pwa-help-note" style="background: #d4edda; border-left-color: #28a745;">
                         <i class="fas fa-check-circle" style="color: #28a745;"></i>
                         <p><strong>Verificações OK:</strong></p>
                         <ul style="list-style: none; padding: 0; margin: 10px 0 0 0;">
                             ${successes.map(s => `<li style="padding: 6px 0; color: #28a745;">
-                                ${s.replace('✅ ', '')}
+                                ✅ ${s}
                             </li>`).join('')}
                         </ul>
                     </div>
                     ` : ''}
                     
-                    <div class="pwa-help-note">
+                    ${diagnostics.length > 0 ? `
+                    <div class="pwa-help-note" style="background: #fff3cd; border-left-color: #ffc107;">
+                        <i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i>
+                        <p><strong>Problemas Detectados:</strong></p>
+                        <ul style="list-style: none; padding: 0; margin: 20px 0;">
+                            ${diagnostics.map(d => `<li style="padding: 8px 0; border-bottom: 1px solid #e1e5e9;">
+                                <i class="fas fa-times-circle" style="color: #e74c3c; margin-right: 8px;"></i>
+                                ${d}
+                            </li>`).join('')}
+                        </ul>
+                    </div>
+                    ` : ''}
+                    
+                    ${probableReasons}
+                    
+                    ${manifestInfo}
+                    
+                    ${solutions.length > 0 ? `
+                    <div class="pwa-help-note" style="background: #d1ecf1; border-left-color: #0c5460; margin-top: 20px;">
+                        <i class="fas fa-lightbulb" style="color: #0c5460;"></i>
+                        <p><strong>Soluções Recomendadas:</strong></p>
+                        <ul style="list-style: none; padding: 0; margin: 10px 0 0 0;">
+                            ${solutions.map(s => `<li style="padding: 6px 0; color: #0c5460;">
+                                💡 ${s}
+                            </li>`).join('')}
+                        </ul>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="pwa-help-note" style="margin-top: 20px;">
                         <i class="fas fa-info-circle"></i>
-                        <p>Verifique o console do navegador (F12) para mais detalhes técnicos.</p>
+                        <p>Verifique o console do navegador (F12) para mais detalhes técnicos do relatório completo.</p>
                     </div>
                 </div>
             </div>
