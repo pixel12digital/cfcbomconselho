@@ -314,7 +314,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: #F6F8FC;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -334,7 +334,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         }
         
         .left-panel {
-            background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
+            background: #1A365D;
             color: white;
             padding: 40px;
             flex: 1;
@@ -368,7 +368,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             margin-bottom: 30px;
             border-radius: 50%;
             box-shadow: 0 10px 30px rgba(0,0,0,0.4);
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            background: #1A365D;
             padding: 8px;
             object-fit: contain;
             transition: all 0.3s ease;
@@ -417,8 +417,8 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         
         .user-type-card.active {
             background: rgba(255,255,255,0.25);
-            border-color: #f39c12;
-            box-shadow: 0 5px 15px rgba(243, 156, 18, 0.3);
+            border-color: #1A365D;
+            box-shadow: 0 5px 15px rgba(26, 54, 93, 0.4);
         }
         
         .user-type-title {
@@ -442,7 +442,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         
         .login-title {
             font-size: 28px;
-            color: #2c3e50;
+            color: #1A365D;
             margin-bottom: 10px;
             font-weight: 600;
         }
@@ -459,7 +459,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         .form-label {
             display: block;
             margin-bottom: 8px;
-            color: #2c3e50;
+            color: #1A365D;
             font-weight: 500;
             font-size: 14px;
         }
@@ -516,11 +516,11 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         
         .checkbox-group label {
             font-size: 14px;
-            color: #2c3e50;
+            color: #1A365D;
         }
         
         .forgot-password {
-            color: #3498db;
+            color: #1A365D;
             text-decoration: none;
             font-size: 14px;
         }
@@ -532,7 +532,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         .btn-login {
             width: 100%;
             padding: 15px;
-            background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+            background: #1A365D;
             color: white;
             border: none;
             border-radius: 10px;
@@ -546,7 +546,8 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         
         .btn-login:hover {
             transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            box-shadow: 0 5px 15px rgba(26, 54, 93, 0.4);
+            background: #0f2a47;
         }
         
         .btn-login:active {
