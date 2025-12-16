@@ -221,6 +221,41 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                 window.dispatchEvent(new CustomEvent('pwa:beforeinstallprompt', { detail: e }));
             }, { once: false });
             
+            // CRÍTICO: Escutar mensagem do SW quando ele é ativado
+            // Se o SW está ativado mas não controlando, recarregar a página
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.addEventListener('message', function(event) {
+                    if (event.data && event.data.type === 'SW_ACTIVATED') {
+                        console.log('[PWA Early] SW ativado recebido, verificando controle...');
+                        
+                        // Aguardar um pouco para o claim() processar
+                        setTimeout(function() {
+                            if (!navigator.serviceWorker.controller) {
+                                console.log('[PWA Early] ⚠️ SW ativado mas não controlando. Recarregando página...');
+                                window.location.reload();
+                            } else {
+                                console.log('[PWA Early] ✅ SW agora está controlando a página');
+                            }
+                        }, 500);
+                    }
+                });
+                
+                // Verificação periódica: se SW está registrado mas não controlando após 2 segundos
+                setTimeout(function() {
+                    if (!navigator.serviceWorker.controller) {
+                        navigator.serviceWorker.getRegistrations().then(function(regs) {
+                            if (regs.length > 0) {
+                                const reg = regs[0];
+                                if (reg.active && reg.active.state === 'activated') {
+                                    console.log('[PWA Early] ⚠️ SW ativado mas não controlando após 2s. Recarregando...');
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                    }
+                }, 2000);
+            }
+            
             console.log('[PWA Early] Listener de beforeinstallprompt registrado (antes do DOM)');
         })();
     </script>
