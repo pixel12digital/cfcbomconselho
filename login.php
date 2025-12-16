@@ -645,33 +645,28 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             display: none !important;
         }
         
-        .back-to-site-btn {
+        .link-site-institucional {
             display: inline-block;
-            width: 100%;
-            padding: 12px 20px;
-            background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
-            color: white;
+            margin-top: 15px;
+            font-size: 13px;
+            color: #7f8c8d;
             text-decoration: none;
-            border-radius: 10px;
-            font-size: 15px;
-            font-weight: 500;
-            transition: all 0.3s ease;
+            opacity: 0.85;
+            transition: all 0.2s ease;
             text-align: center;
-            margin-bottom: 20px;
-            border: 2px solid transparent;
+            width: 100%;
         }
         
-        .back-to-site-btn:hover {
-            background: linear-gradient(135deg, #7f8c8d 0%, #636e72 100%);
-            color: white;
-            text-decoration: none;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(127, 140, 141, 0.3);
-            border-color: rgba(255, 255, 255, 0.2);
+        .link-site-institucional:hover {
+            text-decoration: underline;
+            opacity: 1;
+            color: #1A365D;
         }
         
-        .back-to-site-btn:active {
-            transform: translateY(0);
+        .link-site-institucional:focus {
+            outline: 2px solid #1A365D;
+            outline-offset: 2px;
+            border-radius: 2px;
         }
     </style>
 </head>
@@ -767,13 +762,13 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                 <button type="submit" class="btn-login">
                     Entrar no Sistema
                             </button>
+                            
+                <a href="https://cfcbomconselho.com.br/" target="_blank" rel="noopener" class="link-site-institucional" id="link-site-institucional">
+                    Abrir site institucional
+                </a>
             </form>
             
             <div class="login-footer">
-                <a href="index.php" class="back-to-site-btn">
-                    ← Voltar ao Site
-                </a>
-                
                 <p>Problemas para acessar? Entre em contato com o suporte</p>
                 
                 <!-- PWA Install Footer Container -->
@@ -808,6 +803,29 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         
         // Auto-focus no campo de entrada
         document.getElementById('email').focus();
+        
+        // Mensagem de retorno guiado ao clicar no link do site institucional
+        const linkSiteInstitucional = document.getElementById('link-site-institucional');
+        if (linkSiteInstitucional) {
+            linkSiteInstitucional.addEventListener('click', function(e) {
+                // Não usar preventDefault() - deixar o link abrir normalmente
+                // Mostrar mensagem após um pequeno delay para não interferir na abertura
+                setTimeout(function() {
+                    const userType = '<?php echo $userType; ?>';
+                    let message = '';
+                    
+                    if (userType === 'instrutor') {
+                        message = 'Você abriu o site institucional. Para voltar ao sistema, use o ícone do app "Instrutor" (ou retorne para esta aba).';
+                    } else if (userType === 'aluno') {
+                        message = 'Você abriu o site institucional. Para voltar ao sistema, use o ícone do app "Aluno" (ou retorne para esta aba).';
+                    } else {
+                        message = 'Você abriu o site institucional. Para voltar ao sistema, retorne para esta aba.';
+                    }
+                    
+                    alert(message);
+                }, 50);
+            });
+        }
     </script>
     
     <!-- PWA Registration Script -->
