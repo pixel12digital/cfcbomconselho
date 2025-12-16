@@ -599,6 +599,17 @@ class PWAInstallFooter {
                             <p>Confirme a instalação na janela que aparecer</p>
                         </div>
                     </div>
+                    <div class="pwa-help-note" style="background: #e7f3ff; border-left-color: #2196F3; margin-top: 15px;">
+                        <i class="fas fa-info-circle" style="color: #2196F3;"></i>
+                        <p><strong>Criar atalho na Área de Trabalho (Windows):</strong></p>
+                        <p style="margin-top: 8px; font-size: 14px;">O Chrome pode não criar o ícone automaticamente. Para criar manualmente:</p>
+                        <ol style="margin: 8px 0 0 20px; font-size: 14px;">
+                            <li>Acesse <code>chrome://apps</code> no Chrome</li>
+                            <li>Clique com o botão direito no app "${appName}"</li>
+                            <li>Selecione <strong>"Criar atalhos..."</strong></li>
+                            <li>Marque "Área de trabalho" e confirme</li>
+                        </ol>
+                    </div>
                 `;
             } else {
                 // Fallback genérico
@@ -1351,9 +1362,13 @@ class PWAInstallFooter {
             }
         }
         
-        // Fallback: mostrar opções (desktop ou sem Web Share API)
-        console.log('[PWA Footer] fallback: showing share options');
-        this.showShareOptions(url, text);
+        // Fallback: copiar link diretamente (desktop ou sem Web Share API)
+        console.log('[PWA Footer] fallback: copy');
+        await this.copyToClipboard(url);
+        
+        // Após copiar, mostrar opção de WhatsApp também (opcional)
+        // Se o usuário quiser compartilhar via WhatsApp, pode usar o modal
+        // Por enquanto, apenas copiar é suficiente
     }
     
     /**

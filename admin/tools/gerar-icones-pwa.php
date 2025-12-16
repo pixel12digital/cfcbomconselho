@@ -61,8 +61,8 @@ function createCircularIcon($source, $size) {
     // Criar círculo branco (sobre o fundo já branco, mas garante forma circular)
     imagefilledellipse($icon, $centerX, $centerY, $circleSize, $circleSize, $white);
     
-    // Redimensionar logo para caber dentro do círculo (com margem de 15%)
-    $logoArea = $circleSize * 0.85; // 85% do círculo para o logo
+    // Redimensionar logo para caber dentro do círculo (logo maior: 78-85% do diâmetro)
+    $logoArea = $circleSize * 0.82; // 82% do círculo para o logo (maior que antes)
     $logoWidth = imagesx($source);
     $logoHeight = imagesy($source);
     
@@ -113,8 +113,8 @@ function createMaskableIcon($source, $size) {
     $logoWidth = imagesx($source);
     $logoHeight = imagesy($source);
     
-    // Calcular escala (usar 70% da safe zone para o logo, deixando margem)
-    $logoArea = $safeZone * 0.7;
+    // Calcular escala (usar 80% da safe zone para o logo, deixando margem)
+    $logoArea = $safeZone * 0.8;
     $scale = min($logoArea / $logoWidth, $logoArea / $logoHeight);
     $newWidth = (int)($logoWidth * $scale);
     $newHeight = (int)($logoHeight * $scale);
@@ -145,12 +145,12 @@ function createMaskableIcon($source, $size) {
     return $icon;
 }
 
-// Gerar ícones
+// Gerar ícones (versão v2 com logo maior)
 $icons = [
-    ['size' => 192, 'name' => 'cfc-192-circle.png', 'type' => 'circular'],
-    ['size' => 512, 'name' => 'cfc-512-circle.png', 'type' => 'circular'],
-    ['size' => 192, 'name' => 'cfc-192-maskable.png', 'type' => 'maskable'],
-    ['size' => 512, 'name' => 'cfc-512-maskable.png', 'type' => 'maskable'],
+    ['size' => 192, 'name' => 'cfc-192-circle-v2.png', 'type' => 'circular'],
+    ['size' => 512, 'name' => 'cfc-512-circle-v2.png', 'type' => 'circular'],
+    ['size' => 192, 'name' => 'cfc-192-maskable-v2.png', 'type' => 'maskable'],
+    ['size' => 512, 'name' => 'cfc-512-maskable-v2.png', 'type' => 'maskable'],
 ];
 
 foreach ($icons as $config) {
