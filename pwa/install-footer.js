@@ -310,10 +310,15 @@ class PWAInstallFooter {
         
         block.innerHTML = `
             <div class="pwa-install-footer-content">
-                <div class="pwa-install-footer-title" style="cursor: pointer;">
+                <div class="pwa-install-footer-title" style="cursor: default;">
                     <span class="pwa-install-icon">⬇️</span>
                     <span>${this.getAppTitle()}</span>
                 </div>
+                ${!isInstalled ? `
+                <div class="pwa-install-footer-subtitle" style="font-size: 12px; color: #666; margin-top: 4px; margin-bottom: 12px;">
+                    Instale para abrir como aplicativo no celular e no computador.
+                </div>
+                ` : ''}
                 ${isInstalled ? `
                 <div class="pwa-install-footer-status">
                     <i class="fas fa-check-circle"></i>
@@ -406,12 +411,12 @@ class PWAInstallFooter {
                 return;
             }
             
-            // Clique no título
-            if (title) {
-                console.log('[PWA Footer] Título clicado (delegação)');
-                this.handleTitleClick();
-                return;
-            }
+            // Título não é mais clicável (removido para evitar redundância)
+            // if (title) {
+            //     console.log('[PWA Footer] Título clicado (delegação)');
+            //     this.handleTitleClick();
+            //     return;
+            // }
             
             // Clique no aviso/hint
             if (hint) {
@@ -1307,13 +1312,13 @@ class PWAInstallFooter {
      * Lidar com compartilhamento
      */
     async handleShare() {
-        console.log('[PWA Footer] handleShare chamado');
+        console.log('[PWA Footer] Share click');
         
         const url = this.getAppUrl();
         const title = this.options.userType === 'aluno'
-            ? 'CFC Bom Conselho - App do Aluno'
+            ? 'CFC Bom Conselho • Aluno'
             : this.options.userType === 'instrutor'
-            ? 'CFC Bom Conselho - App do Instrutor'
+            ? 'CFC Bom Conselho • Instrutor'
             : 'CFC Bom Conselho - Sistema';
         const text = this.options.userType === 'aluno' 
             ? 'Acesse o Portal do Aluno do CFC Bom Conselho'
@@ -1321,10 +1326,10 @@ class PWAInstallFooter {
             ? 'Acesse o Portal do Instrutor do CFC Bom Conselho'
             : 'Acesse o site do CFC Bom Conselho';
         
-        console.log('[PWA Footer] URL:', url);
-        console.log('[PWA Footer] Navigator.share disponível:', !!navigator.share);
+        console.log('[PWA Footer] share url:', url);
+        console.log('[PWA Footer] navigator.share available:', !!navigator.share);
         
-        // Tentar Web Share API primeiro
+        // Tentar Web Share API primeiro (mobile)
         if (navigator.share) {
             try {
                 console.log('[PWA Footer] Tentando Web Share API...');
@@ -1338,7 +1343,7 @@ class PWAInstallFooter {
             } catch (error) {
                 // Usuário cancelou ou erro - continuar para fallback
                 if (error.name !== 'AbortError') {
-                    console.log('[PWA Footer] Erro ao compartilhar:', error);
+                    console.log('[PWA Footer] Erro ao compartilhar via Web Share API:', error);
                 } else {
                     console.log('[PWA Footer] Usuário cancelou compartilhamento');
                     return;
@@ -1346,8 +1351,8 @@ class PWAInstallFooter {
             }
         }
         
-        // Fallback: mostrar opções
-        console.log('[PWA Footer] Mostrando opções de compartilhamento (fallback)');
+        // Fallback: mostrar opções (desktop ou sem Web Share API)
+        console.log('[PWA Footer] fallback: showing share options');
         this.showShareOptions(url, text);
     }
     
@@ -1378,7 +1383,7 @@ class PWAInstallFooter {
                         <i class="fab fa-whatsapp"></i>
                         <span>Enviar no WhatsApp</span>
                     </button>
-                    <button class="pwa-share-option" data-action="copy" type="button">
+                    <button class="pwa-share-option" data-action="copy" type="button" id="pwa-share-copy-btn">
                         <i class="fas fa-copy"></i>
                         <span>Copiar link</span>
                     </button>
@@ -1435,7 +1440,7 @@ class PWAInstallFooter {
      * Compartilhar via WhatsApp
      */
     shareViaWhatsApp(url, text) {
-        console.log('[PWA Footer] shareViaWhatsApp chamado');
+        console.log('[PWA Footer] fallback: whatsapp');
         const message = encodeURIComponent(`${text}\n\n${url}`);
         const whatsappUrl = `https://wa.me/?text=${message}`;
         console.log('[PWA Footer] Abrindo WhatsApp:', whatsappUrl);
@@ -1459,13 +1464,14 @@ class PWAInstallFooter {
      * Copiar para área de transferência
      */
     async copyToClipboard(url) {
+        console.log('[PWA Footer] fallback: copy');
         console.log('[PWA Footer] copyToClipboard chamado, URL:', url);
         
         try {
             if (navigator.clipboard && navigator.clipboard.writeText) {
                 await navigator.clipboard.writeText(url);
                 console.log('[PWA Footer] Link copiado via Clipboard API');
-                this.showSuccessMessage('Link copiado para a área de transferência!');
+                this.showSuccessMessage('Link copiado!');
             } else {
                 throw new Error('Clipboard API não disponível');
             }

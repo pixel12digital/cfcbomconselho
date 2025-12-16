@@ -1,5 +1,5 @@
 {
-  "name": "CFC Bom Conselho - App do Aluno",
+  "name": "CFC Bom Conselho • Aluno",
   "short_name": "CFC Aluno",
   "description": "Portal do Aluno do CFC Bom Conselho - Acompanhe suas aulas e frequência",
   "start_url": "/login.php?type=aluno&source=pwa",
