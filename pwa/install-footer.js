@@ -85,6 +85,13 @@ class PWAInstallFooter {
             return; // Não mostrar em dashboards
         }
         
+        // Verificar se há manifest na página (requisito para PWA)
+        const manifestLink = document.querySelector('link[rel="manifest"]');
+        if (!manifestLink) {
+            console.log('[PWA Footer] Manifest não encontrado na página. Componente não será exibido.');
+            return; // Não mostrar se não há manifest
+        }
+        
         // Verificar se já está instalado (mas ainda mostrar o componente)
         if (this.isAlreadyInstalled()) {
             this.isInstalled = true;
@@ -610,18 +617,25 @@ class PWAInstallFooter {
                 const regs = await navigator.serviceWorker.getRegistrations();
                 if (regs.length === 0) {
                     diagnostics.push('Nenhum Service Worker registrado');
+                    diagnostics.push('SOLUÇÃO: Acesse login.php?type=aluno ou login.php?type=instrutor para registrar o SW');
                 } else {
-                    diagnostics.push(`Service Worker registrado mas não ativo (${regs.length} registro(s))`);
+                    const reg = regs[0];
+                    const state = reg.active?.state || reg.installing?.state || reg.waiting?.state || 'unknown';
+                    diagnostics.push(`Service Worker registrado mas não ativo (estado: ${state})`);
+                    diagnostics.push('SOLUÇÃO: Recarregue a página (F5) para o SW assumir controle');
                 }
             } catch (e) {
                 diagnostics.push('Erro ao verificar registros do Service Worker');
             }
+        } else {
+            diagnostics.push('✅ Service Worker está controlando a página');
         }
         
         // 2. Verificar manifest
         const manifestLink = document.querySelector('link[rel="manifest"]');
         if (!manifestLink) {
             diagnostics.push('Manifest não encontrado no HTML');
+            diagnostics.push('SOLUÇÃO: Acesse login.php?type=aluno ou login.php?type=instrutor (páginas com manifest)');
         } else {
             try {
                 const manifestUrl = manifestLink.href;
@@ -636,6 +650,8 @@ class PWAInstallFooter {
                         const json = await res.json();
                         if (!json.name || !json.start_url) {
                             diagnostics.push('Manifest JSON inválido ou incompleto');
+                        } else {
+                            diagnostics.push(`✅ Manifest válido: ${json.name}`);
                         }
                     }
                 }
@@ -647,6 +663,8 @@ class PWAInstallFooter {
         // 3. Verificar HTTPS
         if (!window.isSecureContext) {
             diagnostics.push('Não está em contexto seguro (HTTPS)');
+        } else {
+            diagnostics.push('✅ HTTPS ativo');
         }
         
         // 4. Verificar se já está instalado
@@ -761,6 +779,11 @@ class PWAInstallFooter {
      * Mostrar diagnóstico real do PWA
      */
     showDiagnostics(diagnostics) {
+        // Separar problemas de soluções
+        const problems = diagnostics.filter(d => !d.startsWith('✅') && !d.startsWith('SOLUÇÃO:'));
+        const solutions = diagnostics.filter(d => d.startsWith('SOLUÇÃO:'));
+        const successes = diagnostics.filter(d => d.startsWith('✅'));
+        
         const modal = document.createElement('div');
         modal.className = 'pwa-help-modal';
         modal.innerHTML = `
@@ -772,16 +795,43 @@ class PWAInstallFooter {
                     </button>
                 </div>
                 <div class="pwa-help-modal-body">
+                    ${problems.length > 0 ? `
                     <div class="pwa-help-note" style="background: #fff3cd; border-left-color: #ffc107;">
                         <i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i>
                         <p><strong>O app não está elegível para instalação:</strong></p>
                     </div>
                     <ul style="list-style: none; padding: 0; margin: 20px 0;">
-                        ${diagnostics.map(d => `<li style="padding: 8px 0; border-bottom: 1px solid #e1e5e9;">
+                        ${problems.map(d => `<li style="padding: 8px 0; border-bottom: 1px solid #e1e5e9;">
                             <i class="fas fa-times-circle" style="color: #e74c3c; margin-right: 8px;"></i>
                             ${d}
                         </li>`).join('')}
                     </ul>
+                    ` : ''}
+                    
+                    ${solutions.length > 0 ? `
+                    <div class="pwa-help-note" style="background: #d1ecf1; border-left-color: #0c5460;">
+                        <i class="fas fa-lightbulb" style="color: #0c5460;"></i>
+                        <p><strong>Soluções:</strong></p>
+                        <ul style="list-style: none; padding: 0; margin: 10px 0 0 0;">
+                            ${solutions.map(s => `<li style="padding: 6px 0; color: #0c5460;">
+                                ${s.replace('SOLUÇÃO: ', '')}
+                            </li>`).join('')}
+                        </ul>
+                    </div>
+                    ` : ''}
+                    
+                    ${successes.length > 0 ? `
+                    <div class="pwa-help-note" style="background: #d4edda; border-left-color: #28a745;">
+                        <i class="fas fa-check-circle" style="color: #28a745;"></i>
+                        <p><strong>Verificações OK:</strong></p>
+                        <ul style="list-style: none; padding: 0; margin: 10px 0 0 0;">
+                            ${successes.map(s => `<li style="padding: 6px 0; color: #28a745;">
+                                ${s.replace('✅ ', '')}
+                            </li>`).join('')}
+                        </ul>
+                    </div>
+                    ` : ''}
+                    
                     <div class="pwa-help-note">
                         <i class="fas fa-info-circle"></i>
                         <p>Verifique o console do navegador (F12) para mais detalhes técnicos.</p>
@@ -1213,6 +1263,13 @@ function initPWAInstallFooter() {
     
     console.log('[PWA Footer] Path:', path);
     console.log('[PWA Footer] É dashboard?', isDashboard);
+    
+    // Verificar se há manifest na página
+    const manifestLink = document.querySelector('link[rel="manifest"]');
+    if (!manifestLink) {
+        console.log('[PWA Footer] Manifest não encontrado. Componente não será inicializado.');
+        return;
+    }
     
     if (!isDashboard) {
         // Definir base path antes de inicializar
