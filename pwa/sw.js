@@ -4,7 +4,7 @@
  * Estratégias de cache otimizadas para PWA
  */
 
-const CACHE_VERSION = 'cfc-v1.0.5';
+const CACHE_VERSION = 'cfc-v1.0.6';
 const CACHE_NAME = `cfc-cache-${CACHE_VERSION}`;
 const OFFLINE_CACHE = 'cfc-offline-v1';
 
@@ -86,8 +86,9 @@ self.addEventListener('activate', (event) => {
   console.log(`[SW] Ativando versão ${CACHE_VERSION}`);
   
   event.waitUntil(
-    caches.keys()
-      .then(cacheNames => {
+    Promise.all([
+      // Limpar caches antigos
+      caches.keys().then(cacheNames => {
         return Promise.all(
           cacheNames
             .filter(cacheName => 
@@ -99,25 +100,32 @@ self.addEventListener('activate', (event) => {
               return caches.delete(cacheName);
             })
         );
+      }),
+      // CRÍTICO: Assumir controle imediatamente de todas as páginas
+      // Isso é essencial para o PWA ser elegível para instalação
+      self.clients.claim().then(() => {
+        console.log('[SW] ✅ Controle reivindicado de todas as páginas');
       })
-      .then(() => {
-        console.log('[SW] Cache antigo removido');
-        // Tomar controle de todas as abas
-        console.log('[SW] Reivindicando controle de todas as páginas...');
-        return self.clients.claim();
-      })
-      .then(() => {
-        console.log('[SW] ✅ Service Worker ativado e controlando todas as páginas');
-        // Notificar clientes sobre a ativação
-        return self.clients.matchAll().then(clients => {
-          clients.forEach(client => {
-            client.postMessage({ type: 'SW_ACTIVATED', version: CACHE_VERSION });
+    ])
+    .then(() => {
+      console.log('[SW] Cache antigo removido');
+      console.log('[SW] ✅ Service Worker ativado e controlando todas as páginas');
+      
+      // Notificar clientes sobre a ativação
+      return self.clients.matchAll().then(clients => {
+        clients.forEach(client => {
+          client.postMessage({ 
+            type: 'SW_ACTIVATED', 
+            version: CACHE_VERSION,
+            timestamp: Date.now()
           });
         });
-      })
-      .catch(error => {
-        console.error('[SW] Erro na ativação:', error);
-      })
+        console.log(`[SW] Notificados ${clients.length} cliente(s) sobre ativação`);
+      });
+    })
+    .catch(error => {
+      console.error('[SW] Erro na ativação:', error);
+    })
   );
 });
 
@@ -176,8 +184,12 @@ async function cacheFirstStrategy(request) {
     
     const networkResponse = await fetch(request);
     if (networkResponse.ok) {
+      // CRÍTICO: Clonar ANTES de qualquer uso da response
+      const responseClone = networkResponse.clone();
       const cache = await caches.open(CACHE_NAME);
-      cache.put(request, networkResponse.clone());
+      cache.put(request, responseClone).catch(err => {
+        console.error(`[SW] Erro ao cachear ${request.url}:`, err);
+      });
     }
     
     return networkResponse;
@@ -195,9 +207,12 @@ async function networkFirstStrategy(request) {
     const networkResponse = await fetch(request);
     
     if (networkResponse.ok) {
-      // Cachear apenas respostas bem-sucedidas
+      // CRÍTICO: Clonar ANTES de qualquer uso da response
+      const responseClone = networkResponse.clone();
       const cache = await caches.open(CACHE_NAME);
-      cache.put(request, networkResponse.clone());
+      cache.put(request, responseClone).catch(err => {
+        console.error(`[SW] Erro ao cachear ${request.url}:`, err);
+      });
     }
     
     return networkResponse;
@@ -224,10 +239,18 @@ async function networkFirstStrategy(request) {
 async function staleWhileRevalidateStrategy(request) {
   const cachedResponse = await caches.match(request);
   
-  const fetchPromise = fetch(request).then(networkResponse => {
+  const fetchPromise = fetch(request).then(async networkResponse => {
     if (networkResponse.ok) {
-      const cache = caches.open(CACHE_NAME);
-      cache.then(c => c.put(request, networkResponse.clone()));
+      // CRÍTICO: Clonar ANTES de qualquer uso da response
+      // O body de uma Response só pode ser lido uma vez
+      const responseClone = networkResponse.clone();
+      
+      // Cachear em background (não bloquear a resposta)
+      caches.open(CACHE_NAME).then(cache => {
+        cache.put(request, responseClone).catch(err => {
+          console.error(`[SW] Erro ao cachear ${request.url}:`, err);
+        });
+      });
     }
     return networkResponse;
   }).catch(() => {
@@ -248,8 +271,12 @@ async function networkFirstWithOfflineFallback(request) {
     if (networkResponse.ok) {
       // Cachear apenas páginas HTML bem-sucedidas
       if (request.headers.get('accept').includes('text/html')) {
+        // CRÍTICO: Clonar ANTES de qualquer uso da response
+        const responseClone = networkResponse.clone();
         const cache = await caches.open(CACHE_NAME);
-        cache.put(request, networkResponse.clone());
+        cache.put(request, responseClone).catch(err => {
+          console.error(`[SW] Erro ao cachear ${request.url}:`, err);
+        });
       }
     }
     
