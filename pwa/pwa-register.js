@@ -8,11 +8,18 @@ class PWAManager {
         this.registration = null;
         this.updateAvailable = false;
         this.deferredPrompt = null;
+        
+        // Remover qualquer banner existente imediatamente
+        this.hideInstallBanner();
+        
         this.init();
     }
     
     async init() {
         console.log('[PWA] Inicializando PWA Manager...');
+        
+        // Remover qualquer banner existente ao inicializar
+        this.hideInstallBanner();
         
         // Verificar suporte a Service Worker
         if (!('serviceWorker' in navigator)) {
@@ -30,7 +37,7 @@ class PWAManager {
         // Registrar Service Worker
         await this.registerServiceWorker();
         
-        // Configurar eventos de instalação
+        // Configurar eventos de instalação (mas não mostrar banner)
         this.setupInstallEvents();
         
         // Configurar eventos de atualização
@@ -47,6 +54,8 @@ class PWAManager {
         // Verificar controller após um delay
         setTimeout(() => {
             this.checkControllerStatus();
+            // Garantir que não há banners após delay
+            this.hideInstallBanner();
         }, 2000);
     }
     
@@ -258,38 +267,15 @@ class PWAManager {
     }
     
     createBanner(options) {
-        const banner = document.createElement('div');
-        banner.className = `pwa-banner pwa-banner-${options.type}`;
-        banner.innerHTML = `
-            <div class="pwa-banner-content">
-                <div class="pwa-banner-icon">
-                    <i class="fas fa-${options.type === 'install' ? 'download' : 'sync-alt'}"></i>
-                </div>
-                <div class="pwa-banner-text">
-                    <h4>${options.title}</h4>
-                    <p>${options.message}</p>
-                </div>
-                <div class="pwa-banner-actions">
-                    <button class="pwa-banner-btn pwa-banner-btn-primary" onclick="window.pwaManager.handleInstallChoice('accept')">
-                        ${options.buttonText}
-                    </button>
-                    <button class="pwa-banner-btn pwa-banner-btn-secondary" onclick="window.pwaManager.handleInstallChoice('dismiss')">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        `;
+        // DESABILITADO: Banner removido completamente
+        // Não criar banner - apenas retornar null
+        console.log('[PWA] createBanner() chamado mas desabilitado - banner não será criado');
+        return null;
         
-        // Adicionar estilos
-        this.addBannerStyles();
-        
-        // Configurar ação do botão
-        const button = banner.querySelector('.pwa-banner-btn-primary');
-        if (options.buttonAction) {
-            button.addEventListener('click', options.buttonAction);
-        }
-        
-        return banner;
+        // Código original comentado:
+        // const banner = document.createElement('div');
+        // banner.className = `pwa-banner pwa-banner-${options.type}`;
+        // ... resto do código comentado
     }
     
     addBannerStyles() {
@@ -469,8 +455,18 @@ class PWAManager {
     }
     
     hideInstallBanner() {
-        const banners = document.querySelectorAll('.pwa-banner-install');
-        banners.forEach(banner => banner.remove());
+        // Remover TODOS os banners PWA que possam existir
+        const banners = document.querySelectorAll('.pwa-banner, .pwa-banner-install, .pwa-banner-install');
+        banners.forEach(banner => {
+            console.log('[PWA] Removendo banner encontrado:', banner);
+            banner.remove();
+        });
+        
+        // Também remover estilos do banner se existirem
+        const bannerStyles = document.getElementById('pwa-banner-styles');
+        if (bannerStyles) {
+            bannerStyles.remove();
+        }
     }
     
     showInstallationSuccess() {
