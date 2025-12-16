@@ -720,14 +720,28 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
     <!-- PWA Registration Script -->
     <script src="<?php echo $basePath; ?>/pwa/pwa-register.js"></script>
     
-    <!-- Script para remover qualquer banner PWA existente -->
+    <!-- Script para prevenir e remover qualquer banner PWA -->
+    <style>
+        /* Ocultar banners PWA imediatamente com CSS */
+        .pwa-banner,
+        .pwa-banner-install,
+        [class*="pwa-banner"] {
+            display: none !important;
+            visibility: hidden !important;
+            opacity: 0 !important;
+            pointer-events: none !important;
+            position: absolute !important;
+            left: -9999px !important;
+        }
+    </style>
     <script>
-        // Remover imediatamente qualquer banner PWA que possa existir
+        // Prevenir criação e remover imediatamente qualquer banner PWA
         (function() {
             function removePWABanners() {
                 const banners = document.querySelectorAll('.pwa-banner, .pwa-banner-install, [class*="pwa-banner"]');
                 banners.forEach(banner => {
                     console.log('[PWA Cleanup] Removendo banner encontrado:', banner);
+                    banner.style.display = 'none';
                     banner.remove();
                 });
                 
@@ -738,18 +752,51 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                 }
             }
             
-            // Remover imediatamente
-            removePWABanners();
+            // Observar mutações do DOM para remover banners assim que forem criados
+            const observer = new MutationObserver(function(mutations) {
+                mutations.forEach(function(mutation) {
+                    mutation.addedNodes.forEach(function(node) {
+                        if (node.nodeType === 1) { // Element node
+                            if (node.classList && (
+                                node.classList.contains('pwa-banner') ||
+                                node.classList.contains('pwa-banner-install') ||
+                                node.className.includes('pwa-banner')
+                            )) {
+                                console.log('[PWA Cleanup] Banner detectado sendo adicionado, removendo imediatamente:', node);
+                                node.remove();
+                            }
+                            // Verificar filhos também
+                            const childBanners = node.querySelectorAll && node.querySelectorAll('.pwa-banner, .pwa-banner-install, [class*="pwa-banner"]');
+                            if (childBanners && childBanners.length > 0) {
+                                childBanners.forEach(banner => banner.remove());
+                            }
+                        }
+                    });
+                });
+            });
             
-            // Remover quando DOM estiver pronto
+            // Iniciar observação quando DOM estiver pronto
             if (document.readyState === 'loading') {
-                document.addEventListener('DOMContentLoaded', removePWABanners);
+                document.addEventListener('DOMContentLoaded', function() {
+                    observer.observe(document.body, {
+                        childList: true,
+                        subtree: true
+                    });
+                    removePWABanners();
+                });
             } else {
+                observer.observe(document.body, {
+                    childList: true,
+                    subtree: true
+                });
                 removePWABanners();
             }
             
-            // Remover periodicamente para garantir
-            setInterval(removePWABanners, 1000);
+            // Remover imediatamente
+            removePWABanners();
+            
+            // Remover periodicamente como backup (mas com intervalo menor)
+            setInterval(removePWABanners, 100);
         })();
     </script>
     

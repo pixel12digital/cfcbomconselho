@@ -236,21 +236,16 @@ class PWAManager {
     }
     
     showInstallBanner() {
-        // DESABILITADO: Banner removido para evitar confusão
+        // DESABILITADO COMPLETAMENTE: Banner nunca será exibido
         // O footer do login (install-footer.js) já tem o botão de instalação
         // Não criar banner para manter apenas uma opção de instalação
-        console.log('[PWA] showInstallBanner() chamado mas desabilitado - use o footer do login');
-        return;
+        console.log('[PWA] showInstallBanner() chamado mas DESABILITADO - use o footer do login');
         
-        // Código original comentado:
-        // const banner = this.createBanner({
-        //     type: 'install',
-        //     title: 'Instalar App',
-        //     message: 'Instale o CFC Bom Conselho para acesso rápido e funcionalidades offline.',
-        //     buttonText: 'Instalar',
-        //     buttonAction: () => this.installApp()
-        // });
-        // document.body.appendChild(banner);
+        // Garantir que nenhum banner exista
+        this.hideInstallBanner();
+        
+        // Retornar imediatamente sem criar nada
+        return;
     }
     
     showUpdateBanner() {
