@@ -108,6 +108,14 @@ class PWAInstallFooter {
             return; // Não continuar inicialização
         }
         
+        // Verificação assíncrona adicional para Android (getInstalledRelatedApps)
+        // Se detectar que está instalado, oculta o componente
+        this.checkInstalledRelatedApps().then((isInstalled) => {
+            if (isInstalled) {
+                console.log('[PWA Footer] App detectado como instalado via getInstalledRelatedApps, componente ocultado');
+            }
+        });
+        
         // Configurar eventos
         this.setupInstallEvents();
         
@@ -121,16 +129,51 @@ class PWAInstallFooter {
     
     /**
      * Verificar se já está instalado
+     * Suporta Android e iOS mobile
      */
     isAlreadyInstalled() {
-        // Verificar display mode
+        // 1. Verificar display mode (Android e iOS quando rodando em modo standalone)
         if (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) {
+            console.log('[PWA Footer] ✅ App detectado como instalado: display-mode standalone');
             return true;
         }
         
-        // Verificar se está em modo standalone (navigator.standalone para iOS)
+        // 2. Verificar se está em modo standalone (navigator.standalone para iOS Safari)
         if (window.navigator.standalone === true) {
+            console.log('[PWA Footer] ✅ App detectado como instalado: navigator.standalone (iOS)');
             return true;
+        }
+        
+        // 3. Verificar getInstalledRelatedApps (Android Chrome - mais confiável)
+        // Esta verificação é assíncrona, então fazemos uma verificação síncrona primeiro
+        // e depois atualizamos se necessário
+        if ('getInstalledRelatedApps' in navigator) {
+            // Verificação assíncrona será feita em init() se necessário
+            // Por enquanto, retornamos false para não bloquear a inicialização
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Verificar assincronamente se app está instalado via getInstalledRelatedApps
+     * Útil para Android quando usuário acessa pelo navegador mas já tem app instalado
+     */
+    async checkInstalledRelatedApps() {
+        if (!('getInstalledRelatedApps' in navigator)) {
+            return false;
+        }
+        
+        try {
+            const apps = await navigator.getInstalledRelatedApps();
+            if (apps && apps.length > 0) {
+                console.log('[PWA Footer] ✅ App detectado como instalado via getInstalledRelatedApps:', apps);
+                this.isInstalled = true;
+                this.hide();
+                return true;
+            }
+        } catch (e) {
+            console.warn('[PWA Footer] Erro ao verificar getInstalledRelatedApps:', e);
         }
         
         return false;
