@@ -42,8 +42,9 @@ class PWAManager {
         try {
             console.log('[PWA] Registrando Service Worker...');
             
-            this.registration = await navigator.serviceWorker.register('../pwa/sw.js', {
-                scope: '../pwa/'
+            // Usar SW do root para garantir scope "/"
+            this.registration = await navigator.serviceWorker.register('/sw.js', {
+                scope: '/'
             });
             
             console.log('[PWA] Service Worker registrado:', this.registration);
@@ -496,8 +497,8 @@ class PWAManager {
         if (Notification.permission === 'granted') {
             const notification = new Notification('CFC Bom Conselho', {
                 body: 'Bem-vindo ao sistema administrativo! Você pode instalar este app para acesso rápido.',
-                icon: '../pwa/icons/icon-192.png',
-                badge: '../pwa/icons/icon-72.png',
+                icon: '/pwa/icons/icon-192.png',
+                badge: '/pwa/icons/icon-72.png',
                 tag: 'cfc-welcome',
                 requireInteraction: false,
                 silent: false
@@ -615,8 +616,13 @@ window.resetPWAChoices = function() {
 
 // Inicializar PWA Manager quando DOM estiver pronto
 document.addEventListener('DOMContentLoaded', () => {
-    // Verificar se estamos na área admin
-    if (window.location.pathname.includes('/admin/')) {
+    // Verificar se estamos na área admin, instrutor ou login
+    const path = window.location.pathname;
+    const isAdminArea = path.includes('/admin/');
+    const isInstrutorArea = path.includes('/instrutor/');
+    const isLoginPage = path.includes('/login.php') || path === '/';
+    
+    if (isAdminArea || isInstrutorArea || isLoginPage) {
         window.pwaManager = new PWAManager();
         
         // Debug: mostrar estado das escolhas do usuário

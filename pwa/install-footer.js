@@ -564,6 +564,69 @@ class PWAInstallFooter {
     }
     
     /**
+     * Diagnosticar por que PWA não está elegível
+     */
+    async diagnosePWA() {
+        const diagnostics = [];
+        
+        // 1. Verificar Service Worker
+        const hasController = !!navigator.serviceWorker.controller;
+        if (!hasController) {
+            diagnostics.push('Service Worker não está controlando esta página');
+            
+            // Verificar se está registrado
+            try {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                if (regs.length === 0) {
+                    diagnostics.push('Nenhum Service Worker registrado');
+                } else {
+                    diagnostics.push(`Service Worker registrado mas não ativo (${regs.length} registro(s))`);
+                }
+            } catch (e) {
+                diagnostics.push('Erro ao verificar registros do Service Worker');
+            }
+        }
+        
+        // 2. Verificar manifest
+        const manifestLink = document.querySelector('link[rel="manifest"]');
+        if (!manifestLink) {
+            diagnostics.push('Manifest não encontrado no HTML');
+        } else {
+            try {
+                const manifestUrl = manifestLink.href;
+                const res = await fetch(manifestUrl, {cache: 'no-store'});
+                if (res.status !== 200) {
+                    diagnostics.push(`Manifest retornou status ${res.status}`);
+                } else {
+                    const contentType = res.headers.get('content-type');
+                    if (!contentType || !contentType.includes('json')) {
+                        diagnostics.push(`Manifest com Content-Type incorreto: ${contentType}`);
+                    } else {
+                        const json = await res.json();
+                        if (!json.name || !json.start_url) {
+                            diagnostics.push('Manifest JSON inválido ou incompleto');
+                        }
+                    }
+                }
+            } catch (e) {
+                diagnostics.push(`Erro ao carregar manifest: ${e.message}`);
+            }
+        }
+        
+        // 3. Verificar HTTPS
+        if (!window.isSecureContext) {
+            diagnostics.push('Não está em contexto seguro (HTTPS)');
+        }
+        
+        // 4. Verificar se já está instalado
+        if (window.matchMedia('(display-mode: standalone)').matches) {
+            diagnostics.push('App já está instalado');
+        }
+        
+        return diagnostics;
+    }
+    
+    /**
      * Lidar com instalação
      */
     async handleInstall() {
@@ -575,8 +638,15 @@ class PWAInstallFooter {
         console.log('[PWA Footer] beforeinstallprompt disponível:', hasPrompt);
         
         if (!this.deferredPrompt) {
-            console.warn('[PWA Footer] Deferred prompt não disponível, mostrando ajuda');
-            this.showInstallHelp();
+            console.warn('[PWA Footer] Deferred prompt não disponível, diagnosticando...');
+            
+            // Diagnosticar problema
+            const diagnostics = await this.diagnosePWA();
+            if (diagnostics.length > 0) {
+                this.showDiagnostics(diagnostics);
+            } else {
+                this.showInstallHelp();
+            }
             return;
         }
         
@@ -654,6 +724,57 @@ class PWAInstallFooter {
             }
             this.showChromeInstructions();
         }
+    }
+    
+    /**
+     * Mostrar diagnóstico real do PWA
+     */
+    showDiagnostics(diagnostics) {
+        const modal = document.createElement('div');
+        modal.className = 'pwa-help-modal';
+        modal.innerHTML = `
+            <div class="pwa-help-modal-content">
+                <div class="pwa-help-modal-header">
+                    <h4>Diagnóstico PWA</h4>
+                    <button class="pwa-help-modal-close" type="button">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="pwa-help-modal-body">
+                    <div class="pwa-help-note" style="background: #fff3cd; border-left-color: #ffc107;">
+                        <i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i>
+                        <p><strong>O app não está elegível para instalação:</strong></p>
+                    </div>
+                    <ul style="list-style: none; padding: 0; margin: 20px 0;">
+                        ${diagnostics.map(d => `<li style="padding: 8px 0; border-bottom: 1px solid #e1e5e9;">
+                            <i class="fas fa-times-circle" style="color: #e74c3c; margin-right: 8px;"></i>
+                            ${d}
+                        </li>`).join('')}
+                    </ul>
+                    <div class="pwa-help-note">
+                        <i class="fas fa-info-circle"></i>
+                        <p>Verifique o console do navegador (F12) para mais detalhes técnicos.</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const closeBtn = modal.querySelector('.pwa-help-modal-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modal.remove();
+            });
+        }
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        document.body.appendChild(modal);
     }
     
     /**

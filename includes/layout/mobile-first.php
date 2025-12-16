@@ -192,7 +192,10 @@
     <script>
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('<?php echo rtrim($basePath, '/') . '/pwa/sw.js'; ?>')
+                // Usar SW do root para garantir scope "/"
+                navigator.serviceWorker.register('<?php echo rtrim($basePath, '/') . '/sw.js'; ?>', {
+                    scope: '/'
+                })
                     .then(registration => {
                         console.log('SW registered: ', registration);
                     })
