@@ -476,9 +476,9 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         
         .form-control:focus {
             outline: none;
-            border-color: #3498db;
+            border-color: #1A365D;
             background: white;
-            box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+            box-shadow: 0 0 0 3px rgba(26, 54, 93, 0.1);
         }
         
         .form-control.error {
