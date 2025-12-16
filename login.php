@@ -1099,7 +1099,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                 style.textContent = `
                     .pwa-ios-instructions {
                         background: #f0f9ff;
-                        border: 2px solid #3498db;
+                        border: 2px solid #1A365D;
                         border-radius: 10px;
                         padding: 15px;
                         margin-top: 20px;
@@ -1114,7 +1114,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                     
                     .pwa-ios-content i.fa-mobile-alt {
                         font-size: 24px;
-                        color: #3498db;
+                        color: #1A365D;
                         flex-shrink: 0;
                     }
                     
