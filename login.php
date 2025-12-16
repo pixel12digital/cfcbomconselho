@@ -175,16 +175,26 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
     
     <!-- PWA Manifest - Carregar dinamicamente baseado no tipo -->
     <?php
-    $manifestPath = '/pwa/manifest.json'; // Default
+    // Detectar base path para funcionar em local e produção
+    $basePath = defined('BASE_PATH') ? BASE_PATH : '';
+    if (empty($basePath)) {
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        $scriptDir = dirname($scriptName);
+        if ($scriptDir !== '/' && $scriptDir !== '') {
+            $basePath = rtrim($scriptDir, '/');
+        }
+    }
+    
+    $manifestPath = ($basePath ? $basePath : '') . '/pwa/manifest.json'; // Default
     $appTitle = 'Sistema CFC';
     $appName = 'CFC Bom Conselho';
     
     if ($userType === 'aluno') {
-        $manifestPath = '/pwa/manifest-aluno.json';
+        $manifestPath = ($basePath ? $basePath : '') . '/pwa/manifest-aluno.json';
         $appTitle = 'App do Aluno';
         $appName = 'CFC Bom Conselho - Aluno';
     } elseif ($userType === 'instrutor') {
-        $manifestPath = '/pwa/manifest-instrutor.json';
+        $manifestPath = ($basePath ? $basePath : '') . '/pwa/manifest-instrutor.json';
         $appTitle = 'App do Instrutor';
         $appName = 'CFC Bom Conselho - Instrutor';
     }
@@ -200,7 +210,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
     <meta name="application-name" content="<?php echo htmlspecialchars($appName); ?>">
     
     <!-- Apple Touch Icons -->
-    <link rel="apple-touch-icon" href="/pwa/icons/icon-192.png">
+    <link rel="apple-touch-icon" href="<?php echo htmlspecialchars(($basePath ? $basePath : '') . '/pwa/icons/icon-192.png'); ?>">
     <link rel="apple-touch-icon" sizes="152x152" href="/pwa/icons/icon-152.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/pwa/icons/icon-192.png">
     <style>
