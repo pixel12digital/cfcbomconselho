@@ -91,6 +91,65 @@ header('Content-Type: text/html; charset=utf-8');
         <p><strong>URL Atual:</strong> <span id="current-url"></span></p>
         <p><strong>Data/Hora:</strong> <span id="current-time"></span></p>
         <p><strong>User Agent:</strong> <span id="user-agent"></span></p>
+        <p><strong>Tipo:</strong> <span id="current-type"></span></p>
+    </div>
+    
+    <div class="summary" style="background: #fff3cd; border: 2px solid #ffc107;">
+        <h2>⚠️ Importante</h2>
+        <p><strong>Este check está sendo executado em:</strong> <code>/admin/tools/</code></p>
+        <p>Para testar a installability real, você precisa executar o check nas páginas de login:</p>
+        <div style="margin: 15px 0;">
+            <a href="/login.php?type=instrutor" target="_blank" style="display: inline-block; padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; margin: 5px;">
+                🔗 Abrir Login Instrutor
+            </a>
+            <a href="/login.php?type=aluno" target="_blank" style="display: inline-block; padding: 10px 20px; background: #3498db; color: white; text-decoration: none; border-radius: 5px; margin: 5px;">
+                🔗 Abrir Login Aluno
+            </a>
+        </div>
+        <p><strong>Instrução:</strong> Abra uma das páginas acima, pressione F12 (DevTools), vá em Console e execute:</p>
+        <pre style="background: #2c3e50; color: #fff; padding: 10px; border-radius: 5px; margin: 10px 0;">
+// Verificar manifest
+const manifestLink = document.querySelector('link[rel="manifest"]');
+console.log('Manifest URL:', manifestLink?.href);
+if (manifestLink) {
+    fetch(manifestLink.href).then(r => r.json()).then(m => {
+        console.log('Manifest Data:', m);
+        console.log('start_url:', m.start_url);
+        console.log('scope:', m.scope);
+        console.log('id:', m.id);
+    });
+}
+
+// Verificar SW
+navigator.serviceWorker.getRegistrations().then(regs => {
+    console.log('SW Registrations:', regs);
+    if (regs.length > 0) {
+        console.log('SW Scope:', regs[0].scope);
+        console.log('SW Active:', regs[0].active?.state);
+    }
+});
+navigator.serviceWorker.ready.then(() => {
+    console.log('SW Ready:', navigator.serviceWorker.controller?.scriptURL);
+});
+
+// Verificar beforeinstallprompt
+window.addEventListener('beforeinstallprompt', (e) => {
+    console.log('✅ beforeinstallprompt disparado!', new Date().toISOString());
+});
+        </pre>
+    </div>
+    
+    <div class="summary" style="background: #d1ecf1; border: 2px solid #0c5460;">
+        <h2>🧹 Limpar Dados do Site (para testes)</h2>
+        <p>Se precisar testar instalação do zero:</p>
+        <ol>
+            <li>Abra DevTools (F12)</li>
+            <li>Vá em <strong>Application</strong> (ou Aplicativo)</li>
+            <li>No menu esquerdo, clique em <strong>Clear storage</strong> (ou Limpar armazenamento)</li>
+            <li>Marque todas as opções</li>
+            <li>Clique em <strong>Clear site data</strong> (ou Limpar dados do site)</li>
+            <li>Recarregue a página (F5)</li>
+        </ol>
     </div>
     
     <div id="checks-container"></div>
@@ -105,6 +164,7 @@ header('Content-Type: text/html; charset=utf-8');
         document.getElementById('current-url').textContent = currentUrl;
         document.getElementById('current-time').textContent = new Date().toLocaleString('pt-BR');
         document.getElementById('user-agent').textContent = navigator.userAgent;
+        document.getElementById('current-type').textContent = type === 'aluno' ? 'Aluno' : 'Instrutor';
         
         function addCheck(title, status, details = '') {
             checks.push({ title, status, details });
@@ -129,42 +189,92 @@ header('Content-Type: text/html; charset=utf-8');
         async function runChecks() {
             console.log('🔍 Iniciando diagnóstico PWA...');
             
-            // 1. Service Worker Controller
+            // 1. Service Worker - Verificação completa (evitar falso negativo)
             const hasController = !!navigator.serviceWorker.controller;
-            addCheck(
-                'Service Worker Controller',
-                hasController ? 'pass' : 'fail',
-                hasController 
-                    ? `✅ SW controlando: ${navigator.serviceWorker.controller.scriptURL}`
-                    : '❌ SW não está controlando a página'
-            );
-            console.log('1. SW Controller:', hasController);
+            let swRegistration = null;
+            let swReady = false;
             
-            // 2. Manifest Link
-            const manifestLink = document.querySelector('link[rel="manifest"]');
-            if (!manifestLink) {
-                addCheck('Manifest Link no HTML', 'fail', '❌ Não encontrado');
+            try {
+                const regs = await navigator.serviceWorker.getRegistrations();
+                if (regs.length > 0) {
+                    swRegistration = regs[0];
+                    addCheck(
+                        'Service Worker Registration',
+                        'pass',
+                        `✅ SW registrado: ${swRegistration.scope} (estado: ${swRegistration.active?.state || swRegistration.installing?.state || swRegistration.waiting?.state || 'unknown'})`
+                    );
+                } else {
+                    addCheck('Service Worker Registration', 'fail', '❌ Nenhum SW registrado');
+                }
+            } catch (e) {
+                addCheck('Service Worker Registration', 'fail', `❌ Erro: ${e.message}`);
+            }
+            
+            try {
+                await navigator.serviceWorker.ready;
+                swReady = true;
+                addCheck('Service Worker Ready', 'pass', '✅ SW pronto e ativo');
+            } catch (e) {
+                addCheck('Service Worker Ready', 'fail', `❌ SW não está pronto: ${e.message}`);
+            }
+            
+            if (hasController) {
+                addCheck(
+                    'Service Worker Controller',
+                    'pass',
+                    `✅ SW controlando: ${navigator.serviceWorker.controller.scriptURL}`
+                );
             } else {
-                const manifestUrl = manifestLink.href;
-                addCheck('Manifest Link no HTML', 'pass', `✅ Encontrado: ${manifestUrl}`);
+                if (swRegistration && swReady) {
+                    addCheck(
+                        'Service Worker Controller',
+                        'warn',
+                        '⚠️ SW registrado e pronto, mas ainda não controlando esta aba. <strong>Recarregue a página (F5)</strong> para o SW assumir controle.'
+                    );
+                } else {
+                    addCheck(
+                        'Service Worker Controller',
+                        'fail',
+                        '❌ SW não está controlando a página'
+                    );
+                }
+            }
+            console.log('1. SW Controller:', hasController, 'Registration:', swRegistration, 'Ready:', swReady);
+            
+            // 2. Manifest Link (opcional - pode não existir nesta página)
+            const manifestLink = document.querySelector('link[rel="manifest"]');
+            if (manifestLink) {
+                addCheck('Manifest Link no HTML', 'pass', `✅ Encontrado: ${manifestLink.href}`);
+            } else {
+                addCheck('Manifest Link no HTML', 'warn', '⚠️ Não encontrado nesta página (normal se estiver em admin/tools)');
+            }
+            
+            // 3. Determinar manifest correto baseado no type
+            const urlParams = new URLSearchParams(window.location.search);
+            const type = urlParams.get('type') || 'instrutor';
+            const manifestUrl = type === 'aluno' 
+                ? '/pwa/manifest-aluno.json' 
+                : '/pwa/manifest-instrutor.json';
+            
+            addCheck('Manifest Esperado (via type)', 'pass', `✅ ${type} → ${manifestUrl}`);
+            
+            // 4. Fetch Manifest (fonte da verdade)
+            try {
+                const manifestRes = await fetch(manifestUrl, {cache: 'no-store'});
+                const manifestStatus = manifestRes.status;
+                const manifestContentType = manifestRes.headers.get('content-type');
                 
-                // 3. Fetch Manifest
-                try {
-                    const manifestRes = await fetch(manifestUrl, {cache: 'no-store'});
-                    const manifestStatus = manifestRes.status;
-                    const manifestContentType = manifestRes.headers.get('content-type');
+                if (manifestStatus !== 200) {
+                    addCheck('Manifest HTTP Status (fetch)', 'fail', `❌ Status: ${manifestStatus}`);
+                } else if (!manifestContentType || !manifestContentType.includes('json')) {
+                    addCheck('Manifest Content-Type (fetch)', 'fail', `❌ Content-Type: ${manifestContentType || 'N/A'}`);
+                } else {
+                    addCheck('Manifest HTTP Status (fetch)', 'pass', `✅ Status: ${manifestStatus}`);
+                    addCheck('Manifest Content-Type (fetch)', 'pass', `✅ ${manifestContentType}`);
                     
-                    if (manifestStatus !== 200) {
-                        addCheck('Manifest HTTP Status', 'fail', `❌ Status: ${manifestStatus}`);
-                    } else if (!manifestContentType || !manifestContentType.includes('json')) {
-                        addCheck('Manifest Content-Type', 'fail', `❌ Content-Type: ${manifestContentType || 'N/A'}`);
-                    } else {
-                        addCheck('Manifest HTTP Status', 'pass', `✅ Status: ${manifestStatus}`);
-                        addCheck('Manifest Content-Type', 'pass', `✅ ${manifestContentType}`);
-                        
-                        // 4. Parse Manifest JSON
-                        const manifestData = await manifestRes.json();
-                        console.log('📋 Manifest Data:', manifestData);
+                    // 5. Parse Manifest JSON
+                    const manifestData = await manifestRes.json();
+                    console.log('📋 Manifest Data:', manifestData);
                         
                         // Validar campos obrigatórios
                         const requiredFields = ['name', 'short_name', 'start_url', 'scope', 'display', 'icons'];
@@ -272,7 +382,7 @@ header('Content-Type: text/html; charset=utf-8');
                 addCheck('getInstalledRelatedApps', 'warn', '⚠️ API não disponível neste navegador');
             }
             
-            // 11. beforeinstallprompt Event
+            // 11. beforeinstallprompt Event (com explicação detalhada)
             let beforeinstallpromptFired = false;
             let beforeinstallpromptTimestamp = null;
             
@@ -290,13 +400,44 @@ header('Content-Type: text/html; charset=utf-8');
             
             window.addEventListener('beforeinstallprompt', beforeinstallpromptHandler);
             
+            // Verificar se já está instalado
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
+            let installedRelatedAppsInfo = '';
+            if ('getInstalledRelatedApps' in navigator) {
+                try {
+                    const relatedApps = await navigator.getInstalledRelatedApps();
+                    if (relatedApps && relatedApps.length > 0) {
+                        installedRelatedAppsInfo = ` Apps relacionados instalados: ${JSON.stringify(relatedApps)}.`;
+                    }
+                } catch (e) {
+                    // Ignorar erro
+                }
+            }
+            
             // Aguardar 5 segundos para ver se dispara
             setTimeout(() => {
                 if (!beforeinstallpromptFired) {
+                    let reason = '❌ Não disparou após 5 segundos.';
+                    const reasons = [];
+                    
+                    if (isStandalone) {
+                        reasons.push('App já está instalado como PWA');
+                    }
+                    if (installedRelatedAppsInfo) {
+                        reasons.push(installedRelatedAppsInfo);
+                    }
+                    if (!hasController && (!swRegistration || !swReady)) {
+                        reasons.push('Service Worker não está controlando');
+                    }
+                    if (reasons.length === 0) {
+                        reasons.push('Possível cooldown do Chrome (usuário cancelou instalação recentemente)');
+                        reasons.push('Ou requisitos não totalmente atendidos');
+                    }
+                    
                     addCheck(
                         'beforeinstallprompt Event',
                         'fail',
-                        '❌ Não disparou após 5 segundos. Possíveis causas: cooldown do Chrome, app já instalado, ou requisitos não atendidos.'
+                        `${reason}<br><strong>Possíveis causas:</strong><ul style="margin: 10px 0; padding-left: 20px;">${reasons.map(r => `<li>${r}</li>`).join('')}</ul>`
                     );
                     renderChecks();
                 }
