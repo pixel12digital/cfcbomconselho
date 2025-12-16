@@ -3533,6 +3533,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
             </div>
         `;
         
+        // Cache simples no frontend para reduzir requisições (mitigação max_connections_per_hour)
+        const cacheKey = 'salas_list_cache';
+        const cacheData = sessionStorage.getItem(cacheKey);
+        const cacheTime = sessionStorage.getItem(cacheKey + '_time');
+        const now = Date.now();
+        
+        // Usar cache se existir e tiver menos de 60 segundos
+        if (cacheData && cacheTime && (now - parseInt(cacheTime)) < 60000) {
+            try {
+                const data = JSON.parse(cacheData);
+                console.log('📦 Usando cache de salas (economia de conexão)');
+                renderSalas(data);
+                return;
+            } catch (e) {
+                // Cache inválido, continuar com fetch
+            }
+        }
+        
         // Fazer requisição AJAX
         fetch(getBasePath() + '/admin/api/salas-clean.php?action=listar')
         .then(response => response.text().then(text => {
@@ -3545,6 +3563,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
         }))
         .then(data => {
             console.log('📊 Dados recebidos:', data);
+            
+            // Salvar no cache (60s TTL)
+            try {
+                sessionStorage.setItem(cacheKey, JSON.stringify(data));
+                sessionStorage.setItem(cacheKey + '_time', now.toString());
+            } catch (e) {
+                // Ignorar erros de cache (pode estar desabilitado)
+            }
             
             if (data.sucesso && data.salas) {
                 // Atualizar contador

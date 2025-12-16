@@ -231,15 +231,13 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                         // Verificar se a versão é antiga (v1.0.4 ou anterior)
                         const swVersion = event.data.version || '';
                         if (swVersion && (swVersion.includes('v1.0.4') || swVersion.includes('v1.0.3') || swVersion.includes('v1.0.2') || swVersion.includes('v1.0.1'))) {
-                            console.log('[PWA Early] ⚠️ Versão antiga do SW detectada:', swVersion, '- Forçando atualização...');
-                            // Forçar atualização do SW
+                            console.log('[PWA Early] ⚠️ Versão antiga do SW detectada:', swVersion, '- Atualizando sem reload automático (mitigação conexões)');
+                            // Forçar atualização do SW SEM reload automático
                             navigator.serviceWorker.getRegistrations().then(function(regs) {
                                 if (regs.length > 0) {
                                     regs[0].update().then(function() {
-                                        console.log('[PWA Early] SW atualizado, recarregando página...');
-                                        setTimeout(function() {
-                                            window.location.reload();
-                                        }, 1000);
+                                        console.log('[PWA Early] SW atualizado. Recarregue a página manualmente se necessário.');
+                                        // REMOVIDO: window.location.reload() automático para evitar loops
                                     });
                                 }
                             });
@@ -249,8 +247,8 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                         // Aguardar um pouco para o claim() processar
                         setTimeout(function() {
                             if (!navigator.serviceWorker.controller) {
-                                console.log('[PWA Early] ⚠️ SW ativado mas não controlando. Recarregando página...');
-                                window.location.reload();
+                                console.log('[PWA Early] ⚠️ SW ativado mas não controlando. Recarregue manualmente se necessário (mitigação conexões).');
+                                // REMOVIDO: window.location.reload() automático para evitar loops
                             } else {
                                 console.log('[PWA Early] ✅ SW agora está controlando a página');
                             }
@@ -259,6 +257,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                 });
                 
                 // Verificação periódica: se SW está registrado mas não controlando após 2 segundos
+                // REMOVIDO: reload automático para evitar loops e excesso de conexões
                 setTimeout(function() {
                     if (!navigator.serviceWorker.controller) {
                         navigator.serviceWorker.getRegistrations().then(function(regs) {
@@ -268,18 +267,16 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                                     // Verificar versão do SW ativo
                                     if (reg.active.scriptURL) {
                                         console.log('[PWA Early] SW ativo:', reg.active.scriptURL);
-                                        // Se for versão antiga, forçar atualização
+                                        // Se for versão antiga, forçar atualização SEM reload
                                         if (reg.active.scriptURL.includes('sw.js')) {
-                                            console.log('[PWA Early] ⚠️ SW ativado mas não controlando após 2s. Tentando atualizar...');
+                                            console.log('[PWA Early] ⚠️ SW ativado mas não controlando após 2s. Atualizando sem reload (mitigação conexões)...');
                                             reg.update().then(function() {
-                                                console.log('[PWA Early] SW atualizado, recarregando...');
-                                                setTimeout(function() {
-                                                    window.location.reload();
-                                                }, 1000);
+                                                console.log('[PWA Early] SW atualizado. Recarregue manualmente se necessário.');
+                                                // REMOVIDO: window.location.reload() automático
                                             });
                                         } else {
-                                            console.log('[PWA Early] ⚠️ SW ativado mas não controlando após 2s. Recarregando...');
-                                            window.location.reload();
+                                            console.log('[PWA Early] ⚠️ SW ativado mas não controlando após 2s. Recarregue manualmente se necessário (mitigação conexões).');
+                                            // REMOVIDO: window.location.reload() automático
                                         }
                                     }
                                 }

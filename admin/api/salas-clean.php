@@ -8,7 +8,8 @@ require_once __DIR__ . '/../../includes/database.php';
 
 // Headers primeiro
 header('Content-Type: application/json; charset=utf-8');
-header('Cache-Control: no-cache, must-revalidate');
+// Cache curto para reduzir conexões (mitigação max_connections_per_hour)
+header('Cache-Control: private, max-age=60, must-revalidate');
 
 // Desabilitar qualquer output de erro
 ini_set('display_errors', 0);

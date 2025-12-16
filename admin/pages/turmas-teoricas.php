@@ -7044,19 +7044,46 @@ function eliminarPeliculaEscura() {
 }
 
 // Função para monitorar e limpar backdrops continuamente
+// Ajustado para não executar quando aba está em background (mitigação de conexões)
 function monitorarBackdrops() {
-    setInterval(() => {
-        const backdrops = document.querySelectorAll('.modal-backdrop');
-        backdrops.forEach(backdrop => backdrop.remove());
+    let backdropInterval = null;
+    
+    function startMonitoring() {
+        if (backdropInterval) clearInterval(backdropInterval);
         
-        // Remover elementos com background escuro
-        const darkElements = document.querySelectorAll('[style*="background-color: rgba(0, 0, 0"], [style*="background: rgba(0, 0, 0"]');
-        darkElements.forEach(element => {
-            if (!element.id || !element.id.includes('modalGerenciar')) {
-                element.remove();
+        // Só monitorar se aba estiver visível
+        if (document.visibilityState === 'visible') {
+            backdropInterval = setInterval(() => {
+                if (document.visibilityState === 'visible') {
+                    const backdrops = document.querySelectorAll('.modal-backdrop');
+                    backdrops.forEach(backdrop => backdrop.remove());
+                    
+                    // Remover elementos com background escuro
+                    const darkElements = document.querySelectorAll('[style*="background-color: rgba(0, 0, 0"], [style*="background: rgba(0, 0, 0"]');
+                    darkElements.forEach(element => {
+                        if (!element.id || !element.id.includes('modalGerenciar')) {
+                            element.remove();
+                        }
+                    });
+                }
+            }, 100);
+        }
+    }
+    
+    // Iniciar quando aba ficar visível
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'visible') {
+            startMonitoring();
+        } else {
+            if (backdropInterval) {
+                clearInterval(backdropInterval);
+                backdropInterval = null;
             }
-        });
-    }, 100);
+        }
+    });
+    
+    // Iniciar se já estiver visível
+    startMonitoring();
 }
 
 // Variáveis para controlar o modal

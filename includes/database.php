@@ -12,8 +12,15 @@ class Database {
     private $lastQuery;
     private $queryCount = 0;
     private $queryTime = 0;
+    private static $requestId = null;
+    private static $requestStartTime = null;
     
     private function __construct() {
+        // Gerar request_id único se não existir
+        if (self::$requestId === null) {
+            self::$requestId = uniqid('req_', true);
+            self::$requestStartTime = microtime(true);
+        }
         $this->connect();
     }
     
@@ -88,6 +95,9 @@ class Database {
             // Aguardar um pouco antes de reconectar
             usleep(100000); // 100ms
             
+            // Log de tentativa de reconexão
+            $this->logConnection('reconnect', null);
+            
             // Reconectar
             $this->connect();
             
@@ -96,6 +106,7 @@ class Database {
             }
             
         } catch (Exception $e) {
+            $this->logConnection('reconnect_error', $e->getMessage());
             $this->logError('Erro na reconexão com banco de dados: ' . $e->getMessage());
             throw new Exception('Erro na reconexão com banco de dados');
         }
@@ -261,8 +272,91 @@ class Database {
     }
     
     public function close() {
+        $this->logConnection('close', null);
         $this->connection = null;
         self::$instance = null;
+    }
+    
+    /**
+     * Log de conexões ao banco de dados
+     * Formato JSON Lines para facilitar análise
+     */
+    private function logConnection($event, $error = null) {
+        try {
+            // Criar diretório de logs se não existir
+            $logDir = __DIR__ . '/../storage/logs';
+            if (!is_dir($logDir)) {
+                @mkdir($logDir, 0755, true);
+                // Criar .htaccess para proteger logs
+                $htaccess = $logDir . '/.htaccess';
+                if (!file_exists($htaccess)) {
+                    file_put_contents($htaccess, "Deny from all\n");
+                }
+            }
+            
+            $logFile = $logDir . '/db_connections.jsonl';
+            
+            // Rotação de log se passar de 10MB
+            if (file_exists($logFile) && filesize($logFile) > 10 * 1024 * 1024) {
+                $backupFile = $logDir . '/db_connections_' . date('Ymd_His') . '.jsonl';
+                @rename($logFile, $backupFile);
+                
+                // Manter apenas últimos 10 arquivos
+                $files = glob($logDir . '/db_connections_*.jsonl');
+                if (count($files) > 10) {
+                    usort($files, function($a, $b) {
+                        return filemtime($a) - filemtime($b);
+                    });
+                    foreach (array_slice($files, 0, count($files) - 10) as $oldFile) {
+                        @unlink($oldFile);
+                    }
+                }
+            }
+            
+            // Coletar informações do request
+            $requestTime = self::$requestStartTime ? round((microtime(true) - self::$requestStartTime) * 1000, 2) : 0;
+            
+            // Obter usuário logado (se disponível, sem quebrar se não existir)
+            $userId = null;
+            $userEmail = null;
+            try {
+                if (session_status() === PHP_SESSION_ACTIVE || @session_start()) {
+                    $userId = $_SESSION['user_id'] ?? null;
+                    $userEmail = $_SESSION['user_email'] ?? null;
+                }
+            } catch (Exception $e) {
+                // Ignorar erros de sessão
+            }
+            
+            // Resumir User-Agent (primeiros 100 chars)
+            $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'unknown';
+            $userAgentShort = strlen($userAgent) > 100 ? substr($userAgent, 0, 100) . '...' : $userAgent;
+            
+            // Montar log entry
+            $logEntry = [
+                'timestamp' => date('c'), // ISO 8601
+                'request_id' => self::$requestId,
+                'event' => $event, // connect, reconnect, pdo_exception, close
+                'request_method' => $_SERVER['REQUEST_METHOD'] ?? 'CLI',
+                'request_uri' => $_SERVER['REQUEST_URI'] ?? 'unknown',
+                'http_referer' => $_SERVER['HTTP_REFERER'] ?? null,
+                'remote_ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown',
+                'user_agent' => $userAgentShort,
+                'user_id' => $userId,
+                'user_email' => $userEmail ? substr($userEmail, 0, 50) : null, // Limitar tamanho
+                'request_time_ms' => $requestTime,
+                'error' => $error
+            ];
+            
+            // Escrever log (append mode)
+            $logLine = json_encode($logEntry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
+            @file_put_contents($logFile, $logLine, FILE_APPEND | LOCK_EX);
+            
+        } catch (Exception $e) {
+            // Não quebrar o sistema se logging falhar
+            // Logar em error_log como fallback
+            @error_log('[DB Log Error] ' . $e->getMessage());
+        }
     }
     
     private function logQuery($sql, $params, $time) {
