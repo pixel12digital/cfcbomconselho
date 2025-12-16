@@ -833,6 +833,36 @@ class PWAInstallFooter {
             }
         }
         
+        // 7. Verificações adicionais para beforeinstallprompt
+        report.beforeinstallpromptInfo = {
+            listenerRegistered: !!window.__deferredPrompt || window.__bipFiredAt !== undefined,
+            timeSincePageLoad: Date.now() - (performance.timing?.navigationStart || Date.now()),
+            userAgent: navigator.userAgent,
+            platform: navigator.platform,
+            cookieEnabled: navigator.cookieEnabled,
+            onLine: navigator.onLine
+        };
+        
+        // Verificar se há histórico de rejeição (localStorage)
+        try {
+            const lastRejection = localStorage.getItem('pwa-install-rejected');
+            if (lastRejection) {
+                const rejectionTime = parseInt(lastRejection);
+                const hoursSinceRejection = (Date.now() - rejectionTime) / (1000 * 60 * 60);
+                if (hoursSinceRejection < 24) {
+                    report.issues.push(`Prompt foi rejeitado há ${Math.round(hoursSinceRejection)} horas (cooldown do Chrome pode estar ativo)`);
+                    report.recommendations.push('Aguarde 24 horas ou limpe os dados do site para resetar o cooldown');
+                }
+            }
+        } catch (e) {
+            // Ignorar erro de localStorage
+        }
+        
+        // Verificar se está em modo de desenvolvimento
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            report.recommendations.push('⚠️ Em localhost, o beforeinstallprompt pode não disparar. Teste em produção.');
+        }
+        
         return report;
     }
     
@@ -885,6 +915,30 @@ class PWAInstallFooter {
             console.log('  isStandalone:', report.isStandalone);
             if (report.installedRelatedApps) {
                 console.log('  installedRelatedApps:', report.installedRelatedApps);
+            }
+            if (report.beforeinstallpromptInfo) {
+                console.log('  beforeinstallpromptInfo:', report.beforeinstallpromptInfo);
+            }
+        }
+        
+        // Diagnóstico específico para beforeinstallprompt não disparar
+        if (!window.__deferredPrompt && report.hasServiceWorkerController && report.isSecureContext && report.manifestData) {
+            console.log('[PWA Footer] 🔍 Diagnóstico: beforeinstallprompt não disparou apesar de requisitos OK');
+            console.log('[PWA Footer] Possíveis causas:');
+            console.log('  1. Cooldown do Chrome (usuário rejeitou prompt anteriormente)');
+            console.log('  2. App já instalado (mesmo que não apareça em getInstalledRelatedApps)');
+            console.log('  3. Requisitos internos do Chrome não atendidos (não visíveis)');
+            console.log('  4. Cache do navegador com versão antiga do manifest/SW');
+            console.log('[PWA Footer] Soluções:');
+            console.log('  - Limpar dados do site (F12 → Application → Clear storage)');
+            console.log('  - Desinstalar app PWA se já estiver instalado');
+            console.log('  - Aguardar alguns minutos (cooldown pode ser temporário)');
+            console.log('  - Testar em janela anônima (Ctrl+Shift+N)');
+            
+            // Adicionar solução específica
+            if (!solutions.some(s => s.includes('cooldown'))) {
+                solutions.push('Limpar dados do site (F12 → Application → Clear storage) para resetar cooldown');
+                solutions.push('Testar em janela anônima (Ctrl+Shift+N) para evitar cache');
             }
         }
         
@@ -1085,6 +1139,14 @@ class PWAInstallFooter {
             }
             if (report.manifestData && (!report.manifestData.icons || report.manifestData.icons.length === 0)) {
                 reasons.push('Manifest sem ícones válidos');
+            }
+            
+            // Se todos os requisitos estão OK mas beforeinstallprompt não dispara
+            if (reasons.length === 0 && !window.__deferredPrompt) {
+                reasons.push('Cooldown do Chrome: O prompt foi rejeitado anteriormente (pode durar até 24 horas)');
+                reasons.push('App já instalado: Pode estar instalado mesmo que não apareça em getInstalledRelatedApps');
+                reasons.push('Requisitos internos do Chrome: Alguns critérios não são visíveis publicamente');
+                reasons.push('Cache do navegador: Versão antiga do manifest ou SW pode estar em cache');
             }
             
             if (reasons.length > 0) {
