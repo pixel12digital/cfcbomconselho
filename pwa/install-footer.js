@@ -11,6 +11,9 @@ class PWAInstallFooter {
         this.isInstalled = false;
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         this.isInstalling = false; // Flag para prevenir múltiplos cliques simultâneos
+        this.isRendered = false; // Flag para prevenir múltiplos renders
+        this.isInitialized = false; // Flag para prevenir múltiplas inicializações
+        this.checkInstalledPromise = null; // Promise da verificação assíncrona para evitar múltiplas chamadas
         this.options = {
             userType: options.userType || this.detectUserType(),
             containerSelector: options.containerSelector || null,
@@ -110,20 +113,50 @@ class PWAInstallFooter {
         
         // Verificação assíncrona adicional para Android (getInstalledRelatedApps)
         // Se detectar que está instalado, oculta o componente
-        this.checkInstalledRelatedApps().then((isInstalled) => {
-            if (isInstalled) {
-                console.log('[PWA Footer] App detectado como instalado via getInstalledRelatedApps, componente ocultado');
-            }
-        });
+        // Usar promise única para evitar múltiplas verificações simultâneas
+        if (!this.checkInstalledPromise) {
+            this.checkInstalledPromise = this.checkInstalledRelatedApps().then((isInstalled) => {
+                if (isInstalled) {
+                    console.log('[PWA Footer] App detectado como instalado via getInstalledRelatedApps, componente ocultado');
+                    // Não renderizar se já está instalado
+                    return;
+                }
+                // Se não está instalado e ainda não renderizou, renderizar
+                if (!this.isRendered && !this.isInstalled) {
+                    this.render();
+                }
+            });
+        }
         
         // Configurar eventos
         this.setupInstallEvents();
         
-        // Aguardar DOM estar pronto
+        // Aguardar DOM estar pronto e verificação assíncrona antes de renderizar
+        // Se a verificação assíncrona detectar que está instalado, não renderiza
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', () => this.render());
+            document.addEventListener('DOMContentLoaded', () => {
+                // Aguardar verificação assíncrona antes de renderizar
+                if (this.checkInstalledPromise) {
+                    this.checkInstalledPromise.then(() => {
+                        if (!this.isInstalled && !this.isRendered) {
+                            this.render();
+                        }
+                    });
+                } else if (!this.isInstalled && !this.isRendered) {
+                    this.render();
+                }
+            });
         } else {
-            this.render();
+            // Se a verificação assíncrona ainda não completou, aguardar
+            if (this.checkInstalledPromise) {
+                this.checkInstalledPromise.then(() => {
+                    if (!this.isInstalled && !this.isRendered) {
+                        this.render();
+                    }
+                });
+            } else if (!this.isInstalled && !this.isRendered) {
+                this.render();
+            }
         }
     }
     
@@ -169,7 +202,8 @@ class PWAInstallFooter {
             if (apps && apps.length > 0) {
                 console.log('[PWA Footer] ✅ App detectado como instalado via getInstalledRelatedApps:', apps);
                 this.isInstalled = true;
-                this.hide();
+                // Não chamar hide() aqui para evitar piscar - apenas marcar como instalado
+                // O hide() será chamado naturalmente se necessário
                 return true;
             }
         } catch (e) {
@@ -242,6 +276,18 @@ class PWAInstallFooter {
      * Renderizar componente no footer
      */
     render() {
+        // Proteção contra múltiplos renders
+        if (this.isRendered) {
+            console.log('[PWA Footer] ⚠️ Componente já foi renderizado, ignorando render() duplicado');
+            return;
+        }
+        
+        // Se já está instalado, não renderizar
+        if (this.isInstalled) {
+            console.log('[PWA Footer] App já instalado, não renderizando');
+            return;
+        }
+        
         console.log('[PWA Footer] Iniciando renderização...');
         
         // Encontrar container
@@ -259,6 +305,9 @@ class PWAInstallFooter {
             console.log('[PWA Footer] Bloco já existe, removendo...');
             existingBlock.remove();
         }
+        
+        // Marcar como renderizado ANTES de adicionar ao DOM para prevenir re-renders
+        this.isRendered = true;
         
         // Remover listeners antigos se existirem
         if (this.containerListener) {
@@ -1772,18 +1821,24 @@ class PWAInstallFooter {
      * Ocultar componente
      */
     hide() {
-        // Ocultar footer se existir
+        // Marcar como instalado para prevenir re-renders
+        this.isInstalled = true;
+        this.isRendered = false; // Permitir que seja renderizado novamente se necessário
+        
+        // Ocultar footer se existir (sem remover do DOM para evitar piscar)
         const footer = document.querySelector('.pwa-install-footer');
         if (footer) {
             footer.style.display = 'none';
+            footer.style.visibility = 'hidden';
         }
         
-        // Ocultar container também
+        // Ocultar container também (sem limpar innerHTML para evitar piscar)
         const container = document.querySelector(this.options.containerSelector || '.pwa-install-footer-container');
         if (container) {
             container.style.display = 'none';
-            // Limpar conteúdo para não ocupar espaço
-            container.innerHTML = '';
+            container.style.visibility = 'hidden';
+            // NÃO limpar innerHTML para evitar piscar - apenas ocultar
+            // container.innerHTML = '';
         }
     }
 }
@@ -1809,6 +1864,12 @@ function getPWABasePath() {
 
 // Inicializar automaticamente quando DOM estiver pronto
 function initPWAInstallFooter() {
+    // Proteção contra múltiplas inicializações
+    if (window.pwaInstallFooter && window.pwaInstallFooter.isInitialized) {
+        console.log('[PWA Footer] ⚠️ Componente já foi inicializado, ignorando initPWAInstallFooter() duplicado');
+        return;
+    }
+    
     console.log('[PWA Footer] initPWAInstallFooter chamado');
     
     // Verificar se não estamos em dashboard
@@ -1834,6 +1895,7 @@ function initPWAInstallFooter() {
         
         try {
             window.pwaInstallFooter = new PWAInstallFooter();
+            window.pwaInstallFooter.isInitialized = true;
             console.log('[PWA Footer] Componente inicializado com sucesso');
         } catch (error) {
             console.error('[PWA Footer] Erro ao inicializar componente:', error);
