@@ -98,9 +98,13 @@ class PWAInstallFooter {
             return; // Não mostrar se não há manifest
         }
         
-        // Verificar se já está instalado (mas ainda mostrar o componente)
+        // Verificar se já está instalado - se estiver, não inicializar
         if (this.isAlreadyInstalled()) {
             this.isInstalled = true;
+            console.log('[PWA Footer] App já instalado, componente não será inicializado');
+            // Ocultar container imediatamente
+            this.hide();
+            return; // Não continuar inicialização
         }
         
         // Configurar eventos
@@ -1607,9 +1611,18 @@ class PWAInstallFooter {
      * Ocultar componente
      */
     hide() {
+        // Ocultar footer se existir
         const footer = document.querySelector('.pwa-install-footer');
         if (footer) {
             footer.style.display = 'none';
+        }
+        
+        // Ocultar container também
+        const container = document.querySelector(this.options.containerSelector || '.pwa-install-footer-container');
+        if (container) {
+            container.style.display = 'none';
+            // Limpar conteúdo para não ocupar espaço
+            container.innerHTML = '';
         }
     }
 }
