@@ -505,30 +505,93 @@ class PWAInstallFooter {
             `;
         } else {
             const appName = this.getAppTitle();
-            helpContent = `
-                <div class="pwa-help-note">
-                    <i class="fas fa-info-circle"></i>
-                    <p>Para instalar o ${appName}:</p>
-                </div>
-                <div class="pwa-help-step">
-                    <div class="pwa-help-step-number">1</div>
-                    <div class="pwa-help-step-content">
-                        <p>Use o navegador <strong>Chrome</strong> ou <strong>Edge</strong></p>
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const isDesktop = !isAndroid && !this.isIOS;
+            
+            if (isAndroid) {
+                // Android: menu ⋮ → Instalar app
+                helpContent = `
+                    <div class="pwa-help-note">
+                        <i class="fas fa-info-circle"></i>
+                        <p>Para instalar o ${appName} no Android:</p>
                     </div>
-                </div>
-                <div class="pwa-help-step">
-                    <div class="pwa-help-step-number">2</div>
-                    <div class="pwa-help-step-content">
-                        <p>Toque no menu (⋮) no canto superior direito</p>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">1</div>
+                        <div class="pwa-help-step-content">
+                            <p>Toque no menu <strong>(⋮)</strong> no canto superior direito do Chrome</p>
+                        </div>
                     </div>
-                </div>
-                <div class="pwa-help-step">
-                    <div class="pwa-help-step-number">3</div>
-                    <div class="pwa-help-step-content">
-                        <p>Selecione <strong>Instalar app</strong> ou procure pelo ícone de instalação na barra de endereços</p>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">2</div>
+                        <div class="pwa-help-step-content">
+                            <p>Selecione <strong>"Instalar app"</strong> ou <strong>"Adicionar à tela inicial"</strong></p>
+                        </div>
                     </div>
-                </div>
-            `;
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">3</div>
+                        <div class="pwa-help-step-content">
+                            <p>Confirme a instalação</p>
+                        </div>
+                    </div>
+                    <div class="pwa-help-note" style="background: #fff3cd; border-left-color: #ffc107; margin-top: 15px;">
+                        <i class="fas fa-exclamation-triangle" style="color: #ffc107;"></i>
+                        <p><strong>Nota:</strong> No Android, o ícone de instalação geralmente aparece no menu, não na barra de endereços.</p>
+                    </div>
+                `;
+            } else if (isDesktop) {
+                // Desktop: menu ou ícone na barra
+                helpContent = `
+                    <div class="pwa-help-note">
+                        <i class="fas fa-info-circle"></i>
+                        <p>Para instalar o ${appName} no Desktop:</p>
+                    </div>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">1</div>
+                        <div class="pwa-help-step-content">
+                            <p>Use o navegador <strong>Chrome</strong> ou <strong>Edge</strong></p>
+                        </div>
+                    </div>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">2</div>
+                        <div class="pwa-help-step-content">
+                            <p><strong>Opção A:</strong> Procure pelo ícone de instalação <i class="fas fa-download"></i> na barra de endereços (canto direito)</p>
+                            <p style="margin-top: 8px;"><strong>Opção B:</strong> Clique no menu (⋮) no canto superior direito → <strong>"Instalar app"</strong></p>
+                        </div>
+                    </div>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">3</div>
+                        <div class="pwa-help-step-content">
+                            <p>Confirme a instalação na janela que aparecer</p>
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Fallback genérico
+                helpContent = `
+                    <div class="pwa-help-note">
+                        <i class="fas fa-info-circle"></i>
+                        <p>Para instalar o ${appName}:</p>
+                    </div>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">1</div>
+                        <div class="pwa-help-step-content">
+                            <p>Use o navegador <strong>Chrome</strong> ou <strong>Edge</strong></p>
+                        </div>
+                    </div>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">2</div>
+                        <div class="pwa-help-step-content">
+                            <p>Toque no menu (⋮) no canto superior direito</p>
+                        </div>
+                    </div>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">3</div>
+                        <div class="pwa-help-step-content">
+                            <p>Selecione <strong>Instalar app</strong> ou procure pelo ícone de instalação na barra de endereços</p>
+                        </div>
+                    </div>
+                `;
+            }
         }
         
         const modal = document.createElement('div');
@@ -592,12 +655,31 @@ class PWAInstallFooter {
             // Tem prompt - botão ativo
             installBtn.classList.remove('pwa-install-btn-disabled');
             installBtn.title = 'Clique para instalar o app';
+            const btnText = installBtn.querySelector('span');
+            if (btnText) btnText.textContent = this.getButtonText();
             console.log('[PWA Footer] ✅ Botão de instalação ATIVO (prompt disponível)');
         } else {
-            // Sem prompt - botão desabilitado (mostrará diagnóstico ao clicar)
+            // Sem prompt - botão mostra instruções
             installBtn.classList.add('pwa-install-btn-disabled');
-            installBtn.title = 'Clique para ver diagnóstico de instalação';
-            console.log('[PWA Footer] ⚠️ Botão de instalação DESABILITADO (sem prompt - mostrará diagnóstico)');
+            
+            // Detectar plataforma para texto específico
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const isDesktop = !isAndroid && !this.isIOS;
+            const isInApp = /FBAN|FBAV|Instagram|Line|WhatsApp|wv/i.test(navigator.userAgent);
+            
+            let buttonText = 'Instalar pelo menu do Chrome';
+            if (isAndroid && !isInApp) {
+                buttonText = 'Instalar pelo menu (⋮)';
+            } else if (isDesktop) {
+                buttonText = 'Instalar pelo menu ou ícone na barra';
+            } else if (isInApp) {
+                buttonText = 'Abrir no Chrome para instalar';
+            }
+            
+            const btnText = installBtn.querySelector('span');
+            if (btnText) btnText.textContent = buttonText;
+            installBtn.title = 'Clique para ver instruções de instalação';
+            console.log('[PWA Footer] ⚠️ Botão de instalação (sem prompt - mostrará instruções)');
         }
     }
     
