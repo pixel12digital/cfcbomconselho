@@ -137,6 +137,18 @@
     transform: translateY(0);
 }
 
+/* Botão desabilitado (sem prompt disponível) */
+.pwa-install-btn-disabled {
+    opacity: 0.7;
+    background: #95a5a6 !important;
+    cursor: help;
+}
+
+.pwa-install-btn-disabled:hover {
+    background: #7f8c8d !important;
+    opacity: 0.9;
+}
+
 /* Botão secundário (Compartilhar) */
 .pwa-install-btn-secondary {
     background: rgba(255, 255, 255, 0.1);

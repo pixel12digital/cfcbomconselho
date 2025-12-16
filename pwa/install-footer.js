@@ -134,10 +134,20 @@ class PWAInstallFooter {
     setupInstallEvents() {
         // Evento beforeinstallprompt (Android/Desktop)
         window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('[PWA Footer] ✅ beforeinstallprompt capturado!');
             e.preventDefault();
             this.deferredPrompt = e;
             this.updateInstallButton();
         });
+        
+        // Log se o evento não disparar após um tempo
+        setTimeout(() => {
+            if (!this.deferredPrompt) {
+                console.warn('[PWA Footer] ⚠️ beforeinstallprompt não foi disparado após 3 segundos');
+                console.warn('[PWA Footer] Isso geralmente significa que o PWA não está elegível para instalação');
+                console.warn('[PWA Footer] Verifique: Service Worker controlando, manifest válido, HTTPS');
+            }
+        }, 3000);
         
         // Evento appinstalled (quando instala)
         window.addEventListener('appinstalled', () => {
@@ -183,8 +193,10 @@ class PWAInstallFooter {
         // Usar delegação de eventos no container
         this.setupEventDelegation(container);
         
-        // Atualizar estado dos botões
-        this.updateInstallButton();
+        // Atualizar estado dos botões (aguardar um pouco para deferredPrompt)
+        setTimeout(() => {
+            this.updateInstallButton();
+        }, 500);
         
         // Verificar se os botões foram criados
         const shareBtn = footerBlock.querySelector('#pwa-share-btn');
@@ -272,7 +284,7 @@ class PWAInstallFooter {
                 </div>
                 ` : ''}
                 <div class="pwa-install-footer-actions">
-                    <button class="pwa-install-btn pwa-install-btn-primary" id="pwa-install-btn" style="display: none;">
+                    <button class="pwa-install-btn pwa-install-btn-primary" id="pwa-install-btn">
                         <i class="fas fa-download"></i>
                         <span>${this.getButtonText()}</span>
                     </button>
@@ -554,12 +566,31 @@ class PWAInstallFooter {
      */
     updateInstallButton() {
         const installBtn = document.getElementById('pwa-install-btn');
-        if (!installBtn) return;
+        if (!installBtn) {
+            console.warn('[PWA Footer] Botão de instalação não encontrado');
+            return;
+        }
         
-        if (this.deferredPrompt && !this.isInstalled) {
-            installBtn.style.display = 'inline-flex';
-        } else {
+        // Se já está instalado, ocultar botão
+        if (this.isInstalled) {
             installBtn.style.display = 'none';
+            console.log('[PWA Footer] App já instalado, ocultando botão');
+            return;
+        }
+        
+        // Botão sempre visível, mas muda estilo se não tiver prompt
+        installBtn.style.display = 'inline-flex';
+        
+        if (this.deferredPrompt) {
+            // Tem prompt - botão ativo
+            installBtn.classList.remove('pwa-install-btn-disabled');
+            installBtn.title = 'Clique para instalar o app';
+            console.log('[PWA Footer] ✅ Botão de instalação ATIVO (prompt disponível)');
+        } else {
+            // Sem prompt - botão desabilitado (mostrará diagnóstico ao clicar)
+            installBtn.classList.add('pwa-install-btn-disabled');
+            installBtn.title = 'Clique para ver diagnóstico de instalação';
+            console.log('[PWA Footer] ⚠️ Botão de instalação DESABILITADO (sem prompt - mostrará diagnóstico)');
         }
     }
     
