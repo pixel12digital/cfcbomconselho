@@ -39,27 +39,26 @@ echo "📐 Logo original: {$logoWidth}x{$logoHeight}px\n\n";
 
 // Função para criar ícone circular (any purpose)
 function createCircularIcon($source, $size) {
-    // Criar imagem com fundo branco sólido (NÃO transparente)
+    // Criar imagem com fundo totalmente transparente
     $icon = imagecreatetruecolor($size, $size);
-    
-    // Desabilitar alpha blending para fundo sólido
     imagealphablending($icon, false);
+    imagesavealpha($icon, true);
     
-    // Preencher TODO o fundo com branco sólido primeiro
-    $white = imagecolorallocate($icon, 255, 255, 255);
-    imagefill($icon, 0, 0, $white);
+    // Preencher TODO o fundo com transparência
+    $transparent = imagecolorallocatealpha($icon, 0, 0, 0, 127);
+    imagefill($icon, 0, 0, $transparent);
     
-    // Agora habilitar alpha blending para o logo
+    // Habilitar alpha blending para desenhar o círculo
     imagealphablending($icon, true);
     
-    // Calcular tamanho do círculo (deixar margem de 5% para borda)
-    $circleSize = $size * 0.9;
+    // Círculo ocupando ~98% da área (margem mínima de 2%)
+    $circleSize = $size * 0.98;
     $centerX = $size / 2;
     $centerY = $size / 2;
-    $radius = $circleSize / 2;
     
-    // Criar círculo branco (sobre o fundo já branco, mas garante forma circular)
-    imagefilledellipse($icon, $centerX, $centerY, $circleSize, $circleSize, $white);
+    // Criar círculo azul sólido #1A365D (RGB: 26, 54, 93)
+    $blue = imagecolorallocate($icon, 26, 54, 93);
+    imagefilledellipse($icon, $centerX, $centerY, $circleSize, $circleSize, $blue);
     
     // Redimensionar logo para caber dentro do círculo (logo maior: 78-85% do diâmetro)
     $logoArea = $circleSize * 0.82; // 82% do círculo para o logo (maior que antes)
