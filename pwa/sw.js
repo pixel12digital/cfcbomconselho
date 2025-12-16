@@ -4,7 +4,7 @@
  * Estratégias de cache otimizadas para PWA
  */
 
-const CACHE_VERSION = 'cfc-v1.0.3';
+const CACHE_VERSION = 'cfc-v1.0.4';
 const CACHE_NAME = `cfc-cache-${CACHE_VERSION}`;
 const OFFLINE_CACHE = 'cfc-offline-v1';
 
@@ -103,7 +103,20 @@ self.addEventListener('activate', (event) => {
       .then(() => {
         console.log('[SW] Cache antigo removido');
         // Tomar controle de todas as abas
+        console.log('[SW] Reivindicando controle de todas as páginas...');
         return self.clients.claim();
+      })
+      .then(() => {
+        console.log('[SW] ✅ Service Worker ativado e controlando todas as páginas');
+        // Notificar clientes sobre a ativação
+        return self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ type: 'SW_ACTIVATED', version: CACHE_VERSION });
+          });
+        });
+      })
+      .catch(error => {
+        console.error('[SW] Erro na ativação:', error);
       })
   );
 });

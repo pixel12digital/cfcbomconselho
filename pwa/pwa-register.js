@@ -20,6 +20,13 @@ class PWAManager {
             return;
         }
         
+        // Verificar se já existe um controller
+        if (navigator.serviceWorker.controller) {
+            console.log('[PWA] ✅ Service Worker já está controlando:', navigator.serviceWorker.controller.scriptURL);
+        } else {
+            console.log('[PWA] Service Worker ainda não está controlando. Registrando...');
+        }
+        
         // Registrar Service Worker
         await this.registerServiceWorker();
         
@@ -36,11 +43,53 @@ class PWAManager {
         this.checkInstallationStatus();
         
         console.log('[PWA] PWA Manager inicializado com sucesso');
+        
+        // Verificar controller após um delay
+        setTimeout(() => {
+            this.checkControllerStatus();
+        }, 2000);
+    }
+    
+    /**
+     * Verificar status do controller e fornecer feedback
+     */
+    checkControllerStatus() {
+        if (navigator.serviceWorker.controller) {
+            console.log('[PWA] ✅ Service Worker está controlando a página');
+            console.log('[PWA] Controller URL:', navigator.serviceWorker.controller.scriptURL);
+            console.log('[PWA] Controller State:', navigator.serviceWorker.controller.state);
+        } else {
+            console.warn('[PWA] ⚠️ Service Worker NÃO está controlando a página');
+            console.warn('[PWA] Isso é necessário para instalação PWA');
+            console.warn('[PWA] Solução: Recarregue a página (F5 ou Ctrl+R)');
+            
+            // Verificar registros
+            navigator.serviceWorker.getRegistrations().then(regs => {
+                if (regs.length > 0) {
+                    regs.forEach(reg => {
+                        console.log('[PWA] SW registrado:', {
+                            scope: reg.scope,
+                            active: reg.active?.state,
+                            installing: reg.installing?.state,
+                            waiting: reg.waiting?.state
+                        });
+                    });
+                } else {
+                    console.error('[PWA] Nenhum Service Worker registrado!');
+                }
+            });
+        }
     }
     
     async registerServiceWorker() {
         try {
             console.log('[PWA] Registrando Service Worker...');
+            
+            // Verificar se já existe um controller
+            if (navigator.serviceWorker.controller) {
+                console.log('[PWA] Service Worker já está controlando:', navigator.serviceWorker.controller.scriptURL);
+                return;
+            }
             
             // Usar SW do root para garantir scope "/"
             this.registration = await navigator.serviceWorker.register('/sw.js', {
@@ -48,11 +97,50 @@ class PWAManager {
             });
             
             console.log('[PWA] Service Worker registrado:', this.registration);
+            console.log('[PWA] SW State:', this.registration.active?.state || this.registration.installing?.state || this.registration.waiting?.state);
+            console.log('[PWA] SW Scope:', this.registration.scope);
+            
+            // Se já existe um SW ativo, verificar se está controlando
+            if (this.registration.active) {
+                console.log('[PWA] SW ativo encontrado:', this.registration.active.scriptURL);
+            }
+            
+            // Se está instalando, aguardar ativação
+            if (this.registration.installing) {
+                console.log('[PWA] SW instalando, aguardando ativação...');
+                this.registration.installing.addEventListener('statechange', () => {
+                    console.log('[PWA] SW state mudou para:', this.registration.installing.state);
+                    if (this.registration.installing.state === 'activated') {
+                        console.log('[PWA] SW ativado! Recarregue a página para o SW controlar.');
+                        // Forçar reload após ativação (opcional)
+                        // window.location.reload();
+                    }
+                });
+            }
+            
+            // Se está waiting, pode precisar de skipWaiting
+            if (this.registration.waiting) {
+                console.log('[PWA] SW waiting encontrado. Pode precisar de skipWaiting.');
+            }
             
             // Verificar atualizações
             this.registration.addEventListener('updatefound', () => {
                 console.log('[PWA] Nova versão do Service Worker encontrada');
                 this.handleUpdateFound();
+            });
+            
+            // Escutar mensagens do SW
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'SW_ACTIVATED') {
+                    console.log('[PWA] ✅ Service Worker ativado! Versão:', event.data.version);
+                    // Recarregar para o SW controlar (apenas se ainda não estiver controlando)
+                    if (!navigator.serviceWorker.controller) {
+                        console.log('[PWA] Recarregando página para SW controlar...');
+                        setTimeout(() => {
+                            window.location.reload();
+                        }, 500);
+                    }
+                }
             });
             
         } catch (error) {
