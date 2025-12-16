@@ -10,6 +10,7 @@ class PWAInstallFooter {
         this.deferredPrompt = window.__deferredPrompt || null;
         this.isInstalled = false;
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+        this.isInstalling = false; // Flag para prevenir múltiplos cliques simultâneos
         this.options = {
             userType: options.userType || this.detectUserType(),
             containerSelector: options.containerSelector || null,
@@ -382,12 +383,11 @@ class PWAInstallFooter {
             const hint = target.closest('.pwa-install-hint');
             const title = target.closest('.pwa-install-footer-title');
             
-            // Prevenir comportamento padrão
-            e.preventDefault();
-            e.stopPropagation();
-            
             // Botão de instalação
             if (button && button.id === 'pwa-install-btn') {
+                // Prevenir comportamento padrão apenas para este botão
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('[PWA Footer] Botão instalar clicado (delegação)');
                 this.handleInstall();
                 return;
@@ -395,6 +395,8 @@ class PWAInstallFooter {
             
             // Botão de compartilhar
             if (button && button.id === 'pwa-share-btn') {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('[PWA Footer] Botão compartilhar clicado (delegação)');
                 this.handleShare();
                 return;
@@ -402,6 +404,8 @@ class PWAInstallFooter {
             
             // Botão iOS
             if (button && button.id === 'pwa-ios-install-btn') {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('[PWA Footer] Botão iOS clicado (delegação)');
                 this.showIOSInstructions();
                 return;
@@ -409,6 +413,8 @@ class PWAInstallFooter {
             
             // Botão "Abrir no Chrome"
             if (button && button.id === 'pwa-open-chrome-btn') {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('[PWA Footer] Botão "Abrir no Chrome" clicado (delegação)');
                 this.openInChrome();
                 return;
@@ -423,6 +429,8 @@ class PWAInstallFooter {
             
             // Clique no aviso/hint
             if (hint) {
+                e.preventDefault();
+                e.stopPropagation();
                 console.log('[PWA Footer] Aviso "Abra no Chrome" clicado (delegação)');
                 this.showInstallHelp();
                 return;
@@ -977,6 +985,12 @@ class PWAInstallFooter {
      * Lidar com instalação
      */
     async handleInstall() {
+        // Proteção contra múltiplos cliques simultâneos
+        if (this.isInstalling) {
+            console.log('[PWA Footer] ⚠️ Instalação já em andamento, ignorando clique duplicado');
+            return;
+        }
+        
         const userType = this.options.userType || this.detectUserType();
         const hasPrompt = !!this.deferredPrompt;
         
@@ -999,6 +1013,27 @@ class PWAInstallFooter {
         // Sincronizar se necessário
         if (window.__deferredPrompt && !this.deferredPrompt) {
             this.deferredPrompt = window.__deferredPrompt;
+        }
+        
+        // Verificar se o prompt já foi usado (userChoice existe)
+        if (this.deferredPrompt.userChoice) {
+            console.log('[PWA Footer] ⚠️ Prompt já foi usado anteriormente, limpando e aguardando novo beforeinstallprompt');
+            this.deferredPrompt = null;
+            window.__deferredPrompt = null;
+            this.updateInstallButton();
+            this.showErrorMessage('O prompt de instalação já foi usado. Recarregue a página e tente novamente.');
+            return;
+        }
+        
+        // Marcar como instalando
+        this.isInstalling = true;
+        
+        // Desabilitar botão visualmente
+        const installBtn = document.getElementById('pwa-install-btn');
+        if (installBtn) {
+            installBtn.disabled = true;
+            installBtn.style.opacity = '0.6';
+            installBtn.style.cursor = 'wait';
         }
         
         try {
@@ -1031,6 +1066,7 @@ class PWAInstallFooter {
             
             // Limpar deferred prompt
             this.deferredPrompt = null;
+            window.__deferredPrompt = null;
             this.updateInstallButton();
             
         } catch (error) {
@@ -1047,7 +1083,18 @@ class PWAInstallFooter {
             
             // Limpar deferred prompt mesmo em caso de erro
             this.deferredPrompt = null;
+            window.__deferredPrompt = null;
             this.updateInstallButton();
+        } finally {
+            // Sempre liberar flag de instalação
+            this.isInstalling = false;
+            
+            // Reabilitar botão
+            if (installBtn) {
+                installBtn.disabled = false;
+                installBtn.style.opacity = '';
+                installBtn.style.cursor = '';
+            }
         }
     }
     
