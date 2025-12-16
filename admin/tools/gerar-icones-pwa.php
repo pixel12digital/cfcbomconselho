@@ -99,7 +99,7 @@ function createCircularIcon($source, $size) {
 
 // Função para criar ícone maskable (fundo azul #1A365D sólido, logo com margem grande)
 function createMaskableIcon($source, $size) {
-    // Criar imagem com fundo azul #1A365D sólido
+    // Criar imagem com fundo azul #1A365D sólido (sem transparência)
     $icon = imagecreatetruecolor($size, $size);
     $blue = imagecolorallocate($icon, 26, 54, 93); // #1A365D
     imagefill($icon, 0, 0, $blue);
@@ -113,8 +113,8 @@ function createMaskableIcon($source, $size) {
     $logoWidth = imagesx($source);
     $logoHeight = imagesy($source);
     
-    // Calcular escala (usar 80% da safe zone para o logo, deixando margem)
-    $logoArea = $safeZone * 0.8;
+    // Calcular escala (usar 75-80% da safe zone para o logo, deixando margem)
+    $logoArea = $safeZone * 0.77; // 77% da safe zone (seguro para não cortar)
     $scale = min($logoArea / $logoWidth, $logoArea / $logoHeight);
     $newWidth = (int)($logoWidth * $scale);
     $newHeight = (int)($logoHeight * $scale);
@@ -145,12 +145,12 @@ function createMaskableIcon($source, $size) {
     return $icon;
 }
 
-// Gerar ícones (versão v2 com logo maior)
+// Gerar ícones (versão v3: círculo azul sólido, logo maior)
 $icons = [
-    ['size' => 192, 'name' => 'cfc-192-circle-v2.png', 'type' => 'circular'],
-    ['size' => 512, 'name' => 'cfc-512-circle-v2.png', 'type' => 'circular'],
-    ['size' => 192, 'name' => 'cfc-192-maskable-v2.png', 'type' => 'maskable'],
-    ['size' => 512, 'name' => 'cfc-512-maskable-v2.png', 'type' => 'maskable'],
+    ['size' => 192, 'name' => 'cfc-192-any-v3.png', 'type' => 'circular'],
+    ['size' => 512, 'name' => 'cfc-512-any-v3.png', 'type' => 'circular'],
+    ['size' => 192, 'name' => 'cfc-192-maskable-v3.png', 'type' => 'maskable'],
+    ['size' => 512, 'name' => 'cfc-512-maskable-v3.png', 'type' => 'maskable'],
 ];
 
 foreach ($icons as $config) {
