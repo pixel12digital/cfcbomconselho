@@ -718,7 +718,40 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
     </script>
     
     <!-- PWA Registration Script -->
-    <script src="/pwa/pwa-register.js"></script>
+    <script src="<?php echo $basePath; ?>/pwa/pwa-register.js"></script>
+    
+    <!-- Script para remover qualquer banner PWA existente -->
+    <script>
+        // Remover imediatamente qualquer banner PWA que possa existir
+        (function() {
+            function removePWABanners() {
+                const banners = document.querySelectorAll('.pwa-banner, .pwa-banner-install, [class*="pwa-banner"]');
+                banners.forEach(banner => {
+                    console.log('[PWA Cleanup] Removendo banner encontrado:', banner);
+                    banner.remove();
+                });
+                
+                // Remover estilos do banner
+                const bannerStyles = document.getElementById('pwa-banner-styles');
+                if (bannerStyles) {
+                    bannerStyles.remove();
+                }
+            }
+            
+            // Remover imediatamente
+            removePWABanners();
+            
+            // Remover quando DOM estiver pronto
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', removePWABanners);
+            } else {
+                removePWABanners();
+            }
+            
+            // Remover periodicamente para garantir
+            setInterval(removePWABanners, 1000);
+        })();
+    </script>
     
     <!-- PWA Install Footer Component -->
     <?php
