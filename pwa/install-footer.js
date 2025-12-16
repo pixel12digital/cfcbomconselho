@@ -1492,7 +1492,7 @@ class PWAInstallFooter {
                 const successful = document.execCommand('copy');
                 if (successful) {
                     console.log('[PWA Footer] Link copiado via execCommand');
-                    this.showSuccessMessage('Link copiado para a área de transferência!');
+                    this.showSuccessMessage('Link copiado!');
                 } else {
                     throw new Error('execCommand falhou');
                 }
