@@ -700,18 +700,31 @@ class PWAInstallFooter {
         }
         
         try {
-            // Mostrar prompt de instalação
-            this.deferredPrompt.prompt();
+            console.log('[PWA Footer] Chamando deferredPrompt.prompt()...');
             
-            // Aguardar resposta do usuário
-            const { outcome } = await this.deferredPrompt.userChoice;
+            // Mostrar prompt de instalação
+            const promptResult = this.deferredPrompt.prompt();
+            console.log('[PWA Footer] prompt() retornou:', promptResult);
+            
+            // Aguardar resposta do usuário com timeout
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error('Timeout: prompt não respondeu em 30 segundos'));
+                }, 30000);
+            });
+            
+            const userChoicePromise = this.deferredPrompt.userChoice;
+            console.log('[PWA Footer] Aguardando userChoice...');
+            
+            const { outcome } = await Promise.race([userChoicePromise, timeoutPromise]);
             
             console.log('[PWA Footer] Resultado da instalação:', outcome);
             
             if (outcome === 'accepted') {
                 this.showSuccessMessage('App instalado com sucesso!');
+                console.log('[PWA Footer] ✅ Instalação aceita pelo usuário');
             } else {
-                console.log('[PWA Footer] Usuário rejeitou a instalação');
+                console.log('[PWA Footer] ❌ Usuário rejeitou a instalação');
             }
             
             // Limpar deferred prompt
@@ -720,7 +733,19 @@ class PWAInstallFooter {
             
         } catch (error) {
             console.error('[PWA Footer] Erro durante instalação:', error);
-            this.showErrorMessage('Erro ao instalar o app. Tente novamente.');
+            console.error('[PWA Footer] Tipo do erro:', error.name);
+            console.error('[PWA Footer] Mensagem:', error.message);
+            
+            // Se for timeout, dar feedback específico
+            if (error.message && error.message.includes('Timeout')) {
+                this.showErrorMessage('O prompt de instalação não respondeu. Tente fechar o modal e clicar novamente.');
+            } else {
+                this.showErrorMessage('Erro ao instalar o app. Tente novamente.');
+            }
+            
+            // Limpar deferred prompt mesmo em caso de erro
+            this.deferredPrompt = null;
+            this.updateInstallButton();
         }
     }
     
