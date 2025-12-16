@@ -6,7 +6,8 @@
 
 class PWAInstallFooter {
     constructor(options = {}) {
-        this.deferredPrompt = null;
+        // Usar window.__deferredPrompt como fonte única (capturado cedo)
+        this.deferredPrompt = window.__deferredPrompt || null;
         this.isInstalled = false;
         this.isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
         this.options = {
@@ -14,6 +15,11 @@ class PWAInstallFooter {
             containerSelector: options.containerSelector || null,
             ...options
         };
+        
+        // Se já foi capturado cedo, usar
+        if (window.__deferredPrompt) {
+            console.log('[PWA Footer] ✅ Usando beforeinstallprompt capturado cedo (timestamp:', window.__bipFiredAt, ')');
+        }
         
         this.init();
     }
@@ -139,20 +145,40 @@ class PWAInstallFooter {
      * Configurar eventos de instalação
      */
     setupInstallEvents() {
-        // Evento beforeinstallprompt (Android/Desktop)
+        // Verificar se já foi capturado cedo
+        if (window.__deferredPrompt) {
+            this.deferredPrompt = window.__deferredPrompt;
+            console.log('[PWA Footer] ✅ Usando beforeinstallprompt já capturado cedo');
+            this.updateInstallButton();
+        }
+        
+        // Escutar evento customizado (disparado pelo script early)
+        window.addEventListener('pwa:beforeinstallprompt', (e) => {
+            console.log('[PWA Footer] ✅ Recebido evento customizado pwa:beforeinstallprompt');
+            this.deferredPrompt = window.__deferredPrompt;
+            this.updateInstallButton();
+        });
+        
+        // Backup: Evento beforeinstallprompt direto (caso o early não tenha capturado)
         window.addEventListener('beforeinstallprompt', (e) => {
-            console.log('[PWA Footer] ✅ beforeinstallprompt capturado!');
+            console.log('[PWA Footer] ✅ beforeinstallprompt capturado (backup listener)');
             e.preventDefault();
+            window.__deferredPrompt = e;
+            window.__bipFiredAt = Date.now();
             this.deferredPrompt = e;
             this.updateInstallButton();
         });
         
         // Log se o evento não disparar após um tempo (apenas para log, não trava botão)
         setTimeout(() => {
-            if (!this.deferredPrompt) {
+            if (!this.deferredPrompt && !window.__deferredPrompt) {
                 console.log('[PWA Footer] ℹ️ beforeinstallprompt ainda não foi disparado após 3 segundos');
                 console.log('[PWA Footer] Isso pode ser normal - o evento pode demorar mais');
                 console.log('[PWA Footer] O botão continuará funcionando e mostrará diagnóstico se necessário');
+            } else if (window.__deferredPrompt && !this.deferredPrompt) {
+                // Sincronizar se foi capturado cedo mas não sincronizou
+                this.deferredPrompt = window.__deferredPrompt;
+                this.updateInstallButton();
             }
         }, 3000);
         
@@ -651,7 +677,14 @@ class PWAInstallFooter {
         // Botão sempre visível, mas muda estilo se não tiver prompt
         installBtn.style.display = 'inline-flex';
         
-        if (this.deferredPrompt) {
+        // Verificar window.__deferredPrompt também (fonte única)
+        const hasPrompt = this.deferredPrompt || window.__deferredPrompt;
+        if (hasPrompt) {
+            // Sincronizar se necessário
+            if (window.__deferredPrompt && !this.deferredPrompt) {
+                this.deferredPrompt = window.__deferredPrompt;
+            }
+            
             // Tem prompt - botão ativo
             installBtn.classList.remove('pwa-install-btn-disabled');
             installBtn.title = 'Clique para instalar o app';
@@ -874,13 +907,21 @@ class PWAInstallFooter {
         console.log('[PWA Footer] Tipo detectado:', userType);
         console.log('[PWA Footer] beforeinstallprompt disponível:', hasPrompt);
         
-        if (!this.deferredPrompt) {
+        // Verificar window.__deferredPrompt também (fonte única)
+        const promptToUse = this.deferredPrompt || window.__deferredPrompt;
+        
+        if (!promptToUse) {
             console.log('[PWA Footer] Deferred prompt não disponível, coletando relatório de installability...');
             
             // Coletar relatório completo e mostrar diagnóstico
             const diagnosis = await this.diagnosePWA();
             this.showDiagnostics(diagnosis.diagnostics, diagnosis.successes, diagnosis.solutions, diagnosis.report);
             return;
+        }
+        
+        // Sincronizar se necessário
+        if (window.__deferredPrompt && !this.deferredPrompt) {
+            this.deferredPrompt = window.__deferredPrompt;
         }
         
         try {

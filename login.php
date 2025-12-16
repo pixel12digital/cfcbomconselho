@@ -201,6 +201,30 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
     ?>
     <link rel="manifest" href="<?php echo htmlspecialchars($manifestPath); ?>">
     
+    <!-- Capturar beforeinstallprompt CEDO (antes do DOM) - CRÍTICO para elegibilidade -->
+    <script>
+        // Capturar beforeinstallprompt o mais cedo possível (antes do DOMContentLoaded)
+        // Isso é CRÍTICO - o Chrome só dispara o evento se houver listener ativo
+        (function() {
+            // Variável global para armazenar o prompt
+            window.__deferredPrompt = null;
+            window.__bipFiredAt = null;
+            
+            // Listener imediato (antes de qualquer outro script)
+            window.addEventListener('beforeinstallprompt', function(e) {
+                console.log('[PWA Early] ✅ beforeinstallprompt capturado CEDO!', new Date().toISOString());
+                e.preventDefault();
+                window.__deferredPrompt = e;
+                window.__bipFiredAt = Date.now();
+                
+                // Notificar componentes que podem estar esperando
+                window.dispatchEvent(new CustomEvent('pwa:beforeinstallprompt', { detail: e }));
+            }, { once: false });
+            
+            console.log('[PWA Early] Listener de beforeinstallprompt registrado (antes do DOM)');
+        })();
+    </script>
+    
     <!-- Meta tags PWA -->
     <meta name="theme-color" content="#2c3e50">
     <meta name="mobile-web-app-capable" content="yes">

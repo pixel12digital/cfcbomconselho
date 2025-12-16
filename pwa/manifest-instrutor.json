@@ -14,25 +14,25 @@
   "categories": ["business", "productivity", "education"],
   "icons": [
     {
-      "src": "/pwa/icons/cfc-192-circle.png",
+      "src": "/pwa/icons/cfc-192-circle.png?v=20251216",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pwa/icons/cfc-512-circle.png",
+      "src": "/pwa/icons/cfc-512-circle.png?v=20251216",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/pwa/icons/cfc-192-maskable.png",
+      "src": "/pwa/icons/cfc-192-maskable.png?v=20251216",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "/pwa/icons/cfc-512-maskable.png",
+      "src": "/pwa/icons/cfc-512-maskable.png?v=20251216",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
