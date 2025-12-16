@@ -226,7 +226,25 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             if ('serviceWorker' in navigator) {
                 navigator.serviceWorker.addEventListener('message', function(event) {
                     if (event.data && event.data.type === 'SW_ACTIVATED') {
-                        console.log('[PWA Early] SW ativado recebido, verificando controle...');
+                        console.log('[PWA Early] SW ativado recebido, versão:', event.data.version);
+                        
+                        // Verificar se a versão é antiga (v1.0.4 ou anterior)
+                        const swVersion = event.data.version || '';
+                        if (swVersion && (swVersion.includes('v1.0.4') || swVersion.includes('v1.0.3') || swVersion.includes('v1.0.2') || swVersion.includes('v1.0.1'))) {
+                            console.log('[PWA Early] ⚠️ Versão antiga do SW detectada:', swVersion, '- Forçando atualização...');
+                            // Forçar atualização do SW
+                            navigator.serviceWorker.getRegistrations().then(function(regs) {
+                                if (regs.length > 0) {
+                                    regs[0].update().then(function() {
+                                        console.log('[PWA Early] SW atualizado, recarregando página...');
+                                        setTimeout(function() {
+                                            window.location.reload();
+                                        }, 1000);
+                                    });
+                                }
+                            });
+                            return;
+                        }
                         
                         // Aguardar um pouco para o claim() processar
                         setTimeout(function() {
@@ -247,8 +265,23 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                             if (regs.length > 0) {
                                 const reg = regs[0];
                                 if (reg.active && reg.active.state === 'activated') {
-                                    console.log('[PWA Early] ⚠️ SW ativado mas não controlando após 2s. Recarregando...');
-                                    window.location.reload();
+                                    // Verificar versão do SW ativo
+                                    if (reg.active.scriptURL) {
+                                        console.log('[PWA Early] SW ativo:', reg.active.scriptURL);
+                                        // Se for versão antiga, forçar atualização
+                                        if (reg.active.scriptURL.includes('sw.js')) {
+                                            console.log('[PWA Early] ⚠️ SW ativado mas não controlando após 2s. Tentando atualizar...');
+                                            reg.update().then(function() {
+                                                console.log('[PWA Early] SW atualizado, recarregando...');
+                                                setTimeout(function() {
+                                                    window.location.reload();
+                                                }, 1000);
+                                            });
+                                        } else {
+                                            console.log('[PWA Early] ⚠️ SW ativado mas não controlando após 2s. Recarregando...');
+                                            window.location.reload();
+                                        }
+                                    }
                                 }
                             }
                         });
