@@ -60,8 +60,9 @@ function createCircularIcon($source, $size) {
     $blue = imagecolorallocate($icon, 26, 54, 93);
     imagefilledellipse($icon, $centerX, $centerY, $circleSize, $circleSize, $blue);
     
-    // Redimensionar logo para caber dentro do círculo (logo maior: 78-85% do diâmetro)
-    $logoArea = $circleSize * 0.82; // 82% do círculo para o logo (maior que antes)
+    // Redimensionar logo para caber dentro do círculo (logo ~2x maior: reduzir padding)
+    // Usar ~90% do diâmetro do círculo para o logo (muito maior que antes)
+    $logoArea = $circleSize * 0.90; // 90% do círculo para o logo (quase o dobro do espaço)
     $logoWidth = imagesx($source);
     $logoHeight = imagesy($source);
     

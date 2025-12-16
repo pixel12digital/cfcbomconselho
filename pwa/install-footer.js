@@ -1323,13 +1323,14 @@ class PWAInstallFooter {
      * Lidar com compartilhamento
      */
     async handleShare() {
-        console.log('[PWA Footer] Share click');
+        console.log('[PWA Footer] Botão compartilhar clicado');
+        console.log('[PWA Footer] handleShare chamado');
         
         const url = this.getAppUrl();
         const title = this.options.userType === 'aluno'
-            ? 'CFC Bom Conselho • Aluno'
+            ? 'Sistema CFC — Aluno'
             : this.options.userType === 'instrutor'
-            ? 'CFC Bom Conselho • Instrutor'
+            ? 'Sistema CFC — Instrutor'
             : 'CFC Bom Conselho - Sistema';
         const text = this.options.userType === 'aluno' 
             ? 'Acesse o Portal do Aluno do CFC Bom Conselho'
@@ -1337,7 +1338,7 @@ class PWAInstallFooter {
             ? 'Acesse o Portal do Instrutor do CFC Bom Conselho'
             : 'Acesse o site do CFC Bom Conselho';
         
-        console.log('[PWA Footer] share url:', url);
+        console.log('[PWA Footer] URL final:', url);
         console.log('[PWA Footer] navigator.share available:', !!navigator.share);
         
         // Tentar Web Share API primeiro (mobile)
@@ -1362,13 +1363,9 @@ class PWAInstallFooter {
             }
         }
         
-        // Fallback: copiar link diretamente (desktop ou sem Web Share API)
-        console.log('[PWA Footer] fallback: copy');
-        await this.copyToClipboard(url);
-        
-        // Após copiar, mostrar opção de WhatsApp também (opcional)
-        // Se o usuário quiser compartilhar via WhatsApp, pode usar o modal
-        // Por enquanto, apenas copiar é suficiente
+        // Fallback robusto: mostrar modal com opções (copiar + WhatsApp)
+        console.log('[PWA Footer] fallback: showing share options');
+        this.showShareOptions(url, text);
     }
     
     /**

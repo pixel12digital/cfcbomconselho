@@ -1,7 +1,7 @@
 {
-  "name": "App do Instrutor - CFC Bom Conselho",
-  "short_name": "Instrutor CFC",
-  "description": "Sistema para instrutores do CFC Bom Conselho - Gerencie suas aulas e alunos",
+  "name": "Sistema CFC — Instrutor",
+  "short_name": "CFC Instrutor",
+  "description": "Aplicativo do Instrutor do CFC Bom Conselho",
   "start_url": "/login.php?type=instrutor&source=pwa",
   "scope": "/",
   "id": "/pwa/instrutor",
