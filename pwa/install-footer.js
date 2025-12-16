@@ -270,29 +270,10 @@ class PWAInstallFooter {
             this.updateInstallButton();
         });
         
-        // Log se o evento não disparar após um tempo (apenas para log, não trava botão)
-        // Usar flag para prevenir múltiplas execuções
-        if (!this.timeout3sExecuted) {
-            this.timeout3sExecuted = false;
-            setTimeout(() => {
-                // Marcar como executado para prevenir múltiplas execuções
-                if (this.timeout3sExecuted) return;
-                this.timeout3sExecuted = true;
-                
-                if (!this.deferredPrompt && !window.__deferredPrompt) {
-                    console.log('[PWA Footer] ℹ️ beforeinstallprompt ainda não foi disparado após 3 segundos');
-                    console.log('[PWA Footer] Isso pode ser normal - o evento pode demorar mais');
-                    console.log('[PWA Footer] O botão continuará funcionando e mostrará diagnóstico se necessário');
-                } else if (window.__deferredPrompt && !this.deferredPrompt) {
-                    // Sincronizar se foi capturado cedo mas não sincronizou
-                    this.deferredPrompt = window.__deferredPrompt;
-                    // Só atualizar se o botão já foi renderizado (evitar piscar)
-                    if (this.isRendered) {
-                        this.updateInstallButton();
-                    }
-                }
-            }, 3000);
-        }
+        // Log se o evento não disparar após um tempo (apenas para log, SEM atualizar botão)
+        // REMOVIDO: setTimeout que causava piscar a cada 3s
+        // O botão será atualizado apenas quando beforeinstallprompt disparar naturalmente
+        // ou quando o usuário interagir com o botão
         
         // Evento appinstalled (quando instala)
         window.addEventListener('appinstalled', () => {
@@ -826,6 +807,12 @@ class PWAInstallFooter {
             return;
         }
         
+        // Proteção: não atualizar se já está instalando (evita fechar modal)
+        if (this.isInstalling) {
+            console.log('[PWA Footer] ⚠️ updateInstallButton chamado durante instalação, ignorando para não fechar modal');
+            return;
+        }
+        
         const installBtn = document.getElementById('pwa-install-btn');
         if (!installBtn) {
             console.warn('[PWA Footer] Botão de instalação não encontrado');
@@ -839,37 +826,33 @@ class PWAInstallFooter {
             return;
         }
         
-        // Botão sempre visível, mas muda estilo se não tiver prompt
-        // Usar requestAnimationFrame para evitar mudanças visuais abruptas
-        requestAnimationFrame(() => {
-            if (installBtn && !this.isInstalled) {
-                installBtn.style.display = 'inline-flex';
-            }
-        });
-        
         // Verificar window.__deferredPrompt também (fonte única)
         const hasPrompt = this.deferredPrompt || window.__deferredPrompt;
-        if (hasPrompt) {
-            // Sincronizar se necessário
-            if (window.__deferredPrompt && !this.deferredPrompt) {
-                this.deferredPrompt = window.__deferredPrompt;
-            }
-            
-            // Tem prompt - botão ativo (usar requestAnimationFrame para evitar piscar)
+        
+        // Sincronizar se necessário (sem causar mudanças visuais)
+        if (window.__deferredPrompt && !this.deferredPrompt) {
+            this.deferredPrompt = window.__deferredPrompt;
+        }
+        
+        // Aplicar mudanças apenas se realmente mudou o estado (evita piscar)
+        const currentHasDisabled = installBtn.classList.contains('pwa-install-btn-disabled');
+        const shouldBeDisabled = !hasPrompt;
+        
+        // Só atualizar se o estado mudou
+        if (currentHasDisabled !== shouldBeDisabled) {
+            // Usar requestAnimationFrame para evitar mudanças visuais abruptas
             requestAnimationFrame(() => {
-                if (installBtn && !this.isInstalled) {
-                    installBtn.classList.remove('pwa-install-btn-disabled');
-                    installBtn.title = 'Clique para instalar o app';
-                    const btnText = installBtn.querySelector('span');
-                    if (btnText) btnText.textContent = this.getButtonText();
-                    console.log('[PWA Footer] ✅ Botão de instalação ATIVO (prompt disponível)');
-                }
-            });
-        } else {
-            // Sem prompt - botão mostra instruções (usar requestAnimationFrame para evitar piscar)
-            requestAnimationFrame(() => {
-                if (installBtn && !this.isInstalled) {
-                    installBtn.classList.add('pwa-install-btn-disabled');
+                if (installBtn && !this.isInstalled && !this.isInstalling) {
+                    if (hasPrompt) {
+                        // Tem prompt - botão ativo
+                        installBtn.classList.remove('pwa-install-btn-disabled');
+                        installBtn.title = 'Clique para instalar o app';
+                        const btnText = installBtn.querySelector('span');
+                        if (btnText) btnText.textContent = this.getButtonText();
+                        console.log('[PWA Footer] ✅ Botão de instalação ATIVO (prompt disponível)');
+                    } else {
+                        // Sem prompt - botão mostra instruções
+                        installBtn.classList.add('pwa-install-btn-disabled');
             
             // Detectar plataforma para texto específico
             const isAndroid = /Android/i.test(navigator.userAgent);
