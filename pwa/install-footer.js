@@ -227,6 +227,9 @@ class PWAInstallFooter {
         
         console.log('[PWA Footer] Bloco inserido no DOM');
         
+        // Proteção Android: fazer blur de inputs quando o card estiver visível
+        this.setupMobileBlurProtection(footerBlock);
+        
         // Usar delegação de eventos no container
         this.setupEventDelegation(container);
         

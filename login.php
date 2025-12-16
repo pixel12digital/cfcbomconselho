@@ -772,6 +772,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                 <p>Problemas para acessar? Entre em contato com o suporte</p>
                 
                 <!-- PWA Install Footer Container -->
+                <!-- Em mobile, este container será fixo no rodapé (barra flutuante) -->
                 <div class="pwa-install-footer-container"></div>
                 
                 <div class="support-info">
@@ -801,8 +802,15 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             }
         });
         
-        // Auto-focus no campo de entrada
-        document.getElementById('email').focus();
+        // Auto-focus no campo de entrada (apenas em desktop, não em mobile)
+        // Em mobile, o focus automático abre o teclado e interfere na rolagem até o botão de instalação
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (!isMobile) {
+            const emailInput = document.getElementById('email');
+            if (emailInput) {
+                emailInput.focus();
+            }
+        }
         
         // Mensagem de retorno guiado ao clicar no link do site institucional
         const linkSiteInstitucional = document.getElementById('link-site-institucional');
