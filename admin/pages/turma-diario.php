@@ -477,7 +477,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $podeEditarTurma) {
                             </div>
                             <?php endif; ?>
                         </td>
-                        <td role="cell"><?= htmlspecialchars($aluno['nome']) ?></td>
+                        <td role="cell">
+                            <?php if ($origem === 'instrutor'): ?>
+                                <a href="#" 
+                                   onclick="visualizarAlunoInstrutor(<?= $aluno['id'] ?>, <?= $turmaId ?>); return false;" 
+                                   class="text-decoration-none text-dark fw-bold"
+                                   title="Ver detalhes do aluno">
+                                    <?= htmlspecialchars($aluno['nome']) ?>
+                                </a>
+                            <?php else: ?>
+                                <?= htmlspecialchars($aluno['nome']) ?>
+                            <?php endif; ?>
+                        </td>
                         <td role="cell"><?= htmlspecialchars($aluno['cpf']) ?></td>
                         <td role="cell">
                             <a href="mailto:<?= htmlspecialchars($aluno['email']) ?>" 
@@ -507,8 +518,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $podeEditarTurma) {
                                         onclick="visualizarAlunoInstrutor(<?= $aluno['id'] ?>, <?= $turmaId ?>)"
                                         title="Ver detalhes do aluno <?= htmlspecialchars($aluno['nome']) ?>"
                                         aria-label="Ver detalhes do aluno <?= htmlspecialchars($aluno['nome']) ?>">
-                                    <i class="fas fa-eye" aria-hidden="true"></i>
-                                    <span class="visually-hidden">Ver detalhes</span>
+                                    <i class="fas fa-user" aria-hidden="true"></i>
+                                    <span class="d-none d-md-inline ms-1">Ver Aluno</span>
                                 </button>
                             <?php elseif ($canEdit): ?>
                                 <!-- AJUSTE 2025-12 - Admin/Secretaria: ir para histórico do aluno (com contexto da turma) -->
@@ -1065,16 +1076,38 @@ function visualizarAlunoInstrutor(alunoId, turmaId) {
                 const matricula = data.matricula;
                 const frequencia = data.frequencia;
                 
+                // Formatar CPF
+                function formatarCPF(cpf) {
+                    if (!cpf) return 'Não informado';
+                    const cpfLimpo = cpf.replace(/\D/g, '');
+                    return cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                }
+                
+                // Formatar telefone
+                function formatarTelefone(tel) {
+                    if (!tel) return 'Não informado';
+                    const telLimpo = tel.replace(/\D/g, '');
+                    if (telLimpo.length === 11) {
+                        return telLimpo.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                    } else if (telLimpo.length === 10) {
+                        return telLimpo.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                    }
+                    return tel;
+                }
+                
                 // Formatar data de nascimento
-                const dataNasc = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'N/A';
+                const dataNasc = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'Não informado';
+                
+                // Categoria CNH
+                const categoriaCNH = aluno.categoria_cnh || 'Não informado';
                 
                 // Formatar frequência
-                const freqPercent = frequencia.frequencia_percentual.toFixed(1);
+                const freqPercent = frequencia ? frequencia.frequencia_percentual.toFixed(1) : '0.0';
                 const freqBadgeClass = freqPercent >= 75 ? 'bg-success' : (freqPercent >= 60 ? 'bg-warning' : 'bg-danger');
                 
                 // Montar HTML
                 let historicoHtml = '';
-                if (frequencia.historico && frequencia.historico.length > 0) {
+                if (frequencia && frequencia.historico && frequencia.historico.length > 0) {
                     historicoHtml = `
                         <h6 class="mt-3 mb-2">Últimas Presenças:</h6>
                         <div class="table-responsive">
@@ -1107,31 +1140,59 @@ function visualizarAlunoInstrutor(alunoId, turmaId) {
                 }
                 
                 modalBody.innerHTML = `
+                    <div class="text-center mb-3">
+                        ${aluno.foto && aluno.foto.trim() !== '' 
+                            ? `<img src="../${aluno.foto}" 
+                                   alt="Foto do aluno ${aluno.nome}" 
+                                   class="rounded-circle" 
+                                   style="width: 100px; height: 100px; object-fit: cover; border: 3px solid #dee2e6;"
+                                   onerror="this.outerHTML='<div class=\\'rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto\\' style=\\'width:100px;height:100px;border:3px solid #dee2e6;\\'><i class=\\'fas fa-user fa-3x text-white\\'></i></div>'">`
+                            : `<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto" 
+                                   style="width: 100px; height: 100px; border: 3px solid #dee2e6;">
+                                    <i class="fas fa-user fa-3x text-white"></i>
+                                  </div>`
+                        }
+                    </div>
+                    
                     <div class="row">
                         <div class="col-md-6">
                             <h6>Dados Pessoais</h6>
                             <dl class="row mb-3">
                                 <dt class="col-sm-4">Nome:</dt>
-                                <dd class="col-sm-8">${aluno.nome}</dd>
+                                <dd class="col-sm-8"><strong>${aluno.nome}</strong></dd>
                                 
                                 <dt class="col-sm-4">CPF:</dt>
-                                <dd class="col-sm-8">${aluno.cpf || 'N/A'}</dd>
+                                <dd class="col-sm-8">${formatarCPF(aluno.cpf)}</dd>
                                 
                                 <dt class="col-sm-4">Data Nascimento:</dt>
                                 <dd class="col-sm-8">${dataNasc}</dd>
                                 
                                 <dt class="col-sm-4">Categoria CNH:</dt>
-                                <dd class="col-sm-8">${aluno.categoria_cnh || 'N/A'}</dd>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-info">${categoriaCNH}</span>
+                                </dd>
                             </dl>
                         </div>
                         <div class="col-md-6">
                             <h6>Contato</h6>
                             <dl class="row mb-3">
                                 <dt class="col-sm-4">E-mail:</dt>
-                                <dd class="col-sm-8">${aluno.email || 'N/A'}</dd>
+                                <dd class="col-sm-8">
+                                    ${aluno.email ? `<a href="mailto:${aluno.email}">${aluno.email}</a>` : 'Não informado'}
+                                </dd>
                                 
                                 <dt class="col-sm-4">Telefone:</dt>
-                                <dd class="col-sm-8">${aluno.telefone || 'N/A'}</dd>
+                                <dd class="col-sm-8">
+                                    ${aluno.telefone ? `
+                                        <a href="tel:${aluno.telefone.replace(/\D/g, '')}">${formatarTelefone(aluno.telefone)}</a>
+                                        <a href="https://wa.me/55${aluno.telefone.replace(/\D/g, '')}" 
+                                           target="_blank" 
+                                           class="btn btn-sm btn-success ms-2" 
+                                           title="Abrir WhatsApp">
+                                            <i class="fab fa-whatsapp"></i>
+                                        </a>
+                                    ` : 'Não informado'}
+                                </dd>
                             </dl>
                         </div>
                     </div>

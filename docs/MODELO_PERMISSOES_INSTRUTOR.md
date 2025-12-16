@@ -332,3 +332,5 @@ Todas as queries foram corrigidas para usar o nome correto:
 - `docs/DIAGNOSTICO_AUTENTICACAO_ADMIN_INSTRUTOR.md`
 - `docs/RESUMO_CORRECOES_AUTENTICACAO_INSTRUTOR.md`
 - `docs/RESUMO_CORRECOES_AUTENTICACAO_INSTRUTOR_2025.md`
+
+

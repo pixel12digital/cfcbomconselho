@@ -74,7 +74,7 @@ $db = Database::getInstance();
 
 // Validar parâmetros
 $alunoId = $_GET['aluno_id'] ?? null;
-$turmaId = $_GET['turma_id'] ?? null;
+$turmaId = $_GET['turma_id'] ?? null; // Opcional: se não fornecido, validar aula prática
 
 if (!$alunoId) {
     responderJsonErro('ID do aluno é obrigatório', 400, [
@@ -82,14 +82,10 @@ if (!$alunoId) {
     ]);
 }
 
-if (!$turmaId) {
-    responderJsonErro('ID da turma é obrigatório', 400, [
-        'code' => 'TURMA_ID_REQUIRED',
-    ]);
-}
-
 try {
-    // Verificar se o instrutor tem aulas nesta turma
+    // VALIDAÇÃO DE PERMISSÃO: Turma teórica OU aula prática
+    if ($turmaId) {
+        // CASO 1: Turma teórica - validar vínculo instrutor-turma
     $temAula = $db->fetch(
         "SELECT COUNT(*) as total FROM turma_aulas_agendadas WHERE turma_id = ? AND instrutor_id = ?",
         [$turmaId, $instrutorId]
@@ -113,6 +109,24 @@ try {
         responderJsonErro('Aluno não está matriculado nesta turma', 404, [
             'code' => 'ALUNO_NAO_MATRICULADO',
         ]);
+        }
+    } else {
+        // CASO 2: Aula prática - validar vínculo instrutor-aluno via aulas práticas
+        $temAulaPratica = $db->fetch(
+            "SELECT COUNT(*) as total 
+             FROM aulas 
+             WHERE instrutor_id = ? AND aluno_id = ? AND status != 'cancelada'",
+            [$instrutorId, $alunoId]
+        );
+        
+        if (!$temAulaPratica || $temAulaPratica['total'] == 0) {
+            responderJsonErro('Você não tem aulas com este aluno', 403, [
+                'code' => 'INSTRUTOR_SEM_AULA_PRATICA',
+            ]);
+        }
+        
+        // Para aulas práticas, não há matrícula de turma
+        $matricula = null;
     }
     
     // Buscar dados básicos do aluno (sem dados financeiros ou administrativos)
@@ -137,7 +151,23 @@ try {
         ]);
     }
     
-    // Buscar dados da turma
+    // Buscar categoria CNH da matrícula ativa (priorizar sobre alunos.categoria_cnh)
+    $matriculaAtiva = $db->fetch("
+        SELECT categoria_cnh, tipo_servico
+        FROM matriculas
+        WHERE aluno_id = ? AND status = 'ativa'
+        ORDER BY data_inicio DESC
+        LIMIT 1
+    ", [$alunoId]);
+    
+    // Priorizar categoria da matrícula ativa, senão usar do aluno
+    if ($matriculaAtiva && !empty($matriculaAtiva['categoria_cnh'])) {
+        $aluno['categoria_cnh'] = $matriculaAtiva['categoria_cnh'];
+    }
+    
+    // Buscar dados da turma (apenas se turma_id fornecido)
+    $turma = null;
+    if ($turmaId) {
     $turma = $db->fetch("
         SELECT 
             t.id,
@@ -149,9 +179,18 @@ try {
         FROM turmas_teoricas t
         WHERE t.id = ?
     ", [$turmaId]);
+    }
     
+    // Buscar frequência (apenas se for turma teórica)
+    $totalAulas = 0;
+    $totalPresentes = 0;
+    $totalAusentes = 0;
+    $totalRegistradas = 0;
+    $frequenciaPercentual = 0;
+    $historicoFormatado = [];
+    
+    if ($turmaId) {
     // Buscar resumo de presenças do aluno nesta turma
-    // CORRIGIDO: Usar turma_aula_id (nome correto do campo)
     $presencas = $db->fetch("
         SELECT 
             COUNT(*) as total_registradas,
@@ -178,7 +217,6 @@ try {
     $totalRegistradas = (int)($presencas['total_registradas'] ?? 0);
     
     // Calcular frequência percentual
-    $frequenciaPercentual = 0;
     if ($totalAulas > 0) {
         $frequenciaPercentual = round(($totalPresentes / $totalAulas) * 100, 2);
     }
@@ -199,7 +237,6 @@ try {
     ", [$turmaId, $alunoId]);
     
     // Formatar histórico
-    $historicoFormatado = [];
     foreach ($historicoPresencas as $presenca) {
         $historicoFormatado[] = [
             'data_aula' => $presenca['data_aula'],
@@ -209,6 +246,7 @@ try {
             'status' => $presenca['presente'] ? 'PRESENTE' : 'AUSENTE',
             'registrado_em' => $presenca['registrado_em'],
         ];
+        }
     }
     
     // Montar resposta
@@ -221,32 +259,40 @@ try {
             'email' => $aluno['email'],
             'telefone' => $aluno['telefone'],
             'data_nascimento' => $aluno['data_nascimento'],
-            'categoria_cnh' => $aluno['categoria_cnh'],
-            'foto' => $aluno['foto'],
+            'categoria_cnh' => $aluno['categoria_cnh'] ?: 'Não informado',
+            'foto' => $aluno['foto'] ?: null,
             'status_aluno' => $aluno['status_aluno'],
         ],
-        'turma' => [
+    ];
+    
+    // Adicionar dados de turma e matrícula apenas se turma_id fornecido
+    if ($turmaId && $turma) {
+        $response['turma'] = [
             'id' => (int)$turma['id'],
             'nome' => $turma['nome'],
             'curso_tipo' => $turma['curso_tipo'],
             'data_inicio' => $turma['data_inicio'],
             'data_fim' => $turma['data_fim'],
             'status_turma' => $turma['status_turma'],
-        ],
-        'matricula' => [
+        ];
+        
+        if ($matricula) {
+            $response['matricula'] = [
             'status' => $matricula['status'],
             'data_matricula' => $matricula['data_matricula'],
             'frequencia_percentual' => (float)($matricula['frequencia_percentual'] ?? 0),
-        ],
-        'frequencia' => [
+            ];
+        }
+        
+        $response['frequencia'] = [
             'total_aulas' => $totalAulas,
             'total_presentes' => $totalPresentes,
             'total_ausentes' => $totalAusentes,
             'total_registradas' => $totalRegistradas,
             'frequencia_percentual' => $frequenciaPercentual,
             'historico' => $historicoFormatado,
-        ],
     ];
+    }
     
     echo json_encode($response, JSON_UNESCAPED_UNICODE);
     
@@ -256,3 +302,4 @@ try {
         'code' => 'INTERNAL_ERROR',
     ]);
 }
+

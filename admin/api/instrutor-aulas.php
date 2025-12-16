@@ -16,11 +16,14 @@
  * - transferencia: Transfere uma aula prática para outra data/hora (requer justificativa, nova_data, nova_hora)
  * 
  * AÇÕES QUE SERÃO ADICIONADAS (Tarefa 2.2 - Fase 2):
- * - iniciar: Inicia uma aula prática (status 'agendada' → 'em_andamento', registra hora_inicio_real)
- * - finalizar: Finaliza uma aula prática (status 'em_andamento' → 'concluida', registra hora_fim_real)
+ * - iniciar: Inicia uma aula prática (status 'agendada' → 'em_andamento', registra inicio_at e km_inicial)
+ * - finalizar: Finaliza uma aula prática (status 'em_andamento' → 'concluida', registra fim_at e km_final)
  * 
- * NOTA: Para Tarefa 2.2, campos hora_inicio_real e hora_fim_real devem existir na tabela aulas.
- * Se não existirem, será necessário criar migration ou usar alternativa (observacoes/campos existentes).
+ * NOTA: Requer migration 999-add-campos-km-timestamps-aulas.sql para colunas:
+ * - km_inicial INT NULL
+ * - km_final INT NULL  
+ * - inicio_at TIMESTAMP NULL
+ * - fim_at TIMESTAMP NULL
  */
 
 require_once __DIR__ . '/../../includes/config.php';
@@ -295,44 +298,66 @@ try {
 
             } else if ($tipoAcao === 'iniciar') {
                 // TAREFA 2.2 - Iniciar aula prática
-                // Atualizar status para 'em_andamento' e registrar hora_inicio_real
-                $horaInicioReal = date('H:i:s');
-                $observacoesAtualizadas = ($aula['observacoes'] ?? '') . "\n\n[INICIADA POR INSTRUTOR] " . date('d/m/Y H:i:s');
-                
-                // Verificar se campo hora_inicio_real existe, caso contrário usar observacoes
-                $checkColumn = $db->fetch("SHOW COLUMNS FROM aulas LIKE 'hora_inicio_real'");
-                if ($checkColumn) {
-                    $result = $db->query("
-                        UPDATE aulas 
-                        SET status = 'em_andamento', 
-                            hora_inicio_real = NOW(),
-                            observacoes = ?,
-                            atualizado_em = NOW()
-                        WHERE id = ? AND instrutor_id = ?
-                    ", [$observacoesAtualizadas, $aulaId, $instrutorId]);
-                } else {
-                    // Fallback: usar observacoes para registrar hora real
-                    $observacoesComHora = $observacoesAtualizadas . "\nHora início real: " . date('H:i:s');
-                    $result = $db->query("
-                        UPDATE aulas 
-                        SET status = 'em_andamento', 
-                            observacoes = ?,
-                            atualizado_em = NOW()
-                        WHERE id = ? AND instrutor_id = ?
-                    ", [$observacoesComHora, $aulaId, $instrutorId]);
+                // Validar que é aula prática (KM só para práticas)
+                if (!isset($aula['tipo_aula']) || $aula['tipo_aula'] !== 'pratica') {
+                    returnJsonError('Apenas aulas práticas podem ser iniciadas');
                 }
 
+                // Verificar se colunas necessárias existem (proteção contra migration não aplicada)
+                $checkColumns = $db->fetchAll("SHOW COLUMNS FROM aulas WHERE Field IN ('inicio_at', 'km_inicial')");
+                $columnsFound = array_map(function($col) {
+                    return $col['Field'];
+                }, $checkColumns);
+                
+                if (!in_array('inicio_at', $columnsFound) || !in_array('km_inicial', $columnsFound)) {
+                    returnJsonError('Estrutura do banco incompleta. Execute a migration: admin/migrations/999-add-campos-km-timestamps-aulas.sql', 500);
+                }
+
+                // Exigir km_inicial para aulas práticas
+                if (empty($input['km_inicial']) || !is_numeric($input['km_inicial'])) {
+                    returnJsonError('KM inicial é obrigatório para aulas práticas');
+                }
+
+                $kmInicial = (int)$input['km_inicial'];
+                if ($kmInicial < 0) {
+                    returnJsonError('KM inicial deve ser um número positivo ou zero');
+                }
+
+                // Preparar observações (append de log)
+                $observacoesAtualizadas = ($aula['observacoes'] ?? '') . "\n\n[INICIADA POR INSTRUTOR] " . date('d/m/Y H:i:s') . "\nKM Inicial: " . $kmInicial . " km";
+                
+                // Atualizar: status, inicio_at (timestamp real), km_inicial
+                // Anti-bug: WHERE com status='agendada' para evitar clique duplo/race condition
+                $result = $db->query("
+                    UPDATE aulas 
+                    SET status = 'em_andamento', 
+                        inicio_at = NOW(),
+                        km_inicial = ?,
+                        observacoes = ?,
+                        atualizado_em = NOW()
+                    WHERE id = ? 
+                      AND instrutor_id = ? 
+                      AND status = 'agendada'
+                ", [$kmInicial, $observacoesAtualizadas, $aulaId, $instrutorId]);
+
                 if (!$result) {
-                    returnJsonError('Erro ao iniciar aula', 500);
+                    returnJsonError('Erro ao iniciar aula. Verifique se a aula ainda está agendada.', 500);
+                }
+
+                // Verificar se realmente atualizou (proteção contra status já alterado)
+                $aulaAtualizada = $db->fetch("SELECT id, status FROM aulas WHERE id = ?", [$aulaId]);
+                if (!$aulaAtualizada || $aulaAtualizada['status'] !== 'em_andamento') {
+                    returnJsonError('Aula não pôde ser iniciada. Status atual: ' . ($aulaAtualizada['status'] ?? 'desconhecido'), 409);
                 }
 
                 // Log de auditoria
                 if (defined('LOG_ENABLED') && LOG_ENABLED) {
                     error_log(sprintf(
-                        '[INSTRUTOR_INICIAR_AULA] instrutor_id=%d, usuario_id=%d, aula_id=%d, timestamp=%s, ip=%s',
+                        '[INSTRUTOR_INICIAR_AULA] instrutor_id=%d, usuario_id=%d, aula_id=%d, km_inicial=%d, timestamp=%s, ip=%s',
                         $instrutorId,
                         $user['id'],
                         $aulaId,
+                        $kmInicial,
                         date('Y-m-d H:i:s'),
                         $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
                     ));
@@ -342,49 +367,84 @@ try {
                     'aula_id' => $aulaId,
                     'acao' => 'iniciar',
                     'status' => 'em_andamento',
-                    'hora_inicio_real' => $horaInicioReal
+                    'km_inicial' => $kmInicial,
+                    'inicio_at' => date('Y-m-d H:i:s')
                 ], 'Aula iniciada com sucesso');
 
             } else if ($tipoAcao === 'finalizar') {
                 // TAREFA 2.2 - Finalizar aula prática
-                // Atualizar status para 'concluida' e registrar hora_fim_real
-                $horaFimReal = date('H:i:s');
-                $observacoesAtualizadas = ($aula['observacoes'] ?? '') . "\n\n[FINALIZADA POR INSTRUTOR] " . date('d/m/Y H:i:s');
-                
-                // Verificar se campo hora_fim_real existe, caso contrário usar observacoes
-                $checkColumn = $db->fetch("SHOW COLUMNS FROM aulas LIKE 'hora_fim_real'");
-                if ($checkColumn) {
-                    $result = $db->query("
-                        UPDATE aulas 
-                        SET status = 'concluida', 
-                            hora_fim_real = NOW(),
-                            observacoes = ?,
-                            atualizado_em = NOW()
-                        WHERE id = ? AND instrutor_id = ?
-                    ", [$observacoesAtualizadas, $aulaId, $instrutorId]);
-                } else {
-                    // Fallback: usar observacoes para registrar hora real
-                    $observacoesComHora = $observacoesAtualizadas . "\nHora fim real: " . date('H:i:s');
-                    $result = $db->query("
-                        UPDATE aulas 
-                        SET status = 'concluida', 
-                            observacoes = ?,
-                            atualizado_em = NOW()
-                        WHERE id = ? AND instrutor_id = ?
-                    ", [$observacoesComHora, $aulaId, $instrutorId]);
+                // Validar que é aula prática (KM só para práticas)
+                if (!isset($aula['tipo_aula']) || $aula['tipo_aula'] !== 'pratica') {
+                    returnJsonError('Apenas aulas práticas podem ser finalizadas');
                 }
 
+                // Verificar se colunas necessárias existem (proteção contra migration não aplicada)
+                $checkColumns = $db->fetchAll("SHOW COLUMNS FROM aulas WHERE Field IN ('fim_at', 'km_final', 'km_inicial')");
+                $columnsFound = array_map(function($col) {
+                    return $col['Field'];
+                }, $checkColumns);
+                
+                if (!in_array('fim_at', $columnsFound) || !in_array('km_final', $columnsFound) || !in_array('km_inicial', $columnsFound)) {
+                    returnJsonError('Estrutura do banco incompleta. Execute a migration: admin/migrations/999-add-campos-km-timestamps-aulas.sql', 500);
+                }
+
+                // Exigir km_final para aulas práticas
+                if (empty($input['km_final']) || !is_numeric($input['km_final'])) {
+                    returnJsonError('KM final é obrigatório para aulas práticas');
+                }
+
+                $kmFinal = (int)$input['km_final'];
+                if ($kmFinal < 0) {
+                    returnJsonError('KM final deve ser um número positivo ou zero');
+                }
+
+                // Validar km_final >= km_inicial (se km_inicial existir)
+                if (isset($aula['km_inicial']) && $aula['km_inicial'] !== null) {
+                    if ($kmFinal < $aula['km_inicial']) {
+                        returnJsonError('KM final (' . $kmFinal . ' km) não pode ser menor que KM inicial (' . $aula['km_inicial'] . ' km)');
+                    }
+                }
+
+                // Preparar observações (append de log)
+                $observacoesAtualizadas = ($aula['observacoes'] ?? '') . "\n\n[FINALIZADA POR INSTRUTOR] " . date('d/m/Y H:i:s') . "\nKM Final: " . $kmFinal . " km";
+                if (isset($aula['km_inicial']) && $aula['km_inicial'] !== null) {
+                    $kmRodados = $kmFinal - $aula['km_inicial'];
+                    $observacoesAtualizadas .= " (Rodados: " . $kmRodados . " km)";
+                }
+                
+                // Atualizar: status, fim_at (timestamp real), km_final
+                // Anti-bug: WHERE com status='em_andamento' para evitar clique duplo/race condition
+                $result = $db->query("
+                    UPDATE aulas 
+                    SET status = 'concluida', 
+                        fim_at = NOW(),
+                        km_final = ?,
+                        observacoes = ?,
+                        atualizado_em = NOW()
+                    WHERE id = ? 
+                      AND instrutor_id = ? 
+                      AND status = 'em_andamento'
+                ", [$kmFinal, $observacoesAtualizadas, $aulaId, $instrutorId]);
+
                 if (!$result) {
-                    returnJsonError('Erro ao finalizar aula', 500);
+                    returnJsonError('Erro ao finalizar aula. Verifique se a aula ainda está em andamento.', 500);
+                }
+
+                // Verificar se realmente atualizou (proteção contra status já alterado)
+                $aulaAtualizada = $db->fetch("SELECT id, status FROM aulas WHERE id = ?", [$aulaId]);
+                if (!$aulaAtualizada || $aulaAtualizada['status'] !== 'concluida') {
+                    returnJsonError('Aula não pôde ser finalizada. Status atual: ' . ($aulaAtualizada['status'] ?? 'desconhecido'), 409);
                 }
 
                 // Log de auditoria
                 if (defined('LOG_ENABLED') && LOG_ENABLED) {
                     error_log(sprintf(
-                        '[INSTRUTOR_FINALIZAR_AULA] instrutor_id=%d, usuario_id=%d, aula_id=%d, timestamp=%s, ip=%s',
+                        '[INSTRUTOR_FINALIZAR_AULA] instrutor_id=%d, usuario_id=%d, aula_id=%d, km_final=%d, km_inicial=%s, timestamp=%s, ip=%s',
                         $instrutorId,
                         $user['id'],
                         $aulaId,
+                        $kmFinal,
+                        $aula['km_inicial'] ?? 'NULL',
                         date('Y-m-d H:i:s'),
                         $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0'
                     ));
@@ -394,7 +454,9 @@ try {
                     'aula_id' => $aulaId,
                     'acao' => 'finalizar',
                     'status' => 'concluida',
-                    'hora_fim_real' => $horaFimReal
+                    'km_final' => $kmFinal,
+                    'km_inicial' => $aula['km_inicial'] ?? null,
+                    'fim_at' => date('Y-m-d H:i:s')
                 ], 'Aula finalizada com sucesso');
             }
 

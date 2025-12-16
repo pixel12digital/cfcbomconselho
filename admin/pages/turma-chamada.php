@@ -383,19 +383,87 @@ if ($estatisticasTurma['total_alunos'] > 0) {
     }
 }
 
-// Buscar frequência geral da turma via API
+// Buscar frequência geral da turma
+// AJUSTE 2025-12-13: Replicar lógica da API diretamente aqui para evitar problemas de include
+// Isso garante que a frequência seja carregada corretamente mesmo após recarregar a página
 $frequenciaGeral = null;
-if ($aulaId) {
-    // Simular chamada para API de frequência
-    $_GET = ['turma_id' => $turmaId];
-    ob_start();
-    include __DIR__ . '/../api/turma-frequencia.php';
-    $output = ob_get_clean();
-    $response = json_decode($output, true);
+try {
+    // Usar a mesma lógica da função calcularFrequenciaTurma da API
+    // Buscar dados da turma
+    $turmaFreq = $db->fetch("SELECT * FROM turmas_teoricas WHERE id = ?", [$turmaId]);
     
-    if ($response && $response['success']) {
-        $frequenciaGeral = $response['data'];
+    if ($turmaFreq) {
+        // Contar aulas programadas da turma
+        $aulasProgramadas = $db->fetch("
+            SELECT COUNT(*) as total
+            FROM turma_aulas_agendadas 
+            WHERE turma_id = ? AND status IN ('agendada', 'realizada')
+        ", [$turmaId]);
+        
+        $totalAulas = $aulasProgramadas['total'] ?? 0;
+        
+        // Buscar todos os alunos matriculados
+        $alunosFreq = $db->fetchAll("
+            SELECT 
+                a.id,
+                a.nome,
+                a.cpf,
+                tm.status as status_matricula,
+                tm.data_matricula
+            FROM alunos a
+            JOIN turma_matriculas tm ON a.id = tm.aluno_id
+            WHERE tm.turma_id = ? AND tm.status IN ('matriculado', 'cursando', 'concluido')
+            ORDER BY a.nome ASC
+        ", [$turmaId]);
+        
+        $frequencias = [];
+        
+        foreach ($alunosFreq as $alunoFreq) {
+            // Contar presenças do aluno (usando mesma query da API)
+            $presencas = $db->fetch("
+                SELECT 
+                    COUNT(*) as total_registradas,
+                    COUNT(CASE WHEN tp.presente = 1 THEN 1 END) as presentes,
+                    COUNT(CASE WHEN tp.presente = 0 THEN 1 END) as ausentes
+                FROM turma_presencas tp
+                INNER JOIN turma_aulas_agendadas taa ON tp.turma_aula_id = taa.id
+                WHERE tp.turma_id = ? 
+                AND tp.aluno_id = ?
+                AND taa.status IN ('agendada', 'realizada')
+            ", [$turmaId, $alunoFreq['id']]);
+            
+            $aulasPresentes = $presencas['presentes'] ?? 0;
+            
+            // Calcular percentual de frequência
+            $percentualFrequencia = 0;
+            if ($totalAulas > 0) {
+                $percentualFrequencia = round(($aulasPresentes / $totalAulas) * 100, 2);
+            }
+            
+            $frequencias[] = [
+                'aluno' => $alunoFreq,
+                'estatisticas' => [
+                    'total_aulas_registradas' => $presencas['total_registradas'] ?? 0,
+                    'aulas_presentes' => $aulasPresentes,
+                    'aulas_ausentes' => $presencas['ausentes'] ?? 0,
+                    'percentual_frequencia' => $percentualFrequencia,
+                    'status_frequencia' => 'PENDENTE'
+                ]
+            ];
+        }
+        
+        $frequenciaGeral = [
+            'turma' => [
+                'id' => $turmaFreq['id'],
+                'nome' => $turmaFreq['nome'],
+                'frequencia_minima' => $turmaFreq['frequencia_minima'] ?? 75.0
+            ],
+            'frequencias_alunos' => $frequencias
+        ];
     }
+} catch (Exception $e) {
+    error_log("Erro ao buscar frequência geral da turma {$turmaId}: " . $e->getMessage());
+    $frequenciaGeral = null;
 }
 
 // AJUSTE 2025-12 - URL base da API de presenças da turma
@@ -856,85 +924,36 @@ if (defined('DEBUG_MODE') && DEBUG_MODE) {
                                         <div class="me-2 me-md-3">
                                             <i class="fas fa-user-circle fa-2x text-muted"></i>
                                         </div>
-                                        <div>
-                                            <h6 class="mb-1"><?= htmlspecialchars($aluno['nome']) ?></h6>
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex align-items-center gap-2">
+                                                <h6 class="mb-1">
+                                                    <a href="#" onclick="visualizarAlunoInstrutor(<?= $aluno['id'] ?>, <?= $turmaId ?>); return false;" 
+                                                       class="text-decoration-none text-dark" 
+                                                       title="Ver detalhes do aluno">
+                                                        <?= htmlspecialchars($aluno['nome']) ?>
+                                                    </a>
+                                                </h6>
+                                                <button class="btn btn-sm btn-outline-primary p-1" 
+                                                        onclick="visualizarAlunoInstrutor(<?= $aluno['id'] ?>, <?= $turmaId ?>); return false;"
+                                                        title="Ver detalhes do aluno"
+                                                        style="line-height: 1; min-width: 28px; height: 28px;">
+                                                    <i class="fas fa-user" style="font-size: 0.75rem;"></i>
+                                                </button>
+                                            </div>
                                             <small class="text-muted"><?= htmlspecialchars($aluno['cpf']) ?></small>
                                         </div>
                                     </div>
                                 </div>
                                 
-                                <!-- Status e Frequência (lado a lado em mobile) -->
+                                <!-- Status -->
                                 <div class="col-6 col-md-2 mb-2 mb-md-0">
                                     <span class="badge bg-<?= in_array($aluno['status_matricula'], ['cursando', 'matriculado']) ? 'success' : 'primary' ?>">
                                         <?= ucfirst($aluno['status_matricula']) ?>
                                     </span>
                                 </div>
-                                <div class="col-6 col-md-2 mb-2 mb-md-0">
-                                    <?php 
-                                    // AJUSTE 2025-12 - Buscar frequência do aluno (priorizar API, depois frequencia_percentual)
-                                    $percentualFreq = null;
-                                    
-                                    // Primeiro, tentar buscar da API de frequência (mais confiável e atualizado)
-                                    if ($frequenciaGeral && isset($frequenciaGeral['frequencias_alunos'])) {
-                                        foreach ($frequenciaGeral['frequencias_alunos'] as $freq) {
-                                            if ($freq['aluno']['id'] == $aluno['id']) {
-                                                $percentualFreq = (float)$freq['estatisticas']['percentual_frequencia'];
-                                                break;
-                                            }
-                                        }
-                                    }
-                                    
-                                    // Se não encontrou na API, usar frequencia_percentual direto do aluno (fallback)
-                                    if ($percentualFreq === null && isset($aluno['frequencia_percentual']) && $aluno['frequencia_percentual'] !== null) {
-                                        $percentualFreq = (float)$aluno['frequencia_percentual'];
-                                    }
-                                    
-                                    // Se ainda não tem, calcular diretamente das presenças (último recurso)
-                                    if ($percentualFreq === null && $aulaId) {
-                                        try {
-                                            $presencasAluno = $db->fetch("
-                                                SELECT 
-                                                    COUNT(CASE WHEN tp.presente = 1 THEN 1 END) as total_presentes,
-                                                    COUNT(DISTINCT taa.id) as total_aulas
-                                                FROM turma_aulas_agendadas taa
-                                                LEFT JOIN turma_presencas tp ON (
-                                                    tp.turma_aula_id = taa.id 
-                                                    AND tp.turma_id = ? 
-                                                    AND tp.aluno_id = ?
-                                                )
-                                                WHERE taa.turma_id = ? 
-                                                AND taa.status IN ('agendada', 'realizada')
-                                            ", [$turmaId, $aluno['id'], $turmaId]);
-                                            
-                                            if ($presencasAluno && $presencasAluno['total_aulas'] > 0) {
-                                                $percentualFreq = ($presencasAluno['total_presentes'] / $presencasAluno['total_aulas']) * 100;
-                                            }
-                                        } catch (Exception $e) {
-                                            error_log("Erro ao calcular frequência do aluno {$aluno['id']}: " . $e->getMessage());
-                                        }
-                                    }
-                                    
-                                    if ($percentualFreq !== null && $percentualFreq >= 0):
-                                        $frequenciaMinima = isset($turma['frequencia_minima']) ? (float)$turma['frequencia_minima'] : 75.0;
-                                        $classe = 'baixo';
-                                        if ($percentualFreq >= $frequenciaMinima) {
-                                            $classe = 'alto';
-                                        } elseif ($percentualFreq >= ($frequenciaMinima - 10)) {
-                                            $classe = 'medio';
-                                        }
-                                    ?>
-                                        <span class="frequencia-badge <?= $classe ?>" id="freq-badge-<?= $aluno['id'] ?>">
-                                            <?= number_format($percentualFreq, 1) ?>%
-                                        </span>
-                                    <?php else: ?>
-                                        <span class="frequencia-badge baixo" id="freq-badge-<?= $aluno['id'] ?>">
-                                            0,0%
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
                                 
                                 <!-- Botões de Presença -->
-                                <div class="col-12 col-md-4 mt-2 mt-md-0">
+                                <div class="col-12 col-md-6 mt-2 mt-md-0">
                                     <?php if (!$modoSomenteLeitura): ?>
                                     <div class="btn-group w-100 w-md-auto" role="group">
                                         <button class="btn btn-sm btn-outline-success btn-presenca <?= $aluno['presenca_id'] && $aluno['presente'] ? 'active' : '' ?>" 
@@ -991,6 +1010,33 @@ if (defined('DEBUG_MODE') && DEBUG_MODE) {
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <!-- Modal para Visualizar Aluno (Modo Instrutor) -->
+    <?php if ($origem === 'instrutor' || $userType === 'instrutor'): ?>
+    <div class="modal fade" id="modalAlunoInstrutor" tabindex="-1" aria-labelledby="modalAlunoInstrutorLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalAlunoInstrutorLabel">
+                        <i class="fas fa-user"></i> Detalhes do Aluno
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body" id="modalAlunoInstrutorBody">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2">Carregando informações do aluno...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Modal de Observação -->
     <div class="modal fade" id="modalObservacao" tabindex="-1">
         <div class="modal-dialog">
@@ -1026,6 +1072,7 @@ if (defined('DEBUG_MODE') && DEBUG_MODE) {
         const API_TURMA_PRESENCAS = <?php echo json_encode($apiTurmaPresencasUrl); ?>;
         const API_TURMA_FREQUENCIA = <?php echo json_encode($apiTurmaFrequenciaUrl); ?>;
         const ORIGEM_FLUXO = <?php echo json_encode($origem); ?>;
+        const BACK_URL_INSTRUTOR = <?php echo json_encode($backUrlInstrutor); ?>;
         
         // AJUSTE 2025-12 - Debug: Verificar constantes
         console.log('[Frequência] Constantes definidas:', {
@@ -1521,10 +1568,71 @@ if (defined('DEBUG_MODE') && DEBUG_MODE) {
             }
         }
 
-        // Função para salvar chamada (placeholder)
+        // PATCH: Função para salvar chamada - atualiza status da aula para 'realizada'
         function salvarChamada() {
-            mostrarToast('Chamada salva automaticamente!');
-            alteracoesPendentes = false;
+            if (modoSomenteLeitura || !canEdit) {
+                mostrarToast('Você não tem permissão para salvar chamada', 'error');
+                return;
+            }
+            
+            // Mostrar loading
+            const btnSalvar = document.querySelector('button[onclick="salvarChamada()"]');
+            const textoOriginal = btnSalvar ? btnSalvar.innerHTML : '';
+            if (btnSalvar) {
+                btnSalvar.disabled = true;
+                btnSalvar.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Salvando...';
+            }
+            
+            // Chamar API para finalizar chamada
+            fetch(API_TURMA_PRESENCAS + '?acao=finalizar_chamada', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    turma_id: turmaId,
+                    turma_aula_id: aulaId
+                })
+            })
+            .then(async response => {
+                const text = await response.text();
+                let data;
+                try {
+                    data = JSON.parse(text);
+                } catch (e) {
+                    console.error('Resposta não é JSON válido:', text);
+                    throw new Error('Erro de comunicação com o servidor. Tente novamente.');
+                }
+                if (!data.success) {
+                    throw new Error(data.message || 'Erro ao salvar chamada.');
+                }
+                return data;
+            })
+            .then(data => {
+                mostrarToast('Chamada salva com sucesso! A aula foi marcada como realizada.');
+                alteracoesPendentes = false;
+                
+                // Recarregar página após 1 segundo para atualizar contadores no dashboard
+                setTimeout(() => {
+                    if (ORIGEM_FLUXO === 'instrutor' && typeof BACK_URL_INSTRUTOR !== 'undefined' && BACK_URL_INSTRUTOR) {
+                        // Se veio do dashboard do instrutor, voltar para lá usando o caminho correto
+                        window.location.href = BACK_URL_INSTRUTOR;
+                    } else {
+                        // Senão, recarregar a página atual
+                        window.location.reload();
+                    }
+                }, 1000);
+            })
+            .catch(error => {
+                console.error('Erro:', error);
+                mostrarToast(error.message || 'Erro de conexão. Tente novamente.', 'error');
+                
+                // Reabilitar botão
+                if (btnSalvar) {
+                    btnSalvar.disabled = false;
+                    btnSalvar.innerHTML = textoOriginal;
+                }
+            });
         }
 
         // Função para recarregar página
@@ -1541,6 +1649,211 @@ if (defined('DEBUG_MODE') && DEBUG_MODE) {
                 e.returnValue = '';
             }
         });
+
+        // Função para visualizar aluno (instrutor)
+        function visualizarAlunoInstrutor(alunoId, turmaId) {
+            const modal = new bootstrap.Modal(document.getElementById('modalAlunoInstrutor'));
+            const modalBody = document.getElementById('modalAlunoInstrutorBody');
+            
+            // Mostrar loading
+            modalBody.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2">Carregando informações do aluno...</p>
+                </div>
+            `;
+            
+            // Abrir modal
+            modal.show();
+            
+            // Buscar dados do aluno via endpoint restrito
+            fetch(`../admin/api/aluno-detalhes-instrutor.php?aluno_id=${alunoId}&turma_id=${turmaId}`)
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 403) {
+                            throw new Error('Você não tem permissão para visualizar este aluno');
+                        }
+                        throw new Error('Erro ao carregar dados do aluno');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const aluno = data.aluno;
+                        const turma = data.turma;
+                        const matricula = data.matricula;
+                        const frequencia = data.frequencia;
+                        
+                        // Formatar CPF
+                        function formatarCPF(cpf) {
+                            if (!cpf) return 'Não informado';
+                            const cpfLimpo = cpf.replace(/\D/g, '');
+                            return cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                        }
+                        
+                        // Formatar telefone
+                        function formatarTelefone(tel) {
+                            if (!tel) return 'Não informado';
+                            const telLimpo = tel.replace(/\D/g, '');
+                            if (telLimpo.length === 11) {
+                                return telLimpo.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                            } else if (telLimpo.length === 10) {
+                                return telLimpo.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                            }
+                            return tel;
+                        }
+                        
+                        // Formatar data de nascimento
+                        const dataNasc = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'Não informado';
+                        
+                        // Categoria CNH
+                        const categoriaCNH = aluno.categoria_cnh || 'Não informado';
+                        
+                        // Formatar frequência
+                        const freqPercent = frequencia ? frequencia.frequencia_percentual.toFixed(1) : '0.0';
+                        const freqBadgeClass = freqPercent >= 75 ? 'bg-success' : (freqPercent >= 60 ? 'bg-warning' : 'bg-danger');
+                        
+                        // Montar HTML
+                        let historicoHtml = '';
+                        if (frequencia && frequencia.historico && frequencia.historico.length > 0) {
+                            historicoHtml = `
+                                <h6 class="mt-3 mb-2">Últimas Presenças:</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <thead>
+                                            <tr>
+                                                <th>Data</th>
+                                                <th>Aula</th>
+                                                <th>Status</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${frequencia.historico.map(p => `
+                                                <tr>
+                                                    <td>${new Date(p.data_aula).toLocaleDateString('pt-BR')}</td>
+                                                    <td>${p.nome_aula || 'N/A'}</td>
+                                                    <td>
+                                                        <span class="badge ${p.presente ? 'bg-success' : 'bg-danger'}">
+                                                            ${p.presente ? 'PRESENTE' : 'AUSENTE'}
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            `).join('')}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            `;
+                        } else {
+                            historicoHtml = '<p class="text-muted mt-3">Nenhuma presença registrada ainda.</p>';
+                        }
+                        
+                        modalBody.innerHTML = `
+                            <div class="text-center mb-3">
+                                ${aluno.foto && aluno.foto.trim() !== '' 
+                                    ? `<img src="../${aluno.foto}" 
+                                           alt="Foto do aluno ${aluno.nome}" 
+                                           class="rounded-circle" 
+                                           style="width: 100px; height: 100px; object-fit: cover; border: 3px solid #dee2e6;"
+                                           onerror="this.outerHTML='<div class=\\'rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto\\' style=\\'width:100px;height:100px;border:3px solid #dee2e6;\\'><i class=\\'fas fa-user fa-3x text-white\\'></i></div>'">`
+                                    : `<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto" 
+                                           style="width: 100px; height: 100px; border: 3px solid #dee2e6;">
+                                            <i class="fas fa-user fa-3x text-white"></i>
+                                          </div>`
+                                }
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Dados Pessoais</h6>
+                                    <dl class="row mb-3">
+                                        <dt class="col-sm-4">Nome:</dt>
+                                        <dd class="col-sm-8"><strong>${aluno.nome}</strong></dd>
+                                        
+                                        <dt class="col-sm-4">CPF:</dt>
+                                        <dd class="col-sm-8">${formatarCPF(aluno.cpf)}</dd>
+                                        
+                                        <dt class="col-sm-4">Data Nascimento:</dt>
+                                        <dd class="col-sm-8">${dataNasc}</dd>
+                                        
+                                        <dt class="col-sm-4">Categoria CNH:</dt>
+                                        <dd class="col-sm-8">
+                                            <span class="badge bg-info">${categoriaCNH}</span>
+                                        </dd>
+                                    </dl>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Contato</h6>
+                                    <dl class="row mb-3">
+                                        <dt class="col-sm-4">E-mail:</dt>
+                                        <dd class="col-sm-8">
+                                            ${aluno.email ? `<a href="mailto:${aluno.email}">${aluno.email}</a>` : 'Não informado'}
+                                        </dd>
+                                        
+                                        <dt class="col-sm-4">Telefone:</dt>
+                                        <dd class="col-sm-8">
+                                            ${aluno.telefone ? `
+                                                <a href="tel:${aluno.telefone.replace(/\D/g, '')}">${formatarTelefone(aluno.telefone)}</a>
+                                                <a href="https://wa.me/55${aluno.telefone.replace(/\D/g, '')}" 
+                                                   target="_blank" 
+                                                   class="btn btn-sm btn-success ms-2" 
+                                                   title="Abrir WhatsApp">
+                                                    <i class="fab fa-whatsapp"></i>
+                                                </a>
+                                            ` : 'Não informado'}
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                            
+                            <hr>
+                            
+                            <div class="row">
+                                <div class="col-12">
+                                    <h6>Matrícula na Turma</h6>
+                                    <dl class="row mb-3">
+                                        <dt class="col-sm-4">Turma:</dt>
+                                        <dd class="col-sm-8">${turma.nome}</dd>
+                                        
+                                        <dt class="col-sm-4">Status:</dt>
+                                        <dd class="col-sm-8">
+                                            <span class="badge bg-primary">${matricula.status}</span>
+                                        </dd>
+                                        
+                                        <dt class="col-sm-4">Data Matrícula:</dt>
+                                        <dd class="col-sm-8">${new Date(matricula.data_matricula).toLocaleDateString('pt-BR')}</dd>
+                                        
+                                        <dt class="col-sm-4">Frequência:</dt>
+                                        <dd class="col-sm-8">
+                                            <span class="badge ${freqBadgeClass}">${freqPercent}%</span>
+                                            <small class="text-muted ms-2">
+                                                (${frequencia.total_presentes} presentes / ${frequencia.total_aulas} aulas)
+                                            </small>
+                                        </dd>
+                                    </dl>
+                                    
+                                    ${historicoHtml}
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        modalBody.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle"></i> ${data.message || 'Erro ao carregar dados do aluno'}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    modalBody.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i> ${error.message || 'Erro ao carregar dados do aluno'}
+                        </div>
+                    `;
+                });
+        }
 
         // Inicialização
         document.addEventListener('DOMContentLoaded', function() {

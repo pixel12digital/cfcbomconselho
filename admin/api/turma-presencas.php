@@ -77,6 +77,13 @@ $db = Database::getInstance();
 $method = $_SERVER['REQUEST_METHOD'];
 
 try {
+    // PATCH: Atualizar status da aula para 'realizada' ao salvar chamada
+    // Verificar se é requisição para finalizar chamada (PATCH com ação=finalizar_chamada)
+    if ($method === 'PATCH' || ($method === 'POST' && isset($_GET['acao']) && $_GET['acao'] === 'finalizar_chamada')) {
+        handleFinalizarChamada($db, $userId);
+        exit;
+    }
+    
     switch ($method) {
         case 'GET':
             handleGetRequest($db);
@@ -663,6 +670,34 @@ function marcarPresencaIndividual($db, $dados, $userId) {
             error_log("Erro ao recalcular frequência após criar presença: " . $e->getMessage());
         }
         
+        // Atualizar status da aula para 'realizada' se for a primeira presença registrada
+        try {
+            $totalPresencas = $db->fetch(
+                "SELECT COUNT(*) as total FROM turma_presencas WHERE turma_id = ? AND turma_aula_id = ?",
+                [$dados['turma_id'], $turmaAulaId]
+            );
+            
+            // Se é a primeira presença da aula, atualizar status
+            if (($totalPresencas['total'] ?? 0) == 1) {
+                $aulaAtual = $db->fetch(
+                    "SELECT status FROM turma_aulas_agendadas WHERE id = ? AND turma_id = ?",
+                    [$turmaAulaId, $dados['turma_id']]
+                );
+                
+                // Só atualiza se ainda estiver 'agendada' (evita sobrescrever se já foi atualizada)
+                if ($aulaAtual && ($aulaAtual['status'] ?? '') === 'agendada') {
+                    $db->update('turma_aulas_agendadas', 
+                        ['status' => 'realizada'],
+                        'id = ? AND turma_id = ?',
+                        [$turmaAulaId, $dados['turma_id']]
+                    );
+                }
+            }
+        } catch (Exception $e) {
+            // Log do erro mas não interrompe o fluxo principal
+            error_log("Erro ao atualizar status da aula após criar presença: " . $e->getMessage());
+        }
+        
         $db->commit();
         
         return [
@@ -812,6 +847,34 @@ function marcarPresencasLote($db, $dados, $userId) {
                     error_log("Erro ao recalcular frequência do aluno {$alunoId}: " . $e->getMessage());
                 }
             }
+        }
+        
+        // Atualizar status da aula para 'realizada' se esta foi a primeira chamada (primeiras presenças)
+        try {
+            $totalPresencas = $db->fetch(
+                "SELECT COUNT(*) as total FROM turma_presencas WHERE turma_id = ? AND turma_aula_id = ?",
+                [$turmaId, $turmaAulaId]
+            );
+            
+            // Se foi inserida pelo menos uma presença (sucessos > 0) e agora há presenças, verificar status
+            if ($sucessos > 0 && ($totalPresencas['total'] ?? 0) > 0) {
+                $aulaAtual = $db->fetch(
+                    "SELECT status FROM turma_aulas_agendadas WHERE id = ? AND turma_id = ?",
+                    [$turmaAulaId, $turmaId]
+                );
+                
+                // Só atualiza se ainda estiver 'agendada' (evita sobrescrever se já foi atualizada)
+                if ($aulaAtual && ($aulaAtual['status'] ?? '') === 'agendada') {
+                    $db->update('turma_aulas_agendadas', 
+                        ['status' => 'realizada'],
+                        'id = ? AND turma_id = ?',
+                        [$turmaAulaId, $turmaId]
+                    );
+                }
+            }
+        } catch (Exception $e) {
+            // Log do erro mas não interrompe o fluxo principal
+            error_log("Erro ao atualizar status da aula após criar presenças em lote: " . $e->getMessage());
         }
         
         // Log de auditoria
@@ -1139,4 +1202,108 @@ function registrarLogPresenca($db, $presencaId, $turmaId, $aulaId, $alunoId, $ac
     }
 }
 // FASE 1 - LOG PRESENCA TEORICA - FIM
+
+/**
+ * PATCH: Finalizar chamada - Atualizar status da aula para 'realizada'
+ * Permite que o instrutor finalize a chamada mesmo sem marcar presenças
+ * Idempotente: pode ser chamado múltiplas vezes sem problemas
+ */
+function handleFinalizarChamada($db, $userId) {
+    global $isAdmin, $isSecretaria, $isInstrutor;
+    
+    // Apenas admin, secretaria e instrutor podem finalizar chamada
+    if (!$isAdmin && !$isSecretaria && !$isInstrutor) {
+        responderJsonErro('Permissão negada - Apenas administradores, secretaria e instrutores podem finalizar chamada', 403, [
+            'code' => 'PERMISSAO_NEGADA',
+        ]);
+    }
+    
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    if (json_last_error() !== JSON_ERROR_NONE) {
+        responderJsonErro('JSON inválido: ' . json_last_error_msg(), 400, [
+            'code' => 'JSON_INVALID',
+        ]);
+    }
+    
+    // Validar dados obrigatórios
+    if (empty($input['turma_id']) || empty($input['turma_aula_id'])) {
+        responderJsonErro('turma_id e turma_aula_id são obrigatórios', 400, [
+            'code' => 'DADOS_INVALIDOS',
+        ]);
+    }
+    
+    $turmaId = (int)$input['turma_id'];
+    $turmaAulaId = (int)$input['turma_aula_id'];
+    
+    // Validar regras de edição (mesma validação de presenças)
+    $validacaoEdicao = validarRegrasEdicaoPresenca($db, $turmaId, $turmaAulaId, $userId, $isAdmin, $isSecretaria, $isInstrutor);
+    if (!$validacaoEdicao['permitido']) {
+        responderJsonErro($validacaoEdicao['motivo'], 403, [
+            'code' => 'PERMISSAO_NEGADA',
+        ]);
+    }
+    
+    try {
+        $db->beginTransaction();
+        
+        // Buscar aula atual
+        $aulaAtual = $db->fetch(
+            "SELECT status FROM turma_aulas_agendadas WHERE id = ? AND turma_id = ?",
+            [$turmaAulaId, $turmaId]
+        );
+        
+        if (!$aulaAtual) {
+            $db->rollback();
+            responderJsonErro('Aula não encontrada', 404, [
+                'code' => 'AULA_NAO_ENCONTRADA',
+            ]);
+        }
+        
+        // Não permitir alteração se estiver cancelada
+        if ($aulaAtual['status'] === 'cancelada') {
+            $db->rollback();
+            responderJsonErro('Não é possível finalizar chamada de aulas canceladas', 403, [
+                'code' => 'AULA_CANCELADA',
+            ]);
+        }
+        
+        // Só atualiza se ainda estiver 'agendada' (idempotente - pode ser chamado múltiplas vezes)
+        // Se já estiver 'realizada', retorna sucesso sem alterar (idempotência)
+        if ($aulaAtual['status'] === 'agendada') {
+            // Usar query() diretamente para evitar problema com placeholders duplicados no update()
+            $db->query(
+                "UPDATE turma_aulas_agendadas SET status = :status WHERE id = :aula_id AND turma_id = :turma_id",
+                [
+                    'status' => 'realizada',
+                    'aula_id' => $turmaAulaId,
+                    'turma_id' => $turmaId
+                ]
+            );
+            
+            // Log de auditoria
+            logAuditoria($db, $userId, 'chamada_finalizada', $turmaAulaId, [
+                'turma_id' => $turmaId,
+                'turma_aula_id' => $turmaAulaId,
+                'status_anterior' => 'agendada',
+                'status_novo' => 'realizada'
+            ]);
+        }
+        
+        $db->commit();
+        
+        http_response_code(200);
+        echo json_encode([
+            'success' => true,
+            'message' => 'Chamada finalizada com sucesso',
+            'status' => 'realizada'
+        ], JSON_UNESCAPED_UNICODE);
+        
+    } catch (Exception $e) {
+        $db->rollback();
+        responderJsonErro('Erro ao finalizar chamada: ' . $e->getMessage(), 500, [
+            'code' => 'ERRO_INTERNO',
+        ]);
+    }
+}
 ?>

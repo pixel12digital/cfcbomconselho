@@ -52,6 +52,7 @@ $proximasAulasTeoricas = [];
 if ($instrutor['id']) {
     $aulasPraticasHoje = $db->fetchAll("
         SELECT a.*, 
+               a.aluno_id,
                al.nome as aluno_nome, al.telefone as aluno_telefone,
                v.modelo as veiculo_modelo, v.placa as veiculo_placa,
                'pratica' as tipo_aula
@@ -94,6 +95,7 @@ if ($instrutor['id']) {
     // Próximas aulas (7 dias) - práticas
     $proximasAulasPraticas = $db->fetchAll("
         SELECT a.*, 
+               a.aluno_id,
                al.nome as aluno_nome, al.telefone as aluno_telefone,
                v.modelo as veiculo_modelo, v.placa as veiculo_placa,
                'pratica' as tipo_aula
@@ -144,6 +146,96 @@ $aulasHoje = array_merge($aulasPraticasHoje, $aulasTeoricasHoje);
 usort($aulasHoje, function($a, $b) {
     return strcmp($a['hora_inicio'] ?? '00:00:00', $b['hora_inicio'] ?? '00:00:00');
 });
+
+// CORREÇÃO: Verificar chamada registrada para todas as aulas teóricas (igual ao desktop)
+foreach ($aulasHoje as &$aula) {
+    if ($aula['tipo_aula'] === 'teorica' && isset($aula['id'])) {
+        try {
+            $presencasCount = $db->fetch("
+                SELECT COUNT(*) as total
+                FROM turma_presencas
+                WHERE turma_aula_id = ? AND turma_id = ?
+            ", [$aula['id'], $aula['turma_id'] ?? 0]);
+            $aula['chamada_registrada'] = ($presencasCount['total'] ?? 0) > 0;
+        } catch (Exception $e) {
+            $aula['chamada_registrada'] = false;
+        }
+    } else {
+        $aula['chamada_registrada'] = false; // Aulas práticas não têm chamada teórica
+    }
+}
+unset($aula); // Remover referência do último elemento
+
+// CORREÇÃO: Selecionar próxima aula pendente (igual ao desktop)
+// Selecionar primeira aula pendente (status IN ('agendada','em_andamento')) ordenada por horário
+$aulasPendentes = array_filter($aulasHoje, function($aula) {
+    if ($aula['tipo_aula'] === 'pratica') {
+        return in_array($aula['status'] ?? '', ['agendada', 'em_andamento']);
+    } else {
+        // Teórica: pendente se não tem chamada registrada E status não é 'realizada'
+        return !($aula['chamada_registrada'] ?? false) && ($aula['status'] ?? '') !== 'realizada';
+    }
+});
+
+if (!empty($aulasPendentes)) {
+    // Primeira pendente ordenada por horário
+    $proximaAula = reset($aulasPendentes);
+} else {
+    // Se não há pendentes, pode mostrar a última concluída apenas para visualização (sem ações)
+    $aulasConcluidas = array_filter($aulasHoje, function($aula) {
+        if ($aula['tipo_aula'] === 'pratica') {
+            return ($aula['status'] ?? '') === 'concluida';
+        } else {
+            return ($aula['chamada_registrada'] ?? false) || ($aula['status'] ?? '') === 'realizada';
+        }
+    });
+    $proximaAula = !empty($aulasConcluidas) ? end($aulasConcluidas) : null;
+}
+
+// CORREÇÃO: Calcular contadores baseados APENAS nas aulas do array $aulasHoje (mesmo dataset da tabela)
+$statsHoje = [
+    'total_aulas' => 0,
+    'pendentes' => 0,
+    'concluidas' => 0
+];
+
+if ($instrutor['id'] && !empty($aulasHoje)) {
+    $totalAulas = count($aulasHoje);
+    $concluidas = 0;
+    $pendentes = 0;
+    
+    foreach ($aulasHoje as $aula) {
+        if ($aula['tipo_aula'] === 'pratica') {
+            // Aula prática: regras simples baseadas apenas em status
+            $status = $aula['status'] ?? '';
+            if ($status === 'concluida') {
+                $concluidas++;
+            } elseif (in_array($status, ['agendada', 'em_andamento'])) {
+                // NUNCA contar 'concluida' nem 'cancelada' como pendente
+                $pendentes++;
+            }
+            // 'cancelada' não conta em nenhum dos dois
+        } else {
+            // Aula teórica: considerar status do banco
+            $status = $aula['status'] ?? '';
+            // Concluída se status = 'realizada' (independente de chamada_registrada)
+            if ($status === 'realizada') {
+                $concluidas++;
+            } elseif ($status !== 'cancelada') {
+                // Pendente: qualquer outro status que não seja 'realizada' nem 'cancelada'
+                // (inclui 'agendada' e outros estados possíveis)
+                $pendentes++;
+            }
+            // 'cancelada' não conta em nenhum dos dois
+        }
+    }
+    
+    $statsHoje = [
+        'total_aulas' => $totalAulas,
+        'pendentes' => $pendentes,
+        'concluidas' => $concluidas
+    ];
+}
 
 $proximasAulas = array_merge($proximasAulasPraticas, $proximasAulasTeoricas);
 usort($proximasAulas, function($a, $b) {
@@ -255,7 +347,23 @@ ob_start();
                                     <span class="badge bg-<?php echo $aula['tipo_aula'] === 'teorica' ? 'info' : 'success'; ?> mb-1">
                                         <?php echo ucfirst($aula['tipo_aula']); ?>
                                     </span>
-                                    <h6 class="mb-1"><?php echo htmlspecialchars($aula['aluno_nome']); ?></h6>
+                                    <h6 class="mb-1">
+                                        <?php if ($aula['tipo_aula'] === 'pratica' && isset($aula['aluno_id'])): ?>
+                                        <a href="#" onclick="abrirModalAluno(<?= $aula['aluno_id'] ?>); return false;" 
+                                           class="text-primary text-decoration-none" 
+                                           title="Ver detalhes do aluno">
+                                            <?php echo htmlspecialchars($aula['aluno_nome']); ?>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-primary ml-2 p-1" 
+                                                onclick="abrirModalAluno(<?= $aula['aluno_id'] ?>); return false;"
+                                                title="Ver detalhes do aluno"
+                                                style="line-height: 1; min-width: 28px; height: 28px; vertical-align: middle;">
+                                            <i class="fas fa-user" style="font-size: 0.75rem;"></i>
+                                        </button>
+                                        <?php else: ?>
+                                        <?php echo htmlspecialchars($aula['aluno_nome']); ?>
+                                        <?php endif; ?>
+                                    </h6>
                                     <small class="text-muted">
                                         <?php echo date('H:i', strtotime($aula['hora_inicio'])); ?> - 
                                         <?php echo date('H:i', strtotime($aula['hora_fim'])); ?>
@@ -273,6 +381,18 @@ ob_start();
                                     <small><?php echo htmlspecialchars($aula['veiculo_modelo']); ?> - <?php echo htmlspecialchars($aula['veiculo_placa']); ?></small>
                                 </div>
                                 <?php endif; ?>
+                                <?php if ($aula['tipo_aula'] === 'pratica'): ?>
+                                    <?php if ($aula['status'] === 'em_andamento' && isset($aula['km_inicial']) && $aula['km_inicial'] !== null): ?>
+                                    <div class="d-flex align-items-center mb-1">
+                                        <small class="text-muted">KM inicial: <?php echo number_format($aula['km_inicial'], 0, ',', '.'); ?></small>
+                                    </div>
+                                    <?php elseif ($aula['status'] === 'concluida' && isset($aula['km_inicial']) && $aula['km_inicial'] !== null && isset($aula['km_final']) && $aula['km_final'] !== null): ?>
+                                    <?php $kmRodados = $aula['km_final'] - $aula['km_inicial']; ?>
+                                    <div class="d-flex align-items-center mb-1">
+                                        <small class="text-muted">KM: <?php echo number_format($aula['km_inicial'], 0, ',', '.'); ?> → <?php echo number_format($aula['km_final'], 0, ',', '.'); ?> (<?php echo $kmRodados >= 0 ? '+' : ''; ?><?php echo number_format($kmRodados, 0, ',', '.'); ?>)</small>
+                                    </div>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                                 <?php if ($aula['observacoes']): ?>
                                 <div class="d-flex align-items-center">
                                     <i class="fas fa-sticky-note text-muted me-2"></i>
@@ -281,6 +401,17 @@ ob_start();
                                 <?php endif; ?>
                             </div>
                             
+                            <?php 
+                            // CORREÇÃO: Só mostrar botões se a aula não estiver concluída ou cancelada
+                            $mostrarBotoes = true;
+                            if ($aula['tipo_aula'] === 'pratica') {
+                                $mostrarBotoes = !in_array($aula['status'] ?? '', ['concluida', 'cancelada']);
+                            } else {
+                                // Teórica: não mostrar botões se tem chamada registrada OU status = 'realizada'
+                                $mostrarBotoes = !($aula['chamada_registrada'] ?? false) && ($aula['status'] ?? '') !== 'realizada';
+                            }
+                            ?>
+                            <?php if ($mostrarBotoes): ?>
                             <div class="d-grid gap-2">
                                 <?php if ($aula['tipo_aula'] === 'teorica'): ?>
                                 <button class="btn btn-primary btn-mobile fazer-chamada" 
@@ -296,11 +427,19 @@ ob_start();
                                     Abrir Diário
                                 </button>
                                 <?php else: ?>
+                                <?php if (($aula['status'] ?? '') === 'agendada'): ?>
                                 <button class="btn btn-primary btn-mobile iniciar-aula" 
                                         data-aula-id="<?php echo $aula['id']; ?>">
                                     <i class="fas fa-play me-2"></i>
                                     Iniciar Aula
                                 </button>
+                                <?php elseif (($aula['status'] ?? '') === 'em_andamento'): ?>
+                                <button class="btn btn-success btn-mobile finalizar-aula" 
+                                        data-aula-id="<?php echo $aula['id']; ?>">
+                                    <i class="fas fa-stop me-2"></i>
+                                    Finalizar Aula
+                                </button>
+                                <?php endif; ?>
                                 <?php endif; ?>
                                 
                                 <button class="btn btn-outline-warning btn-mobile cancelar-aula" 
@@ -319,6 +458,11 @@ ob_start();
                                     Transferir
                                 </button>
                             </div>
+                            <?php else: ?>
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Aula já concluída
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <?php endforeach; ?>
@@ -356,7 +500,23 @@ ob_start();
                                     <span class="badge bg-<?php echo $aula['tipo_aula'] === 'teorica' ? 'info' : 'success'; ?> mb-1">
                                         <?php echo ucfirst($aula['tipo_aula']); ?>
                                     </span>
-                                    <h6 class="mb-1"><?php echo htmlspecialchars($aula['aluno_nome']); ?></h6>
+                                    <h6 class="mb-1">
+                                        <?php if ($aula['tipo_aula'] === 'pratica' && isset($aula['aluno_id'])): ?>
+                                        <a href="#" onclick="abrirModalAluno(<?= $aula['aluno_id'] ?>); return false;" 
+                                           class="text-primary text-decoration-none" 
+                                           title="Ver detalhes do aluno">
+                                            <?php echo htmlspecialchars($aula['aluno_nome']); ?>
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-primary ml-2 p-1" 
+                                                onclick="abrirModalAluno(<?= $aula['aluno_id'] ?>); return false;"
+                                                title="Ver detalhes do aluno"
+                                                style="line-height: 1; min-width: 28px; height: 28px; vertical-align: middle;">
+                                            <i class="fas fa-user" style="font-size: 0.75rem;"></i>
+                                        </button>
+                                        <?php else: ?>
+                                        <?php echo htmlspecialchars($aula['aluno_nome']); ?>
+                                        <?php endif; ?>
+                                    </h6>
                                     <small class="text-muted">
                                         <?php echo date('d/m/Y', strtotime($aula['data_aula'])); ?> - 
                                         <?php echo date('H:i', strtotime($aula['hora_inicio'])); ?>
@@ -374,6 +534,18 @@ ob_start();
                                     <small><?php echo htmlspecialchars($aula['veiculo_modelo']); ?> - <?php echo htmlspecialchars($aula['veiculo_placa']); ?></small>
                                 </div>
                                 <?php endif; ?>
+                                <?php if ($aula['tipo_aula'] === 'pratica'): ?>
+                                    <?php if ($aula['status'] === 'em_andamento' && isset($aula['km_inicial']) && $aula['km_inicial'] !== null): ?>
+                                    <div class="d-flex align-items-center mb-1">
+                                        <small class="text-muted">KM inicial: <?php echo number_format($aula['km_inicial'], 0, ',', '.'); ?></small>
+                                    </div>
+                                    <?php elseif ($aula['status'] === 'concluida' && isset($aula['km_inicial']) && $aula['km_inicial'] !== null && isset($aula['km_final']) && $aula['km_final'] !== null): ?>
+                                    <?php $kmRodados = $aula['km_final'] - $aula['km_inicial']; ?>
+                                    <div class="d-flex align-items-center mb-1">
+                                        <small class="text-muted">KM: <?php echo number_format($aula['km_inicial'], 0, ',', '.'); ?> → <?php echo number_format($aula['km_final'], 0, ',', '.'); ?> (<?php echo $kmRodados >= 0 ? '+' : ''; ?><?php echo number_format($kmRodados, 0, ',', '.'); ?>)</small>
+                                    </div>
+                                    <?php endif; ?>
+                                <?php endif; ?>
                                 <?php if ($aula['observacoes']): ?>
                                 <div class="d-flex align-items-center">
                                     <i class="fas fa-sticky-note text-muted me-2"></i>
@@ -382,6 +554,17 @@ ob_start();
                                 <?php endif; ?>
                             </div>
                             
+                            <?php 
+                            // CORREÇÃO: Só mostrar botões se a aula não estiver concluída ou cancelada
+                            $mostrarBotoes = true;
+                            if ($aula['tipo_aula'] === 'pratica') {
+                                $mostrarBotoes = !in_array($aula['status'] ?? '', ['concluida', 'cancelada']);
+                            } else {
+                                // Teórica: não mostrar botões se status = 'realizada'
+                                $mostrarBotoes = ($aula['status'] ?? '') !== 'realizada';
+                            }
+                            ?>
+                            <?php if ($mostrarBotoes): ?>
                             <div class="d-grid gap-2">
                                 <button class="btn btn-outline-warning btn-mobile cancelar-aula" 
                                         data-aula-id="<?php echo $aula['id']; ?>"
@@ -399,6 +582,11 @@ ob_start();
                                     Transferir
                                 </button>
                             </div>
+                            <?php else: ?>
+                            <div class="alert alert-info mb-0">
+                                <i class="fas fa-info-circle me-2"></i>Aula já concluída
+                            </div>
+                            <?php endif; ?>
                         </div>
                     </div>
                     <?php endforeach; ?>
@@ -585,6 +773,126 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // TAREFA 2.2 - Botões de iniciar aula
+    document.querySelectorAll('.iniciar-aula').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const aulaId = this.dataset.aulaId;
+            
+            // Coletar KM inicial via prompt
+            const kmInicialStr = prompt('Informe o KM inicial do veículo:');
+            
+            // Se cancelou ou vazio, abortar
+            if (kmInicialStr === null || kmInicialStr.trim() === '') {
+                return;
+            }
+            
+            // Validar numérico
+            const kmInicial = Number(kmInicialStr.trim());
+            if (isNaN(kmInicial)) {
+                showToast('KM inicial deve ser um número válido.', 'error');
+                return;
+            }
+            
+            // Validar >= 0
+            if (kmInicial < 0) {
+                showToast('KM inicial deve ser maior ou igual a zero.', 'error');
+                return;
+            }
+            
+            showLoading('Iniciando aula...');
+            
+            try {
+                const response = await fetch('../admin/api/instrutor-aulas.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        aula_id: aulaId,
+                        tipo_acao: 'iniciar',
+                        km_inicial: kmInicial
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Aula iniciada com sucesso!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showToast(result.message || 'Erro ao iniciar aula.', 'error');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                showToast('Erro de conexão. Tente novamente.', 'error');
+            } finally {
+                hideLoading();
+            }
+        });
+    });
+
+    // TAREFA 2.2 - Botões de finalizar aula
+    document.querySelectorAll('.finalizar-aula').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const aulaId = this.dataset.aulaId;
+            
+            // Coletar KM final via prompt
+            const kmFinalStr = prompt('Informe o KM final do veículo:');
+            
+            // Se cancelou ou vazio, abortar
+            if (kmFinalStr === null || kmFinalStr.trim() === '') {
+                return;
+            }
+            
+            // Validar numérico
+            const kmFinal = Number(kmFinalStr.trim());
+            if (isNaN(kmFinal)) {
+                showToast('KM final deve ser um número válido.', 'error');
+                return;
+            }
+            
+            // Validar >= 0
+            if (kmFinal < 0) {
+                showToast('KM final deve ser maior ou igual a zero.', 'error');
+                return;
+            }
+            
+            showLoading('Finalizando aula...');
+            
+            try {
+                const response = await fetch('../admin/api/instrutor-aulas.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        aula_id: aulaId,
+                        tipo_acao: 'finalizar',
+                        km_final: kmFinal
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    showToast('Aula finalizada com sucesso!', 'success');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1500);
+                } else {
+                    showToast(result.message || 'Erro ao finalizar aula.', 'error');
+                }
+            } catch (error) {
+                console.error('Erro:', error);
+                showToast('Erro de conexão. Tente novamente.', 'error');
+            } finally {
+                hideLoading();
+            }
+        });
+    });
+
     // Botões de marcar notificação como lida
     document.querySelectorAll('.marcar-lida').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -698,7 +1006,225 @@ async function marcarNotificacaoComoLida(notificacaoId) {
         console.error('Erro:', error);
     }
 }
+
+// Função para abrir modal de aluno (suporta aulas práticas e teóricas)
+function abrirModalAluno(alunoId, turmaId = null) {
+    // Verificar se Bootstrap está disponível
+    if (typeof bootstrap === 'undefined') {
+        alert('Erro: Bootstrap não está carregado. Recarregue a página.');
+        return;
+    }
+    
+    const modal = new bootstrap.Modal(document.getElementById('modalAlunoInstrutor'));
+    const modalBody = document.getElementById('modalAlunoInstrutorBody');
+    
+    // Mostrar loading
+    modalBody.innerHTML = `
+        <div class="text-center py-4">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Carregando...</span>
+            </div>
+            <p class="mt-2">Carregando informações do aluno...</p>
+        </div>
+    `;
+    
+    // Abrir modal
+    modal.show();
+    
+    // Montar URL (turma_id é opcional para aulas práticas)
+    let url = '../admin/api/aluno-detalhes-instrutor.php?aluno_id=' + alunoId;
+    if (turmaId) {
+        url += '&turma_id=' + turmaId;
+    }
+    
+    // Buscar dados do aluno via endpoint restrito
+    fetch(url)
+        .then(response => {
+            if (!response.ok) {
+                if (response.status === 403) {
+                    throw new Error('Você não tem permissão para visualizar este aluno');
+                }
+                throw new Error('Erro ao carregar dados do aluno');
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                const aluno = data.aluno;
+                const turma = data.turma || null;
+                const matricula = data.matricula || null;
+                const frequencia = data.frequencia || null;
+                
+                // Formatar CPF
+                function formatarCPF(cpf) {
+                    if (!cpf) return 'Não informado';
+                    const cpfLimpo = cpf.replace(/\D/g, '');
+                    return cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                }
+                
+                // Formatar telefone
+                function formatarTelefone(tel) {
+                    if (!tel) return 'Não informado';
+                    const telLimpo = tel.replace(/\D/g, '');
+                    if (telLimpo.length === 11) {
+                        return telLimpo.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                    } else if (telLimpo.length === 10) {
+                        return telLimpo.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                    }
+                    return tel;
+                }
+                
+                // Formatar data de nascimento
+                const dataNasc = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'Não informado';
+                
+                // Categoria CNH
+                const categoriaCNH = aluno.categoria_cnh || 'Não informado';
+                
+                // Montar HTML
+                let turmaHtml = '';
+                if (turma && matricula) {
+                    let frequenciaHtml = '';
+                    if (frequencia) {
+                        const freqPercent = frequencia.frequencia_percentual.toFixed(1);
+                        const freqBadgeClass = freqPercent >= 75 ? 'bg-success' : (freqPercent >= 60 ? 'bg-warning' : 'bg-danger');
+                        frequenciaHtml = `
+                            <dt class="col-sm-4">Frequência:</dt>
+                            <dd class="col-sm-8">
+                                <span class="badge ${freqBadgeClass}">${freqPercent}%</span>
+                                <small class="text-muted ms-2">
+                                    (${frequencia.total_presentes} presentes / ${frequencia.total_aulas} aulas)
+                                </small>
+                            </dd>
+                        `;
+                    }
+                    
+                    turmaHtml = `
+                        <hr>
+                        <div class="row">
+                            <div class="col-12">
+                                <h6>Matrícula na Turma</h6>
+                                <dl class="row mb-3">
+                                    <dt class="col-sm-4">Turma:</dt>
+                                    <dd class="col-sm-8">${turma.nome}</dd>
+                                    
+                                    <dt class="col-sm-4">Status:</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="badge bg-primary">${matricula.status}</span>
+                                    </dd>
+                                    
+                                    <dt class="col-sm-4">Data Matrícula:</dt>
+                                    <dd class="col-sm-8">${new Date(matricula.data_matricula).toLocaleDateString('pt-BR')}</dd>
+                                    
+                                    ${frequenciaHtml}
+                                </dl>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                modalBody.innerHTML = `
+                    <div class="text-center mb-3">
+                        ${aluno.foto && aluno.foto.trim() !== '' 
+                            ? `<img src="../${aluno.foto}" 
+                                   alt="Foto do aluno ${aluno.nome}" 
+                                   class="rounded-circle" 
+                                   style="width: 100px; height: 100px; object-fit: cover; border: 3px solid #dee2e6;"
+                                   onerror="this.outerHTML='<div class=\\'rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto\\' style=\\'width:100px;height:100px;border:3px solid #dee2e6;\\'><i class=\\'fas fa-user fa-3x text-white\\'></i></div>'">`
+                            : `<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto" 
+                                   style="width: 100px; height: 100px; border: 3px solid #dee2e6;">
+                                    <i class="fas fa-user fa-3x text-white"></i>
+                                  </div>`
+                        }
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <h6>Dados Pessoais</h6>
+                            <dl class="row mb-3">
+                                <dt class="col-sm-4">Nome:</dt>
+                                <dd class="col-sm-8"><strong>${aluno.nome}</strong></dd>
+                                
+                                <dt class="col-sm-4">CPF:</dt>
+                                <dd class="col-sm-8">${formatarCPF(aluno.cpf)}</dd>
+                                
+                                <dt class="col-sm-4">Data Nascimento:</dt>
+                                <dd class="col-sm-8">${dataNasc}</dd>
+                                
+                                <dt class="col-sm-4">Categoria CNH:</dt>
+                                <dd class="col-sm-8">
+                                    <span class="badge bg-info">${categoriaCNH}</span>
+                                </dd>
+                            </dl>
+                        </div>
+                        <div class="col-md-6">
+                            <h6>Contato</h6>
+                            <dl class="row mb-3">
+                                <dt class="col-sm-4">E-mail:</dt>
+                                <dd class="col-sm-8">
+                                    ${aluno.email ? `<a href="mailto:${aluno.email}">${aluno.email}</a>` : 'Não informado'}
+                                </dd>
+                                
+                                <dt class="col-sm-4">Telefone:</dt>
+                                <dd class="col-sm-8">
+                                    ${aluno.telefone ? `
+                                        <a href="tel:${aluno.telefone.replace(/\D/g, '')}">${formatarTelefone(aluno.telefone)}</a>
+                                        <a href="https://wa.me/55${aluno.telefone.replace(/\D/g, '')}" 
+                                           target="_blank" 
+                                           class="btn btn-sm btn-success ms-2" 
+                                           title="Abrir WhatsApp">
+                                            <i class="fab fa-whatsapp"></i>
+                                        </a>
+                                    ` : 'Não informado'}
+                                </dd>
+                            </dl>
+                        </div>
+                    </div>
+                    
+                    ${turmaHtml}
+                `;
+            } else {
+                modalBody.innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle"></i> ${data.message || 'Erro ao carregar dados do aluno'}
+                    </div>
+                `;
+            }
+        })
+        .catch(error => {
+            console.error('Erro:', error);
+            modalBody.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="fas fa-exclamation-triangle"></i> ${error.message || 'Erro ao carregar dados do aluno'}
+                </div>
+            `;
+        });
+}
 </script>
+
+<!-- Modal para Visualizar Aluno -->
+<div class="modal fade" id="modalAlunoInstrutor" tabindex="-1" aria-labelledby="modalAlunoInstrutorLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalAlunoInstrutorLabel">
+                    <i class="fas fa-user"></i> Detalhes do Aluno
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+            </div>
+            <div class="modal-body" id="modalAlunoInstrutorBody">
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2">Carregando informações do aluno...</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <?php
 // Finalizar buffer e incluir layout

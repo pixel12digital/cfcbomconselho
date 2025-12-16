@@ -87,6 +87,7 @@ $aulasTeoricas = [];
 if ($instrutorId && ($tipoFiltro === '' || $tipoFiltro === 'pratica')) {
     $sql = "
         SELECT a.*, 
+               a.aluno_id,
                al.nome as aluno_nome, al.telefone as aluno_telefone,
                v.modelo as veiculo_modelo, v.placa as veiculo_placa,
                'pratica' as tipo_aula
@@ -200,6 +201,8 @@ foreach ($aulas as $aula) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Todas as Aulas - <?php echo htmlspecialchars($instrutor['nome']); ?></title>
+    <!-- Bootstrap 5 CSS (para modal) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="../assets/css/mobile-first.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -338,7 +341,17 @@ foreach ($aulas as $aula) {
                                 </span>
                             </div>
                             <div style="font-size: 18px; font-weight: 600; color: #1e293b; margin-bottom: 4px;">
-                                <?php echo htmlspecialchars($aula['aluno_nome'] ?? 'Aluno não informado'); ?>
+                                <a href="#" onclick="abrirModalAluno(<?= $aula['aluno_id'] ?? 0 ?>); return false;" 
+                                   class="text-primary text-decoration-none" 
+                                   title="Ver detalhes do aluno">
+                                    <?php echo htmlspecialchars($aula['aluno_nome'] ?? 'Aluno não informado'); ?>
+                                </a>
+                                <button class="btn btn-sm btn-outline-primary ml-2" 
+                                        onclick="abrirModalAluno(<?= $aula['aluno_id'] ?? 0 ?>); return false;"
+                                        title="Ver detalhes do aluno"
+                                        style="line-height: 1; padding: 2px 8px; font-size: 0.75rem;">
+                                    <i class="fas fa-user"></i> Ver Aluno
+                                </button>
                             </div>
                             <div style="font-size: 14px; color: #64748b;">
                                 <i class="fas fa-calendar"></i> <?php echo date('d/m/Y', strtotime($aula['data_aula'])); ?>
@@ -348,6 +361,18 @@ foreach ($aulas as $aula) {
                             <div style="font-size: 14px; color: #64748b; margin-top: 4px;">
                                 <i class="fas fa-car"></i> <?php echo htmlspecialchars($aula['veiculo_modelo']); ?> - <?php echo htmlspecialchars($aula['veiculo_placa']); ?>
                             </div>
+                            <?php endif; ?>
+                            <?php if ($aula['tipo_aula'] === 'pratica'): ?>
+                                <?php if ($aula['status'] === 'em_andamento' && isset($aula['km_inicial']) && $aula['km_inicial'] !== null): ?>
+                                <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
+                                    KM inicial: <?php echo number_format($aula['km_inicial'], 0, ',', '.'); ?>
+                                </div>
+                                <?php elseif ($aula['status'] === 'concluida' && isset($aula['km_inicial']) && $aula['km_inicial'] !== null && isset($aula['km_final']) && $aula['km_final'] !== null): ?>
+                                <?php $kmRodados = $aula['km_final'] - $aula['km_inicial']; ?>
+                                <div style="font-size: 12px; color: #94a3b8; margin-top: 2px;">
+                                    KM: <?php echo number_format($aula['km_inicial'], 0, ',', '.'); ?> → <?php echo number_format($aula['km_final'], 0, ',', '.'); ?> (<?php echo $kmRodados >= 0 ? '+' : ''; ?><?php echo number_format($kmRodados, 0, ',', '.'); ?>)
+                                </div>
+                                <?php endif; ?>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -558,6 +583,34 @@ foreach ($aulas as $aula) {
         </div>
     </div>
 
+    <!-- Modal para Visualizar Aluno -->
+    <div class="modal fade" id="modalAlunoInstrutor" tabindex="-1" aria-labelledby="modalAlunoInstrutorLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="modalAlunoInstrutorLabel">
+                        <i class="fas fa-user"></i> Detalhes do Aluno
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Fechar"></button>
+                </div>
+                <div class="modal-body" id="modalAlunoInstrutorBody">
+                    <div class="text-center py-4">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Carregando...</span>
+                        </div>
+                        <p class="mt-2">Carregando informações do aluno...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Fechar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap 5 JS (para modal) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
     <script>
         // FASE 1 - Reutilização: Mesmo código JavaScript do dashboard.php
         // Arquivo: instrutor/aulas.php (linha ~350)
@@ -666,7 +719,25 @@ foreach ($aulas as $aula) {
             document.querySelectorAll('.iniciar-aula').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const aulaId = this.dataset.aulaId;
-                    if (!confirm('Deseja iniciar esta aula?')) {
+                    
+                    // Coletar KM inicial via prompt
+                    const kmInicialStr = prompt('Informe o KM inicial do veículo:');
+                    
+                    // Se cancelou ou vazio, abortar
+                    if (kmInicialStr === null || kmInicialStr.trim() === '') {
+                        return;
+                    }
+                    
+                    // Validar numérico
+                    const kmInicial = Number(kmInicialStr.trim());
+                    if (isNaN(kmInicial)) {
+                        alert('KM inicial deve ser um número válido.');
+                        return;
+                    }
+                    
+                    // Validar >= 0
+                    if (kmInicial < 0) {
+                        alert('KM inicial deve ser maior ou igual a zero.');
                         return;
                     }
                     
@@ -678,7 +749,8 @@ foreach ($aulas as $aula) {
                             },
                             body: JSON.stringify({
                                 aula_id: aulaId,
-                                tipo_acao: 'iniciar'
+                                tipo_acao: 'iniciar',
+                                km_inicial: kmInicial
                             })
                         });
 
@@ -703,7 +775,25 @@ foreach ($aulas as $aula) {
             document.querySelectorAll('.finalizar-aula').forEach(btn => {
                 btn.addEventListener('click', async function() {
                     const aulaId = this.dataset.aulaId;
-                    if (!confirm('Deseja finalizar esta aula?')) {
+                    
+                    // Coletar KM final via prompt
+                    const kmFinalStr = prompt('Informe o KM final do veículo:');
+                    
+                    // Se cancelou ou vazio, abortar
+                    if (kmFinalStr === null || kmFinalStr.trim() === '') {
+                        return;
+                    }
+                    
+                    // Validar numérico
+                    const kmFinal = Number(kmFinalStr.trim());
+                    if (isNaN(kmFinal)) {
+                        alert('KM final deve ser um número válido.');
+                        return;
+                    }
+                    
+                    // Validar >= 0
+                    if (kmFinal < 0) {
+                        alert('KM final deve ser maior ou igual a zero.');
                         return;
                     }
                     
@@ -715,7 +805,8 @@ foreach ($aulas as $aula) {
                             },
                             body: JSON.stringify({
                                 aula_id: aulaId,
-                                tipo_acao: 'finalizar'
+                                tipo_acao: 'finalizar',
+                                km_final: kmFinal
                             })
                         });
 
@@ -742,6 +833,199 @@ foreach ($aulas as $aula) {
                 }
             });
         });
+
+        // Função para abrir modal de aluno (suporta aulas práticas e teóricas)
+        function abrirModalAluno(alunoId, turmaId = null) {
+            const modal = new bootstrap.Modal(document.getElementById('modalAlunoInstrutor'));
+            const modalBody = document.getElementById('modalAlunoInstrutorBody');
+            
+            // Mostrar loading
+            modalBody.innerHTML = `
+                <div class="text-center py-4">
+                    <div class="spinner-border text-primary" role="status">
+                        <span class="visually-hidden">Carregando...</span>
+                    </div>
+                    <p class="mt-2">Carregando informações do aluno...</p>
+                </div>
+            `;
+            
+            // Abrir modal
+            modal.show();
+            
+            // Montar URL (turma_id é opcional para aulas práticas)
+            let url = '../admin/api/aluno-detalhes-instrutor.php?aluno_id=' + alunoId;
+            if (turmaId) {
+                url += '&turma_id=' + turmaId;
+            }
+            
+            // Buscar dados do aluno via endpoint restrito
+            fetch(url)
+                .then(response => {
+                    if (!response.ok) {
+                        if (response.status === 403) {
+                            throw new Error('Você não tem permissão para visualizar este aluno');
+                        }
+                        throw new Error('Erro ao carregar dados do aluno');
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.success) {
+                        const aluno = data.aluno;
+                        const turma = data.turma || null;
+                        const matricula = data.matricula || null;
+                        const frequencia = data.frequencia || null;
+                        
+                        // Formatar CPF
+                        function formatarCPF(cpf) {
+                            if (!cpf) return 'Não informado';
+                            const cpfLimpo = cpf.replace(/\D/g, '');
+                            return cpfLimpo.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+                        }
+                        
+                        // Formatar telefone
+                        function formatarTelefone(tel) {
+                            if (!tel) return 'Não informado';
+                            const telLimpo = tel.replace(/\D/g, '');
+                            if (telLimpo.length === 11) {
+                                return telLimpo.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3');
+                            } else if (telLimpo.length === 10) {
+                                return telLimpo.replace(/(\d{2})(\d{4})(\d{4})/, '($1) $2-$3');
+                            }
+                            return tel;
+                        }
+                        
+                        // Foto ou avatar padrão (fallback para ícone se não existir)
+                        let fotoUrl = '';
+                        if (aluno.foto && aluno.foto.trim() !== '') {
+                            fotoUrl = '../' + aluno.foto;
+                        }
+                        
+                        // Formatar data de nascimento
+                        const dataNasc = aluno.data_nascimento ? new Date(aluno.data_nascimento).toLocaleDateString('pt-BR') : 'Não informado';
+                        
+                        // Categoria CNH
+                        const categoriaCNH = aluno.categoria_cnh || 'Não informado';
+                        
+                        // Montar HTML
+                        let turmaHtml = '';
+                        if (turma && matricula) {
+                            let frequenciaHtml = '';
+                            if (frequencia) {
+                                const freqPercent = frequencia.frequencia_percentual.toFixed(1);
+                                const freqBadgeClass = freqPercent >= 75 ? 'bg-success' : (freqPercent >= 60 ? 'bg-warning' : 'bg-danger');
+                                frequenciaHtml = `
+                                    <dt class="col-sm-4">Frequência:</dt>
+                                    <dd class="col-sm-8">
+                                        <span class="badge ${freqBadgeClass}">${freqPercent}%</span>
+                                        <small class="text-muted ms-2">
+                                            (${frequencia.total_presentes} presentes / ${frequencia.total_aulas} aulas)
+                                        </small>
+                                    </dd>
+                                `;
+                            }
+                            
+                            turmaHtml = `
+                                <hr>
+                                <div class="row">
+                                    <div class="col-12">
+                                        <h6>Matrícula na Turma</h6>
+                                        <dl class="row mb-3">
+                                            <dt class="col-sm-4">Turma:</dt>
+                                            <dd class="col-sm-8">${turma.nome}</dd>
+                                            
+                                            <dt class="col-sm-4">Status:</dt>
+                                            <dd class="col-sm-8">
+                                                <span class="badge bg-primary">${matricula.status}</span>
+                                            </dd>
+                                            
+                                            <dt class="col-sm-4">Data Matrícula:</dt>
+                                            <dd class="col-sm-8">${new Date(matricula.data_matricula).toLocaleDateString('pt-BR')}</dd>
+                                            
+                                            ${frequenciaHtml}
+                                        </dl>
+                                    </div>
+                                </div>
+                            `;
+                        }
+                        
+                        modalBody.innerHTML = `
+                            <div class="text-center mb-3">
+                                ${aluno.foto && aluno.foto.trim() !== '' 
+                                    ? `<img src="../${aluno.foto}" 
+                                           alt="Foto do aluno ${aluno.nome}" 
+                                           class="rounded-circle" 
+                                           style="width: 100px; height: 100px; object-fit: cover; border: 3px solid #dee2e6;"
+                                           onerror="this.outerHTML='<div class=\\'rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto\\' style=\\'width:100px;height:100px;border:3px solid #dee2e6;\\'><i class=\\'fas fa-user fa-3x text-white\\'></i></div>'">`
+                                    : `<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center mx-auto" 
+                                           style="width: 100px; height: 100px; border: 3px solid #dee2e6;">
+                                            <i class="fas fa-user fa-3x text-white"></i>
+                                          </div>`
+                                }
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <h6>Dados Pessoais</h6>
+                                    <dl class="row mb-3">
+                                        <dt class="col-sm-4">Nome:</dt>
+                                        <dd class="col-sm-8"><strong>${aluno.nome}</strong></dd>
+                                        
+                                        <dt class="col-sm-4">CPF:</dt>
+                                        <dd class="col-sm-8">${formatarCPF(aluno.cpf)}</dd>
+                                        
+                                        <dt class="col-sm-4">Data Nascimento:</dt>
+                                        <dd class="col-sm-8">${dataNasc}</dd>
+                                        
+                                        <dt class="col-sm-4">Categoria CNH:</dt>
+                                        <dd class="col-sm-8">
+                                            <span class="badge bg-info">${categoriaCNH}</span>
+                                        </dd>
+                                    </dl>
+                                </div>
+                                <div class="col-md-6">
+                                    <h6>Contato</h6>
+                                    <dl class="row mb-3">
+                                        <dt class="col-sm-4">E-mail:</dt>
+                                        <dd class="col-sm-8">
+                                            ${aluno.email ? `<a href="mailto:${aluno.email}">${aluno.email}</a>` : 'Não informado'}
+                                        </dd>
+                                        
+                                        <dt class="col-sm-4">Telefone:</dt>
+                                        <dd class="col-sm-8">
+                                            ${aluno.telefone ? `
+                                                <a href="tel:${aluno.telefone.replace(/\D/g, '')}">${formatarTelefone(aluno.telefone)}</a>
+                                                <a href="https://wa.me/55${aluno.telefone.replace(/\D/g, '')}" 
+                                                   target="_blank" 
+                                                   class="btn btn-sm btn-success ms-2" 
+                                                   title="Abrir WhatsApp">
+                                                    <i class="fab fa-whatsapp"></i>
+                                                </a>
+                                            ` : 'Não informado'}
+                                        </dd>
+                                    </dl>
+                                </div>
+                            </div>
+                            
+                            ${turmaHtml}
+                        `;
+                    } else {
+                        modalBody.innerHTML = `
+                            <div class="alert alert-danger">
+                                <i class="fas fa-exclamation-triangle"></i> ${data.message || 'Erro ao carregar dados do aluno'}
+                            </div>
+                        `;
+                    }
+                })
+                .catch(error => {
+                    console.error('Erro:', error);
+                    modalBody.innerHTML = `
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle"></i> ${error.message || 'Erro ao carregar dados do aluno'}
+                        </div>
+                    `;
+                });
+        }
     </script>
 </body>
 </html>
