@@ -161,6 +161,22 @@
     border-color: rgba(255, 255, 255, 0.3);
 }
 
+/* Botão Abrir no Chrome */
+.pwa-install-btn-chrome {
+    background: rgba(66, 133, 244, 0.2);
+    color: rgba(255, 255, 255, 0.9);
+    border: 1px solid rgba(66, 133, 244, 0.4);
+}
+
+.pwa-install-btn-chrome:hover {
+    background: rgba(66, 133, 244, 0.3);
+    border-color: rgba(66, 133, 244, 0.5);
+}
+
+.pwa-install-btn-chrome i {
+    color: #4285f4;
+}
+
 /* Modal de compartilhamento */
 .pwa-share-modal {
     position: fixed;
@@ -457,16 +473,22 @@
 }
 
 .login-footer .pwa-install-btn-secondary,
-.login-footer .pwa-install-btn-ios {
+.login-footer .pwa-install-btn-ios,
+.login-footer .pwa-install-btn-chrome {
     background: rgba(44, 62, 80, 0.05);
     color: #2c3e50;
     border: 1px solid rgba(44, 62, 80, 0.2);
 }
 
 .login-footer .pwa-install-btn-secondary:hover,
-.login-footer .pwa-install-btn-ios:hover {
+.login-footer .pwa-install-btn-ios:hover,
+.login-footer .pwa-install-btn-chrome:hover {
     background: rgba(44, 62, 80, 0.1);
     border-color: rgba(44, 62, 80, 0.3);
+}
+
+.login-footer .pwa-install-btn-chrome i {
+    color: #4285f4;
 }
 
 .login-footer .pwa-install-hint {

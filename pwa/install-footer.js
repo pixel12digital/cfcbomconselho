@@ -55,11 +55,24 @@ class PWAInstallFooter {
      */
     getButtonText() {
         if (this.options.userType === 'aluno') {
-            return 'Instalar App (Aluno)';
+            return 'Instalar App do Aluno';
         } else if (this.options.userType === 'instrutor') {
-            return 'Instalar App (Instrutor)';
+            return 'Instalar App do Instrutor';
         } else {
             return 'Instalar App';
+        }
+    }
+    
+    /**
+     * Obter título do app baseado no tipo
+     */
+    getAppTitle() {
+        if (this.options.userType === 'aluno') {
+            return 'App do Aluno';
+        } else if (this.options.userType === 'instrutor') {
+            return 'App do Instrutor';
+        } else {
+            return 'App do CFC';
         }
     }
     
@@ -250,7 +263,7 @@ class PWAInstallFooter {
             <div class="pwa-install-footer-content">
                 <div class="pwa-install-footer-title" style="cursor: pointer;">
                     <span class="pwa-install-icon">⬇️</span>
-                    <span>App do CFC</span>
+                    <span>${this.getAppTitle()}</span>
                 </div>
                 ${isInstalled ? `
                 <div class="pwa-install-footer-status">
@@ -267,6 +280,12 @@ class PWAInstallFooter {
                         <i class="fas fa-share-alt"></i>
                         <span>Compartilhar</span>
                     </button>
+                    ${isInApp ? `
+                    <button class="pwa-install-btn pwa-install-btn-chrome" id="pwa-open-chrome-btn">
+                        <i class="fab fa-chrome"></i>
+                        <span>Abrir no Chrome</span>
+                    </button>
+                    ` : ''}
                     ${this.isIOS ? `
                     <button class="pwa-install-btn pwa-install-btn-ios" id="pwa-ios-install-btn">
                         <i class="fas fa-mobile-alt"></i>
@@ -331,9 +350,16 @@ class PWAInstallFooter {
                 return;
             }
             
-            // Clique no título "App do CFC"
+            // Botão "Abrir no Chrome"
+            if (button && button.id === 'pwa-open-chrome-btn') {
+                console.log('[PWA Footer] Botão "Abrir no Chrome" clicado (delegação)');
+                this.openInChrome();
+                return;
+            }
+            
+            // Clique no título
             if (title) {
-                console.log('[PWA Footer] Título "App do CFC" clicado (delegação)');
+                console.log('[PWA Footer] Título clicado (delegação)');
                 this.handleTitleClick();
                 return;
             }
@@ -459,10 +485,11 @@ class PWAInstallFooter {
                 </div>
             `;
         } else {
+            const appName = this.getAppTitle();
             helpContent = `
                 <div class="pwa-help-note">
                     <i class="fas fa-info-circle"></i>
-                    <p>Para instalar o app do CFC:</p>
+                    <p>Para instalar o ${appName}:</p>
                 </div>
                 <div class="pwa-help-step">
                     <div class="pwa-help-step-number">1</div>
@@ -473,13 +500,13 @@ class PWAInstallFooter {
                 <div class="pwa-help-step">
                     <div class="pwa-help-step-number">2</div>
                     <div class="pwa-help-step-content">
-                        <p>Procure pelo ícone de instalação <i class="fas fa-download"></i> na barra de endereços</p>
+                        <p>Toque no menu (⋮) no canto superior direito</p>
                     </div>
                 </div>
                 <div class="pwa-help-step">
                     <div class="pwa-help-step-number">3</div>
                     <div class="pwa-help-step-content">
-                        <p>Ou clique no botão "Instalar App" quando aparecer</p>
+                        <p>Selecione <strong>Instalar app</strong> ou procure pelo ícone de instalação na barra de endereços</p>
                     </div>
                 </div>
             `;
@@ -540,8 +567,16 @@ class PWAInstallFooter {
      * Lidar com instalação
      */
     async handleInstall() {
+        const userType = this.options.userType || this.detectUserType();
+        const hasPrompt = !!this.deferredPrompt;
+        
+        console.log('[PWA Footer] Clique em "Instalar App" detectado');
+        console.log('[PWA Footer] Tipo detectado:', userType);
+        console.log('[PWA Footer] beforeinstallprompt disponível:', hasPrompt);
+        
         if (!this.deferredPrompt) {
-            console.warn('[PWA Footer] Deferred prompt não disponível');
+            console.warn('[PWA Footer] Deferred prompt não disponível, mostrando ajuda');
+            this.showInstallHelp();
             return;
         }
         
@@ -571,13 +606,127 @@ class PWAInstallFooter {
     }
     
     /**
+     * Abrir no Chrome (para in-app browsers)
+     */
+    openInChrome() {
+        const currentUrl = window.location.href;
+        console.log('[PWA Footer] Tentando abrir no Chrome:', currentUrl);
+        
+        // Extrair apenas o path e query string (sem o protocolo e domínio)
+        const urlParts = new URL(currentUrl);
+        const pathAndQuery = urlParts.pathname + urlParts.search + urlParts.hash;
+        
+        // Tentar usar intent do Android primeiro
+        const chromeIntent = `intent://${urlParts.host}${pathAndQuery}#Intent;scheme=https;package=com.android.chrome;end`;
+        
+        // Criar um link temporário para tentar abrir
+        const link = document.createElement('a');
+        link.href = chromeIntent;
+        link.style.display = 'none';
+        document.body.appendChild(link);
+        
+        try {
+            link.click();
+            
+            // Se não funcionar após um tempo, tentar fallback
+            setTimeout(() => {
+                // Fallback 1: Tentar com googlechrome://
+                const chromeUrl = `googlechrome://${urlParts.host}${pathAndQuery}`;
+                link.href = chromeUrl;
+                link.click();
+                
+                // Fallback 2: Se ainda não funcionar, mostrar instruções
+                setTimeout(() => {
+                    this.showChromeInstructions();
+                }, 1000);
+            }, 500);
+            
+            // Remover link após tentativas
+            setTimeout(() => {
+                if (link.parentNode) {
+                    link.parentNode.removeChild(link);
+                }
+            }, 2000);
+        } catch (error) {
+            console.error('[PWA Footer] Erro ao abrir no Chrome:', error);
+            if (link.parentNode) {
+                link.parentNode.removeChild(link);
+            }
+            this.showChromeInstructions();
+        }
+    }
+    
+    /**
+     * Mostrar instruções para abrir no Chrome
+     */
+    showChromeInstructions() {
+        const modal = document.createElement('div');
+        modal.className = 'pwa-help-modal';
+        modal.innerHTML = `
+            <div class="pwa-help-modal-content">
+                <div class="pwa-help-modal-header">
+                    <h4>Abrir no Chrome</h4>
+                    <button class="pwa-help-modal-close" type="button">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="pwa-help-modal-body">
+                    <div class="pwa-help-note">
+                        <i class="fas fa-info-circle"></i>
+                        <p>Para instalar o app, você precisa abrir esta página no Chrome:</p>
+                    </div>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">1</div>
+                        <div class="pwa-help-step-content">
+                            <p>Toque nos <strong>3 pontos</strong> (⋮) no canto superior direito</p>
+                        </div>
+                    </div>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">2</div>
+                        <div class="pwa-help-step-content">
+                            <p>Selecione <strong>Abrir no Chrome</strong> ou <strong>Abrir no navegador</strong></p>
+                        </div>
+                    </div>
+                    <div class="pwa-help-step">
+                        <div class="pwa-help-step-number">3</div>
+                        <div class="pwa-help-step-content">
+                            <p>No Chrome, procure pelo ícone de instalação na barra de endereços</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        const closeBtn = modal.querySelector('.pwa-help-modal-close');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                modal.remove();
+            });
+        }
+        
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                modal.remove();
+            }
+        });
+        
+        document.body.appendChild(modal);
+    }
+    
+    /**
      * Lidar com compartilhamento
      */
     async handleShare() {
         console.log('[PWA Footer] handleShare chamado');
         
         const url = this.getAppUrl();
-        const title = 'CFC Bom Conselho - Sistema';
+        const title = this.options.userType === 'aluno'
+            ? 'CFC Bom Conselho - App do Aluno'
+            : this.options.userType === 'instrutor'
+            ? 'CFC Bom Conselho - App do Instrutor'
+            : 'CFC Bom Conselho - Sistema';
         const text = this.options.userType === 'aluno' 
             ? 'Acesse o Portal do Aluno do CFC Bom Conselho'
             : this.options.userType === 'instrutor'

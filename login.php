@@ -173,15 +173,31 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?php echo $currentConfig['title']; ?> | Sistema CFC</title>
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="/pwa/manifest.json">
+    <!-- PWA Manifest - Carregar dinamicamente baseado no tipo -->
+    <?php
+    $manifestPath = '/pwa/manifest.json'; // Default
+    $appTitle = 'Sistema CFC';
+    $appName = 'CFC Bom Conselho';
+    
+    if ($userType === 'aluno') {
+        $manifestPath = '/pwa/manifest-aluno.json';
+        $appTitle = 'App do Aluno';
+        $appName = 'CFC Bom Conselho - Aluno';
+    } elseif ($userType === 'instrutor') {
+        $manifestPath = '/pwa/manifest-instrutor.json';
+        $appTitle = 'App do Instrutor';
+        $appName = 'CFC Bom Conselho - Instrutor';
+    }
+    ?>
+    <link rel="manifest" href="<?php echo htmlspecialchars($manifestPath); ?>">
     
     <!-- Meta tags PWA -->
     <meta name="theme-color" content="#2c3e50">
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="CFC Instrutor">
+    <meta name="apple-mobile-web-app-title" content="<?php echo htmlspecialchars($appTitle); ?>">
+    <meta name="application-name" content="<?php echo htmlspecialchars($appName); ?>">
     
     <!-- Apple Touch Icons -->
     <link rel="apple-touch-icon" href="/pwa/icons/icon-192.png">
