@@ -118,6 +118,7 @@ class PWAInstallFooter {
         // Verificação assíncrona adicional para Android (getInstalledRelatedApps)
         // Se detectar que está instalado, oculta o componente
         // Usar promise única para evitar múltiplas verificações simultâneas
+        // IMPORTANTE: Esta verificação NÃO deve causar re-renders ou piscar
         if (!this.checkInstalledPromise) {
             this.checkInstalledPromise = this.checkInstalledRelatedApps().then((isInstalled) => {
                 if (isInstalled) {
@@ -128,23 +129,25 @@ class PWAInstallFooter {
                     return;
                 }
                 // Se não está instalado e ainda não renderizou, renderizar apenas uma vez
-                if (!this.isRendered && !this.isInstalled && !this.isInitialized) {
+                // Mas só se não estiver bloqueado e não estiver instalando
+                if (!this.isRendered && !this.isInstalled && !this.isInitialized && !this.renderBlocked && !this.isInstalling) {
                     // Aguardar um pouco para garantir que não há outras verificações pendentes
                     setTimeout(() => {
-                        if (!this.isRendered && !this.isInstalled) {
+                        // Verificar novamente todas as condições antes de renderizar
+                        if (!this.isRendered && !this.isInstalled && !this.renderBlocked && !this.isInstalling) {
                             this.render();
                         }
-                    }, 100);
+                    }, 200); // Aumentado para 200ms para mais estabilidade
                 }
             }).catch((error) => {
                 console.warn('[PWA Footer] Erro na verificação assíncrona:', error);
-                // Em caso de erro, renderizar normalmente
-                if (!this.isRendered && !this.isInstalled) {
+                // Em caso de erro, renderizar normalmente apenas se todas condições OK
+                if (!this.isRendered && !this.isInstalled && !this.renderBlocked && !this.isInstalling) {
                     setTimeout(() => {
-                        if (!this.isRendered && !this.isInstalled) {
+                        if (!this.isRendered && !this.isInstalled && !this.renderBlocked && !this.isInstalling) {
                             this.render();
                         }
-                    }, 100);
+                    }, 200);
                 }
             });
         }
@@ -154,29 +157,43 @@ class PWAInstallFooter {
         
         // Aguardar DOM estar pronto e verificação assíncrona antes de renderizar
         // Se a verificação assíncrona detectar que está instalado, não renderiza
+        // IMPORTANTE: Renderizar apenas UMA vez, após todas verificações
+        const doRender = () => {
+            // Verificar todas condições antes de renderizar
+            if (!this.isInstalled && !this.isRendered && !this.renderBlocked && !this.isInstalling) {
+                // Aguardar um pouco para garantir estabilidade
+                setTimeout(() => {
+                    // Verificar novamente antes de renderizar (pode ter mudado)
+                    if (!this.isInstalled && !this.isRendered && !this.renderBlocked && !this.isInstalling) {
+                        this.render();
+                    }
+                }, 300); // 300ms para garantir que tudo está estável
+            }
+        };
+        
         if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', () => {
                 // Aguardar verificação assíncrona antes de renderizar
                 if (this.checkInstalledPromise) {
                     this.checkInstalledPromise.then(() => {
-                        if (!this.isInstalled && !this.isRendered) {
-                            this.render();
-                        }
+                        doRender();
+                    }).catch(() => {
+                        doRender();
                     });
-                } else if (!this.isInstalled && !this.isRendered) {
-                    this.render();
+                } else {
+                    doRender();
                 }
             });
         } else {
             // Se a verificação assíncrona ainda não completou, aguardar
             if (this.checkInstalledPromise) {
                 this.checkInstalledPromise.then(() => {
-                    if (!this.isInstalled && !this.isRendered) {
-                        this.render();
-                    }
+                    doRender();
+                }).catch(() => {
+                    doRender();
                 });
-            } else if (!this.isInstalled && !this.isRendered) {
-                this.render();
+            } else {
+                doRender();
             }
         }
     }
