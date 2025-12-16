@@ -175,12 +175,14 @@ class PWAManager {
             e.preventDefault();
             this.deferredPrompt = e;
             
+            // Desabilitado: banner removido para evitar confusão
+            // O footer do login já tem o botão de instalação
             // Só mostrar banner se ainda deve mostrar baseado nas escolhas do usuário
-            if (this.shouldShowInstallPrompt()) {
-                this.showInstallBanner();
-            } else {
-                console.log('[PWA] beforeinstallprompt ignorado - usuário já escolheu anteriormente');
-            }
+            // if (this.shouldShowInstallPrompt()) {
+            //     this.showInstallBanner();
+            // } else {
+            //     console.log('[PWA] beforeinstallprompt ignorado - usuário já escolheu anteriormente');
+            // }
         });
         
         // Evento appinstalled - quando o app é instalado
@@ -677,13 +679,15 @@ class PWAManager {
      * Verificar se deve mostrar prompt e eventualmente mostrar
      */
     maybeShowInstallPrompt() {
+        // Desabilitado: banner removido para evitar confusão
+        // O footer do login já tem o botão de instalação
         // Sempre verificar se deve mostrar antes de tentar mostrar
-        if (this.shouldShowInstallPrompt()) {
-            console.log('[PWA] Condições atendidas, mostrando prompt de instalação');
-            this.showInstallPrompt();
-        } else {
-            console.log('[PWA] Condições não atendidas para mostrar prompt de instalação');
-        }
+        // if (this.shouldShowInstallPrompt()) {
+        //     console.log('[PWA] Condições atendidas, mostrando prompt de instalação');
+        //     this.showInstallPrompt();
+        // } else {
+        //     console.log('[PWA] Condições não atendidas para mostrar prompt de instalação');
+        // }
     }
 
     /**
@@ -705,12 +709,14 @@ class PWAManager {
             return;
         }
         
+        // Desabilitado: banner removido para evitar confusão
+        // O footer do login já tem o botão de instalação
         // Mostrar banner de instalação
-        console.log('[PWA] Mostrando prompt de instalação');
-        this.showInstallBanner();
+        // console.log('[PWA] Mostrando prompt de instalação');
+        // this.showInstallBanner();
         
         // Salvar que foi mostrado hoje
-        localStorage.setItem('pwa-install-prompt-last-shown', today);
+        // localStorage.setItem('pwa-install-prompt-last-shown', today);
     }
 }
 
