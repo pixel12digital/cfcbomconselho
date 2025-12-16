@@ -1629,6 +1629,56 @@ class PWAInstallFooter {
     }
     
     /**
+     * Proteção Android: fazer blur de inputs quando o card estiver visível
+     * Previne que o teclado abra automaticamente ao rolar até o card
+     */
+    setupMobileBlurProtection(footerBlock) {
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        if (!isMobile) return;
+        
+        console.log('[PWA Footer] Configurando proteção de blur para mobile');
+        
+        // Função para fazer blur de inputs focados
+        const blurActiveInput = () => {
+            const activeElement = document.activeElement;
+            if (activeElement && (activeElement.tagName === 'INPUT' || activeElement.tagName === 'TEXTAREA')) {
+                console.log('[PWA Footer] Fazendo blur do input ativo:', activeElement.id || activeElement.name);
+                activeElement.blur();
+            }
+        };
+        
+        // Usar IntersectionObserver para detectar quando o card entra em viewport
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting && entry.intersectionRatio > 0.1) {
+                    // Card está visível, fazer blur de inputs
+                    blurActiveInput();
+                }
+            });
+        }, {
+            threshold: [0.1, 0.5, 1.0],
+            rootMargin: '0px'
+        });
+        
+        // Observar o card
+        observer.observe(footerBlock);
+        
+        // Também fazer blur quando o modal de ajuda for aberto
+        const originalShowHelp = this.showInstallHelp.bind(this);
+        this.showInstallHelp = () => {
+            blurActiveInput();
+            originalShowHelp();
+        };
+        
+        // Fazer blur ao clicar em qualquer botão do card
+        footerBlock.addEventListener('click', (e) => {
+            if (e.target.closest('.pwa-install-btn, .pwa-share-btn')) {
+                blurActiveInput();
+            }
+        }, { passive: true });
+    }
+    
+    /**
      * Ocultar componente
      */
     hide() {
