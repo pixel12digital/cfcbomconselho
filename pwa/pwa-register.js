@@ -227,16 +227,21 @@ class PWAManager {
     }
     
     showInstallBanner() {
-        // Criar banner de instalação
-        const banner = this.createBanner({
-            type: 'install',
-            title: 'Instalar App',
-            message: 'Instale o CFC Bom Conselho para acesso rápido e funcionalidades offline.',
-            buttonText: 'Instalar',
-            buttonAction: () => this.installApp()
-        });
+        // DESABILITADO: Banner removido para evitar confusão
+        // O footer do login (install-footer.js) já tem o botão de instalação
+        // Não criar banner para manter apenas uma opção de instalação
+        console.log('[PWA] showInstallBanner() chamado mas desabilitado - use o footer do login');
+        return;
         
-        document.body.appendChild(banner);
+        // Código original comentado:
+        // const banner = this.createBanner({
+        //     type: 'install',
+        //     title: 'Instalar App',
+        //     message: 'Instale o CFC Bom Conselho para acesso rápido e funcionalidades offline.',
+        //     buttonText: 'Instalar',
+        //     buttonAction: () => this.installApp()
+        // });
+        // document.body.appendChild(banner);
     }
     
     showUpdateBanner() {
@@ -736,7 +741,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const isInstrutorArea = path.includes('/instrutor/');
     const isLoginPage = path.includes('/login.php') || path === '/';
     
-    if (isAdminArea || isInstrutorArea || isLoginPage) {
+    // NÃO inicializar na página de login - o install-footer.js já cuida disso
+    // Isso evita mostrar dois prompts de instalação
+    if (isAdminArea || isInstrutorArea) {
         window.pwaManager = new PWAManager();
         
         // Debug: mostrar estado das escolhas do usuário
@@ -746,6 +753,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const expiry = new Date(parseInt(timestamp));
             console.log(`[PWA] Estado anterior: ${choice}, expira em: ${expiry.toLocaleString()}`);
         }
+    } else if (isLoginPage) {
+        console.log('[PWA] Página de login detectada - PWAManager não será inicializado (install-footer.js cuida da instalação)');
     }
 });
 
