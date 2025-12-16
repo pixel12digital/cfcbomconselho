@@ -111,9 +111,14 @@ class PWAManager {
                 this.registration.installing.addEventListener('statechange', () => {
                     console.log('[PWA] SW state mudou para:', this.registration.installing.state);
                     if (this.registration.installing.state === 'activated') {
-                        console.log('[PWA] SW ativado! Recarregue a página para o SW controlar.');
-                        // Forçar reload após ativação (opcional)
-                        // window.location.reload();
+                        console.log('[PWA] SW ativado! Aguardando clients.claim()...');
+                        // Aguardar um pouco e verificar se está controlando
+                        setTimeout(() => {
+                            if (!navigator.serviceWorker.controller) {
+                                console.log('[PWA] SW ativado mas não está controlando. Recarregando página...');
+                                window.location.reload();
+                            }
+                        }, 1000);
                     }
                 });
             }
@@ -121,6 +126,21 @@ class PWAManager {
             // Se está waiting, pode precisar de skipWaiting
             if (this.registration.waiting) {
                 console.log('[PWA] SW waiting encontrado. Pode precisar de skipWaiting.');
+                // Se há um SW waiting, pode ser que precise recarregar
+                if (!navigator.serviceWorker.controller) {
+                    console.log('[PWA] SW waiting e sem controller. Recarregando para ativar...');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 500);
+                }
+            }
+            
+            // Se já está ativo mas não está controlando, recarregar
+            if (this.registration.active && !navigator.serviceWorker.controller) {
+                console.log('[PWA] SW ativo mas não está controlando. Recarregando página...');
+                setTimeout(() => {
+                    window.location.reload();
+                }, 1000);
             }
             
             // Verificar atualizações
