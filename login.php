@@ -191,12 +191,12 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
     
     if ($userType === 'aluno') {
         $manifestPath = ($basePath ? $basePath : '') . '/pwa/manifest-aluno.json';
-        $appTitle = 'App do Aluno';
-        $appName = 'CFC Bom Conselho - Aluno';
+        $appTitle = 'Aluno CFC';
+        $appName = 'Aluno CFC';
     } elseif ($userType === 'instrutor') {
         $manifestPath = ($basePath ? $basePath : '') . '/pwa/manifest-instrutor.json';
-        $appTitle = 'App do Instrutor';
-        $appName = 'CFC Bom Conselho - Instrutor';
+        $appTitle = 'Instrutor CFC';
+        $appName = 'Instrutor CFC';
     }
     ?>
     <link rel="manifest" href="<?php echo htmlspecialchars($manifestPath); ?>">

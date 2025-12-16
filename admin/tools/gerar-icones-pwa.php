@@ -1,7 +1,7 @@
 <?php
 /**
  * Script para gerar ícones PWA circulares a partir do logo do CFC
- * Cria versões circulares (any) e maskable com fundo branco
+ * Cria versões circulares (any) e maskable com fundo azul #1A365D
  */
 
 // Caminhos
@@ -88,7 +88,7 @@ function createCircularIcon($source, $size) {
         $newWidth, $newHeight, $logoWidth, $logoHeight
     );
     
-    // Aplicar logo sobre o círculo branco
+    // Aplicar logo sobre o círculo azul
     imagealphablending($icon, true);
     imagecopy($icon, $logoResized, (int)$offsetX, (int)$offsetY, 0, 0, $newWidth, $newHeight);
     
@@ -97,12 +97,12 @@ function createCircularIcon($source, $size) {
     return $icon;
 }
 
-// Função para criar ícone maskable (fundo branco sólido, logo com margem grande)
+// Função para criar ícone maskable (fundo azul #1A365D sólido, logo com margem grande)
 function createMaskableIcon($source, $size) {
-    // Criar imagem com fundo branco sólido
+    // Criar imagem com fundo azul #1A365D sólido
     $icon = imagecreatetruecolor($size, $size);
-    $white = imagecolorallocate($icon, 255, 255, 255);
-    imagefill($icon, 0, 0, $white);
+    $blue = imagecolorallocate($icon, 26, 54, 93); // #1A365D
+    imagefill($icon, 0, 0, $blue);
     
     // Safe zone: 80% do tamanho (deixar 20% de margem para máscara do Android)
     $safeZone = $size * 0.8;
@@ -136,7 +136,7 @@ function createMaskableIcon($source, $size) {
         $newWidth, $newHeight, $logoWidth, $logoHeight
     );
     
-    // Aplicar logo sobre fundo branco
+    // Aplicar logo sobre fundo azul
     imagealphablending($icon, true);
     imagecopy($icon, $logoResized, (int)$offsetX, (int)$offsetY, 0, 0, $newWidth, $newHeight);
     
