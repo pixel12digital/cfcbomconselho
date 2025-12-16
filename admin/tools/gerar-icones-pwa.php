@@ -1,7 +1,7 @@
 <?php
 /**
- * Script para gerar ícones PWA a partir do logo do CFC
- * Cria versões circulares nos tamanhos necessários (192x192, 512x512)
+ * Script para gerar ícones PWA circulares a partir do logo do CFC
+ * Cria versões circulares (any) e maskable com fundo branco
  */
 
 // Caminhos
@@ -23,15 +23,7 @@ if (!is_dir($outputDir)) {
     mkdir($outputDir, 0755, true);
 }
 
-echo "🎨 Gerando ícones PWA a partir do logo do CFC...\n\n";
-
-// Tamanhos necessários
-$sizes = [
-    ['size' => 192, 'name' => 'icon-192.png', 'maskable' => false],
-    ['size' => 512, 'name' => 'icon-512.png', 'maskable' => false],
-    ['size' => 512, 'name' => 'icon-512-maskable.png', 'maskable' => true],
-    ['size' => 96, 'name' => 'icon-96.png', 'maskable' => false],
-];
+echo "🎨 Gerando ícones PWA circulares a partir do logo do CFC...\n\n";
 
 // Carregar logo original
 $logo = imagecreatefrompng($logoOriginal);
@@ -45,8 +37,8 @@ $logoHeight = imagesy($logo);
 
 echo "📐 Logo original: {$logoWidth}x{$logoHeight}px\n\n";
 
-// Função para criar ícone circular
-function createCircularIcon($source, $size, $maskable = false) {
+// Função para criar ícone circular (any purpose)
+function createCircularIcon($source, $size) {
     // Criar imagem base (transparente)
     $icon = imagecreatetruecolor($size, $size);
     imagealphablending($icon, false);
@@ -56,89 +48,120 @@ function createCircularIcon($source, $size, $maskable = false) {
     $transparent = imagecolorallocatealpha($icon, 0, 0, 0, 127);
     imagefill($icon, 0, 0, $transparent);
     
-    // Para maskable, deixar 20% de padding (safe zone)
-    $padding = $maskable ? $size * 0.2 : 0;
-    $drawSize = $size - ($padding * 2);
+    // Calcular tamanho do círculo (deixar margem de 5% para borda)
+    $circleSize = $size * 0.9;
     $centerX = $size / 2;
     $centerY = $size / 2;
-    $radius = $drawSize / 2;
+    $radius = $circleSize / 2;
     
-    // Criar máscara circular
-    $mask = imagecreatetruecolor($size, $size);
-    imagealphablending($mask, false);
-    imagesavealpha($mask, true);
-    $transparentMask = imagecolorallocatealpha($mask, 0, 0, 0, 127);
-    imagefill($mask, 0, 0, $transparentMask);
+    // Criar círculo branco
+    $white = imagecolorallocate($icon, 255, 255, 255);
+    imagefilledellipse($icon, $centerX, $centerY, $circleSize, $circleSize, $white);
     
-    // Desenhar círculo branco na máscara
-    $white = imagecolorallocate($mask, 255, 255, 255);
-    imagefilledellipse($mask, $centerX, $centerY, $drawSize, $drawSize, $white);
-    
-    // Redimensionar logo para caber no círculo
-    $logoResized = imagecreatetruecolor($drawSize, $drawSize);
-    imagealphablending($logoResized, false);
-    imagesavealpha($logoResized, true);
-    
-    // Obter dimensões do logo original
+    // Redimensionar logo para caber dentro do círculo (com margem de 15%)
+    $logoArea = $circleSize * 0.85; // 85% do círculo para o logo
     $logoWidth = imagesx($source);
     $logoHeight = imagesy($source);
     
     // Calcular escala para manter proporção
-    $scale = min($drawSize / $logoWidth, $drawSize / $logoHeight);
+    $scale = min($logoArea / $logoWidth, $logoArea / $logoHeight);
     $newWidth = (int)($logoWidth * $scale);
     $newHeight = (int)($logoHeight * $scale);
     
-    // Centralizar
-    $offsetX = ($drawSize - $newWidth) / 2;
-    $offsetY = ($drawSize - $newHeight) / 2;
+    // Centralizar logo
+    $offsetX = $centerX - ($newWidth / 2);
+    $offsetY = $centerY - ($newHeight / 2);
     
     // Redimensionar logo
+    $logoResized = imagecreatetruecolor($newWidth, $newHeight);
+    imagealphablending($logoResized, false);
+    imagesavealpha($logoResized, true);
+    $transparentLogo = imagecolorallocatealpha($logoResized, 0, 0, 0, 127);
+    imagefill($logoResized, 0, 0, $transparentLogo);
+    
     imagecopyresampled(
         $logoResized, $source,
         0, 0, 0, 0,
         $newWidth, $newHeight, $logoWidth, $logoHeight
     );
     
-    // Aplicar máscara circular
+    // Aplicar logo sobre o círculo branco
     imagealphablending($icon, true);
-    for ($x = 0; $x < $size; $x++) {
-        for ($y = 0; $y < $size; $y++) {
-            $maskPixel = imagecolorat($mask, $x, $y);
-            $maskAlpha = ($maskPixel >> 24) & 0xFF;
-            
-            if ($maskAlpha < 127) { // Dentro do círculo
-                $logoX = $x - $padding - $offsetX;
-                $logoY = $y - $padding - $offsetY;
-                
-                if ($logoX >= 0 && $logoX < $newWidth && $logoY >= 0 && $logoY < $newHeight) {
-                    $logoPixel = imagecolorat($logoResized, $logoX, $logoY);
-                    imagesetpixel($icon, $x, $y, $logoPixel);
-                }
-            }
-        }
-    }
+    imagecopy($icon, $logoResized, (int)$offsetX, (int)$offsetY, 0, 0, $newWidth, $newHeight);
     
-    // Adicionar borda e sombra (simulação)
-    // Borda branca sutil
-    $borderColor = imagecolorallocatealpha($icon, 255, 255, 255, 50);
-    imagefilledellipse($icon, $centerX, $centerY, $drawSize + 4, $drawSize + 4, $borderColor);
-    
-    // Limpar recursos
-    imagedestroy($mask);
     imagedestroy($logoResized);
     
     return $icon;
 }
 
-// Gerar cada tamanho
-foreach ($sizes as $config) {
+// Função para criar ícone maskable (fundo branco sólido, logo com margem grande)
+function createMaskableIcon($source, $size) {
+    // Criar imagem com fundo branco sólido
+    $icon = imagecreatetruecolor($size, $size);
+    $white = imagecolorallocate($icon, 255, 255, 255);
+    imagefill($icon, 0, 0, $white);
+    
+    // Safe zone: 80% do tamanho (deixar 20% de margem para máscara do Android)
+    $safeZone = $size * 0.8;
+    $centerX = $size / 2;
+    $centerY = $size / 2;
+    
+    // Redimensionar logo para caber na safe zone
+    $logoWidth = imagesx($source);
+    $logoHeight = imagesy($source);
+    
+    // Calcular escala (usar 70% da safe zone para o logo, deixando margem)
+    $logoArea = $safeZone * 0.7;
+    $scale = min($logoArea / $logoWidth, $logoArea / $logoHeight);
+    $newWidth = (int)($logoWidth * $scale);
+    $newHeight = (int)($logoHeight * $scale);
+    
+    // Centralizar logo
+    $offsetX = $centerX - ($newWidth / 2);
+    $offsetY = $centerY - ($newHeight / 2);
+    
+    // Redimensionar logo
+    $logoResized = imagecreatetruecolor($newWidth, $newHeight);
+    imagealphablending($logoResized, false);
+    imagesavealpha($logoResized, true);
+    $transparentLogo = imagecolorallocatealpha($logoResized, 0, 0, 0, 127);
+    imagefill($logoResized, 0, 0, $transparentLogo);
+    
+    imagecopyresampled(
+        $logoResized, $source,
+        0, 0, 0, 0,
+        $newWidth, $newHeight, $logoWidth, $logoHeight
+    );
+    
+    // Aplicar logo sobre fundo branco
+    imagealphablending($icon, true);
+    imagecopy($icon, $logoResized, (int)$offsetX, (int)$offsetY, 0, 0, $newWidth, $newHeight);
+    
+    imagedestroy($logoResized);
+    
+    return $icon;
+}
+
+// Gerar ícones
+$icons = [
+    ['size' => 192, 'name' => 'cfc-192-circle.png', 'type' => 'circular'],
+    ['size' => 512, 'name' => 'cfc-512-circle.png', 'type' => 'circular'],
+    ['size' => 192, 'name' => 'cfc-192-maskable.png', 'type' => 'maskable'],
+    ['size' => 512, 'name' => 'cfc-512-maskable.png', 'type' => 'maskable'],
+];
+
+foreach ($icons as $config) {
     $size = $config['size'];
     $filename = $config['name'];
-    $maskable = isset($config['maskable']) && $config['maskable'];
+    $type = $config['type'];
     
-    echo "🖼️  Gerando {$filename} ({$size}x{$size}px)... ";
+    echo "🖼️  Gerando {$filename} ({$size}x{$size}px, {$type})... ";
     
-    $icon = createCircularIcon($logo, $size, $maskable);
+    if ($type === 'circular') {
+        $icon = createCircularIcon($logo, $size);
+    } else {
+        $icon = createMaskableIcon($logo, $size);
+    }
     
     $outputPath = $outputDir . $filename;
     if (imagepng($icon, $outputPath, 9)) {
