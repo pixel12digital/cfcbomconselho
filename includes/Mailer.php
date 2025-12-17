@@ -8,30 +8,59 @@
 class Mailer {
     
     /**
+     * Obter configurações SMTP (do banco primeiro, fallback para config.php)
+     * 
+     * @return array|null ['host', 'port', 'user', 'pass', 'encryption_mode', 'from_name', 'from_email']
+     */
+    private static function getSMTPConfig() {
+        // Tentar obter do banco primeiro
+        if (class_exists('SMTPConfigService')) {
+            require_once __DIR__ . '/SMTPConfigService.php';
+            $dbConfig = SMTPConfigService::getConfig();
+            if ($dbConfig) {
+                return $dbConfig;
+            }
+        }
+        
+        // Fallback para config.php
+        $host = defined('SMTP_HOST') ? SMTP_HOST : '';
+        $port = defined('SMTP_PORT') ? SMTP_PORT : 587;
+        $user = defined('SMTP_USER') ? SMTP_USER : '';
+        $pass = defined('SMTP_PASS') ? SMTP_PASS : '';
+        $encryption = 'tls'; // Padrão
+        
+        // Verificar se não são placeholders
+        if (empty($host) || empty($user) || empty($pass)) {
+            return null;
+        }
+        
+        if (strpos($user, 'seu_email@seudominio.com') !== false) {
+            return null;
+        }
+        
+        if (strpos($pass, 'sua_senha_smtp') !== false) {
+            return null;
+        }
+        
+        return [
+            'host' => $host,
+            'port' => $port,
+            'user' => $user,
+            'pass' => $pass,
+            'encryption_mode' => $encryption,
+            'from_name' => null,
+            'from_email' => null
+        ];
+    }
+    
+    /**
      * Verificar se SMTP está configurado
      * 
      * @return bool
      */
     public static function isConfigured() {
-        $host = defined('SMTP_HOST') ? SMTP_HOST : '';
-        $user = defined('SMTP_USER') ? SMTP_USER : '';
-        $pass = defined('SMTP_PASS') ? SMTP_PASS : '';
-        
-        // Verificar se não são placeholders
-        if (empty($host) || empty($user) || empty($pass)) {
-            return false;
-        }
-        
-        // Verificar se não são valores padrão
-        if (strpos($user, 'seu_email@seudominio.com') !== false) {
-            return false;
-        }
-        
-        if (strpos($pass, 'sua_senha_smtp') !== false) {
-            return false;
-        }
-        
-        return true;
+        $config = self::getSMTPConfig();
+        return $config !== null;
     }
     
     /**
@@ -114,32 +143,55 @@ class Mailer {
      */
     private static function sendSMTP($to, $subject, $htmlBody, $textBody) {
         try {
+            // Obter configurações SMTP (banco primeiro, fallback config.php)
+            $config = self::getSMTPConfig();
+            if (!$config) {
+                return [
+                    'success' => false,
+                    'message' => 'Configurações SMTP não encontradas'
+                ];
+            }
+            
+            // Determinar remetente
+            $fromEmail = $config['from_email'] ?? $config['user'];
+            $fromName = $config['from_name'] ?? 'CFC Bom Conselho';
+            
             // Configurar headers
             $headers = [];
             $headers[] = 'MIME-Version: 1.0';
             $headers[] = 'Content-Type: text/html; charset=UTF-8';
-            $headers[] = 'From: CFC Bom Conselho <' . (defined('SMTP_USER') ? SMTP_USER : 'noreply@cfcbomconselho.com.br') . '>';
-            $headers[] = 'Reply-To: ' . (defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : 'contato@cfcbomconselho.com.br');
+            $headers[] = 'From: ' . $fromName . ' <' . $fromEmail . '>';
+            $headers[] = 'Reply-To: ' . (defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : $fromEmail);
             $headers[] = 'X-Mailer: PHP/' . phpversion();
             
             $headersString = implode("\r\n", $headers);
             
-            // Tentar enviar
+            // Tentar enviar via mail() nativo
+            // Nota: Para produção, considere usar PHPMailer com autenticação SMTP real
             $sent = @mail($to, $subject, $htmlBody, $headersString);
             
             if ($sent) {
+                if (LOG_ENABLED) {
+                    error_log(sprintf('[MAILER] Email enviado via SMTP - From: %s, To: %s', $fromEmail, $to));
+                }
                 return [
                     'success' => true,
                     'message' => 'Email enviado com sucesso'
                 ];
             } else {
+                if (LOG_ENABLED) {
+                    error_log('[MAILER] Falha ao enviar email - função mail() retornou false');
+                }
                 return [
                     'success' => false,
-                    'message' => 'Falha ao enviar email (função mail() retornou false)'
+                    'message' => 'Falha ao enviar email (função mail() retornou false). Verifique configurações SMTP do servidor.'
                 ];
             }
             
         } catch (Exception $e) {
+            if (LOG_ENABLED) {
+                error_log('[MAILER] Erro ao enviar email: ' . $e->getMessage());
+            }
             return [
                 'success' => false,
                 'message' => 'Erro ao enviar email: ' . $e->getMessage()

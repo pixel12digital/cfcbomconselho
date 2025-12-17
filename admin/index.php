@@ -1851,11 +1851,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <span>Diagnóstico de Queries</span>
                         </a>
                         <?php endif; ?>
-                        <!-- TODO: Verificar se configuracoes.php aceita action=geral ou criar página específica -->
-                        <a href="#" class="nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
-                            <i class="fas fa-sliders-h"></i>
-                            <span>Configurações Gerais</span>
-                            <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                        <a href="index.php?page=configuracoes-smtp" class="nav-sublink <?php echo $page === 'configuracoes-smtp' ? 'active' : ''; ?>">
+                            <i class="fas fa-envelope"></i>
+                            <span>E-mail (SMTP)</span>
                         </a>
                     </div>
                 </div>
@@ -2163,11 +2161,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <span>Diagnóstico de Queries</span>
                                 </a>
                                 <?php endif; ?>
-                                <!-- TODO: Verificar se configuracoes.php aceita action=geral ou criar página específica -->
-                                <a href="#" class="mobile-nav-sublink" onclick="alert('Página em desenvolvimento'); return false;" style="opacity: 0.6; cursor: not-allowed;">
-                                    <i class="fas fa-sliders-h"></i>
-                                    <span>Configurações Gerais</span>
-                                    <small style="color: #999; font-size: 0.7em;">(Em breve)</small>
+                                <a href="index.php?page=configuracoes-smtp" class="mobile-nav-sublink <?php echo $page === 'configuracoes-smtp' ? 'active' : ''; ?>">
+                                    <i class="fas fa-envelope"></i>
+                                    <span>E-mail (SMTP)</span>
                                 </a>
                             </div>
                         </div>
