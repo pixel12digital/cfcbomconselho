@@ -1850,6 +1850,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                             <i class="fas fa-search"></i>
                             <span>Diagnóstico de Queries</span>
                         </a>
+                        <?php endif; ?>
                         <?php if ($isAdmin): ?>
                         <a href="index.php?page=configuracoes-smtp" class="nav-sublink <?php echo $page === 'configuracoes-smtp' ? 'active' : ''; ?>">
                             <i class="fas fa-envelope"></i>
@@ -2161,6 +2162,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $page === 'veiculos') {
                                     <i class="fas fa-search"></i>
                                     <span>Diagnóstico de Queries</span>
                                 </a>
+                                <?php endif; ?>
                                 <?php if ($isAdmin): ?>
                                 <a href="index.php?page=configuracoes-smtp" class="mobile-nav-sublink <?php echo $page === 'configuracoes-smtp' ? 'active' : ''; ?>">
                                     <i class="fas fa-envelope"></i>
