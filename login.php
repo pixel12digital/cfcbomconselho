@@ -17,7 +17,8 @@ if (isLoggedIn()) {
 
 $error = '';
 $success = '';
-$userType = $_GET['type'] ?? 'admin'; // Tipo de usuário selecionado
+$userType = $_GET['type'] ?? ''; // Tipo de usuário selecionado (vazio = tela de seleção)
+$hasSpecificType = !empty($userType); // Se tem type definido, mostrar apenas aquele tipo
 
 // Processar formulário de login
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -145,7 +146,7 @@ $userTypes = [
         'field_type' => 'email'
     ],
     'secretaria' => [
-        'title' => 'Atendente CFC',
+        'title' => 'Secretaria',
         'placeholder' => 'atendente@cfc.com',
         'field_label' => 'E-mail',
         'field_type' => 'email'
@@ -164,7 +165,9 @@ $userTypes = [
     ]
 ];
 
-$currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
+// Se não tiver type definido, usar 'admin' como padrão para exibição
+$displayType = $hasSpecificType ? $userType : 'admin';
+$currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -449,6 +452,22 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             font-size: 16px;
         }
         
+        /* Texto informativo do portal */
+        .login-portal-info {
+            margin-top: 15px;
+            padding: 12px 16px;
+            background: #e8f4f8;
+            border-left: 4px solid #1A365D;
+            border-radius: 4px;
+        }
+        
+        .portal-info-text {
+            color: #2c3e50;
+            font-size: 14px;
+            margin: 0;
+            line-height: 1.5;
+        }
+        
         .form-group {
             margin-bottom: 20px;
         }
@@ -665,6 +684,32 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             outline-offset: 2px;
             border-radius: 2px;
         }
+        
+        /* Link "Trocar tipo de acesso" */
+        .change-access-type {
+            margin-top: 20px;
+            text-align: center;
+            padding-top: 20px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .change-access-link {
+            color: rgba(255, 255, 255, 0.7);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s ease;
+        }
+        
+        .change-access-link:hover {
+            color: #ffffff;
+            text-decoration: underline;
+        }
+        
+        .change-access-link:focus {
+            outline: 2px solid rgba(255, 255, 255, 0.8);
+            outline-offset: 2px;
+            border-radius: 2px;
+        }
     </style>
 </head>
 <body>
@@ -677,17 +722,38 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
         </div>
             
             <div class="user-types">
-                <?php foreach ($userTypes as $type => $config): 
-                    // Portal do Aluno: mostrar APENAS Aluno
-                    if ($userType === 'aluno' && $type !== 'aluno') continue;
-                    // Portal do CFC: NÃO mostrar Aluno
-                    if ($userType !== 'aluno' && $type === 'aluno') continue;
+                <?php 
+                // Se tiver type específico, mostrar apenas aquele tipo
+                // Se não tiver, mostrar todos (exceto aluno, que tem seu próprio portal)
+                if ($hasSpecificType) {
+                    // Mostrar apenas o tipo específico quando type estiver definido
+                    $typeToShow = $userType;
+                    if (isset($userTypes[$typeToShow])) {
+                        $config = $userTypes[$typeToShow];
+                        ?>
+                        <a href="?type=<?php echo $typeToShow; ?>" class="user-type-card active">
+                            <div class="user-type-title"><?php echo $config['title']; ?></div>
+                        </a>
+                        <?php
+                    }
+                } else {
+                    // Tela de seleção: mostrar todos exceto aluno
+                    foreach ($userTypes as $type => $config): 
+                        // Não mostrar Aluno na tela de seleção (tem portal próprio)
+                        if ($type === 'aluno') continue;
+                    ?>
+                        <a href="?type=<?php echo $type; ?>" class="user-type-card">
+                            <div class="user-type-title"><?php echo $config['title']; ?></div>
+                        </a>
+                    <?php endforeach;
+                }
                 ?>
-                    <a href="?type=<?php echo $type; ?>" class="user-type-card <?php echo $userType === $type ? 'active' : ''; ?>">
-                        <div class="user-type-title"><?php echo $config['title']; ?></div>
-                    </a>
-                <?php endforeach; ?>
             </div>
+            <?php if ($hasSpecificType): ?>
+                <div class="change-access-type">
+                    <a href="login.php" class="change-access-link">Trocar tipo de acesso</a>
+                </div>
+            <?php endif; ?>
                 </div>
                     
         <!-- Painel Direito - Formulário de Login -->
@@ -695,6 +761,23 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
             <div class="login-header">
                 <h2 class="login-title"><?php echo $currentConfig['title']; ?></h2>
                 <p class="login-subtitle">Entre com suas credenciais para acessar o sistema</p>
+                <?php if ($hasSpecificType): ?>
+                    <div class="login-portal-info">
+                        <?php 
+                        switch ($userType) {
+                            case 'secretaria':
+                                echo '<p class="portal-info-text">Acesso para Secretaria. Administrador use Portal do Administrador.</p>';
+                                break;
+                            case 'instrutor':
+                                echo '<p class="portal-info-text">Acesso para Instrutor (instalação do app disponível aqui).</p>';
+                                break;
+                            case 'admin':
+                                echo '<p class="portal-info-text">Acesso para Administrador.</p>';
+                                break;
+                        }
+                        ?>
+                    </div>
+                <?php endif; ?>
                     </div>
                             
                             <?php if ($error): ?>
@@ -716,7 +799,7 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                             <?php endif; ?>
                             
             <form method="POST">
-                <input type="hidden" name="user_type" value="<?php echo $userType; ?>">
+                <input type="hidden" name="user_type" value="<?php echo $displayType; ?>">
                 
                 <div class="form-group">
                     <label for="email" class="form-label"><?php echo $currentConfig['field_label']; ?></label>
@@ -752,8 +835,14 @@ $currentConfig = $userTypes[$userType] ?? $userTypes['admin'];
                         <input type="checkbox" id="remember" name="remember">
                         <label for="remember">Lembrar de mim</label>
                             </div>
-                    <a href="#" class="forgot-password">Esqueci minha senha</a>
+                    <a href="forgot-password.php<?php echo $hasSpecificType ? '?type=' . htmlspecialchars($userType) : ''; ?>" class="forgot-password">Esqueci minha senha</a>
                             </div>
+                <?php else: ?>
+                <div class="form-options">
+                    <div class="form-help" style="text-align: center; margin-top: 10px; color: #7f8c8d;">
+                        <a href="forgot-password.php?type=aluno" style="color: #1A365D; text-decoration: none;">Esqueci minha senha</a>
+                    </div>
+                </div>
                 <?php endif; ?>
                 
                 <button type="submit" class="btn-login">
