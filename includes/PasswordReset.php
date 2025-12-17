@@ -99,7 +99,22 @@ class PasswordReset {
             $tokenHash = hash('sha256', $token); // Hash SHA256 para armazenar
             
             // Expiração: 30 minutos
-            $expiresAt = date('Y-m-d H:i:s', time() + (30 * 60));
+            // Usar UTC para evitar problemas de timezone entre PHP e MySQL
+            $expiresAt = gmdate('Y-m-d H:i:s', time() + (30 * 60));
+            
+            // Log para diagnóstico
+            if (LOG_ENABLED) {
+                $now = date('Y-m-d H:i:s');
+                $nowUtc = gmdate('Y-m-d H:i:s');
+                error_log(sprintf(
+                    '[PASSWORD_RESET] Token gerado - expires_at: %s (UTC: %s), now: %s (UTC: %s), timezone: %s',
+                    $expiresAt,
+                    gmdate('Y-m-d H:i:s', time() + (30 * 60)),
+                    $now,
+                    $nowUtc,
+                    date_default_timezone_get()
+                ));
+            }
             
             // Invalidar tokens anteriores do mesmo login (não usados)
             try {
@@ -115,6 +130,9 @@ class PasswordReset {
             }
             
             // Salvar token no banco
+            // Usar UTC para created_at também para consistência
+            $createdAt = gmdate('Y-m-d H:i:s');
+            
             $resetData = [
                 'login' => $login,
                 'token_hash' => $tokenHash,
@@ -122,7 +140,7 @@ class PasswordReset {
                 'ip' => $ip,
                 'expires_at' => $expiresAt,
                 'used_at' => null,
-                'created_at' => date('Y-m-d H:i:s')
+                'created_at' => $createdAt
             ];
             
             $resetId = $db->insert('password_resets', $resetData);
@@ -190,12 +208,48 @@ class PasswordReset {
             $tokenHash = hash('sha256', $token);
             
             // Buscar token (não expirado e não usado)
+            // Usar UTC_TIMESTAMP() para garantir mesma timezone
             $reset = $db->fetch(
-                "SELECT id, login, type, expires_at, used_at FROM password_resets 
-                 WHERE token_hash = :token_hash AND expires_at > NOW() AND used_at IS NULL 
+                "SELECT id, login, type, expires_at, used_at, created_at FROM password_resets 
+                 WHERE token_hash = :token_hash AND expires_at > UTC_TIMESTAMP() AND used_at IS NULL 
                  LIMIT 1",
                 ['token_hash' => $tokenHash]
             );
+            
+            // Log detalhado para diagnóstico
+            if (LOG_ENABLED) {
+                $nowUtc = gmdate('Y-m-d H:i:s');
+                if ($reset) {
+                    error_log(sprintf(
+                        '[PASSWORD_RESET] Token válido encontrado - expires_at: %s, now (UTC): %s, created_at: %s',
+                        $reset['expires_at'],
+                        $nowUtc,
+                        $reset['created_at'] ?? 'N/A'
+                    ));
+                } else {
+                    // Verificar se existe mas está expirado
+                    $expiredCheck = $db->fetch(
+                        "SELECT id, expires_at, used_at FROM password_resets 
+                         WHERE token_hash = :token_hash 
+                         LIMIT 1",
+                        ['token_hash' => $tokenHash]
+                    );
+                    if ($expiredCheck) {
+                        error_log(sprintf(
+                            '[PASSWORD_RESET] Token encontrado mas INVÁLIDO - expires_at: %s, now (UTC): %s, used_at: %s, reason: %s',
+                            $expiredCheck['expires_at'],
+                            $nowUtc,
+                            $expiredCheck['used_at'] ?? 'NULL',
+                            ($expiredCheck['expires_at'] <= $nowUtc) ? 'EXPIRADO' : (($expiredCheck['used_at'] ?? null) ? 'JÁ USADO' : 'OUTRO')
+                        ));
+                    } else {
+                        error_log(sprintf(
+                            '[PASSWORD_RESET] Token não encontrado no banco - token_hash: %s',
+                            substr($tokenHash, 0, 16) . '...'
+                        ));
+                    }
+                }
+            }
             
             if (!$reset) {
                 return [
