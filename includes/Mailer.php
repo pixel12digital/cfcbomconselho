@@ -130,10 +130,9 @@ class Mailer {
     }
     
     /**
-     * Enviar email via SMTP usando mail() nativo do PHP
+     * Enviar email via SMTP com autenticação real
      * 
-     * Nota: Para produção, considere usar PHPMailer ou similar
-     * Por enquanto, usa mail() nativo como implementação mínima
+     * Tenta usar PHPMailer se disponível, caso contrário usa socket nativo do PHP
      * 
      * @param string $to Email do destinatário
      * @param string $subject Assunto
@@ -156,37 +155,13 @@ class Mailer {
             $fromEmail = $config['from_email'] ?? $config['user'];
             $fromName = $config['from_name'] ?? 'CFC Bom Conselho';
             
-            // Configurar headers
-            $headers = [];
-            $headers[] = 'MIME-Version: 1.0';
-            $headers[] = 'Content-Type: text/html; charset=UTF-8';
-            $headers[] = 'From: ' . $fromName . ' <' . $fromEmail . '>';
-            $headers[] = 'Reply-To: ' . (defined('SUPPORT_EMAIL') ? SUPPORT_EMAIL : $fromEmail);
-            $headers[] = 'X-Mailer: PHP/' . phpversion();
-            
-            $headersString = implode("\r\n", $headers);
-            
-            // Tentar enviar via mail() nativo
-            // Nota: Para produção, considere usar PHPMailer com autenticação SMTP real
-            $sent = @mail($to, $subject, $htmlBody, $headersString);
-            
-            if ($sent) {
-                if (LOG_ENABLED) {
-                    error_log(sprintf('[MAILER] Email enviado via SMTP - From: %s, To: %s', $fromEmail, $to));
-                }
-                return [
-                    'success' => true,
-                    'message' => 'Email enviado com sucesso'
-                ];
-            } else {
-                if (LOG_ENABLED) {
-                    error_log('[MAILER] Falha ao enviar email - função mail() retornou false');
-                }
-                return [
-                    'success' => false,
-                    'message' => 'Falha ao enviar email (função mail() retornou false). Verifique configurações SMTP do servidor.'
-                ];
+            // Tentar usar PHPMailer primeiro (se disponível)
+            if (class_exists('PHPMailer\\PHPMailer\\PHPMailer') || class_exists('PHPMailer')) {
+                return self::sendViaPHPMailer($to, $subject, $htmlBody, $textBody, $config, $fromEmail, $fromName);
             }
+            
+            // Fallback: usar socket nativo para SMTP real
+            return self::sendViaSocket($to, $subject, $htmlBody, $textBody, $config, $fromEmail, $fromName);
             
         } catch (Exception $e) {
             if (LOG_ENABLED) {
@@ -197,6 +172,213 @@ class Mailer {
                 'message' => 'Erro ao enviar email: ' . $e->getMessage()
             ];
         }
+    }
+    
+    /**
+     * Enviar via PHPMailer (se disponível)
+     */
+    private static function sendViaPHPMailer($to, $subject, $htmlBody, $textBody, $config, $fromEmail, $fromName) {
+        try {
+            // Detectar namespace do PHPMailer
+            if (class_exists('PHPMailer\\PHPMailer\\PHPMailer')) {
+                $mailerClass = 'PHPMailer\\PHPMailer\\PHPMailer';
+                $smtpClass = 'PHPMailer\\PHPMailer\\SMTP';
+            } else {
+                $mailerClass = 'PHPMailer';
+                $smtpClass = 'SMTP';
+            }
+            
+            $mail = new $mailerClass(true);
+            
+            // Configurações do servidor
+            $mail->isSMTP();
+            $mail->Host = $config['host'];
+            $mail->SMTPAuth = true;
+            $mail->Username = $config['user'];
+            $mail->Password = $config['pass'];
+            $mail->Port = $config['port'];
+            $mail->CharSet = 'UTF-8';
+            
+            // Configurar criptografia
+            if ($config['encryption_mode'] === 'ssl') {
+                $mail->SMTPSecure = $smtpClass::ENCRYPTION_SMTPS;
+            } elseif ($config['encryption_mode'] === 'tls') {
+                $mail->SMTPSecure = $smtpClass::ENCRYPTION_STARTTLS;
+            } else {
+                $mail->SMTPSecure = false;
+            }
+            
+            // Remetente e destinatário
+            $mail->setFrom($fromEmail, $fromName);
+            $mail->addAddress($to);
+            $mail->addReplyTo($fromEmail, $fromName);
+            
+            // Conteúdo
+            $mail->isHTML(true);
+            $mail->Subject = $subject;
+            $mail->Body = $htmlBody;
+            $mail->AltBody = $textBody;
+            
+            // Enviar
+            $mail->send();
+            
+            if (LOG_ENABLED) {
+                error_log(sprintf('[MAILER] Email enviado via PHPMailer SMTP - From: %s, To: %s', $fromEmail, $to));
+            }
+            
+            return [
+                'success' => true,
+                'message' => 'Email enviado com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            if (LOG_ENABLED) {
+                error_log('[MAILER] Erro PHPMailer: ' . $e->getMessage());
+            }
+            throw $e; // Deixar o catch principal tratar
+        }
+    }
+    
+    /**
+     * Enviar via socket nativo (SMTP real sem PHPMailer)
+     */
+    private static function sendViaSocket($to, $subject, $htmlBody, $textBody, $config, $fromEmail, $fromName) {
+        try {
+            $host = $config['host'];
+            $port = $config['port'];
+            $user = $config['user'];
+            $pass = $config['pass'];
+            $encryption = $config['encryption_mode'] ?? 'tls';
+            
+            // Determinar contexto de conexão (TLS/SSL)
+            $context = null;
+            $transport = 'tcp';
+            $targetHost = $host;
+            
+            if ($encryption === 'ssl') {
+                $transport = 'ssl';
+                $context = stream_context_create([
+                    'ssl' => [
+                        'verify_peer' => false,
+                        'verify_peer_name' => false,
+                        'allow_self_signed' => true
+                    ]
+                ]);
+            }
+            
+            // Conectar ao servidor SMTP
+            $socket = @stream_socket_client(
+                "$transport://$targetHost:$port",
+                $errno,
+                $errstr,
+                30,
+                STREAM_CLIENT_CONNECT,
+                $context
+            );
+            
+            if (!$socket) {
+                throw new Exception("Falha ao conectar ao servidor SMTP: $errstr ($errno)");
+            }
+            
+            // Ler resposta inicial
+            self::readSMTPResponse($socket);
+            
+            // EHLO
+            fwrite($socket, "EHLO $host\r\n");
+            $ehloResponse = self::readSMTPResponse($socket);
+            
+            // STARTTLS se necessário
+            if ($encryption === 'tls' && strpos($ehloResponse, '250-STARTTLS') !== false) {
+                fwrite($socket, "STARTTLS\r\n");
+                self::readSMTPResponse($socket);
+                
+                // Ativar criptografia
+                stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+                
+                // EHLO novamente após TLS
+                fwrite($socket, "EHLO $host\r\n");
+                self::readSMTPResponse($socket);
+            }
+            
+            // Autenticação
+            fwrite($socket, "AUTH LOGIN\r\n");
+            self::readSMTPResponse($socket);
+            
+            fwrite($socket, base64_encode($user) . "\r\n");
+            self::readSMTPResponse($socket);
+            
+            fwrite($socket, base64_encode($pass) . "\r\n");
+            $authResponse = self::readSMTPResponse($socket);
+            
+            if (strpos($authResponse, '235') === false) {
+                throw new Exception('Falha na autenticação SMTP');
+            }
+            
+            // MAIL FROM
+            fwrite($socket, "MAIL FROM: <$fromEmail>\r\n");
+            self::readSMTPResponse($socket);
+            
+            // RCPT TO
+            fwrite($socket, "RCPT TO: <$to>\r\n");
+            self::readSMTPResponse($socket);
+            
+            // DATA
+            fwrite($socket, "DATA\r\n");
+            self::readSMTPResponse($socket);
+            
+            // Headers e corpo
+            $message = "From: $fromName <$fromEmail>\r\n";
+            $message .= "To: <$to>\r\n";
+            $message .= "Subject: =?UTF-8?B?" . base64_encode($subject) . "?=\r\n";
+            $message .= "MIME-Version: 1.0\r\n";
+            $message .= "Content-Type: text/html; charset=UTF-8\r\n";
+            $message .= "Content-Transfer-Encoding: base64\r\n";
+            $message .= "\r\n";
+            $message .= chunk_split(base64_encode($htmlBody));
+            $message .= "\r\n.\r\n";
+            
+            fwrite($socket, $message);
+            $dataResponse = self::readSMTPResponse($socket);
+            
+            if (strpos($dataResponse, '250') === false) {
+                throw new Exception('Falha ao enviar mensagem: ' . $dataResponse);
+            }
+            
+            // QUIT
+            fwrite($socket, "QUIT\r\n");
+            self::readSMTPResponse($socket);
+            
+            fclose($socket);
+            
+            if (LOG_ENABLED) {
+                error_log(sprintf('[MAILER] Email enviado via socket SMTP - From: %s, To: %s', $fromEmail, $to));
+            }
+            
+            return [
+                'success' => true,
+                'message' => 'Email enviado com sucesso'
+            ];
+            
+        } catch (Exception $e) {
+            if (LOG_ENABLED) {
+                error_log('[MAILER] Erro socket SMTP: ' . $e->getMessage());
+            }
+            throw $e;
+        }
+    }
+    
+    /**
+     * Ler resposta do servidor SMTP
+     */
+    private static function readSMTPResponse($socket) {
+        $response = '';
+        while ($line = fgets($socket, 515)) {
+            $response .= $line;
+            if (substr($line, 3, 1) === ' ') {
+                break;
+            }
+        }
+        return $response;
     }
     
     /**
