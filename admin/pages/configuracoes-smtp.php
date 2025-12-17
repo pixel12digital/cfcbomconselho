@@ -32,7 +32,8 @@ $status = null;
 $config = null;
 
 try {
-    require_once '../../includes/SMTPConfigService.php';
+    // Usar caminho absoluto baseado em __DIR__ para garantir que funciona mesmo quando incluído
+    require_once __DIR__ . '/../../includes/SMTPConfigService.php';
     
     // Obter status atual
     $status = SMTPConfigService::getStatus();
