@@ -72,9 +72,41 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Tentar enviar email
                     $emailResult = Mailer::sendPasswordResetEmail($emailTo, $result['token'], $requestedType);
                     
-                    // Sucesso: cadastro encontrado e email enviado
-                    $success = $result['message'];
-                    $maskedDestination = $result['masked_destination'];
+                    // Verificar resultado do envio
+                    if ($emailResult['success']) {
+                        // Email enviado com sucesso
+                        $success = $result['message'];
+                        $maskedDestination = $result['masked_destination'];
+                    } else {
+                        // Email falhou - logar erro detalhado
+                        if (LOG_ENABLED) {
+                            error_log(sprintf(
+                                '[FORGOT_PASSWORD] Falha ao enviar email de recuperação - Email: %s, Type: %s, Erro: %s',
+                                $emailTo,
+                                $requestedType,
+                                $emailResult['message'] ?? 'Erro desconhecido'
+                            ));
+                        }
+                        
+                        // Mostrar mensagem específica se SMTP não configurado
+                        if (isset($emailResult['smtp_configured']) && !$emailResult['smtp_configured']) {
+                            $error = 'Erro ao enviar email: SMTP não configurado. Entre em contato com a Secretaria.';
+                        } else {
+                            // Manter mensagem neutra por segurança (não revelar se email existe)
+                            // Mas logar erro detalhado para admin investigar
+                            $success = $result['message'];
+                            $maskedDestination = $result['masked_destination'];
+                            
+                            if (LOG_ENABLED) {
+                                error_log(sprintf(
+                                    '[FORGOT_PASSWORD] Email falhou silenciosamente - Token gerado mas não enviado. Email: %s, Type: %s, Erro: %s',
+                                    $emailTo,
+                                    $requestedType,
+                                    $emailResult['message'] ?? 'Erro desconhecido'
+                                ));
+                            }
+                        }
+                    }
                 }
             } elseif (isset($result['found']) && $result['found'] === false) {
                 // Não encontrado

@@ -109,17 +109,38 @@ class Mailer {
             // Enviar via SMTP
             $result = self::sendSMTP($to, $subject, $htmlBody, $textBody);
             
-            if ($result['success']) {
-                if (LOG_ENABLED) {
-                    error_log('[MAILER] Email de recuperação enviado com sucesso para: ' . $to);
+            // Log detalhado do resultado
+            if (LOG_ENABLED) {
+                if ($result['success']) {
+                    error_log(sprintf(
+                        '[MAILER] Email de recuperação enviado com sucesso - To: %s, Type: %s, URL: %s',
+                        $to,
+                        $type,
+                        $resetUrl
+                    ));
+                } else {
+                    error_log(sprintf(
+                        '[MAILER] Email de recuperação FALHOU - To: %s, Type: %s, Erro: %s',
+                        $to,
+                        $type,
+                        $result['message'] ?? 'Erro desconhecido'
+                    ));
                 }
             }
             
             return $result;
             
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
+            // Captura Exception e Error (PHP 7+)
             if (LOG_ENABLED) {
-                error_log('[MAILER] Erro ao enviar email: ' . $e->getMessage());
+                error_log(sprintf(
+                    '[MAILER] Exceção ao enviar email de recuperação - To: %s, Type: %s, Erro: %s, Arquivo: %s:%d',
+                    $to,
+                    $type,
+                    $e->getMessage(),
+                    $e->getFile(),
+                    $e->getLine()
+                ));
             }
             
             return [
@@ -163,9 +184,16 @@ class Mailer {
             // Fallback: usar socket nativo para SMTP real
             return self::sendViaSocket($to, $subject, $htmlBody, $textBody, $config, $fromEmail, $fromName);
             
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
+            // Captura Exception e Error (PHP 7+)
             if (LOG_ENABLED) {
-                error_log('[MAILER] Erro ao enviar email: ' . $e->getMessage());
+                error_log(sprintf(
+                    '[MAILER] Erro ao enviar email via SMTP - To: %s, Erro: %s, Arquivo: %s:%d',
+                    $to,
+                    $e->getMessage(),
+                    $e->getFile(),
+                    $e->getLine()
+                ));
             }
             return [
                 'success' => false,
@@ -231,9 +259,16 @@ class Mailer {
                 'message' => 'Email enviado com sucesso'
             ];
             
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
+            // Captura Exception e Error (PHP 7+)
             if (LOG_ENABLED) {
-                error_log('[MAILER] Erro PHPMailer: ' . $e->getMessage());
+                error_log(sprintf(
+                    '[MAILER] Erro PHPMailer - To: %s, Erro: %s, Arquivo: %s:%d',
+                    $to,
+                    $e->getMessage(),
+                    $e->getFile(),
+                    $e->getLine()
+                ));
             }
             throw $e; // Deixar o catch principal tratar
         }
@@ -359,9 +394,16 @@ class Mailer {
                 'message' => 'Email enviado com sucesso'
             ];
             
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
+            // Captura Exception e Error (PHP 7+)
             if (LOG_ENABLED) {
-                error_log('[MAILER] Erro socket SMTP: ' . $e->getMessage());
+                error_log(sprintf(
+                    '[MAILER] Erro socket SMTP - To: %s, Erro: %s, Arquivo: %s:%d',
+                    $to,
+                    $e->getMessage(),
+                    $e->getFile(),
+                    $e->getLine()
+                ));
             }
             throw $e;
         }
