@@ -14,15 +14,65 @@ class Mailer {
      */
     private static function getSMTPConfig() {
         // Tentar obter do banco primeiro
+        // Sempre tentar carregar a classe (não depender de autoload)
+        if (!class_exists('SMTPConfigService')) {
+            $smtpServicePath = __DIR__ . '/SMTPConfigService.php';
+            if (file_exists($smtpServicePath)) {
+                require_once $smtpServicePath;
+            }
+        }
+        
+        // Se a classe existe agora, tentar obter configurações do banco
         if (class_exists('SMTPConfigService')) {
-            require_once __DIR__ . '/SMTPConfigService.php';
-            $dbConfig = SMTPConfigService::getConfig();
-            if ($dbConfig) {
-                return $dbConfig;
+            try {
+                $dbConfig = SMTPConfigService::getConfig();
+                if ($dbConfig) {
+                    // Verificar se todos os campos obrigatórios estão presentes
+                    if (!empty($dbConfig['host']) && !empty($dbConfig['user']) && !empty($dbConfig['pass'])) {
+                        if (LOG_ENABLED) {
+                            error_log('[MAILER] Usando configurações SMTP do banco de dados');
+                        }
+                        return $dbConfig;
+                    } else {
+                        // Config retornado mas campos obrigatórios faltando
+                        if (LOG_ENABLED) {
+                            error_log(sprintf(
+                                '[MAILER] Configurações do banco incompletas - host: %s, user: %s, pass: %s',
+                                !empty($dbConfig['host']) ? 'OK' : 'VAZIO',
+                                !empty($dbConfig['user']) ? 'OK' : 'VAZIO',
+                                !empty($dbConfig['pass']) ? 'OK' : 'VAZIO'
+                            ));
+                        }
+                    }
+                } else {
+                    // getConfig() retornou null
+                    if (LOG_ENABLED) {
+                        error_log('[MAILER] SMTPConfigService::getConfig() retornou null - nenhuma configuração ativa no banco');
+                    }
+                }
+            } catch (Throwable $e) {
+                // Se houver erro ao obter do banco, logar e continuar para fallback
+                if (LOG_ENABLED) {
+                    error_log(sprintf(
+                        '[MAILER] Erro ao obter SMTP do banco - Erro: %s, Arquivo: %s:%d',
+                        $e->getMessage(),
+                        $e->getFile(),
+                        $e->getLine()
+                    ));
+                }
+            }
+        } else {
+            // Classe não existe mesmo após tentar carregar
+            if (LOG_ENABLED) {
+                error_log('[MAILER] SMTPConfigService não encontrada - arquivo pode não existir ou erro ao carregar');
             }
         }
         
         // Fallback para config.php
+        if (LOG_ENABLED) {
+            error_log('[MAILER] Tentando fallback para config.php (banco não retornou configurações)');
+        }
+        
         $host = defined('SMTP_HOST') ? SMTP_HOST : '';
         $port = defined('SMTP_PORT') ? SMTP_PORT : 587;
         $user = defined('SMTP_USER') ? SMTP_USER : '';
@@ -31,15 +81,28 @@ class Mailer {
         
         // Verificar se não são placeholders
         if (empty($host) || empty($user) || empty($pass)) {
+            if (LOG_ENABLED) {
+                error_log('[MAILER] Fallback config.php falhou - campos vazios ou não definidos');
+            }
             return null;
         }
         
         if (strpos($user, 'seu_email@seudominio.com') !== false) {
+            if (LOG_ENABLED) {
+                error_log('[MAILER] Fallback config.php falhou - placeholder detectado no user');
+            }
             return null;
         }
         
         if (strpos($pass, 'sua_senha_smtp') !== false) {
+            if (LOG_ENABLED) {
+                error_log('[MAILER] Fallback config.php falhou - placeholder detectado no pass');
+            }
             return null;
+        }
+        
+        if (LOG_ENABLED) {
+            error_log('[MAILER] Usando configurações SMTP do config.php (fallback)');
         }
         
         return [
@@ -60,7 +123,23 @@ class Mailer {
      */
     public static function isConfigured() {
         $config = self::getSMTPConfig();
-        return $config !== null;
+        $isConfigured = $config !== null;
+        
+        // Log detalhado para diagnóstico
+        if (LOG_ENABLED) {
+            if ($isConfigured) {
+                error_log(sprintf(
+                    '[MAILER] SMTP configurado - Host: %s, User: %s, Source: %s',
+                    $config['host'] ?? 'N/A',
+                    $config['user'] ?? 'N/A',
+                    isset($config['from_name']) ? 'banco' : 'config.php'
+                ));
+            } else {
+                error_log('[MAILER] SMTP NÃO configurado - getSMTPConfig() retornou null');
+            }
+        }
+        
+        return $isConfigured;
     }
     
     /**

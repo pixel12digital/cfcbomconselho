@@ -30,8 +30,18 @@ class SMTPConfigService {
             }
             
             // Descriptografar senha
-            $config['pass'] = self::decryptPassword($config['pass_encrypted']);
+            $decryptedPass = self::decryptPassword($config['pass_encrypted']);
+            $config['pass'] = $decryptedPass;
             unset($config['pass_encrypted']); // Não expor hash
+            
+            // Verificar se a descriptografia funcionou
+            if (empty($config['pass'])) {
+                if (LOG_ENABLED) {
+                    error_log('[SMTP_CONFIG] AVISO: Senha descriptografada está vazia - possível erro na descriptografia ou senha não foi criptografada corretamente');
+                }
+                // Retornar null para forçar fallback ou indicar configuração inválida
+                return null;
+            }
             
             return $config;
             
