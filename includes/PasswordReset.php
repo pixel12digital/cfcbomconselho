@@ -27,30 +27,61 @@ class PasswordReset {
             // Rate limiting: verificar última solicitação nos últimos 5 minutos
             $rateLimitResult = self::checkRateLimit($login, $ip, $db);
             if (!$rateLimitResult['allowed']) {
-                // Retornar sucesso mesmo assim (proteção anti-enumeração)
-                // Mas não gerar token se já solicitou recentemente
+                // Rate limit: retornar mensagem informando cooldown
                 return [
-                    'success' => true,
-                    'message' => 'Se o dado informado existir em nossa base, você receberá instruções para redefinir sua senha.',
+                    'success' => false,
+                    'found' => null, // Não verificado devido a rate limit
+                    'message' => 'Você já solicitou recuperação recentemente. Aguarde alguns minutos antes de tentar novamente.',
                     'token' => null,
                     'rate_limited' => true
                 ];
             }
             
-            // Buscar usuário (sem revelar se existe ou não)
+            // Buscar usuário (consulta real)
             $usuario = self::findUserByLogin($login, $type, $db);
             
             if (!$usuario) {
-                // Proteção anti-enumeração: retornar mesma mensagem
-                // Não revelar que usuário não existe
+                // Não encontrado: retornar mensagem amigável
                 return [
-                    'success' => true,
-                    'message' => 'Se o dado informado existir em nossa base, você receberá instruções para redefinir sua senha.',
+                    'success' => false,
+                    'found' => false,
+                    'message' => 'Não foi possível localizar um cadastro com os dados informados. Verifique se digitou corretamente. Se persistir, entre em contato com a Secretaria.',
                     'token' => null,
                     'user_not_found' => true
                 ];
             }
             
+            // Usuário encontrado: verificar se tem e-mail
+            $emailTo = $usuario['email'] ?? null;
+            $hasValidEmail = !empty($emailTo) && filter_var($emailTo, FILTER_VALIDATE_EMAIL);
+            
+            // Se não tem e-mail válido, retornar mensagem específica
+            if (!$hasValidEmail) {
+                if ($type === 'aluno') {
+                    return [
+                        'success' => false,
+                        'found' => true,
+                        'has_email' => false,
+                        'message' => 'Cadastro localizado, porém não há e-mail cadastrado. Entre em contato com a Secretaria para atualizar seu cadastro e redefinir sua senha.',
+                        'token' => null,
+                        'user_id' => $usuario['id'],
+                        'user_email' => null
+                    ];
+                } else {
+                    // Para funcionários, e-mail é obrigatório
+                    return [
+                        'success' => false,
+                        'found' => true,
+                        'has_email' => false,
+                        'message' => 'Cadastro localizado, porém o e-mail cadastrado não é válido. Entre em contato com a Secretaria para atualizar seu cadastro.',
+                        'token' => null,
+                        'user_id' => $usuario['id'],
+                        'user_email' => null
+                    ];
+                }
+            }
+            
+            // Tem e-mail válido: gerar token e processar reset
             // Gerar token único (32 bytes, hex)
             $token = bin2hex(random_bytes(32)); // 64 caracteres hex
             $tokenHash = hash('sha256', $token); // Hash SHA256 para armazenar
@@ -98,30 +129,18 @@ class PasswordReset {
                     error_log($auditLog);
                 }
                 
-                // Preparar resposta com destino mascarado (se feature flag ativa e destino válido)
-                $maskedDestination = null;
-                if (defined('PASSWORD_RESET_SHOW_MASKED_DESTINATION') && PASSWORD_RESET_SHOW_MASKED_DESTINATION) {
-                    $emailTo = $usuario['email'] ?? null;
-                    if ($emailTo && filter_var($emailTo, FILTER_VALIDATE_EMAIL)) {
-                        // Priorizar e-mail se disponível
-                        $maskedDestination = self::maskEmail($emailTo);
-                    } elseif ($type === 'aluno' && !empty($usuario['telefone'])) {
-                        // Para aluno sem e-mail, mostrar telefone mascarado (se disponível)
-                        $phoneMasked = self::maskPhone($usuario['telefone']);
-                        if ($phoneMasked) {
-                            $maskedDestination = $phoneMasked;
-                        }
-                    }
-                }
+                // Preparar e-mail mascarado para feedback
+                $maskedDestination = self::maskEmail($emailTo);
                 
                 return [
                     'success' => true,
-                    'message' => 'Se o dado informado existir em nossa base, você receberá instruções para redefinir sua senha.',
+                    'found' => true,
+                    'has_email' => true,
+                    'message' => 'Se o seu cadastro estiver correto, as instruções foram enviadas para redefinir sua senha.',
                     'token' => $token, // Retornar token apenas para montar link no email
                     'user_id' => $usuario['id'],
-                    'user_email' => $usuario['email'] ?? null,
-                    'masked_destination' => $maskedDestination, // Destino mascarado (se disponível e seguro)
-                    'has_email' => !empty($usuario['email']) && filter_var($usuario['email'], FILTER_VALIDATE_EMAIL)
+                    'user_email' => $emailTo,
+                    'masked_destination' => $maskedDestination // E-mail mascarado
                 ];
             }
             
@@ -135,10 +154,11 @@ class PasswordReset {
                 error_log('[PASSWORD_RESET] Erro ao solicitar reset: ' . $e->getMessage());
             }
             
-            // Em caso de erro, retornar mensagem neutra
+            // Em caso de erro, retornar mensagem de erro genérica
             return [
-                'success' => true, // Retornar sucesso mesmo em erro (anti-enumeração)
-                'message' => 'Se o dado informado existir em nossa base, você receberá instruções para redefinir sua senha.',
+                'success' => false,
+                'found' => null,
+                'message' => 'Erro ao processar solicitação. Tente novamente mais tarde ou entre em contato com a Secretaria.',
                 'token' => null
             ];
         }
@@ -384,16 +404,27 @@ class PasswordReset {
      */
     private static function findUserByLogin($login, $type, $db) {
         try {
-            // Para aluno: buscar por CPF
+            // Para aluno: buscar por CPF (prioritário)
             if ($type === 'aluno') {
                 // Limpar CPF (remover pontos e traços)
                 $cpfLimpo = preg_replace('/[^0-9]/', '', $login);
                 
-                // Buscar primeiro na tabela usuarios (por CPF limpo ou email)
-                $usuario = $db->fetch(
-                    "SELECT id, email, cpf, tipo FROM usuarios WHERE (cpf = :cpf OR email = :email) AND tipo = 'aluno' AND ativo = 1 LIMIT 1",
-                    ['cpf' => $cpfLimpo, 'email' => $login]
-                );
+                // Verificar se é email ou CPF
+                $isEmail = filter_var($login, FILTER_VALIDATE_EMAIL);
+                
+                if ($isEmail) {
+                    // Se for email, buscar por email
+                    $usuario = $db->fetch(
+                        "SELECT id, email, cpf, tipo FROM usuarios WHERE email = :email AND tipo = 'aluno' AND ativo = 1 LIMIT 1",
+                        ['email' => $login]
+                    );
+                } else {
+                    // Se for CPF, buscar por CPF limpo
+                    $usuario = $db->fetch(
+                        "SELECT id, email, cpf, tipo FROM usuarios WHERE cpf = :cpf AND tipo = 'aluno' AND ativo = 1 LIMIT 1",
+                        ['cpf' => $cpfLimpo]
+                    );
+                }
                 
                 // Se encontrou, buscar dados adicionais na tabela alunos (telefone)
                 if ($usuario) {
@@ -445,8 +476,9 @@ class PasswordReset {
     }
     
     /**
-     * Mascarar e-mail para exibição segura
-     * Exemplo: joao@example.com → j***@ex***.com
+     * Mascarar e-mail para exibição segura (padrão cartão)
+     * Exemplo: joao.silva@gmail.com → jo***@gm***.com
+     * Exemplo: contato@cfc.com.br → co***@cf***.com.br
      * 
      * @param string $email E-mail completo
      * @return string|null E-mail mascarado ou null se inválido
@@ -459,9 +491,11 @@ class PasswordReset {
         list($local, $domain) = explode('@', $email, 2);
         
         // Mascarar parte local (antes do @)
-        // Manter primeira letra + asteriscos
-        if (strlen($local) > 1) {
-            $maskedLocal = substr($local, 0, 1) . str_repeat('*', min(3, strlen($local) - 1));
+        // Manter primeiras 2 letras + asteriscos (padrão cartão)
+        if (strlen($local) >= 2) {
+            $maskedLocal = substr($local, 0, 2) . str_repeat('*', min(3, max(1, strlen($local) - 2)));
+        } elseif (strlen($local) == 1) {
+            $maskedLocal = substr($local, 0, 1) . '***';
         } else {
             $maskedLocal = '*';
         }
@@ -471,11 +505,13 @@ class PasswordReset {
         $domainParts = explode('.', $domain);
         $mainDomain = array_shift($domainParts); // exemplo
         
-        // Manter 2-3 primeiras letras do domínio principal
-        if (strlen($mainDomain) > 3) {
-            $maskedMain = substr($mainDomain, 0, 2) . str_repeat('*', min(3, strlen($mainDomain) - 2));
+        // Manter 2 primeiras letras do domínio principal + asteriscos (padrão cartão)
+        if (strlen($mainDomain) >= 2) {
+            $maskedMain = substr($mainDomain, 0, 2) . str_repeat('*', min(3, max(1, strlen($mainDomain) - 2)));
+        } elseif (strlen($mainDomain) == 1) {
+            $maskedMain = substr($mainDomain, 0, 1) . '***';
         } else {
-            $maskedMain = substr($mainDomain, 0, 1) . str_repeat('*', strlen($mainDomain) - 1);
+            $maskedMain = '***';
         }
         
         // Reconstruir domínio com extensão

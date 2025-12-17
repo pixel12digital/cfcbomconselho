@@ -18,11 +18,20 @@ if (isLoggedIn()) {
 
 $error = '';
 $success = '';
+$info = ''; // Mensagem informativa adicional
 $maskedDestination = null;
+$found = null; // null = não verificado, true = encontrado, false = não encontrado
 $hasEmail = false;
 $rateLimited = false;
 $userType = $_GET['type'] ?? '';
 $hasSpecificType = !empty($userType);
+
+// Contatos da Secretaria (pode ser movido para config se necessário)
+$secretariaContato = [
+    'telefone' => '(87) 98145-0308',
+    'whatsapp' => '(87) 98145-0308',
+    'email' => 'contato@cfcbomconselho.com.br'
+];
 
 // Processar solicitação de recuperação
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -30,7 +39,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $requestedType = $_POST['user_type'] ?? $userType;
     
     if (empty($login)) {
-        $error = 'Por favor, informe seu email ou CPF.';
+        $error = $requestedType === 'aluno' 
+            ? 'Por favor, informe seu CPF.' 
+            : 'Por favor, informe seu e-mail.';
     } else {
         try {
             // Obter IP do cliente
@@ -42,10 +53,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Solicitar reset
             $result = PasswordReset::requestReset($login, $requestedType, $ip);
             
-            // Capturar informações para feedback melhorado
+            // Capturar informações para feedback
             $rateLimited = $result['rate_limited'] ?? false;
-            $maskedDestination = $result['masked_destination'] ?? null;
+            $found = $result['found'] ?? null;
             $hasEmail = $result['has_email'] ?? false;
+            $maskedDestination = $result['masked_destination'] ?? null;
             
             if ($result['success'] && isset($result['token']) && $result['token']) {
                 // Token gerado - enviar email
@@ -55,15 +67,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Tentar enviar email
                     $emailResult = Mailer::sendPasswordResetEmail($emailTo, $result['token'], $requestedType);
                     
-                    // Mesmo se email falhar, retornar mensagem neutra (anti-enumeração)
+                    // Sucesso: cadastro encontrado e email enviado
                     $success = $result['message'];
-                } else {
-                    // Para aluno sem email cadastrado - mensagem neutra
-                    $success = $result['message'];
+                    $maskedDestination = $result['masked_destination'];
                 }
+            } elseif (isset($result['found']) && $result['found'] === false) {
+                // Não encontrado
+                $error = $result['message'];
+            } elseif (isset($result['found']) && $result['found'] === true && !$result['has_email']) {
+                // Encontrado mas sem e-mail
+                $error = $result['message'];
+            } elseif ($rateLimited) {
+                // Rate limit
+                $error = $result['message'];
             } else {
-                // Sem token (rate limit ou usuário não encontrado) - mensagem neutra
-                $success = $result['message'];
+                // Erro genérico
+                $error = $result['message'] ?? 'Erro ao processar solicitação. Tente novamente mais tarde.';
             }
             
         } catch (Exception $e) {
@@ -78,12 +97,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Determinar tipo para exibição
 $displayType = $hasSpecificType ? $userType : 'admin';
 
-// Configurações por tipo (reutilizar do login.php)
+// Configurações por tipo
 $userTypes = [
-    'admin' => ['title' => 'Administrador', 'field_label' => 'E-mail', 'field_type' => 'email', 'placeholder' => 'admin@cfc.com'],
-    'secretaria' => ['title' => 'Secretaria', 'field_label' => 'E-mail', 'field_type' => 'email', 'placeholder' => 'atendente@cfc.com'],
-    'instrutor' => ['title' => 'Instrutor', 'field_label' => 'E-mail', 'field_type' => 'email', 'placeholder' => 'instrutor@cfc.com'],
-    'aluno' => ['title' => 'Aluno', 'field_label' => 'CPF', 'field_type' => 'text', 'placeholder' => '000.000.000-00']
+    'admin' => [
+        'title' => 'Administrador', 
+        'field_label' => 'E-mail', 
+        'field_type' => 'email', 
+        'placeholder' => 'admin@cfc.com',
+        'help_text' => 'Digite seu endereço de e-mail cadastrado no sistema'
+    ],
+    'secretaria' => [
+        'title' => 'Secretaria', 
+        'field_label' => 'E-mail', 
+        'field_type' => 'email', 
+        'placeholder' => 'atendente@cfc.com',
+        'help_text' => 'Digite seu endereço de e-mail cadastrado no sistema'
+    ],
+    'instrutor' => [
+        'title' => 'Instrutor', 
+        'field_label' => 'E-mail', 
+        'field_type' => 'email', 
+        'placeholder' => 'instrutor@cfc.com',
+        'help_text' => 'Digite seu endereço de e-mail cadastrado no sistema'
+    ],
+    'aluno' => [
+        'title' => 'Aluno', 
+        'field_label' => 'CPF', 
+        'field_type' => 'text', 
+        'placeholder' => '000.000.000-00',
+        'help_text' => 'Digite seu CPF cadastrado (apenas números ou com formatação)'
+    ]
 ];
 
 $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
@@ -366,6 +409,31 @@ $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
                 }, 1000);
             }
             <?php endif; ?>
+            
+            // Máscara de CPF para campo de aluno
+            <?php if ($displayType === 'aluno'): ?>
+            const cpfInput = document.getElementById('login');
+            if (cpfInput) {
+                cpfInput.addEventListener('input', function(e) {
+                    let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+                    
+                    // Aplica máscara
+                    if (value.length <= 11) {
+                        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                        value = value.replace(/(\d{3})(\d)/, '$1.$2');
+                        value = value.replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+                        e.target.value = value;
+                    }
+                });
+                
+                // Permitir backspace e delete
+                cpfInput.addEventListener('keydown', function(e) {
+                    if (e.key === 'Backspace' || e.key === 'Delete') {
+                        // Permite apagar normalmente
+                    }
+                });
+            }
+            <?php endif; ?>
         });
     </script>
 </head>
@@ -386,7 +454,20 @@ $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
             
             <?php if ($error): ?>
                 <div class="alert alert-error">
-                    <?php echo htmlspecialchars($error); ?>
+                    <p style="margin-bottom: 10px;">
+                        <i class="fas fa-exclamation-circle"></i> <?php echo htmlspecialchars($error); ?>
+                    </p>
+                </div>
+                
+                <!-- Contatos da Secretaria quando há erro -->
+                <div class="alert-info">
+                    <strong><i class="fas fa-phone"></i> Precisa de ajuda?</strong><br>
+                    <p style="margin: 10px 0 0 0;">
+                        Entre em contato com a Secretaria:<br>
+                        📞 <strong><?php echo htmlspecialchars($secretariaContato['telefone']); ?></strong><br>
+                        💬 WhatsApp: <strong><?php echo htmlspecialchars($secretariaContato['whatsapp']); ?></strong><br>
+                        📧 <a href="mailto:<?php echo htmlspecialchars($secretariaContato['email']); ?>" style="color: #1A365D;"><?php echo htmlspecialchars($secretariaContato['email']); ?></a>
+                    </p>
                 </div>
             <?php endif; ?>
             
@@ -397,14 +478,8 @@ $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
                     </p>
                     
                     <?php if ($maskedDestination): ?>
-                        <p style="margin: 10px 0; font-weight: 600; color: #155724;">
-                            <i class="fas fa-envelope"></i> Instruções serão enviadas para: <strong><?php echo htmlspecialchars($maskedDestination); ?></strong>
-                        </p>
-                    <?php endif; ?>
-                    
-                    <?php if ($rateLimited): ?>
-                        <p style="margin: 10px 0; font-size: 13px; color: #856404;">
-                            <i class="fas fa-clock"></i> Você pode solicitar novamente em alguns minutos.
+                        <p style="margin: 15px 0 10px 0; font-weight: 600; color: #155724; font-size: 15px;">
+                            <i class="fas fa-envelope"></i> Enviamos para o e-mail cadastrado: <strong><?php echo htmlspecialchars($maskedDestination); ?></strong>
                         </p>
                     <?php endif; ?>
                 </div>
@@ -412,14 +487,20 @@ $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
                 <div class="alert-info" style="margin-top: 20px;">
                     <strong><i class="fas fa-question-circle"></i> Não recebeu?</strong><br>
                     <ul style="margin: 10px 0 0 20px; padding: 0;">
-                        <li>Verifique se digitou corretamente o <?php echo $displayType === 'aluno' ? 'CPF ou e-mail' : 'e-mail'; ?>.</li>
-                        <li>Confira sua caixa de entrada, spam ou lixeira.</li>
+                        <li>Verifique se digitou corretamente o <?php echo $displayType === 'aluno' ? 'CPF' : 'e-mail'; ?>.</li>
+                        <li>Confira sua caixa de entrada, pasta de spam ou lixeira.</li>
+                        <li>O e-mail pode levar alguns minutos para chegar.</li>
                         <?php if ($displayType === 'aluno'): ?>
-                        <li>Se você não tiver e-mail cadastrado, entre em contato com a Secretaria para atualizar seu cadastro e redefinir a senha.</li>
-                        <?php else: ?>
-                        <li>Se não receber em alguns minutos, verifique o e-mail informado ou entre em contato com o suporte.</li>
+                        <li>Se você não tiver e-mail cadastrado, entre em contato com a Secretaria para atualizar seu cadastro.</li>
                         <?php endif; ?>
                     </ul>
+                    
+                    <p style="margin: 15px 0 5px 0; padding-top: 10px; border-top: 1px solid rgba(26, 54, 93, 0.2);">
+                        <strong>Contato da Secretaria:</strong><br>
+                        📞 <?php echo htmlspecialchars($secretariaContato['telefone']); ?><br>
+                        💬 WhatsApp: <?php echo htmlspecialchars($secretariaContato['whatsapp']); ?><br>
+                        📧 <a href="mailto:<?php echo htmlspecialchars($secretariaContato['email']); ?>" style="color: #1A365D;"><?php echo htmlspecialchars($secretariaContato['email']); ?></a>
+                    </p>
                 </div>
             <?php endif; ?>
             
@@ -427,34 +508,35 @@ $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
                 <form method="POST">
                     <input type="hidden" name="user_type" value="<?php echo htmlspecialchars($displayType); ?>">
                     
-                    <?php if ($displayType === 'aluno'): ?>
-                        <div class="alert-info">
-                            <strong>⚠️ Para Alunos:</strong> Se você não possui email cadastrado no sistema, entre em contato com a secretaria para recuperar sua senha.
-                        </div>
-                    <?php endif; ?>
-                    
                     <div class="form-group">
                         <label for="login" class="form-label">
-                            <?php echo $displayType === 'aluno' ? 'CPF ou E-mail' : 'E-mail'; ?>
+                            <?php echo htmlspecialchars($currentConfig['field_label']); ?>
                             <span style="color: #d63031;">*</span>
                         </label>
                         <input 
-                            type="<?php echo $displayType === 'aluno' ? 'text' : 'email'; ?>" 
+                            type="<?php echo htmlspecialchars($currentConfig['field_type']); ?>" 
                             id="login" 
                             name="login" 
                             class="form-control" 
                             placeholder="<?php echo htmlspecialchars($currentConfig['placeholder']); ?>" 
                             required
                             autofocus
+                            <?php if ($displayType === 'aluno'): ?>
+                            pattern="[0-9]{3}\.[0-9]{3}\.[0-9]{3}-[0-9]{2}|[0-9]{11}"
+                            title="Digite o CPF no formato 000.000.000-00 ou apenas números"
+                            maxlength="14"
+                            <?php endif; ?>
                         >
                         <div class="form-help">
-                            <?php if ($displayType === 'aluno'): ?>
-                                Digite seu CPF cadastrado ou e-mail (se tiver cadastrado)
-                            <?php else: ?>
-                                Digite seu endereço de e-mail cadastrado no sistema
-                            <?php endif; ?>
+                            <?php echo htmlspecialchars($currentConfig['help_text']); ?>
                         </div>
                     </div>
+                    
+                    <?php if ($displayType === 'aluno'): ?>
+                        <div class="alert-info" style="font-size: 13px;">
+                            <strong>ℹ️ Informação:</strong> As instruções de recuperação serão enviadas para o e-mail cadastrado em seu CPF. Se não tiver e-mail cadastrado, entre em contato com a Secretaria.
+                        </div>
+                    <?php endif; ?>
                     
                     <button type="submit" id="submitBtn" class="btn-submit">
                         <i class="fas fa-paper-plane"></i> Enviar Instruções
