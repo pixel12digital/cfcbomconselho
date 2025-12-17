@@ -62,7 +62,13 @@ if ($environment === 'local') {
         define('BASE_PATH', $base_path);
     }
 } else {
-    define('APP_URL', 'https://linen-mantis-198436.hostingersite.com');
+    // Em produção, usar o domínio real ou detectar automaticamente
+    $productionHost = $_SERVER['HTTP_HOST'] ?? 'cfcbomconselho.com.br';
+    // Se for o domínio antigo da Hostinger, usar o domínio correto
+    if (strpos($productionHost, 'hostingersite.com') !== false || strpos($productionHost, 'hstgr.io') !== false) {
+        $productionHost = 'cfcbomconselho.com.br';
+    }
+    define('APP_URL', 'https://' . $productionHost);
     define('BASE_PATH', '');
 }
 

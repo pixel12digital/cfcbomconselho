@@ -167,16 +167,20 @@ class Mailer {
         }
         
         try {
-            $baseUrl = defined('APP_URL') ? APP_URL : '';
-            if (empty($baseUrl)) {
-                $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http';
-                $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-                $scriptDir = dirname($_SERVER['SCRIPT_NAME'] ?? '');
-                $baseUrl = $protocol . '://' . $host . ($scriptDir !== '/' ? $scriptDir : '');
-            }
+            // SEMPRE usar o domínio correto para links de email (não depender de APP_URL que pode estar errado)
+            $protocol = 'https'; // Sempre HTTPS em produção
+            $host = 'cfcbomconselho.com.br'; // Domínio correto fixo
+            
+            // Construir URL base
+            $baseUrl = $protocol . '://' . $host;
             
             // URL de reset
-            $resetUrl = rtrim($baseUrl, '/') . '/reset-password.php?token=' . urlencode($token);
+            $resetUrl = $baseUrl . '/reset-password.php?token=' . urlencode($token);
+            
+            // Log da URL gerada para diagnóstico
+            if (LOG_ENABLED) {
+                error_log('[MAILER] URL de reset gerada: ' . $resetUrl);
+            }
             
             // Assunto
             $subject = 'Recuperação de Senha - CFC Bom Conselho';
