@@ -94,6 +94,9 @@ class PWAInstallFooter {
      * Inicializar componente
      */
     async init() {
+        // Garantir que a classe de padding seja removida inicialmente
+        this.updateBodyPaddingClass(false);
+        
         // Verificar se estamos em dashboard (não mostrar)
         if (this.isDashboardPage()) {
             return; // Não mostrar em dashboards
@@ -366,6 +369,10 @@ class PWAInstallFooter {
         
         // Desbloquear após adicionar ao DOM
         this.renderBlocked = false;
+        
+        // Adicionar classe no body para aplicar padding apenas quando banner estiver visível
+        // Verificar se o container está realmente visível antes de adicionar a classe
+        this.updateBodyPaddingClass(true);
         
         console.log('[PWA Footer] Bloco inserido no DOM');
         
@@ -1901,12 +1908,46 @@ class PWAInstallFooter {
     }
     
     /**
+     * Gerenciar classe no body para controlar padding quando banner está visível
+     */
+    updateBodyPaddingClass(isVisible) {
+        // Verificar se o container está realmente visível antes de adicionar a classe
+        if (isVisible) {
+            const container = document.querySelector(this.options.containerSelector || '.pwa-install-footer-container');
+            const footer = document.querySelector('.pwa-install-footer');
+            
+            // Só adicionar classe se o container e footer estiverem realmente visíveis
+            if (container && footer) {
+                const containerVisible = container.offsetParent !== null && 
+                                       container.style.display !== 'none' && 
+                                       container.style.visibility !== 'hidden';
+                const footerVisible = footer.offsetParent !== null && 
+                                    footer.style.display !== 'none' && 
+                                    footer.style.visibility !== 'hidden';
+                
+                if (containerVisible && footerVisible) {
+                    document.body.classList.add('pwa-banner-visible');
+                } else {
+                    document.body.classList.remove('pwa-banner-visible');
+                }
+            } else {
+                document.body.classList.remove('pwa-banner-visible');
+            }
+        } else {
+            document.body.classList.remove('pwa-banner-visible');
+        }
+    }
+    
+    /**
      * Ocultar componente
      */
     hide() {
         // Marcar como instalado para prevenir re-renders
         this.isInstalled = true;
         this.isRendered = false; // Permitir que seja renderizado novamente se necessário
+        
+        // Remover classe do body para remover padding
+        this.updateBodyPaddingClass(false);
         
         // Ocultar footer se existir (sem remover do DOM para evitar piscar)
         const footer = document.querySelector('.pwa-install-footer');
@@ -1947,6 +1988,9 @@ function getPWABasePath() {
 
 // Inicializar automaticamente quando DOM estiver pronto
 function initPWAInstallFooter() {
+    // Garantir que a classe de padding seja removida inicialmente (antes de qualquer inicialização)
+    document.body.classList.remove('pwa-banner-visible');
+    
     // Proteção contra múltiplas inicializações
     if (window.pwaInstallFooter && window.pwaInstallFooter.isInitialized) {
         console.log('[PWA Footer] ⚠️ Componente já foi inicializado, ignorando initPWAInstallFooter() duplicado');

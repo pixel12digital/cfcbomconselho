@@ -464,11 +464,12 @@
     }
     
     /* Espaçamento no final da página para não esconder conteúdo */
-    body {
+    /* APENAS quando o banner estiver visível */
+    body.pwa-banner-visible {
         padding-bottom: 120px;
     }
     
-    .login-container {
+    body.pwa-banner-visible .login-container {
         padding-bottom: 120px;
     }
     
