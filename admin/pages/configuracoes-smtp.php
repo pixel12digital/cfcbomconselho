@@ -65,7 +65,7 @@ try {
 }
 
 .smtp-status-card {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%);
     color: white;
     padding: 20px;
     border-radius: 8px;
@@ -73,12 +73,13 @@ try {
 }
 
 .smtp-status-card.incomplete {
-    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    background: linear-gradient(135deg, #F7931E 0%, #ffb347 100%);
+    color: white;
 }
 
 .smtp-status-card.error {
-    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
-    color: #333;
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
 }
 
 .smtp-status-header {
@@ -202,12 +203,14 @@ try {
 }
 
 .btn-primary {
-    background: #1A365D;
+    background: #023A8D;
     color: white;
 }
 
 .btn-primary:hover {
-    background: #2d4a6b;
+    background: #1e5bb8;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(2, 58, 141, 0.3);
 }
 
 .btn-secondary {
