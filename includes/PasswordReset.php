@@ -122,7 +122,7 @@ class PasswordReset {
                     "UPDATE password_resets SET used_at = NOW() WHERE login = :login AND used_at IS NULL",
                     ['login' => $login]
                 );
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 // Log mas continuar (pode ser primeira solicitação)
                 if (LOG_ENABLED) {
                     error_log('[PASSWORD_RESET] Aviso ao invalidar tokens anteriores: ' . $e->getMessage());
@@ -268,7 +268,7 @@ class PasswordReset {
                 'type' => $reset['type']
             ];
             
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             if (LOG_ENABLED) {
                 error_log('[PASSWORD_RESET] Erro ao validar token: ' . $e->getMessage());
             }
@@ -317,23 +317,86 @@ class PasswordReset {
             $usuario = self::findUserByLogin($login, $validation['type'], $db);
             
             if (!$usuario) {
+                if (LOG_ENABLED) {
+                    error_log(sprintf(
+                        '[PASSWORD_RESET] Usuário não encontrado - login: %s, type: %s',
+                        $login,
+                        $validation['type']
+                    ));
+                }
                 return [
                     'success' => false,
                     'message' => 'Usuário não encontrado.'
                 ];
             }
             
+            // Validar que o usuário tem ID
+            if (empty($usuario['id'])) {
+                if (LOG_ENABLED) {
+                    error_log(sprintf(
+                        '[PASSWORD_RESET] Usuário encontrado mas sem ID - login: %s, type: %s, usuario: %s',
+                        $login,
+                        $validation['type'],
+                        json_encode($usuario)
+                    ));
+                }
+                return [
+                    'success' => false,
+                    'message' => 'Erro ao atualizar senha. Dados do usuário incompletos.'
+                ];
+            }
+            
             // Hash da nova senha
             $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
             
+            if (LOG_ENABLED) {
+                error_log(sprintf(
+                    '[PASSWORD_RESET] Tentando atualizar senha - usuario_id: %s, tipo: %s, login: %s',
+                    $usuario['id'],
+                    $usuario['tipo'] ?? 'N/A',
+                    $login
+                ));
+            }
+            
             // Atualizar senha na tabela usuarios
             try {
-                $db->update('usuarios', ['senha' => $passwordHash], 'id = :id', ['id' => $usuario['id']]);
-                $updateSuccess = true;
-            } catch (Exception $e) {
+                $stmt = $db->update('usuarios', ['senha' => $passwordHash], 'id = :id', ['id' => $usuario['id']]);
+                
+                // Verificar se a atualização afetou alguma linha
+                $rowsAffected = $stmt ? $stmt->rowCount() : 0;
+                
+                if ($rowsAffected > 0) {
+                    $updateSuccess = true;
+                    if (LOG_ENABLED) {
+                        error_log(sprintf(
+                            '[PASSWORD_RESET] Senha atualizada com sucesso - usuario_id: %s, linhas afetadas: %d',
+                            $usuario['id'],
+                            $rowsAffected
+                        ));
+                    }
+                } else {
+                    $updateSuccess = false;
+                    if (LOG_ENABLED) {
+                        error_log(sprintf(
+                            '[PASSWORD_RESET] Nenhuma linha foi atualizada - usuario_id: %s, tipo: %s. Verificar se o ID existe na tabela.',
+                            $usuario['id'],
+                            $usuario['tipo'] ?? 'N/A'
+                        ));
+                    }
+                }
+            } catch (Throwable $e) {
                 $updateSuccess = false;
                 if (LOG_ENABLED) {
-                    error_log('[PASSWORD_RESET] Erro ao atualizar senha: ' . $e->getMessage());
+                    error_log(sprintf(
+                        '[PASSWORD_RESET] Erro ao atualizar senha: %s | Usuario ID: %s | Tipo: %s | Login: %s | File: %s:%d | Trace: %s',
+                        $e->getMessage(),
+                        $usuario['id'],
+                        $usuario['tipo'] ?? 'N/A',
+                        $login,
+                        $e->getFile(),
+                        $e->getLine(),
+                        substr($e->getTraceAsString(), 0, 500)
+                    ));
                 }
             }
             
@@ -348,7 +411,7 @@ class PasswordReset {
                     if ($alunoNaTabelaAlunos) {
                         $db->update('alunos', ['senha' => $passwordHash], 'cpf = :cpf', ['cpf' => $usuario['cpf']]);
                     }
-                } catch (Exception $e) {
+                } catch (Throwable $e) {
                     // Não falhar a operação principal se houver erro na sincronização
                     if (LOG_ENABLED) {
                         error_log('[PASSWORD_RESET] Erro ao sincronizar senha na tabela alunos: ' . $e->getMessage());
@@ -363,10 +426,10 @@ class PasswordReset {
                 ];
             }
             
-            // Marcar token como usado
+            // Marcar token como usado (usar UTC para consistência)
             try {
-                $db->update('password_resets', ['used_at' => date('Y-m-d H:i:s')], 'id = :id', ['id' => $validation['reset_id']]);
-            } catch (Exception $e) {
+                $db->update('password_resets', ['used_at' => gmdate('Y-m-d H:i:s')], 'id = :id', ['id' => $validation['reset_id']]);
+            } catch (Throwable $e) {
                 // Log mas não falhar operação
                 if (LOG_ENABLED) {
                     error_log('[PASSWORD_RESET] Erro ao marcar token como usado: ' . $e->getMessage());
@@ -380,7 +443,7 @@ class PasswordReset {
                      WHERE login = :login AND used_at IS NULL AND id != :id",
                     ['login' => $login, 'id' => $validation['reset_id']]
                 );
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 // Log mas não falhar operação
                 if (LOG_ENABLED) {
                     error_log('[PASSWORD_RESET] Erro ao invalidar outros tokens: ' . $e->getMessage());
