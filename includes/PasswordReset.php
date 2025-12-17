@@ -38,7 +38,19 @@ class PasswordReset {
             }
             
             // Buscar usuário (consulta real)
+            if (LOG_ENABLED) {
+                error_log("[PASSWORD_RESET] requestReset chamado - login: '$login', type: '$type', ip: '$ip'");
+            }
+            
             $usuario = self::findUserByLogin($login, $type, $db);
+            
+            if (LOG_ENABLED) {
+                if ($usuario) {
+                    error_log("[PASSWORD_RESET] Usuário encontrado - ID: " . ($usuario['id'] ?? 'N/A') . ", email: " . ($usuario['email'] ?? 'N/A') . ", tipo: " . ($usuario['tipo'] ?? 'N/A'));
+                } else {
+                    error_log("[PASSWORD_RESET] Usuário NÃO encontrado - login: '$login', type: '$type'");
+                }
+            }
             
             if (!$usuario) {
                 // Não encontrado: retornar mensagem amigável
@@ -404,14 +416,19 @@ class PasswordReset {
      */
     private static function findUserByLogin($login, $type, $db) {
         try {
-            // Para aluno: buscar por CPF (prioritário)
+            // Para aluno: buscar por CPF (prioritário) na tabela usuarios
             if ($type === 'aluno') {
-                // Limpar CPF (remover pontos e traços)
-                $cpfLimpo = preg_replace('/[^0-9]/', '', $login);
+                // Limpar CPF (remover pontos e traços) e espaços
+                $cpfLimpo = preg_replace('/[^0-9]/', '', trim($login));
+                
+                if (LOG_ENABLED) {
+                    error_log("[PASSWORD_RESET] findUserByLogin - login recebido: '$login', type: '$type', cpfLimpo: '$cpfLimpo'");
+                }
                 
                 // Verificar se é email ou CPF
                 $isEmail = filter_var($login, FILTER_VALIDATE_EMAIL);
                 
+                // Buscar APENAS na tabela usuarios (não usar fallback para alunos)
                 if ($isEmail) {
                     // Se for email, buscar por email
                     $usuario = $db->fetch(
@@ -419,39 +436,89 @@ class PasswordReset {
                         ['email' => $login]
                     );
                 } else {
-                    // Se for CPF, buscar por CPF limpo
-                    $usuario = $db->fetch(
-                        "SELECT id, email, cpf, tipo FROM usuarios WHERE cpf = :cpf AND tipo = 'aluno' AND ativo = 1 LIMIT 1",
-                        ['cpf' => $cpfLimpo]
-                    );
+                    // Se for CPF, buscar normalizando o CPF do banco (pode estar com ou sem formatação)
+                    // Usar REPLACE para remover formatação durante a comparação
+                    if (!empty($cpfLimpo) && strlen($cpfLimpo) === 11) {
+                        if (LOG_ENABLED) {
+                            error_log("[PASSWORD_RESET] Buscando aluno na tabela usuarios com CPF limpo: $cpfLimpo");
+                        }
+                        
+                        $usuario = $db->fetch(
+                            "SELECT id, email, cpf, tipo FROM usuarios 
+                             WHERE REPLACE(REPLACE(cpf, '.', ''), '-', '') = :cpf 
+                             AND tipo = 'aluno' 
+                             AND ativo = 1 
+                             LIMIT 1",
+                            ['cpf' => $cpfLimpo]
+                        );
+                        
+                        if (LOG_ENABLED) {
+                            if ($usuario) {
+                                error_log("[PASSWORD_RESET] Aluno encontrado na tabela usuarios - ID: " . $usuario['id'] . ", CPF: " . ($usuario['cpf'] ?? 'N/A'));
+                            } else {
+                                error_log("[PASSWORD_RESET] Aluno NÃO encontrado na tabela usuarios com CPF: $cpfLimpo");
+                                // Log adicional: verificar se existe com outro formato
+                                $verificarFormato = $db->fetchAll(
+                                    "SELECT id, cpf, tipo, ativo FROM usuarios WHERE tipo = 'aluno' LIMIT 10"
+                                );
+                                if (LOG_ENABLED && !empty($verificarFormato)) {
+                                    error_log("[PASSWORD_RESET] Exemplos de CPFs na tabela usuarios: " . json_encode($verificarFormato));
+                                }
+                            }
+                        }
+                    } else {
+                        if (LOG_ENABLED) {
+                            error_log("[PASSWORD_RESET] CPF inválido ou vazio - limpo: '$cpfLimpo', tamanho: " . strlen($cpfLimpo));
+                        }
+                        $usuario = null;
+                    }
                 }
                 
-                // Se encontrou, buscar dados adicionais na tabela alunos (telefone)
+                // Se encontrou, buscar dados adicionais na tabela alunos (telefone/email complementar)
                 if ($usuario) {
-                    // Buscar CPF e telefone na tabela alunos
+                    // Buscar CPF e telefone na tabela alunos (apenas para dados complementares)
                     $cpfParaBusca = $usuario['cpf'] ?? $cpfLimpo;
                     $emailParaBusca = $usuario['email'] ?? null;
                     
                     $alunoCompleto = null;
-                    if (!empty($cpfParaBusca)) {
-                        $alunoCompleto = $db->fetch(
-                            "SELECT cpf, telefone, celular FROM alunos WHERE cpf = :cpf LIMIT 1",
-                            ['cpf' => $cpfParaBusca]
-                        );
-                    } elseif (!empty($emailParaBusca)) {
-                        $alunoCompleto = $db->fetch(
-                            "SELECT cpf, telefone, celular FROM alunos WHERE email = :email LIMIT 1",
-                            ['email' => $emailParaBusca]
-                        );
+                    try {
+                        if (!empty($cpfParaBusca)) {
+                            // Normalizar CPF para busca
+                            $cpfBusca = preg_replace('/[^0-9]/', '', $cpfParaBusca);
+                            
+                            if (strlen($cpfBusca) === 11) {
+                                // Buscar normalizando CPF do banco (remove formatação durante comparação)
+                                // Nota: tabela alunos tem 'telefone' e 'telefone_secundario', não tem 'celular'
+                                $alunoCompleto = $db->fetch(
+                                    "SELECT cpf, telefone, telefone_secundario, email FROM alunos 
+                                     WHERE REPLACE(REPLACE(cpf, '.', ''), '-', '') = :cpf 
+                                     LIMIT 1",
+                                    ['cpf' => $cpfBusca]
+                                );
+                            }
+                        } elseif (!empty($emailParaBusca)) {
+                            $alunoCompleto = $db->fetch(
+                                "SELECT cpf, telefone, telefone_secundario, email FROM alunos WHERE email = :email LIMIT 1",
+                                ['email' => $emailParaBusca]
+                            );
+                        }
+                    } catch (Exception $e) {
+                        // Se falhar ao buscar dados complementares, não é crítico - continuar com dados do usuarios
+                        if (LOG_ENABLED) {
+                            error_log("[PASSWORD_RESET] Erro ao buscar dados complementares em alunos (não crítico): " . $e->getMessage());
+                        }
+                        $alunoCompleto = null;
                     }
                     
                     if ($alunoCompleto) {
-                        // Atualizar CPF se não tinha
-                        if (empty($usuario['cpf']) && !empty($alunoCompleto['cpf'])) {
-                            $usuario['cpf'] = $alunoCompleto['cpf'];
+                        // Atualizar email se não tinha (mas manter CPF e ID de usuarios)
+                        if (empty($usuario['email']) && !empty($alunoCompleto['email'])) {
+                            $usuario['email'] = $alunoCompleto['email'];
                         }
-                        // Adicionar telefone (preferir celular)
-                        $usuario['telefone'] = !empty($alunoCompleto['celular']) ? $alunoCompleto['celular'] : ($alunoCompleto['telefone'] ?? null);
+                        // Adicionar telefone (preferir telefone_secundario se disponível, senão telefone) - apenas para exibição/feedback
+                        $usuario['telefone'] = !empty($alunoCompleto['telefone_secundario']) 
+                            ? $alunoCompleto['telefone_secundario'] 
+                            : ($alunoCompleto['telefone'] ?? null);
                     }
                 }
                 

@@ -38,6 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $login = trim($_POST['login'] ?? '');
     $requestedType = $_POST['user_type'] ?? $userType;
     
+    // Log para debug (remover em produção)
+    if (LOG_ENABLED) {
+        error_log("[FORGOT_PASSWORD] POST recebido - login: '$login', requestedType: '$requestedType', userType: '$userType'");
+    }
+    
     if (empty($login)) {
         $error = $requestedType === 'aluno' 
             ? 'Por favor, informe seu CPF.' 

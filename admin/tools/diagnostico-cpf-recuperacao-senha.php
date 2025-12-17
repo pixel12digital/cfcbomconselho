@@ -7,7 +7,6 @@
 
 require_once '../../includes/config.php';
 require_once '../../includes/database.php';
-require_once '../../includes/database.php';
 
 // Script de diagnóstico - permite acesso sem login para facilitar testes
 // Em produção, considere adicionar verificação de IP ou token
