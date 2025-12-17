@@ -83,7 +83,8 @@ class SMTPConfigService {
             }
             
             // Desabilitar outras configurações (mantém apenas uma ativa)
-            $db->update('smtp_settings', ['enabled' => 0], []);
+            // Usar WHERE 1=1 para desabilitar todas, pois vamos habilitar apenas a nova
+            $db->update('smtp_settings', ['enabled' => 0], '1=1');
             
             // Salvar nova configuração
             $configData = [
@@ -168,7 +169,7 @@ class SMTPConfigService {
             ];
             
             // Atualizar última configuração ativa
-            $db->update('smtp_settings', $updateData, ['enabled' => 1]);
+            $db->update('smtp_settings', $updateData, 'enabled = 1');
             
             if ($result['success']) {
                 return [
