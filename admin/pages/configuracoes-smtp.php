@@ -21,15 +21,36 @@ if (!defined('ADMIN_ROUTING')) {
 
 // Verificar se é admin (obrigatório)
 if (!isset($isAdmin) || !$isAdmin) {
-    echo '<div class="alert alert-danger">Você não tem permissão para acessar esta página. Apenas administradores podem configurar SMTP.</div>';
+    echo '<div class="alert alert-danger" style="margin: 20px; padding: 15px; background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; border-radius: 4px;">
+        <strong>❌ Acesso Negado:</strong> Você não tem permissão para acessar esta página. Apenas administradores podem configurar SMTP.
+    </div>';
     return;
 }
 
-require_once '../../includes/SMTPConfigService.php';
+// Carregar serviço SMTP
+$status = null;
+$config = null;
 
-// Obter status atual
-$status = SMTPConfigService::getStatus();
-$config = SMTPConfigService::getConfig();
+try {
+    require_once '../../includes/SMTPConfigService.php';
+    
+    // Obter status atual
+    $status = SMTPConfigService::getStatus();
+    $config = SMTPConfigService::getConfig();
+} catch (Exception $e) {
+    // Se houver erro ao carregar (ex: tabela não existe), continuar mesmo assim
+    $status = [
+        'configured' => false,
+        'status' => 'incompleto',
+        'message' => 'SMTP não configurado. Execute a migration primeiro.',
+        'error' => $e->getMessage()
+    ];
+    $config = null;
+    
+    if (LOG_ENABLED) {
+        error_log('[SMTP_CONFIG_PAGE] Erro ao carregar serviço: ' . $e->getMessage());
+    }
+}
 ?>
 
 <style>
@@ -263,18 +284,27 @@ $config = SMTPConfigService::getConfig();
 </style>
 
 <div class="smtp-config-container">
-    <h1 style="color: #1A365D; margin-bottom: 30px;">
+        <h1 style="color: #1A365D; margin-bottom: 30px;">
         <i class="fas fa-envelope me-2"></i>
         Configurações de E-mail (SMTP)
     </h1>
     
+    <?php if (isset($status['error'])): ?>
+        <div class="alert alert-danger">
+            <strong>⚠️ Aviso:</strong> Erro ao carregar configurações SMTP. 
+            Execute a migration primeiro: <a href="tools/executar-migration-smtp-settings.php" target="_blank">Executar Migration</a>
+            <br><small>Erro: <?php echo htmlspecialchars($status['error']); ?></small>
+        </div>
+    <?php endif; ?>
+    
     <!-- Status Card -->
-    <div class="smtp-status-card <?php echo $status['status'] === 'incompleto' ? 'incomplete' : ($status['status'] === 'error' ? 'error' : ''); ?>">
+    <div class="smtp-status-card <?php echo ($status && $status['status'] === 'incompleto') ? 'incomplete' : (($status && $status['status'] === 'error') ? 'error' : ''); ?>">
         <div class="smtp-status-header">
             <h2 class="smtp-status-title">Status SMTP</h2>
             <span class="smtp-status-badge">
                 <?php 
-                switch($status['status']) {
+                $statusType = $status && isset($status['status']) ? $status['status'] : 'incompleto';
+                switch($statusType) {
                     case 'configurado':
                         echo '✅ Configurado';
                         break;
@@ -288,23 +318,23 @@ $config = SMTPConfigService::getConfig();
             </span>
         </div>
         <div class="smtp-status-info">
-            <?php if ($status['configured']): ?>
-                <p><strong>Host:</strong> <?php echo htmlspecialchars($status['host']); ?></p>
-                <p><strong>Usuário:</strong> <?php echo htmlspecialchars($status['user']); ?></p>
+            <?php if ($status && isset($status['configured']) && $status['configured']): ?>
+                <p><strong>Host:</strong> <?php echo htmlspecialchars($status['host'] ?? ''); ?></p>
+                <p><strong>Usuário:</strong> <?php echo htmlspecialchars($status['user'] ?? ''); ?></p>
             <?php else: ?>
                 <p>Configure o SMTP abaixo para habilitar o envio de e-mails do sistema.</p>
             <?php endif; ?>
             
-            <?php if ($status['last_test_at']): ?>
+            <?php if ($status && isset($status['last_test_at']) && $status['last_test_at']): ?>
                 <div class="smtp-status-last-test">
                     <strong>Último teste:</strong> 
                     <?php echo date('d/m/Y H:i', strtotime($status['last_test_at'])); ?>
                     - 
-                    <?php if ($status['last_test_status'] === 'ok'): ?>
+                    <?php if (isset($status['last_test_status']) && $status['last_test_status'] === 'ok'): ?>
                         <span style="color: #90EE90;">✅ Sucesso</span>
                     <?php else: ?>
                         <span style="color: #FFB6C1;">❌ Falhou</span>
-                        <?php if ($status['last_test_message']): ?>
+                        <?php if (isset($status['last_test_message']) && $status['last_test_message']): ?>
                             <br><small><?php echo htmlspecialchars($status['last_test_message']); ?></small>
                         <?php endif; ?>
                     <?php endif; ?>
@@ -467,7 +497,7 @@ $config = SMTPConfigService::getConfig();
 </div>
 
 <script>
-let currentConfig = <?php echo json_encode($config); ?>;
+let currentConfig = <?php echo json_encode($config ?? []); ?>;
 let isSaving = false;
 let isTesting = false;
 
