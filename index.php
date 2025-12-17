@@ -529,6 +529,102 @@ require_once 'includes/config.php';
             font-weight: 500;
         }
         
+        /* Correção: Endereço branco no menu mobile para legibilidade */
+        .mobile-menu .mobile-menu-contact .contact-item span {
+            color: #ffffff !important;
+        }
+        
+        /* Seção Acessos - Menu Mobile */
+        .mobile-menu-access {
+            padding: 20px;
+            border-top: 1px solid rgba(255,255,255,0.2);
+            border-bottom: 1px solid rgba(255,255,255,0.2);
+            margin: 10px 0;
+        }
+        
+        .access-title {
+            color: #ffffff;
+            font-size: 18px;
+            font-weight: 700;
+            margin-bottom: 15px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .access-item {
+            margin-bottom: 20px;
+        }
+        
+        .access-item:last-child {
+            margin-bottom: 0;
+        }
+        
+        .access-link {
+            display: flex;
+            align-items: center;
+            color: #ffffff !important;
+            text-decoration: none;
+            padding: 12px 0;
+            font-size: 16px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .access-link:hover,
+        .access-link:focus {
+            color: var(--logo-yellow) !important;
+            background: rgba(255,255,255,0.05);
+            outline: none;
+        }
+        
+        .access-link i {
+            width: 24px;
+            margin-right: 12px;
+            color: var(--logo-yellow);
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        
+        .access-label {
+            flex: 1;
+            color: #ffffff;
+        }
+        
+        /* Nota informativa abaixo dos acessos */
+        .mobile-menu-access-note {
+            padding: 0 20px 10px 20px;
+            margin-top: 10px;
+        }
+        
+        .access-note-text {
+            font-size: 12px;
+            color: rgba(255,255,255,0.7) !important;
+            line-height: 1.5;
+            font-style: italic;
+            margin: 0;
+        }
+        
+        .access-microtext {
+            margin-top: 8px;
+            padding-left: 36px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        
+        .microtext-item {
+            font-size: 12px;
+            color: rgba(255,255,255,0.85) !important;
+            line-height: 1.5;
+            font-weight: 400;
+        }
+        
+        /* Garantir legibilidade em todos os navegadores */
+        .mobile-menu .access-microtext .microtext-item {
+            color: rgba(255,255,255,0.85) !important;
+        }
+        
         /* Estilos específicos para textos de contato */
         .contact-info .contact-item span {
             color: #333 !important;
@@ -629,6 +725,22 @@ require_once 'includes/config.php';
         
         .arrow-btn i {
             font-size: 18px;
+        }
+        
+        /* Correção: Centralizar ícone da seta no botão do menu mobile */
+        .mobile-menu .arrow-btn {
+            display: flex !important;
+            align-items: center !important;
+            justify-content: center !important;
+        }
+        
+        .mobile-menu .arrow-btn i {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            margin: 0;
+            padding: 0;
         }
         
         /* Hero Section Redesenhado */
@@ -3625,6 +3737,30 @@ require_once 'includes/config.php';
             color: var(--logo-yellow);
         }
         
+        /* Footer - Seção Acessos */
+        .footer-access-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 12px;
+            color: var(--logo-yellow);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        
+        .footer-access-links {
+            margin-top: 0;
+        }
+        
+        .footer-access-note {
+            font-size: 0.85rem;
+            color: #999;
+            font-style: italic;
+            margin-top: 12px;
+            margin-bottom: 0;
+            line-height: 1.4;
+        }
+        
         /* Coluna Contato */
         .contact-info {
             display: flex;
@@ -4084,6 +4220,35 @@ require_once 'includes/config.php';
             <a href="#servicos">SERVIÇOS</a>
             <a href="#trabalhe">TRABALHE CONOSCO</a>
             <a href="#contato">CONTATO</a>
+            
+            <!-- Seção Acessos -->
+            <div class="mobile-menu-access">
+                <h3 class="access-title">Acessos</h3>
+                <div class="access-item">
+                    <a href="login.php?type=aluno" target="_blank" class="access-link">
+                        <i class="fas fa-user-graduate"></i>
+                        <span class="access-label">Portal do Aluno</span>
+                    </a>
+                </div>
+                <div class="access-item">
+                    <a href="login.php?type=secretaria" target="_blank" class="access-link">
+                        <i class="fas fa-user-tie"></i>
+                        <span class="access-label">Portal da Secretaria</span>
+                    </a>
+                </div>
+                <div class="access-item">
+                    <a href="login.php?type=instrutor" target="_blank" class="access-link">
+                        <i class="fas fa-chalkboard-teacher"></i>
+                        <span class="access-label">Portal do Instrutor</span>
+                    </a>
+                </div>
+                <div class="access-item">
+                    <a href="login.php?type=admin" target="_blank" class="access-link">
+                        <i class="fas fa-user-shield"></i>
+                        <span class="access-label">Portal do Administrador</span>
+                    </a>
+                </div>
+            </div>
             
             <!-- Informações de Contato -->
             <div class="mobile-menu-contact">
@@ -4778,8 +4943,13 @@ require_once 'includes/config.php';
                         <li><a href="#servicos">Serviços</a></li>
                         <li><a href="trabalhe-conosco.php">Trabalhe Conosco</a></li>
                         <li><a href="links-uteis.php">Links Úteis</a></li>
+                    </ul>
+                    <h5 class="footer-access-title">Acessos</h5>
+                    <ul class="footer-links footer-access-links">
                         <li><a href="login.php?type=aluno" target="_blank">Portal do Aluno</a></li>
-                        <li><a href="login.php?type=admin" target="_blank">Portal do CFC</a></li>
+                        <li><a href="login.php?type=secretaria" target="_blank">Portal da Secretaria</a></li>
+                        <li><a href="login.php?type=instrutor" target="_blank">Portal do Instrutor</a></li>
+                        <li><a href="login.php?type=admin" target="_blank">Portal do Administrador</a></li>
                     </ul>
                 </div>
                 
