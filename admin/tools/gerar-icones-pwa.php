@@ -113,8 +113,8 @@ function createMaskableIcon($source, $size) {
     $logoWidth = imagesx($source);
     $logoHeight = imagesy($source);
     
-    // Calcular escala (usar 75-80% da safe zone para o logo, deixando margem)
-    $logoArea = $safeZone * 0.77; // 77% da safe zone (seguro para não cortar)
+    // Calcular escala (logo maior: usar ~85% da safe zone, ainda seguro para não cortar)
+    $logoArea = $safeZone * 0.85; // 85% da safe zone (logo bem maior, mas ainda seguro)
     $scale = min($logoArea / $logoWidth, $logoArea / $logoHeight);
     $newWidth = (int)($logoWidth * $scale);
     $newHeight = (int)($logoHeight * $scale);
@@ -145,12 +145,12 @@ function createMaskableIcon($source, $size) {
     return $icon;
 }
 
-// Gerar ícones (versão v3: círculo azul sólido, logo maior)
+// Gerar ícones (versão v105: círculo azul sólido, logo ~2x maior)
 $icons = [
-    ['size' => 192, 'name' => 'cfc-192-any-v3.png', 'type' => 'circular'],
-    ['size' => 512, 'name' => 'cfc-512-any-v3.png', 'type' => 'circular'],
-    ['size' => 192, 'name' => 'cfc-192-maskable-v3.png', 'type' => 'maskable'],
-    ['size' => 512, 'name' => 'cfc-512-maskable-v3.png', 'type' => 'maskable'],
+    ['size' => 192, 'name' => 'cfc-192-any-v105.png', 'type' => 'circular'],
+    ['size' => 512, 'name' => 'cfc-512-any-v105.png', 'type' => 'circular'],
+    ['size' => 192, 'name' => 'cfc-192-maskable-v105.png', 'type' => 'maskable'],
+    ['size' => 512, 'name' => 'cfc-512-maskable-v105.png', 'type' => 'maskable'],
 ];
 
 foreach ($icons as $config) {

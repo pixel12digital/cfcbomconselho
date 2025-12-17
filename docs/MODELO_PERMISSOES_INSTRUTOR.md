@@ -334,3 +334,5 @@ Todas as queries foram corrigidas para usar o nome correto:
 - `docs/RESUMO_CORRECOES_AUTENTICACAO_INSTRUTOR_2025.md`
 
 
+
+

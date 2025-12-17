@@ -589,7 +589,17 @@ function saveConfig() {
         },
         body: JSON.stringify(data)
     })
-    .then(response => response.json())
+    .then(async response => {
+        // Verificar se a resposta é JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            // Tentar ler como texto para ver o que foi retornado
+            const text = await response.text();
+            console.error('Resposta não é JSON:', text.substring(0, 200));
+            throw new Error('Resposta inválida do servidor. Verifique se a tabela smtp_settings existe.');
+        }
+        return response.json();
+    })
     .then(result => {
         isSaving = false;
         btnSave.disabled = false;
@@ -602,15 +612,17 @@ function saveConfig() {
                 window.location.reload();
             }, 1500);
         } else {
-            showAlert('<strong>❌ Erro:</strong> ' + result.message, 'danger');
+            showAlert('<strong>❌ Erro:</strong> ' + (result.message || 'Erro desconhecido'), 'danger');
         }
     })
     .catch(error => {
         isSaving = false;
         btnSave.disabled = false;
         btnSave.innerHTML = '<i class="fas fa-save me-2"></i> Salvar Configurações';
-        showAlert('<strong>❌ Erro:</strong> Erro ao salvar configurações. Tente novamente.', 'danger');
-        console.error('Erro:', error);
+        
+        const errorMsg = error.message || 'Erro ao salvar configurações. Tente novamente.';
+        showAlert('<strong>❌ Erro:</strong> ' + errorMsg + '<br><small>Verifique se executou a migration da tabela smtp_settings.</small>', 'danger');
+        console.error('Erro ao salvar SMTP:', error);
     });
 }
 
@@ -644,7 +656,15 @@ function testSMTP() {
             test_email: testEmail
         })
     })
-    .then(response => response.json())
+    .then(async response => {
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Resposta não é JSON:', text.substring(0, 200));
+            throw new Error('Resposta inválida do servidor');
+        }
+        return response.json();
+    })
     .then(result => {
         isTesting = false;
         btnTest.disabled = false;
