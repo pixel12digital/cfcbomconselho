@@ -98,12 +98,30 @@ class PasswordReset {
                     error_log($auditLog);
                 }
                 
+                // Preparar resposta com destino mascarado (se feature flag ativa e destino válido)
+                $maskedDestination = null;
+                if (defined('PASSWORD_RESET_SHOW_MASKED_DESTINATION') && PASSWORD_RESET_SHOW_MASKED_DESTINATION) {
+                    $emailTo = $usuario['email'] ?? null;
+                    if ($emailTo && filter_var($emailTo, FILTER_VALIDATE_EMAIL)) {
+                        // Priorizar e-mail se disponível
+                        $maskedDestination = self::maskEmail($emailTo);
+                    } elseif ($type === 'aluno' && !empty($usuario['telefone'])) {
+                        // Para aluno sem e-mail, mostrar telefone mascarado (se disponível)
+                        $phoneMasked = self::maskPhone($usuario['telefone']);
+                        if ($phoneMasked) {
+                            $maskedDestination = $phoneMasked;
+                        }
+                    }
+                }
+                
                 return [
                     'success' => true,
                     'message' => 'Se o dado informado existir em nossa base, você receberá instruções para redefinir sua senha.',
                     'token' => $token, // Retornar token apenas para montar link no email
                     'user_id' => $usuario['id'],
-                    'user_email' => $usuario['email'] ?? null
+                    'user_email' => $usuario['email'] ?? null,
+                    'masked_destination' => $maskedDestination, // Destino mascarado (se disponível e seguro)
+                    'has_email' => !empty($usuario['email']) && filter_var($usuario['email'], FILTER_VALIDATE_EMAIL)
                 ];
             }
             
@@ -377,14 +395,32 @@ class PasswordReset {
                     ['cpf' => $cpfLimpo, 'email' => $login]
                 );
                 
-                // Se encontrou mas não tem CPF, tentar buscar CPF na tabela alunos pelo email
-                if ($usuario && empty($usuario['cpf']) && !empty($usuario['email'])) {
-                    $alunoComCPF = $db->fetch(
-                        "SELECT cpf FROM alunos WHERE email = :email LIMIT 1",
-                        ['email' => $usuario['email']]
-                    );
-                    if ($alunoComCPF && !empty($alunoComCPF['cpf'])) {
-                        $usuario['cpf'] = $alunoComCPF['cpf'];
+                // Se encontrou, buscar dados adicionais na tabela alunos (telefone)
+                if ($usuario) {
+                    // Buscar CPF e telefone na tabela alunos
+                    $cpfParaBusca = $usuario['cpf'] ?? $cpfLimpo;
+                    $emailParaBusca = $usuario['email'] ?? null;
+                    
+                    $alunoCompleto = null;
+                    if (!empty($cpfParaBusca)) {
+                        $alunoCompleto = $db->fetch(
+                            "SELECT cpf, telefone, celular FROM alunos WHERE cpf = :cpf LIMIT 1",
+                            ['cpf' => $cpfParaBusca]
+                        );
+                    } elseif (!empty($emailParaBusca)) {
+                        $alunoCompleto = $db->fetch(
+                            "SELECT cpf, telefone, celular FROM alunos WHERE email = :email LIMIT 1",
+                            ['email' => $emailParaBusca]
+                        );
+                    }
+                    
+                    if ($alunoCompleto) {
+                        // Atualizar CPF se não tinha
+                        if (empty($usuario['cpf']) && !empty($alunoCompleto['cpf'])) {
+                            $usuario['cpf'] = $alunoCompleto['cpf'];
+                        }
+                        // Adicionar telefone (preferir celular)
+                        $usuario['telefone'] = !empty($alunoCompleto['celular']) ? $alunoCompleto['celular'] : ($alunoCompleto['telefone'] ?? null);
                     }
                 }
                 
@@ -405,6 +441,84 @@ class PasswordReset {
             }
             
             return null;
+        }
+    }
+    
+    /**
+     * Mascarar e-mail para exibição segura
+     * Exemplo: joao@example.com → j***@ex***.com
+     * 
+     * @param string $email E-mail completo
+     * @return string|null E-mail mascarado ou null se inválido
+     */
+    private static function maskEmail($email) {
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return null;
+        }
+        
+        list($local, $domain) = explode('@', $email, 2);
+        
+        // Mascarar parte local (antes do @)
+        // Manter primeira letra + asteriscos
+        if (strlen($local) > 1) {
+            $maskedLocal = substr($local, 0, 1) . str_repeat('*', min(3, strlen($local) - 1));
+        } else {
+            $maskedLocal = '*';
+        }
+        
+        // Mascarar domínio
+        // Separar domínio em partes (ex: example.com.br → [example, com, br])
+        $domainParts = explode('.', $domain);
+        $mainDomain = array_shift($domainParts); // exemplo
+        
+        // Manter 2-3 primeiras letras do domínio principal
+        if (strlen($mainDomain) > 3) {
+            $maskedMain = substr($mainDomain, 0, 2) . str_repeat('*', min(3, strlen($mainDomain) - 2));
+        } else {
+            $maskedMain = substr($mainDomain, 0, 1) . str_repeat('*', strlen($mainDomain) - 1);
+        }
+        
+        // Reconstruir domínio com extensão
+        $extension = !empty($domainParts) ? '.' . implode('.', $domainParts) : '';
+        
+        return $maskedLocal . '@' . $maskedMain . $extension;
+    }
+    
+    /**
+     * Mascarar telefone para exibição segura
+     * Exemplo: (87) 98145-0308 → (**) *****-**08
+     * 
+     * @param string $phone Telefone completo
+     * @return string|null Telefone mascarado ou null se inválido
+     */
+    private static function maskPhone($phone) {
+        if (empty($phone)) {
+            return null;
+        }
+        
+        // Remover caracteres não numéricos
+        $cleaned = preg_replace('/[^0-9]/', '', $phone);
+        
+        // Se tiver menos de 10 dígitos, não mascarar
+        if (strlen($cleaned) < 10) {
+            return null;
+        }
+        
+        // Formato esperado: DDD (2 dígitos) + número (8 ou 9 dígitos)
+        // Exibir apenas últimos 2 dígitos
+        $lastTwo = substr($cleaned, -2);
+        
+        // Contar dígitos totais para determinar padrão
+        if (strlen($cleaned) == 11) {
+            // Celular: (XX) 9XXXX-XXXX → (**) *****-**XX
+            return '(**) *****-**' . $lastTwo;
+        } elseif (strlen($cleaned) == 10) {
+            // Fixo: (XX) XXXX-XXXX → (**) ****-**XX
+            return '(**) ****-**' . $lastTwo;
+        } else {
+            // Formato desconhecido, mascarar tudo exceto últimos 2
+            $masked = str_repeat('*', strlen($cleaned) - 2) . $lastTwo;
+            return $masked;
         }
     }
 }

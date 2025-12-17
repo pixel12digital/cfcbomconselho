@@ -86,6 +86,9 @@ define('SMTP_PORT', 587);
 define('SMTP_USER', 'seu_email@seudominio.com');
 define('SMTP_PASS', 'sua_senha_smtp');
 
+// Configurações de Recuperação de Senha
+define('PASSWORD_RESET_SHOW_MASKED_DESTINATION', true); // Mostrar destino mascarado (e-mail/telefone) quando seguro
+
 // Configurações de Log baseadas no ambiente
 define('LOG_ENABLED', true);
 define('LOG_LEVEL', ($environment === 'production') ? 'INFO' : 'DEBUG'); // INFO para produção, DEBUG para local/homolog

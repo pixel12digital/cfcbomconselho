@@ -18,6 +18,9 @@ if (isLoggedIn()) {
 
 $error = '';
 $success = '';
+$maskedDestination = null;
+$hasEmail = false;
+$rateLimited = false;
 $userType = $_GET['type'] ?? '';
 $hasSpecificType = !empty($userType);
 
@@ -39,6 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Solicitar reset
             $result = PasswordReset::requestReset($login, $requestedType, $ip);
             
+            // Capturar informações para feedback melhorado
+            $rateLimited = $result['rate_limited'] ?? false;
+            $maskedDestination = $result['masked_destination'] ?? null;
+            $hasEmail = $result['has_email'] ?? false;
+            
             if ($result['success'] && isset($result['token']) && $result['token']) {
                 // Token gerado - enviar email
                 $emailTo = $result['user_email'] ?? null;
@@ -50,12 +58,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Mesmo se email falhar, retornar mensagem neutra (anti-enumeração)
                     $success = $result['message'];
                 } else {
-                    // Para aluno sem email cadastrado
-                    if ($requestedType === 'aluno') {
-                        $success = 'Se você não possui email cadastrado, entre em contato com a secretaria para recuperar sua senha.';
-                    } else {
-                        $success = $result['message'];
-                    }
+                    // Para aluno sem email cadastrado - mensagem neutra
+                    $success = $result['message'];
                 }
             } else {
                 // Sem token (rate limit ou usuário não encontrado) - mensagem neutra
@@ -277,6 +281,27 @@ $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
             line-height: 1.6;
         }
         
+        .alert-info ul {
+            list-style-type: disc;
+        }
+        
+        .alert-info li {
+            margin: 5px 0;
+        }
+        
+        .btn-submit:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        
+        .cooldown-timer {
+            margin-top: 10px;
+            font-size: 13px;
+            color: #7f8c8d;
+            font-style: italic;
+        }
+        
         @media (max-width: 768px) {
             .login-container {
                 flex-direction: column;
@@ -288,6 +313,61 @@ $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
             }
         }
     </style>
+    <script>
+        // Desabilitar botão após clique e mostrar cooldown
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const submitBtn = document.getElementById('submitBtn');
+            const cooldownTimerEl = document.getElementById('cooldownTimer');
+            
+            if (form && submitBtn) {
+                form.addEventListener('submit', function(e) {
+                    // Desabilitar botão imediatamente
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
+                    
+                    // Mostrar mensagem de processamento
+                    if (cooldownTimerEl) {
+                        cooldownTimerEl.style.display = 'block';
+                        cooldownTimerEl.textContent = 'Processando solicitação...';
+                    }
+                    
+                    // Permitir reenvio após 3 segundos (evitar múltiplos cliques acidentais)
+                    // Nota: Se o formulário for enviado com sucesso, a página será recarregada
+                    setTimeout(function() {
+                        // Só reabilitar se ainda estiver na mesma página (não houve redirecionamento)
+                        if (submitBtn && submitBtn.disabled) {
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i class="fas fa-paper-plane"></i> Enviar Instruções';
+                            
+                            if (cooldownTimerEl) {
+                                cooldownTimerEl.style.display = 'none';
+                            }
+                        }
+                    }, 3000);
+                });
+            }
+            
+            // Se já submetido e há rate limit, mostrar timer de 5 minutos
+            <?php if ($rateLimited): ?>
+            let cooldownSeconds = 300; // 5 minutos
+            if (cooldownTimerEl) {
+                cooldownTimerEl.style.display = 'block';
+                const interval = setInterval(function() {
+                    const minutes = Math.floor(cooldownSeconds / 60);
+                    const seconds = cooldownSeconds % 60;
+                    cooldownTimerEl.textContent = 'Você pode solicitar novamente em ' + minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+                    
+                    if (cooldownSeconds <= 0) {
+                        clearInterval(interval);
+                        cooldownTimerEl.style.display = 'none';
+                    }
+                    cooldownSeconds--;
+                }, 1000);
+            }
+            <?php endif; ?>
+        });
+    </script>
 </head>
 <body>
     <div class="login-container">
@@ -312,7 +392,34 @@ $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
             
             <?php if ($success): ?>
                 <div class="alert alert-success">
-                    <?php echo htmlspecialchars($success); ?>
+                    <p style="margin-bottom: 10px;">
+                        <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($success); ?>
+                    </p>
+                    
+                    <?php if ($maskedDestination): ?>
+                        <p style="margin: 10px 0; font-weight: 600; color: #155724;">
+                            <i class="fas fa-envelope"></i> Instruções serão enviadas para: <strong><?php echo htmlspecialchars($maskedDestination); ?></strong>
+                        </p>
+                    <?php endif; ?>
+                    
+                    <?php if ($rateLimited): ?>
+                        <p style="margin: 10px 0; font-size: 13px; color: #856404;">
+                            <i class="fas fa-clock"></i> Você pode solicitar novamente em alguns minutos.
+                        </p>
+                    <?php endif; ?>
+                </div>
+                
+                <div class="alert-info" style="margin-top: 20px;">
+                    <strong><i class="fas fa-question-circle"></i> Não recebeu?</strong><br>
+                    <ul style="margin: 10px 0 0 20px; padding: 0;">
+                        <li>Verifique se digitou corretamente o <?php echo $displayType === 'aluno' ? 'CPF ou e-mail' : 'e-mail'; ?>.</li>
+                        <li>Confira sua caixa de entrada, spam ou lixeira.</li>
+                        <?php if ($displayType === 'aluno'): ?>
+                        <li>Se você não tiver e-mail cadastrado, entre em contato com a Secretaria para atualizar seu cadastro e redefinir a senha.</li>
+                        <?php else: ?>
+                        <li>Se não receber em alguns minutos, verifique o e-mail informado ou entre em contato com o suporte.</li>
+                        <?php endif; ?>
+                    </ul>
                 </div>
             <?php endif; ?>
             
@@ -349,9 +456,10 @@ $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
                         </div>
                     </div>
                     
-                    <button type="submit" class="btn-submit">
+                    <button type="submit" id="submitBtn" class="btn-submit">
                         <i class="fas fa-paper-plane"></i> Enviar Instruções
                     </button>
+                    <div id="cooldownTimer" class="cooldown-timer" style="display: none;"></div>
                 </form>
             <?php endif; ?>
             
