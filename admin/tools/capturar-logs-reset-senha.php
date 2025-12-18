@@ -249,15 +249,80 @@ header('Content-Type: text/html; charset=utf-8');
     <div class="container">
         <h1>🔍 Capturador de Logs - Reset de Senha</h1>
         
-        <div class="instructions">
-            <h2>📋 Instruções:</h2>
+            <div class="instructions">
+            <h2>📋 Instruções (Método 1 - Recomendado):</h2>
             <ol>
-                <li><strong>Abra esta página em uma nova aba</strong> (mantenha aberta)</li>
+                <li><strong>Abra a página de reset:</strong> <code>reset-password.php?token=SEU_TOKEN</code></li>
+                <li><strong>Abra o DevTools (F12)</strong> e vá na aba "Console"</li>
+                <li><strong>Cole o código abaixo</strong> no console e pressione Enter:</li>
+                <li><strong>Preencha o formulário</strong> e clique em "Redefinir Senha"</li>
+                <li><strong>Os logs aparecerão no console</strong> e também serão salvos em <code>window.capturedLogs</code></li>
+            </ol>
+            <div style="background: #1e1e1e; color: #d4d4d4; padding: 15px; border-radius: 4px; margin-top: 10px; font-family: monospace; font-size: 12px; overflow-x: auto;">
+                <pre id="codeSnippet">// Cole este código no console da página reset-password.php
+(function() {
+    window.capturedLogs = [];
+    const addLog = (type, msg, data) => {
+        const log = {time: new Date().toLocaleTimeString(), type, msg, data};
+        window.capturedLogs.push(log);
+        console.log(`[${log.time}] ${type.toUpperCase()}:`, msg, data || '');
+    };
+    
+    // Interceptar submit do formulário
+    document.addEventListener('submit', (e) => {
+        const form = e.target;
+        const formData = new FormData(form);
+        const data = {};
+        formData.forEach((v, k) => {
+            data[k] = k.includes('password') || k.includes('senha') ? '***' : v;
+        });
+        addLog('REQUEST', `FORM SUBMIT: ${form.method} ${form.action || window.location.href}`, data);
+    }, true);
+    
+    // Interceptar fetch
+    const origFetch = window.fetch;
+    window.fetch = (...args) => {
+        addLog('REQUEST', `FETCH: ${args[0]}`, {method: args[1]?.method || 'GET'});
+        return origFetch.apply(this, args).then(r => {
+            addLog('RESPONSE', `FETCH: ${args[0]}`, {status: r.status, statusText: r.statusText});
+            return r;
+        }).catch(e => {
+            addLog('ERROR', `FETCH ERROR: ${args[0]}`, e.message);
+            throw e;
+        });
+    };
+    
+    // Interceptar XHR
+    const OrigXHR = window.XMLHttpRequest;
+    window.XMLHttpRequest = function() {
+        const xhr = new OrigXHR();
+        const origOpen = xhr.open;
+        const origSend = xhr.send;
+        xhr.open = function(m, u) {
+            this._method = m; this._url = u;
+            addLog('REQUEST', `XHR: ${m} ${u}`);
+            return origOpen.apply(this, arguments);
+        };
+        xhr.send = function(d) {
+            xhr.addEventListener('load', () => addLog('RESPONSE', `XHR: ${xhr._method} ${xhr._url}`, {status: xhr.status}));
+            xhr.addEventListener('error', () => addLog('ERROR', `XHR ERROR: ${xhr._method} ${xhr._url}`));
+            return origSend.apply(this, arguments);
+        };
+        return xhr;
+    };
+    
+    addLog('INFO', '✅ Captura de logs iniciada!');
+    console.log('📋 Logs serão salvos em window.capturedLogs');
+})();</pre>
+                <button onclick="copyCode()" class="btn btn-primary" style="margin-top: 10px;">📋 Copiar Código</button>
+            </div>
+            
+            <h2 style="margin-top: 30px;">📋 Método 2 - Comunicação entre Abas:</h2>
+            <ol>
+                <li><strong>Abra esta página em uma aba</strong> (mantenha aberta)</li>
                 <li><strong>Abra outra aba</strong> e acesse: <code>reset-password.php?token=SEU_TOKEN</code></li>
-                <li><strong>Preencha o formulário</strong> de reset de senha</li>
-                <li><strong>Clique em "Redefinir Senha"</strong></li>
-                <li><strong>Volte para esta aba</strong> e veja os logs capturados</li>
-                <li><strong>Clique em "Copiar Logs"</strong> para copiar tudo</li>
+                <li><strong>Cole o código acima no console</strong> da página de reset</li>
+                <li><strong>Os logs serão sincronizados</strong> entre as abas via localStorage</li>
             </ol>
         </div>
         
@@ -473,6 +538,55 @@ header('Content-Type: text/html; charset=utf-8');
                 return xhr;
             };
             
+            // Interceptar submissões de formulário (CRÍTICO para reset-password.php)
+            document.addEventListener('submit', function(event) {
+                const form = event.target;
+                if (form.tagName === 'FORM') {
+                    const formData = new FormData(form);
+                    const formObject = {};
+                    formData.forEach((value, key) => {
+                        // Mascarar senhas
+                        if (key.includes('password') || key.includes('senha')) {
+                            formObject[key] = '***MASCARADO***';
+                        } else {
+                            formObject[key] = value;
+                        }
+                    });
+                    
+                    addLog('request', `FORM SUBMIT: ${form.method || 'POST'} ${form.action || window.location.href}`, {
+                        method: form.method || 'POST',
+                        action: form.action || window.location.href,
+                        enctype: form.enctype,
+                        data: formObject
+                    });
+                    
+                    // Não prevenir o submit, apenas logar
+                }
+            }, true); // Usar capture phase para pegar antes de qualquer preventDefault
+            
+            // Interceptar cliques em botões de submit
+            document.addEventListener('click', function(event) {
+                const target = event.target;
+                if (target.type === 'submit' || target.closest('button[type="submit"]') || target.closest('input[type="submit"]')) {
+                    const form = target.closest('form');
+                    if (form) {
+                        addLog('info', `Botão de submit clicado: ${target.textContent || target.value || 'Submit'}`, {
+                            formAction: form.action || window.location.href,
+                            formMethod: form.method || 'POST'
+                        });
+                    }
+                }
+            }, true);
+            
+            // Capturar mudanças em campos de formulário (para debug)
+            document.addEventListener('input', function(event) {
+                const target = event.target;
+                if (target.tagName === 'INPUT' && (target.type === 'password' || target.name.includes('password') || target.name.includes('senha'))) {
+                    // Não logar o valor, apenas que foi digitado
+                    addLog('info', `Campo de senha modificado: ${target.name} (${target.value.length} caracteres)`);
+                }
+            });
+            
             // Capturar erros globais
             window.addEventListener('error', function(event) {
                 addLog('error', `JavaScript Error: ${event.message}`, {
@@ -490,8 +604,30 @@ header('Content-Type: text/html; charset=utf-8');
                 });
             });
             
+            // Interceptar navegação (para capturar quando o formulário redireciona)
+            const originalPushState = history.pushState;
+            const originalReplaceState = history.replaceState;
+            
+            history.pushState = function() {
+                addLog('info', 'History.pushState chamado', { arguments: Array.from(arguments) });
+                return originalPushState.apply(history, arguments);
+            };
+            
+            history.replaceState = function() {
+                addLog('info', 'History.replaceState chamado', { arguments: Array.from(arguments) });
+                return originalReplaceState.apply(history, arguments);
+            };
+            
+            // Interceptar antes de sair da página (para capturar redirects)
+            window.addEventListener('beforeunload', function(event) {
+                addLog('info', 'Página está sendo descarregada/navegada', {
+                    url: window.location.href
+                });
+            });
+            
             addLog('success', '✅ Captura de logs iniciada!');
             addLog('info', 'Agora você pode testar o reset de senha em outra aba.');
+            addLog('info', '⚠️ IMPORTANTE: Para capturar requisições de formulário, você precisa abrir o DevTools (F12) na aba do reset-password.php e verificar a aba "Rede" (Network).');
         }
         
         function stopCapture() {
@@ -543,6 +679,34 @@ header('Content-Type: text/html; charset=utf-8');
                 addLog('error', 'Erro ao copiar logs: ' + err.message);
             });
         }
+        
+        function copyCode() {
+            const code = document.getElementById('codeSnippet').textContent;
+            navigator.clipboard.writeText(code).then(() => {
+                alert('✅ Código copiado! Cole no console da página reset-password.php');
+            });
+        }
+        
+        // Monitorar localStorage para logs de outras abas
+        function checkLocalStorageLogs() {
+            try {
+                const storedLogs = localStorage.getItem('capturedLogs');
+                if (storedLogs) {
+                    const logs = JSON.parse(storedLogs);
+                    logs.forEach(log => {
+                        if (!logs.find(l => l.time === log.time && l.msg === log.msg)) {
+                            addLog(log.type, log.msg, log.data);
+                        }
+                    });
+                    localStorage.removeItem('capturedLogs');
+                }
+            } catch (e) {
+                // Ignorar erros
+            }
+        }
+        
+        // Verificar logs a cada segundo
+        setInterval(checkLocalStorageLogs, 1000);
         
         // Iniciar captura automaticamente
         window.addEventListener('load', function() {
