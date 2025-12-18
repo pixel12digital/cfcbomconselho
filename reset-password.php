@@ -33,26 +33,55 @@ if (!empty($token)) {
 }
 
 // Processar redefinição de senha
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tokenValid) {
-    $token = $_POST['token'] ?? '';
-    $newPassword = $_POST['new_password'] ?? '';
-    $confirmPassword = $_POST['confirm_password'] ?? '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (LOG_ENABLED) {
+        error_log(sprintf(
+            '[RESET_PASSWORD] POST recebido - tokenValid: %s, token: %s, has_new_password: %s, has_confirm: %s',
+            $tokenValid ? 'true' : 'false',
+            !empty($_POST['token']) ? substr($_POST['token'], 0, 16) . '...' : 'vazio',
+            !empty($_POST['new_password']) ? 'sim' : 'não',
+            !empty($_POST['confirm_password']) ? 'sim' : 'não'
+        ));
+    }
     
-    if (empty($newPassword) || empty($confirmPassword)) {
-        $error = 'Por favor, preencha todos os campos.';
-    } elseif (strlen($newPassword) < 8) {
-        $error = 'A senha deve ter no mínimo 8 caracteres.';
-    } elseif ($newPassword !== $confirmPassword) {
-        $error = 'As senhas não coincidem.';
+    if (!$tokenValid) {
+        if (LOG_ENABLED) {
+            error_log('[RESET_PASSWORD] Token inválido no POST - bloqueando processamento');
+        }
+        $error = 'Link inválido ou expirado. Solicite uma nova recuperação de senha.';
     } else {
-        // Consumir token e definir nova senha
-        $result = PasswordReset::consumeTokenAndSetPassword($token, $newPassword);
+        $token = $_POST['token'] ?? '';
+        $newPassword = $_POST['new_password'] ?? '';
+        $confirmPassword = $_POST['confirm_password'] ?? '';
         
-        if ($result['success']) {
-            $success = $result['message'];
-            $tokenValid = false; // Marcar como usado para não mostrar formulário
+        if (empty($newPassword) || empty($confirmPassword)) {
+            $error = 'Por favor, preencha todos os campos.';
+        } elseif (strlen($newPassword) < 8) {
+            $error = 'A senha deve ter no mínimo 8 caracteres.';
+        } elseif ($newPassword !== $confirmPassword) {
+            $error = 'As senhas não coincidem.';
         } else {
-            $error = $result['message'];
+            // Consumir token e definir nova senha
+            if (LOG_ENABLED) {
+                error_log('[RESET_PASSWORD] Chamando consumeTokenAndSetPassword');
+            }
+            
+            $result = PasswordReset::consumeTokenAndSetPassword($token, $newPassword);
+            
+            if (LOG_ENABLED) {
+                error_log(sprintf(
+                    '[RESET_PASSWORD] Resultado do consumeTokenAndSetPassword - success: %s, message: %s',
+                    $result['success'] ? 'true' : 'false',
+                    $result['message'] ?? 'N/A'
+                ));
+            }
+            
+            if ($result['success']) {
+                $success = $result['message'];
+                $tokenValid = false; // Marcar como usado para não mostrar formulário
+            } else {
+                $error = $result['message'];
+            }
         }
     }
 }

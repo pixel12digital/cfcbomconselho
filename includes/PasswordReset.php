@@ -292,12 +292,36 @@ class PasswordReset {
      */
     public static function consumeTokenAndSetPassword($token, $newPassword) {
         try {
+            if (LOG_ENABLED) {
+                error_log(sprintf(
+                    '[PASSWORD_RESET] consumeTokenAndSetPassword chamado - token: %s, password_length: %d',
+                    substr($token, 0, 16) . '...',
+                    strlen($newPassword)
+                ));
+            }
+            
             $db = db();
             
             // Validar token primeiro
             $validation = self::validateToken($token);
             
+            if (LOG_ENABLED) {
+                error_log(sprintf(
+                    '[PASSWORD_RESET] Validação do token - valid: %s, login: %s, type: %s, reset_id: %s',
+                    $validation['valid'] ? 'true' : 'false',
+                    $validation['login'] ?? 'N/A',
+                    $validation['type'] ?? 'N/A',
+                    $validation['reset_id'] ?? 'N/A'
+                ));
+            }
+            
             if (!$validation['valid']) {
+                if (LOG_ENABLED) {
+                    error_log(sprintf(
+                        '[PASSWORD_RESET] Token inválido ao consumir - reason: %s',
+                        $validation['reason'] ?? 'Não especificado'
+                    ));
+                }
                 return [
                     'success' => false,
                     'message' => 'Link inválido ou expirado. Solicite uma nova recuperação de senha.'
@@ -468,9 +492,15 @@ class PasswordReset {
                 'message' => 'Senha alterada com sucesso. Você pode fazer login agora.'
             ];
             
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             if (LOG_ENABLED) {
-                error_log('[PASSWORD_RESET] Erro ao consumir token: ' . $e->getMessage());
+                error_log(sprintf(
+                    '[PASSWORD_RESET] Erro ao consumir token: %s | File: %s:%d | Trace: %s',
+                    $e->getMessage(),
+                    $e->getFile(),
+                    $e->getLine(),
+                    substr($e->getTraceAsString(), 0, 1000)
+                ));
             }
             
             return [
