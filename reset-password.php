@@ -68,53 +68,73 @@ if (!empty($token)) {
 
 // Processar redefinição de senha
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $postToken = $_POST['token'] ?? '';
+    $newPassword = $_POST['new_password'] ?? '';
+    $confirmPassword = $_POST['confirm_password'] ?? '';
+    
     if (LOG_ENABLED) {
         error_log(sprintf(
-            '[RESET_PASSWORD] POST recebido - tokenValid: %s, token: %s, has_new_password: %s, has_confirm: %s',
-            $tokenValid ? 'true' : 'false',
-            !empty($_POST['token']) ? substr($_POST['token'], 0, 16) . '...' : 'vazio',
-            !empty($_POST['new_password']) ? 'sim' : 'não',
-            !empty($_POST['confirm_password']) ? 'sim' : 'não'
+            '[RESET_PASSWORD] POST recebido - token: %s, has_new_password: %s, has_confirm: %s',
+            !empty($postToken) ? substr($postToken, 0, 16) . '...' : 'vazio',
+            !empty($newPassword) ? 'sim' : 'não',
+            !empty($confirmPassword) ? 'sim' : 'não'
         ));
     }
     
-    if (!$tokenValid) {
+    // Validar token do POST (não usar $tokenValid do GET)
+    if (empty($postToken)) {
         if (LOG_ENABLED) {
-            error_log('[RESET_PASSWORD] Token inválido no POST - bloqueando processamento');
+            error_log('[RESET_PASSWORD] Token vazio no POST');
         }
-        $error = 'Link inválido ou expirado. Solicite uma nova recuperação de senha.';
+        $error = 'Token não fornecido. Solicite uma nova recuperação de senha.';
     } else {
-        $token = $_POST['token'] ?? '';
-        $newPassword = $_POST['new_password'] ?? '';
-        $confirmPassword = $_POST['confirm_password'] ?? '';
+        // Validar token novamente no POST
+        $postValidation = PasswordReset::validateToken($postToken);
+        $postTokenValid = $postValidation['valid'];
         
-        if (empty($newPassword) || empty($confirmPassword)) {
-            $error = 'Por favor, preencha todos os campos.';
-        } elseif (strlen($newPassword) < 8) {
-            $error = 'A senha deve ter no mínimo 8 caracteres.';
-        } elseif ($newPassword !== $confirmPassword) {
-            $error = 'As senhas não coincidem.';
+        if (LOG_ENABLED) {
+            error_log(sprintf(
+                '[RESET_PASSWORD] Validação token POST - valid: %s, reason: %s',
+                $postTokenValid ? 'true' : 'false',
+                $postValidation['reason'] ?? 'N/A'
+            ));
+        }
+        
+        if (!$postTokenValid) {
+            if (LOG_ENABLED) {
+                error_log('[RESET_PASSWORD] Token inválido no POST - bloqueando processamento');
+            }
+            $error = 'Link inválido ou expirado. Solicite uma nova recuperação de senha.';
         } else {
-            // Consumir token e definir nova senha
-            if (LOG_ENABLED) {
-                error_log('[RESET_PASSWORD] Chamando consumeTokenAndSetPassword');
-            }
-            
-            $result = PasswordReset::consumeTokenAndSetPassword($token, $newPassword);
-            
-            if (LOG_ENABLED) {
-                error_log(sprintf(
-                    '[RESET_PASSWORD] Resultado do consumeTokenAndSetPassword - success: %s, message: %s',
-                    $result['success'] ? 'true' : 'false',
-                    $result['message'] ?? 'N/A'
-                ));
-            }
-            
-            if ($result['success']) {
-                $success = $result['message'];
-                $tokenValid = false; // Marcar como usado para não mostrar formulário
+            // Validar campos
+            if (empty($newPassword) || empty($confirmPassword)) {
+                $error = 'Por favor, preencha todos os campos.';
+            } elseif (strlen($newPassword) < 8) {
+                $error = 'A senha deve ter no mínimo 8 caracteres.';
+            } elseif ($newPassword !== $confirmPassword) {
+                $error = 'As senhas não coincidem.';
             } else {
-                $error = $result['message'];
+                // Consumir token e definir nova senha
+                if (LOG_ENABLED) {
+                    error_log('[RESET_PASSWORD] Chamando consumeTokenAndSetPassword');
+                }
+                
+                $result = PasswordReset::consumeTokenAndSetPassword($postToken, $newPassword);
+                
+                if (LOG_ENABLED) {
+                    error_log(sprintf(
+                        '[RESET_PASSWORD] Resultado do consumeTokenAndSetPassword - success: %s, message: %s',
+                        $result['success'] ? 'true' : 'false',
+                        $result['message'] ?? 'N/A'
+                    ));
+                }
+                
+                if ($result['success']) {
+                    $success = $result['message'];
+                    $tokenValid = false; // Marcar como usado para não mostrar formulário
+                } else {
+                    $error = $result['message'];
+                }
             }
         }
     }
