@@ -35,16 +35,22 @@
     `;
     document.body.appendChild(logsDiv);
     
+    // Salvar console original ANTES de qualquer interceptação
+    const originalConsole = {
+        log: console.log.bind(console),
+        error: console.error.bind(console),
+        warn: console.warn.bind(console),
+        info: console.info.bind(console)
+    };
+    
     const addLog = (type, msg, data = null) => {
         const time = new Date().toLocaleTimeString('pt-BR');
         const log = {time, type, msg, data};
         window.capturedLogs.push(log);
         
-        // Log no console (usar original para evitar recursão)
-        if (typeof window.originalConsole !== 'undefined') {
-            const consoleMethod = type === 'error' ? 'error' : type === 'warn' ? 'warn' : 'log';
-            window.originalConsole[consoleMethod](`[${time}] ${type.toUpperCase()}:`, msg, data || '');
-        }
+        // Log no console usando ORIGINAL (nunca o interceptado)
+        const consoleMethod = type === 'error' ? 'error' : type === 'warn' ? 'warn' : 'log';
+        originalConsole[consoleMethod](`[${time}] ${type.toUpperCase()}:`, msg, data || '');
         
         // Adicionar na div
         const logEntry = document.createElement('div');
@@ -167,7 +173,7 @@
         return xhr;
     };
     
-    // Capturar erros JavaScript
+    // Capturar erros JavaScript (sem interceptar console)
     window.addEventListener('error', function(e) {
         addLog('error', `JavaScript Error: ${e.message}`, {
             filename: e.filename,
@@ -182,67 +188,15 @@
         });
     });
     
-    // Salvar console original globalmente para uso em addLog
-    window.originalConsole = {
-        log: console.log.bind(console),
-        error: console.error.bind(console),
-        warn: console.warn.bind(console),
-        info: console.info.bind(console)
-    };
-    
-    // Interceptar console (usar flag para evitar recursão)
-    let isLogging = false;
-    const origConsole = window.originalConsole;
-    
-    console.log = function(...args) {
-        if (!isLogging) {
-            isLogging = true;
-            origConsole.log.apply(console, args);
-            addLog('info', args.join(' '));
-            isLogging = false;
-        } else {
-            origConsole.log.apply(console, args);
-        }
-    };
-    
-    console.error = function(...args) {
-        if (!isLogging) {
-            isLogging = true;
-            origConsole.error.apply(console, args);
-            addLog('error', args.join(' '));
-            isLogging = false;
-        } else {
-            origConsole.error.apply(console, args);
-        }
-    };
-    
-    console.warn = function(...args) {
-        if (!isLogging) {
-            isLogging = true;
-            origConsole.warn.apply(console, args);
-            addLog('warn', args.join(' '));
-            isLogging = false;
-        } else {
-            origConsole.warn.apply(console, args);
-        }
-    };
-    
-    console.info = function(...args) {
-        if (!isLogging) {
-            isLogging = true;
-            origConsole.info.apply(console, args);
-            addLog('info', args.join(' '));
-            isLogging = false;
-        } else {
-            origConsole.info.apply(console, args);
-        }
-    };
+    // NÃO interceptar console para evitar recursão
+    // Se quiser ver logs do console, use a aba Network do DevTools
     
     addLog('success', '✅ Captura de logs iniciada!');
     addLog('info', '📋 Logs salvos em window.capturedLogs');
     addLog('info', '📋 Use console.log(window.capturedLogs) para ver todos os logs');
     addLog('info', '📋 Use JSON.stringify(window.capturedLogs) para copiar');
     
-    console.log('✅ Script de captura de logs injetado com sucesso!');
-    console.log('📋 Logs serão exibidos no console e em window.capturedLogs');
+    originalConsole.log('✅ Script de captura de logs injetado com sucesso!');
+    originalConsole.log('📋 Logs serão exibidos no console e em window.capturedLogs');
+    originalConsole.log('⚠️ Console.log não está sendo interceptado para evitar recursão');
 })();
