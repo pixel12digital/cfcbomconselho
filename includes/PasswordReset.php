@@ -426,6 +426,7 @@ class PasswordReset {
             }
             
             // Atualizar senha na tabela usuarios
+            $updateSuccess = false;
             try {
                 if (LOG_ENABLED) {
                     error_log(sprintf(
@@ -434,6 +435,10 @@ class PasswordReset {
                         strlen($passwordHash)
                     ));
                 }
+                
+                // Obter hash atual antes do UPDATE para comparação
+                $senhaAtual = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+                $senhaAtualHash = $senhaAtual['senha'] ?? null;
                 
                 $stmt = $db->update('usuarios', ['senha' => $passwordHash], 'id = :id', ['id' => $usuario['id']]);
                 
@@ -448,27 +453,47 @@ class PasswordReset {
                     ));
                 }
                 
+                // Verificar se a atualização foi bem-sucedida de duas formas:
+                // 1. rowCount() > 0 (método tradicional)
+                // 2. Verificar diretamente no banco se a senha mudou (mais confiável)
                 if ($rowsAffected > 0) {
                     $updateSuccess = true;
                     if (LOG_ENABLED) {
                         error_log(sprintf(
-                            '[PASSWORD_RESET] ✅ Senha atualizada com sucesso - usuario_id: %s, linhas afetadas: %d',
+                            '[PASSWORD_RESET] ✅ Senha atualizada com sucesso (rowCount) - usuario_id: %s, linhas afetadas: %d',
                             $usuario['id'],
                             $rowsAffected
                         ));
                     }
                 } else {
-                    $updateSuccess = false;
-                    // Verificar se o ID realmente existe
-                    $checkId = $db->fetch("SELECT id, tipo, login FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
-                    if (LOG_ENABLED) {
-                        error_log(sprintf(
-                            '[PASSWORD_RESET] ❌ Nenhuma linha foi atualizada - usuario_id: %s, tipo: %s, id_existe_na_tabela: %s, check_result: %s',
-                            $usuario['id'],
-                            $usuario['tipo'] ?? 'N/A',
-                            $checkId ? 'sim' : 'não',
-                            $checkId ? json_encode($checkId) : 'null'
-                        ));
+                    // rowCount pode retornar 0 mesmo quando UPDATE funciona (problema conhecido do PDO)
+                    // Verificar diretamente no banco se a senha foi atualizada
+                    $senhaDepois = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+                    $senhaDepoisHash = $senhaDepois['senha'] ?? null;
+                    
+                    if ($senhaDepoisHash && $senhaDepoisHash !== $senhaAtualHash) {
+                        // Senha foi atualizada mesmo com rowCount = 0
+                        $updateSuccess = true;
+                        if (LOG_ENABLED) {
+                            error_log(sprintf(
+                                '[PASSWORD_RESET] ✅ Senha atualizada com sucesso (verificação direta) - usuario_id: %s, rowCount foi 0 mas senha mudou',
+                                $usuario['id']
+                            ));
+                        }
+                    } else {
+                        $updateSuccess = false;
+                        // Verificar se o ID realmente existe
+                        $checkId = $db->fetch("SELECT id, tipo, login FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+                        if (LOG_ENABLED) {
+                            error_log(sprintf(
+                                '[PASSWORD_RESET] ❌ Nenhuma linha foi atualizada - usuario_id: %s, tipo: %s, id_existe_na_tabela: %s, senha_mudou: %s, check_result: %s',
+                                $usuario['id'],
+                                $usuario['tipo'] ?? 'N/A',
+                                $checkId ? 'sim' : 'não',
+                                ($senhaDepoisHash !== $senhaAtualHash) ? 'sim' : 'não',
+                                $checkId ? json_encode($checkId) : 'null'
+                            ));
+                        }
                     }
                 }
             } catch (Throwable $e) {

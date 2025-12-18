@@ -315,8 +315,37 @@ $login = $_GET['login'] ?? '';
                         print_r($reset);
                         echo "</pre>";
                         
-                        // Verificar se usuário existe
-                        $usuario = PasswordReset::findUserByLogin($reset['login'], $reset['type'], $db);
+                        // Verificar se usuário existe (busca manual)
+                        $usuario = null;
+                        $loginBusca = $reset['login'];
+                        $typeBusca = $reset['type'];
+                        
+                        if ($typeBusca === 'aluno') {
+                            $cpfLimpo = preg_replace('/[^0-9]/', '', trim($loginBusca));
+                            $isEmail = filter_var($loginBusca, FILTER_VALIDATE_EMAIL);
+                            
+                            if ($isEmail) {
+                                $usuario = $db->fetch(
+                                    "SELECT id, email, cpf, tipo FROM usuarios WHERE email = :email AND tipo = 'aluno' AND ativo = 1 LIMIT 1",
+                                    ['email' => $loginBusca]
+                                );
+                            } elseif (!empty($cpfLimpo) && strlen($cpfLimpo) === 11) {
+                                $usuario = $db->fetch(
+                                    "SELECT id, email, cpf, tipo FROM usuarios 
+                                     WHERE REPLACE(REPLACE(cpf, '.', ''), '-', '') = :cpf 
+                                     AND tipo = 'aluno' 
+                                     AND ativo = 1 
+                                     LIMIT 1",
+                                    ['cpf' => $cpfLimpo]
+                                );
+                            }
+                        } else {
+                            $usuario = $db->fetch(
+                                "SELECT id, email, tipo FROM usuarios WHERE email = :email AND tipo = :type AND ativo = 1 LIMIT 1",
+                                ['email' => $loginBusca, 'type' => $typeBusca]
+                            );
+                        }
+                        
                         if ($usuario) {
                             echo "<h4 class='success'>✅ Usuário encontrado:</h4>";
                             echo "<pre>";
