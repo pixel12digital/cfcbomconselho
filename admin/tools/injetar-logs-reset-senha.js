@@ -40,9 +40,11 @@
         const log = {time, type, msg, data};
         window.capturedLogs.push(log);
         
-        // Log no console
-        const consoleMethod = type === 'error' ? 'error' : type === 'warn' ? 'warn' : 'log';
-        console[consoleMethod](`[${time}] ${type.toUpperCase()}:`, msg, data || '');
+        // Log no console (usar original para evitar recursão)
+        if (typeof window.originalConsole !== 'undefined') {
+            const consoleMethod = type === 'error' ? 'error' : type === 'warn' ? 'warn' : 'log';
+            window.originalConsole[consoleMethod](`[${time}] ${type.toUpperCase()}:`, msg, data || '');
+        }
         
         // Adicionar na div
         const logEntry = document.createElement('div');
@@ -180,32 +182,60 @@
         });
     });
     
-    // Interceptar console
-    const origConsole = {
-        log: console.log,
-        error: console.error,
-        warn: console.warn,
-        info: console.info
+    // Salvar console original globalmente para uso em addLog
+    window.originalConsole = {
+        log: console.log.bind(console),
+        error: console.error.bind(console),
+        warn: console.warn.bind(console),
+        info: console.info.bind(console)
     };
     
+    // Interceptar console (usar flag para evitar recursão)
+    let isLogging = false;
+    const origConsole = window.originalConsole;
+    
     console.log = function(...args) {
-        origConsole.log.apply(console, args);
-        addLog('info', args.join(' '));
+        if (!isLogging) {
+            isLogging = true;
+            origConsole.log.apply(console, args);
+            addLog('info', args.join(' '));
+            isLogging = false;
+        } else {
+            origConsole.log.apply(console, args);
+        }
     };
     
     console.error = function(...args) {
-        origConsole.error.apply(console, args);
-        addLog('error', args.join(' '));
+        if (!isLogging) {
+            isLogging = true;
+            origConsole.error.apply(console, args);
+            addLog('error', args.join(' '));
+            isLogging = false;
+        } else {
+            origConsole.error.apply(console, args);
+        }
     };
     
     console.warn = function(...args) {
-        origConsole.warn.apply(console, args);
-        addLog('warn', args.join(' '));
+        if (!isLogging) {
+            isLogging = true;
+            origConsole.warn.apply(console, args);
+            addLog('warn', args.join(' '));
+            isLogging = false;
+        } else {
+            origConsole.warn.apply(console, args);
+        }
     };
     
     console.info = function(...args) {
-        origConsole.info.apply(console, args);
-        addLog('info', args.join(' '));
+        if (!isLogging) {
+            isLogging = true;
+            origConsole.info.apply(console, args);
+            addLog('info', args.join(' '));
+            isLogging = false;
+        } else {
+            origConsole.info.apply(console, args);
+        }
     };
     
     addLog('success', '✅ Captura de logs iniciada!');
