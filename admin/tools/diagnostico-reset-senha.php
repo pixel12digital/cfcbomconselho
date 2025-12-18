@@ -17,6 +17,16 @@ if (!$user || $user['tipo'] !== 'admin') {
 
 header('Content-Type: text/html; charset=UTF-8');
 
+// Tratamento de erros
+error_reporting(E_ALL);
+ini_set('display_errors', 0); // Não mostrar erros na tela, apenas logar
+set_error_handler(function($errno, $errstr, $errfile, $errline) {
+    if (LOG_ENABLED) {
+        error_log(sprintf('[DIAGNOSTICO_RESET] Erro: %s em %s:%d', $errstr, $errfile, $errline));
+    }
+    return false;
+});
+
 // Processar ações
 $action = $_GET['action'] ?? 'diagnostico';
 $token = $_GET['token'] ?? '';
@@ -354,9 +364,18 @@ $login = $_GET['login'] ?? '';
                         echo "<tr><td><strong>Usado em (used_at)</strong></td><td><strong>" . ($reset['used_at'] ?: 'NULL') . "</strong></td></tr>";
                         
                         // Verificar se está expirado
-                        $nowUtc = new DateTime($mysqlNowUtc, new DateTimeZone('UTC'));
-                        $expiresUtc = new DateTime($reset['expires_at'], new DateTimeZone('UTC'));
-                        $isExpired = $expiresUtc < $nowUtc;
+                        try {
+                            // Garantir que temos o timezone correto
+                            if (empty($mysqlNowUtc)) {
+                                $mysqlNowUtc = $db->fetch("SELECT UTC_TIMESTAMP() as utc_now")['utc_now'] ?? gmdate('Y-m-d H:i:s');
+                            }
+                            $nowUtc = new DateTime($mysqlNowUtc, new DateTimeZone('UTC'));
+                            $expiresUtc = new DateTime($reset['expires_at'], new DateTimeZone('UTC'));
+                            $isExpired = $expiresUtc < $nowUtc;
+                        } catch (Exception $e) {
+                            // Fallback se DateTime falhar
+                            $isExpired = strtotime($reset['expires_at']) < time();
+                        }
                         $isUsed = !empty($reset['used_at']);
                         
                         echo "<tr><td><strong>Status</strong></td><td>";
@@ -466,16 +485,27 @@ $login = $_GET['login'] ?? '';
                         echo "<tr><td>Usado em</td><td>" . ($reset['used_at'] ?: 'NULL') . "</td></tr>";
                         
                         // Verificar motivo da invalidade
-                        $now = new DateTime('now', new DateTimeZone('UTC'));
-                        $expires = new DateTime($reset['expires_at'], new DateTimeZone('UTC'));
-                        
-                        if ($reset['used_at']) {
-                            echo "<tr><td>Motivo</td><td class='error'>Token já foi usado</td></tr>";
-                        } elseif ($expires < $now) {
-                            $diff = $now->diff($expires);
-                            echo "<tr><td>Motivo</td><td class='error'>Token expirado há " . $diff->format('%a dias, %h horas, %i minutos') . "</td></tr>";
-                        } else {
-                            echo "<tr><td>Motivo</td><td class='warning'>Token válido (verificar código)</td></tr>";
+                        try {
+                            $now = new DateTime('now', new DateTimeZone('UTC'));
+                            $expires = new DateTime($reset['expires_at'], new DateTimeZone('UTC'));
+                            
+                            if ($reset['used_at']) {
+                                echo "<tr><td>Motivo</td><td class='error'>Token já foi usado</td></tr>";
+                            } elseif ($expires < $now) {
+                                $diff = $now->diff($expires);
+                                echo "<tr><td>Motivo</td><td class='error'>Token expirado há " . $diff->format('%a dias, %h horas, %i minutos') . "</td></tr>";
+                            } else {
+                                echo "<tr><td>Motivo</td><td class='warning'>Token válido (verificar código)</td></tr>";
+                            }
+                        } catch (Exception $e) {
+                            // Fallback se DateTime falhar
+                            if ($reset['used_at']) {
+                                echo "<tr><td>Motivo</td><td class='error'>Token já foi usado</td></tr>";
+                            } elseif (strtotime($reset['expires_at']) < time()) {
+                                echo "<tr><td>Motivo</td><td class='error'>Token expirado</td></tr>";
+                            } else {
+                                echo "<tr><td>Motivo</td><td class='warning'>Token válido (verificar código)</td></tr>";
+                            }
                         }
                         echo "</table>";
                     } else {
