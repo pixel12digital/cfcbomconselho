@@ -60,6 +60,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             // Capturar informações para feedback
             $rateLimited = $result['rate_limited'] ?? false;
+            $remainingSeconds = $result['remaining_seconds'] ?? 300; // Default 5 minutos se não informado
+            $remainingMinutes = $result['remaining_minutes'] ?? ceil($remainingSeconds / 60);
             $found = $result['found'] ?? null;
             $hasEmail = $result['has_email'] ?? false;
             $maskedDestination = $result['masked_destination'] ?? null;
@@ -428,9 +430,9 @@ $currentConfig = $userTypes[$displayType] ?? $userTypes['admin'];
                 });
             }
             
-            // Se já submetido e há rate limit, mostrar timer de 5 minutos
+            // Se já submetido e há rate limit, mostrar timer com tempo restante
             <?php if ($rateLimited): ?>
-            let cooldownSeconds = 300; // 5 minutos
+            let cooldownSeconds = <?php echo (int)$remainingSeconds; ?>; // Tempo restante em segundos
             if (cooldownTimerEl) {
                 cooldownTimerEl.style.display = 'block';
                 const interval = setInterval(function() {

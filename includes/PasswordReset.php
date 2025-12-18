@@ -27,13 +27,25 @@ class PasswordReset {
             // Rate limiting: verificar última solicitação nos últimos 5 minutos
             $rateLimitResult = self::checkRateLimit($login, $ip, $db);
             if (!$rateLimitResult['allowed']) {
-                // Rate limit: retornar mensagem informando cooldown
+                // Rate limit: retornar mensagem informando cooldown com tempo exato
+                $remainingSeconds = $rateLimitResult['remaining_seconds'] ?? 300;
+                $remainingMinutes = ceil($remainingSeconds / 60);
+                
+                $message = 'Você já solicitou recuperação recentemente. ';
+                if ($remainingSeconds > 60) {
+                    $message .= sprintf('Aguarde %d minuto%s antes de tentar novamente.', $remainingMinutes, $remainingMinutes > 1 ? 's' : '');
+                } else {
+                    $message .= sprintf('Aguarde %d segundo%s antes de tentar novamente.', $remainingSeconds, $remainingSeconds > 1 ? 's' : '');
+                }
+                
                 return [
                     'success' => false,
                     'found' => null, // Não verificado devido a rate limit
-                    'message' => 'Você já solicitou recuperação recentemente. Aguarde alguns minutos antes de tentar novamente.',
+                    'message' => $message,
                     'token' => null,
-                    'rate_limited' => true
+                    'rate_limited' => true,
+                    'remaining_seconds' => $remainingSeconds,
+                    'remaining_minutes' => $remainingMinutes
                 ];
             }
             
@@ -529,16 +541,28 @@ class PasswordReset {
             );
             
             if ($recentRequest) {
+                // Calcular tempo restante até poder solicitar novamente
+                $lastRequestTime = strtotime($recentRequest['created_at']);
+                $currentTime = time();
+                $elapsedSeconds = $currentTime - $lastRequestTime;
+                $cooldownSeconds = 300; // 5 minutos = 300 segundos
+                $remainingSeconds = $cooldownSeconds - $elapsedSeconds;
+                
                 if (LOG_ENABLED) {
                     error_log(sprintf(
-                        '[PASSWORD_RESET] Rate limit atingido para login=%s, ip=%s (última solicitação: %s)',
+                        '[PASSWORD_RESET] Rate limit atingido para login=%s, ip=%s (última solicitação: %s, restam %d segundos)',
                         $login,
                         $ip,
-                        $recentRequest['created_at']
+                        $recentRequest['created_at'],
+                        max(0, $remainingSeconds)
                     ));
                 }
                 
-                return ['allowed' => false];
+                return [
+                    'allowed' => false,
+                    'remaining_seconds' => max(0, $remainingSeconds),
+                    'last_request' => $recentRequest['created_at']
+                ];
             }
             
             return ['allowed' => true];
