@@ -4,15 +4,43 @@
  * Versão simplificada sem DateTime para evitar erros
  */
 
-require_once __DIR__ . '/../includes/config.php';
-require_once __DIR__ . '/../includes/database.php';
-require_once __DIR__ . '/../includes/auth.php';
-require_once __DIR__ . '/../includes/PasswordReset.php';
+// Ativar exibição de erros temporariamente para debug
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+
+try {
+    require_once __DIR__ . '/../includes/config.php';
+} catch (Throwable $e) {
+    die('Erro ao carregar config.php: ' . $e->getMessage());
+}
+
+try {
+    require_once __DIR__ . '/../includes/database.php';
+} catch (Throwable $e) {
+    die('Erro ao carregar database.php: ' . $e->getMessage());
+}
+
+try {
+    require_once __DIR__ . '/../includes/auth.php';
+} catch (Throwable $e) {
+    die('Erro ao carregar auth.php: ' . $e->getMessage());
+}
+
+try {
+    require_once __DIR__ . '/../includes/PasswordReset.php';
+} catch (Throwable $e) {
+    die('Erro ao carregar PasswordReset.php: ' . $e->getMessage());
+}
 
 // Verificar se é admin
-$user = getCurrentUser();
-if (!$user || $user['tipo'] !== 'admin') {
-    die('Acesso negado. Apenas administradores podem executar este script.');
+try {
+    $user = getCurrentUser();
+    if (!$user || $user['tipo'] !== 'admin') {
+        die('Acesso negado. Apenas administradores podem executar este script.');
+    }
+} catch (Throwable $e) {
+    die('Erro ao verificar usuário: ' . $e->getMessage());
 }
 
 header('Content-Type: text/html; charset=UTF-8');

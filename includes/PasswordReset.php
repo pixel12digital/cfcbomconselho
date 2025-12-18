@@ -423,11 +423,13 @@ class PasswordReset {
             // Hash da nova senha
             $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
             
-            // LOG CIRÚRGICO: Antes do UPDATE - obter senha atual
-            $senhaAntesUpdate = null;
+            // Obter hash atual ANTES do UPDATE para comparação (SEMPRE, não apenas se LOG_ENABLED)
+            $senhaAtual = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+            $senhaAntesUpdate = $senhaAtual['senha'] ?? null;
+            $senhaAtualHash = $senhaAntesUpdate; // Alias para compatibilidade
+            
+            // LOG CIRÚRGICO: Antes do UPDATE
             if (LOG_ENABLED) {
-                $senhaAtual = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
-                $senhaAntesUpdate = $senhaAtual['senha'] ?? null;
                 error_log(sprintf(
                     '[PASSWORD_RESET_AUDIT] [4] ANTES UPDATE - usuario_id: %s, tipo: %s, login: %s, senha_hash_antes: %s (len=%d), senha_hash_novo: %s (len=%d)',
                     $usuario['id'],
@@ -450,10 +452,6 @@ class PasswordReset {
                         strlen($passwordHash)
                     ));
                 }
-                
-                // Obter hash atual antes do UPDATE para comparação
-                $senhaAtual = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
-                $senhaAtualHash = $senhaAtual['senha'] ?? null;
                 
                 $stmt = $db->update('usuarios', ['senha' => $passwordHash], 'id = :id', ['id' => $usuario['id']]);
                 
@@ -481,25 +479,27 @@ class PasswordReset {
                         ));
                     }
                 } else {
-                // rowCount pode retornar 0 mesmo quando UPDATE funciona (problema conhecido do PDO)
-                // Verificar diretamente no banco se a senha foi atualizada
-                $senhaDepois = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
-                $senhaDepoisHash = $senhaDepois['senha'] ?? null;
-                
-                // LOG CIRÚRGICO: Depois do UPDATE - verificar se mudou
-                if (LOG_ENABLED) {
+                    // rowCount pode retornar 0 mesmo quando UPDATE funciona (problema conhecido do PDO)
+                    // Verificar diretamente no banco se a senha foi atualizada
+                    $senhaDepois = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+                    $senhaDepoisHash = $senhaDepois['senha'] ?? null;
+                    
+                    // Comparar com senha antes do UPDATE (garantir que está definida)
                     $senhaMudou = ($senhaDepoisHash && $senhaDepoisHash !== $senhaAntesUpdate);
-                    error_log(sprintf(
-                        '[PASSWORD_RESET_AUDIT] [5] DEPOIS UPDATE - usuario_id: %s, rowCount: %d, senha_hash_depois: %s (len=%d), senha_mudou: %s',
-                        $usuario['id'],
-                        $rowsAffected,
-                        $senhaDepoisHash ? substr($senhaDepoisHash, 0, 20) . '...' : 'NULL',
-                        $senhaDepoisHash ? strlen($senhaDepoisHash) : 0,
-                        $senhaMudou ? 'SIM' : 'NÃO'
-                    ));
-                }
-                
-                if ($senhaDepoisHash && $senhaDepoisHash !== $senhaAntesUpdate) {
+                    
+                    // LOG CIRÚRGICO: Depois do UPDATE - verificar se mudou
+                    if (LOG_ENABLED) {
+                        error_log(sprintf(
+                            '[PASSWORD_RESET_AUDIT] [5] DEPOIS UPDATE - usuario_id: %s, rowCount: %d, senha_hash_depois: %s (len=%d), senha_mudou: %s',
+                            $usuario['id'],
+                            $rowsAffected,
+                            $senhaDepoisHash ? substr($senhaDepoisHash, 0, 20) . '...' : 'NULL',
+                            $senhaDepoisHash ? strlen($senhaDepoisHash) : 0,
+                            $senhaMudou ? 'SIM' : 'NÃO'
+                        ));
+                    }
+                    
+                    if ($senhaMudou) {
                     // Senha foi atualizada mesmo com rowCount = 0
                     $updateSuccess = true;
                     if (LOG_ENABLED) {

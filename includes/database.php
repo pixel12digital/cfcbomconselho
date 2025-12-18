@@ -406,12 +406,21 @@ class Database {
         $whereSql = $where;
         
         if (!empty($whereParams)) {
-            $whereCounter = 0;
-            foreach ($whereParams as $param) {
-                $whereParamName = "where_{$whereCounter}";
-                $whereSql = str_replace('?', ":{$whereParamName}", $whereSql);
-                $whereParamsNamed[$whereParamName] = $param;
-                $whereCounter++;
+            // Verificar se WHERE já tem parâmetros nomeados (ex: "id = :id")
+            $hasNamedParams = preg_match('/:\w+/', $where);
+            
+            if ($hasNamedParams) {
+                // WHERE já tem parâmetros nomeados, usar diretamente
+                $whereParamsNamed = $whereParams;
+            } else {
+                // WHERE usa placeholders ?, converter para nomeados
+                $whereCounter = 0;
+                foreach ($whereParams as $param) {
+                    $whereParamName = "where_{$whereCounter}";
+                    $whereSql = str_replace('?', ":{$whereParamName}", $whereSql);
+                    $whereParamsNamed[$whereParamName] = $param;
+                    $whereCounter++;
+                }
             }
         }
         
