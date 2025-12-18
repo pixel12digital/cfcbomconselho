@@ -9,6 +9,17 @@ require_once 'includes/database.php';
 require_once 'includes/auth.php';
 require_once 'includes/PasswordReset.php';
 
+// Log inicial para rastreamento
+if (LOG_ENABLED) {
+    error_log(sprintf(
+        '[RESET_PASSWORD] Página carregada - Method: %s, GET_token: %s, POST_token: %s, POST_new_password: %s',
+        $_SERVER['REQUEST_METHOD'] ?? 'N/A',
+        !empty($_GET['token']) ? substr($_GET['token'], 0, 16) . '...' : 'vazio',
+        !empty($_POST['token']) ? substr($_POST['token'], 0, 16) . '...' : 'vazio',
+        !empty($_POST['new_password']) ? 'preenchido' : 'vazio'
+    ));
+}
+
 // Se já estiver logado, redirecionar
 if (isLoggedIn()) {
     $user = getCurrentUser();
@@ -23,12 +34,31 @@ $tokenData = null;
 
 // Validar token se fornecido
 if (!empty($token)) {
+    if (LOG_ENABLED) {
+        error_log(sprintf(
+            '[RESET_PASSWORD] Validando token GET - token: %s',
+            substr($token, 0, 16) . '...'
+        ));
+    }
+    
     $validation = PasswordReset::validateToken($token);
     $tokenValid = $validation['valid'];
     $tokenData = $validation;
     
+    if (LOG_ENABLED) {
+        error_log(sprintf(
+            '[RESET_PASSWORD] Resultado validação token - valid: %s, reason: %s',
+            $tokenValid ? 'true' : 'false',
+            $validation['reason'] ?? 'N/A'
+        ));
+    }
+    
     if (!$tokenValid) {
         $error = 'Link inválido ou expirado. Solicite uma nova recuperação de senha.';
+    }
+} else {
+    if (LOG_ENABLED) {
+        error_log('[RESET_PASSWORD] Token GET vazio');
     }
 }
 
