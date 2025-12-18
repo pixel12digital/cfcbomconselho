@@ -304,10 +304,12 @@ class PasswordReset {
      */
     public static function consumeTokenAndSetPassword($token, $newPassword) {
         try {
+            // LOG CIRÚRGICO: Antes de validar token
             if (LOG_ENABLED) {
                 error_log(sprintf(
-                    '[PASSWORD_RESET] consumeTokenAndSetPassword chamado - token: %s, password_length: %d',
-                    substr($token, 0, 16) . '...',
+                    '[PASSWORD_RESET_AUDIT] [1] INÍCIO consumeTokenAndSetPassword - token_preview: %s, token_len: %d, password_len: %d',
+                    substr($token, 0, 6) . '...',
+                    strlen($token),
                     strlen($newPassword)
                 ));
             }
@@ -316,6 +318,18 @@ class PasswordReset {
             
             // Validar token primeiro
             $validation = self::validateToken($token);
+            
+            // LOG CIRÚRGICO: Depois de buscar token no banco
+            if (LOG_ENABLED) {
+                error_log(sprintf(
+                    '[PASSWORD_RESET_AUDIT] [2] Token validado - valid: %s, reset_id: %s, login: %s, type: %s, reason: %s',
+                    $validation['valid'] ? 'true' : 'false',
+                    $validation['reset_id'] ?? 'N/A',
+                    $validation['login'] ?? 'N/A',
+                    $validation['type'] ?? 'N/A',
+                    $validation['reason'] ?? 'N/A'
+                ));
+            }
             
             if (LOG_ENABLED) {
                 error_log(sprintf(
@@ -362,18 +376,21 @@ class PasswordReset {
             
             $usuario = self::findUserByLogin($login, $type, $db);
             
+            // LOG CIRÚRGICO: Depois de buscar usuário
             if (LOG_ENABLED) {
                 if ($usuario) {
                     error_log(sprintf(
-                        '[PASSWORD_RESET] Usuário encontrado - id: %s, tipo: %s, login: %s, tem_id: %s',
+                        '[PASSWORD_RESET_AUDIT] [3] Usuário encontrado - user_id: %s, tipo: %s, login: %s, tem_id: %s, tem_email: %s, tem_cpf: %s',
                         $usuario['id'] ?? 'N/A',
                         $usuario['tipo'] ?? 'N/A',
                         $login,
-                        !empty($usuario['id']) ? 'sim' : 'não'
+                        !empty($usuario['id']) ? 'sim' : 'não',
+                        !empty($usuario['email']) ? 'sim' : 'não',
+                        !empty($usuario['cpf']) ? 'sim' : 'não'
                     ));
                 } else {
                     error_log(sprintf(
-                        '[PASSWORD_RESET] Usuário NÃO encontrado - login: %s, type: %s',
+                        '[PASSWORD_RESET_AUDIT] [3] Usuário NÃO encontrado - login: %s, type: %s',
                         $login,
                         $type
                     ));
@@ -406,22 +423,20 @@ class PasswordReset {
             // Hash da nova senha
             $passwordHash = password_hash($newPassword, PASSWORD_DEFAULT);
             
+            // LOG CIRÚRGICO: Antes do UPDATE - obter senha atual
+            $senhaAntesUpdate = null;
             if (LOG_ENABLED) {
+                $senhaAtual = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+                $senhaAntesUpdate = $senhaAtual['senha'] ?? null;
                 error_log(sprintf(
-                    '[PASSWORD_RESET] Tentando atualizar senha - usuario_id: %s, tipo: %s, login: %s',
+                    '[PASSWORD_RESET_AUDIT] [4] ANTES UPDATE - usuario_id: %s, tipo: %s, login: %s, senha_hash_antes: %s (len=%d), senha_hash_novo: %s (len=%d)',
                     $usuario['id'],
                     $usuario['tipo'] ?? 'N/A',
-                    $login
-                ));
-            }
-            
-            // Verificar se o ID existe na tabela antes de atualizar
-            if (LOG_ENABLED) {
-                $userExists = $db->fetch("SELECT id FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
-                error_log(sprintf(
-                    '[PASSWORD_RESET] Verificando se usuario_id existe na tabela - id: %s, existe: %s',
-                    $usuario['id'],
-                    $userExists ? 'sim' : 'não'
+                    $login,
+                    $senhaAntesUpdate ? substr($senhaAntesUpdate, 0, 20) . '...' : 'NULL',
+                    $senhaAntesUpdate ? strlen($senhaAntesUpdate) : 0,
+                    substr($passwordHash, 0, 20) . '...',
+                    strlen($passwordHash)
                 ));
             }
             
@@ -466,35 +481,48 @@ class PasswordReset {
                         ));
                     }
                 } else {
-                    // rowCount pode retornar 0 mesmo quando UPDATE funciona (problema conhecido do PDO)
-                    // Verificar diretamente no banco se a senha foi atualizada
-                    $senhaDepois = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
-                    $senhaDepoisHash = $senhaDepois['senha'] ?? null;
-                    
-                    if ($senhaDepoisHash && $senhaDepoisHash !== $senhaAtualHash) {
-                        // Senha foi atualizada mesmo com rowCount = 0
-                        $updateSuccess = true;
-                        if (LOG_ENABLED) {
-                            error_log(sprintf(
-                                '[PASSWORD_RESET] ✅ Senha atualizada com sucesso (verificação direta) - usuario_id: %s, rowCount foi 0 mas senha mudou',
-                                $usuario['id']
-                            ));
-                        }
-                    } else {
-                        $updateSuccess = false;
-                        // Verificar se o ID realmente existe
-                        $checkId = $db->fetch("SELECT id, tipo, login FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
-                        if (LOG_ENABLED) {
-                            error_log(sprintf(
-                                '[PASSWORD_RESET] ❌ Nenhuma linha foi atualizada - usuario_id: %s, tipo: %s, id_existe_na_tabela: %s, senha_mudou: %s, check_result: %s',
-                                $usuario['id'],
-                                $usuario['tipo'] ?? 'N/A',
-                                $checkId ? 'sim' : 'não',
-                                ($senhaDepoisHash !== $senhaAtualHash) ? 'sim' : 'não',
-                                $checkId ? json_encode($checkId) : 'null'
-                            ));
-                        }
+                // rowCount pode retornar 0 mesmo quando UPDATE funciona (problema conhecido do PDO)
+                // Verificar diretamente no banco se a senha foi atualizada
+                $senhaDepois = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+                $senhaDepoisHash = $senhaDepois['senha'] ?? null;
+                
+                // LOG CIRÚRGICO: Depois do UPDATE - verificar se mudou
+                if (LOG_ENABLED) {
+                    $senhaMudou = ($senhaDepoisHash && $senhaDepoisHash !== $senhaAntesUpdate);
+                    error_log(sprintf(
+                        '[PASSWORD_RESET_AUDIT] [5] DEPOIS UPDATE - usuario_id: %s, rowCount: %d, senha_hash_depois: %s (len=%d), senha_mudou: %s',
+                        $usuario['id'],
+                        $rowsAffected,
+                        $senhaDepoisHash ? substr($senhaDepoisHash, 0, 20) . '...' : 'NULL',
+                        $senhaDepoisHash ? strlen($senhaDepoisHash) : 0,
+                        $senhaMudou ? 'SIM' : 'NÃO'
+                    ));
+                }
+                
+                if ($senhaDepoisHash && $senhaDepoisHash !== $senhaAntesUpdate) {
+                    // Senha foi atualizada mesmo com rowCount = 0
+                    $updateSuccess = true;
+                    if (LOG_ENABLED) {
+                        error_log(sprintf(
+                            '[PASSWORD_RESET] ✅ Senha atualizada com sucesso (verificação direta) - usuario_id: %s, rowCount foi 0 mas senha mudou',
+                            $usuario['id']
+                        ));
                     }
+                } else {
+                    $updateSuccess = false;
+                    // Verificar se o ID realmente existe
+                    $checkId = $db->fetch("SELECT id, tipo, login FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+                    if (LOG_ENABLED) {
+                        error_log(sprintf(
+                            '[PASSWORD_RESET] ❌ Nenhuma linha foi atualizada - usuario_id: %s, tipo: %s, id_existe_na_tabela: %s, senha_mudou: %s, check_result: %s',
+                            $usuario['id'],
+                            $usuario['tipo'] ?? 'N/A',
+                            $checkId ? 'sim' : 'não',
+                            ($senhaDepoisHash !== $senhaAntesUpdate) ? 'sim' : 'não',
+                            $checkId ? json_encode($checkId) : 'null'
+                        ));
+                    }
+                }
                 }
             } catch (Throwable $e) {
                 $updateSuccess = false;
@@ -539,8 +567,27 @@ class PasswordReset {
             }
             
             // Marcar token como usado (usar UTC para consistência)
+            // LOG CIRÚRGICO: Antes de marcar token como usado
+            if (LOG_ENABLED) {
+                error_log(sprintf(
+                    '[PASSWORD_RESET_AUDIT] [6] ANTES marcar used_at - reset_id: %s, updateSuccess: %s',
+                    $validation['reset_id'],
+                    $updateSuccess ? 'true' : 'false'
+                ));
+            }
+            
             try {
                 $db->update('password_resets', ['used_at' => gmdate('Y-m-d H:i:s')], 'id = :id', ['id' => $validation['reset_id']]);
+                
+                // LOG CIRÚRGICO: Depois de marcar token como usado
+                if (LOG_ENABLED) {
+                    $usedAtCheck = $db->fetch("SELECT used_at FROM password_resets WHERE id = :id", ['id' => $validation['reset_id']]);
+                    error_log(sprintf(
+                        '[PASSWORD_RESET_AUDIT] [7] DEPOIS marcar used_at - reset_id: %s, used_at: %s',
+                        $validation['reset_id'],
+                        $usedAtCheck['used_at'] ?? 'NULL'
+                    ));
+                }
             } catch (Throwable $e) {
                 // Log mas não falhar operação
                 if (LOG_ENABLED) {
@@ -565,11 +612,12 @@ class PasswordReset {
             // Log de auditoria
             if (LOG_ENABLED) {
                 $auditLog = sprintf(
-                    '[PASSWORD_RESET_COMPLETE] login=%s, type=%s, reset_id=%d, user_id=%d, timestamp=%s',
+                    '[PASSWORD_RESET_AUDIT] [8] COMPLETO - login=%s, type=%s, reset_id=%d, user_id=%d, updateSuccess=%s, timestamp=%s',
                     $login,
                     $validation['type'],
                     $validation['reset_id'],
                     $usuario['id'],
+                    $updateSuccess ? 'true' : 'false',
                     date('Y-m-d H:i:s')
                 );
                 error_log($auditLog);

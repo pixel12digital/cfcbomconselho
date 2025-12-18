@@ -288,12 +288,44 @@ $login = $_GET['login'] ?? '';
             if ($action === 'validar_token' && !empty($token)) {
                 echo "<h3>Resultado da Validação</h3>";
                 
+                // Informações críticas do token
+                $tokenLength = strlen($token);
+                $tokenPreview = substr($token, 0, 6) . '...';
+                $tokenHash = hash('sha256', $token);
+                
+                echo "<h4>📊 Informações do Token</h4>";
+                echo "<table>";
+                echo "<tr><th>Campo</th><th>Valor</th></tr>";
+                echo "<tr><td><strong>token_length</strong></td><td><strong>{$tokenLength}</strong> caracteres</td></tr>";
+                echo "<tr><td>token_preview</td><td><code>{$tokenPreview}</code></td></tr>";
+                echo "<tr><td>token_hash (SHA256)</td><td><code>" . substr($tokenHash, 0, 16) . "...</code></td></tr>";
+                echo "</table>";
+                
+                // Comparação de timezone
+                $db = db();
+                $phpTime = date('Y-m-d H:i:s');
+                $phpTimeUtc = gmdate('Y-m-d H:i:s');
+                $mysqlNow = $db->fetch("SELECT NOW() as now, UTC_TIMESTAMP() as utc_now");
+                $mysqlNowLocal = $mysqlNow['now'] ?? 'N/A';
+                $mysqlNowUtc = $mysqlNow['utc_now'] ?? 'N/A';
+                
+                echo "<h4>🕐 Comparação de Timezone</h4>";
+                echo "<table>";
+                echo "<tr><th>Origem</th><th>Data/Hora</th></tr>";
+                echo "<tr><td>PHP (local)</td><td>{$phpTime}</td></tr>";
+                echo "<tr><td>PHP (UTC)</td><td>{$phpTimeUtc}</td></tr>";
+                echo "<tr><td>MySQL NOW()</td><td>{$mysqlNowLocal}</td></tr>";
+                echo "<tr><td>MySQL UTC_TIMESTAMP()</td><td>{$mysqlNowUtc}</td></tr>";
+                echo "<tr><td>PHP timezone</td><td>" . date_default_timezone_get() . "</td></tr>";
+                echo "</table>";
+                
                 // Validar token
                 $validation = PasswordReset::validateToken($token);
                 
+                echo "<h4>✅ Validação do Token</h4>";
                 echo "<table>";
                 echo "<tr><th>Campo</th><th>Valor</th></tr>";
-                echo "<tr><td>Token válido</td><td>" . ($validation['valid'] ? "<span class='success'>✅ Sim</span>" : "<span class='error'>❌ Não</span>") . "</td></tr>";
+                echo "<tr><td><strong>Token válido</strong></td><td>" . ($validation['valid'] ? "<span class='success'>✅ SIM</span>" : "<span class='error'>❌ NÃO</span>") . "</td></tr>";
                 echo "<tr><td>Reset ID</td><td>" . ($validation['reset_id'] ?? 'N/A') . "</td></tr>";
                 echo "<tr><td>Login</td><td>" . htmlspecialchars($validation['login'] ?? 'N/A') . "</td></tr>";
                 echo "<tr><td>Tipo</td><td>" . htmlspecialchars($validation['type'] ?? 'N/A') . "</td></tr>";
@@ -310,10 +342,33 @@ $login = $_GET['login'] ?? '';
                     );
                     
                     if ($reset) {
-                        echo "<h4>Detalhes do Registro:</h4>";
-                        echo "<pre>";
-                        print_r($reset);
-                        echo "</pre>";
+                        echo "<h4>📋 Detalhes do Registro no Banco</h4>";
+                        echo "<table>";
+                        echo "<tr><th>Campo</th><th>Valor</th></tr>";
+                        echo "<tr><td><strong>Token encontrado?</strong></td><td><span class='success'>✅ SIM</span></td></tr>";
+                        echo "<tr><td>ID</td><td>{$reset['id']}</td></tr>";
+                        echo "<tr><td>Login</td><td>" . htmlspecialchars($reset['login']) . "</td></tr>";
+                        echo "<tr><td>Tipo</td><td>{$reset['type']}</td></tr>";
+                        echo "<tr><td>Criado em</td><td>{$reset['created_at']}</td></tr>";
+                        echo "<tr><td><strong>Expira em (expires_at)</strong></td><td><strong>{$reset['expires_at']}</strong></td></tr>";
+                        echo "<tr><td><strong>Usado em (used_at)</strong></td><td><strong>" . ($reset['used_at'] ?: 'NULL') . "</strong></td></tr>";
+                        
+                        // Verificar se está expirado
+                        $nowUtc = new DateTime($mysqlNowUtc, new DateTimeZone('UTC'));
+                        $expiresUtc = new DateTime($reset['expires_at'], new DateTimeZone('UTC'));
+                        $isExpired = $expiresUtc < $nowUtc;
+                        $isUsed = !empty($reset['used_at']);
+                        
+                        echo "<tr><td><strong>Status</strong></td><td>";
+                        if ($isUsed) {
+                            echo "<span class='error'>❌ JÁ USADO</span>";
+                        } elseif ($isExpired) {
+                            echo "<span class='error'>❌ EXPIRADO</span>";
+                        } else {
+                            echo "<span class='success'>✅ VÁLIDO</span>";
+                        }
+                        echo "</td></tr>";
+                        echo "</table>";
                         
                         // Verificar se usuário existe (busca manual)
                         $usuario = null;
@@ -347,12 +402,47 @@ $login = $_GET['login'] ?? '';
                         }
                         
                         if ($usuario) {
-                            echo "<h4 class='success'>✅ Usuário encontrado:</h4>";
-                            echo "<pre>";
-                            print_r($usuario);
-                            echo "</pre>";
+                            echo "<h4 class='success'>✅ Usuário encontrado</h4>";
+                            echo "<table>";
+                            echo "<tr><th>Campo</th><th>Valor</th></tr>";
+                            echo "<tr><td><strong>user_found</strong></td><td><span class='success'>✅ SIM</span></td></tr>";
+                            echo "<tr><td><strong>user_id</strong></td><td><strong>{$usuario['id']}</strong></td></tr>";
+                            echo "<tr><td>user_tipo</td><td>{$usuario['tipo']}</td></tr>";
+                            echo "<tr><td>user_email</td><td>" . htmlspecialchars($usuario['email'] ?? 'N/A') . "</td></tr>";
+                            echo "<tr><td>user_cpf</td><td>" . htmlspecialchars($usuario['cpf'] ?? 'N/A') . "</td></tr>";
+                            
+                            // Verificar se está ativo
+                            $userAtivo = $db->fetch("SELECT ativo FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+                            $ativo = $userAtivo['ativo'] ?? null;
+                            echo "<tr><td><strong>user_ativo</strong></td><td><strong>" . ($ativo ? 'SIM (1)' : 'NÃO (0)') . "</strong></td></tr>";
+                            
+                            // Verificar schema da coluna senha
+                            $senhaColumn = $db->fetch("SHOW COLUMNS FROM usuarios WHERE Field = 'senha'");
+                            if ($senhaColumn) {
+                                echo "<tr><td colspan='2'><strong>Schema da coluna senha:</strong></td></tr>";
+                                echo "<tr><td>Field</td><td>{$senhaColumn['Field']}</td></tr>";
+                                echo "<tr><td>Type</td><td>{$senhaColumn['Type']}</td></tr>";
+                                echo "<tr><td>Null</td><td>{$senhaColumn['Null']}</td></tr>";
+                                echo "<tr><td>Key</td><td>{$senhaColumn['Key']}</td></tr>";
+                                echo "<tr><td>Default</td><td>" . ($senhaColumn['Default'] ?? 'NULL') . "</td></tr>";
+                            }
+                            
+                            // Verificar senha atual (apenas hash, não o valor)
+                            $senhaAtual = $db->fetch("SELECT senha FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+                            $senhaHashAtual = $senhaAtual['senha'] ?? null;
+                            if ($senhaHashAtual) {
+                                echo "<tr><td>senha_hash_atual (primeiros 20)</td><td><code>" . substr($senhaHashAtual, 0, 20) . "...</code> (len=" . strlen($senhaHashAtual) . ")</td></tr>";
+                            }
+                            
+                            echo "</table>";
                         } else {
-                            echo "<h4 class='error'>❌ Usuário NÃO encontrado com login: " . htmlspecialchars($reset['login']) . ", tipo: " . htmlspecialchars($reset['type']) . "</h4>";
+                            echo "<h4 class='error'>❌ Usuário NÃO encontrado</h4>";
+                            echo "<table>";
+                            echo "<tr><th>Campo</th><th>Valor</th></tr>";
+                            echo "<tr><td><strong>user_found</strong></td><td><span class='error'>❌ NÃO</span></td></tr>";
+                            echo "<tr><td>login_buscado</td><td>" . htmlspecialchars($reset['login']) . "</td></tr>";
+                            echo "<tr><td>type_buscado</td><td>" . htmlspecialchars($reset['type']) . "</td></tr>";
+                            echo "</table>";
                         }
                     }
                 } else {
