@@ -567,7 +567,7 @@ class PasswordReset {
             
             return ['allowed' => true];
             
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             if (LOG_ENABLED) {
                 error_log('[PASSWORD_RESET] Erro ao verificar rate limit: ' . $e->getMessage());
             }
