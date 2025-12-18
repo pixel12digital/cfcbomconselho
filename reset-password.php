@@ -35,6 +35,7 @@ $success = '';
 $token = $_GET['token'] ?? '';
 $tokenValid = false;
 $tokenData = null;
+$userType = 'admin'; // Tipo padrão para fallback
 
 // Validar token se fornecido
 if (!empty($token)) {
@@ -49,11 +50,22 @@ if (!empty($token)) {
     $tokenValid = $validation['valid'];
     $tokenData = $validation;
     
+    // Capturar o tipo do usuário do token para usar no redirect
+    if ($tokenValid && isset($validation['type'])) {
+        $userType = strtolower($validation['type']);
+        // Whitelist de tipos válidos
+        $allowedTypes = ['aluno', 'secretaria', 'instrutor', 'admin'];
+        if (!in_array($userType, $allowedTypes)) {
+            $userType = 'admin'; // Fallback seguro
+        }
+    }
+    
     if (LOG_ENABLED) {
         error_log(sprintf(
-            '[RESET_PASSWORD] Resultado validação token - valid: %s, reason: %s',
+            '[RESET_PASSWORD] Resultado validação token - valid: %s, reason: %s, type: %s',
             $tokenValid ? 'true' : 'false',
-            $validation['reason'] ?? 'N/A'
+            $validation['reason'] ?? 'N/A',
+            $userType
         ));
     }
     
@@ -92,11 +104,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $postValidation = PasswordReset::validateToken($postToken);
         $postTokenValid = $postValidation['valid'];
         
+        // Capturar tipo do usuário do token validado no POST
+        if ($postTokenValid && isset($postValidation['type'])) {
+            $userType = strtolower($postValidation['type']);
+            $allowedTypes = ['aluno', 'secretaria', 'instrutor', 'admin'];
+            if (!in_array($userType, $allowedTypes)) {
+                $userType = 'admin'; // Fallback seguro
+            }
+        }
+        
         if (LOG_ENABLED) {
             error_log(sprintf(
-                '[RESET_PASSWORD] Validação token POST - valid: %s, reason: %s',
+                '[RESET_PASSWORD] Validação token POST - valid: %s, reason: %s, type: %s',
                 $postTokenValid ? 'true' : 'false',
-                $postValidation['reason'] ?? 'N/A'
+                $postValidation['reason'] ?? 'N/A',
+                $userType
             ));
         }
         
@@ -132,6 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($result['success']) {
                     $success = $result['message'];
                     $tokenValid = false; // Marcar como usado para não mostrar formulário
+                    // Garantir que o tipo está definido (já foi capturado acima do $postValidation)
                 } else {
                     $error = $result['message'];
                 }
@@ -629,25 +652,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
         <?php endif; ?>
         
+        <?php 
+        // Construir URL de login com type preservado
+        $loginUrl = 'login.php?type=' . htmlspecialchars($userType);
+        ?>
+        
         <?php if ($success): ?>
             <div class="alert alert-success">
                 <i class="fas fa-check-circle"></i> <?php echo htmlspecialchars($success); ?>
             </div>
-            <a href="login.php" class="back-link">
+            <a href="<?php echo $loginUrl; ?>" class="back-link">
                 <i class="fas fa-arrow-left"></i> Voltar para o login
             </a>
         <?php elseif (empty($token)): ?>
             <div class="alert alert-error">
                 Token não fornecido. Verifique o link enviado por email.
             </div>
-            <a href="login.php" class="back-link">
+            <a href="<?php echo $loginUrl; ?>" class="back-link">
                 <i class="fas fa-arrow-left"></i> Voltar para o login
             </a>
         <?php elseif (!$tokenValid): ?>
             <div class="alert alert-error">
                 Link inválido ou expirado. Solicite uma nova recuperação de senha.
             </div>
-            <a href="forgot-password.php" class="back-link">
+            <a href="forgot-password.php?type=<?php echo htmlspecialchars($userType); ?>" class="back-link">
                 <i class="fas fa-arrow-left"></i> Solicitar nova recuperação
             </a>
         <?php else: ?>
@@ -704,7 +732,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 </button>
             </form>
             
-            <a href="login.php" class="back-link">
+            <a href="<?php echo $loginUrl; ?>" class="back-link">
                 <i class="fas fa-arrow-left"></i> Voltar para o login
             </a>
         <?php endif; ?>

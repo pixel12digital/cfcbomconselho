@@ -34,12 +34,23 @@ if ($user_info) {
     }
 }
 
+// Capturar tipo do usuário ANTES de fazer logout (sessão será destruída)
+$userType = 'admin'; // Tipo padrão
+if ($user_info && isset($user_info['tipo'])) {
+    $userType = strtolower($user_info['tipo']);
+    // Whitelist de tipos válidos
+    $allowedTypes = ['aluno', 'secretaria', 'instrutor', 'admin'];
+    if (!in_array($userType, $allowedTypes)) {
+        $userType = 'admin'; // Fallback seguro
+    }
+}
+
 // Limpar qualquer output buffer
 if (ob_get_level()) {
     ob_end_clean();
 }
 
-// Redirecionar para a página de login com mensagem de sucesso
-header('Location: login.php?message=logout_success');
+// Redirecionar para a página de login com mensagem de sucesso e type preservado
+header('Location: login.php?type=' . urlencode($userType) . '&message=logout_success');
 exit;
 ?>

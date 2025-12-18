@@ -10,7 +10,7 @@ require_once '../includes/auth.php';
 $auth = new Auth();
 $auth->logout();
 
-// Redirecionar para login principal com tipo aluno
-header('Location: ../login.php?type=aluno');
+// Redirecionar para login principal com tipo aluno e mensagem de sucesso
+header('Location: ../login.php?type=aluno&message=logout_success');
 exit;
 ?>
