@@ -9,14 +9,18 @@ require_once 'includes/database.php';
 require_once 'includes/auth.php';
 require_once 'includes/PasswordReset.php';
 
+// Ativar captura de logs se parâmetro debug=1 estiver presente
+$enableLogCapture = isset($_GET['debug']) && $_GET['debug'] == '1';
+
 // Log inicial para rastreamento
 if (LOG_ENABLED) {
     error_log(sprintf(
-        '[RESET_PASSWORD] Página carregada - Method: %s, GET_token: %s, POST_token: %s, POST_new_password: %s',
+        '[RESET_PASSWORD] Página carregada - Method: %s, GET_token: %s, POST_token: %s, POST_new_password: %s, debug: %s',
         $_SERVER['REQUEST_METHOD'] ?? 'N/A',
         !empty($_GET['token']) ? substr($_GET['token'], 0, 16) . '...' : 'vazio',
         !empty($_POST['token']) ? substr($_POST['token'], 0, 16) . '...' : 'vazio',
-        !empty($_POST['new_password']) ? 'preenchido' : 'vazio'
+        !empty($_POST['new_password']) ? 'preenchido' : 'vazio',
+        $enableLogCapture ? 'sim' : 'não'
     ));
 }
 
@@ -377,6 +381,218 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             const isValid = password.length >= 8 && password === confirm && confirm.length > 0;
             submitBtn.disabled = !isValid;
         }
+        
+        <?php if ($enableLogCapture): ?>
+        // ============================================
+        // CAPTURA DE LOGS PARA DEBUG
+        // ============================================
+        (function() {
+            const logs = [];
+            const originalConsole = {};
+            const originalFetch = window.fetch;
+            const originalXHR = window.XMLHttpRequest;
+            
+            // Salvar métodos originais
+            ['log', 'error', 'warn', 'info', 'debug'].forEach(method => {
+                originalConsole[method] = console[method];
+            });
+            
+            // Interceptar console
+            ['log', 'error', 'warn', 'info', 'debug'].forEach(method => {
+                console[method] = function(...args) {
+                    originalConsole[method].apply(console, args);
+                    logs.push({
+                        type: method,
+                        message: args.map(a => typeof a === 'object' ? JSON.stringify(a) : String(a)).join(' '),
+                        timestamp: new Date().toISOString(),
+                        stack: new Error().stack
+                    });
+                    updateLogDisplay();
+                };
+            });
+            
+            // Interceptar fetch
+            window.fetch = function(...args) {
+                const url = args[0];
+                const options = args[1] || {};
+                const method = options.method || 'GET';
+                
+                logs.push({
+                    type: 'request',
+                    message: `FETCH ${method} ${url}`,
+                    timestamp: new Date().toISOString(),
+                    data: {
+                        url: url,
+                        method: method,
+                        headers: options.headers,
+                        body: options.body
+                    }
+                });
+                updateLogDisplay();
+                
+                return originalFetch.apply(this, args)
+                    .then(response => {
+                        logs.push({
+                            type: 'response',
+                            message: `FETCH Response: ${url} - ${response.status} ${response.statusText}`,
+                            timestamp: new Date().toISOString(),
+                            data: { status: response.status, statusText: response.statusText }
+                        });
+                        updateLogDisplay();
+                        return response;
+                    })
+                    .catch(error => {
+                        logs.push({
+                            type: 'error',
+                            message: `FETCH Error: ${url} - ${error.message}`,
+                            timestamp: new Date().toISOString(),
+                            data: { error: error.message }
+                        });
+                        updateLogDisplay();
+                        throw error;
+                    });
+            };
+            
+            // Interceptar XMLHttpRequest
+            window.XMLHttpRequest = function() {
+                const xhr = new originalXHR();
+                const originalOpen = xhr.open;
+                const originalSend = xhr.send;
+                
+                xhr.open = function(method, url, ...rest) {
+                    this._method = method;
+                    this._url = url;
+                    logs.push({
+                        type: 'request',
+                        message: `XHR ${method} ${url}`,
+                        timestamp: new Date().toISOString()
+                    });
+                    updateLogDisplay();
+                    return originalOpen.apply(this, [method, url, ...rest]);
+                };
+                
+                xhr.send = function(data) {
+                    logs.push({
+                        type: 'request',
+                        message: `XHR Send: ${this._method} ${this._url}`,
+                        timestamp: new Date().toISOString(),
+                        data: data ? { body: String(data).substring(0, 200) } : null
+                    });
+                    updateLogDisplay();
+                    
+                    xhr.addEventListener('load', function() {
+                        logs.push({
+                            type: 'response',
+                            message: `XHR Response: ${this._method} ${this._url} - ${this.status}`,
+                            timestamp: new Date().toISOString(),
+                            data: { status: this.status, responseText: this.responseText.substring(0, 500) }
+                        });
+                        updateLogDisplay();
+                    });
+                    
+                    xhr.addEventListener('error', function() {
+                        logs.push({
+                            type: 'error',
+                            message: `XHR Error: ${this._method} ${this._url}`,
+                            timestamp: new Date().toISOString()
+                        });
+                        updateLogDisplay();
+                    });
+                    
+                    return originalSend.apply(this, arguments);
+                };
+                
+                return xhr;
+            };
+            
+            // Capturar erros globais
+            window.addEventListener('error', function(event) {
+                logs.push({
+                    type: 'error',
+                    message: `JavaScript Error: ${event.message}`,
+                    timestamp: new Date().toISOString(),
+                    data: {
+                        filename: event.filename,
+                        lineno: event.lineno,
+                        colno: event.colno,
+                        error: event.error ? event.error.toString() : null
+                    }
+                });
+                updateLogDisplay();
+            });
+            
+            window.addEventListener('unhandledrejection', function(event) {
+                logs.push({
+                    type: 'error',
+                    message: `Unhandled Promise Rejection: ${event.reason}`,
+                    timestamp: new Date().toISOString(),
+                    data: { reason: String(event.reason) }
+                });
+                updateLogDisplay();
+            });
+            
+            // Interceptar submit do formulário
+            document.addEventListener('DOMContentLoaded', function() {
+                const form = document.getElementById('resetForm');
+                if (form) {
+                    form.addEventListener('submit', function(e) {
+                        const formData = new FormData(form);
+                        logs.push({
+                            type: 'form',
+                            message: 'FORM SUBMIT: reset-password.php',
+                            timestamp: new Date().toISOString(),
+                            data: {
+                                token: formData.get('token') ? formData.get('token').substring(0, 20) + '...' : null,
+                                hasNewPassword: !!formData.get('new_password'),
+                                hasConfirmPassword: !!formData.get('confirm_password'),
+                                passwordLength: formData.get('new_password') ? formData.get('new_password').length : 0
+                            }
+                        });
+                        updateLogDisplay();
+                    });
+                }
+            });
+            
+            function updateLogDisplay() {
+                const container = document.getElementById('logCaptureContainer');
+                if (!container) return;
+                
+                const logText = logs.map(log => {
+                    let text = `[${new Date(log.timestamp).toLocaleTimeString()}] ${log.type.toUpperCase()}: ${log.message}`;
+                    if (log.data) {
+                        text += '\n' + JSON.stringify(log.data, null, 2);
+                    }
+                    return text;
+                }).join('\n\n');
+                
+                container.textContent = logText;
+                container.scrollTop = container.scrollHeight;
+            }
+            
+            // Criar container de logs
+            document.addEventListener('DOMContentLoaded', function() {
+                const logPanel = document.createElement('div');
+                logPanel.id = 'logCapturePanel';
+                logPanel.style.cssText = 'position:fixed;bottom:0;right:0;width:500px;max-height:400px;background:#1e1e1e;color:#d4d4d4;font-family:monospace;font-size:11px;padding:10px;border:2px solid #1A365D;z-index:10000;overflow:auto;box-shadow:0 -2px 10px rgba(0,0,0,0.3);';
+                
+                const header = document.createElement('div');
+                header.style.cssText = 'background:#1A365D;color:white;padding:8px;margin:-10px -10px 10px -10px;font-weight:bold;display:flex;justify-content:space-between;align-items:center;';
+                header.innerHTML = '<span>📋 Logs Capturados (' + logs.length + ')</span><button onclick="this.parentElement.parentElement.style.display=\'none\'" style="background:transparent;border:none;color:white;cursor:pointer;font-size:18px;">×</button>';
+                
+                const container = document.createElement('pre');
+                container.id = 'logCaptureContainer';
+                container.style.cssText = 'margin:0;white-space:pre-wrap;word-wrap:break-word;max-height:350px;overflow:auto;';
+                
+                logPanel.appendChild(header);
+                logPanel.appendChild(container);
+                document.body.appendChild(logPanel);
+                
+                updateLogDisplay();
+            });
+            
+            console.log('🔍 Captura de logs ativada! Todos os logs serão capturados.');
+        })();
+        <?php endif; ?>
     </script>
 </head>
 <body>
