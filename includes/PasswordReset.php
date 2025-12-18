@@ -350,16 +350,37 @@ class PasswordReset {
             
             // Buscar usuário
             $login = $validation['login'];
-            $usuario = self::findUserByLogin($login, $validation['type'], $db);
+            $type = $validation['type'];
             
-            if (!$usuario) {
-                if (LOG_ENABLED) {
+            if (LOG_ENABLED) {
+                error_log(sprintf(
+                    '[PASSWORD_RESET] Buscando usuário - login: %s, type: %s',
+                    $login,
+                    $type
+                ));
+            }
+            
+            $usuario = self::findUserByLogin($login, $type, $db);
+            
+            if (LOG_ENABLED) {
+                if ($usuario) {
                     error_log(sprintf(
-                        '[PASSWORD_RESET] Usuário não encontrado - login: %s, type: %s',
+                        '[PASSWORD_RESET] Usuário encontrado - id: %s, tipo: %s, login: %s, tem_id: %s',
+                        $usuario['id'] ?? 'N/A',
+                        $usuario['tipo'] ?? 'N/A',
                         $login,
-                        $validation['type']
+                        !empty($usuario['id']) ? 'sim' : 'não'
+                    ));
+                } else {
+                    error_log(sprintf(
+                        '[PASSWORD_RESET] Usuário NÃO encontrado - login: %s, type: %s',
+                        $login,
+                        $type
                     ));
                 }
+            }
+            
+            if (!$usuario) {
                 return [
                     'success' => false,
                     'message' => 'Usuário não encontrado.'
@@ -370,10 +391,10 @@ class PasswordReset {
             if (empty($usuario['id'])) {
                 if (LOG_ENABLED) {
                     error_log(sprintf(
-                        '[PASSWORD_RESET] Usuário encontrado mas sem ID - login: %s, type: %s, usuario: %s',
+                        '[PASSWORD_RESET] Usuário encontrado mas sem ID - login: %s, type: %s, usuario_keys: %s',
                         $login,
-                        $validation['type'],
-                        json_encode($usuario)
+                        $type,
+                        implode(', ', array_keys($usuario))
                     ));
                 }
                 return [
@@ -394,29 +415,59 @@ class PasswordReset {
                 ));
             }
             
+            // Verificar se o ID existe na tabela antes de atualizar
+            if (LOG_ENABLED) {
+                $userExists = $db->fetch("SELECT id FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
+                error_log(sprintf(
+                    '[PASSWORD_RESET] Verificando se usuario_id existe na tabela - id: %s, existe: %s',
+                    $usuario['id'],
+                    $userExists ? 'sim' : 'não'
+                ));
+            }
+            
             // Atualizar senha na tabela usuarios
             try {
+                if (LOG_ENABLED) {
+                    error_log(sprintf(
+                        '[PASSWORD_RESET] Executando UPDATE - tabela: usuarios, id: %s, senha_hash_length: %d',
+                        $usuario['id'],
+                        strlen($passwordHash)
+                    ));
+                }
+                
                 $stmt = $db->update('usuarios', ['senha' => $passwordHash], 'id = :id', ['id' => $usuario['id']]);
                 
                 // Verificar se a atualização afetou alguma linha
                 $rowsAffected = $stmt ? $stmt->rowCount() : 0;
                 
+                if (LOG_ENABLED) {
+                    error_log(sprintf(
+                        '[PASSWORD_RESET] Resultado do UPDATE - rowsAffected: %d, stmt: %s',
+                        $rowsAffected,
+                        $stmt ? 'objeto PDOStatement' : 'null'
+                    ));
+                }
+                
                 if ($rowsAffected > 0) {
                     $updateSuccess = true;
                     if (LOG_ENABLED) {
                         error_log(sprintf(
-                            '[PASSWORD_RESET] Senha atualizada com sucesso - usuario_id: %s, linhas afetadas: %d',
+                            '[PASSWORD_RESET] ✅ Senha atualizada com sucesso - usuario_id: %s, linhas afetadas: %d',
                             $usuario['id'],
                             $rowsAffected
                         ));
                     }
                 } else {
                     $updateSuccess = false;
+                    // Verificar se o ID realmente existe
+                    $checkId = $db->fetch("SELECT id, tipo, login FROM usuarios WHERE id = :id", ['id' => $usuario['id']]);
                     if (LOG_ENABLED) {
                         error_log(sprintf(
-                            '[PASSWORD_RESET] Nenhuma linha foi atualizada - usuario_id: %s, tipo: %s. Verificar se o ID existe na tabela.',
+                            '[PASSWORD_RESET] ❌ Nenhuma linha foi atualizada - usuario_id: %s, tipo: %s, id_existe_na_tabela: %s, check_result: %s',
                             $usuario['id'],
-                            $usuario['tipo'] ?? 'N/A'
+                            $usuario['tipo'] ?? 'N/A',
+                            $checkId ? 'sim' : 'não',
+                            $checkId ? json_encode($checkId) : 'null'
                         ));
                     }
                 }
@@ -424,14 +475,14 @@ class PasswordReset {
                 $updateSuccess = false;
                 if (LOG_ENABLED) {
                     error_log(sprintf(
-                        '[PASSWORD_RESET] Erro ao atualizar senha: %s | Usuario ID: %s | Tipo: %s | Login: %s | File: %s:%d | Trace: %s',
+                        '[PASSWORD_RESET] ❌ EXCEÇÃO ao atualizar senha: %s | Usuario ID: %s | Tipo: %s | Login: %s | File: %s:%d | Trace: %s',
                         $e->getMessage(),
                         $usuario['id'],
                         $usuario['tipo'] ?? 'N/A',
                         $login,
                         $e->getFile(),
                         $e->getLine(),
-                        substr($e->getTraceAsString(), 0, 500)
+                        substr($e->getTraceAsString(), 0, 1000)
                     ));
                 }
             }
