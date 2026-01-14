@@ -1,0 +1,26 @@
+# Front Controller Pattern
+RewriteEngine On
+
+# Permitir acesso direto a arquivos estáticos (assets, imagens, etc)
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Redirecionar tudo para index.php
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Segurança
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Proteger storage
+RewriteRule ^storage/ - [F,L]
+
+# Headers de segurança
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-Frame-Options "SAMEORIGIN"
+    Header set X-XSS-Protection "1; mode=block"
+</IfModule>

@@ -1,0 +1,18 @@
+# Proteger diretórios sensíveis
+<FilesMatch "^\.">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Redirecionar tudo para public_html
+RewriteEngine On
+
+# Não redirecionar se já estiver em public_html
+RewriteCond %{REQUEST_URI} !^/cfc-v\.1/public_html/
+
+# Não redirecionar se for um arquivo ou diretório existente na raiz do projeto
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+
+# Redirecionar tudo para public_html (mantendo o caminho relativo)
+RewriteRule ^(.*)$ public_html/$1 [L]

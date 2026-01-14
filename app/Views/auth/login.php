@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <base href="<?= base_path('/') ?>">
+    <title>Login - CFC Sistema</title>
+    <link rel="stylesheet" href="<?= asset_url('css/tokens.css') ?>">
+    <link rel="stylesheet" href="<?= asset_url('css/components.css') ?>">
+    <style>
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-dark) 100%);
+            padding: var(--spacing-md);
+        }
+        
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            background-color: var(--color-bg);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow-xl);
+            padding: var(--spacing-2xl);
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .login-logo {
+            font-size: var(--font-size-3xl);
+            font-weight: var(--font-weight-bold);
+            color: var(--color-primary);
+            margin-bottom: var(--spacing-sm);
+        }
+        
+        .login-title {
+            font-size: var(--font-size-xl);
+            font-weight: var(--font-weight-semibold);
+            color: var(--color-text);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .login-subtitle {
+            color: var(--color-text-muted);
+            font-size: var(--font-size-sm);
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">CFC</div>
+                <h1 class="login-title">Sistema de Gestão</h1>
+                <p class="login-subtitle">Acesse sua conta</p>
+            </div>
+            
+            <?php if (isset($_SESSION['error'])): ?>
+                <div class="alert alert-danger">
+                    <?= htmlspecialchars($_SESSION['error']) ?>
+                </div>
+                <?php unset($_SESSION['error']); ?>
+            <?php endif; ?>
+            
+            <form method="POST" action="<?= base_path('/login') ?>">
+                <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                
+                <div class="form-group">
+                    <label class="form-label" for="email">Email</label>
+                    <input type="email" 
+                           id="email" 
+                           name="email" 
+                           class="form-input" 
+                           required 
+                           autofocus 
+                           placeholder="seu@email.com">
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label" for="password">Senha</label>
+                    <input type="password" 
+                           id="password" 
+                           name="password" 
+                           class="form-input" 
+                           required 
+                           placeholder="••••••••">
+                </div>
+                
+                <button type="submit" class="btn btn-primary" style="width: 100%; margin-bottom: var(--spacing-md);">
+                    Entrar
+                </button>
+            </form>
+            
+            <div style="text-align: center; margin-top: var(--spacing-md);">
+                <a href="<?= base_path('/forgot-password') ?>" class="text-link" style="font-size: var(--font-size-sm);">
+                    Esqueci minha senha
+                </a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
