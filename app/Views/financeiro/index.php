@@ -36,7 +36,7 @@
 
 <?php if (!$isAluno && !empty($students) && !$student): ?>
     <!-- Lista de resultados da busca -->
-    <div class="card">
+    <div class="card" style="margin-bottom: var(--spacing-md);">
         <div class="card-body">
             <h3 style="margin-bottom: var(--spacing-md);">Resultados da busca</h3>
             <div class="table-wrapper">
@@ -193,13 +193,228 @@
             </div>
         </div>
     <?php endif; ?>
-<?php elseif ($search): ?>
+<?php else: ?>
+    <?php if (!$isAluno && !$student && (!isset($students) || empty($students))): ?>
+    <!-- Lista de Matrículas com Saldo Devedor -->
     <div class="card">
-        <div class="card-body text-center" style="padding: 60px 20px;">
-            <p class="text-muted">Nenhum aluno encontrado com o termo "<?= htmlspecialchars($search) ?>".</p>
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <div>
+                <h3>Matrículas com Saldo Devedor<?= !empty($search) ? ' (Filtrado)' : '' ?></h3>
+                <p class="text-muted" style="margin: 0; font-size: var(--font-size-sm);">
+                    Total: <?= $pendingTotal ?> matrícula(s) com saldo devedor
+                    <?php if (!empty($search)): ?>
+                    <br>Filtro: "<?= htmlspecialchars($search) ?>"
+                    <?php endif; ?>
+                    <?php if (isset($pendingSyncableCount) && $pendingSyncableCount > 0): ?>
+                    <br>Sincronizáveis: <?= $pendingSyncableCount ?>
+                    <?php endif; ?>
+                </p>
+            </div>
+            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <?php if (isset($pendingSyncableCount) && $pendingSyncableCount > 0): ?>
+                <button type="button" class="btn btn-primary" id="btnSyncPendings" onclick="sincronizarPendentes()">
+                    Sincronizar Pendentes desta Página
+                </button>
+                <?php else: ?>
+                <button type="button" class="btn btn-primary" id="btnSyncPendings" disabled title="Sem cobranças para sincronizar">
+                    Sincronizar Pendentes desta Página
+                </button>
+                <span style="font-size: var(--font-size-sm); color: var(--color-text-muted); margin-left: 0.5rem;">
+                    Sem cobranças para sincronizar
+                </span>
+                <?php endif; ?>
+            </div>
+        </div>
+        <div class="card-body">
+            <?php if (empty($pendingEnrollments)): ?>
+            <div class="text-center" style="padding: 40px 20px;">
+                <p class="text-muted">
+                    <?php if (!empty($search)): ?>
+                    Nenhum resultado encontrado com o termo "<?= htmlspecialchars($search) ?>".
+                    <?php else: ?>
+                    Nenhuma matrícula com saldo devedor encontrada.
+                    <?php endif; ?>
+                </p>
+            </div>
+            <?php else: ?>
+            <div class="table-wrapper">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Aluno</th>
+                            <th>CPF</th>
+                            <th>Serviço</th>
+                            <th>Saldo Devedor</th>
+                            <th>Vencimento</th>
+                            <th>Status Financeiro</th>
+                            <th>Cobrança</th>
+                            <th>Status Gateway</th>
+                            <th>Último Evento</th>
+                            <th style="width: 220px;">Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($pendingEnrollments as $enr): ?>
+                        <?php
+                        $studentName = $enr['student_full_name'] ?: $enr['student_name'];
+                        $cpfFormatted = \App\Helpers\ValidationHelper::formatCpf($enr['student_cpf'] ?? '');
+                        
+                        // Saldo devedor calculado
+                        $outstandingAmount = floatval($enr['calculated_outstanding'] ?? $enr['outstanding_amount'] ?? ($enr['final_price'] - ($enr['entry_amount'] ?? 0)));
+                        
+                        // Data de vencimento
+                        $dueDate = null;
+                        $isOverdue = false;
+                        if (!empty($enr['first_due_date']) && $enr['first_due_date'] !== '0000-00-00') {
+                            $dueDate = date('d/m/Y', strtotime($enr['first_due_date']));
+                            $isOverdue = strtotime($enr['first_due_date']) < time();
+                        } elseif (!empty($enr['down_payment_due_date']) && $enr['down_payment_due_date'] !== '0000-00-00') {
+                            $dueDate = date('d/m/Y', strtotime($enr['down_payment_due_date']));
+                            $isOverdue = strtotime($enr['down_payment_due_date']) < time();
+                        }
+                        
+                        // Status financeiro
+                        $financialStatusConfig = [
+                            'em_dia' => ['label' => 'Em Dia', 'color' => '#10b981'],
+                            'pendente' => ['label' => 'Pendente', 'color' => '#f59e0b'],
+                            'bloqueado' => ['label' => 'Bloqueado', 'color' => '#ef4444']
+                        ];
+                        $financialStatus = $financialStatusConfig[$enr['financial_status']] ?? ['label' => $enr['financial_status'], 'color' => '#666'];
+                        
+                        // Verificar se tem cobrança gerada
+                        $hasCharge = !empty($enr['gateway_charge_id']) && $enr['gateway_charge_id'] !== '';
+                        
+                        // Status gateway
+                        $gatewayStatus = $hasCharge ? ($enr['gateway_last_status'] ?? '-') : '-';
+                        $billingStatus = $enr['billing_status'] ?? 'draft';
+                        
+                        // Último evento
+                        $lastEvent = !empty($enr['gateway_last_event_at']) 
+                            ? date('d/m/Y H:i', strtotime($enr['gateway_last_event_at'])) 
+                            : '-';
+                        ?>
+                        <tr id="enrollment-row-<?= $enr['id'] ?>" style="<?= $isOverdue ? 'background-color: #fef2f2;' : '' ?>">
+                            <td><?= htmlspecialchars($studentName) ?></td>
+                            <td><?= htmlspecialchars($cpfFormatted) ?></td>
+                            <td>
+                                <a href="<?= base_path("matriculas/{$enr['id']}") ?>" style="color: var(--color-primary); text-decoration: none;">
+                                    <?= htmlspecialchars($enr['service_name'] ?? 'Matrícula') ?>
+                                </a>
+                            </td>
+                            <td style="font-weight: 600; color: <?= $outstandingAmount > 0 ? '#ef4444' : '#10b981' ?>;">
+                                R$ <?= number_format($outstandingAmount, 2, ',', '.') ?>
+                            </td>
+                            <td style="<?= $isOverdue ? 'color: #ef4444; font-weight: 600;' : '' ?>">
+                                <?= $dueDate ?: '-' ?>
+                                <?php if ($isOverdue): ?>
+                                <span style="font-size: var(--font-size-xs); color: #ef4444;">(Vencida)</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <span style="color: <?= $financialStatus['color'] ?>; font-weight: 600;">
+                                    <?= $financialStatus['label'] ?>
+                                </span>
+                            </td>
+                            <td>
+                                <?php if ($hasCharge): ?>
+                                <span style="color: #10b981; font-weight: 600; font-size: var(--font-size-sm);">
+                                    ✓ Gerada
+                                </span>
+                                <?php else: ?>
+                                <span style="color: var(--color-text-muted); font-size: var(--font-size-sm);">
+                                    Não gerada
+                                </span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php if ($hasCharge): ?>
+                                <span style="font-size: var(--font-size-sm);">
+                                    <?= htmlspecialchars($gatewayStatus) ?>
+                                </span>
+                                <?php else: ?>
+                                <span style="font-size: var(--font-size-sm); color: var(--color-text-muted);">-</span>
+                                <?php endif; ?>
+                            </td>
+                            <td style="font-size: var(--font-size-sm); color: var(--color-text-muted);">
+                                <?= htmlspecialchars($lastEvent) ?>
+                            </td>
+                            <td>
+                                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                                    <?php if ($hasCharge): ?>
+                                        <?php if (!empty($enr['gateway_payment_url'])): ?>
+                                        <a 
+                                            href="<?= htmlspecialchars($enr['gateway_payment_url']) ?>" 
+                                            target="_blank" 
+                                            class="btn btn-sm btn-outline"
+                                            title="Abrir cobrança"
+                                        >
+                                            Abrir Cobrança
+                                        </a>
+                                        <?php endif; ?>
+                                        <button 
+                                            type="button" 
+                                            class="btn btn-sm btn-secondary" 
+                                            onclick="sincronizarIndividual(<?= $enr['id'] ?>)"
+                                            id="btn-sync-<?= $enr['id'] ?>"
+                                        >
+                                            Sincronizar
+                                        </button>
+                                    <?php else: ?>
+                                        <a 
+                                            href="<?= base_path("matriculas/{$enr['id']}") ?>" 
+                                            class="btn btn-sm btn-primary"
+                                            title="Gerar cobrança"
+                                        >
+                                            Gerar Cobrança
+                                        </a>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Paginação -->
+            <?php if ($pendingTotal > $pendingPerPage): ?>
+            <?php
+            $totalPages = ceil($pendingTotal / $pendingPerPage);
+            $paginationParams = ['page' => $pendingPage];
+            if (!empty($search)) {
+                $paginationParams['q'] = $search;
+            }
+            ?>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--spacing-md); padding-top: var(--spacing-md); border-top: 1px solid var(--color-border);">
+                <div style="color: var(--color-text-muted); font-size: var(--font-size-sm);">
+                    Página <?= $pendingPage ?> de <?= $totalPages ?>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <?php if ($pendingPage > 1): ?>
+                    <?php
+                    $prevParams = $paginationParams;
+                    $prevParams['page'] = $pendingPage - 1;
+                    ?>
+                    <a href="<?= base_path("financeiro?" . http_build_query($prevParams)) ?>" class="btn btn-outline">
+                        Anterior
+                    </a>
+                    <?php endif; ?>
+                    <?php if ($pendingPage < $totalPages): ?>
+                    <?php
+                    $nextParams = $paginationParams;
+                    $nextParams['page'] = $pendingPage + 1;
+                    ?>
+                    <a href="<?= base_path("financeiro?" . http_build_query($nextParams)) ?>" class="btn btn-outline">
+                        Próxima
+                    </a>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
         </div>
     </div>
-<?php else: ?>
+    <?php endif; ?>
+    <?php if (!$isAluno && !$student && empty($pendingEnrollments) && empty($search) && (empty($students) || !isset($students))): ?>
     <?php
     // Verificar se há dados para mostrar nos cards
     $hasCards = !empty($overdueStudents) || !empty($dueSoonStudents) || !empty($recentStudents);
@@ -343,6 +558,8 @@
     </div>
     <?php endif; ?>
 <?php endif; ?>
+<?php endif; ?>
+<?php endif; ?>
 
 <script>
 // Autocomplete para busca
@@ -445,4 +662,105 @@
         }
     });
 })();
+
+// Sincronização em lote
+function sincronizarPendentes() {
+    const btn = document.getElementById('btnSyncPendings');
+    
+    if (btn.disabled) {
+        alert('Sem cobranças para sincronizar nesta página.');
+        return;
+    }
+    
+    const page = <?= $pendingPage ?>;
+    const perPage = <?= $pendingPerPage ?>;
+    const search = '<?= htmlspecialchars($search ?? '', ENT_QUOTES) ?>';
+    
+    if (!confirm('Deseja sincronizar todas as cobranças pendentes desta página?\n\nIsso irá consultar o status atual na EFI para cada matrícula.')) {
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = 'Sincronizando...';
+    
+    fetch('<?= base_path('api/payments/sync-pendings') ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            page: page,
+            per_page: perPage,
+            search: search
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            let message = `Sincronização concluída!\n\n`;
+            message += `- Total processado: ${data.total}\n`;
+            message += `- Sincronizadas com sucesso: ${data.synced}\n`;
+            
+            if (data.errors && data.errors.length > 0) {
+                message += `- Erros: ${data.errors.length}\n`;
+            }
+            
+            alert(message);
+            
+            // Recarregar página para atualizar status
+            window.location.reload();
+        } else {
+            alert('Erro ao sincronizar: ' + (data.message || 'Erro desconhecido'));
+            btn.disabled = false;
+            btn.textContent = 'Sincronizar Pendentes desta Página';
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao comunicar com o servidor. Tente novamente.');
+        btn.disabled = false;
+        btn.textContent = 'Sincronizar Pendentes desta Página';
+    });
+}
+
+// Sincronização individual
+function sincronizarIndividual(enrollmentId) {
+    const btn = document.getElementById('btn-sync-' + enrollmentId);
+    
+    if (!confirm('Deseja sincronizar o status desta cobrança com a EFI?')) {
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = 'Sincronizando...';
+    
+    fetch('<?= base_path('api/payments/sync') ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            enrollment_id: enrollmentId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            alert('Cobrança sincronizada com sucesso!\n\nStatus: ' + (data.status || 'N/A'));
+            window.location.reload();
+        } else {
+            alert('Erro ao sincronizar: ' + (data.message || 'Erro desconhecido'));
+            btn.disabled = false;
+            btn.textContent = 'Sincronizar';
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao comunicar com o servidor. Tente novamente.');
+        btn.disabled = false;
+        btn.textContent = 'Sincronizar';
+    });
+}
 </script>

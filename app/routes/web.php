@@ -14,6 +14,11 @@ use App\Controllers\ConfiguracoesController;
 use App\Controllers\NotificationsController;
 use App\Controllers\BroadcastNotificationsController;
 use App\Controllers\RescheduleRequestsController;
+use App\Controllers\TheoryClassesController;
+use App\Controllers\TheorySessionsController;
+use App\Controllers\TheoryEnrollmentsController;
+use App\Controllers\TheoryAttendanceController;
+use App\Controllers\PaymentsController;
 use App\Middlewares\AuthMiddleware;
 use App\Middlewares\RoleMiddleware;
 
@@ -120,6 +125,42 @@ $router->get('/configuracoes/smtp', [ConfiguracoesController::class, 'smtp'], [A
 $router->post('/configuracoes/smtp/salvar', [ConfiguracoesController::class, 'salvarSmtp'], [AuthMiddleware::class]);
 $router->post('/configuracoes/smtp/testar', [ConfiguracoesController::class, 'testarSmtp'], [AuthMiddleware::class]);
 
+// Curso Teórico - Configurações (ADMIN)
+$router->get('/configuracoes/disciplinas', [ConfiguracoesController::class, 'disciplinas'], [AuthMiddleware::class]);
+$router->get('/configuracoes/disciplinas/novo', [ConfiguracoesController::class, 'disciplinaNovo'], [AuthMiddleware::class]);
+$router->post('/configuracoes/disciplinas/criar', [ConfiguracoesController::class, 'disciplinaCriar'], [AuthMiddleware::class]);
+$router->get('/configuracoes/disciplinas/{id}/editar', [ConfiguracoesController::class, 'disciplinaEditar'], [AuthMiddleware::class]);
+$router->post('/configuracoes/disciplinas/{id}/atualizar', [ConfiguracoesController::class, 'disciplinaAtualizar'], [AuthMiddleware::class]);
+
+$router->get('/configuracoes/cursos', [ConfiguracoesController::class, 'cursos'], [AuthMiddleware::class]);
+$router->get('/configuracoes/cursos/novo', [ConfiguracoesController::class, 'cursoNovo'], [AuthMiddleware::class]);
+$router->post('/configuracoes/cursos/criar', [ConfiguracoesController::class, 'cursoCriar'], [AuthMiddleware::class]);
+$router->get('/configuracoes/cursos/{id}/editar', [ConfiguracoesController::class, 'cursoEditar'], [AuthMiddleware::class]);
+$router->post('/configuracoes/cursos/{id}/atualizar', [ConfiguracoesController::class, 'cursoAtualizar'], [AuthMiddleware::class]);
+
+// Curso Teórico - Secretaria (Turmas, Sessões, Matrículas, Presença)
+$router->get('/turmas-teoricas', [TheoryClassesController::class, 'index'], [AuthMiddleware::class]);
+$router->get('/turmas-teoricas/novo', [TheoryClassesController::class, 'novo'], [AuthMiddleware::class]);
+$router->post('/turmas-teoricas/criar', [TheoryClassesController::class, 'criar'], [AuthMiddleware::class]);
+$router->get('/turmas-teoricas/{id}', [TheoryClassesController::class, 'show'], [AuthMiddleware::class]);
+$router->get('/turmas-teoricas/{id}/editar', [TheoryClassesController::class, 'editar'], [AuthMiddleware::class]);
+$router->post('/turmas-teoricas/{id}/atualizar', [TheoryClassesController::class, 'atualizar'], [AuthMiddleware::class]);
+$router->post('/turmas-teoricas/{id}/excluir', [TheoryClassesController::class, 'excluir'], [AuthMiddleware::class]);
+
+$router->get('/turmas-teoricas/{classId}/sessoes/novo', [TheorySessionsController::class, 'novo'], [AuthMiddleware::class]);
+$router->post('/turmas-teoricas/{classId}/sessoes/criar', [TheorySessionsController::class, 'criar'], [AuthMiddleware::class]);
+$router->get('/turmas-teoricas/{classId}/sessoes/{sessionId}/editar', [TheorySessionsController::class, 'editar'], [AuthMiddleware::class]);
+$router->post('/turmas-teoricas/{classId}/sessoes/{sessionId}/atualizar', [TheorySessionsController::class, 'atualizar'], [AuthMiddleware::class]);
+$router->post('/turmas-teoricas/{classId}/sessoes/{sessionId}/cancelar', [TheorySessionsController::class, 'cancelar'], [AuthMiddleware::class]);
+
+$router->get('/turmas-teoricas/{classId}/matricular', [TheoryEnrollmentsController::class, 'novo'], [AuthMiddleware::class]);
+$router->get('/turmas-teoricas/{classId}/matriculas/buscar', [TheoryEnrollmentsController::class, 'buscarMatriculas'], [AuthMiddleware::class]);
+$router->post('/turmas-teoricas/{classId}/matriculas/criar', [TheoryEnrollmentsController::class, 'criar'], [AuthMiddleware::class]);
+$router->post('/turmas-teoricas/{classId}/matriculas/{enrollmentId}/remover', [TheoryEnrollmentsController::class, 'remover'], [AuthMiddleware::class]);
+
+$router->get('/turmas-teoricas/{classId}/sessoes/{sessionId}/presenca', [TheoryAttendanceController::class, 'sessao'], [AuthMiddleware::class]);
+$router->post('/turmas-teoricas/{classId}/sessoes/{sessionId}/presenca/salvar', [TheoryAttendanceController::class, 'salvar'], [AuthMiddleware::class]);
+
 // Notificações
 $router->get('/notificacoes', [NotificationsController::class, 'index'], [AuthMiddleware::class]);
 $router->post('/notificacoes/{id}/ler', [NotificationsController::class, 'markAsRead'], [AuthMiddleware::class]);
@@ -141,6 +182,12 @@ $router->post('/api/switch-role', [ApiController::class, 'switchRole'], [AuthMid
 $router->get('/api/geo/cidades', [ApiController::class, 'getCidades'], [AuthMiddleware::class]);
 $router->get('/api/geo/cep', [ApiController::class, 'getCep'], [AuthMiddleware::class]);
 $router->get('/api/students/{id}/enrollments', [ApiController::class, 'getStudentEnrollments'], [AuthMiddleware::class]);
+
+// Payments API
+$router->post('/api/payments/generate', [PaymentsController::class, 'generate'], [AuthMiddleware::class]);
+$router->post('/api/payments/sync', [PaymentsController::class, 'sync'], [AuthMiddleware::class]);
+$router->post('/api/payments/sync-pendings', [PaymentsController::class, 'syncPendings'], [AuthMiddleware::class]);
+$router->post('/api/payments/webhook/efi', [PaymentsController::class, 'webhookEfi']);
 
 // Debug (APENAS LOCAL - REMOVER EM PRODUÇÃO)
 use App\Controllers\DebugController;

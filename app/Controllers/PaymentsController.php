@@ -1,0 +1,484 @@
+<?php
+
+namespace App\Controllers;
+
+use App\Models\Enrollment;
+use App\Services\EfiPaymentService;
+use App\Services\PermissionService;
+use App\Config\Constants;
+
+class PaymentsController extends Controller
+{
+    private $efiService;
+    private $enrollmentModel;
+
+    public function __construct()
+    {
+        $this->efiService = new EfiPaymentService();
+        $this->enrollmentModel = new Enrollment();
+    }
+
+    /**
+     * POST /api/payments/generate
+     * Gera cobrança na Efí para uma matrícula
+     */
+    public function generate()
+    {
+        header('Content-Type: application/json');
+
+        // Verificar autenticação
+        if (empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'message' => 'Não autenticado']);
+            exit;
+        }
+
+        // Verificar permissão (admin ou secretaria)
+        $currentRole = $_SESSION['current_role'] ?? '';
+        if (!in_array($currentRole, [Constants::ROLE_ADMIN, Constants::ROLE_SECRETARIA])) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'message' => 'Sem permissão']);
+            exit;
+        }
+
+        // Validar método
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['ok' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        // Obter enrollment_id
+        $input = json_decode(file_get_contents('php://input'), true);
+        $enrollmentId = $input['enrollment_id'] ?? $_POST['enrollment_id'] ?? null;
+
+        if (!$enrollmentId) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'message' => 'enrollment_id é obrigatório']);
+            exit;
+        }
+
+        // Buscar matrícula com detalhes
+        $enrollment = $this->enrollmentModel->findWithDetails($enrollmentId);
+        if (!$enrollment) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'message' => 'Matrícula não encontrada']);
+            exit;
+        }
+
+        // Verificar se matrícula pertence ao CFC do usuário
+        $cfcId = $_SESSION['cfc_id'] ?? Constants::CFC_ID_DEFAULT;
+        if ($enrollment['cfc_id'] != $cfcId) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'message' => 'Acesso negado']);
+            exit;
+        }
+
+        // Validar saldo devedor antes de gerar
+        $outstandingAmount = floatval($enrollment['outstanding_amount'] ?? $enrollment['final_price'] ?? 0);
+        if ($outstandingAmount <= 0) {
+            http_response_code(400);
+            echo json_encode([
+                'ok' => false,
+                'message' => 'Não é possível gerar cobrança: saldo devedor deve ser maior que zero'
+            ]);
+            exit;
+        }
+
+        // Verificar idempotência: se já existe cobrança ativa, retornar dados existentes
+        if (!empty($enrollment['gateway_charge_id']) && 
+            $enrollment['billing_status'] === 'generated' &&
+            !in_array($enrollment['gateway_last_status'] ?? '', ['canceled', 'expired', 'error'])) {
+            
+            http_response_code(200);
+            echo json_encode([
+                'ok' => true,
+                'charge_id' => $enrollment['gateway_charge_id'],
+                'status' => $enrollment['gateway_last_status'],
+                'payment_url' => $enrollment['gateway_payment_url'] ?? null,
+                'message' => 'Cobrança já existe'
+            ]);
+            exit;
+        }
+
+        // Gerar cobrança
+        $result = $this->efiService->createCharge($enrollment);
+
+        if (!$result['ok']) {
+            http_response_code(400);
+        }
+
+        echo json_encode($result);
+        exit;
+    }
+
+    /**
+     * POST /api/payments/webhook/efi
+     * Recebe webhook da Efí (público, mas com validação de assinatura)
+     */
+    public function webhookEfi()
+    {
+        header('Content-Type: application/json');
+
+        // Validar método
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['ok' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        // Obter payload
+        $payload = json_decode(file_get_contents('php://input'), true);
+        
+        if (!$payload) {
+            // Tentar obter de POST se não vier em JSON
+            $payload = $_POST;
+        }
+
+        if (empty($payload)) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'message' => 'Payload vazio']);
+            exit;
+        }
+
+        // Processar webhook
+        $result = $this->efiService->parseWebhook($payload);
+
+        // Sempre retornar 200 para evitar retry infinito
+        http_response_code(200);
+        echo json_encode($result);
+        exit;
+    }
+
+    /**
+     * POST /api/payments/sync
+     * Sincroniza status de cobrança EFI manualmente
+     */
+    public function sync()
+    {
+        header('Content-Type: application/json');
+
+        // Verificar autenticação
+        if (empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'message' => 'Não autenticado']);
+            exit;
+        }
+
+        // Verificar permissão (admin ou secretaria)
+        $currentRole = $_SESSION['current_role'] ?? '';
+        if (!in_array($currentRole, [Constants::ROLE_ADMIN, Constants::ROLE_SECRETARIA])) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'message' => 'Sem permissão']);
+            exit;
+        }
+
+        // Validar método
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['ok' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        // Obter enrollment_id
+        $input = json_decode(file_get_contents('php://input'), true);
+        $enrollmentId = $input['enrollment_id'] ?? $_POST['enrollment_id'] ?? null;
+
+        if (!$enrollmentId) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'message' => 'enrollment_id é obrigatório']);
+            exit;
+        }
+
+        // Buscar matrícula com detalhes
+        $enrollment = $this->enrollmentModel->findWithDetails($enrollmentId);
+        if (!$enrollment) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'message' => 'Matrícula não encontrada']);
+            exit;
+        }
+
+        // Verificar se matrícula pertence ao CFC do usuário
+        $cfcId = $_SESSION['cfc_id'] ?? Constants::CFC_ID_DEFAULT;
+        if ($enrollment['cfc_id'] != $cfcId) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'message' => 'Acesso negado']);
+            exit;
+        }
+
+        // Verificar se existe cobrança gerada
+        if (empty($enrollment['gateway_charge_id'])) {
+            http_response_code(400);
+            echo json_encode([
+                'ok' => false,
+                'message' => 'Nenhuma cobrança gerada para esta matrícula. Gere uma cobrança primeiro.'
+            ]);
+            exit;
+        }
+
+        // Sincronizar cobrança
+        try {
+            $result = $this->efiService->syncCharge($enrollment);
+            
+            if (!$result['ok']) {
+                http_response_code(502); // Bad Gateway - problema ao consultar EFI
+            }
+            
+            echo json_encode($result);
+        } catch (\Exception $e) {
+            // Log erro sem expor detalhes sensíveis
+            error_log(sprintf(
+                "EFI Sync Error: enrollment_id=%d, error=%s",
+                $enrollmentId,
+                $e->getMessage()
+            ));
+            
+            http_response_code(500);
+            echo json_encode([
+                'ok' => false,
+                'message' => 'Erro ao sincronizar cobrança. Tente novamente mais tarde.'
+            ]);
+        }
+        
+        exit;
+    }
+
+    /**
+     * POST /api/payments/sync-pendings
+     * Sincroniza cobranças pendentes em lote (somente página atual)
+     */
+    public function syncPendings()
+    {
+        header('Content-Type: application/json');
+
+        // Verificar autenticação
+        if (empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'message' => 'Não autenticado']);
+            exit;
+        }
+
+        // Verificar permissão (admin ou secretaria)
+        $currentRole = $_SESSION['current_role'] ?? '';
+        if (!in_array($currentRole, [Constants::ROLE_ADMIN, Constants::ROLE_SECRETARIA])) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'message' => 'Sem permissão']);
+            exit;
+        }
+
+        // Validar método
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['ok' => false, 'message' => 'Method not allowed']);
+            exit;
+        }
+
+        // Obter parâmetros
+        $input = json_decode(file_get_contents('php://input'), true);
+        $page = max(1, intval($input['page'] ?? $_POST['page'] ?? 1));
+        $perPage = min(20, max(1, intval($input['per_page'] ?? $_POST['per_page'] ?? 10))); // Máximo 20
+        $search = trim($input['search'] ?? $_POST['search'] ?? '');
+
+        $cfcId = $_SESSION['cfc_id'] ?? Constants::CFC_ID_DEFAULT;
+        $db = \App\Config\Database::getInstance()->getConnection();
+
+        // Verificar se coluna gateway_charge_id existe (migration 030)
+        $columnCheck = $db->prepare("
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'enrollments' 
+            AND COLUMN_NAME = 'gateway_charge_id'
+        ");
+        $columnCheck->execute();
+        $hasColumn = $columnCheck->fetch()['count'] > 0;
+
+        if (!$hasColumn) {
+            http_response_code(400);
+            echo json_encode([
+                'ok' => false,
+                'message' => 'Colunas do gateway não encontradas. Execute a migration 030 primeiro.'
+            ]);
+            exit;
+        }
+
+        // Verificar se coluna outstanding_amount existe
+        $columnCheck = $db->prepare("
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'enrollments' 
+            AND COLUMN_NAME = 'outstanding_amount'
+        ");
+        $columnCheck->execute();
+        $hasOutstandingAmount = $columnCheck->fetch()['count'] > 0;
+
+        // Buscar matrículas com saldo devedor E cobrança gerada (mesma query da listagem)
+        $offset = ($page - 1) * $perPage;
+        
+        // Base da query: matrículas com saldo devedor
+        if ($hasOutstandingAmount) {
+            $whereClause = "AND (e.outstanding_amount > 0 OR (e.outstanding_amount IS NULL AND e.final_price > COALESCE(e.entry_amount, 0)))";
+        } else {
+            $whereClause = "AND (e.final_price > COALESCE(e.entry_amount, 0))";
+        }
+        
+        // Verificar se colunas do gateway existem
+        $columnCheck = $db->prepare("
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'enrollments' 
+            AND COLUMN_NAME = 'gateway_charge_id'
+        ");
+        $columnCheck->execute();
+        $hasGatewayColumns = $columnCheck->fetch()['count'] > 0;
+
+        if (!$hasGatewayColumns) {
+            http_response_code(400);
+            echo json_encode([
+                'ok' => false,
+                'message' => 'Colunas do gateway não encontradas. Execute a migration 030 primeiro.'
+            ]);
+            exit;
+        }
+        
+        $sql = "SELECT e.*, 
+                       s.name as student_name, 
+                       s.full_name as student_full_name, 
+                       s.cpf as student_cpf,
+                       sv.name as service_name
+                FROM enrollments e
+                INNER JOIN students s ON s.id = e.student_id
+                INNER JOIN services sv ON sv.id = e.service_id
+                WHERE e.cfc_id = ?
+                AND e.status != 'cancelada'
+                {$whereClause}
+                AND e.gateway_charge_id IS NOT NULL
+                AND e.gateway_charge_id != ''";
+        
+        $params = [$cfcId];
+        
+        if (!empty($search)) {
+            $searchTerm = "%{$search}%";
+            $sql .= " AND (s.name LIKE ? OR s.full_name LIKE ? OR s.cpf LIKE ?)";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+        
+        $sql .= " ORDER BY 
+                    CASE 
+                        WHEN COALESCE(
+                            NULLIF(e.first_due_date, '0000-00-00'),
+                            NULLIF(e.down_payment_due_date, '0000-00-00'),
+                            '9999-12-31'
+                        ) < CURDATE() THEN 0
+                        ELSE 1
+                    END ASC,
+                    COALESCE(
+                        NULLIF(e.first_due_date, '0000-00-00'),
+                        NULLIF(e.down_payment_due_date, '0000-00-00'),
+                        DATE(e.created_at)
+                    ) ASC,
+                    e.id ASC
+                LIMIT ? OFFSET ?";
+        
+        $params[] = $perPage;
+        $params[] = $offset;
+        
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        $enrollments = $stmt->fetchAll();
+
+        // Sincronizar cada matrícula
+        $synced = 0;
+        $errors = [];
+        $items = [];
+
+        foreach ($enrollments as $enrollment) {
+            // Buscar matrícula com detalhes completos
+            $enrollmentFull = $this->enrollmentModel->findWithDetails($enrollment['id']);
+            if (!$enrollmentFull) {
+                $errors[] = [
+                    'enrollment_id' => $enrollment['id'],
+                    'reason' => 'Matrícula não encontrada'
+                ];
+                continue;
+            }
+
+            // Verificar se tem gateway_charge_id
+            if (empty($enrollmentFull['gateway_charge_id'])) {
+                $errors[] = [
+                    'enrollment_id' => $enrollment['id'],
+                    'reason' => 'Nenhuma cobrança gerada'
+                ];
+                continue;
+            }
+
+            // Sincronizar (com timeout)
+            try {
+                $result = $this->efiService->syncCharge($enrollmentFull);
+                
+                if ($result['ok']) {
+                    $synced++;
+                    $items[] = [
+                        'enrollment_id' => $enrollment['id'],
+                        'charge_id' => $result['charge_id'],
+                        'status' => $result['status'],
+                        'billing_status' => $result['billing_status'],
+                        'financial_status' => $result['financial_status']
+                    ];
+                } else {
+                    $errors[] = [
+                        'enrollment_id' => $enrollment['id'],
+                        'reason' => $result['message'] ?? 'Erro desconhecido'
+                    ];
+                }
+            } catch (\Exception $e) {
+                // Log erro sem dados sensíveis
+                error_log(sprintf(
+                    "EFI Sync Pendings Error: enrollment_id=%d, error=%s",
+                    $enrollment['id'],
+                    $e->getMessage()
+                ));
+                
+                $errors[] = [
+                    'enrollment_id' => $enrollment['id'],
+                    'reason' => 'Erro ao sincronizar: ' . $e->getMessage()
+                ];
+            }
+        }
+
+        // Contar total (mesma query sem LIMIT e sem filtro de gateway_charge_id)
+        $countSql = "SELECT COUNT(*) as total
+                     FROM enrollments e
+                     INNER JOIN students s ON s.id = e.student_id
+                     WHERE e.cfc_id = ?
+                     AND e.status != 'cancelada'
+                     {$whereClause}";
+        
+        $countParams = [$cfcId];
+        
+        if (!empty($search)) {
+            $searchTerm = "%{$search}%";
+            $countSql .= " AND (s.name LIKE ? OR s.full_name LIKE ? OR s.cpf LIKE ?)";
+            $countParams[] = $searchTerm;
+            $countParams[] = $searchTerm;
+            $countParams[] = $searchTerm;
+        }
+        
+        $countStmt = $db->prepare($countSql);
+        $countStmt->execute($countParams);
+        $total = (int)$countStmt->fetch()['total'];
+
+        echo json_encode([
+            'ok' => true,
+            'total' => $total,
+            'synced' => $synced,
+            'errors' => $errors,
+            'items' => $items
+        ]);
+        exit;
+    }
+}

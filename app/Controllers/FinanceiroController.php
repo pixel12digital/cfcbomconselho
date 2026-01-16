@@ -37,6 +37,10 @@ class FinanceiroController extends Controller
         $recentStudents = [];
         $students = [];
         $search = '';
+        $pendingEnrollments = [];
+        $pendingTotal = 0;
+        $pendingPage = 1;
+        $pendingPerPage = 10;
         
         // Se for ALUNO, carregar automaticamente os dados do próprio aluno
         if ($currentRole === Constants::ROLE_ALUNO && $userId) {
@@ -61,6 +65,7 @@ class FinanceiroController extends Controller
             // Comportamento administrativo (ADMIN, SECRETARIA, etc)
             $search = $_GET['q'] ?? '';
             $studentId = $_GET['student_id'] ?? null;
+            $pendingPage = max(1, intval($_GET['page'] ?? 1));
             
             if ($studentId) {
                 $student = $studentModel->find($studentId);
@@ -80,14 +85,29 @@ class FinanceiroController extends Controller
                     }
                 }
             } elseif ($search) {
-                // Buscar alunos
+                // Buscar alunos OU filtrar pendentes
+                // Se a busca retornar alunos, mostrar lista de alunos
+                // Se não, aplicar filtro na lista de pendentes
                 $students = $studentModel->findByCfc($this->cfcId, $search);
+                
+                // Se não encontrou alunos, aplicar filtro na lista de pendentes
+                if (empty($students)) {
+                    $pendingResult = $this->getPendingEnrollments($pendingPage, $pendingPerPage, $search);
+                    $pendingEnrollments = $pendingResult['items'];
+                    $pendingTotal = $pendingResult['total'];
+                    $pendingSyncableCount = $pendingResult['syncable_count'] ?? 0;
+                } else {
+                    $pendingEnrollments = [];
+                    $pendingTotal = 0;
+                    $pendingSyncableCount = 0;
+                }
             } else {
                 $students = [];
-                // Carregar dados dos cards apenas quando não houver busca
-                $overdueStudents = $this->getOverdueStudents();
-                $dueSoonStudents = $this->getDueSoonStudents();
-                $recentStudents = $this->getRecentStudentsByUser();
+                // Carregar lista de pendentes (padrão) - matrículas com saldo devedor
+                $pendingResult = $this->getPendingEnrollments($pendingPage, $pendingPerPage, '');
+                $pendingEnrollments = $pendingResult['items'];
+                $pendingTotal = $pendingResult['total'];
+                $pendingSyncableCount = $pendingResult['syncable_count'] ?? 0;
             }
         }
         
@@ -102,7 +122,12 @@ class FinanceiroController extends Controller
             'overdueStudents' => $overdueStudents,
             'dueSoonStudents' => $dueSoonStudents,
             'recentStudents' => $recentStudents,
-            'isAluno' => $currentRole === Constants::ROLE_ALUNO
+            'isAluno' => $currentRole === Constants::ROLE_ALUNO,
+            'pendingEnrollments' => $pendingEnrollments ?? [],
+            'pendingTotal' => $pendingTotal ?? 0,
+            'pendingPage' => $pendingPage,
+            'pendingPerPage' => $pendingPerPage,
+            'pendingSyncableCount' => $pendingSyncableCount ?? 0
         ];
         
         $this->view('financeiro/index', $data);
@@ -217,6 +242,163 @@ class FinanceiroController extends Controller
         } catch (\PDOException $e) {
             // Tabela não existe ainda, ignorar silenciosamente
         }
+    }
+
+    /**
+     * Verifica se uma coluna existe na tabela
+     */
+    private function columnExists($table, $column)
+    {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT COUNT(*) as count 
+                FROM INFORMATION_SCHEMA.COLUMNS 
+                WHERE TABLE_SCHEMA = DATABASE() 
+                AND TABLE_NAME = ? 
+                AND COLUMN_NAME = ?
+            ");
+            $stmt->execute([$table, $column]);
+            $result = $stmt->fetch();
+            return $result['count'] > 0;
+        } catch (\Exception $e) {
+            return false;
+        }
+    }
+
+    /**
+     * Busca matrículas com saldo devedor (para listagem padrão)
+     * 
+     * @param int $page Página atual
+     * @param int $perPage Itens por página
+     * @param string $search Filtro por nome/CPF
+     * @return array {items: [], total: int, syncable_count: int}
+     */
+    private function getPendingEnrollments($page = 1, $perPage = 10, $search = '')
+    {
+        $offset = ($page - 1) * $perPage;
+        
+        // Verificar se coluna outstanding_amount existe
+        $hasOutstandingAmount = $this->columnExists('enrollments', 'outstanding_amount');
+        
+        // Base da query: matrículas com saldo devedor
+        // Critério: outstanding_amount > 0 OU (se coluna não existir, usar final_price - entry_amount)
+        if ($hasOutstandingAmount) {
+            $whereClause = "AND (e.outstanding_amount > 0 OR (e.outstanding_amount IS NULL AND e.final_price > COALESCE(e.entry_amount, 0)))";
+        } else {
+            // Fallback: calcular saldo devedor na query
+            $whereClause = "AND (e.final_price > COALESCE(e.entry_amount, 0))";
+        }
+        
+        // Verificar se colunas do gateway existem (migration 030)
+        $hasGatewayColumns = $this->columnExists('enrollments', 'gateway_charge_id');
+        
+        $sql = "SELECT e.*, 
+                       s.name as student_name, 
+                       s.full_name as student_full_name, 
+                       s.cpf as student_cpf,
+                       sv.name as service_name,
+                       CASE 
+                           WHEN " . ($hasOutstandingAmount ? "e.outstanding_amount" : "(e.final_price - COALESCE(e.entry_amount, 0))") . " > 0 
+                           THEN " . ($hasOutstandingAmount ? "e.outstanding_amount" : "(e.final_price - COALESCE(e.entry_amount, 0))") . "
+                           ELSE 0 
+                       END as calculated_outstanding
+                FROM enrollments e
+                INNER JOIN students s ON s.id = e.student_id
+                INNER JOIN services sv ON sv.id = e.service_id
+                WHERE e.cfc_id = ?
+                AND e.status != 'cancelada'
+                {$whereClause}";
+        
+        $params = [$this->cfcId];
+        
+        // Filtro por busca (nome/CPF)
+        if (!empty($search)) {
+            $searchTerm = "%{$search}%";
+            $sql .= " AND (s.name LIKE ? OR s.full_name LIKE ? OR s.cpf LIKE ?)";
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+            $params[] = $searchTerm;
+        }
+        
+        // Ordenação: vencidas primeiro, depois por vencimento mais próximo
+        $sql .= " ORDER BY 
+                    CASE 
+                        WHEN COALESCE(
+                            NULLIF(e.first_due_date, '0000-00-00'),
+                            NULLIF(e.down_payment_due_date, '0000-00-00'),
+                            '9999-12-31'
+                        ) < CURDATE() THEN 0
+                        ELSE 1
+                    END ASC,
+                    COALESCE(
+                        NULLIF(e.first_due_date, '0000-00-00'),
+                        NULLIF(e.down_payment_due_date, '0000-00-00'),
+                        DATE(e.created_at)
+                    ) ASC,
+                    e.id ASC
+                LIMIT ? OFFSET ?";
+        
+        $params[] = $perPage;
+        $params[] = $offset;
+        
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        $items = $stmt->fetchAll();
+        
+        // Contar total (mesma query sem LIMIT)
+        $countSql = "SELECT COUNT(*) as total
+                     FROM enrollments e
+                     INNER JOIN students s ON s.id = e.student_id
+                     WHERE e.cfc_id = ?
+                     AND e.status != 'cancelada'
+                     {$whereClause}";
+        
+        $countParams = [$this->cfcId];
+        
+        if (!empty($search)) {
+            $searchTerm = "%{$search}%";
+            $countSql .= " AND (s.name LIKE ? OR s.full_name LIKE ? OR s.cpf LIKE ?)";
+            $countParams[] = $searchTerm;
+            $countParams[] = $searchTerm;
+            $countParams[] = $searchTerm;
+        }
+        
+        $countStmt = $this->db->prepare($countSql);
+        $countStmt->execute($countParams);
+        $total = $countStmt->fetch()['total'];
+        
+        // Contar quantas têm cobrança gerada (sincronizáveis)
+        $syncableCount = 0;
+        if ($hasGatewayColumns) {
+            $syncableSql = "SELECT COUNT(*) as total
+                           FROM enrollments e
+                           INNER JOIN students s ON s.id = e.student_id
+                           WHERE e.cfc_id = ?
+                           AND e.status != 'cancelada'
+                           {$whereClause}
+                           AND e.gateway_charge_id IS NOT NULL
+                           AND e.gateway_charge_id != ''";
+            
+            $syncableParams = [$this->cfcId];
+            
+            if (!empty($search)) {
+                $searchTerm = "%{$search}%";
+                $syncableSql .= " AND (s.name LIKE ? OR s.full_name LIKE ? OR s.cpf LIKE ?)";
+                $syncableParams[] = $searchTerm;
+                $syncableParams[] = $searchTerm;
+                $syncableParams[] = $searchTerm;
+            }
+            
+            $syncableStmt = $this->db->prepare($syncableSql);
+            $syncableStmt->execute($syncableParams);
+            $syncableCount = (int)$syncableStmt->fetch()['total'];
+        }
+        
+        return [
+            'items' => $items,
+            'total' => (int)$total,
+            'syncable_count' => $syncableCount
+        ];
     }
 
     /**

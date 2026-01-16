@@ -133,7 +133,7 @@
                         style="background-color: var(--color-bg); font-weight: var(--font-weight-semibold); font-size: var(--font-size-md); color: var(--color-primary);"
                     >
                     <input type="hidden" id="outstanding_amount" name="outstanding_amount" value="<?= $enrollment['outstanding_amount'] ?? $enrollment['final_price'] ?>">
-                    <small class="text-muted">Valor que será cobrado no Asaas</small>
+                    <small class="text-muted">Valor que será cobrado no Gateway (Efí)</small>
                 </div>
             </div>
 
@@ -190,7 +190,7 @@
                         readonly
                         style="background-color: var(--color-bg); font-weight: var(--font-weight-semibold); font-size: var(--font-size-md); color: var(--color-primary);"
                     >
-                    <small class="text-muted">Valor que será cobrado no Asaas</small>
+                    <small class="text-muted">Valor que será cobrado no Gateway (Efí)</small>
                 </div>
                 <?php endif; ?>
             </div>
@@ -261,7 +261,7 @@
                 <?php endif; ?>
 
                 <div class="form-group">
-                    <label class="form-label">Status Cobrança Asaas</label>
+                    <label class="form-label">Status Cobrança (Gateway)</label>
                     <input 
                         type="text" 
                         class="form-input" 
@@ -274,6 +274,69 @@
                         style="background-color: var(--color-bg);"
                     >
                 </div>
+                
+                <?php if (!empty($enrollment['gateway_charge_id'])): ?>
+                <div class="form-group">
+                    <label class="form-label">ID da Cobrança</label>
+                    <input 
+                        type="text" 
+                        class="form-input" 
+                        value="<?= htmlspecialchars($enrollment['gateway_charge_id']) ?>" 
+                        readonly
+                        style="background-color: var(--color-bg); font-family: monospace; font-size: var(--font-size-sm);"
+                    >
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($enrollment['gateway_last_status'])): ?>
+                <div class="form-group">
+                    <label class="form-label">Status no Gateway</label>
+                    <input 
+                        type="text" 
+                        class="form-input" 
+                        value="<?= htmlspecialchars($enrollment['gateway_last_status']) ?>" 
+                        readonly
+                        style="background-color: var(--color-bg);"
+                    >
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($enrollment['gateway_last_event_at'])): ?>
+                <div class="form-group">
+                    <label class="form-label">Último Evento</label>
+                    <input 
+                        type="text" 
+                        class="form-input" 
+                        value="<?= date('d/m/Y H:i:s', strtotime($enrollment['gateway_last_event_at'])) ?>" 
+                        readonly
+                        style="background-color: var(--color-bg);"
+                    >
+                </div>
+                <?php endif; ?>
+                
+                <?php if (!empty($enrollment['gateway_payment_url'])): ?>
+                <div class="form-group">
+                    <label class="form-label">Link de Pagamento</label>
+                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                        <input 
+                            type="text" 
+                            class="form-input" 
+                            value="<?= htmlspecialchars($enrollment['gateway_payment_url']) ?>" 
+                            readonly
+                            id="payment_url_input"
+                            style="background-color: var(--color-bg); font-family: monospace; font-size: var(--font-size-sm); flex: 1;"
+                        >
+                        <a 
+                            href="<?= htmlspecialchars($enrollment['gateway_payment_url']) ?>" 
+                            target="_blank" 
+                            class="btn btn-outline"
+                            style="white-space: nowrap;"
+                        >
+                            Abrir Link
+                        </a>
+                    </div>
+                </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 
@@ -360,9 +423,34 @@
                 <button type="submit" class="btn btn-primary">
                     Atualizar Matrícula
                 </button>
-                <?php if (!empty($enrollment['installments']) && ($enrollment['billing_status'] === 'draft' || $enrollment['billing_status'] === 'ready')): ?>
-                <button type="button" class="btn btn-secondary" id="btnGerarCobranca" onclick="gerarCobrancaAsaas()" style="margin-left: 0.5rem;">
-                    Gerar Cobrança Asaas
+                <?php 
+                // Calcular saldo devedor
+                $outstandingAmount = floatval($enrollment['outstanding_amount'] ?? $enrollment['final_price'] ?? 0);
+                $hasOutstanding = $outstandingAmount > 0;
+                
+                // Mostrar botão apenas se não houver cobrança ativa
+                $hasActiveCharge = !empty($enrollment['gateway_charge_id']) && 
+                                   $enrollment['billing_status'] === 'generated' &&
+                                   !in_array($enrollment['gateway_last_status'] ?? '', ['canceled', 'expired', 'error']);
+                
+                // Botão Gerar Cobrança: aparece se tem parcelas, saldo > 0, e não tem cobrança ativa
+                if (!empty($enrollment['installments']) && $hasOutstanding && !$hasActiveCharge && ($enrollment['billing_status'] === 'draft' || $enrollment['billing_status'] === 'ready' || $enrollment['billing_status'] === 'error')): 
+                ?>
+                <button type="button" class="btn btn-secondary" id="btnGerarCobranca" onclick="gerarCobrancaEfi()" style="margin-left: 0.5rem;">
+                    Gerar Cobrança Efí
+                </button>
+                <?php elseif ($hasActiveCharge): ?>
+                <span class="btn btn-outline" style="margin-left: 0.5rem; cursor: default;">
+                    Cobrança já gerada
+                </span>
+                <?php endif; ?>
+                
+                <?php 
+                // Botão Sincronizar: aparece se existe cobrança gerada
+                if (!empty($enrollment['gateway_charge_id'])): 
+                ?>
+                <button type="button" class="btn btn-outline" id="btnSincronizarCobranca" onclick="sincronizarCobrancaEfi()" style="margin-left: 0.5rem;">
+                    Sincronizar Cobrança
                 </button>
                 <?php endif; ?>
                 <a href="<?= base_path("alunos/{$enrollment['student_id']}?tab=matricula") ?>" class="btn btn-outline">
@@ -479,14 +567,20 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function gerarCobrancaAsaas() {
+function gerarCobrancaEfi() {
     const enrollmentId = <?= $enrollment['id'] ?>;
     const btn = document.getElementById('btnGerarCobranca');
-    const outstandingAmount = <?= $enrollment['outstanding_amount'] ?? $enrollment['final_price'] ?>;
+    const outstandingAmount = <?= $enrollment['outstanding_amount'] ?? $enrollment['final_price'] ?? 0 ?>;
     const installments = <?= $enrollment['installments'] ?? 1 ?>;
     const entryAmount = <?= $enrollment['entry_amount'] ?? 0 ?>;
     
-    let message = 'Deseja gerar a cobrança no Asaas?\n\n';
+    // Validação adicional no frontend
+    if (outstandingAmount <= 0) {
+        alert('Não é possível gerar cobrança: saldo devedor deve ser maior que zero.');
+        return;
+    }
+    
+    let message = 'Deseja gerar a cobrança na Efí?\n\n';
     message += 'Valores que serão cobrados:\n';
     if (entryAmount > 0) {
         message += `- Entrada já recebida: R$ ${entryAmount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
@@ -494,7 +588,7 @@ function gerarCobrancaAsaas() {
     message += `- Saldo devedor: R$ ${outstandingAmount.toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n`;
     message += `- Parcelas: ${installments}x\n`;
     message += `- Valor por parcela: R$ ${(outstandingAmount / installments).toLocaleString('pt-BR', {minimumFractionDigits: 2})}\n\n`;
-    message += 'Nota: O Asaas gerará cobranças apenas sobre o saldo devedor (valor final - entrada).';
+    message += 'Nota: A Efí gerará cobranças apenas sobre o saldo devedor (valor final - entrada).';
     
     if (!confirm(message)) {
         return;
@@ -504,15 +598,103 @@ function gerarCobrancaAsaas() {
     btn.disabled = true;
     btn.textContent = 'Gerando...';
     
-    // TODO: Implementar chamada AJAX para endpoint de geração de cobrança
-    // IMPORTANTE: Usar outstanding_amount ao invés de final_price
-    // - outstanding_amount = valor que será cobrado no Asaas
-    // - entry_amount = valor já recebido (não deve ser cobrado novamente)
-    // - Parcelas = installments
-    // - Valor da parcela = outstanding_amount / installments
-    alert('Funcionalidade de geração de cobrança Asaas será implementada em breve.\n\nA matrícula está preparada com:\n- Método: <?= htmlspecialchars($enrollment['payment_method']) ?>\n- Parcelas: <?= $enrollment['installments'] ?? 'N/A' ?>\n- Saldo devedor: R$ <?= number_format($enrollment['outstanding_amount'] ?? $enrollment['final_price'], 2, ',', '.') ?>\n- Status: <?= $enrollment['billing_status'] ?? 'draft' ?>');
+    // Fazer chamada AJAX para gerar cobrança
+    fetch('<?= base_path('api/payments/generate') ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            enrollment_id: enrollmentId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            // Sucesso
+            let successMsg = 'Cobrança gerada com sucesso!\n\n';
+            successMsg += `- ID da Cobrança: ${data.charge_id || 'N/A'}\n`;
+            successMsg += `- Status: ${data.status || 'N/A'}\n`;
+            
+            if (data.payment_url) {
+                successMsg += `\n- Link de Pagamento: ${data.payment_url}\n`;
+            }
+            
+            alert(successMsg);
+            
+            // Recarregar página para atualizar status
+            window.location.reload();
+        } else {
+            // Erro
+            alert('Erro ao gerar cobrança: ' + (data.message || 'Erro desconhecido'));
+            btn.disabled = false;
+            btn.textContent = 'Gerar Cobrança Efí';
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao comunicar com o servidor. Tente novamente.');
+        btn.disabled = false;
+        btn.textContent = 'Gerar Cobrança Efí';
+    });
+}
+
+function sincronizarCobrancaEfi() {
+    const enrollmentId = <?= $enrollment['id'] ?>;
+    const btn = document.getElementById('btnSincronizarCobranca');
     
-    btn.disabled = false;
-    btn.textContent = 'Gerar Cobrança Asaas';
+    if (!confirm('Deseja sincronizar o status da cobrança com a EFI?\n\nIsso irá consultar o status atual na EFI e atualizar os dados da matrícula.')) {
+        return;
+    }
+    
+    // Desabilitar botão durante processamento
+    btn.disabled = true;
+    btn.textContent = 'Sincronizando...';
+    
+    // Fazer chamada AJAX para sincronizar
+    fetch('<?= base_path('api/payments/sync') ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            enrollment_id: enrollmentId
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.ok) {
+            // Sucesso
+            let successMsg = 'Cobrança sincronizada com sucesso!\n\n';
+            successMsg += `- Status: ${data.status || 'N/A'}\n`;
+            successMsg += `- Status Interno: ${data.billing_status || 'N/A'}\n`;
+            
+            if (data.financial_status) {
+                successMsg += `- Status Financeiro: ${data.financial_status}\n`;
+            }
+            
+            if (data.payment_url) {
+                successMsg += `\n- Link de Pagamento atualizado\n`;
+            }
+            
+            alert(successMsg);
+            
+            // Recarregar página para atualizar status
+            window.location.reload();
+        } else {
+            // Erro
+            alert('Erro ao sincronizar cobrança: ' + (data.message || 'Erro desconhecido'));
+            btn.disabled = false;
+            btn.textContent = 'Sincronizar Cobrança';
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao comunicar com o servidor. Tente novamente.');
+        btn.disabled = false;
+        btn.textContent = 'Sincronizar Cobrança';
+    });
 }
 </script>
