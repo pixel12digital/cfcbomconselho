@@ -12,7 +12,11 @@ RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Permitir acesso direto a public_html/assets (para arquivos estáticos)
+# Permitir acesso direto a assets (em public_html/assets/)
+RewriteCond %{REQUEST_URI} ^/public_html/assets/
+RewriteRule ^ - [L]
+
+# Permitir acesso direto a assets (também na raiz, se existir symlink)
 RewriteCond %{REQUEST_URI} ^/assets/
 RewriteRule ^ - [L]
 

@@ -63,11 +63,28 @@ if (!function_exists('base_url')) {
 
 if (!function_exists('asset_url')) {
     function asset_url($path, $versioned = true) {
-        $url = base_path('assets/' . ltrim($path, '/'));
+        // Detectar ambiente: produção ou desenvolvimento local
+        $appEnv = $_ENV['APP_ENV'] ?? 'local';
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+        
+        // Se está em produção OU se a URI não contém o path local
+        if ($appEnv === 'production' || strpos($requestUri, '/cfc-v.1/public_html') === false) {
+            // Produção: assets estão em public_html/assets/
+            // Como o DocumentRoot aponta para public_html/painel/, o path deve ser /public_html/assets/
+            $url = base_path('public_html/assets/' . ltrim($path, '/'));
+        } else {
+            // Desenvolvimento local: assets estão em /assets/
+            $url = base_path('assets/' . ltrim($path, '/'));
+        }
         
         // Versionamento automático via filemtime (evita cache quebrado)
         if ($versioned) {
+            // Tentar ambos os caminhos possíveis para encontrar o arquivo
             $filePath = ROOT_PATH . '/assets/' . ltrim($path, '/');
+            if (!file_exists($filePath)) {
+                // Se não encontrou, tentar em public_html/assets/
+                $filePath = ROOT_PATH . '/public_html/assets/' . ltrim($path, '/');
+            }
             if (file_exists($filePath)) {
                 $url .= '?v=' . filemtime($filePath);
             }
