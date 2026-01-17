@@ -359,14 +359,20 @@ class EfiPaymentService
 
         // Se certificado for necessário (geralmente exigido em produção)
         if ($this->certPath && file_exists($this->certPath)) {
+            // Configurar certificado cliente para mutual TLS (mTLS)
             curl_setopt($ch, CURLOPT_SSLCERT, $this->certPath);
             curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'P12');
+            // Para P12, também pode precisar especificar a chave (mesmo arquivo)
+            curl_setopt($ch, CURLOPT_SSLKEY, $this->certPath);
+            curl_setopt($ch, CURLOPT_SSLKEYTYPE, 'P12');
             // Se tiver senha do certificado, usar
             if ($this->certPassword) {
                 curl_setopt($ch, CURLOPT_SSLCERTPASSWD, $this->certPassword);
+                curl_setopt($ch, CURLOPT_SSLKEYPASSWD, $this->certPassword);
             } else {
                 // Tentar sem senha (certificado pode não ter senha)
                 curl_setopt($ch, CURLOPT_SSLCERTPASSWD, '');
+                curl_setopt($ch, CURLOPT_SSLKEYPASSWD, '');
             }
         } elseif (!$this->sandbox) {
             // Em produção, certificado pode ser obrigatório
@@ -503,11 +509,19 @@ class EfiPaymentService
 
         // Se certificado for necessário (obrigatório em produção)
         if ($this->certPath && file_exists($this->certPath)) {
+            // Configurar certificado cliente para mutual TLS (mTLS)
             curl_setopt($ch, CURLOPT_SSLCERT, $this->certPath);
             curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'P12');
+            // Para P12, também pode precisar especificar a chave (mesmo arquivo)
+            curl_setopt($ch, CURLOPT_SSLKEY, $this->certPath);
+            curl_setopt($ch, CURLOPT_SSLKEYTYPE, 'P12');
             // Se tiver senha do certificado, usar
             if ($this->certPassword) {
                 curl_setopt($ch, CURLOPT_SSLCERTPASSWD, $this->certPassword);
+                curl_setopt($ch, CURLOPT_SSLKEYPASSWD, $this->certPassword);
+            } else {
+                curl_setopt($ch, CURLOPT_SSLCERTPASSWD, '');
+                curl_setopt($ch, CURLOPT_SSLKEYPASSWD, '');
             }
         }
 

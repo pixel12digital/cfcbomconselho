@@ -114,12 +114,18 @@ header('Content-Type: text/html; charset=utf-8');
 
         // Configurar certificado se existir
         if ($certPath && file_exists($certPath)) {
+            // Configurar certificado cliente para mutual TLS (mTLS)
             curl_setopt($ch, CURLOPT_SSLCERT, $certPath);
             curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'P12');
+            // Para P12, também pode precisar especificar a chave (mesmo arquivo)
+            curl_setopt($ch, CURLOPT_SSLKEY, $certPath);
+            curl_setopt($ch, CURLOPT_SSLKEYTYPE, 'P12');
             if (!empty($certPassword)) {
                 curl_setopt($ch, CURLOPT_SSLCERTPASSWD, $certPassword);
+                curl_setopt($ch, CURLOPT_SSLKEYPASSWD, $certPassword);
             } else {
                 curl_setopt($ch, CURLOPT_SSLCERTPASSWD, '');
+                curl_setopt($ch, CURLOPT_SSLKEYPASSWD, '');
             }
         }
 
