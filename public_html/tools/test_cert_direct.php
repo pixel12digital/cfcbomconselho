@@ -101,14 +101,24 @@ if ($curlErrNo !== 0) {
 
 echo "\n" . str_repeat("=", 60) . "\n";
 echo "💡 CONCLUSÃO:\n";
-if ($returnVar !== 0 && empty($certPassword)) {
-    echo "   O certificado PROVAVELMENTE TEM SENHA.\n";
-    echo "   Pergunte ao cliente qual é a senha e adicione:\n";
-    echo "   EFI_CERT_PASSWORD=senha_aqui no .env\n";
-} elseif ($returnVar === 0) {
-    echo "   O certificado NÃO tem senha (ou a senha configurada está correta).\n";
+if ($curlErrNo === 0 && (strpos($curlError, 'bad password') === false && strpos($curlError, 'Mac verify failure') === false)) {
+    echo "   ✅ O certificado NÃO tem senha e está funcionando corretamente.\n\n";
+    echo "   ⚠️  O problema do erro 401 NÃO é a senha do certificado.\n";
     echo "   O problema pode ser:\n";
-    echo "   1. Credenciais não correspondem ao certificado\n";
-    echo "   2. Escopos não habilitados na aplicação EFI\n";
-    echo "   3. Certificado e credenciais são de aplicações diferentes\n";
+    echo "   1. ❌ Credenciais não correspondem ao certificado\n";
+    echo "      → Certificado e credenciais devem ser da MESMA aplicação\n";
+    echo "   2. ❌ Escopos não habilitados na aplicação EFI\n";
+    echo "      → Verifique na dashboard: API → Minhas Aplicações → Escopos\n";
+    echo "   3. ❌ Aplicação inativa ou credenciais revogadas\n";
+    echo "      → Verifique se a aplicação está ATIVA na dashboard\n";
+    echo "   4. ❌ Certificado e credenciais são de ambientes diferentes\n";
+    echo "      → Ambos devem ser de PRODUÇÃO (não misturar com Homologação)\n\n";
+    echo "   📋 AÇÃO NECESSÁRIA:\n";
+    echo "   Peça ao cliente para verificar na dashboard da EFI:\n";
+    echo "   - Aplicação está ATIVA?\n";
+    echo "   - Escopos estão HABILITADOS? (Cobranças, PIX, etc.)\n";
+    echo "   - Certificado e credenciais são da MESMA aplicação?\n";
+} else {
+    echo "   ⚠️  O certificado pode ter senha ou há problema ao usá-lo.\n";
+    echo "   Erro: {$curlError}\n";
 }
