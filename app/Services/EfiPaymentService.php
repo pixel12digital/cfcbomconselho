@@ -14,6 +14,7 @@ class EfiPaymentService
     private $clientSecret;
     private $sandbox;
     private $certPath;
+    private $certPassword;
     private $webhookSecret;
     private $baseUrl;
     private $oauthUrl;
@@ -27,6 +28,7 @@ class EfiPaymentService
         $this->clientSecret = $_ENV['EFI_CLIENT_SECRET'] ?? null;
         $this->sandbox = ($_ENV['EFI_SANDBOX'] ?? 'true') === 'true';
         $this->certPath = $_ENV['EFI_CERT_PATH'] ?? null;
+        $this->certPassword = $_ENV['EFI_CERT_PASSWORD'] ?? null;
         $this->webhookSecret = $_ENV['EFI_WEBHOOK_SECRET'] ?? null;
         
         // URLs base da API Efí (Gerencianet)
@@ -359,8 +361,10 @@ class EfiPaymentService
         if ($this->certPath && file_exists($this->certPath)) {
             curl_setopt($ch, CURLOPT_SSLCERT, $this->certPath);
             curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'P12');
-            // Se tiver senha do certificado, adicionar aqui
-            // curl_setopt($ch, CURLOPT_SSLCERTPASSWD, 'senha_do_certificado');
+            // Se tiver senha do certificado, usar
+            if ($this->certPassword) {
+                curl_setopt($ch, CURLOPT_SSLCERTPASSWD, $this->certPassword);
+            }
         } elseif (!$this->sandbox) {
             // Em produção, certificado pode ser obrigatório
             error_log("EFI Auth Warning: Produção sem certificado configurado. A EFI pode exigir certificado cliente em produção.");
@@ -436,8 +440,10 @@ class EfiPaymentService
         if ($this->certPath && file_exists($this->certPath)) {
             curl_setopt($ch, CURLOPT_SSLCERT, $this->certPath);
             curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'P12');
-            // Se tiver senha do certificado, adicionar aqui
-            // curl_setopt($ch, CURLOPT_SSLCERTPASSWD, $_ENV['EFI_CERT_PASSWORD'] ?? '');
+            // Se tiver senha do certificado, usar
+            if ($this->certPassword) {
+                curl_setopt($ch, CURLOPT_SSLCERTPASSWD, $this->certPassword);
+            }
         }
 
         $response = curl_exec($ch);
