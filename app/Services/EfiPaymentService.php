@@ -364,19 +364,62 @@ class EfiPaymentService
             // Se tiver senha do certificado, usar
             if ($this->certPassword) {
                 curl_setopt($ch, CURLOPT_SSLCERTPASSWD, $this->certPassword);
+            } else {
+                // Tentar sem senha (certificado pode não ter senha)
+                curl_setopt($ch, CURLOPT_SSLCERTPASSWD, '');
             }
         } elseif (!$this->sandbox) {
             // Em produção, certificado pode ser obrigatório
             error_log("EFI Auth Warning: Produção sem certificado configurado. A EFI pode exigir certificado cliente em produção.");
         }
 
+        // Captura verbose do cURL para debug (apenas em desenvolvimento ou se habilitado)
+        $debugMode = ($_ENV['EFI_DEBUG'] ?? 'false') === 'true' || ($_ENV['APP_ENV'] ?? 'local') === 'local';
+        $verboseLog = null;
+        if ($debugMode) {
+            $verbose = fopen('php://temp', 'w+');
+            curl_setopt($ch, CURLOPT_VERBOSE, true);
+            curl_setopt($ch, CURLOPT_STDERR, $verbose);
+        }
+
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
+        $curlErrNo = curl_errno($ch);
+        
+        // Capturar verbose log se habilitado
+        if ($debugMode && isset($verbose)) {
+            rewind($verbose);
+            $verboseLog = stream_get_contents($verbose);
+            fclose($verbose);
+        }
+        
         curl_close($ch);
 
+        // Função helper para debug (não expor segredos completos)
+        $tailHex = function($s, $n = 6) {
+            if (strlen($s) <= $n) return '***';
+            $t = substr($s, -$n);
+            return bin2hex($t);
+        };
+
         if ($curlError) {
-            $errorDetails = "cURL error: {$curlError}";
+            $errorDetails = "cURL error: {$curlError} (errno: {$curlErrNo})";
+            
+            // Debug detalhado se habilitado
+            if ($debugMode) {
+                $errorDetails .= "\nDEBUG INFO:";
+                $errorDetails .= "\n- HTTP_CODE: {$httpCode}";
+                $errorDetails .= "\n- CURL_ERRNO: {$curlErrNo}";
+                $errorDetails .= "\n- CLIENT_ID_LEN: " . strlen($this->clientId) . " TAIL: " . $tailHex($this->clientId);
+                $errorDetails .= "\n- CLIENT_SECRET_LEN: " . strlen($this->clientSecret) . " TAIL: " . $tailHex($this->clientSecret);
+                $errorDetails .= "\n- CERT_PATH: " . ($this->certPath ?? 'não configurado');
+                $errorDetails .= "\n- CERT_EXISTS: " . ($this->certPath && file_exists($this->certPath) ? 'sim' : 'não');
+                if ($verboseLog) {
+                    $errorDetails .= "\n- CURL_VERBOSE:\n" . $verboseLog;
+                }
+                $errorDetails .= "\n- RESPONSE: " . substr($response, 0, 500);
+            }
             
             // Mensagens mais específicas para erros comuns
             if (strpos($curlError, 'Connection was reset') !== false || strpos($curlError, 'Recv failure') !== false) {
@@ -394,7 +437,29 @@ class EfiPaymentService
         if ($httpCode !== 200) {
             $errorData = json_decode($response, true);
             $errorMessage = $errorData['error_description'] ?? $errorData['error'] ?? $errorData['message'] ?? 'Erro desconhecido';
-            error_log("EFI Auth Error: HTTP {$httpCode} - {$errorMessage}");
+            
+            // Debug detalhado se habilitado
+            $debugInfo = "";
+            if (($debugMode = ($_ENV['EFI_DEBUG'] ?? 'false') === 'true' || ($_ENV['APP_ENV'] ?? 'local') === 'local')) {
+                $tailHex = function($s, $n = 6) {
+                    if (strlen($s) <= $n) return '***';
+                    $t = substr($s, -$n);
+                    return bin2hex($t);
+                };
+                $debugInfo = "\nDEBUG INFO:";
+                $debugInfo .= "\n- HTTP_CODE: {$httpCode}";
+                $debugInfo .= "\n- CLIENT_ID_LEN: " . strlen($this->clientId) . " TAIL: " . $tailHex($this->clientId);
+                $debugInfo .= "\n- CLIENT_SECRET_LEN: " . strlen($this->clientSecret) . " TAIL: " . $tailHex($this->clientSecret);
+                $debugInfo .= "\n- CERT_PATH: " . ($this->certPath ?? 'não configurado');
+                $debugInfo .= "\n- CERT_EXISTS: " . ($this->certPath && file_exists($this->certPath) ? 'sim' : 'não');
+                $debugInfo .= "\n- CERT_HAS_PASSWORD: " . (!empty($this->certPassword) ? 'sim' : 'não');
+                if ($verboseLog) {
+                    $debugInfo .= "\n- CURL_VERBOSE:\n" . substr($verboseLog, 0, 2000);
+                }
+                $debugInfo .= "\n- RESPONSE_BODY: " . substr($response, 0, 500);
+            }
+            
+            error_log("EFI Auth Error: HTTP {$httpCode} - {$errorMessage}{$debugInfo}");
             return null;
         }
 
