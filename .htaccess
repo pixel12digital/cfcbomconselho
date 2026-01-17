@@ -4,15 +4,21 @@
     Deny from all
 </FilesMatch>
 
-# Redirecionar tudo para public_html
+# Front Controller - Redirecionar para index.php na raiz
 RewriteEngine On
 
-# Não redirecionar se já estiver em public_html
-RewriteCond %{REQUEST_URI} !^/cfc-v\.1/public_html/
+# Permitir acesso direto a arquivos estáticos na raiz
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
 
-# Não redirecionar se for um arquivo ou diretório existente na raiz do projeto
-RewriteCond %{REQUEST_FILENAME} !-f
-RewriteCond %{REQUEST_FILENAME} !-d
+# Permitir acesso direto a public_html/assets (para arquivos estáticos)
+RewriteCond %{REQUEST_URI} ^/assets/
+RewriteRule ^ - [L]
 
-# Redirecionar tudo para public_html (mantendo o caminho relativo)
-RewriteRule ^(.*)$ public_html/$1 [L]
+# Redirecionar tudo para index.php na raiz
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+# Proteger storage e certificados
+RewriteRule ^storage/ - [F,L]
+RewriteRule ^certificados/.*\.(p12|pfx|pem)$ - [F,L]
