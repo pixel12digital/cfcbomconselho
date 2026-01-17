@@ -16,14 +16,25 @@ date_default_timezone_set('America/Sao_Paulo');
 // Helper functions
 if (!function_exists('base_path')) {
     function base_path($path = '') {
-        // Path base relativo (sem protocolo/host)
-        $base = '/cfc-v.1/public_html';
+        // Detectar ambiente: produção ou desenvolvimento local
+        $appEnv = $_ENV['APP_ENV'] ?? 'local';
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+        
+        // Se está em produção OU se a URI não contém o path local
+        if ($appEnv === 'production' || strpos($requestUri, '/cfc-v.1/public_html') === false) {
+            // Produção: path base vazio ou relativo ao subdomínio/pasta
+            $base = '';
+        } else {
+            // Desenvolvimento local: path completo
+            $base = '/cfc-v.1/public_html';
+        }
+        
         // Se path vazio ou apenas /, retornar base com barra final
         if ($path === '' || $path === '/') {
-            return rtrim($base, '/') . '/';
+            return ($base ? rtrim($base, '/') . '/' : '/');
         }
         // Caso contrário, concatenar normalmente
-        return rtrim($base, '/') . '/' . ltrim($path, '/');
+        return ($base ? rtrim($base, '/') . '/' : '') . ltrim($path, '/');
     }
 }
 
@@ -32,7 +43,20 @@ if (!function_exists('base_url')) {
         // URL completa (para redirects)
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-        $base = $protocol . '://' . $host . '/cfc-v.1/public_html';
+        
+        // Detectar ambiente: produção ou desenvolvimento local
+        $appEnv = $_ENV['APP_ENV'] ?? 'local';
+        $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+        
+        // Se está em produção OU se a URI não contém o path local
+        if ($appEnv === 'production' || strpos($requestUri, '/cfc-v.1/public_html') === false) {
+            // Produção: sem path adicional
+            $base = $protocol . '://' . $host;
+        } else {
+            // Desenvolvimento local: com path completo
+            $base = $protocol . '://' . $host . '/cfc-v.1/public_html';
+        }
+        
         return rtrim($base, '/') . '/' . ltrim($path, '/');
     }
 }

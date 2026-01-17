@@ -1,0 +1,2 @@
+# Este arquivo garante que o diretório certificados/ seja versionado no Git
+# Os arquivos .p12 dentro deste diretório são ignorados pelo .gitignore

@@ -26,3 +26,11 @@ Thumbs.db
 # Temp
 *.tmp
 *.log
+
+# Certificates (EFI)
+*.p12
+*.pfx
+*.pem
+certificados/*
+!certificados/.gitkeep
+!certificados/README.md

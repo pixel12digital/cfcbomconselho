@@ -45,8 +45,13 @@ class Router
         $method = $_SERVER['REQUEST_METHOD'];
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         
-        // Remover prefixo do projeto
-        $uri = str_replace('/cfc-v.1/public_html', '', $uri);
+        // Detectar ambiente: produção ou desenvolvimento local
+        $appEnv = $_ENV['APP_ENV'] ?? 'local';
+        
+        // Remover prefixo do projeto (apenas se existir - desenvolvimento local)
+        if (strpos($uri, '/cfc-v.1/public_html') !== false) {
+            $uri = str_replace('/cfc-v.1/public_html', '', $uri);
+        }
         
         // Se a URI é /index.php ou termina com /index.php, remover
         $uri = str_replace('/index.php', '', $uri);
