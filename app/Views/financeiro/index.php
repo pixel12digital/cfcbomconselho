@@ -350,6 +350,14 @@
                                         >
                                             Abrir Cobrança
                                         </a>
+                                        <button 
+                                            type="button" 
+                                            class="btn btn-sm btn-primary" 
+                                            onclick="imprimirBoleto('<?= htmlspecialchars($enr['gateway_payment_url'], ENT_QUOTES) ?>')"
+                                            title="Imprimir boleto"
+                                        >
+                                            🖨️ Imprimir
+                                        </button>
                                         <?php endif; ?>
                                         <button 
                                             type="button" 
@@ -762,5 +770,31 @@ function sincronizarIndividual(enrollmentId) {
         btn.disabled = false;
         btn.textContent = 'Sincronizar';
     });
+}
+
+// Imprimir boleto
+function imprimirBoleto(paymentUrl) {
+    // Abrir o link do boleto em nova janela
+    const printWindow = window.open(paymentUrl, '_blank');
+    
+    if (!printWindow) {
+        alert('Erro ao abrir o boleto. Verifique se os pop-ups estão bloqueados.');
+        return;
+    }
+    
+    // Aguardar a página carregar e então abrir diálogo de impressão
+    printWindow.addEventListener('load', function() {
+        // Pequeno delay para garantir que a página carregou completamente
+        setTimeout(function() {
+            printWindow.print();
+        }, 500);
+    });
+    
+    // Fallback: se a página já estiver carregada
+    if (printWindow.document.readyState === 'complete') {
+        setTimeout(function() {
+            printWindow.print();
+        }, 500);
+    }
 }
 </script>
