@@ -596,7 +596,7 @@ class EfiPaymentService
         
         // Log de debug detalhado
         if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
-            error_log("[EFI-DEBUG] getAccessToken: forPix=" . ($forPix ? 'true' : 'false') . ", tokenUrl={$url}, contentType={$contentType}");
+            // Log já feito acima com efiLog()
         }
 
         $ch = curl_init($url);
@@ -694,7 +694,7 @@ class EfiPaymentService
                 $errorDetails .= " | Timeout na conexão. Verifique conectividade com a internet";
             }
             
-            error_log("EFI Auth Error: {$errorDetails}");
+            // Log já feito acima com efiLog()
             return null;
         }
 
@@ -980,7 +980,7 @@ class EfiPaymentService
                 'endpoint' => $endpoint
             ];
             
-            error_log("EFI API Error: HTTP {$httpCode} - " . json_encode($errorDetails, JSON_UNESCAPED_UNICODE));
+            // Log já feito acima com efiLog()
         }
 
         return $result;
