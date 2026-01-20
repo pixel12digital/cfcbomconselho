@@ -220,7 +220,44 @@ class EfiPaymentService
                 ];
             } else {
                 // Pagamento à vista (Boleto)
-                $payload['payment'] = ['banking_billet' => []];
+                // banking_billet deve ser um OBJETO, não array vazio
+                $bankingBillet = [];
+                
+                // Adicionar dados do pagador se disponível
+                if (!empty($student['cpf'])) {
+                    $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
+                    if (strlen($cpf) === 11) {
+                        $bankingBillet['customer'] = [
+                            'name' => $student['full_name'] ?? $student['name'] ?? 'Cliente',
+                            'cpf' => $cpf,
+                            'email' => $student['email'] ?? null,
+                            'phone_number' => !empty($student['phone']) ? preg_replace('/[^0-9]/', '', $student['phone']) : null
+                        ];
+                        
+                        // Adicionar endereço se disponível
+                        if (!empty($student['cep'])) {
+                            $cep = preg_replace('/[^0-9]/', '', $student['cep']);
+                            if (strlen($cep) === 8) {
+                                $bankingBillet['customer']['address'] = [
+                                    'street' => $student['street'] ?? 'Não informado',
+                                    'number' => $student['number'] ?? 'S/N',
+                                    'neighborhood' => $student['neighborhood'] ?? '',
+                                    'zipcode' => $cep,
+                                    'city' => $student['city'] ?? '',
+                                    'state' => $student['state_uf'] ?? ''
+                                ];
+                            }
+                        }
+                    }
+                }
+                
+                // Data de vencimento (padrão: 3 dias)
+                $bankingBillet['expire_at'] = date('Y-m-d', strtotime('+3 days'));
+                
+                // Mensagem opcional
+                $bankingBillet['message'] = 'Pagamento referente a matrícula';
+                
+                $payload['payment'] = ['banking_billet' => $bankingBillet];
             }
         }
 

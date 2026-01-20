@@ -56,7 +56,24 @@ $payload = [
         'email' => 'teste@example.com'
     ],
     'payment' => [
-        'banking_billet' => []
+        'banking_billet' => [
+            'customer' => [
+                'name' => 'Cliente Teste',
+                'cpf' => '12345678909',
+                'phone_number' => '11999999999',
+                'email' => 'cliente.teste@example.com',
+                'address' => [
+                    'street' => 'Rua Teste',
+                    'number' => '100',
+                    'neighborhood' => 'Centro',
+                    'zipcode' => '01001000',
+                    'city' => 'Sao Paulo',
+                    'state' => 'SP'
+                ]
+            ],
+            'expire_at' => date('Y-m-d', strtotime('+3 days')),
+            'message' => 'Pagamento referente a matrícula'
+        ]
     ],
     'metadata' => [
         'test' => 'true',
