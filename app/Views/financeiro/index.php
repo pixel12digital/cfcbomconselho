@@ -719,14 +719,14 @@ function sincronizarPendentes() {
             // Recarregar página para atualizar status
             window.location.reload();
         } else {
-            alert('Erro ao sincronizar: ' + (data.message || 'Erro desconhecido'));
+            alert('Não foi possível sincronizar: ' + (data.message || 'Ocorreu um erro desconhecido. Por favor, tente novamente.'));
             btn.disabled = false;
             btn.textContent = 'Sincronizar Pendentes desta Página';
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Erro ao comunicar com o servidor. Tente novamente.');
+        alert('Não foi possível comunicar com o servidor. Por favor, tente novamente.');
         btn.disabled = false;
         btn.textContent = 'Sincronizar Pendentes desta Página';
     });
@@ -756,17 +756,17 @@ function sincronizarIndividual(enrollmentId) {
     .then(response => response.json())
     .then(data => {
         if (data.ok) {
-            alert('Cobrança sincronizada com sucesso!\n\nStatus: ' + (data.status || 'N/A'));
+            alert('Cobrança sincronizada com sucesso!\n\nStatus: ' + (data.status || 'Não disponível'));
             window.location.reload();
         } else {
-            alert('Erro ao sincronizar: ' + (data.message || 'Erro desconhecido'));
+            alert('Não foi possível sincronizar: ' + (data.message || 'Ocorreu um erro desconhecido. Por favor, tente novamente.'));
             btn.disabled = false;
             btn.textContent = 'Sincronizar';
         }
     })
     .catch(error => {
         console.error('Erro:', error);
-        alert('Erro ao comunicar com o servidor. Tente novamente.');
+        alert('Não foi possível comunicar com o servidor. Por favor, tente novamente.');
         btn.disabled = false;
         btn.textContent = 'Sincronizar';
     });

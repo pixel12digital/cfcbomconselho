@@ -32,7 +32,7 @@ class PaymentsController extends Controller
             // Verificar autenticação
             if (empty($_SESSION['user_id'])) {
                 http_response_code(401);
-                echo json_encode(['ok' => false, 'message' => 'Não autenticado'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['ok' => false, 'message' => 'Você precisa fazer login para continuar'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
 
@@ -40,14 +40,14 @@ class PaymentsController extends Controller
             $currentRole = $_SESSION['current_role'] ?? '';
             if (!in_array($currentRole, [Constants::ROLE_ADMIN, Constants::ROLE_SECRETARIA])) {
                 http_response_code(403);
-                echo json_encode(['ok' => false, 'message' => 'Sem permissão'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['ok' => false, 'message' => 'Você não tem permissão para realizar esta ação'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
 
             // Validar método
             if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
                 http_response_code(405);
-                echo json_encode(['ok' => false, 'message' => 'Method not allowed'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['ok' => false, 'message' => 'Operação não permitida'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
 
@@ -57,7 +57,7 @@ class PaymentsController extends Controller
 
             if (!$enrollmentId) {
                 http_response_code(400);
-                echo json_encode(['ok' => false, 'message' => 'enrollment_id é obrigatório'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['ok' => false, 'message' => 'É necessário informar o ID da matrícula'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
 
@@ -73,7 +73,7 @@ class PaymentsController extends Controller
             $cfcId = $_SESSION['cfc_id'] ?? Constants::CFC_ID_DEFAULT;
             if ($enrollment['cfc_id'] != $cfcId) {
                 http_response_code(403);
-                echo json_encode(['ok' => false, 'message' => 'Acesso negado'], JSON_UNESCAPED_UNICODE);
+                echo json_encode(['ok' => false, 'message' => 'Acesso negado a esta matrícula'], JSON_UNESCAPED_UNICODE);
                 exit;
             }
 
@@ -83,7 +83,7 @@ class PaymentsController extends Controller
                 http_response_code(400);
                 echo json_encode([
                     'ok' => false,
-                    'message' => 'Não é possível gerar cobrança: saldo devedor deve ser maior que zero'
+                    'message' => 'Não é possível gerar cobrança. Esta matrícula não possui saldo devedor.'
                 ], JSON_UNESCAPED_UNICODE);
                 exit;
             }
@@ -99,7 +99,7 @@ class PaymentsController extends Controller
                     'charge_id' => $enrollment['gateway_charge_id'],
                     'status' => $enrollment['gateway_last_status'],
                     'payment_url' => $enrollment['gateway_payment_url'] ?? null,
-                    'message' => 'Cobrança já existe'
+                    'message' => 'Esta cobrança já foi gerada anteriormente'
                 ], JSON_UNESCAPED_UNICODE);
                 exit;
             }
@@ -137,7 +137,7 @@ class PaymentsController extends Controller
             
             echo json_encode([
                 'ok' => false,
-                'message' => 'Erro interno ao gerar cobrança',
+                'message' => 'Ocorreu um erro ao gerar a cobrança. Por favor, tente novamente.',
                 'details' => [
                     'error' => $e->getMessage(),
                     'file' => basename($e->getFile()),
@@ -160,7 +160,7 @@ class PaymentsController extends Controller
         // Validar método
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
-            echo json_encode(['ok' => false, 'message' => 'Method not allowed']);
+            echo json_encode(['ok' => false, 'message' => 'Operação não permitida']);
             exit;
         }
 
@@ -174,7 +174,7 @@ class PaymentsController extends Controller
 
         if (empty($payload)) {
             http_response_code(400);
-            echo json_encode(['ok' => false, 'message' => 'Payload vazio']);
+            echo json_encode(['ok' => false, 'message' => 'Dados não recebidos. Por favor, tente novamente.']);
             exit;
         }
 
@@ -198,7 +198,7 @@ class PaymentsController extends Controller
         // Verificar autenticação
         if (empty($_SESSION['user_id'])) {
             http_response_code(401);
-            echo json_encode(['ok' => false, 'message' => 'Não autenticado']);
+            echo json_encode(['ok' => false, 'message' => 'Você precisa fazer login para continuar']);
             exit;
         }
 
@@ -206,14 +206,14 @@ class PaymentsController extends Controller
         $currentRole = $_SESSION['current_role'] ?? '';
         if (!in_array($currentRole, [Constants::ROLE_ADMIN, Constants::ROLE_SECRETARIA])) {
             http_response_code(403);
-            echo json_encode(['ok' => false, 'message' => 'Sem permissão']);
+            echo json_encode(['ok' => false, 'message' => 'Você não tem permissão para realizar esta ação']);
             exit;
         }
 
         // Validar método
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
-            echo json_encode(['ok' => false, 'message' => 'Method not allowed']);
+            echo json_encode(['ok' => false, 'message' => 'Operação não permitida']);
             exit;
         }
 
@@ -223,7 +223,7 @@ class PaymentsController extends Controller
 
         if (!$enrollmentId) {
             http_response_code(400);
-            echo json_encode(['ok' => false, 'message' => 'enrollment_id é obrigatório']);
+            echo json_encode(['ok' => false, 'message' => 'É necessário informar o ID da matrícula']);
             exit;
         }
 
@@ -239,7 +239,7 @@ class PaymentsController extends Controller
         $cfcId = $_SESSION['cfc_id'] ?? Constants::CFC_ID_DEFAULT;
         if ($enrollment['cfc_id'] != $cfcId) {
             http_response_code(403);
-            echo json_encode(['ok' => false, 'message' => 'Acesso negado']);
+            echo json_encode(['ok' => false, 'message' => 'Acesso negado a esta matrícula']);
             exit;
         }
 
@@ -248,7 +248,7 @@ class PaymentsController extends Controller
             http_response_code(400);
             echo json_encode([
                 'ok' => false,
-                'message' => 'Nenhuma cobrança gerada para esta matrícula. Gere uma cobrança primeiro.'
+                'message' => 'Esta matrícula ainda não possui cobrança gerada. Por favor, gere uma cobrança primeiro.'
             ]);
             exit;
         }
@@ -273,7 +273,7 @@ class PaymentsController extends Controller
             http_response_code(500);
             echo json_encode([
                 'ok' => false,
-                'message' => 'Erro ao sincronizar cobrança. Tente novamente mais tarde.'
+                'message' => 'Não foi possível sincronizar a cobrança. Por favor, tente novamente mais tarde.'
             ]);
         }
         
@@ -291,7 +291,7 @@ class PaymentsController extends Controller
         // Verificar autenticação
         if (empty($_SESSION['user_id'])) {
             http_response_code(401);
-            echo json_encode(['ok' => false, 'message' => 'Não autenticado']);
+            echo json_encode(['ok' => false, 'message' => 'Você precisa fazer login para continuar']);
             exit;
         }
 
@@ -299,14 +299,14 @@ class PaymentsController extends Controller
         $currentRole = $_SESSION['current_role'] ?? '';
         if (!in_array($currentRole, [Constants::ROLE_ADMIN, Constants::ROLE_SECRETARIA])) {
             http_response_code(403);
-            echo json_encode(['ok' => false, 'message' => 'Sem permissão']);
+            echo json_encode(['ok' => false, 'message' => 'Você não tem permissão para realizar esta ação']);
             exit;
         }
 
         // Validar método
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             http_response_code(405);
-            echo json_encode(['ok' => false, 'message' => 'Method not allowed']);
+            echo json_encode(['ok' => false, 'message' => 'Operação não permitida']);
             exit;
         }
 
@@ -482,7 +482,7 @@ class PaymentsController extends Controller
                 
                 $errors[] = [
                     'enrollment_id' => $enrollment['id'],
-                    'reason' => 'Erro ao sincronizar: ' . $e->getMessage()
+                    'reason' => 'Não foi possível sincronizar: ' . $e->getMessage()
                 ];
             }
         }

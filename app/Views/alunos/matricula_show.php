@@ -649,7 +649,7 @@ function gerarCobrancaEfi() {
         } else {
             // Erro retornado pelo backend (mas com status HTTP OK)
             const errorMsg = data.message || data.error || data.error_description || 'Erro desconhecido';
-            alert('Erro ao gerar cobrança: ' + errorMsg);
+            alert('Não foi possível gerar a cobrança: ' + errorMsg);
             btn.disabled = false;
             btn.textContent = 'Gerar Cobrança Efí';
         }
@@ -657,8 +657,8 @@ function gerarCobrancaEfi() {
     .catch(error => {
         console.error('Erro completo:', error);
         console.error('Stack:', error.stack);
-        const errorMsg = error.message || 'Erro desconhecido';
-        alert('Erro ao comunicar com o servidor: ' + errorMsg + '\n\nVerifique o console para mais detalhes.');
+        const errorMsg = error.message || 'Ocorreu um erro desconhecido. Por favor, tente novamente.';
+        alert('Não foi possível comunicar com o servidor: ' + errorMsg + '\n\nVerifique o console para mais detalhes.');
         btn.disabled = false;
         btn.textContent = 'Gerar Cobrança Efí';
     });
@@ -718,7 +718,7 @@ function sincronizarCobrancaEfi() {
             window.location.reload();
         } else {
             // Erro
-            alert('Erro ao sincronizar cobrança: ' + (data.message || 'Erro desconhecido'));
+            alert('Não foi possível sincronizar a cobrança: ' + (data.message || 'Ocorreu um erro desconhecido. Por favor, tente novamente.'));
             btn.disabled = false;
             btn.textContent = 'Sincronizar Cobrança';
         }
