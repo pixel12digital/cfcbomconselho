@@ -188,12 +188,22 @@ class EfiPaymentService
             // NOTA: A API de Cobranças EFI não aceita metadata no formato padrão
             // Se precisar rastrear enrollment_id, usar no campo de observações do boleto ou em outro lugar
 
-            // Configurar método de pagamento
-            // Se payment_method for 'cartao' E installments > 1 → Cartão parcelado
-            // Caso contrário → Boleto (pagamento à vista)
-            $isCreditCard = ($paymentMethod === 'cartao' || $paymentMethod === 'credit_card') && $installments > 1;
+            // ÁRVORE DE DECISÃO CORRETA (conforme regra de negócio):
+            // 
+            // 1. payment_method = 'pix' → Pix (único, sempre installments = 1)
+            // 2. payment_method = 'cartao' + installments > 1 → Cartão parcelado
+            // 3. payment_method = 'cartao' + installments = 1 → Cartão à vista
+            // 4. payment_method = 'boleto' + installments = 1 → Boleto à vista
+            // 5. payment_method = 'boleto' + installments > 1 → Carnê (N boletos via /v1/carnet)
+            //
+            // IMPORTANTE: Boleto + parcelas deve usar Carnê, NÃO cartão!
             
-            if ($isCreditCard) {
+            $isCreditCard = ($paymentMethod === 'cartao' || $paymentMethod === 'credit_card') && $installments > 1;
+            $isCreditCardSingle = ($paymentMethod === 'cartao' || $paymentMethod === 'credit_card') && $installments === 1;
+            $isBoletoSingle = ($paymentMethod === 'boleto') && $installments === 1;
+            $isCarnet = ($paymentMethod === 'boleto') && $installments > 1;
+            
+            if ($isCreditCard || $isCreditCardSingle) {
                 // Cartão de crédito (parcelado): customer vai no root do payload
                 if (!empty($student['cpf'])) {
                     $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
@@ -220,8 +230,8 @@ class EfiPaymentService
                         ]
                     ]
                 ];
-            } else {
-                // Pagamento à vista (Boleto)
+            } elseif ($isBoletoSingle) {
+                // Boleto à vista (payment_method = 'boleto' + installments = 1)
                 // IMPORTANTE: customer NÃO deve estar no root do payload para boleto
                 // customer deve estar APENAS dentro de payment.banking_billet.customer
                 // banking_billet deve ser um OBJETO, não array vazio
@@ -262,11 +272,29 @@ class EfiPaymentService
                 $bankingBillet['message'] = 'Pagamento referente a matrícula';
                 
                 $payload['payment'] = ['banking_billet' => $bankingBillet];
+            } elseif ($isCarnet) {
+                // Carnê (boleto parcelado): boleto + installments > 1
+                // Usa endpoint /v1/carnet para criar múltiplos boletos
+                // Retornar diretamente após criar o Carnê (não seguir fluxo normal)
+                return $this->createCarnet($enrollment, $student, $outstandingAmount, $installments);
+            } else {
+                // Método de pagamento inválido ou não suportado
+                $this->efiLog('ERROR', 'createCharge: Método de pagamento não suportado', [
+                    'payment_method' => $paymentMethod,
+                    'installments' => $installments,
+                    'enrollment_id' => $enrollment['id']
+                ]);
+                $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
+                return [
+                    'ok' => false,
+                    'message' => 'Método de pagamento não suportado. Verifique payment_method e installments.'
+                ];
             }
         }
 
         // Criar cobrança na API Efí
         // Se for PIX, usar API Pix (/v2/cob), senão usar API de Cobranças (/v1/charges)
+        // NOTA: Carnê já foi tratado acima e retornou diretamente
         if ($isPix) {
             // API Pix: converter payload para formato Pix e usar endpoint /v2/cob
             // A API Pix tem estrutura diferente da API de Cobranças
@@ -443,11 +471,232 @@ class EfiPaymentService
             $paymentUrl
         );
 
+        // Determinar tipo de pagamento para o retorno
+        $paymentType = 'boleto'; // padrão
+        if ($isPix) {
+            $paymentType = 'pix';
+        } elseif ($isCreditCard || $isCreditCardSingle) {
+            $paymentType = 'cartao';
+        } elseif ($isBoletoSingle) {
+            $paymentType = 'boleto';
+        }
+
         return [
             'ok' => true,
+            'type' => $paymentType,
             'charge_id' => $chargeId,
             'status' => $status,
             'payment_url' => $paymentUrl
+        ];
+    }
+
+    /**
+     * Cria um Carnê (múltiplos boletos) na API EFI
+     * 
+     * @param array $enrollment Dados da matrícula
+     * @param array $student Dados do aluno
+     * @param float $totalAmount Valor total a ser parcelado
+     * @param int $installments Número de parcelas
+     * @return array Resultado da criação do Carnê
+     */
+    public function createCarnet($enrollment, $student, $totalAmount, $installments)
+    {
+        // Validar configuração
+        if (!$this->clientId || !$this->clientSecret) {
+            return [
+                'ok' => false,
+                'message' => 'Configuração do gateway incompleta. Verifique EFI_CLIENT_ID e EFI_CLIENT_SECRET no arquivo .env'
+            ];
+        }
+
+        // Obter token de autenticação (Carnê usa API de Cobranças, não PIX)
+        $token = $this->getAccessToken(false);
+        if (!$token) {
+            return [
+                'ok' => false,
+                'message' => 'Falha ao autenticar no gateway. Verifique se as credenciais estão corretas.'
+            ];
+        }
+
+        // Calcular valor por parcela
+        $parcelValue = $totalAmount / $installments;
+        $parcelValueInCents = intval($parcelValue * 100);
+        
+        // Obter data da primeira parcela
+        $firstDueDate = $enrollment['first_due_date'] ?? null;
+        if (!$firstDueDate || $firstDueDate === '0000-00-00') {
+            // Se não tiver data configurada, usar 30 dias a partir de hoje
+            $firstDueDate = date('Y-m-d', strtotime('+30 days'));
+        }
+
+        // Preparar lista de parcelas (repeats) para o Carnê
+        $repeats = [];
+        for ($i = 0; $i < $installments; $i++) {
+            // Calcular data de vencimento de cada parcela (mensal)
+            $dueDate = date('Y-m-d', strtotime($firstDueDate . " +{$i} months"));
+            
+            $repeats[] = [
+                'value' => $parcelValueInCents,
+                'expire_at' => $dueDate
+            ];
+        }
+
+        // Preparar payload do Carnê
+        $payload = [
+            'items' => [
+                [
+                    'name' => ($enrollment['service_name'] ?? 'Matrícula') . ' - Parcela 1/' . $installments,
+                    'value' => $parcelValueInCents,
+                    'amount' => 1
+                ]
+            ],
+            'repeats' => $repeats,
+            'split_items' => false // Não dividir itens entre parcelas
+        ];
+
+        // Adicionar dados do cliente
+        if (!empty($student['cpf'])) {
+            $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
+            if (strlen($cpf) === 11) {
+                $payload['customer'] = [
+                    'name' => $student['full_name'] ?? $student['name'] ?? 'Cliente',
+                    'cpf' => $cpf,
+                    'email' => $student['email'] ?? null,
+                    'phone_number' => !empty($student['phone']) ? preg_replace('/[^0-9]/', '', $student['phone']) : null
+                ];
+
+                // Adicionar endereço se disponível
+                if (!empty($student['cep'])) {
+                    $cep = preg_replace('/[^0-9]/', '', $student['cep']);
+                    if (strlen($cep) === 8) {
+                        $payload['customer']['address'] = [
+                            'street' => $student['street'] ?? 'Não informado',
+                            'number' => $student['number'] ?? 'S/N',
+                            'neighborhood' => $student['neighborhood'] ?? '',
+                            'zipcode' => $cep,
+                            'city' => $student['city'] ?? '',
+                            'state' => $student['state_uf'] ?? ''
+                        ];
+                    }
+                }
+            }
+        }
+
+        // Configurar método de pagamento como boleto
+        $payload['payment'] = [
+            'banking_billet' => [
+                'message' => 'Pagamento referente a matrícula'
+            ]
+        ];
+
+        // Fazer requisição para criar Carnê
+        $response = $this->makeRequest('POST', '/v1/carnet', $payload, $token, false);
+
+        $httpCode = $response['http_code'] ?? 0;
+        $responseData = $response['response'] ?? null;
+
+        if ($httpCode !== 200 && $httpCode !== 201) {
+            $errorMessage = 'Erro ao criar Carnê';
+            if (is_array($responseData)) {
+                if (isset($responseData['error_description'])) {
+                    $errorDesc = $responseData['error_description'];
+                    if (is_array($errorDesc)) {
+                        $errorMessage = json_encode($errorDesc, JSON_UNESCAPED_UNICODE);
+                    } else {
+                        $errorMessage = (string)$errorDesc;
+                    }
+                } elseif (isset($responseData['message'])) {
+                    $errorMessage = $responseData['message'];
+                } elseif (isset($responseData['error'])) {
+                    $errorMessage = $responseData['error'];
+                }
+            } else {
+                $errorMessage = (string)$responseData;
+            }
+
+            $this->efiLog('ERROR', 'createCarnet: Falha ao criar Carnê', [
+                'enrollment_id' => $enrollment['id'],
+                'http_code' => $httpCode,
+                'error' => substr($errorMessage, 0, 200),
+                'response_snippet' => is_array($responseData) ? json_encode($responseData, JSON_UNESCAPED_UNICODE) : substr((string)$responseData, 0, 200)
+            ]);
+
+            $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
+            return [
+                'ok' => false,
+                'message' => 'Erro ao criar Carnê: ' . $errorMessage
+            ];
+        }
+
+        // Processar resposta do Carnê
+        $carnetData = $responseData['data'] ?? $responseData;
+        $carnetId = $carnetData['carnet_id'] ?? null;
+        $charges = $carnetData['charges'] ?? [];
+
+        // Extrair charge_ids das parcelas
+        $chargeIds = [];
+        $paymentUrls = [];
+        foreach ($charges as $charge) {
+            $chargeId = $charge['charge_id'] ?? null;
+            if ($chargeId) {
+                $chargeIds[] = $chargeId;
+                
+                // Extrair URL de pagamento se disponível
+                if (isset($charge['payment']['banking_billet']['link'])) {
+                    $paymentUrls[] = $charge['payment']['banking_billet']['link'];
+                }
+            }
+        }
+
+        // Log de sucesso
+        $this->efiLog('INFO', 'createCarnet: Carnê criado com sucesso', [
+            'enrollment_id' => $enrollment['id'],
+            'carnet_id' => $carnetId,
+            'installments' => $installments,
+            'charge_ids_count' => count($chargeIds)
+        ]);
+
+        // Atualizar matrícula com dados do Carnê
+        // NOTA: Para Carnê, salvamos o carnet_id e lista de charge_ids
+        // Como a estrutura atual do banco só tem gateway_charge_id (singular),
+        // vamos salvar o carnet_id lá e guardar os charge_ids em gateway_payment_url como JSON
+        // (solução temporária - ideal seria ter campos dedicados para Carnê)
+        $chargeIdsJson = json_encode($chargeIds, JSON_UNESCAPED_UNICODE);
+        $firstPaymentUrl = !empty($paymentUrls) ? $paymentUrls[0] : null;
+
+        $this->updateEnrollmentStatus(
+            $enrollment['id'],
+            'generated',
+            'waiting', // Status inicial do Carnê
+            $carnetId, // Usar carnet_id como identificador principal
+            null,
+            $firstPaymentUrl // URL do primeiro boleto
+        );
+
+        // Atualizar campo adicional para armazenar charge_ids (via UPDATE direto)
+        // Idealmente, deveria ter um campo gateway_charge_ids (JSON) ou tabela filha
+        $stmt = $this->db->prepare("
+            UPDATE enrollments 
+            SET gateway_payment_url = ? 
+            WHERE id = ?
+        ");
+        // Salvar JSON com charge_ids e payment_urls
+        $additionalData = json_encode([
+            'carnet_id' => $carnetId,
+            'charge_ids' => $chargeIds,
+            'payment_urls' => $paymentUrls,
+            'type' => 'carne'
+        ], JSON_UNESCAPED_UNICODE);
+        $stmt->execute([$additionalData, $enrollment['id']]);
+
+        return [
+            'ok' => true,
+            'type' => 'carne',
+            'carnet_id' => $carnetId,
+            'charge_ids' => $chargeIds,
+            'installments' => $installments,
+            'payment_urls' => $paymentUrls,
+            'status' => 'waiting'
         ];
     }
 
