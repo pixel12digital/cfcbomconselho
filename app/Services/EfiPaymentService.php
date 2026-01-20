@@ -781,15 +781,14 @@ class EfiPaymentService
         
         $accessToken = trim($accessToken);
         
-        // Log de sucesso padronizado
-        $this->efiLog('DEBUG', 'getAccessToken sucesso', [
+        // Log após sucesso
+        $this->efiLog('INFO', 'getAccessToken result', [
             'forPix' => $forPix,
-            'host' => parse_url($url, PHP_URL_HOST),
-            'url' => $url,
             'http_code' => $httpCode,
+            'curl_error' => null,
             'token' => $accessToken, // será sanitizado pelo efiLog
-            'scope' => $data['scope'] ?? 'N/A',
-            'is_jwt' => (substr($accessToken, 0, 3) === 'eyJ')
+            'token_len' => strlen($accessToken),
+            'token_prefix' => substr($accessToken, 0, 10)
         ]);
         
         return $accessToken;
