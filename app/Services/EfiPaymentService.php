@@ -148,7 +148,9 @@ class EfiPaymentService
         
         // Validar e sanitizar token
         if (!is_string($token)) {
-            error_log("EFI Error: Token não é uma string. Tipo: " . gettype($token) . ", Valor: " . print_r($token, true));
+            $this->efiLog('ERROR', 'createCharge: Token não é uma string', [
+                'token_type' => gettype($token)
+            ]);
             return [
                 'ok' => false,
                 'message' => 'Erro interno: Token de autenticação inválido'
@@ -157,7 +159,7 @@ class EfiPaymentService
         
         $token = trim($token);
         if (empty($token)) {
-            error_log("EFI Error: Token está vazio após trim");
+            $this->efiLog('ERROR', 'createCharge: Token está vazio após trim', []);
             return [
                 'ok' => false,
                 'message' => 'Erro interno: Token de autenticação vazio'
@@ -230,7 +232,9 @@ class EfiPaymentService
             // Validar chave PIX (obrigatória para API Pix)
             $pixKey = $_ENV['EFI_PIX_KEY'] ?? null;
             if (empty($pixKey)) {
-                error_log("EFI CreateCharge Pix Error: EFI_PIX_KEY não configurada no .env");
+                $this->efiLog('ERROR', 'createCharge Pix: EFI_PIX_KEY não configurada', [
+                    'enrollment_id' => $enrollment['id']
+                ]);
                 $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
                 return [
                     'ok' => false,
@@ -284,7 +288,12 @@ class EfiPaymentService
             if ($httpCode >= 400 || !$responseData || isset($responseData['error']) || isset($responseData['mensagem'])) {
                 $errorMessage = $responseData['mensagem'] ?? $responseData['error_description'] ?? $responseData['message'] ?? $responseData['error'] ?? 'Erro desconhecido ao criar cobrança Pix';
                 
-                error_log("EFI CreateCharge Pix Error: HTTP {$httpCode} - " . json_encode($responseData, JSON_UNESCAPED_UNICODE));
+                $this->efiLog('ERROR', 'createCharge Pix falhou', [
+                    'enrollment_id' => $enrollment['id'],
+                    'http_code' => $httpCode,
+                    'error' => substr($errorMessage, 0, 180),
+                    'response_snippet' => substr(json_encode($responseData, JSON_UNESCAPED_UNICODE), 0, 180)
+                ]);
                 
                 $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
                 
@@ -318,7 +327,12 @@ class EfiPaymentService
                 }
                 
                 // Log detalhado para debug
-                error_log("EFI CreateCharge Error: HTTP {$httpCode} - " . json_encode($responseData, JSON_UNESCAPED_UNICODE));
+                $this->efiLog('ERROR', 'createCharge Cobranças falhou', [
+                    'enrollment_id' => $enrollment['id'],
+                    'http_code' => $httpCode,
+                    'error' => substr($errorMessage, 0, 180),
+                    'response_snippet' => substr(json_encode($responseData, JSON_UNESCAPED_UNICODE), 0, 180)
+                ]);
                 
                 // Atualizar status de erro no banco
                 $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
@@ -408,7 +422,9 @@ class EfiPaymentService
 
         if (!$enrollment) {
             // Logar mas não quebrar (idempotência)
-            error_log("EFI Webhook: Matrícula não encontrada para charge_id: {$chargeId}");
+            $this->efiLog('WARN', 'processWebhook: Matrícula não encontrada', [
+                'charge_id' => $chargeId
+            ]);
             return [
                 'ok' => true,
                 'processed' => false,
@@ -488,6 +504,60 @@ class EfiPaymentService
     }
 
     /**
+     * Helper para log padronizado da integração EFI
+     * 
+     * @param string $level Nível do log: DEBUG, INFO, WARN, ERROR
+     * @param string $msg Mensagem do log
+     * @param array $ctx Contexto adicional (host, url, endpoint, isPix, http_code, etc.)
+     * @return void
+     */
+    private function efiLog($level, $msg, array $ctx = [])
+    {
+        $debugEnabled = ($_ENV['EFI_DEBUG'] ?? 'false') === 'true';
+        
+        // Se não estiver em debug, logar apenas WARN e ERROR
+        if (!$debugEnabled && !in_array($level, ['WARN', 'ERROR'])) {
+            return;
+        }
+        
+        $tag = "[EFI-{$level}]";
+        $logMsg = "{$tag} {$msg}";
+        
+        // Adicionar contexto se fornecido
+        if (!empty($ctx)) {
+            // Sanitizar contexto: nunca incluir tokens completos, client_secret, pix_key
+            $safeCtx = [];
+            foreach ($ctx as $key => $value) {
+                if (in_array($key, ['token', 'client_secret', 'pix_key', 'access_token'])) {
+                    // Nunca logar valores completos de tokens/secrets
+                    if (is_string($value) && strlen($value) > 0) {
+                        $safeCtx[$key . '_len'] = strlen($value);
+                        $safeCtx[$key . '_prefix'] = substr($value, 0, 10);
+                    }
+                } elseif (in_array($key, ['header', 'auth_header', 'authorization'])) {
+                    // Para headers, logar apenas tamanho
+                    if (is_string($value)) {
+                        $safeCtx[$key . '_len'] = strlen($value);
+                    }
+                } else {
+                    // Outros valores podem ser logados (mas limitar tamanho de strings)
+                    if (is_string($value) && strlen($value) > 200) {
+                        $safeCtx[$key] = substr($value, 0, 200) . '...';
+                    } else {
+                        $safeCtx[$key] = $value;
+                    }
+                }
+            }
+            
+            if (!empty($safeCtx)) {
+                $logMsg .= " | " . json_encode($safeCtx, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            }
+        }
+        
+        error_log($logMsg);
+    }
+
+    /**
      * Obtém token de autenticação OAuth da Efí
      * 
      * @param bool $forPix Se true, usa OAuth da API Pix, senão usa OAuth de Cobranças
@@ -497,7 +567,11 @@ class EfiPaymentService
     {
         // Validar credenciais antes de fazer requisição
         if (empty($this->clientId) || empty($this->clientSecret)) {
-            error_log("EFI Auth Error: Credenciais não configuradas (CLIENT_ID ou CLIENT_SECRET vazios)");
+            $this->efiLog('ERROR', 'getAccessToken: Credenciais não configuradas', [
+                'forPix' => $forPix,
+                'has_client_id' => !empty($this->clientId),
+                'has_client_secret' => !empty($this->clientSecret)
+            ]);
             return null;
         }
 
@@ -557,7 +631,10 @@ class EfiPaymentService
             }
         } elseif (!$this->sandbox) {
             // Em produção, certificado pode ser obrigatório
-            error_log("EFI Auth Warning: Produção sem certificado configurado. A EFI pode exigir certificado cliente em produção.");
+            $this->efiLog('WARN', 'getAccessToken: Produção sem certificado configurado', [
+                'forPix' => $forPix,
+                'sandbox' => $this->sandbox
+            ]);
         }
 
         // Captura verbose do cURL para debug (apenas em desenvolvimento ou se habilitado)
@@ -646,18 +723,34 @@ class EfiPaymentService
                 $debugInfo .= "\n- RESPONSE_BODY: " . substr($response, 0, 500);
             }
             
-            error_log("EFI Auth Error: HTTP {$httpCode} - {$errorMessage}{$debugInfo}");
+            $this->efiLog('ERROR', 'getAccessToken falhou', [
+                'forPix' => $forPix,
+                'host' => parse_url($url, PHP_URL_HOST),
+                'url' => $url,
+                'http_code' => $httpCode,
+                'error' => substr($errorMessage, 0, 180),
+                'response_snippet' => substr($response, 0, 180)
+            ]);
             return null;
         }
 
         if (!$response) {
-            error_log("EFI Auth Error: Resposta vazia da API");
+            $this->efiLog('ERROR', 'getAccessToken: Resposta vazia da API', [
+                'forPix' => $forPix,
+                'host' => parse_url($url, PHP_URL_HOST),
+                'url' => $url
+            ]);
             return null;
         }
 
         $data = json_decode($response, true);
         if (!isset($data['access_token'])) {
-            error_log("EFI Auth Error: access_token não encontrado na resposta. Resposta completa: " . substr($response, 0, 500));
+            $this->efiLog('ERROR', 'getAccessToken: access_token não encontrado na resposta', [
+                'forPix' => $forPix,
+                'host' => parse_url($url, PHP_URL_HOST),
+                'url' => $url,
+                'response_snippet' => substr($response, 0, 180)
+            ]);
             return null;
         }
 
@@ -665,20 +758,27 @@ class EfiPaymentService
         
         // Validar que o token é uma string válida
         if (!is_string($accessToken) || empty(trim($accessToken))) {
-            error_log("EFI Auth Error: access_token não é uma string válida. Tipo: " . gettype($accessToken));
+            $this->efiLog('ERROR', 'getAccessToken: access_token não é uma string válida', [
+                'forPix' => $forPix,
+                'host' => parse_url($url, PHP_URL_HOST),
+                'url' => $url,
+                'token_type' => gettype($accessToken)
+            ]);
             return null;
         }
         
         $accessToken = trim($accessToken);
         
-        // Log de debug com informações do token
-        if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
-            $tokenPrefix = substr($accessToken, 0, 10);
-            $isJwt = (substr($accessToken, 0, 3) === 'eyJ');
-            $scope = $data['scope'] ?? 'N/A';
-            error_log("[EFI-DEBUG] getAccessToken SUCCESS: forPix=" . ($forPix ? 'true' : 'false') . ", http_code={$httpCode}, tokenUrl={$url}");
-            error_log("[EFI-DEBUG] getAccessToken TOKEN: token_length=" . strlen($accessToken) . ", token_prefix={$tokenPrefix}, is_jwt=" . ($isJwt ? 'true' : 'false') . ", scope={$scope}");
-        }
+        // Log de sucesso padronizado
+        $this->efiLog('DEBUG', 'getAccessToken sucesso', [
+            'forPix' => $forPix,
+            'host' => parse_url($url, PHP_URL_HOST),
+            'url' => $url,
+            'http_code' => $httpCode,
+            'token' => $accessToken, // será sanitizado pelo efiLog
+            'scope' => $data['scope'] ?? 'N/A',
+            'is_jwt' => (substr($accessToken, 0, 3) === 'eyJ')
+        ]);
         
         return $accessToken;
     }
@@ -714,7 +814,11 @@ class EfiPaymentService
         // GUARDRAIL: Bloquear URLs antigas (apis.gerencianet.com.br)
         // Nenhuma requisição deve usar apis.gerencianet.com.br
         if (strpos($url, 'apis.gerencianet.com.br') !== false || strpos($url, 'api.gerencianet.com.br') !== false) {
-            error_log("[EFI-DEBUG] BLOCKED: URL antiga detectada. url={$url}");
+            $this->efiLog('ERROR', 'makeRequest: URL antiga detectada e bloqueada', [
+                'isPix' => $isPix,
+                'url' => $url,
+                'endpoint' => $endpoint
+            ]);
             return [
                 'http_code' => 400,
                 'response' => [
@@ -742,8 +846,18 @@ class EfiPaymentService
             
             // Validar formato do token (deve ser JWT ou string alfanumérica)
             if (empty($token) || strlen($token) < 10) {
-                error_log("EFI makeRequest Error: Token inválido ou muito curto. Tamanho: " . strlen($token));
-                return ['error' => 'Token de autenticação inválido', 'error_description' => 'Token muito curto ou vazio'];
+                $this->efiLog('ERROR', 'makeRequest: Token inválido ou muito curto', [
+                    'isPix' => $isPix,
+                    'host' => parse_url($url, PHP_URL_HOST),
+                    'url' => $url,
+                    'token_len' => strlen($token)
+                ]);
+                return [
+                    'http_code' => 401,
+                    'response' => ['error' => 'Token de autenticação inválido', 'error_description' => 'Token muito curto ou vazio'],
+                    'raw_response' => 'Token inválido',
+                    'curl_error' => null
+                ];
             }
             
             // IMPORTANTE: Garantir que não há espaços extras ou caracteres especiais
@@ -752,7 +866,12 @@ class EfiPaymentService
             
             // Verificar se há caracteres problemáticos no token
             if (preg_match('/[^\x20-\x7E]/', $token)) {
-                error_log("EFI makeRequest Warning: Token contém caracteres não-ASCII");
+                $this->efiLog('WARN', 'makeRequest: Token contém caracteres não-ASCII', [
+                    'isPix' => $isPix,
+                    'host' => parse_url($url, PHP_URL_HOST),
+                    'url' => $url,
+                    'token' => $token // será sanitizado pelo efiLog
+                ]);
                 // Remover caracteres não-ASCII do token
                 $token = preg_replace('/[^\x20-\x7E]/', '', $token);
                 $token = trim($token);
@@ -764,24 +883,17 @@ class EfiPaymentService
             
             // Verificar se o header está correto
             if (strlen($authHeader) !== strlen('Authorization: Bearer ') + strlen($token)) {
-                error_log("EFI makeRequest Error: Header Authorization tem tamanho incorreto");
+                $this->efiLog('ERROR', 'makeRequest: Header Authorization tem tamanho incorreto', [
+                    'isPix' => $isPix,
+                    'host' => parse_url($url, PHP_URL_HOST),
+                    'url' => $url,
+                    'expected_len' => strlen('Authorization: Bearer ') + strlen($token),
+                    'actual_len' => strlen($authHeader)
+                ]);
             }
             
             // Authorization DEVE ser o primeiro header
             $headers[] = $authHeader;
-            
-            // Log para debug (apenas primeiros e últimos caracteres do token por segurança)
-            if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
-                $tokenPreview = substr($token, 0, 20) . '...' . substr($token, -10);
-                error_log("[EFI-DEBUG] makeRequest: URL={$url}, isPix={$isPix}, Token preview={$tokenPreview}, Header length=" . strlen($authHeader));
-                error_log("[EFI-DEBUG] makeRequest: Header completo (primeiros 100 chars): " . substr($authHeader, 0, 100));
-                // Verificar se há caracteres problemáticos
-                $headerBytes = [];
-                for ($i = 0; $i < min(50, strlen($authHeader)); $i++) {
-                    $headerBytes[] = dechex(ord($authHeader[$i]));
-                }
-                error_log("[EFI-DEBUG] makeRequest: Header bytes (hex, primeiros 50): " . implode(' ', $headerBytes));
-            }
         }
         
         // Content-Type vem depois do Authorization
@@ -813,13 +925,19 @@ class EfiPaymentService
             }
         } elseif (!$this->sandbox) {
             // Em produção, certificado é obrigatório para requisições da API
-            error_log("EFI makeRequest Warning: Produção sem certificado configurado. A EFI exige certificado cliente em produção para todas as requisições.");
+            $this->efiLog('WARN', 'makeRequest: Produção sem certificado configurado', [
+                'isPix' => $isPix,
+                'host' => parse_url($url, PHP_URL_HOST),
+                'url' => $url
+            ]);
         }
 
-        // Log detalhado dos headers sendo enviados (apenas em debug)
-        if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
-            error_log("[EFI-DEBUG] makeRequest HEADERS: " . json_encode($headers, JSON_UNESCAPED_UNICODE));
-        }
+        // Log dos headers (apenas tamanho, nunca conteúdo completo)
+        $this->efiLog('DEBUG', 'makeRequest headers preparados', [
+            'isPix' => $isPix,
+            'headers_count' => count($headers),
+            'header' => implode('; ', $headers) // será sanitizado pelo efiLog
+        ]);
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
@@ -836,7 +954,12 @@ class EfiPaymentService
         ];
 
         if ($curlError) {
-            error_log("EFI Request Error: {$curlError}");
+            $this->efiLog('ERROR', 'makeRequest: Erro cURL', [
+                'isPix' => $isPix,
+                'host' => parse_url($url, PHP_URL_HOST),
+                'url' => $url,
+                'curl_error' => $curlError
+            ]);
             $result['response'] = ['error' => 'cURL Error', 'error_description' => $curlError];
             return $result;
         }
@@ -844,34 +967,7 @@ class EfiPaymentService
         $data = json_decode($response, true);
         $result['response'] = $data !== null ? $data : ['raw' => $response];
 
-        // Log de debug detalhado para erros
-        if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
-            if ($httpCode >= 400) {
-                $errorType = 'unknown';
-                if ($httpCode === 401 || $httpCode === 403) {
-                    $errorType = 'authentication';
-                } elseif ($httpCode === 400) {
-                    $errorDesc = $data['error_description'] ?? $data['message'] ?? '';
-                    if (strpos($errorDesc, 'validation_error') !== false || strpos($errorDesc, 'obrigatória') !== false) {
-                        $errorType = 'validation';
-                    } else {
-                        $errorType = 'request';
-                    }
-                }
-                
-                error_log("[EFI-DEBUG] makeRequest ERROR: isPix=" . ($isPix ? 'true' : 'false') . ", http_code={$httpCode}, error_type={$errorType}, url={$url}");
-                error_log("[EFI-DEBUG] makeRequest ERROR DETAIL: " . substr(json_encode($data, JSON_UNESCAPED_UNICODE), 0, 300));
-                
-                // Log específico para erro AWS (token errado/host errado)
-                if (isset($data['message']) && strpos($data['message'], 'Invalid key=value pair') !== false) {
-                    error_log("[EFI-DEBUG] ERRO AWS DETECTADO: Invalid key=value pair - token pode estar sendo usado no host errado");
-                    error_log("[EFI-DEBUG] URL usada: {$url} - Verifique se está usando o host correto");
-                    error_log("[EFI-DEBUG] isPix={$isPix} - Verifique se o token foi obtido do OAuth correto");
-                }
-            } else {
-                error_log("[EFI-DEBUG] makeRequest SUCCESS: isPix=" . ($isPix ? 'true' : 'false') . ", http_code={$httpCode}, url={$url}");
-            }
-        }
+        // Logs já foram feitos acima no bloco "Log após requisição"
         
         if ($httpCode >= 400) {
             $errorDetails = [
