@@ -462,24 +462,28 @@ class EfiPaymentService
         $endpoint = $isPix ? "/v2/cob/{$chargeId}" : "/charges/{$chargeId}";
         $response = $this->makeRequest('GET', $endpoint, null, $token, $isPix);
         
-        if (!$response) {
+        // makeRequest agora sempre retorna array com http_code
+        $httpCode = $response['http_code'] ?? 0;
+        $responseData = $response['response'] ?? $response;
+        
+        if ($httpCode >= 400 || !$responseData) {
             return null;
         }
         
         // API Pix retorna dados diretamente, API de Cobranças retorna dentro de 'data'
         if ($isPix) {
             // API Pix: verificar se há erro
-            if (isset($response['error']) || isset($response['mensagem'])) {
+            if (isset($responseData['error']) || isset($responseData['mensagem'])) {
                 return null;
             }
             // Retornar dados diretamente
-            return $response;
+            return $responseData;
         } else {
             // API de Cobranças: dados vêm dentro de 'data'
-            if (!isset($response['data'])) {
+            if (!isset($responseData['data'])) {
                 return null;
             }
-            return $response['data'];
+            return $responseData['data'];
         }
     }
 
