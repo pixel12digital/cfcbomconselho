@@ -664,7 +664,10 @@ class EfiPaymentService
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
-        $headers = ['Content-Type: application/json'];
+        // IMPORTANTE: Authorization DEVE ser o primeiro header
+        // A API da EFI é muito sensível à ordem e formato dos headers
+        $headers = [];
+        
         if ($token) {
             // Garantir que token é string e está limpo
             $token = is_string($token) ? trim($token) : (string)$token;
@@ -678,13 +681,25 @@ class EfiPaymentService
             // IMPORTANTE: Garantir que não há espaços extras ou caracteres especiais
             // A API da EFI em produção é muito sensível ao formato do header
             $token = trim($token);
-            $authHeader = 'Authorization: Bearer ' . $token;
             
-            // Verificar se há caracteres problemáticos no header
-            if (preg_match('/[^\x20-\x7E]/', $authHeader)) {
-                error_log("EFI makeRequest Warning: Header contém caracteres não-ASCII");
+            // Verificar se há caracteres problemáticos no token
+            if (preg_match('/[^\x20-\x7E]/', $token)) {
+                error_log("EFI makeRequest Warning: Token contém caracteres não-ASCII");
+                // Remover caracteres não-ASCII do token
+                $token = preg_replace('/[^\x20-\x7E]/', '', $token);
+                $token = trim($token);
             }
             
+            // Montar header Authorization - DEVE ser exatamente "Authorization: Bearer {token}"
+            // Sem espaços extras, sem quebras de linha, sem caracteres especiais
+            $authHeader = 'Authorization: Bearer ' . $token;
+            
+            // Verificar se o header está correto
+            if (strlen($authHeader) !== strlen('Authorization: Bearer ') + strlen($token)) {
+                error_log("EFI makeRequest Error: Header Authorization tem tamanho incorreto");
+            }
+            
+            // Authorization DEVE ser o primeiro header
             $headers[] = $authHeader;
             
             // Log para debug (apenas primeiros e últimos caracteres do token por segurança)
@@ -693,19 +708,16 @@ class EfiPaymentService
                 error_log("EFI makeRequest: URL={$url}, Token preview={$tokenPreview}, Header length=" . strlen($authHeader));
             }
         }
+        
+        // Content-Type vem depois do Authorization
+        $headers[] = 'Content-Type: application/json';
 
         if ($payload && in_array($method, ['POST', 'PUT', 'PATCH'])) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         }
-
-        // IMPORTANTE: Ordem dos headers pode ser importante para a EFI
-        // Garantir que Authorization vem antes de Content-Type
-        usort($headers, function($a, $b) {
-            if (strpos($a, 'Authorization') === 0) return -1;
-            if (strpos($b, 'Authorization') === 0) return 1;
-            return 0;
-        });
         
+        // NÃO usar usort - pode corromper o header
+        // Headers já estão na ordem correta: Authorization primeiro, depois Content-Type
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         // Se certificado for necessário (obrigatório em produção)
