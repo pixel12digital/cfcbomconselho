@@ -673,19 +673,8 @@ class EfiPaymentService
         $baseUrl = $isPix ? $this->baseUrlPix : $this->baseUrlCharges;
         $url = $baseUrl . $endpoint;
         
-        // GUARDRAIL 1: Se isPix=false e URL contém /v1/charges, token NÃO pode ser JWT (Pix)
-        if (!$isPix && strpos($endpoint, '/charges') !== false && $token) {
-            $tokenPrefix = substr(trim($token), 0, 3);
-            if ($tokenPrefix === 'eyJ') {
-                error_log("[EFI-DEBUG] BLOCKED: token JWT (Pix) sendo usado em /charges. token_prefix={$tokenPrefix}, endpoint={$endpoint}, url={$url}");
-                return [
-                    'error' => 'Token inválido para API de Cobranças',
-                    'error_description' => 'Token JWT (Pix) não pode ser usado na API de Cobranças. Use getAccessToken(false) para obter token de Cobranças.'
-                ];
-            }
-        }
-        
-        // GUARDRAIL 2: Se isPix=true e URL contém apis.gerencianet.com.br, BLOQUEAR
+        // GUARDRAIL: Se isPix=true e URL contém apis.gerencianet.com.br, BLOQUEAR
+        // (Ambas as APIs retornam JWT, então não podemos bloquear JWT em /charges)
         if ($isPix && strpos($url, 'apis.gerencianet.com.br') !== false) {
             error_log("[EFI-DEBUG] BLOCKED: URL de Cobranças sendo usada para Pix. url={$url}");
             return [
