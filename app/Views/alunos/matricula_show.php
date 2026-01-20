@@ -609,7 +609,16 @@ function gerarCobrancaEfi() {
             enrollment_id: enrollmentId
         })
     })
-    .then(response => response.json())
+    .then(async response => {
+        // Verificar se a resposta é JSON válido
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Resposta não é JSON:', text);
+            throw new Error('Resposta do servidor não é JSON válido. Status: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.ok) {
             // Sucesso
@@ -633,8 +642,9 @@ function gerarCobrancaEfi() {
         }
     })
     .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao comunicar com o servidor. Tente novamente.');
+        console.error('Erro completo:', error);
+        console.error('Stack:', error.stack);
+        alert('Erro ao comunicar com o servidor: ' + (error.message || 'Erro desconhecido') + '\n\nVerifique o console para mais detalhes.');
         btn.disabled = false;
         btn.textContent = 'Gerar Cobrança Efí';
     });
@@ -663,7 +673,16 @@ function sincronizarCobrancaEfi() {
             enrollment_id: enrollmentId
         })
     })
-    .then(response => response.json())
+    .then(async response => {
+        // Verificar se a resposta é JSON válido
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Resposta não é JSON:', text);
+            throw new Error('Resposta do servidor não é JSON válido. Status: ' + response.status);
+        }
+        return response.json();
+    })
     .then(data => {
         if (data.ok) {
             // Sucesso
@@ -691,8 +710,9 @@ function sincronizarCobrancaEfi() {
         }
     })
     .catch(error => {
-        console.error('Erro:', error);
-        alert('Erro ao comunicar com o servidor. Tente novamente.');
+        console.error('Erro completo:', error);
+        console.error('Stack:', error.stack);
+        alert('Erro ao comunicar com o servidor: ' + (error.message || 'Erro desconhecido') + '\n\nVerifique o console para mais detalhes.');
         btn.disabled = false;
         btn.textContent = 'Sincronizar Cobrança';
     });

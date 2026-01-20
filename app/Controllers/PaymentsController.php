@@ -102,13 +102,22 @@ class PaymentsController extends Controller
         }
 
         // Gerar cobrança
-        $result = $this->efiService->createCharge($enrollment);
+        try {
+            $result = $this->efiService->createCharge($enrollment);
 
-        if (!$result['ok']) {
-            http_response_code(400);
+            if (!$result['ok']) {
+                http_response_code(400);
+            }
+
+            echo json_encode($result);
+        } catch (\Exception $e) {
+            http_response_code(500);
+            error_log("PaymentsController::generate() - Exception: " . $e->getMessage());
+            echo json_encode([
+                'ok' => false,
+                'message' => 'Erro interno ao gerar cobrança: ' . $e->getMessage()
+            ]);
         }
-
-        echo json_encode($result);
         exit;
     }
 

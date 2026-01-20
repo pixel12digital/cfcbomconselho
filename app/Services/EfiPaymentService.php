@@ -124,6 +124,24 @@ class EfiPaymentService
                 'message' => 'Falha ao autenticar no gateway. Verifique se as credenciais estão corretas e se o ambiente (sandbox/produção) está configurado adequadamente.'
             ];
         }
+        
+        // Validar e sanitizar token
+        if (!is_string($token)) {
+            error_log("EFI Error: Token não é uma string. Tipo: " . gettype($token) . ", Valor: " . print_r($token, true));
+            return [
+                'ok' => false,
+                'message' => 'Erro interno: Token de autenticação inválido'
+            ];
+        }
+        
+        $token = trim($token);
+        if (empty($token)) {
+            error_log("EFI Error: Token está vazio após trim");
+            return [
+                'ok' => false,
+                'message' => 'Erro interno: Token de autenticação vazio'
+            ];
+        }
 
         // Montar payload da cobrança
         $installments = intval($enrollment['installments'] ?? 1);
@@ -186,7 +204,16 @@ class EfiPaymentService
         $response = $this->makeRequest('POST', '/charges', $payload, $token);
         
         if (!$response || !isset($response['data'])) {
-            $errorMessage = $response['error_description'] ?? $response['message'] ?? 'Erro desconhecido ao criar cobrança';
+            // Capturar mensagem de erro mais detalhada
+            $errorMessage = $response['error_description'] ?? $response['message'] ?? $response['error'] ?? 'Erro desconhecido ao criar cobrança';
+            
+            // Se houver detalhes adicionais, incluir
+            if (isset($response['error_detail'])) {
+                $errorMessage .= ' - ' . $response['error_detail'];
+            }
+            
+            // Log detalhado para debug
+            error_log("EFI CreateCharge Error: " . json_encode($response, JSON_UNESCAPED_UNICODE));
             
             // Atualizar status de erro no banco
             $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
@@ -476,11 +503,19 @@ class EfiPaymentService
 
         $data = json_decode($response, true);
         if (!isset($data['access_token'])) {
-            error_log("EFI Auth Error: access_token não encontrado na resposta");
+            error_log("EFI Auth Error: access_token não encontrado na resposta. Resposta completa: " . substr($response, 0, 500));
             return null;
         }
 
-        return $data['access_token'];
+        $accessToken = $data['access_token'];
+        
+        // Validar que o token é uma string válida
+        if (!is_string($accessToken) || empty(trim($accessToken))) {
+            error_log("EFI Auth Error: access_token não é uma string válida. Tipo: " . gettype($accessToken));
+            return null;
+        }
+        
+        return trim($accessToken);
     }
 
     /**
@@ -498,13 +533,46 @@ class EfiPaymentService
 
         $headers = ['Content-Type: application/json'];
         if ($token) {
-            $headers[] = 'Authorization: Bearer ' . $token;
+            // Garantir que token é string e está limpo
+            $token = is_string($token) ? trim($token) : (string)$token;
+            
+            // Validar formato do token (deve ser JWT ou string alfanumérica)
+            if (empty($token) || strlen($token) < 10) {
+                error_log("EFI makeRequest Error: Token inválido ou muito curto. Tamanho: " . strlen($token));
+                return ['error' => 'Token de autenticação inválido', 'error_description' => 'Token muito curto ou vazio'];
+            }
+            
+            // IMPORTANTE: Garantir que não há espaços extras ou caracteres especiais
+            // A API da EFI em produção é muito sensível ao formato do header
+            $token = trim($token);
+            $authHeader = 'Authorization: Bearer ' . $token;
+            
+            // Verificar se há caracteres problemáticos no header
+            if (preg_match('/[^\x20-\x7E]/', $authHeader)) {
+                error_log("EFI makeRequest Warning: Header contém caracteres não-ASCII");
+            }
+            
+            $headers[] = $authHeader;
+            
+            // Log para debug (apenas primeiros e últimos caracteres do token por segurança)
+            if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
+                $tokenPreview = substr($token, 0, 20) . '...' . substr($token, -10);
+                error_log("EFI makeRequest: URL={$url}, Token preview={$tokenPreview}, Header length=" . strlen($authHeader));
+            }
         }
 
         if ($payload && in_array($method, ['POST', 'PUT', 'PATCH'])) {
             curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($payload));
         }
 
+        // IMPORTANTE: Ordem dos headers pode ser importante para a EFI
+        // Garantir que Authorization vem antes de Content-Type
+        usort($headers, function($a, $b) {
+            if (strpos($a, 'Authorization') === 0) return -1;
+            if (strpos($b, 'Authorization') === 0) return 1;
+            return 0;
+        });
+        
         curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
 
         // Se certificado for necessário (obrigatório em produção)
@@ -523,6 +591,9 @@ class EfiPaymentService
                 curl_setopt($ch, CURLOPT_SSLCERTPASSWD, '');
                 curl_setopt($ch, CURLOPT_SSLKEYPASSWD, '');
             }
+        } elseif (!$this->sandbox) {
+            // Em produção, certificado é obrigatório para requisições da API
+            error_log("EFI makeRequest Warning: Produção sem certificado configurado. A EFI exige certificado cliente em produção para todas as requisições.");
         }
 
         $response = curl_exec($ch);
@@ -538,7 +609,12 @@ class EfiPaymentService
         $data = json_decode($response, true);
 
         if ($httpCode >= 400) {
-            error_log("EFI API Error: HTTP {$httpCode} - " . json_encode($data));
+            $errorDetails = [
+                'http_code' => $httpCode,
+                'response' => $data,
+                'raw_response' => substr($response, 0, 1000) // Primeiros 1000 caracteres
+            ];
+            error_log("EFI API Error: HTTP {$httpCode} - " . json_encode($errorDetails, JSON_UNESCAPED_UNICODE));
             return $data; // Retornar erro para tratamento
         }
 
