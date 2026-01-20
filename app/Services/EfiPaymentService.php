@@ -38,15 +38,15 @@ class EfiPaymentService
         $this->webhookSecret = $_ENV['EFI_WEBHOOK_SECRET'] ?? null;
         
         // URLs para API de Cobranças (boletos/cartão de crédito)
-        // OAuth endpoint usa URL diferente (sem /v1)
-        $this->oauthUrlCharges = $this->sandbox 
-            ? 'https://sandbox.gerencianet.com.br'
-            : 'https://apis.gerencianet.com.br';
-        
-        // API endpoints de cobranças usam /v1
-        $this->baseUrlCharges = $this->sandbox 
-            ? 'https://sandbox.gerencianet.com.br/v1'
-            : 'https://apis.gerencianet.com.br/v1';
+        // NUNCA usar apis.gerencianet.com.br - usar cobrancas.api.efipay.com.br
+        // OAuth de Cobranças usa /v1/authorize (não /oauth/token)
+        if ($this->sandbox) {
+            $this->oauthUrlCharges = 'https://cobrancas-h.api.efipay.com.br/v1/authorize';
+            $this->baseUrlCharges = 'https://cobrancas-h.api.efipay.com.br';
+        } else {
+            $this->oauthUrlCharges = 'https://cobrancas.api.efipay.com.br/v1/authorize';
+            $this->baseUrlCharges = 'https://cobrancas.api.efipay.com.br';
+        }
         
         // URLs para API Pix (NUNCA usar apis.gerencianet.com.br)
         $this->oauthUrlPix = $this->sandbox 
@@ -276,11 +276,15 @@ class EfiPaymentService
             
             $response = $this->makeRequest('POST', '/v2/cob', $pixPayload, $token, true);
             
+            // makeRequest agora sempre retorna array com http_code
+            $httpCode = $response['http_code'] ?? 0;
+            $responseData = $response['response'] ?? $response;
+            
             // API Pix retorna dados diretamente (não dentro de 'data')
-            if (!$response || isset($response['error']) || isset($response['mensagem'])) {
-                $errorMessage = $response['mensagem'] ?? $response['error_description'] ?? $response['message'] ?? $response['error'] ?? 'Erro desconhecido ao criar cobrança Pix';
+            if ($httpCode >= 400 || !$responseData || isset($responseData['error']) || isset($responseData['mensagem'])) {
+                $errorMessage = $responseData['mensagem'] ?? $responseData['error_description'] ?? $responseData['message'] ?? $responseData['error'] ?? 'Erro desconhecido ao criar cobrança Pix';
                 
-                error_log("EFI CreateCharge Pix Error: " . json_encode($response, JSON_UNESCAPED_UNICODE));
+                error_log("EFI CreateCharge Pix Error: HTTP {$httpCode} - " . json_encode($responseData, JSON_UNESCAPED_UNICODE));
                 
                 $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
                 
@@ -291,25 +295,30 @@ class EfiPaymentService
             }
             
             // Processar resposta da API Pix
-            $chargeId = $response['txid'] ?? null;
+            $chargeId = $responseData['txid'] ?? null;
             $status = 'waiting'; // Pix geralmente inicia como 'waiting'
-            $paymentUrl = $response['pixCopiaECola'] ?? $response['qrCode'] ?? null;
+            $paymentUrl = $responseData['pixCopiaECola'] ?? $responseData['qrCode'] ?? null;
             
         } else {
             // API de Cobranças: usar formato original
+            // makeRequest já adiciona /v1/ automaticamente para Cobranças
             $response = $this->makeRequest('POST', '/charges', $payload, $token, false);
             
-            if (!$response || !isset($response['data'])) {
+            // makeRequest agora sempre retorna array com http_code
+            $httpCode = $response['http_code'] ?? 0;
+            $responseData = $response['response'] ?? $response;
+            
+            if ($httpCode >= 400 || !$responseData || !isset($responseData['data'])) {
                 // Capturar mensagem de erro mais detalhada
-                $errorMessage = $response['error_description'] ?? $response['message'] ?? $response['error'] ?? 'Erro desconhecido ao criar cobrança';
+                $errorMessage = $responseData['error_description'] ?? $responseData['message'] ?? $responseData['error'] ?? 'Erro desconhecido ao criar cobrança';
                 
                 // Se houver detalhes adicionais, incluir
-                if (isset($response['error_detail'])) {
-                    $errorMessage .= ' - ' . $response['error_detail'];
+                if (isset($responseData['error_detail'])) {
+                    $errorMessage .= ' - ' . $responseData['error_detail'];
                 }
                 
                 // Log detalhado para debug
-                error_log("EFI CreateCharge Error: " . json_encode($response, JSON_UNESCAPED_UNICODE));
+                error_log("EFI CreateCharge Error: HTTP {$httpCode} - " . json_encode($responseData, JSON_UNESCAPED_UNICODE));
                 
                 // Atualizar status de erro no banco
                 $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
@@ -321,7 +330,7 @@ class EfiPaymentService
             }
             
             // Processar resposta da API de Cobranças
-            $chargeData = $response['data'];
+            $chargeData = $responseData['data'];
             $chargeId = $chargeData['charge_id'] ?? null;
             $status = $chargeData['status'] ?? 'unknown';
             $paymentUrl = null;
@@ -448,7 +457,8 @@ class EfiPaymentService
             return null;
         }
 
-        // API Pix usa /v2/cob/{txid}, API de Cobranças usa /charges/{charge_id}
+        // API Pix usa /v2/cob/{txid}, API de Cobranças usa /v1/charges/{charge_id}
+        // makeRequest já adiciona /v1/ automaticamente para Cobranças
         $endpoint = $isPix ? "/v2/cob/{$chargeId}" : "/charges/{$chargeId}";
         $response = $this->makeRequest('GET', $endpoint, null, $token, $isPix);
         
@@ -487,25 +497,33 @@ class EfiPaymentService
             return null;
         }
 
-        // Usar OAuth Pix se for requisição Pix, senão usar OAuth de Cobranças
-        $oauthUrl = $forPix ? $this->oauthUrlPix : $this->oauthUrlCharges;
-        $url = $oauthUrl . '/oauth/token';
+        // OAuth Pix e OAuth Cobranças usam formatos diferentes
+        if ($forPix) {
+            // OAuth Pix: usa /oauth/token com form-urlencoded
+            $url = $this->oauthUrlPix . '/oauth/token';
+            $payload = ['grant_type' => 'client_credentials'];
+            $contentType = 'application/x-www-form-urlencoded';
+            $postData = http_build_query($payload);
+        } else {
+            // OAuth Cobranças: usa /v1/authorize com JSON
+            // oauthUrlCharges já inclui /v1/authorize (não adicionar /oauth/token)
+            $url = $this->oauthUrlCharges;
+            $payload = ['grant_type' => 'client_credentials'];
+            $contentType = 'application/json';
+            $postData = json_encode($payload);
+        }
         
         // Log de debug
         if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
-            error_log("[EFI-DEBUG] getAccessToken: forPix={$forPix}, tokenUrl={$url}");
+            error_log("[EFI-DEBUG] getAccessToken: forPix={$forPix}, tokenUrl={$url}, contentType={$contentType}");
         }
-        
-        $payload = [
-            'grant_type' => 'client_credentials'
-        ];
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
         curl_setopt($ch, CURLOPT_POST, true);
-        curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($payload));
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $postData);
         curl_setopt($ch, CURLOPT_HTTPHEADER, [
-            'Content-Type: application/x-www-form-urlencoded',
+            'Content-Type: ' . $contentType,
             'Authorization: Basic ' . base64_encode($this->clientId . ':' . $this->clientSecret)
         ]);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
@@ -671,15 +689,32 @@ class EfiPaymentService
     {
         // Usar base URL Pix se for requisição Pix, senão usar base URL de Cobranças
         $baseUrl = $isPix ? $this->baseUrlPix : $this->baseUrlCharges;
+        
+        // Para Cobranças, garantir que endpoint começa com /v1/
+        // baseUrlCharges NÃO inclui /v1 (foi removido)
+        if (!$isPix && strpos($endpoint, '/v1/') !== 0 && strpos($endpoint, '/v1') !== 0) {
+            // Se endpoint não começa com /v1, adicionar
+            if (strpos($endpoint, '/') === 0) {
+                $endpoint = '/v1' . $endpoint;
+            } else {
+                $endpoint = '/v1/' . $endpoint;
+            }
+        }
+        
         $url = $baseUrl . $endpoint;
         
-        // GUARDRAIL: Se isPix=true e URL contém apis.gerencianet.com.br, BLOQUEAR
-        // (Ambas as APIs retornam JWT, então não podemos bloquear JWT em /charges)
-        if ($isPix && strpos($url, 'apis.gerencianet.com.br') !== false) {
-            error_log("[EFI-DEBUG] BLOCKED: URL de Cobranças sendo usada para Pix. url={$url}");
+        // GUARDRAIL: Bloquear URLs antigas (apis.gerencianet.com.br)
+        // Nenhuma requisição deve usar apis.gerencianet.com.br
+        if (strpos($url, 'apis.gerencianet.com.br') !== false || strpos($url, 'api.gerencianet.com.br') !== false) {
+            error_log("[EFI-DEBUG] BLOCKED: URL antiga detectada. url={$url}");
             return [
-                'error' => 'URL incorreta para API Pix',
-                'error_description' => 'API Pix deve usar pix.api.efipay.com.br, não apis.gerencianet.com.br'
+                'http_code' => 400,
+                'response' => [
+                    'error' => 'URL incorreta',
+                    'error_description' => 'Não use apis.gerencianet.com.br. Use cobrancas.api.efipay.com.br para Cobranças ou pix.api.efipay.com.br para Pix.'
+                ],
+                'raw_response' => 'URL bloqueada',
+                'curl_error' => null
             ];
         }
 
@@ -786,12 +821,22 @@ class EfiPaymentService
         $curlInfo = curl_getinfo($ch);
         curl_close($ch);
 
+        // SEMPRE retornar array com http_code, response e raw_response
+        $result = [
+            'http_code' => $httpCode,
+            'response' => null,
+            'raw_response' => $response,
+            'curl_error' => $curlError ?: null
+        ];
+
         if ($curlError) {
             error_log("EFI Request Error: {$curlError}");
-            return null;
+            $result['response'] = ['error' => 'cURL Error', 'error_description' => $curlError];
+            return $result;
         }
 
         $data = json_decode($response, true);
+        $result['response'] = $data !== null ? $data : ['raw' => $response];
 
         if ($httpCode >= 400) {
             $errorDetails = [
@@ -811,14 +856,14 @@ class EfiPaymentService
                     error_log("[EFI-DEBUG] ERRO ESPECÍFICO: Invalid key=value pair detectado");
                     error_log("[EFI-DEBUG] Isso geralmente indica que a API está interpretando o header Authorization como AWS SigV4");
                     error_log("[EFI-DEBUG] Verifique se o header está no formato correto: 'Authorization: Bearer {token}'");
+                    error_log("[EFI-DEBUG] URL usada: {$url} - Verifique se está usando o host correto (cobrancas.api.efipay.com.br para Cobranças)");
                 }
             }
             
             error_log("EFI API Error: HTTP {$httpCode} - " . json_encode($errorDetails, JSON_UNESCAPED_UNICODE));
-            return $data; // Retornar erro para tratamento
         }
 
-        return $data;
+        return $result;
     }
 
     /**

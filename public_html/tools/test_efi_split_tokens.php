@@ -113,61 +113,62 @@ try {
     echo "\n4. Testando Requisições:\n";
     
     // Teste 1: Cobranças
-    echo "\n   4.1. GET {$baseUrlChargesValue}/charges?limit=1\n";
+    // makeRequest já adiciona /v1/ automaticamente, então usar apenas /charges
+    echo "\n   4.1. GET {$baseUrlChargesValue}/v1/charges?limit=1\n";
     $makeRequest = $reflection->getMethod('makeRequest');
     $makeRequest->setAccessible(true);
     
     $resultCharges = $makeRequest->invoke($service, 'GET', '/charges?limit=1', null, $tokenCharges, false);
     
-    if (isset($resultCharges['http_code'])) {
-        $httpCodeCharges = $resultCharges['http_code'];
-        echo "   HTTP Code: {$httpCodeCharges}\n";
-        
-        if ($httpCodeCharges === 200 || $httpCodeCharges === 201) {
-            echo "   ✅ Requisição bem-sucedida\n";
-        } elseif ($httpCodeCharges === 403) {
-            echo "   ❌ HTTP 403 - Acesso negado\n";
-            if (isset($resultCharges['message'])) {
-                echo "   Erro: " . substr($resultCharges['message'], 0, 200) . "\n";
-            }
-        } else {
-            echo "   ⚠️ HTTP {$httpCodeCharges}\n";
+    // makeRequest agora sempre retorna array com http_code
+    $httpCodeCharges = $resultCharges['http_code'] ?? 0;
+    $responseCharges = $resultCharges['response'] ?? $resultCharges;
+    
+    echo "   HTTP Code: {$httpCodeCharges}\n";
+    
+    if ($httpCodeCharges === 200 || $httpCodeCharges === 201) {
+        echo "   ✅ Requisição bem-sucedida\n";
+    } elseif ($httpCodeCharges === 403) {
+        echo "   ❌ HTTP 403 - Acesso negado\n";
+        $errorMsg = $responseCharges['message'] ?? $responseCharges['error'] ?? 'Erro desconhecido';
+        echo "   Erro: " . substr($errorMsg, 0, 200) . "\n";
+        if (strpos($errorMsg, 'Invalid key=value pair') !== false) {
+            echo "   ⚠️ Erro AWS detectado - verifique se está usando cobrancas.api.efipay.com.br\n";
         }
-        
-        $responsePreview = json_encode($resultCharges, JSON_UNESCAPED_UNICODE);
-        echo "   Response (primeiros 200 chars): " . substr($responsePreview, 0, 200) . "\n";
     } else {
-        echo "   ⚠️ Resposta não contém http_code\n";
-        echo "   Response: " . substr(json_encode($resultCharges, JSON_UNESCAPED_UNICODE), 0, 200) . "\n";
+        echo "   ⚠️ HTTP {$httpCodeCharges}\n";
     }
+    
+    $responsePreview = json_encode($responseCharges, JSON_UNESCAPED_UNICODE);
+    echo "   Response (primeiros 200 chars): " . substr($responsePreview, 0, 200) . "\n";
     
     // Teste 2: Pix
-    echo "\n   4.2. GET {$baseUrlPixValue}/v2/cob?inicio=" . date('Y-m-d', strtotime('-1 day')) . "&fim=" . date('Y-m-d') . "\n";
+    // API Pix requer formato date-time ISO 8601
+    $inicio = date('Y-m-d\T00:00:00\Z', strtotime('-1 day'));
+    $fim = date('Y-m-d\T23:59:59\Z');
+    echo "\n   4.2. GET {$baseUrlPixValue}/v2/cob?inicio={$inicio}&fim={$fim}\n";
     
-    $endpointPix = '/v2/cob?inicio=' . date('Y-m-d', strtotime('-1 day')) . '&fim=' . date('Y-m-d');
+    $endpointPix = '/v2/cob?inicio=' . urlencode($inicio) . '&fim=' . urlencode($fim);
     $resultPix = $makeRequest->invoke($service, 'GET', $endpointPix, null, $tokenPix, true);
     
-    if (isset($resultPix['http_code'])) {
-        $httpCodePix = $resultPix['http_code'];
-        echo "   HTTP Code: {$httpCodePix}\n";
-        
-        if ($httpCodePix === 200 || $httpCodePix === 201) {
-            echo "   ✅ Requisição bem-sucedida\n";
-        } elseif ($httpCodePix === 403) {
-            echo "   ❌ HTTP 403 - Acesso negado\n";
-            if (isset($resultPix['message'])) {
-                echo "   Erro: " . substr($resultPix['message'], 0, 200) . "\n";
-            }
-        } else {
-            echo "   ⚠️ HTTP {$httpCodePix}\n";
-        }
-        
-        $responsePreview = json_encode($resultPix, JSON_UNESCAPED_UNICODE);
-        echo "   Response (primeiros 200 chars): " . substr($responsePreview, 0, 200) . "\n";
+    // makeRequest agora sempre retorna array com http_code
+    $httpCodePix = $resultPix['http_code'] ?? 0;
+    $responsePix = $resultPix['response'] ?? $resultPix;
+    
+    echo "   HTTP Code: {$httpCodePix}\n";
+    
+    if ($httpCodePix === 200 || $httpCodePix === 201) {
+        echo "   ✅ Requisição bem-sucedida\n";
+    } elseif ($httpCodePix === 403) {
+        echo "   ❌ HTTP 403 - Acesso negado\n";
+        $errorMsg = $responsePix['message'] ?? $responsePix['error'] ?? 'Erro desconhecido';
+        echo "   Erro: " . substr($errorMsg, 0, 200) . "\n";
     } else {
-        echo "   ⚠️ Resposta não contém http_code\n";
-        echo "   Response: " . substr(json_encode($resultPix, JSON_UNESCAPED_UNICODE), 0, 200) . "\n";
+        echo "   ⚠️ HTTP {$httpCodePix}\n";
     }
+    
+    $responsePreview = json_encode($responsePix, JSON_UNESCAPED_UNICODE);
+    echo "   Response (primeiros 200 chars): " . substr($responsePreview, 0, 200) . "\n";
     
     echo "\n==========================================\n";
     echo "RESUMO:\n";
