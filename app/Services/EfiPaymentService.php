@@ -16,8 +16,14 @@ class EfiPaymentService
     private $certPath;
     private $certPassword;
     private $webhookSecret;
-    private $baseUrl;
-    private $oauthUrl;
+    
+    // URLs para API de Cobranças (boletos/cartão)
+    private $baseUrlCharges;
+    private $oauthUrlCharges;
+    
+    // URLs para API Pix
+    private $baseUrlPix;
+    private $oauthUrlPix;
 
     public function __construct()
     {
@@ -31,16 +37,26 @@ class EfiPaymentService
         $this->certPassword = $_ENV['EFI_CERT_PASSWORD'] ?? null;
         $this->webhookSecret = $_ENV['EFI_WEBHOOK_SECRET'] ?? null;
         
-        // URLs base da API Efí (Gerencianet)
+        // URLs para API de Cobranças (boletos/cartão de crédito)
         // OAuth endpoint usa URL diferente (sem /v1)
-        $this->oauthUrl = $this->sandbox 
+        $this->oauthUrlCharges = $this->sandbox 
             ? 'https://sandbox.gerencianet.com.br'
             : 'https://apis.gerencianet.com.br';
         
-        // API endpoints usam /v1
-        $this->baseUrl = $this->sandbox 
+        // API endpoints de cobranças usam /v1
+        $this->baseUrlCharges = $this->sandbox 
             ? 'https://sandbox.gerencianet.com.br/v1'
             : 'https://apis.gerencianet.com.br/v1';
+        
+        // URLs para API Pix (NUNCA usar apis.gerencianet.com.br)
+        $this->oauthUrlPix = $this->sandbox 
+            ? 'https://pix-h.api.efipay.com.br'
+            : 'https://pix.api.efipay.com.br';
+        
+        // API Pix usa /v2 (sem /v1)
+        $this->baseUrlPix = $this->sandbox 
+            ? 'https://pix-h.api.efipay.com.br'
+            : 'https://pix.api.efipay.com.br';
     }
 
     /**
@@ -108,8 +124,13 @@ class EfiPaymentService
             ];
         }
 
-        // Obter token de autenticação
-        $token = $this->getAccessToken();
+        // Determinar se é PIX para usar a API correta
+        $paymentMethod = $enrollment['payment_method'] ?? 'pix';
+        $installments = intval($enrollment['installments'] ?? 1);
+        $isPix = ($paymentMethod === 'pix' && $installments === 1);
+        
+        // Obter token de autenticação (usar OAuth Pix se for PIX)
+        $token = $this->getAccessToken($isPix);
         if (!$token) {
             // Verificar se credenciais estão configuradas
             if (empty($this->clientId) || empty($this->clientSecret)) {
@@ -143,98 +164,175 @@ class EfiPaymentService
             ];
         }
 
-        // Montar payload da cobrança
-        $installments = intval($enrollment['installments'] ?? 1);
-        $amountInCents = intval($outstandingAmount * 100); // Converter para centavos
+        // Montar payload conforme o tipo de API
+        // Se for PIX, o payload será montado dentro do bloco if ($isPix) abaixo
+        // Se não for PIX, montar payload da API de Cobranças
+        $payload = null;
+        
+        if (!$isPix) {
+            // Payload para API de Cobranças (boletos/cartão)
+            $amountInCents = intval($outstandingAmount * 100); // Converter para centavos
 
-        $payload = [
-            'items' => [
-                [
-                    'name' => $enrollment['service_name'] ?? 'Matrícula',
-                    'value' => $amountInCents,
-                    'amount' => 1
-                ]
-            ],
-            'metadata' => [
-                'enrollment_id' => $enrollment['id'],
-                'cfc_id' => $enrollment['cfc_id'] ?? 1,
-                'student_id' => $enrollment['student_id']
-            ]
-        ];
-
-        // Adicionar dados do pagador
-        if (!empty($student['cpf'])) {
-            $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
-            if (strlen($cpf) === 11) {
-                $payload['customer'] = [
-                    'name' => $student['full_name'] ?? $student['name'] ?? 'Cliente',
-                    'cpf' => $cpf,
-                    'email' => $student['email'] ?? null,
-                    'phone_number' => !empty($student['phone']) ? preg_replace('/[^0-9]/', '', $student['phone']) : null
-                ];
-            }
-        }
-
-        // Configurar parcelamento se aplicável
-        if ($installments > 1) {
-            $payload['payment'] = [
-                'credit_card' => [
-                    'installments' => $installments,
-                    'billing_address' => [
-                        'street' => $student['street'] ?? 'Não informado',
-                        'number' => $student['number'] ?? 'S/N',
-                        'neighborhood' => $student['neighborhood'] ?? '',
-                        'zipcode' => preg_replace('/[^0-9]/', '', $student['cep'] ?? ''),
-                        'city' => $student['city'] ?? '',
-                        'state' => $student['state_uf'] ?? ''
+            $payload = [
+                'items' => [
+                    [
+                        'name' => $enrollment['service_name'] ?? 'Matrícula',
+                        'value' => $amountInCents,
+                        'amount' => 1
                     ]
+                ],
+                'metadata' => [
+                    'enrollment_id' => $enrollment['id'],
+                    'cfc_id' => $enrollment['cfc_id'] ?? 1,
+                    'student_id' => $enrollment['student_id']
                 ]
             ];
-        } else {
-            // Pagamento à vista (PIX ou Boleto)
-            $paymentMethod = $enrollment['payment_method'] ?? 'pix';
-            if ($paymentMethod === 'pix') {
-                $payload['payment'] = ['pix' => []];
+
+            // Adicionar dados do pagador
+            if (!empty($student['cpf'])) {
+                $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
+                if (strlen($cpf) === 11) {
+                    $payload['customer'] = [
+                        'name' => $student['full_name'] ?? $student['name'] ?? 'Cliente',
+                        'cpf' => $cpf,
+                        'email' => $student['email'] ?? null,
+                        'phone_number' => !empty($student['phone']) ? preg_replace('/[^0-9]/', '', $student['phone']) : null
+                    ];
+                }
+            }
+
+            // Configurar parcelamento se aplicável
+            if ($installments > 1) {
+                $payload['payment'] = [
+                    'credit_card' => [
+                        'installments' => $installments,
+                        'billing_address' => [
+                            'street' => $student['street'] ?? 'Não informado',
+                            'number' => $student['number'] ?? 'S/N',
+                            'neighborhood' => $student['neighborhood'] ?? '',
+                            'zipcode' => preg_replace('/[^0-9]/', '', $student['cep'] ?? ''),
+                            'city' => $student['city'] ?? '',
+                            'state' => $student['state_uf'] ?? ''
+                        ]
+                    ]
+                ];
             } else {
+                // Pagamento à vista (Boleto)
                 $payload['payment'] = ['banking_billet' => []];
             }
         }
 
         // Criar cobrança na API Efí
-        $response = $this->makeRequest('POST', '/charges', $payload, $token);
-        
-        if (!$response || !isset($response['data'])) {
-            // Capturar mensagem de erro mais detalhada
-            $errorMessage = $response['error_description'] ?? $response['message'] ?? $response['error'] ?? 'Erro desconhecido ao criar cobrança';
-            
-            // Se houver detalhes adicionais, incluir
-            if (isset($response['error_detail'])) {
-                $errorMessage .= ' - ' . $response['error_detail'];
+        // Se for PIX, usar API Pix (/v2/cob), senão usar API de Cobranças (/v1/charges)
+        if ($isPix) {
+            // API Pix: converter payload para formato Pix e usar endpoint /v2/cob
+            // A API Pix tem estrutura diferente da API de Cobranças
+            // Validar chave PIX (obrigatória para API Pix)
+            $pixKey = $_ENV['EFI_PIX_KEY'] ?? null;
+            if (empty($pixKey)) {
+                error_log("EFI CreateCharge Pix Error: EFI_PIX_KEY não configurada no .env");
+                $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
+                return [
+                    'ok' => false,
+                    'message' => 'Chave PIX não configurada. Configure EFI_PIX_KEY no arquivo .env'
+                ];
             }
             
-            // Log detalhado para debug
-            error_log("EFI CreateCharge Error: " . json_encode($response, JSON_UNESCAPED_UNICODE));
-            
-            // Atualizar status de erro no banco
-            $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
-            
-            return [
-                'ok' => false,
-                'message' => $errorMessage
+            $pixPayload = [
+                'calendario' => [
+                    'expiracao' => 3600 // 1 hora em segundos
+                ],
+                'valor' => [
+                    'original' => number_format($outstandingAmount, 2, '.', '')
+                ],
+                'chave' => $pixKey, // Chave Pix (obrigatória)
+                'solicitacaoPagador' => $enrollment['service_name'] ?? 'Matrícula',
+                'infoAdicionais' => [
+                    [
+                        'nome' => 'enrollment_id',
+                        'valor' => (string)$enrollment['id']
+                    ],
+                    [
+                        'nome' => 'cfc_id',
+                        'valor' => (string)($enrollment['cfc_id'] ?? 1)
+                    ],
+                    [
+                        'nome' => 'student_id',
+                        'valor' => (string)$enrollment['student_id']
+                    ]
+                ]
             ];
-        }
-
-        $chargeData = $response['data'];
-        $chargeId = $chargeData['charge_id'] ?? null;
-        $status = $chargeData['status'] ?? 'unknown';
-        $paymentUrl = null;
-
-        // Extrair URL de pagamento se disponível
-        if (isset($chargeData['payment'])) {
-            if (isset($chargeData['payment']['pix']['qr_code'])) {
-                $paymentUrl = $chargeData['payment']['pix']['qr_code'];
-            } elseif (isset($chargeData['payment']['banking_billet']['link'])) {
-                $paymentUrl = $chargeData['payment']['banking_billet']['link'];
+            
+            // Adicionar dados do pagador se disponível
+            if (!empty($student['cpf'])) {
+                $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
+                if (strlen($cpf) === 11) {
+                    $pixPayload['devedor'] = [
+                        'cpf' => $cpf,
+                        'nome' => $student['full_name'] ?? $student['name'] ?? 'Cliente'
+                    ];
+                }
+            }
+            
+            $response = $this->makeRequest('POST', '/v2/cob', $pixPayload, $token, true);
+            
+            // API Pix retorna dados diretamente (não dentro de 'data')
+            if (!$response || isset($response['error']) || isset($response['mensagem'])) {
+                $errorMessage = $response['mensagem'] ?? $response['error_description'] ?? $response['message'] ?? $response['error'] ?? 'Erro desconhecido ao criar cobrança Pix';
+                
+                error_log("EFI CreateCharge Pix Error: " . json_encode($response, JSON_UNESCAPED_UNICODE));
+                
+                $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
+                
+                return [
+                    'ok' => false,
+                    'message' => $errorMessage
+                ];
+            }
+            
+            // Processar resposta da API Pix
+            $chargeId = $response['txid'] ?? null;
+            $status = 'waiting'; // Pix geralmente inicia como 'waiting'
+            $paymentUrl = $response['pixCopiaECola'] ?? $response['qrCode'] ?? null;
+            
+        } else {
+            // API de Cobranças: usar formato original
+            $response = $this->makeRequest('POST', '/charges', $payload, $token, false);
+            
+            if (!$response || !isset($response['data'])) {
+                // Capturar mensagem de erro mais detalhada
+                $errorMessage = $response['error_description'] ?? $response['message'] ?? $response['error'] ?? 'Erro desconhecido ao criar cobrança';
+                
+                // Se houver detalhes adicionais, incluir
+                if (isset($response['error_detail'])) {
+                    $errorMessage .= ' - ' . $response['error_detail'];
+                }
+                
+                // Log detalhado para debug
+                error_log("EFI CreateCharge Error: " . json_encode($response, JSON_UNESCAPED_UNICODE));
+                
+                // Atualizar status de erro no banco
+                $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
+                
+                return [
+                    'ok' => false,
+                    'message' => $errorMessage
+                ];
+            }
+            
+            // Processar resposta da API de Cobranças
+            $chargeData = $response['data'];
+            $chargeId = $chargeData['charge_id'] ?? null;
+            $status = $chargeData['status'] ?? 'unknown';
+            $paymentUrl = null;
+            
+            // Extrair URL de pagamento se disponível
+            if (isset($chargeData['payment'])) {
+                if (isset($chargeData['payment']['pix']['qr_code'])) {
+                    $paymentUrl = $chargeData['payment']['pix']['qr_code'];
+                } elseif (isset($chargeData['payment']['banking_billet']['link'])) {
+                    $paymentUrl = $chargeData['payment']['banking_billet']['link'];
+                }
             }
         }
 
@@ -336,28 +434,52 @@ class EfiPaymentService
      * @param string $chargeId ID da cobrança
      * @return array|null Dados da cobrança ou null em caso de erro
      */
-    public function getChargeStatus($chargeId)
+    /**
+     * Consulta status de uma cobrança na Efí
+     * 
+     * @param string $chargeId ID da cobrança
+     * @param bool $isPix Se true, consulta na API Pix, senão na API de Cobranças
+     * @return array|null Dados da cobrança ou null em caso de erro
+     */
+    public function getChargeStatus($chargeId, $isPix = false)
     {
-        $token = $this->getAccessToken();
+        $token = $this->getAccessToken($isPix);
         if (!$token) {
             return null;
         }
 
-        $response = $this->makeRequest('GET', "/charges/{$chargeId}", null, $token);
+        // API Pix usa /v2/cob/{txid}, API de Cobranças usa /charges/{charge_id}
+        $endpoint = $isPix ? "/v2/cob/{$chargeId}" : "/charges/{$chargeId}";
+        $response = $this->makeRequest('GET', $endpoint, null, $token, $isPix);
         
-        if (!$response || !isset($response['data'])) {
+        if (!$response) {
             return null;
         }
-
-        return $response['data'];
+        
+        // API Pix retorna dados diretamente, API de Cobranças retorna dentro de 'data'
+        if ($isPix) {
+            // API Pix: verificar se há erro
+            if (isset($response['error']) || isset($response['mensagem'])) {
+                return null;
+            }
+            // Retornar dados diretamente
+            return $response;
+        } else {
+            // API de Cobranças: dados vêm dentro de 'data'
+            if (!isset($response['data'])) {
+                return null;
+            }
+            return $response['data'];
+        }
     }
 
     /**
      * Obtém token de autenticação OAuth da Efí
      * 
-     * @return array|null {token: string, error?: string, http_code?: int} ou null em caso de erro crítico
+     * @param bool $forPix Se true, usa OAuth da API Pix, senão usa OAuth de Cobranças
+     * @return string|null Token de acesso ou null em caso de erro
      */
-    private function getAccessToken()
+    private function getAccessToken($forPix = false)
     {
         // Validar credenciais antes de fazer requisição
         if (empty($this->clientId) || empty($this->clientSecret)) {
@@ -365,7 +487,9 @@ class EfiPaymentService
             return null;
         }
 
-        $url = $this->oauthUrl . '/oauth/token';
+        // Usar OAuth Pix se for requisição Pix, senão usar OAuth de Cobranças
+        $oauthUrl = $forPix ? $this->oauthUrlPix : $this->oauthUrlCharges;
+        $url = $oauthUrl . '/oauth/token';
         
         $payload = [
             'grant_type' => 'client_credentials'
@@ -520,10 +644,19 @@ class EfiPaymentService
 
     /**
      * Faz requisição HTTP para API Efí
+     * 
+     * @param string $method Método HTTP (GET, POST, PUT, DELETE)
+     * @param string $endpoint Endpoint da API (ex: /charges, /v2/cob)
+     * @param array|null $payload Dados para enviar (POST/PUT)
+     * @param string|null $token Token de autenticação Bearer
+     * @param bool $isPix Se true, usa baseUrlPix, senão usa baseUrlCharges
+     * @return array|null Resposta da API ou null em caso de erro
      */
-    private function makeRequest($method, $endpoint, $payload = null, $token = null)
+    private function makeRequest($method, $endpoint, $payload = null, $token = null, $isPix = false)
     {
-        $url = $this->baseUrl . $endpoint;
+        // Usar base URL Pix se for requisição Pix, senão usar base URL de Cobranças
+        $baseUrl = $isPix ? $this->baseUrlPix : $this->baseUrlCharges;
+        $url = $baseUrl . $endpoint;
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -715,8 +848,12 @@ class EfiPaymentService
             ];
         }
 
-        // Consultar status na EFI
-        $chargeData = $this->getChargeStatus($chargeId);
+        // Determinar se é PIX baseado no payment_method da matrícula
+        $paymentMethod = $enrollment['payment_method'] ?? null;
+        $isPix = ($paymentMethod === 'pix');
+
+        // Consultar status na EFI (usar API Pix se for PIX)
+        $chargeData = $this->getChargeStatus($chargeId, $isPix);
         if (!$chargeData) {
             return [
                 'ok' => false,
@@ -724,15 +861,38 @@ class EfiPaymentService
             ];
         }
 
-        $status = $chargeData['status'] ?? 'unknown';
+        $status = 'unknown';
         $paymentUrl = null;
 
-        // Extrair URL de pagamento se disponível
-        if (isset($chargeData['payment'])) {
-            if (isset($chargeData['payment']['pix']['qr_code'])) {
-                $paymentUrl = $chargeData['payment']['pix']['qr_code'];
-            } elseif (isset($chargeData['payment']['banking_billet']['link'])) {
-                $paymentUrl = $chargeData['payment']['banking_billet']['link'];
+        // Processar resposta conforme o tipo de API
+        if ($isPix) {
+            // API Pix: dados vêm diretamente (não dentro de 'data')
+            $status = $chargeData['status'] ?? 'ATIVA'; // API Pix usa 'ATIVA', 'CONCLUIDA', etc.
+            // Mapear status Pix para formato padrão
+            if ($status === 'CONCLUIDA') {
+                $status = 'paid';
+            } elseif ($status === 'ATIVA') {
+                $status = 'waiting';
+            }
+            
+            // Extrair QR Code da API Pix
+            $paymentUrl = $chargeData['pixCopiaECola'] ?? $chargeData['qrCode'] ?? null;
+            
+            // Se não tiver QR Code direto, pode estar em location
+            if (empty($paymentUrl) && isset($chargeData['location'])) {
+                // TODO: Consultar location se necessário
+            }
+        } else {
+            // API de Cobranças: dados vêm dentro de 'data'
+            $status = $chargeData['status'] ?? 'unknown';
+            
+            // Extrair URL de pagamento se disponível
+            if (isset($chargeData['payment'])) {
+                if (isset($chargeData['payment']['pix']['qr_code'])) {
+                    $paymentUrl = $chargeData['payment']['pix']['qr_code'];
+                } elseif (isset($chargeData['payment']['banking_billet']['link'])) {
+                    $paymentUrl = $chargeData['payment']['banking_billet']['link'];
+                }
             }
         }
 
