@@ -309,15 +309,24 @@ class EfiPaymentService
             $paymentUrl = $responseData['pixCopiaECola'] ?? $responseData['qrCode'] ?? null;
             
         } else {
-            // API de Cobranças: usar formato original
+            // API de Cobranças: usar endpoint one-step (cria e define pagamento em uma única chamada)
             // makeRequest já adiciona /v1/ automaticamente para Cobranças
-            $response = $this->makeRequest('POST', '/charges', $payload, $token, false);
+            // Endpoint correto: POST /v1/charge/one-step
+            $response = $this->makeRequest('POST', '/charge/one-step', $payload, $token, false);
             
             // makeRequest agora sempre retorna array com http_code
             $httpCode = $response['http_code'] ?? 0;
             $responseData = $response['response'] ?? $response;
             
-            if ($httpCode >= 400 || !$responseData || !isset($responseData['data'])) {
+            // Log detalhado para debug
+            $this->efiLog('DEBUG', 'createCharge Cobranças response', [
+                'enrollment_id' => $enrollment['id'],
+                'http_code' => $httpCode,
+                'has_data' => isset($responseData['data']),
+                'response_keys' => is_array($responseData) ? array_keys($responseData) : []
+            ]);
+            
+            if ($httpCode >= 400 || !$responseData) {
                 // Capturar mensagem de erro mais detalhada
                 $errorMessage = $responseData['error_description'] ?? $responseData['message'] ?? $responseData['error'] ?? 'Erro desconhecido ao criar cobrança';
                 
@@ -344,19 +353,34 @@ class EfiPaymentService
             }
             
             // Processar resposta da API de Cobranças
-            $chargeData = $responseData['data'];
-            $chargeId = $chargeData['charge_id'] ?? null;
+            // A resposta pode vir diretamente ou dentro de 'data'
+            $chargeData = $responseData['data'] ?? $responseData;
+            $chargeId = $chargeData['charge_id'] ?? $chargeData['id'] ?? null;
             $status = $chargeData['status'] ?? 'unknown';
             $paymentUrl = null;
             
             // Extrair URL de pagamento se disponível
             if (isset($chargeData['payment'])) {
+                // Boleto
+                if (isset($chargeData['payment']['banking_billet']['link'])) {
+                    $paymentUrl = $chargeData['payment']['banking_billet']['link'];
+                } elseif (isset($chargeData['payment']['banking_billet']['barcode'])) {
+                    // Se não tiver link, pode ter código de barras
+                    $paymentUrl = $chargeData['payment']['banking_billet']['barcode'];
+                }
+                // Pix (se houver)
                 if (isset($chargeData['payment']['pix']['qr_code'])) {
                     $paymentUrl = $chargeData['payment']['pix']['qr_code'];
-                } elseif (isset($chargeData['payment']['banking_billet']['link'])) {
-                    $paymentUrl = $chargeData['payment']['banking_billet']['link'];
                 }
             }
+            
+            // Log de sucesso
+            $this->efiLog('INFO', 'createCharge Cobranças sucesso', [
+                'enrollment_id' => $enrollment['id'],
+                'charge_id' => $chargeId,
+                'status' => $status,
+                'has_payment_url' => !empty($paymentUrl)
+            ]);
         }
 
         // Atualizar matrícula com dados da cobrança (incluindo payment_url)
