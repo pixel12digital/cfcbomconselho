@@ -544,19 +544,60 @@ class EfiPaymentService
     {
         $token = $this->getAccessToken($isPix);
         if (!$token) {
+            $this->efiLog('ERROR', 'getChargeStatus: Token não obtido', [
+                'charge_id' => $chargeId,
+                'isPix' => $isPix
+            ]);
             return null;
         }
 
-        // API Pix usa /v2/cob/{txid}, API de Cobranças usa /v1/charges/{charge_id}
+        // API Pix usa /v2/cob/{txid}, API de Cobranças usa /v1/charge/{charge_id} (singular, não plural)
         // makeRequest já adiciona /v1/ automaticamente para Cobranças
-        $endpoint = $isPix ? "/v2/cob/{$chargeId}" : "/charges/{$chargeId}";
+        $endpoint = $isPix ? "/v2/cob/{$chargeId}" : "/charge/{$chargeId}";
         $response = $this->makeRequest('GET', $endpoint, null, $token, $isPix);
         
         // makeRequest agora sempre retorna array com http_code
         $httpCode = $response['http_code'] ?? 0;
         $responseData = $response['response'] ?? $response;
+        $rawResponse = $response['raw_response'] ?? '';
+        $curlError = $response['curl_error'] ?? null;
+        
+        // Log detalhado para debug
+        $this->efiLog('DEBUG', 'getChargeStatus response', [
+            'charge_id' => $chargeId,
+            'isPix' => $isPix,
+            'http_code' => $httpCode,
+            'has_response_data' => !empty($responseData),
+            'has_data_key' => isset($responseData['data']),
+            'response_keys' => is_array($responseData) ? array_keys($responseData) : [],
+            'curl_error' => $curlError
+        ]);
+        
+        if ($curlError) {
+            $this->efiLog('ERROR', 'getChargeStatus: Erro cURL', [
+                'charge_id' => $chargeId,
+                'isPix' => $isPix,
+                'curl_error' => $curlError
+            ]);
+            return null;
+        }
         
         if ($httpCode >= 400 || !$responseData) {
+            $errorMessage = 'Erro desconhecido';
+            if (is_array($responseData)) {
+                $errorMessage = $responseData['error_description'] ?? $responseData['message'] ?? $responseData['error'] ?? 'Erro desconhecido';
+                if (is_array($errorMessage) || is_object($errorMessage)) {
+                    $errorMessage = json_encode($errorMessage, JSON_UNESCAPED_UNICODE);
+                }
+            }
+            
+            $this->efiLog('ERROR', 'getChargeStatus: Falha na consulta', [
+                'charge_id' => $chargeId,
+                'isPix' => $isPix,
+                'http_code' => $httpCode,
+                'error' => substr((string)$errorMessage, 0, 180),
+                'response_snippet' => substr($rawResponse, 0, 200)
+            ]);
             return null;
         }
         
@@ -564,6 +605,10 @@ class EfiPaymentService
         if ($isPix) {
             // API Pix: verificar se há erro
             if (isset($responseData['error']) || isset($responseData['mensagem'])) {
+                $this->efiLog('ERROR', 'getChargeStatus: API Pix retornou erro', [
+                    'charge_id' => $chargeId,
+                    'error' => $responseData['error'] ?? $responseData['mensagem'] ?? 'Erro desconhecido'
+                ]);
                 return null;
             }
             // Retornar dados diretamente
@@ -571,6 +616,21 @@ class EfiPaymentService
         } else {
             // API de Cobranças: dados vêm dentro de 'data'
             if (!isset($responseData['data'])) {
+                // Verificar se a resposta está em formato diferente
+                // Algumas APIs podem retornar dados diretamente se houver apenas um item
+                if (is_array($responseData) && isset($responseData['charge_id'])) {
+                    // Dados estão diretamente na resposta (não em 'data')
+                    $this->efiLog('INFO', 'getChargeStatus: Dados retornados diretamente (sem data)', [
+                        'charge_id' => $chargeId
+                    ]);
+                    return $responseData;
+                }
+                
+                $this->efiLog('ERROR', 'getChargeStatus: Resposta sem campo data', [
+                    'charge_id' => $chargeId,
+                    'response_keys' => is_array($responseData) ? array_keys($responseData) : [],
+                    'response_snippet' => substr(json_encode($responseData, JSON_UNESCAPED_UNICODE), 0, 300)
+                ]);
                 return null;
             }
             return $responseData['data'];
