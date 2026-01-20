@@ -9,6 +9,7 @@
  * https://painel.cfcbomconselho.com.br/tools/test_efi_split_tokens.php
  */
 
+require_once __DIR__ . '/../../app/Config/Database.php';
 require_once __DIR__ . '/../../app/Config/Env.php';
 require_once __DIR__ . '/../../app/Services/EfiPaymentService.php';
 
