@@ -221,6 +221,32 @@ try {
     
     echo "\n";
     
+    // Mostrar últimas linhas do log EFI
+    echo "==========================================\n";
+    echo "ÚLTIMAS LINHAS DO LOG EFI:\n";
+    echo "==========================================\n";
+    
+    $logFile = __DIR__ . '/../../storage/logs/php_errors.log';
+    if (file_exists($logFile)) {
+        $lines = file($logFile, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        $efiLines = array_filter($lines, function($line) {
+            return stripos($line, 'EFI-') !== false;
+        });
+        $efiLines = array_slice($efiLines, -30);
+        
+        if (!empty($efiLines)) {
+            foreach ($efiLines as $line) {
+                echo $line . "\n";
+            }
+        } else {
+            echo "Nenhuma linha EFI encontrada no log.\n";
+        }
+    } else {
+        echo "Arquivo de log não encontrado: {$logFile}\n";
+    }
+    
+    echo "\n";
+    
 } catch (Error $e) {
     echo "❌ ERRO FATAL: " . $e->getMessage() . "\n";
     echo "Arquivo: " . $e->getFile() . ":" . $e->getLine() . "\n";

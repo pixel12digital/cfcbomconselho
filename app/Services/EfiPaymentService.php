@@ -504,57 +504,73 @@ class EfiPaymentService
     }
 
     /**
+     * Verifica se debug está habilitado
+     * 
+     * @return bool True se EFI_DEBUG está habilitado
+     */
+    private function efiDebugEnabled(): bool
+    {
+        $raw = $_ENV['EFI_DEBUG'] ?? getenv('EFI_DEBUG') ?? 'false';
+        return in_array(strtolower(trim((string)$raw)), ['1', 'true', 'yes', 'on'], true);
+    }
+
+    /**
      * Helper para log padronizado da integração EFI
+     * Grava diretamente no arquivo storage/logs/php_errors.log
      * 
      * @param string $level Nível do log: DEBUG, INFO, WARN, ERROR
-     * @param string $msg Mensagem do log
-     * @param array $ctx Contexto adicional (host, url, endpoint, isPix, http_code, etc.)
+     * @param string $message Mensagem do log
+     * @param array $context Contexto adicional (host, url, endpoint, isPix, http_code, etc.)
      * @return void
      */
-    private function efiLog($level, $msg, array $ctx = [])
+    private function efiLog(string $level, string $message, array $context = []): void
     {
-        $debugEnabled = ($_ENV['EFI_DEBUG'] ?? 'false') === 'true';
-        
-        // Se não estiver em debug, logar apenas WARN e ERROR
-        if (!$debugEnabled && !in_array($level, ['WARN', 'ERROR'])) {
+        // DEBUG só grava se debug estiver habilitado
+        if ($level === 'DEBUG' && !$this->efiDebugEnabled()) {
             return;
         }
         
-        $tag = "[EFI-{$level}]";
-        $logMsg = "{$tag} {$msg}";
+        // INFO, WARN, ERROR sempre gravam
+        $level = strtoupper($level);
+        if (!in_array($level, ['DEBUG', 'INFO', 'WARN', 'ERROR'], true)) {
+            $level = 'INFO';
+        }
         
-        // Adicionar contexto se fornecido
-        if (!empty($ctx)) {
-            // Sanitizar contexto: nunca incluir tokens completos, client_secret, pix_key
-            $safeCtx = [];
-            foreach ($ctx as $key => $value) {
-                if (in_array($key, ['token', 'client_secret', 'pix_key', 'access_token'])) {
-                    // Nunca logar valores completos de tokens/secrets
-                    if (is_string($value) && strlen($value) > 0) {
-                        $safeCtx[$key . '_len'] = strlen($value);
-                        $safeCtx[$key . '_prefix'] = substr($value, 0, 10);
-                    }
-                } elseif (in_array($key, ['header', 'auth_header', 'authorization'])) {
-                    // Para headers, logar apenas tamanho
-                    if (is_string($value)) {
-                        $safeCtx[$key . '_len'] = strlen($value);
-                    }
-                } else {
-                    // Outros valores podem ser logados (mas limitar tamanho de strings)
-                    if (is_string($value) && strlen($value) > 200) {
-                        $safeCtx[$key] = substr($value, 0, 200) . '...';
+        // Sanitizar contexto: nunca incluir tokens completos, client_secret, pix_key
+        $safeContext = [];
+        foreach ($context as $key => $value) {
+            // Mascarar dados sensíveis
+            if (in_array($key, ['token', 'client_secret', 'pix_key', 'access_token', 'authorization', 'auth_header', 'header'])) {
+                if (is_string($value) && strlen($value) > 0) {
+                    if ($key === 'token' || $key === 'access_token') {
+                        $safeContext['token_len'] = strlen($value);
+                        $safeContext['token_prefix'] = substr($value, 0, 10);
+                    } elseif ($key === 'authorization' || $key === 'auth_header' || $key === 'header') {
+                        $safeContext[$key . '_len'] = strlen($value);
                     } else {
-                        $safeCtx[$key] = $value;
+                        // client_secret, pix_key: não logar nada
+                        continue;
                     }
                 }
-            }
-            
-            if (!empty($safeCtx)) {
-                $logMsg .= " | " . json_encode($safeCtx, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            } else {
+                // Outros valores podem ser logados (mas limitar tamanho de strings)
+                if (is_string($value) && strlen($value) > 200) {
+                    $safeContext[$key] = substr($value, 0, 200) . '...';
+                } else {
+                    $safeContext[$key] = $value;
+                }
             }
         }
         
-        error_log($logMsg);
+        // Montar linha de log
+        $timestamp = date('Y-m-d H:i:s');
+        $timezone = date_default_timezone_get();
+        $contextJson = !empty($safeContext) ? ' ' . json_encode($safeContext, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) : '';
+        $line = "[{$timestamp} {$timezone}] EFI-{$level}: {$message}{$contextJson}";
+        
+        // Gravar diretamente no arquivo
+        $logFile = __DIR__ . '/../../storage/logs/php_errors.log';
+        @file_put_contents($logFile, $line . PHP_EOL, FILE_APPEND | LOCK_EX);
     }
 
     /**
@@ -933,11 +949,15 @@ class EfiPaymentService
         }
 
         // Log dos headers (apenas tamanho, nunca conteúdo completo)
-        $this->efiLog('DEBUG', 'makeRequest headers preparados', [
-            'isPix' => $isPix,
-            'headers_count' => count($headers),
-            'header' => implode('; ', $headers) // será sanitizado pelo efiLog
-        ]);
+        if ($token) {
+            $this->efiLog('DEBUG', 'makeRequest headers', [
+                'isPix' => $isPix,
+                'auth_header_len' => strlen($authHeader ?? ''),
+                'token' => $token, // será sanitizado pelo efiLog
+                'token_len' => strlen($token),
+                'token_prefix' => substr($token, 0, 10)
+            ]);
+        }
         
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
