@@ -182,16 +182,18 @@ class EfiPaymentService
                         'value' => $amountInCents,
                         'amount' => 1
                     ]
-                ],
-                'metadata' => [
-                    'enrollment_id' => $enrollment['id'],
-                    'cfc_id' => $enrollment['cfc_id'] ?? 1,
-                    'student_id' => $enrollment['student_id']
                 ]
             ];
+            
+            // NOTA: A API de Cobranças EFI não aceita metadata no formato padrão
+            // Se precisar rastrear enrollment_id, usar no campo de observações do boleto ou em outro lugar
 
-            // Configurar parcelamento se aplicável
-            if ($installments > 1) {
+            // Configurar método de pagamento
+            // Se payment_method for 'cartao' E installments > 1 → Cartão parcelado
+            // Caso contrário → Boleto (pagamento à vista)
+            $isCreditCard = ($paymentMethod === 'cartao' || $paymentMethod === 'credit_card') && $installments > 1;
+            
+            if ($isCreditCard) {
                 // Cartão de crédito (parcelado): customer vai no root do payload
                 if (!empty($student['cpf'])) {
                     $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
@@ -369,9 +371,18 @@ class EfiPaymentService
                 // Capturar mensagem de erro mais detalhada
                 $errorMessage = $responseData['error_description'] ?? $responseData['message'] ?? $responseData['error'] ?? 'Erro desconhecido ao criar cobrança';
                 
+                // Garantir que errorMessage seja string
+                if (is_array($errorMessage) || is_object($errorMessage)) {
+                    $errorMessage = json_encode($errorMessage, JSON_UNESCAPED_UNICODE);
+                }
+                $errorMessage = (string)$errorMessage;
+                
                 // Se houver detalhes adicionais, incluir
                 if (isset($responseData['error_detail'])) {
-                    $errorMessage .= ' - ' . $responseData['error_detail'];
+                    $errorDetail = is_array($responseData['error_detail']) || is_object($responseData['error_detail'])
+                        ? json_encode($responseData['error_detail'], JSON_UNESCAPED_UNICODE)
+                        : (string)$responseData['error_detail'];
+                    $errorMessage .= ' - ' . $errorDetail;
                 }
                 
                 // Log detalhado para debug
