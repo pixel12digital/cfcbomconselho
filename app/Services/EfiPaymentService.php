@@ -502,14 +502,17 @@ class EfiPaymentService
         }
 
         // OAuth Pix e OAuth Cobranças usam formatos diferentes
+        // GARANTIR SEGREGAÇÃO ABSOLUTA: nunca misturar OAuth Pix com Cobranças
         if ($forPix) {
             // OAuth Pix: usa /oauth/token com form-urlencoded
+            // SEMPRE usar oauthUrlPix (nunca oauthUrlCharges)
             $url = $this->oauthUrlPix . '/oauth/token';
             $payload = ['grant_type' => 'client_credentials'];
             $contentType = 'application/x-www-form-urlencoded';
             $postData = http_build_query($payload);
         } else {
             // OAuth Cobranças: usa /v1/authorize com JSON
+            // SEMPRE usar oauthUrlCharges (nunca oauthUrlPix)
             // oauthUrlCharges já inclui /v1/authorize (não adicionar /oauth/token)
             $url = $this->oauthUrlCharges;
             $payload = ['grant_type' => 'client_credentials'];
@@ -517,9 +520,9 @@ class EfiPaymentService
             $postData = json_encode($payload);
         }
         
-        // Log de debug
+        // Log de debug detalhado
         if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
-            error_log("[EFI-DEBUG] getAccessToken: forPix={$forPix}, tokenUrl={$url}, contentType={$contentType}");
+            error_log("[EFI-DEBUG] getAccessToken: forPix=" . ($forPix ? 'true' : 'false') . ", tokenUrl={$url}, contentType={$contentType}");
         }
 
         $ch = curl_init($url);
@@ -673,7 +676,8 @@ class EfiPaymentService
             $tokenPrefix = substr($accessToken, 0, 10);
             $isJwt = (substr($accessToken, 0, 3) === 'eyJ');
             $scope = $data['scope'] ?? 'N/A';
-            error_log("[EFI-DEBUG] getAccessToken: forPix={$forPix}, http_code={$httpCode}, token_length=" . strlen($accessToken) . ", token_prefix={$tokenPrefix}, is_jwt=" . ($isJwt ? 'true' : 'false') . ", scope={$scope}");
+            error_log("[EFI-DEBUG] getAccessToken SUCCESS: forPix=" . ($forPix ? 'true' : 'false') . ", http_code={$httpCode}, tokenUrl={$url}");
+            error_log("[EFI-DEBUG] getAccessToken TOKEN: token_length=" . strlen($accessToken) . ", token_prefix={$tokenPrefix}, is_jwt=" . ($isJwt ? 'true' : 'false') . ", scope={$scope}");
         }
         
         return $accessToken;
@@ -814,9 +818,7 @@ class EfiPaymentService
 
         // Log detalhado dos headers sendo enviados (apenas em debug)
         if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
-            error_log("[EFI-DEBUG] makeRequest: Enviando requisição para {$url}");
-            error_log("[EFI-DEBUG] makeRequest: Headers sendo enviados: " . json_encode($headers, JSON_UNESCAPED_UNICODE));
-            error_log("[EFI-DEBUG] makeRequest: Método: {$method}, Endpoint: {$endpoint}, isPix: " . ($isPix ? 'true' : 'false'));
+            error_log("[EFI-DEBUG] makeRequest HEADERS: " . json_encode($headers, JSON_UNESCAPED_UNICODE));
         }
         
         $response = curl_exec($ch);
@@ -842,6 +844,35 @@ class EfiPaymentService
         $data = json_decode($response, true);
         $result['response'] = $data !== null ? $data : ['raw' => $response];
 
+        // Log de debug detalhado para erros
+        if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
+            if ($httpCode >= 400) {
+                $errorType = 'unknown';
+                if ($httpCode === 401 || $httpCode === 403) {
+                    $errorType = 'authentication';
+                } elseif ($httpCode === 400) {
+                    $errorDesc = $data['error_description'] ?? $data['message'] ?? '';
+                    if (strpos($errorDesc, 'validation_error') !== false || strpos($errorDesc, 'obrigatória') !== false) {
+                        $errorType = 'validation';
+                    } else {
+                        $errorType = 'request';
+                    }
+                }
+                
+                error_log("[EFI-DEBUG] makeRequest ERROR: isPix=" . ($isPix ? 'true' : 'false') . ", http_code={$httpCode}, error_type={$errorType}, url={$url}");
+                error_log("[EFI-DEBUG] makeRequest ERROR DETAIL: " . substr(json_encode($data, JSON_UNESCAPED_UNICODE), 0, 300));
+                
+                // Log específico para erro AWS (token errado/host errado)
+                if (isset($data['message']) && strpos($data['message'], 'Invalid key=value pair') !== false) {
+                    error_log("[EFI-DEBUG] ERRO AWS DETECTADO: Invalid key=value pair - token pode estar sendo usado no host errado");
+                    error_log("[EFI-DEBUG] URL usada: {$url} - Verifique se está usando o host correto");
+                    error_log("[EFI-DEBUG] isPix={$isPix} - Verifique se o token foi obtido do OAuth correto");
+                }
+            } else {
+                error_log("[EFI-DEBUG] makeRequest SUCCESS: isPix=" . ($isPix ? 'true' : 'false') . ", http_code={$httpCode}, url={$url}");
+            }
+        }
+        
         if ($httpCode >= 400) {
             $errorDetails = [
                 'http_code' => $httpCode,
@@ -852,17 +883,6 @@ class EfiPaymentService
                 'method' => $method,
                 'endpoint' => $endpoint
             ];
-            
-            // Log detalhado em caso de erro 403 (problema de autenticação)
-            if ($httpCode === 403) {
-                error_log("[EFI-DEBUG] HTTP 403 - Detalhes completos: " . json_encode($errorDetails, JSON_UNESCAPED_UNICODE));
-                if (isset($data['message']) && strpos($data['message'], 'Invalid key=value pair') !== false) {
-                    error_log("[EFI-DEBUG] ERRO ESPECÍFICO: Invalid key=value pair detectado");
-                    error_log("[EFI-DEBUG] Isso geralmente indica que a API está interpretando o header Authorization como AWS SigV4");
-                    error_log("[EFI-DEBUG] Verifique se o header está no formato correto: 'Authorization: Bearer {token}'");
-                    error_log("[EFI-DEBUG] URL usada: {$url} - Verifique se está usando o host correto (cobrancas.api.efipay.com.br para Cobranças)");
-                }
-            }
             
             error_log("EFI API Error: HTTP {$httpCode} - " . json_encode($errorDetails, JSON_UNESCAPED_UNICODE));
         }

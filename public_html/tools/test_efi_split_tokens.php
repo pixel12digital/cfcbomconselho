@@ -63,8 +63,10 @@ try {
     $baseUrlPixValue = $baseUrlPix->getValue($service);
     
     echo "1. URLs Configuradas:\n";
-    echo "   OAuth Cobranças: {$oauthUrlChargesValue}/oauth/token\n";
+    // oauthUrlCharges já inclui /v1/authorize (não adicionar /oauth/token)
+    echo "   OAuth Cobranças: {$oauthUrlChargesValue}\n";
     echo "   Base Cobranças:  {$baseUrlChargesValue}\n";
+    // oauthUrlPix não inclui /oauth/token, então mostrar separado
     echo "   OAuth Pix:       {$oauthUrlPixValue}/oauth/token\n";
     echo "   Base Pix:        {$baseUrlPixValue}\n\n";
     
@@ -83,11 +85,7 @@ try {
         echo "   ✅ Token obtido\n";
         echo "   Length: {$tokenChargesLen} caracteres\n";
         echo "   Prefix: {$tokenChargesPrefix}\n";
-        echo "   É JWT (eyJ): " . ($isJwtCharges ? 'SIM ⚠️' : 'NÃO ✅') . "\n";
-        
-        if ($isJwtCharges) {
-            echo "   ⚠️ AVISO: Token de Cobranças é JWT (típico de Pix)!\n";
-        }
+        echo "   Formato: " . ($isJwtCharges ? 'JWT' : 'Outro') . " (ambos podem ser JWT)\n";
     } else {
         echo "   ❌ Token NÃO obtido\n";
         exit(1);
@@ -104,7 +102,7 @@ try {
         echo "   ✅ Token obtido\n";
         echo "   Length: {$tokenPixLen} caracteres\n";
         echo "   Prefix: {$tokenPixPrefix}\n";
-        echo "   É JWT (eyJ): " . ($isJwtPix ? 'SIM ✅' : 'NÃO ⚠️') . "\n";
+        echo "   Formato: " . ($isJwtPix ? 'JWT' : 'Outro') . "\n";
     } else {
         echo "   ❌ Token NÃO obtido\n";
         exit(1);
@@ -126,17 +124,36 @@ try {
     
     echo "   HTTP Code: {$httpCodeCharges}\n";
     
+    // Interpretar corretamente: 401/403 = erro de autenticação, 400 validation_error = auth OK
     if ($httpCodeCharges === 200 || $httpCodeCharges === 201) {
         echo "   ✅ Requisição bem-sucedida\n";
-    } elseif ($httpCodeCharges === 403) {
-        echo "   ❌ HTTP 403 - Acesso negado\n";
-        $errorMsg = $responseCharges['message'] ?? $responseCharges['error'] ?? 'Erro desconhecido';
+        $chargesAuthOk = true;
+    } elseif ($httpCodeCharges === 401 || $httpCodeCharges === 403) {
+        echo "   ❌ HTTP {$httpCodeCharges} - Erro de AUTENTICAÇÃO\n";
+        $errorMsg = $responseCharges['message'] ?? $responseCharges['error'] ?? $responseCharges['error_description'] ?? 'Erro desconhecido';
         echo "   Erro: " . substr($errorMsg, 0, 200) . "\n";
         if (strpos($errorMsg, 'Invalid key=value pair') !== false) {
-            echo "   ⚠️ Erro AWS detectado - verifique se está usando cobrancas.api.efipay.com.br\n";
+            echo "   ⚠️ Erro AWS detectado - token pode estar sendo usado no host errado\n";
+        }
+        $chargesAuthOk = false;
+    } elseif ($httpCodeCharges === 400) {
+        // HTTP 400 pode ser validação (auth OK) ou erro de request
+        $errorType = $responseCharges['error'] ?? '';
+        $errorDesc = $responseCharges['error_description'] ?? '';
+        
+        if (strpos($errorDesc, 'validation_error') !== false || strpos($errorDesc, 'charge_type') !== false || strpos($errorDesc, 'obrigatória') !== false) {
+            echo "   ✅ AUTH OK - Token válido, request chegou na API\n";
+            echo "   ⚠️ HTTP 400 - Erro de VALIDAÇÃO (endpoint exige parâmetros obrigatórios)\n";
+            echo "   Erro: " . substr($errorDesc, 0, 200) . "\n";
+            $chargesAuthOk = true;
+        } else {
+            echo "   ⚠️ HTTP 400 - Erro na requisição\n";
+            echo "   Erro: " . substr($errorDesc ?: json_encode($responseCharges, JSON_UNESCAPED_UNICODE), 0, 200) . "\n";
+            $chargesAuthOk = false;
         }
     } else {
         echo "   ⚠️ HTTP {$httpCodeCharges}\n";
+        $chargesAuthOk = false;
     }
     
     $responsePreview = json_encode($responseCharges, JSON_UNESCAPED_UNICODE);
@@ -174,24 +191,32 @@ try {
     echo "RESUMO:\n";
     echo "==========================================\n";
     
-    $chargesOk = !$isJwtCharges && (isset($httpCodeCharges) && ($httpCodeCharges === 200 || $httpCodeCharges === 201));
-    $pixOk = $isJwtPix && (isset($httpCodePix) && ($httpCodePix === 200 || $httpCodePix === 201));
+    // Critério correto: token obtido E não retornou 401/403 (erro de autenticação)
+    $chargesOk = $tokenCharges && (isset($chargesAuthOk) && $chargesAuthOk);
+    $pixOk = $tokenPix && (isset($httpCodePix) && ($httpCodePix === 200 || $httpCodePix === 201));
     
     echo "Token Cobranças: " . ($chargesOk ? "✅ OK" : "❌ PROBLEMA") . "\n";
+    if ($chargesOk && isset($httpCodeCharges) && $httpCodeCharges === 400) {
+        echo "   (Auth OK, mas endpoint exige parâmetros obrigatórios)\n";
+    }
+    
     echo "Token Pix:       " . ($pixOk ? "✅ OK" : "❌ PROBLEMA") . "\n";
     
     if (!$chargesOk) {
         echo "\n⚠️ PROBLEMA: Token de Cobranças não está funcionando corretamente.\n";
-        if ($isJwtCharges) {
-            echo "   - Token é JWT (típico de Pix), pode estar usando OAuth errado.\n";
-        }
-        if (isset($httpCodeCharges) && $httpCodeCharges === 403) {
-            echo "   - HTTP 403 indica que o token não é aceito pela API de Cobranças.\n";
+        if (!isset($httpCodeCharges) || $httpCodeCharges === 0) {
+            echo "   - Não foi possível fazer requisição.\n";
+        } elseif ($httpCodeCharges === 401 || $httpCodeCharges === 403) {
+            echo "   - HTTP {$httpCodeCharges} indica erro de AUTENTICAÇÃO.\n";
+            echo "   - Verifique se o token foi obtido do OAuth correto (cobrancas.api.efipay.com.br/v1/authorize).\n";
         }
     }
     
-    if (!$pixOk && isset($httpCodePix) && $httpCodePix === 403) {
-        echo "\n⚠️ PROBLEMA: Token Pix retornou HTTP 403.\n";
+    if (!$pixOk) {
+        echo "\n⚠️ PROBLEMA: Token Pix não está funcionando corretamente.\n";
+        if (isset($httpCodePix) && ($httpCodePix === 401 || $httpCodePix === 403)) {
+            echo "   - HTTP {$httpCodePix} indica erro de AUTENTICAÇÃO.\n";
+        }
     }
     
     echo "\n";
