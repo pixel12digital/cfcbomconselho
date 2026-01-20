@@ -24,100 +24,128 @@ class PaymentsController extends Controller
      */
     public function generate()
     {
-        header('Content-Type: application/json');
-
-        // Verificar autenticação
-        if (empty($_SESSION['user_id'])) {
-            http_response_code(401);
-            echo json_encode(['ok' => false, 'message' => 'Não autenticado']);
-            exit;
-        }
-
-        // Verificar permissão (admin ou secretaria)
-        $currentRole = $_SESSION['current_role'] ?? '';
-        if (!in_array($currentRole, [Constants::ROLE_ADMIN, Constants::ROLE_SECRETARIA])) {
-            http_response_code(403);
-            echo json_encode(['ok' => false, 'message' => 'Sem permissão']);
-            exit;
-        }
-
-        // Validar método
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            http_response_code(405);
-            echo json_encode(['ok' => false, 'message' => 'Method not allowed']);
-            exit;
-        }
-
-        // Obter enrollment_id
-        $input = json_decode(file_get_contents('php://input'), true);
-        $enrollmentId = $input['enrollment_id'] ?? $_POST['enrollment_id'] ?? null;
-
-        if (!$enrollmentId) {
-            http_response_code(400);
-            echo json_encode(['ok' => false, 'message' => 'enrollment_id é obrigatório']);
-            exit;
-        }
-
-        // Buscar matrícula com detalhes
-        $enrollment = $this->enrollmentModel->findWithDetails($enrollmentId);
-        if (!$enrollment) {
-            http_response_code(404);
-            echo json_encode(['ok' => false, 'message' => 'Matrícula não encontrada']);
-            exit;
-        }
-
-        // Verificar se matrícula pertence ao CFC do usuário
-        $cfcId = $_SESSION['cfc_id'] ?? Constants::CFC_ID_DEFAULT;
-        if ($enrollment['cfc_id'] != $cfcId) {
-            http_response_code(403);
-            echo json_encode(['ok' => false, 'message' => 'Acesso negado']);
-            exit;
-        }
-
-        // Validar saldo devedor antes de gerar
-        $outstandingAmount = floatval($enrollment['outstanding_amount'] ?? $enrollment['final_price'] ?? 0);
-        if ($outstandingAmount <= 0) {
-            http_response_code(400);
-            echo json_encode([
-                'ok' => false,
-                'message' => 'Não é possível gerar cobrança: saldo devedor deve ser maior que zero'
-            ]);
-            exit;
-        }
-
-        // Verificar idempotência: se já existe cobrança ativa, retornar dados existentes
-        if (!empty($enrollment['gateway_charge_id']) && 
-            $enrollment['billing_status'] === 'generated' &&
-            !in_array($enrollment['gateway_last_status'] ?? '', ['canceled', 'expired', 'error'])) {
-            
-            http_response_code(200);
-            echo json_encode([
-                'ok' => true,
-                'charge_id' => $enrollment['gateway_charge_id'],
-                'status' => $enrollment['gateway_last_status'],
-                'payment_url' => $enrollment['gateway_payment_url'] ?? null,
-                'message' => 'Cobrança já existe'
-            ]);
-            exit;
-        }
-
-        // Gerar cobrança
+        // Sempre retornar JSON, mesmo em erro
         try {
+            // Definir header JSON ANTES de qualquer saída
+            header('Content-Type: application/json; charset=utf-8');
+
+            // Verificar autenticação
+            if (empty($_SESSION['user_id'])) {
+                http_response_code(401);
+                echo json_encode(['ok' => false, 'message' => 'Não autenticado'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Verificar permissão (admin ou secretaria)
+            $currentRole = $_SESSION['current_role'] ?? '';
+            if (!in_array($currentRole, [Constants::ROLE_ADMIN, Constants::ROLE_SECRETARIA])) {
+                http_response_code(403);
+                echo json_encode(['ok' => false, 'message' => 'Sem permissão'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Validar método
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                http_response_code(405);
+                echo json_encode(['ok' => false, 'message' => 'Method not allowed'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Obter enrollment_id
+            $input = json_decode(file_get_contents('php://input'), true);
+            $enrollmentId = $input['enrollment_id'] ?? $_POST['enrollment_id'] ?? null;
+
+            if (!$enrollmentId) {
+                http_response_code(400);
+                echo json_encode(['ok' => false, 'message' => 'enrollment_id é obrigatório'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Buscar matrícula com detalhes
+            $enrollment = $this->enrollmentModel->findWithDetails($enrollmentId);
+            if (!$enrollment) {
+                http_response_code(404);
+                echo json_encode(['ok' => false, 'message' => 'Matrícula não encontrada'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Verificar se matrícula pertence ao CFC do usuário
+            $cfcId = $_SESSION['cfc_id'] ?? Constants::CFC_ID_DEFAULT;
+            if ($enrollment['cfc_id'] != $cfcId) {
+                http_response_code(403);
+                echo json_encode(['ok' => false, 'message' => 'Acesso negado'], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Validar saldo devedor antes de gerar
+            $outstandingAmount = floatval($enrollment['outstanding_amount'] ?? $enrollment['final_price'] ?? 0);
+            if ($outstandingAmount <= 0) {
+                http_response_code(400);
+                echo json_encode([
+                    'ok' => false,
+                    'message' => 'Não é possível gerar cobrança: saldo devedor deve ser maior que zero'
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Verificar idempotência: se já existe cobrança ativa, retornar dados existentes
+            if (!empty($enrollment['gateway_charge_id']) && 
+                $enrollment['billing_status'] === 'generated' &&
+                !in_array($enrollment['gateway_last_status'] ?? '', ['canceled', 'expired', 'error'])) {
+                
+                http_response_code(200);
+                echo json_encode([
+                    'ok' => true,
+                    'charge_id' => $enrollment['gateway_charge_id'],
+                    'status' => $enrollment['gateway_last_status'],
+                    'payment_url' => $enrollment['gateway_payment_url'] ?? null,
+                    'message' => 'Cobrança já existe'
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+
+            // Gerar cobrança
             $result = $this->efiService->createCharge($enrollment);
 
             if (!$result['ok']) {
                 http_response_code(400);
             }
 
-            echo json_encode($result);
-        } catch (\Exception $e) {
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
+            
+        } catch (\Throwable $e) {
+            // Capturar qualquer erro (Exception, Error, etc)
             http_response_code(500);
-            error_log("PaymentsController::generate() - Exception: " . $e->getMessage());
+            
+            // Log com prefixo PAYMENTS-ERROR
+            $logFile = __DIR__ . '/../../storage/logs/php_errors.log';
+            $timestamp = date('Y-m-d H:i:s');
+            $logMessage = sprintf(
+                "[%s] PAYMENTS-ERROR: PaymentsController::generate() - %s in %s:%d\nStack trace:\n%s\n",
+                $timestamp,
+                $e->getMessage(),
+                $e->getFile(),
+                $e->getLine(),
+                $e->getTraceAsString()
+            );
+            @file_put_contents($logFile, $logMessage, FILE_APPEND | LOCK_EX);
+            
+            // Garantir que header JSON foi enviado
+            if (!headers_sent()) {
+                header('Content-Type: application/json; charset=utf-8');
+            }
+            
             echo json_encode([
                 'ok' => false,
-                'message' => 'Erro interno ao gerar cobrança: ' . $e->getMessage()
-            ]);
+                'message' => 'Erro interno ao gerar cobrança',
+                'details' => [
+                    'error' => $e->getMessage(),
+                    'file' => basename($e->getFile()),
+                    'line' => $e->getLine()
+                ]
+            ], JSON_UNESCAPED_UNICODE);
         }
+        
         exit;
     }
 

@@ -42,6 +42,8 @@ echo "   Prefix: {$tokenPrefix}\n\n";
 
 // Montar payload mínimo válido para boleto
 echo "2. Montando payload para boleto...\n";
+// IMPORTANTE: Para boleto, customer NÃO deve estar no root do payload
+// customer deve estar APENAS dentro de payment.banking_billet.customer
 $payload = [
     'items' => [
         [
@@ -49,11 +51,6 @@ $payload = [
             'value' => 10000, // R$ 100,00 em centavos
             'amount' => 1
         ]
-    ],
-    'customer' => [
-        'name' => 'Cliente Teste',
-        'cpf' => '12345678901',
-        'email' => 'teste@example.com'
     ],
     'payment' => [
         'banking_billet' => [
@@ -120,10 +117,49 @@ if ($httpCode >= 200 && $httpCode < 300) {
     
 } else {
     echo "   ❌ Requisição falhou\n";
-    $errorMessage = $responseData['error_description'] ?? $responseData['message'] ?? $responseData['error'] ?? 'Erro desconhecido';
-    echo "   Erro: {$errorMessage}\n";
+    
+    // Tratar error_description que pode ser array/objeto
+    $errorDescription = $responseData['error_description'] ?? null;
+    $errorMessage = $responseData['message'] ?? $responseData['error'] ?? 'Erro desconhecido';
+    
+    // Se error_description for array/objeto, converter para JSON
+    if (is_array($errorDescription) || is_object($errorDescription)) {
+        $errorDescStr = json_encode($errorDescription, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        echo "   Erro: {$errorMessage}\n";
+        echo "   Detalhes:\n";
+        // Mostrar cada propriedade do erro detalhado
+        if (is_array($errorDescription)) {
+            foreach ($errorDescription as $key => $value) {
+                if (is_array($value) || is_object($value)) {
+                    $valueStr = json_encode($value, JSON_UNESCAPED_UNICODE);
+                } else {
+                    $valueStr = $value;
+                }
+                echo "      - {$key}: {$valueStr}\n";
+            }
+        } else {
+            echo "      " . $errorDescStr . "\n";
+        }
+    } else {
+        echo "   Erro: {$errorMessage}\n";
+        if ($errorDescription) {
+            echo "   Descrição: {$errorDescription}\n";
+        }
+    }
+    
     echo "\n   Response (primeiros 300 chars):\n";
     echo "   " . substr($rawResponse, 0, 300) . "...\n";
+    
+    // Mostrar payload enviado para debug (sem dados sensíveis)
+    echo "\n   Payload enviado (estrutura):\n";
+    $payloadDebug = $payload;
+    if (isset($payloadDebug['customer']['cpf'])) {
+        $payloadDebug['customer']['cpf'] = '***MASCARADO***';
+    }
+    if (isset($payloadDebug['payment']['banking_billet']['customer']['cpf'])) {
+        $payloadDebug['payment']['banking_billet']['customer']['cpf'] = '***MASCARADO***';
+    }
+    echo "   " . substr(json_encode($payloadDebug, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT), 0, 500) . "...\n";
 }
 
 echo "\n==========================================\n";

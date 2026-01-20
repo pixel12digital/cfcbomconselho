@@ -610,14 +610,26 @@ function gerarCobrancaEfi() {
         })
     })
     .then(async response => {
-        // Verificar se a resposta é JSON válido
-        const contentType = response.headers.get('content-type');
-        if (!contentType || !contentType.includes('application/json')) {
-            const text = await response.text();
-            console.error('Resposta não é JSON:', text);
-            throw new Error('Resposta do servidor não é JSON válido. Status: ' + response.status);
+        // Ler resposta como texto primeiro (mais seguro)
+        const raw = await response.text();
+        let data;
+        
+        // Tentar parsear como JSON
+        try {
+            data = JSON.parse(raw);
+        } catch (e) {
+            // Se não for JSON válido, tratar como erro
+            console.error('Resposta não é JSON válido:', raw);
+            throw new Error('Servidor retornou resposta inválida. Status: ' + response.status + '\n\n' + raw.slice(0, 200));
         }
-        return response.json();
+        
+        // Se não veio JSON válido ou status não OK
+        if (!response.ok) {
+            const errorMsg = data.message || data.error || data.error_description || 'Erro desconhecido';
+            throw new Error(`Erro ${response.status}: ${errorMsg}`);
+        }
+        
+        return data;
     })
     .then(data => {
         if (data.ok) {
@@ -635,8 +647,9 @@ function gerarCobrancaEfi() {
             // Recarregar página para atualizar status
             window.location.reload();
         } else {
-            // Erro
-            alert('Erro ao gerar cobrança: ' + (data.message || 'Erro desconhecido'));
+            // Erro retornado pelo backend (mas com status HTTP OK)
+            const errorMsg = data.message || data.error || data.error_description || 'Erro desconhecido';
+            alert('Erro ao gerar cobrança: ' + errorMsg);
             btn.disabled = false;
             btn.textContent = 'Gerar Cobrança Efí';
         }
@@ -644,7 +657,8 @@ function gerarCobrancaEfi() {
     .catch(error => {
         console.error('Erro completo:', error);
         console.error('Stack:', error.stack);
-        alert('Erro ao comunicar com o servidor: ' + (error.message || 'Erro desconhecido') + '\n\nVerifique o console para mais detalhes.');
+        const errorMsg = error.message || 'Erro desconhecido';
+        alert('Erro ao comunicar com o servidor: ' + errorMsg + '\n\nVerifique o console para mais detalhes.');
         btn.disabled = false;
         btn.textContent = 'Gerar Cobrança Efí';
     });

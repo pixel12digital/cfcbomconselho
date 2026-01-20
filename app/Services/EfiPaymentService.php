@@ -190,21 +190,21 @@ class EfiPaymentService
                 ]
             ];
 
-            // Adicionar dados do pagador
-            if (!empty($student['cpf'])) {
-                $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
-                if (strlen($cpf) === 11) {
-                    $payload['customer'] = [
-                        'name' => $student['full_name'] ?? $student['name'] ?? 'Cliente',
-                        'cpf' => $cpf,
-                        'email' => $student['email'] ?? null,
-                        'phone_number' => !empty($student['phone']) ? preg_replace('/[^0-9]/', '', $student['phone']) : null
-                    ];
-                }
-            }
-
             // Configurar parcelamento se aplicável
             if ($installments > 1) {
+                // Cartão de crédito (parcelado): customer vai no root do payload
+                if (!empty($student['cpf'])) {
+                    $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
+                    if (strlen($cpf) === 11) {
+                        $payload['customer'] = [
+                            'name' => $student['full_name'] ?? $student['name'] ?? 'Cliente',
+                            'cpf' => $cpf,
+                            'email' => $student['email'] ?? null,
+                            'phone_number' => !empty($student['phone']) ? preg_replace('/[^0-9]/', '', $student['phone']) : null
+                        ];
+                    }
+                }
+                
                 $payload['payment'] = [
                     'credit_card' => [
                         'installments' => $installments,
@@ -220,6 +220,8 @@ class EfiPaymentService
                 ];
             } else {
                 // Pagamento à vista (Boleto)
+                // IMPORTANTE: customer NÃO deve estar no root do payload para boleto
+                // customer deve estar APENAS dentro de payment.banking_billet.customer
                 // banking_billet deve ser um OBJETO, não array vazio
                 $bankingBillet = [];
                 
