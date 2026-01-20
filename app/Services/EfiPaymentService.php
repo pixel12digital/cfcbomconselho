@@ -491,6 +491,11 @@ class EfiPaymentService
         $oauthUrl = $forPix ? $this->oauthUrlPix : $this->oauthUrlCharges;
         $url = $oauthUrl . '/oauth/token';
         
+        // Log de debug
+        if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
+            error_log("[EFI-DEBUG] getAccessToken: forPix={$forPix}, tokenUrl={$url}");
+        }
+        
         $payload = [
             'grant_type' => 'client_credentials'
         ];
@@ -639,7 +644,17 @@ class EfiPaymentService
             return null;
         }
         
-        return trim($accessToken);
+        $accessToken = trim($accessToken);
+        
+        // Log de debug com informações do token
+        if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
+            $tokenPrefix = substr($accessToken, 0, 10);
+            $isJwt = (substr($accessToken, 0, 3) === 'eyJ');
+            $scope = $data['scope'] ?? 'N/A';
+            error_log("[EFI-DEBUG] getAccessToken: forPix={$forPix}, http_code={$httpCode}, token_length=" . strlen($accessToken) . ", token_prefix={$tokenPrefix}, is_jwt=" . ($isJwt ? 'true' : 'false') . ", scope={$scope}");
+        }
+        
+        return $accessToken;
     }
 
     /**
@@ -657,6 +672,27 @@ class EfiPaymentService
         // Usar base URL Pix se for requisição Pix, senão usar base URL de Cobranças
         $baseUrl = $isPix ? $this->baseUrlPix : $this->baseUrlCharges;
         $url = $baseUrl . $endpoint;
+        
+        // GUARDRAIL 1: Se isPix=false e URL contém /v1/charges, token NÃO pode ser JWT (Pix)
+        if (!$isPix && strpos($endpoint, '/charges') !== false && $token) {
+            $tokenPrefix = substr(trim($token), 0, 3);
+            if ($tokenPrefix === 'eyJ') {
+                error_log("[EFI-DEBUG] BLOCKED: token JWT (Pix) sendo usado em /charges. token_prefix={$tokenPrefix}, endpoint={$endpoint}, url={$url}");
+                return [
+                    'error' => 'Token inválido para API de Cobranças',
+                    'error_description' => 'Token JWT (Pix) não pode ser usado na API de Cobranças. Use getAccessToken(false) para obter token de Cobranças.'
+                ];
+            }
+        }
+        
+        // GUARDRAIL 2: Se isPix=true e URL contém apis.gerencianet.com.br, BLOQUEAR
+        if ($isPix && strpos($url, 'apis.gerencianet.com.br') !== false) {
+            error_log("[EFI-DEBUG] BLOCKED: URL de Cobranças sendo usada para Pix. url={$url}");
+            return [
+                'error' => 'URL incorreta para API Pix',
+                'error_description' => 'API Pix deve usar pix.api.efipay.com.br, não apis.gerencianet.com.br'
+            ];
+        }
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
