@@ -15,10 +15,23 @@ require_once __DIR__ . '/../../app/Services/EfiPaymentService.php';
 use App\Config\Env;
 use App\Services\EfiPaymentService;
 
-// Carregar ENV
-Env::load();
+// Habilitar exibição de erros
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
 
-header('Content-Type: text/plain; charset=utf-8');
+// Carregar ENV
+try {
+    Env::load();
+} catch (Exception $e) {
+    echo "ERRO ao carregar ENV: " . $e->getMessage() . "\n";
+    exit(1);
+}
+
+// Não usar header() em CLI
+if (php_sapi_name() !== 'cli') {
+    header('Content-Type: text/plain; charset=utf-8');
+}
 
 echo "==========================================\n";
 echo "TESTE: Tokens Separados EFI (Cobranças vs Pix)\n";
@@ -26,7 +39,9 @@ echo "==========================================\n";
 echo "Data/Hora: " . date('Y-m-d H:i:s') . "\n\n";
 
 try {
+    echo "Criando instância de EfiPaymentService...\n";
     $service = new EfiPaymentService();
+    echo "✅ Instância criada\n\n";
     $reflection = new ReflectionClass($service);
     
     // Obter URLs
@@ -179,8 +194,14 @@ try {
     
     echo "\n";
     
+} catch (Error $e) {
+    echo "❌ ERRO FATAL: " . $e->getMessage() . "\n";
+    echo "Arquivo: " . $e->getFile() . ":" . $e->getLine() . "\n";
+    echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
+    exit(1);
 } catch (Exception $e) {
     echo "❌ ERRO: " . $e->getMessage() . "\n";
+    echo "Arquivo: " . $e->getFile() . ":" . $e->getLine() . "\n";
     echo "Stack trace:\n" . $e->getTraceAsString() . "\n";
     exit(1);
 }
