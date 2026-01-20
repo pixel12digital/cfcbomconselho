@@ -610,10 +610,7 @@ class EfiPaymentService
             $postData = json_encode($payload);
         }
         
-        // Log de debug detalhado
-        if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
-            // Log já feito acima com efiLog()
-        }
+        // Log já feito acima com efiLog()
 
         $ch = curl_init($url);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -739,11 +736,10 @@ class EfiPaymentService
                 $debugInfo .= "\n- RESPONSE_BODY: " . substr($response, 0, 500);
             }
             
-            $this->efiLog('ERROR', 'getAccessToken falhou', [
+            $this->efiLog('ERROR', 'getAccessToken failed', [
                 'forPix' => $forPix,
-                'host' => parse_url($url, PHP_URL_HOST),
-                'url' => $url,
                 'http_code' => $httpCode,
+                'curl_error' => $curlError ?: null,
                 'error' => substr($errorMessage, 0, 180),
                 'response_snippet' => substr($response, 0, 180)
             ]);
