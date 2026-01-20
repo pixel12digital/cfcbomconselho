@@ -730,7 +730,14 @@ class EfiPaymentService
             // Log para debug (apenas primeiros e últimos caracteres do token por segurança)
             if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
                 $tokenPreview = substr($token, 0, 20) . '...' . substr($token, -10);
-                error_log("EFI makeRequest: URL={$url}, Token preview={$tokenPreview}, Header length=" . strlen($authHeader));
+                error_log("[EFI-DEBUG] makeRequest: URL={$url}, isPix={$isPix}, Token preview={$tokenPreview}, Header length=" . strlen($authHeader));
+                error_log("[EFI-DEBUG] makeRequest: Header completo (primeiros 100 chars): " . substr($authHeader, 0, 100));
+                // Verificar se há caracteres problemáticos
+                $headerBytes = [];
+                for ($i = 0; $i < min(50, strlen($authHeader)); $i++) {
+                    $headerBytes[] = dechex(ord($authHeader[$i]));
+                }
+                error_log("[EFI-DEBUG] makeRequest: Header bytes (hex, primeiros 50): " . implode(' ', $headerBytes));
             }
         }
         
@@ -766,9 +773,17 @@ class EfiPaymentService
             error_log("EFI makeRequest Warning: Produção sem certificado configurado. A EFI exige certificado cliente em produção para todas as requisições.");
         }
 
+        // Log detalhado dos headers sendo enviados (apenas em debug)
+        if (($_ENV['EFI_DEBUG'] ?? 'false') === 'true') {
+            error_log("[EFI-DEBUG] makeRequest: Enviando requisição para {$url}");
+            error_log("[EFI-DEBUG] makeRequest: Headers sendo enviados: " . json_encode($headers, JSON_UNESCAPED_UNICODE));
+            error_log("[EFI-DEBUG] makeRequest: Método: {$method}, Endpoint: {$endpoint}, isPix: " . ($isPix ? 'true' : 'false'));
+        }
+        
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
+        $curlInfo = curl_getinfo($ch);
         curl_close($ch);
 
         if ($curlError) {
@@ -782,8 +797,23 @@ class EfiPaymentService
             $errorDetails = [
                 'http_code' => $httpCode,
                 'response' => $data,
-                'raw_response' => substr($response, 0, 1000) // Primeiros 1000 caracteres
+                'raw_response' => substr($response, 0, 1000), // Primeiros 1000 caracteres
+                'url' => $url,
+                'isPix' => $isPix,
+                'method' => $method,
+                'endpoint' => $endpoint
             ];
+            
+            // Log detalhado em caso de erro 403 (problema de autenticação)
+            if ($httpCode === 403) {
+                error_log("[EFI-DEBUG] HTTP 403 - Detalhes completos: " . json_encode($errorDetails, JSON_UNESCAPED_UNICODE));
+                if (isset($data['message']) && strpos($data['message'], 'Invalid key=value pair') !== false) {
+                    error_log("[EFI-DEBUG] ERRO ESPECÍFICO: Invalid key=value pair detectado");
+                    error_log("[EFI-DEBUG] Isso geralmente indica que a API está interpretando o header Authorization como AWS SigV4");
+                    error_log("[EFI-DEBUG] Verifique se o header está no formato correto: 'Authorization: Bearer {token}'");
+                }
+            }
+            
             error_log("EFI API Error: HTTP {$httpCode} - " . json_encode($errorDetails, JSON_UNESCAPED_UNICODE));
             return $data; // Retornar erro para tratamento
         }
