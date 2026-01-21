@@ -99,16 +99,24 @@ class UsuariosController extends Controller
         $instructorModel = new Instructor();
         
         // Buscar alunos e instrutores sem usuário vinculado
+        // Inclui alunos sem user_id OU com user_id que não existe na tabela usuarios
         $db = Database::getInstance()->getConnection();
         
         $stmt = $db->prepare("
-            SELECT id, name, full_name, cpf, email 
-            FROM students 
-            WHERE cfc_id = ? AND (user_id IS NULL OR user_id = 0)
-            ORDER BY COALESCE(full_name, name) ASC
+            SELECT s.id, s.name, s.full_name, s.cpf, s.email, s.user_id
+            FROM students s
+            LEFT JOIN usuarios u ON u.id = s.user_id
+            WHERE s.cfc_id = ? 
+            AND (s.user_id IS NULL OR s.user_id = 0 OR u.id IS NULL)
+            AND s.email IS NOT NULL 
+            AND s.email != ''
+            ORDER BY COALESCE(s.full_name, s.name) ASC
         ");
         $stmt->execute([$this->cfcId]);
         $students = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // Log para diagnóstico
+        error_log("[USUARIOS_NOVO] Alunos encontrados sem acesso: " . count($students));
         
         $stmt = $db->prepare("
             SELECT id, name, cpf, email 
@@ -428,9 +436,22 @@ class UsuariosController extends Controller
             redirect(base_url('usuarios'));
         }
 
+        // Verificar se aluno já tem usuário válido (que existe na tabela usuarios)
         if (!empty($student['user_id'])) {
-            $_SESSION['error'] = 'Este aluno já possui acesso vinculado.';
-            redirect(base_url('usuarios'));
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->prepare("SELECT id FROM usuarios WHERE id = ?");
+            $stmt->execute([$student['user_id']]);
+            $existingUser = $stmt->fetch();
+            
+            if ($existingUser) {
+                $_SESSION['error'] = 'Este aluno já possui acesso vinculado.';
+                redirect(base_url('usuarios'));
+            } else {
+                // user_id existe mas usuário não existe - limpar referência inválida
+                error_log("[USUARIOS] Aluno ID {$studentId} tem user_id inválido ({$student['user_id']}). Limpando referência.");
+                $studentModel->update($studentId, ['user_id' => null]);
+                $student['user_id'] = null; // Atualizar para continuar
+            }
         }
 
         $email = trim($student['email'] ?? '');
