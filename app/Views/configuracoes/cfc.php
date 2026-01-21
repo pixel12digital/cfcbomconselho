@@ -222,44 +222,9 @@
                 return false;
             });
 
-            // Interceptar resposta após submit usando fetch (se possível) ou verificar headers na próxima página
-            // Como é um form submit tradicional, vamos verificar headers na resposta
-            if (window.performance && window.performance.getEntriesByType) {
-                // Verificar última navegação após um delay
-                setTimeout(function() {
-                    const navEntries = performance.getEntriesByType('navigation');
-                    if (navEntries.length > 0) {
-                        const lastNav = navEntries[navEntries.length - 1];
-                        console.log('[UPLOAD DEBUG] Navegação detectada:', {
-                            type: lastNav.type,
-                            duration: lastNav.duration
-                        });
-                    }
-                }, 1000);
-            }
         } else {
-            console.error('[UPLOAD DEBUG] Form não encontrado!');
+            console.error('[UPLOAD DEBUG] ❌ Form não encontrado!');
         }
-
-        // Verificar headers de debug na resposta (após redirect)
-        window.addEventListener('load', function() {
-            // Tentar ler headers via fetch (não funciona com redirect, mas tenta)
-            fetch(window.location.href, { method: 'HEAD' })
-                .then(function(response) {
-                    const debugHeaders = {};
-                    response.headers.forEach(function(value, key) {
-                        if (key.toLowerCase().startsWith('x-upload-debug')) {
-                            debugHeaders[key] = value;
-                        }
-                    });
-                    if (Object.keys(debugHeaders).length > 0) {
-                        console.log('[UPLOAD DEBUG] Headers de debug encontrados:', debugHeaders);
-                    }
-                })
-                .catch(function(err) {
-                    // Ignorar erro (normal com redirect)
-                });
-        });
         </script>
 
         <?php if ($hasLogo): ?>
