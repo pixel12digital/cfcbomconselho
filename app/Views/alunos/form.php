@@ -240,14 +240,16 @@
 
                 <div class="form-row">
                     <div class="form-group form-col-2">
-                        <label class="form-label" for="email">Email</label>
+                        <label class="form-label" for="email">Email *</label>
                         <input 
                             type="email" 
                             id="email" 
                             name="email" 
                             class="form-input" 
                             value="<?= htmlspecialchars($student['email'] ?? '') ?>"
+                            required
                         >
+                        <small class="form-text text-muted">Necessário para criar acesso ao sistema</small>
                     </div>
                 </div>
             </div>

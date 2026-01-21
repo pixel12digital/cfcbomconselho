@@ -10,6 +10,7 @@ use App\Models\StudentStep;
 use App\Models\State;
 use App\Models\City;
 use App\Models\StudentHistory;
+use App\Models\User;
 use App\Services\AuditService;
 use App\Services\PermissionService;
 use App\Services\EnrollmentPolicy;
@@ -110,28 +111,43 @@ class AlunosController extends Controller
 
         // Criar usuário automaticamente se houver e-mail
         $email = trim($_POST['email'] ?? '');
+        
+        // Log para diagnóstico
+        error_log("[ALUNO_CRIAR] Aluno ID {$id} criado. Email recebido: " . ($email ?: '(vazio)'));
+        
         if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            error_log("[ALUNO_CRIAR] Tentando criar usuário para aluno ID {$id} com email: {$email}");
+            
             try {
                 $userService = new UserCreationService();
                 $userData = $userService->createForStudent($id, $email, $fullName ?: null);
+                
+                error_log("[ALUNO_CRIAR] Usuário criado com sucesso! User ID: {$userData['user_id']}, Email: {$email}");
                 
                 // Tentar enviar e-mail com credenciais (não bloqueia se falhar)
                 try {
                     $emailService = new EmailService();
                     $loginUrl = base_url('/login');
                     $emailService->sendAccessCreated($email, $userData['temp_password'], $loginUrl);
+                    error_log("[ALUNO_CRIAR] E-mail de acesso enviado com sucesso para: {$email}");
                 } catch (\Exception $e) {
                     // Log mas não bloqueia
-                    error_log("Erro ao enviar e-mail de acesso: " . $e->getMessage());
+                    error_log("[ALUNO_CRIAR] Erro ao enviar e-mail de acesso para {$email}: " . $e->getMessage());
                 }
                 
                 $_SESSION['success'] = 'Aluno criado com sucesso! Acesso ao sistema criado automaticamente.';
             } catch (\Exception $e) {
+                // Log detalhado do erro
+                error_log("[ALUNO_CRIAR] ERRO ao criar acesso para aluno ID {$id}: " . $e->getMessage());
+                error_log("[ALUNO_CRIAR] Stack trace: " . $e->getTraceAsString());
+                error_log("[ALUNO_CRIAR] Dados: Email={$email}, Nome={$fullName}");
+                
                 // Se falhar, apenas logar mas não bloquear criação do aluno
-                error_log("Erro ao criar acesso para aluno: " . $e->getMessage());
-                $_SESSION['success'] = 'Aluno criado com sucesso! (Aviso: não foi possível criar acesso automático - ' . $e->getMessage() . ')';
+                $_SESSION['success'] = 'Aluno criado com sucesso!';
+                $_SESSION['warning'] = 'Não foi possível criar acesso automático: ' . $e->getMessage();
             }
         } else {
+            error_log("[ALUNO_CRIAR] Email não informado ou inválido para aluno ID {$id}. Email recebido: " . ($email ?: '(vazio)'));
             $_SESSION['success'] = 'Aluno criado com sucesso! (Acesso não criado: e-mail não informado ou inválido)';
         }
 
@@ -343,10 +359,18 @@ class AlunosController extends Controller
         $serviceModel = new Service();
         $services = $serviceModel->findActiveByCfc($this->cfcId);
 
+        // Buscar cursos e turmas teóricas para seleção
+        $theoryCourseModel = new \App\Models\TheoryCourse();
+        $theoryClassModel = new \App\Models\TheoryClass();
+        $courses = $theoryCourseModel->findActiveByCfc($this->cfcId);
+        $classes = $theoryClassModel->findByCfc($this->cfcId, ['scheduled', 'in_progress']); // Apenas turmas agendadas/em andamento
+
         $data = [
             'pageTitle' => 'Nova Matrícula',
             'student' => $student,
-            'services' => $services
+            'services' => $services,
+            'theoryCourses' => $courses,
+            'theoryClasses' => $classes
         ];
         $this->view('alunos/matricular', $data);
     }
@@ -424,6 +448,10 @@ class AlunosController extends Controller
         
         // Calcular saldo devedor
         $outstandingAmount = $entryAmount > 0 ? max(0, $finalPrice - $entryAmount) : $finalPrice;
+        
+        // Recalcular financial_status baseado em outstanding_amount (coerência)
+        // Se outstanding_amount > 0, deve ser 'pendente' (padrão inicial)
+        $financialStatus = $outstandingAmount > 0 ? 'pendente' : 'em_dia';
 
         // Processar campos de parcelamento
         $installments = null;
@@ -503,7 +531,7 @@ class AlunosController extends Controller
             'extra_value' => $extraValue,
             'final_price' => $finalPrice,
             'payment_method' => $paymentMethod,
-            'financial_status' => 'em_dia',
+            'financial_status' => $financialStatus, // Calculado baseado em outstanding_amount
             'status' => 'ativa',
             'created_by_user_id' => $_SESSION['user_id'] ?? null,
             'renach' => $renach,
@@ -520,12 +548,36 @@ class AlunosController extends Controller
             'down_payment_amount' => $downPaymentAmount,
             'down_payment_due_date' => $downPaymentDueDate,
             'first_due_date' => $firstDueDate,
-            'billing_status' => 'draft' // Status inicial: rascunho (pronto para gerar cobrança)
+            'billing_status' => 'draft', // Status inicial: rascunho (pronto para gerar cobrança)
+            'theory_course_id' => $theoryCourseId,
+            'theory_class_id' => $theoryClassId
         ];
 
-        $enrollmentId = $enrollmentModel->create($enrollmentData);
+        // Validar curso/turma teórica se informado
+        if ($theoryClassId) {
+            $theoryClassModel = new \App\Models\TheoryClass();
+            $theoryClass = $theoryClassModel->find($theoryClassId);
+            if (!$theoryClass || $theoryClass['cfc_id'] != $this->cfcId || !in_array($theoryClass['status'], ['scheduled', 'in_progress'])) {
+                $_SESSION['error'] = 'Turma teórica inválida ou não disponível.';
+                redirect(base_url("alunos/{$id}/matricular"));
+            }
+        }
         
-        $auditService->logCreate('enrollments', $enrollmentId, $enrollmentData);
+        if ($theoryCourseId) {
+            $theoryCourseModel = new \App\Models\TheoryCourse();
+            $theoryCourse = $theoryCourseModel->find($theoryCourseId);
+            if (!$theoryCourse || $theoryCourse['cfc_id'] != $this->cfcId || !$theoryCourse['active']) {
+                $_SESSION['error'] = 'Curso teórico inválido ou inativo.';
+                redirect(base_url("alunos/{$id}/matricular"));
+            }
+        }
+
+        $db = \App\Config\Database::getInstance()->getConnection();
+        $db->beginTransaction();
+        
+        try {
+            $enrollmentId = $enrollmentModel->create($enrollmentData);
+            $auditService->logCreate('enrollments', $enrollmentId, $enrollmentData);
         
         // Registrar no histórico do aluno
         $historyService = new StudentHistoryService();
@@ -568,8 +620,32 @@ class AlunosController extends Controller
             $studentStepModel->create($studentStepData);
         }
 
-        $_SESSION['success'] = 'Matrícula criada com sucesso!';
-        redirect(base_url("alunos/{$id}?tab=matricula"));
+        // Se turma teórica selecionada, criar theory_enrollment (idempotente)
+        if ($theoryClassId) {
+            $theoryEnrollmentModel = new \App\Models\TheoryEnrollment();
+            
+            // Verificar se já existe (idempotência)
+            if (!$theoryEnrollmentModel->isEnrolled($theoryClassId, $id)) {
+                $theoryEnrollmentData = [
+                    'class_id' => $theoryClassId,
+                    'student_id' => $id,
+                    'enrollment_id' => $enrollmentId,
+                    'status' => 'active',
+                    'created_by' => $_SESSION['user_id'] ?? null
+                ];
+                $theoryEnrollmentModel->create($theoryEnrollmentData);
+            }
+        }
+
+            $db->commit();
+            
+            $_SESSION['success'] = 'Matrícula criada com sucesso!';
+            redirect(base_url("alunos/{$id}?tab=matricula"));
+        } catch (\Exception $e) {
+            $db->rollBack();
+            $_SESSION['error'] = 'Erro ao criar matrícula: ' . $e->getMessage();
+            redirect(base_url("alunos/{$id}/matricular"));
+        }
     }
 
     public function showMatricula($id)
@@ -654,6 +730,13 @@ class AlunosController extends Controller
         
         // Calcular saldo devedor
         $outstandingAmount = $entryAmount > 0 ? max(0, $finalPrice - $entryAmount) : $finalPrice;
+        
+        // Recalcular financial_status baseado em outstanding_amount (coerência)
+        // Se outstanding_amount > 0 e não está bloqueado, deve ser 'pendente'
+        // Se outstanding_amount = 0, deve ser 'em_dia' (a menos que esteja bloqueado)
+        if ($financialStatus !== 'bloqueado') {
+            $financialStatus = $outstandingAmount > 0 ? 'pendente' : 'em_dia';
+        }
 
         // Verificar se pode alterar parcelamento (não pode se já gerou cobrança)
         $billingStatus = $enrollment['billing_status'] ?? 'draft';
@@ -1082,8 +1165,7 @@ class AlunosController extends Controller
             }
             
             // Verificar se e-mail já está em uso na tabela usuarios
-            $userModel = new User();
-            $existingUser = $userModel->findByEmail($email);
+            $existingUser = User::findByEmail($email);
             if ($existingUser) {
                 // Se editando, verificar se o usuário vinculado é do próprio aluno
                 if ($studentId) {

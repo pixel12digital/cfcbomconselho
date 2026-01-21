@@ -21,21 +21,28 @@ class UserCreationService
      */
     public function createForStudent($studentId, $email, $fullName = null)
     {
+        error_log("[UserCreationService] Iniciando criação de usuário para aluno ID {$studentId}, email: {$email}");
+        
         // Verificar se aluno já tem usuário
         $stmt = $this->db->prepare("SELECT user_id FROM students WHERE id = ?");
         $stmt->execute([$studentId]);
         $student = $stmt->fetch();
         
         if ($student && !empty($student['user_id'])) {
+            error_log("[UserCreationService] Aluno ID {$studentId} já possui usuário ID {$student['user_id']}");
             return $student['user_id']; // Já tem usuário
         }
 
         // Verificar se email já existe
         $stmt = $this->db->prepare("SELECT id FROM usuarios WHERE email = ?");
         $stmt->execute([$email]);
-        if ($stmt->fetch()) {
+        $existingUser = $stmt->fetch();
+        if ($existingUser) {
+            error_log("[UserCreationService] Email {$email} já está em uso por usuário ID {$existingUser['id']}");
             throw new \Exception("E-mail já está em uso por outro usuário.");
         }
+
+        error_log("[UserCreationService] Email {$email} disponível. Gerando senha temporária...");
 
         // Gerar senha temporária segura
         $tempPassword = $this->generateTempPassword();
@@ -43,6 +50,7 @@ class UserCreationService
 
         try {
             $this->db->beginTransaction();
+            error_log("[UserCreationService] Transação iniciada. CFC ID: {$this->cfcId}");
 
             // Criar usuário
             $stmt = $this->db->prepare("
@@ -56,16 +64,20 @@ class UserCreationService
                 $hashedPassword
             ]);
             $userId = $this->db->lastInsertId();
+            error_log("[UserCreationService] Usuário criado com ID: {$userId}");
 
             // Vincular com aluno
             $stmt = $this->db->prepare("UPDATE students SET user_id = ? WHERE id = ?");
             $stmt->execute([$userId, $studentId]);
+            error_log("[UserCreationService] Aluno ID {$studentId} vinculado ao usuário ID {$userId}");
 
             // Associar role ALUNO
             $stmt = $this->db->prepare("INSERT INTO usuario_roles (usuario_id, role) VALUES (?, 'ALUNO')");
             $stmt->execute([$userId]);
+            error_log("[UserCreationService] Role ALUNO associada ao usuário ID {$userId}");
 
             $this->db->commit();
+            error_log("[UserCreationService] Transação commitada com sucesso. Usuário ID {$userId} criado para aluno ID {$studentId}");
 
             // Retornar dados para possível envio de e-mail
             return [
@@ -75,6 +87,8 @@ class UserCreationService
             ];
         } catch (\Exception $e) {
             $this->db->rollBack();
+            error_log("[UserCreationService] ERRO na transação. Rollback executado. Erro: " . $e->getMessage());
+            error_log("[UserCreationService] Stack trace: " . $e->getTraceAsString());
             throw $e;
         }
     }
