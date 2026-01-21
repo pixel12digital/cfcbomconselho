@@ -8,8 +8,8 @@
     <base href="<?= base_path('/') ?>">
     <title><?= $pageTitle ?? 'CFC Sistema' ?></title>
     
-    <!-- PWA Manifest (usando .json temporariamente - manifest.php com erro 500) -->
-    <link rel="manifest" href="<?= base_path('/manifest.json') ?>">
+    <!-- PWA Manifest (testando pwa-manifest.php - manifest.php retorna 500, possível bloqueio WAF por nome) -->
+    <link rel="manifest" href="<?= base_path('/pwa-manifest.php') ?>">
     
     <!-- Apple Touch Icon (iOS) -->
     <link rel="apple-touch-icon" href="<?= base_path('/icons/icon-192x192.png') ?>">

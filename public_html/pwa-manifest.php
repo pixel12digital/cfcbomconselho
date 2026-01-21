@@ -4,8 +4,6 @@
  * 
  * Versão mínima que sempre funciona
  * Retorna manifest.json com paths relativos
- * 
- * NOTA: manifest.php bloqueado por regra do servidor, usar pwa-manifest.php
  */
 
 // Headers
