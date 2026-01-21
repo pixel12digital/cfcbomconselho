@@ -32,6 +32,11 @@ class InstallmentsViewService
                 isset($paymentData['charges']) && 
                 is_array($paymentData['charges'])) {
                 
+                // Verificar se o carnê foi cancelado
+                $carnetStatus = $paymentData['status'] ?? null;
+                $billingStatus = $enrollment['billing_status'] ?? null;
+                $isCarnetCanceled = ($billingStatus === 'canceled' || $carnetStatus === 'canceled');
+                
                 // Processar cada parcela do carnê
                 $totalAmount = 0;
                 foreach ($paymentData['charges'] as $index => $charge) {
@@ -71,8 +76,13 @@ class InstallmentsViewService
                     
                     $totalAmount += $amount;
                     
-                    // Normalizar status
-                    $status = $this->normalizeStatus($gatewayStatus, $expireAt);
+                    // Verificar se a cobrança foi cancelada (prioridade ao billing_status ou status do carnê)
+                    if ($isCarnetCanceled || $gatewayStatus === 'canceled') {
+                        $status = 'canceled';
+                    } else {
+                        // Normalizar status
+                        $status = $this->normalizeStatus($gatewayStatus, $expireAt);
+                    }
                     
                     // Label da parcela
                     $label = ($index + 1) . '/' . count($paymentData['charges']);
@@ -101,6 +111,7 @@ class InstallmentsViewService
             
             $paymentUrl = $enrollment['gateway_payment_url'];
             $gatewayStatus = $enrollment['gateway_last_status'] ?? 'waiting';
+            $billingStatus = $enrollment['billing_status'] ?? null;
             $dueDate = null;
             
             // Tentar obter vencimento
@@ -114,8 +125,13 @@ class InstallmentsViewService
             $outstandingAmount = floatval($enrollment['outstanding_amount'] ?? 
                                          ($enrollment['final_price'] - ($enrollment['entry_amount'] ?? 0)));
             
-            // Normalizar status
-            $status = $this->normalizeStatus($gatewayStatus, $dueDate);
+            // Verificar se a cobrança foi cancelada (prioridade ao billing_status)
+            if ($billingStatus === 'canceled' || $gatewayStatus === 'canceled') {
+                $status = 'canceled';
+            } else {
+                // Normalizar status
+                $status = $this->normalizeStatus($gatewayStatus, $dueDate);
+            }
             
             $installments[] = [
                 'label' => 'Pagamento',
@@ -241,7 +257,7 @@ class InstallmentsViewService
      * 
      * @param string|null $gatewayStatus Status do gateway
      * @param string|null $dueDate Data de vencimento
-     * @return string Status normalizado: 'paid', 'open', 'overdue', 'unknown'
+     * @return string Status normalizado: 'paid', 'open', 'overdue', 'canceled', 'unknown'
      */
     private function normalizeStatus(?string $gatewayStatus, ?string $dueDate): string
     {
@@ -256,6 +272,11 @@ class InstallmentsViewService
             return 'paid';
         }
         
+        // Status cancelados (não deve ser tratado como overdue)
+        if ($gatewayStatus === 'canceled') {
+            return 'canceled';
+        }
+        
         // Status abertos (não vencidos)
         if (in_array($gatewayStatus, ['waiting', 'pending', 'processing', 'new', 'up_to_date'])) {
             if ($dueDate) {
@@ -264,8 +285,8 @@ class InstallmentsViewService
             return 'open';
         }
         
-        // Status vencidos/não pagos
-        if (in_array($gatewayStatus, ['unpaid', 'expired', 'canceled', 'error'])) {
+        // Status vencidos/não pagos (mas não cancelados)
+        if (in_array($gatewayStatus, ['unpaid', 'expired', 'error'])) {
             return 'overdue';
         }
         

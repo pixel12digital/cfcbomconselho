@@ -235,7 +235,7 @@
                                             <?php
                                             $dueDate = new \DateTime($installment['due_date']);
                                             $today = new \DateTime();
-                                            $isOverdue = $dueDate < $today && $installment['status'] !== 'paid';
+                                            $isOverdue = $dueDate < $today && $installment['status'] !== 'paid' && $installment['status'] !== 'canceled';
                                             ?>
                                             <span style="<?= $isOverdue ? 'color: #ef4444; font-weight: 600;' : '' ?>">
                                                 <?= $dueDate->format('d/m/Y') ?>
@@ -253,6 +253,7 @@
                                             'paid' => ['label' => '✅ Paga', 'color' => '#10b981', 'bg' => '#d1fae5'],
                                             'open' => ['label' => '⚠️ A vencer', 'color' => '#3b82f6', 'bg' => '#dbeafe'],
                                             'overdue' => ['label' => '❌ Vencida', 'color' => '#ef4444', 'bg' => '#fee2e2'],
+                                            'canceled' => ['label' => '🚫 Cancelada', 'color' => '#6b7280', 'bg' => '#e5e7eb'],
                                             'unknown' => ['label' => '⏳ Aguardando', 'color' => '#6b7280', 'bg' => '#f3f4f6']
                                         ];
                                         $status = $statusConfig[$installment['status']] ?? $statusConfig['unknown'];
