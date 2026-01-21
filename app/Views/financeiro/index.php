@@ -248,7 +248,7 @@
                             <th>Vencimento</th>
                             <th>Status Financeiro</th>
                             <th>Cobrança</th>
-                            <th>Status Gateway</th>
+                            <th>Status Banco EFI</th>
                             <th>Último Evento</th>
                             <th style="width: 220px;">Ações</th>
                         </tr>
@@ -284,8 +284,24 @@
                         // Verificar se tem cobrança gerada
                         $hasCharge = !empty($enr['gateway_charge_id']) && $enr['gateway_charge_id'] !== '';
                         
-                        // Status gateway
-                        $gatewayStatus = $hasCharge ? ($enr['gateway_last_status'] ?? '-') : '-';
+                        // Status gateway (traduzir para português)
+                        $gatewayStatusRaw = $hasCharge ? ($enr['gateway_last_status'] ?? '-') : '-';
+                        $gatewayStatus = '-';
+                        if ($gatewayStatusRaw !== '-') {
+                            $statusMap = [
+                                'waiting' => 'Aguardando pagamento',
+                                'paid' => 'Pago',
+                                'settled' => 'Liquidado',
+                                'canceled' => 'Cancelado',
+                                'expired' => 'Expirado',
+                                'error' => 'Erro',
+                                'unpaid' => 'Não pago',
+                                'pending' => 'Pendente',
+                                'processing' => 'Processando',
+                                'new' => 'Novo'
+                            ];
+                            $gatewayStatus = $statusMap[strtolower($gatewayStatusRaw)] ?? $gatewayStatusRaw;
+                        }
                         $billingStatus = $enr['billing_status'] ?? 'draft';
                         
                         // Último evento
@@ -756,7 +772,20 @@ function sincronizarIndividual(enrollmentId) {
     .then(response => response.json())
     .then(data => {
         if (data.ok) {
-            alert('Cobrança sincronizada com sucesso!\n\nStatus: ' + (data.status || 'Não disponível'));
+            const statusMap = {
+                'waiting': 'Aguardando pagamento',
+                'paid': 'Pago',
+                'settled': 'Liquidado',
+                'canceled': 'Cancelado',
+                'expired': 'Expirado',
+                'error': 'Erro',
+                'unpaid': 'Não pago',
+                'pending': 'Pendente',
+                'processing': 'Processando',
+                'new': 'Novo'
+            };
+            const statusTraduzido = data.status ? (statusMap[data.status.toLowerCase()] || data.status) : 'Não disponível';
+            alert('Cobrança sincronizada com sucesso!\n\nStatus: ' + statusTraduzido);
             window.location.reload();
         } else {
             alert('Não foi possível sincronizar: ' + (data.message || 'Ocorreu um erro desconhecido. Por favor, tente novamente.'));

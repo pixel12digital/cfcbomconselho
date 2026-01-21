@@ -634,9 +634,23 @@ function gerarCobrancaEfi() {
     .then(data => {
         if (data.ok) {
             // Sucesso
+            const statusMap = {
+                'waiting': 'Aguardando pagamento',
+                'paid': 'Pago',
+                'settled': 'Liquidado',
+                'canceled': 'Cancelado',
+                'expired': 'Expirado',
+                'error': 'Erro',
+                'unpaid': 'Não pago',
+                'pending': 'Pendente',
+                'processing': 'Processando',
+                'new': 'Novo'
+            };
+            const statusTraduzido = data.status ? (statusMap[data.status.toLowerCase()] || data.status) : 'Não disponível';
+            
             let successMsg = 'Cobrança gerada com sucesso!\n\n';
-            successMsg += `- ID da Cobrança: ${data.charge_id || 'N/A'}\n`;
-            successMsg += `- Status: ${data.status || 'N/A'}\n`;
+            successMsg += `- ID da Cobrança: ${data.charge_id || 'Não disponível'}\n`;
+            successMsg += `- Status: ${statusTraduzido}\n`;
             
             if (data.payment_url) {
                 successMsg += `\n- Link de Pagamento: ${data.payment_url}\n`;
@@ -700,9 +714,23 @@ function sincronizarCobrancaEfi() {
     .then(data => {
         if (data.ok) {
             // Sucesso
+            const statusMap = {
+                'waiting': 'Aguardando pagamento',
+                'paid': 'Pago',
+                'settled': 'Liquidado',
+                'canceled': 'Cancelado',
+                'expired': 'Expirado',
+                'error': 'Erro',
+                'unpaid': 'Não pago',
+                'pending': 'Pendente',
+                'processing': 'Processando',
+                'new': 'Novo'
+            };
+            const statusTraduzido = data.status ? (statusMap[data.status.toLowerCase()] || data.status) : 'Não disponível';
+            
             let successMsg = 'Cobrança sincronizada com sucesso!\n\n';
-            successMsg += `- Status: ${data.status || 'N/A'}\n`;
-            successMsg += `- Status Interno: ${data.billing_status || 'N/A'}\n`;
+            successMsg += `- Status: ${statusTraduzido}\n`;
+            successMsg += `- Status Interno: ${data.billing_status || 'Não disponível'}\n`;
             
             if (data.financial_status) {
                 successMsg += `- Status Financeiro: ${data.financial_status}\n`;
