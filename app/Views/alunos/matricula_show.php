@@ -291,12 +291,31 @@
                 <?php if (!empty($enrollment['gateway_last_status'])): ?>
                 <div class="form-group">
                     <label class="form-label">Status no Gateway</label>
+                    <?php
+                    $gatewayStatusRaw = $enrollment['gateway_last_status'];
+                    $statusMap = [
+                        'waiting' => 'Aguardando pagamento',
+                        'up_to_date' => 'Em dia (sem parcelas vencidas)',
+                        'paid' => 'Pago',
+                        'paid_partial' => 'Parcialmente pago',
+                        'settled' => 'Liquidado',
+                        'canceled' => 'Cancelado',
+                        'expired' => 'Expirado',
+                        'error' => 'Erro',
+                        'unpaid' => 'Não pago',
+                        'pending' => 'Pendente',
+                        'processing' => 'Processando',
+                        'new' => 'Nova cobrança'
+                    ];
+                    $gatewayStatusTranslated = $statusMap[strtolower($gatewayStatusRaw)] ?? $gatewayStatusRaw;
+                    ?>
                     <input 
                         type="text" 
                         class="form-input" 
-                        value="<?= htmlspecialchars($enrollment['gateway_last_status']) ?>" 
+                        value="<?= htmlspecialchars($gatewayStatusTranslated) ?>" 
                         readonly
                         style="background-color: var(--color-bg);"
+                        title="Status original: <?= htmlspecialchars($gatewayStatusRaw) ?>"
                     >
                 </div>
                 <?php endif; ?>
@@ -423,10 +442,17 @@
                                     <td>
                                         <?php
                                         $statusLabels = [
-                                            'waiting' => ['label' => 'Aguardando', 'class' => 'badge-warning'],
+                                            'waiting' => ['label' => 'Aguardando pagamento', 'class' => 'badge-warning'],
+                                            'up_to_date' => ['label' => 'Em dia', 'class' => 'badge-success'],
                                             'paid' => ['label' => 'Pago', 'class' => 'badge-success'],
+                                            'paid_partial' => ['label' => 'Parcialmente pago', 'class' => 'badge-info'],
+                                            'settled' => ['label' => 'Liquidado', 'class' => 'badge-success'],
                                             'canceled' => ['label' => 'Cancelado', 'class' => 'badge-danger'],
-                                            'expired' => ['label' => 'Expirado', 'class' => 'badge-secondary']
+                                            'expired' => ['label' => 'Expirado', 'class' => 'badge-secondary'],
+                                            'unpaid' => ['label' => 'Não pago', 'class' => 'badge-warning'],
+                                            'pending' => ['label' => 'Pendente', 'class' => 'badge-warning'],
+                                            'processing' => ['label' => 'Processando', 'class' => 'badge-info'],
+                                            'error' => ['label' => 'Erro', 'class' => 'badge-danger']
                                         ];
                                         $status = $charge['status'] ?? 'waiting';
                                         $statusInfo = $statusLabels[$status] ?? ['label' => ucfirst($status), 'class' => 'badge-secondary'];
@@ -754,7 +780,9 @@ function gerarCobrancaEfi() {
             // Sucesso
             const statusMap = {
                 'waiting': 'Aguardando pagamento',
+                'up_to_date': 'Em dia (sem parcelas vencidas)',
                 'paid': 'Pago',
+                'paid_partial': 'Parcialmente pago',
                 'settled': 'Liquidado',
                 'canceled': 'Cancelado',
                 'expired': 'Expirado',
@@ -762,13 +790,20 @@ function gerarCobrancaEfi() {
                 'unpaid': 'Não pago',
                 'pending': 'Pendente',
                 'processing': 'Processando',
-                'new': 'Novo'
+                'new': 'Nova cobrança'
             };
             const statusTraduzido = data.status ? (statusMap[data.status.toLowerCase()] || data.status) : 'Não disponível';
             
             let successMsg = 'Cobrança gerada com sucesso!\n\n';
-            successMsg += `- ID da Cobrança: ${data.charge_id || 'Não disponível'}\n`;
+            // Para Carnê, usar carnet_id; para cobrança única, usar charge_id
+            const chargeId = data.carnet_id || data.charge_id || 'Não disponível';
+            successMsg += `- ID da Cobrança: ${chargeId}\n`;
             successMsg += `- Status: ${statusTraduzido}\n`;
+            
+            // Se for Carnê, mostrar informações adicionais
+            if (data.type === 'carne' && data.carnet_id) {
+                successMsg += `- Tipo: Carnê (${data.installments || 'N'} parcelas)\n`;
+            }
             
             if (data.payment_url) {
                 successMsg += `\n- Link de Pagamento: ${data.payment_url}\n`;
@@ -834,7 +869,9 @@ function sincronizarCobrancaEfi() {
             // Sucesso
             const statusMap = {
                 'waiting': 'Aguardando pagamento',
+                'up_to_date': 'Em dia (sem parcelas vencidas)',
                 'paid': 'Pago',
+                'paid_partial': 'Parcialmente pago',
                 'settled': 'Liquidado',
                 'canceled': 'Cancelado',
                 'expired': 'Expirado',
@@ -842,7 +879,7 @@ function sincronizarCobrancaEfi() {
                 'unpaid': 'Não pago',
                 'pending': 'Pendente',
                 'processing': 'Processando',
-                'new': 'Novo'
+                'new': 'Nova cobrança'
             };
             const statusTraduzido = data.status ? (statusMap[data.status.toLowerCase()] || data.status) : 'Não disponível';
             
@@ -914,12 +951,19 @@ function atualizarStatusCarne(enrollmentId) {
             if (tbody && data.charges) {
                 tbody.innerHTML = '';
                 data.charges.forEach((charge, idx) => {
-                    const statusLabels = {
-                        'waiting': ['Aguardando', 'badge-warning'],
-                        'paid': ['Pago', 'badge-success'],
-                        'canceled': ['Cancelado', 'badge-danger'],
-                        'expired': ['Expirado', 'badge-secondary']
-                    };
+                        const statusLabels = {
+                            'waiting': ['Aguardando pagamento', 'badge-warning'],
+                            'up_to_date': ['Em dia', 'badge-success'],
+                            'paid': ['Pago', 'badge-success'],
+                            'paid_partial': ['Parcialmente pago', 'badge-info'],
+                            'settled': ['Liquidado', 'badge-success'],
+                            'canceled': ['Cancelado', 'badge-danger'],
+                            'expired': ['Expirado', 'badge-secondary'],
+                            'unpaid': ['Não pago', 'badge-warning'],
+                            'pending': ['Pendente', 'badge-warning'],
+                            'processing': ['Processando', 'badge-info'],
+                            'error': ['Erro', 'badge-danger']
+                        };
                     const statusInfo = statusLabels[charge.status] || [charge.status, 'badge-secondary'];
                     const expireDate = charge.expire_at ? new Date(charge.expire_at).toLocaleDateString('pt-BR') : 'N/A';
                     

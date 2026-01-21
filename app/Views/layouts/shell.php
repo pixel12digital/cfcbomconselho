@@ -180,46 +180,36 @@
             const isProduction = <?= ($_ENV['APP_ENV'] ?? 'local') === 'production' ? 'true' : 'false' ?>;
             const swPath = '<?= base_path('/sw.js') ?>';
             
-            // Em desenvolvimento, verificar se o arquivo existe antes de registrar
-            if (isProduction) {
-                // Em produção, sempre tentar registrar
-                window.addEventListener('load', function() {
-                    navigator.serviceWorker.register(swPath)
-                        .then(function(registration) {
-                            console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
-                            
-                            // Verificar atualizações periodicamente
-                            setInterval(function() {
-                                registration.update();
-                            }, 60000); // Verificar a cada minuto
-                        })
-                        .catch(function(error) {
-                            // Silenciar erro em produção (não poluir console)
-                            if (console && console.warn) {
-                                console.warn('[SW] Falha ao registrar Service Worker:', error.message);
-                            }
-                        });
-                });
-            } else {
-                // Em desenvolvimento, verificar se arquivo existe primeiro
-                fetch(swPath, { method: 'HEAD' })
-                    .then(function(response) {
-                        if (response.ok) {
-                            window.addEventListener('load', function() {
-                                navigator.serviceWorker.register(swPath)
-                                    .then(function(registration) {
+            // Verificar se arquivo existe antes de registrar (tanto em produção quanto desenvolvimento)
+            fetch(swPath, { method: 'HEAD' })
+                .then(function(response) {
+                    if (response.ok) {
+                        window.addEventListener('load', function() {
+                            navigator.serviceWorker.register(swPath)
+                                .then(function(registration) {
+                                    if (isProduction) {
+                                        console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
+                                        
+                                        // Verificar atualizações periodicamente (apenas em produção)
+                                        setInterval(function() {
+                                            registration.update();
+                                        }, 60000); // Verificar a cada minuto
+                                    } else {
                                         console.log('[SW] Service Worker registrado:', registration.scope);
-                                    })
-                                    .catch(function(error) {
-                                        // Silenciar erro silenciosamente em dev
-                                    });
-                            });
-                        }
-                    })
-                    .catch(function() {
-                        // Arquivo não existe ou erro - não registrar (evita 404)
-                    });
-            }
+                                    }
+                                })
+                                .catch(function(error) {
+                                    // Silenciar erro completamente (não poluir console)
+                                    // O arquivo existe mas houve erro ao registrar (pode ser problema de CORS, etc)
+                                });
+                        });
+                    }
+                    // Se response não é ok (404, etc), não registrar (evita 404 no console)
+                })
+                .catch(function() {
+                    // Arquivo não existe ou erro de rede - não registrar (evita 404)
+                    // Não fazer nada, silenciar completamente
+                });
         }
     </script>
 </body>

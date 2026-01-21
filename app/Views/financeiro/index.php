@@ -248,7 +248,7 @@
                             <th>Vencimento</th>
                             <th>Status Financeiro</th>
                             <th>Cobrança</th>
-                            <th>Status Banco EFI</th>
+                            <th>Status da Cobrança</th>
                             <th>Último Evento</th>
                             <th style="width: 220px;">Ações</th>
                         </tr>
@@ -284,13 +284,15 @@
                         // Verificar se tem cobrança gerada
                         $hasCharge = !empty($enr['gateway_charge_id']) && $enr['gateway_charge_id'] !== '';
                         
-                        // Status gateway (traduzir para português)
+                        // Status gateway (traduzir para português claro e não técnico)
                         $gatewayStatusRaw = $hasCharge ? ($enr['gateway_last_status'] ?? '-') : '-';
                         $gatewayStatus = '-';
                         if ($gatewayStatusRaw !== '-') {
                             $statusMap = [
                                 'waiting' => 'Aguardando pagamento',
+                                'up_to_date' => 'Em dia (sem parcelas vencidas)',
                                 'paid' => 'Pago',
+                                'paid_partial' => 'Parcialmente pago',
                                 'settled' => 'Liquidado',
                                 'canceled' => 'Cancelado',
                                 'expired' => 'Expirado',
@@ -298,7 +300,7 @@
                                 'unpaid' => 'Não pago',
                                 'pending' => 'Pendente',
                                 'processing' => 'Processando',
-                                'new' => 'Novo'
+                                'new' => 'Nova cobrança'
                             ];
                             $gatewayStatus = $statusMap[strtolower($gatewayStatusRaw)] ?? $gatewayStatusRaw;
                         }
