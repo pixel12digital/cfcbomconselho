@@ -588,12 +588,28 @@ class ConfiguracoesController extends Controller
             redirect(base_url('configuracoes/cfc'));
         }
 
-        if (!isset($_FILES['logo']) || $_FILES['logo']['error'] !== UPLOAD_ERR_OK) {
-            $_SESSION['error'] = 'Erro ao enviar arquivo.';
+        if (!isset($_FILES['logo'])) {
+            $_SESSION['error'] = 'Nenhum arquivo foi enviado.';
             redirect(base_url('configuracoes/cfc'));
         }
 
         $file = $_FILES['logo'];
+        
+        // Verificar erro de upload
+        if ($file['error'] !== UPLOAD_ERR_OK) {
+            $uploadErrors = [
+                UPLOAD_ERR_INI_SIZE => 'Arquivo excede o tamanho máximo permitido pelo PHP (upload_max_filesize).',
+                UPLOAD_ERR_FORM_SIZE => 'Arquivo excede o tamanho máximo do formulário (MAX_FILE_SIZE).',
+                UPLOAD_ERR_PARTIAL => 'Upload parcial do arquivo. Tente novamente.',
+                UPLOAD_ERR_NO_FILE => 'Nenhum arquivo foi enviado.',
+                UPLOAD_ERR_NO_TMP_DIR => 'Diretório temporário não encontrado no servidor.',
+                UPLOAD_ERR_CANT_WRITE => 'Erro ao escrever arquivo no disco. Verifique permissões.',
+                UPLOAD_ERR_EXTENSION => 'Upload bloqueado por extensão do PHP.'
+            ];
+            $errorMsg = $uploadErrors[$file['error']] ?? 'Erro desconhecido no upload (código: ' . $file['error'] . ').';
+            $_SESSION['error'] = $errorMsg;
+            redirect(base_url('configuracoes/cfc'));
+        }
         
         // Validar tipo
         $allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
@@ -615,11 +631,20 @@ class ConfiguracoesController extends Controller
         // Criar diretório se não existir
         $uploadDir = dirname(__DIR__, 2) . '/storage/uploads/cfcs/';
         if (!is_dir($uploadDir)) {
-            mkdir($uploadDir, 0755, true);
+            if (!mkdir($uploadDir, 0755, true)) {
+                $_SESSION['error'] = 'Erro ao criar diretório de upload. Verifique as permissões.';
+                redirect(base_url('configuracoes/cfc'));
+            }
+        }
+
+        // Verificar se diretório é gravável
+        if (!is_writable($uploadDir)) {
+            $_SESSION['error'] = 'Diretório de upload não tem permissão de escrita. Verifique as permissões.';
+            redirect(base_url('configuracoes/cfc'));
         }
 
         // Gerar nome único
-        $extension = pathinfo($file['name'], PATHINFO_EXTENSION);
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
         $filename = 'cfc_' . $cfc['id'] . '_' . time() . '.' . $extension;
         $filepath = $uploadDir . $filename;
 
@@ -635,7 +660,27 @@ class ConfiguracoesController extends Controller
 
         // Mover arquivo
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
-            $_SESSION['error'] = 'Erro ao salvar arquivo.';
+            $errorMsg = 'Erro ao salvar arquivo.';
+            // Verificar tipo de erro
+            if ($file['error'] !== UPLOAD_ERR_OK) {
+                $uploadErrors = [
+                    UPLOAD_ERR_INI_SIZE => 'Arquivo excede o tamanho máximo permitido pelo PHP.',
+                    UPLOAD_ERR_FORM_SIZE => 'Arquivo excede o tamanho máximo do formulário.',
+                    UPLOAD_ERR_PARTIAL => 'Upload parcial do arquivo.',
+                    UPLOAD_ERR_NO_FILE => 'Nenhum arquivo foi enviado.',
+                    UPLOAD_ERR_NO_TMP_DIR => 'Diretório temporário não encontrado.',
+                    UPLOAD_ERR_CANT_WRITE => 'Erro ao escrever arquivo no disco.',
+                    UPLOAD_ERR_EXTENSION => 'Upload bloqueado por extensão.'
+                ];
+                $errorMsg = $uploadErrors[$file['error']] ?? 'Erro desconhecido no upload.';
+            }
+            $_SESSION['error'] = $errorMsg;
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        // Verificar se arquivo foi salvo corretamente
+        if (!file_exists($filepath)) {
+            $_SESSION['error'] = 'Arquivo não foi salvo corretamente.';
             redirect(base_url('configuracoes/cfc'));
         }
 

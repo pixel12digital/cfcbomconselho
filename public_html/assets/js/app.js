@@ -422,8 +422,8 @@
         });
     }
     
-    // Esconder botão se já estiver instalado
-    if (isStandalone && installButtonContainer) {
+    // Esconder botão se já estiver instalado (verificação final)
+    if (isAppInstalled() && installButtonContainer) {
         installButtonContainer.style.display = 'none';
     }
 })();
