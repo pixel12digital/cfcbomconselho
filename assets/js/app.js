@@ -188,4 +188,202 @@
             document.body.classList.remove('sidebar-open');
         }
     });
+    
+    // ============================================
+    // PWA Installation Handler (Opcional - Sem Forçar)
+    // ============================================
+    
+    let deferredPrompt = null;
+    const installButton = document.getElementById('pwa-install-btn');
+    const installButtonContainer = document.getElementById('pwa-install-container');
+    
+    // Detectar se já está instalado (standalone mode)
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                        window.navigator.standalone || 
+                        document.referrer.includes('android-app://');
+    
+    // Interceptar beforeinstallprompt (Android/Desktop)
+    window.addEventListener('beforeinstallprompt', function(e) {
+        // Prevenir o prompt automático
+        e.preventDefault();
+        
+        // Guardar o evento para usar depois
+        deferredPrompt = e;
+        
+        // Mostrar botão apenas se não estiver em standalone
+        if (!isStandalone && installButtonContainer) {
+            installButtonContainer.style.display = 'block';
+        }
+    });
+    
+    // Handler do botão de instalação
+    if (installButton) {
+        installButton.addEventListener('click', async function() {
+            // Android/Desktop: usar deferredPrompt
+            if (deferredPrompt) {
+                // Mostrar prompt de instalação
+                deferredPrompt.prompt();
+                
+                // Aguardar escolha do usuário
+                const { outcome } = await deferredPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    console.log('Usuário aceitou instalação');
+                } else {
+                    console.log('Usuário recusou instalação');
+                }
+                
+                // Limpar referência
+                deferredPrompt = null;
+                
+                // Esconder botão
+                if (installButtonContainer) {
+                    installButtonContainer.style.display = 'none';
+                }
+            } else {
+                // iOS: mostrar modal com instruções
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+                
+                if (isIOS) {
+                    showIOSInstallModal();
+                } else {
+                    // Outros navegadores que não suportam PWA
+                    alert('Instalação não disponível neste navegador. Use Chrome, Edge ou Safari.');
+                }
+            }
+        });
+    }
+    
+    // Escutar evento de instalação concluída
+    window.addEventListener('appinstalled', function() {
+        console.log('PWA instalado com sucesso');
+        deferredPrompt = null;
+        
+        // Esconder botão definitivamente
+        if (installButtonContainer) {
+            installButtonContainer.style.display = 'none';
+        }
+    });
+    
+    // Função para mostrar modal iOS
+    function showIOSInstallModal() {
+        // Criar modal se não existir
+        let modal = document.getElementById('ios-install-modal');
+        
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'ios-install-modal';
+            modal.className = 'ios-install-modal';
+            modal.innerHTML = `
+                <div class="ios-install-modal-content">
+                    <div class="ios-install-modal-header">
+                        <h3>Instalar Aplicativo</h3>
+                        <button class="ios-install-modal-close" onclick="this.closest('.ios-install-modal').style.display='none'">×</button>
+                    </div>
+                    <div class="ios-install-modal-body">
+                        <p>Para instalar este aplicativo no seu iPhone/iPad:</p>
+                        <ol>
+                            <li>Toque no botão <strong>Compartilhar</strong> <span style="font-size: 20px;">📤</span> na barra inferior do Safari</li>
+                            <li>Role para baixo e toque em <strong>"Adicionar à Tela de Início"</strong></li>
+                            <li>Toque em <strong>"Adicionar"</strong> para confirmar</li>
+                        </ol>
+                    </div>
+                    <div class="ios-install-modal-footer">
+                        <button class="ios-install-modal-btn" onclick="document.getElementById('ios-install-modal').style.display='none'">Entendi</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Adicionar CSS inline (simples, sem depender de arquivo externo)
+            if (!document.getElementById('ios-install-modal-style')) {
+                const style = document.createElement('style');
+                style.id = 'ios-install-modal-style';
+                style.textContent = `
+                    .ios-install-modal {
+                        display: none;
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0, 0, 0, 0.5);
+                        z-index: 10000;
+                        align-items: center;
+                        justify-content: center;
+                    }
+                    .ios-install-modal.show {
+                        display: flex;
+                    }
+                    .ios-install-modal-content {
+                        background: white;
+                        border-radius: 8px;
+                        max-width: 400px;
+                        width: 90%;
+                        max-height: 90vh;
+                        overflow-y: auto;
+                        box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+                    }
+                    .ios-install-modal-header {
+                        padding: 20px;
+                        border-bottom: 1px solid #e0e0e0;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    }
+                    .ios-install-modal-header h3 {
+                        margin: 0;
+                        color: #023A8D;
+                    }
+                    .ios-install-modal-close {
+                        background: none;
+                        border: none;
+                        font-size: 24px;
+                        cursor: pointer;
+                        color: #666;
+                    }
+                    .ios-install-modal-body {
+                        padding: 20px;
+                    }
+                    .ios-install-modal-body ol {
+                        margin: 15px 0;
+                        padding-left: 20px;
+                    }
+                    .ios-install-modal-body li {
+                        margin: 10px 0;
+                    }
+                    .ios-install-modal-footer {
+                        padding: 20px;
+                        border-top: 1px solid #e0e0e0;
+                        text-align: right;
+                    }
+                    .ios-install-modal-btn {
+                        background: #023A8D;
+                        color: white;
+                        border: none;
+                        padding: 10px 20px;
+                        border-radius: 4px;
+                        cursor: pointer;
+                    }
+                `;
+                document.head.appendChild(style);
+            }
+        }
+        
+        // Mostrar modal
+        modal.style.display = 'flex';
+        modal.classList.add('show');
+        
+        // Fechar ao clicar fora
+        modal.addEventListener('click', function(e) {
+            if (e.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+    }
+    
+    // Esconder botão se já estiver instalado
+    if (isStandalone && installButtonContainer) {
+        installButtonContainer.style.display = 'none';
+    }
 })();

@@ -8,8 +8,8 @@
     <base href="<?= base_path('/') ?>">
     <title><?= $pageTitle ?? 'CFC Sistema' ?></title>
     
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="<?= base_path('/manifest.json') ?>">
+    <!-- PWA Manifest (dinâmico para white-label) -->
+    <link rel="manifest" href="<?= base_path('/manifest.php') ?>">
     
     <!-- Apple Touch Icon (iOS) -->
     <link rel="apple-touch-icon" href="<?= base_path('/icons/icon-192x192.png') ?>">
@@ -93,6 +93,15 @@
                     </div>
                     <span class="d-none-mobile"><?= htmlspecialchars($_SESSION['user_name'] ?? 'Usuário') ?></span>
                     <div class="topbar-profile-dropdown" id="profileDropdown" style="display: none;">
+                        <!-- Botão Instalar Aplicativo (PWA) - Opcional, só aparece quando disponível -->
+                        <div id="pwa-install-container" style="display: none; border-bottom: 1px solid #e0e0e0; margin-bottom: 5px;">
+                            <button id="pwa-install-btn" class="topbar-profile-dropdown-item" style="width: 100%; text-align: left; background: none; border: none; cursor: pointer; padding: 12px 16px;">
+                                <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 8px;">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                                Instalar Aplicativo
+                            </button>
+                        </div>
                         <a href="<?= base_path('/change-password') ?>" class="topbar-profile-dropdown-item">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 8px;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>

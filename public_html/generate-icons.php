@@ -2,7 +2,28 @@
 /**
  * Gerador de Ícones PWA - Acesse via browser: /generate-icons.php
  * Cria ícones 192x192 e 512x512 com texto "CFC" em fundo azul
+ * 
+ * SEGURANÇA: Requer autenticação de administrador
  */
+
+// Carregar configurações
+require_once __DIR__ . '/../app/Bootstrap.php';
+require_once __DIR__ . '/../app/Config/Env.php';
+
+use App\Config\Env;
+
+Env::load();
+
+// Iniciar sessão
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Verificar autenticação (apenas admin pode gerar ícones)
+if (empty($_SESSION['user_id']) || ($_SESSION['current_role'] ?? '') !== 'ADMIN') {
+    http_response_code(403);
+    die("Acesso negado. Apenas administradores podem gerar ícones.");
+}
 
 // Verificar se GD está disponível
 if (!extension_loaded('gd')) {
