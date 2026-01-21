@@ -34,14 +34,24 @@ $pageTitle = $isEdit ? 'Editar Usuário' : 'Criar Acesso';
                 <label class="form-label" for="student_id">Aluno</label>
                 <select name="link_id" id="student_id" class="form-input">
                     <option value="">Selecione um aluno...</option>
-                    <?php foreach ($students ?? [] as $student): ?>
-                    <option value="<?= $student['id'] ?>">
-                        <?= htmlspecialchars($student['full_name'] ?: $student['name']) ?> 
-                        (<?= htmlspecialchars($student['cpf']) ?>)
-                    </option>
-                    <?php endforeach; ?>
+                    <?php if (!empty($students)): ?>
+                        <?php foreach ($students as $student): ?>
+                        <option value="<?= $student['id'] ?>">
+                            <?= htmlspecialchars($student['full_name'] ?: $student['name']) ?> 
+                            (<?= htmlspecialchars($student['cpf']) ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <option value="" disabled>Nenhum aluno disponível</option>
+                    <?php endif; ?>
                 </select>
-                <small class="form-text">Apenas alunos sem acesso vinculado aparecem aqui.</small>
+                <small class="form-text">
+                    <?php if (empty($students)): ?>
+                        <span style="color: #dc3545;">⚠️ Nenhum aluno sem acesso encontrado. Todos os alunos já possuem acesso vinculado ou não possuem email cadastrado.</span>
+                    <?php else: ?>
+                        Apenas alunos sem acesso vinculado aparecem aqui. (<?= count($students) ?> disponível(is))
+                    <?php endif; ?>
+                </small>
             </div>
 
             <!-- Seleção de Instrutor -->
@@ -49,14 +59,24 @@ $pageTitle = $isEdit ? 'Editar Usuário' : 'Criar Acesso';
                 <label class="form-label" for="instructor_id">Instrutor</label>
                 <select name="link_id" id="instructor_id" class="form-input">
                     <option value="">Selecione um instrutor...</option>
-                    <?php foreach ($instructors ?? [] as $instructor): ?>
-                    <option value="<?= $instructor['id'] ?>">
-                        <?= htmlspecialchars($instructor['name']) ?> 
-                        (<?= htmlspecialchars($instructor['cpf']) ?>)
-                    </option>
-                    <?php endforeach; ?>
+                    <?php if (!empty($instructors)): ?>
+                        <?php foreach ($instructors as $instructor): ?>
+                        <option value="<?= $instructor['id'] ?>">
+                            <?= htmlspecialchars($instructor['name']) ?> 
+                            (<?= htmlspecialchars($instructor['cpf']) ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <option value="" disabled>Nenhum instrutor disponível</option>
+                    <?php endif; ?>
                 </select>
-                <small class="form-text">Apenas instrutores sem acesso vinculado aparecem aqui.</small>
+                <small class="form-text">
+                    <?php if (empty($instructors)): ?>
+                        <span style="color: #dc3545;">⚠️ Nenhum instrutor sem acesso encontrado. Todos os instrutores já possuem acesso vinculado ou não possuem email cadastrado.</span>
+                    <?php else: ?>
+                        Apenas instrutores sem acesso vinculado aparecem aqui. (<?= count($instructors) ?> disponível(is))
+                    <?php endif; ?>
+                </small>
             </div>
 
             <!-- Nome (apenas para administrativo) -->
@@ -282,17 +302,72 @@ document.addEventListener('DOMContentLoaded', function() {
     const studentSelect = document.getElementById('student-select');
     const instructorSelect = document.getElementById('instructor-select');
     const nomeInput = document.getElementById('nome-input');
+    const studentIdSelect = document.getElementById('student_id');
+    const instructorIdSelect = document.getElementById('instructor_id');
     
+    // Função para atualizar visibilidade dos campos
+    function updateFieldsVisibility(value) {
+        if (!value && linkType) {
+            value = linkType.value;
+        }
+        if (!value) {
+            value = 'none';
+        }
+        
+        console.log('[USUARIOS_FORM] Atualizando visibilidade para:', value);
+        
+        if (studentSelect) {
+            const shouldShow = value === 'student';
+            studentSelect.style.display = shouldShow ? 'block' : 'none';
+            console.log('[USUARIOS_FORM] Student select:', {
+                display: studentSelect.style.display,
+                shouldShow: shouldShow,
+                optionsCount: studentIdSelect ? studentIdSelect.options.length : 0
+            });
+        } else {
+            console.warn('[USUARIOS_FORM] student-select não encontrado!');
+        }
+        
+        if (instructorSelect) {
+            const shouldShow = value === 'instructor';
+            instructorSelect.style.display = shouldShow ? 'block' : 'none';
+            console.log('[USUARIOS_FORM] Instructor select:', {
+                display: instructorSelect.style.display,
+                shouldShow: shouldShow,
+                optionsCount: instructorIdSelect ? instructorIdSelect.options.length : 0
+            });
+        } else {
+            console.warn('[USUARIOS_FORM] instructor-select não encontrado!');
+        }
+        
+        if (nomeInput) {
+            nomeInput.style.display = value === 'none' ? 'block' : 'none';
+        }
+        
+        // Limpar seleções quando mudar
+        if (studentIdSelect && value !== 'student') {
+            studentIdSelect.value = '';
+        }
+        if (instructorIdSelect && value !== 'instructor') {
+            instructorIdSelect.value = '';
+        }
+    }
+    
+    // Inicializar estado ao carregar
     if (linkType) {
+        console.log('[USUARIOS_FORM] Link type inicial:', linkType.value);
+        console.log('[USUARIOS_FORM] Alunos disponíveis:', studentIdSelect ? studentIdSelect.options.length : 0);
+        console.log('[USUARIOS_FORM] Instrutores disponíveis:', instructorIdSelect ? instructorIdSelect.options.length : 0);
+        
+        // Atualizar visibilidade inicial
+        updateFieldsVisibility(linkType.value);
+        
+        // Adicionar listener para mudanças
         linkType.addEventListener('change', function() {
-            studentSelect.style.display = this.value === 'student' ? 'block' : 'none';
-            instructorSelect.style.display = this.value === 'instructor' ? 'block' : 'none';
-            nomeInput.style.display = this.value === 'none' ? 'block' : 'none';
-            
-            // Limpar seleções
-            document.getElementById('student_id').value = '';
-            document.getElementById('instructor_id').value = '';
+            updateFieldsVisibility(this.value);
         });
+    } else {
+        console.warn('[USUARIOS_FORM] Campo link_type não encontrado!');
     }
 });
 

@@ -118,14 +118,23 @@ class UsuariosController extends Controller
         // Log para diagnóstico
         error_log("[USUARIOS_NOVO] Alunos encontrados sem acesso: " . count($students));
         
+        // Buscar instrutores sem usuário vinculado
+        // Inclui instrutores sem user_id OU com user_id que não existe na tabela usuarios
         $stmt = $db->prepare("
-            SELECT id, name, cpf, email 
-            FROM instructors 
-            WHERE cfc_id = ? AND (user_id IS NULL OR user_id = 0)
-            ORDER BY name ASC
+            SELECT i.id, i.name, i.cpf, i.email, i.user_id
+            FROM instructors i
+            LEFT JOIN usuarios u ON u.id = i.user_id
+            WHERE i.cfc_id = ? 
+            AND (i.user_id IS NULL OR i.user_id = 0 OR u.id IS NULL)
+            AND i.email IS NOT NULL 
+            AND i.email != ''
+            ORDER BY i.name ASC
         ");
         $stmt->execute([$this->cfcId]);
         $instructors = $stmt->fetchAll(\PDO::FETCH_ASSOC);
+        
+        // Log para diagnóstico
+        error_log("[USUARIOS_NOVO] Instrutores encontrados sem acesso: " . count($instructors));
         
         $data = [
             'pageTitle' => 'Criar Acesso',
