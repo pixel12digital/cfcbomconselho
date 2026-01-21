@@ -93,6 +93,43 @@ $studentModel = new Student();
         </div>
     </div>
 
+    <!-- Curso Teórico (Detalhes) -->
+    <?php if (!empty($theoryClass) && !empty($theoryProgress)): ?>
+    <div class="card" style="margin-bottom: var(--spacing-md);">
+        <div class="card-header">
+            <h3 style="margin: 0;">Curso Teórico</h3>
+        </div>
+        <div class="card-body">
+            <div style="margin-bottom: var(--spacing-md);">
+                <strong><?= htmlspecialchars($theoryClass['course_name']) ?></strong>
+                <?php if ($theoryClass['name']): ?>
+                    <div class="text-muted" style="font-size: var(--font-size-sm); margin-top: var(--spacing-xs);">
+                        Turma: <?= htmlspecialchars($theoryClass['name']) ?>
+                    </div>
+                <?php endif; ?>
+            </div>
+            
+            <div style="margin-bottom: var(--spacing-md);">
+                <label class="form-label" style="margin-bottom: var(--spacing-xs);">Progresso</label>
+                <div style="background: var(--color-bg-light); border-radius: var(--radius-md); padding: var(--spacing-xs);">
+                    <div style="background: var(--color-primary); height: 24px; border-radius: var(--radius-sm); width: <?= $theoryProgress['progress_percent'] ?>%; transition: width 0.3s; display: flex; align-items: center; justify-content: center; color: white; font-size: var(--font-size-sm); font-weight: var(--font-weight-semibold);">
+                        <?= $theoryProgress['progress_percent'] ?>%
+                    </div>
+                </div>
+                <div style="margin-top: var(--spacing-xs); font-size: var(--font-size-sm); color: var(--color-text-muted);">
+                    <?= $theoryProgress['attended_sessions'] ?> de <?= $theoryProgress['total_sessions'] ?> sessões concluídas
+                </div>
+            </div>
+            
+            <?php if ($theoryProgress['is_completed']): ?>
+            <div style="padding: var(--spacing-sm); background: var(--color-success-light, #d1fae5); border: 1px solid var(--color-success); border-radius: var(--radius-md); color: var(--color-success); font-weight: var(--font-weight-semibold);">
+                ✅ Curso Teórico Concluído!
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Progresso (Etapas) -->
     <?php if (!empty($activeEnrollment) && !empty($steps)): ?>
     <div class="card" style="margin-bottom: var(--spacing-md);">
@@ -105,6 +142,7 @@ $studentModel = new Student();
                 <?php 
                 $studentStep = $studentStepsMap[$step['id']] ?? null;
                 $isCompleted = $studentStep && $studentStep['status'] === 'concluida';
+                $isTheoryStep = $step['code'] === 'CURSO_TEORICO';
                 ?>
                 <div class="timeline-item <?= $isCompleted ? 'completed' : '' ?>">
                     <div class="timeline-marker">
@@ -122,6 +160,11 @@ $studentModel = new Student();
                         <div>
                             <h4 style="margin: 0 0 var(--spacing-xs) 0; font-size: var(--font-size-base);">
                                 <?= htmlspecialchars($step['name']) ?>
+                                <?php if ($isTheoryStep && !empty($theoryProgress)): ?>
+                                    <span style="font-size: var(--font-size-sm); color: var(--color-text-muted); font-weight: normal;">
+                                        (<?= $theoryProgress['progress_percent'] ?>%)
+                                    </span>
+                                <?php endif; ?>
                             </h4>
                             <?php if ($step['description']): ?>
                             <p class="text-muted" style="margin: 0; font-size: var(--font-size-sm);">
@@ -144,18 +187,39 @@ $studentModel = new Student();
         </div>
         <div class="card-body">
             <?php if ($hasPending): ?>
-                <div style="color: var(--color-danger); font-weight: var(--font-weight-semibold); margin-bottom: var(--spacing-sm);">
-                    ⚠️ Pendência: <?= number_format($totalDebt, 2, ',', '.') ?> em aberto
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                    <div>
+                        <label class="form-label" style="margin-bottom: var(--spacing-xs); font-size: var(--font-size-sm);">Em aberto</label>
+                        <div style="color: var(--color-danger); font-weight: var(--font-weight-semibold); font-size: var(--font-size-lg);">
+                            R$ <?= number_format($totalDebt, 2, ',', '.') ?>
+                        </div>
+                    </div>
+                    <?php if (!empty($nextDueDate)): ?>
+                    <div>
+                        <label class="form-label" style="margin-bottom: var(--spacing-xs); font-size: var(--font-size-sm);">Próximo vencimento</label>
+                        <div style="font-weight: var(--font-weight-semibold); font-size: var(--font-size-lg);">
+                            <?= date('d/m/Y', strtotime($nextDueDate)) ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
+                    <?php if ($overdueCount > 0): ?>
+                    <div>
+                        <label class="form-label" style="margin-bottom: var(--spacing-xs); font-size: var(--font-size-sm);">Parcelas em atraso</label>
+                        <div style="color: var(--color-danger); font-weight: var(--font-weight-semibold); font-size: var(--font-size-lg);">
+                            <?= $overdueCount ?>
+                        </div>
+                    </div>
+                    <?php endif; ?>
                 </div>
-                <p class="text-muted" style="font-size: var(--font-size-sm);">
+                <p class="text-muted" style="font-size: var(--font-size-sm); margin-bottom: var(--spacing-md);">
                     Entre em contato com a secretaria para regularizar.
                 </p>
             <?php else: ?>
-                <div style="color: var(--color-success); font-weight: var(--font-weight-semibold);">
+                <div style="color: var(--color-success); font-weight: var(--font-weight-semibold); margin-bottom: var(--spacing-md);">
                     ✅ Sem pendências
                 </div>
             <?php endif; ?>
-            <div style="margin-top: var(--spacing-md);">
+            <div style="display: flex; gap: var(--spacing-sm); flex-wrap: wrap;">
                 <a href="<?= base_path('financeiro') ?>" class="btn btn-sm btn-outline">
                     Ver detalhes financeiros
                 </a>

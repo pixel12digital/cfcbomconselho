@@ -12,6 +12,7 @@ use App\Models\RescheduleRequest;
 use App\Models\Notification;
 use App\Config\Constants;
 use App\Config\Database;
+use App\Services\InstallmentsViewService;
 
 class DashboardController extends Controller
 {
@@ -93,11 +94,81 @@ class DashboardController extends Controller
             $steps = $stepModel->findAllActive();
             $studentSteps = $studentStepModel->findByEnrollment($activeEnrollment['id']);
         }
+
+        // Buscar dados do curso teórico (se matrícula tem turma vinculada)
+        $theoryClass = null;
+        $theoryEnrollments = [];
+        $theoryProgress = null;
+        
+        if ($activeEnrollment && $activeEnrollment['theory_class_id']) {
+            $theoryClassModel = new \App\Models\TheoryClass();
+            $theoryClass = $theoryClassModel->findWithDetails($activeEnrollment['theory_class_id']);
+            
+            if ($theoryClass) {
+                // Buscar matrícula do aluno na turma
+                $theoryEnrollmentModel = new \App\Models\TheoryEnrollment();
+                $theoryEnrollments = $theoryEnrollmentModel->findByStudent($studentId);
+                
+                // Buscar step CURSO_TEORICO
+                $cursoTeoricoStep = $stepModel->findByCode('CURSO_TEORICO');
+                if ($cursoTeoricoStep) {
+                    $theoryStudentStep = $studentStepModel->findByEnrollmentAndStep($activeEnrollment['id'], $cursoTeoricoStep['id']);
+                    
+                    // Calcular progresso (% de disciplinas concluídas)
+                    $sessionModel = new \App\Models\TheorySession();
+                    $attendanceModel = new \App\Models\TheoryAttendance();
+                    
+                    // Buscar TODAS as sessões da turma (planejadas + concluídas)
+                    $allSessions = $sessionModel->query(
+                        "SELECT id, discipline_id, status FROM theory_sessions 
+                         WHERE class_id = ?",
+                        [$activeEnrollment['theory_class_id']]
+                    )->fetchAll();
+                    
+                    $totalSessions = count($allSessions);
+                    $attendedSessions = 0;
+                    
+                    if ($totalSessions > 0) {
+                        // Filtrar apenas sessões concluídas para verificar presenças
+                        $doneSessions = array_filter($allSessions, function($s) {
+                            return $s['status'] === 'done';
+                        });
+                        $sessionIds = array_column($doneSessions, 'id');
+                        
+                        if (!empty($sessionIds)) {
+                            $attendances = $attendanceModel->query(
+                                "SELECT session_id FROM theory_attendance 
+                                 WHERE student_id = ? 
+                                   AND session_id IN (" . implode(',', array_fill(0, count($sessionIds), '?')) . ")
+                                   AND status IN ('present', 'justified')",
+                                array_merge([$studentId], $sessionIds)
+                            )->fetchAll();
+                            
+                            $attendedSessions = count($attendances);
+                        }
+                    }
+                    
+                    $progressPercent = $totalSessions > 0 ? round(($attendedSessions / $totalSessions) * 100) : 0;
+                    
+                    $theoryProgress = [
+                        'step' => $theoryStudentStep,
+                        'total_sessions' => $totalSessions,
+                        'attended_sessions' => $attendedSessions,
+                        'progress_percent' => $progressPercent,
+                        'is_completed' => $theoryStudentStep && $theoryStudentStep['status'] === 'concluida'
+                    ];
+                }
+            }
+        }
         
         // Calcular situação financeira
         $totalDebt = 0;
         $totalPaid = 0;
         $hasPending = false;
+        
+        // Service para visualização de parcelas
+        $installmentsService = new InstallmentsViewService();
+        $allInstallments = [];
         
         foreach ($enrollments as $enr) {
             if ($enr['status'] !== 'cancelada') {
@@ -111,8 +182,17 @@ class DashboardController extends Controller
                 if ($remainingDebt > 0) {
                     $hasPending = true;
                 }
+                
+                // Obter parcelas virtuais para esta matrícula
+                $enrollmentInstallments = $installmentsService->getInstallmentsViewForEnrollment($enr);
+                $allInstallments = array_merge($allInstallments, $enrollmentInstallments);
             }
         }
+        
+        // Calcular estatísticas agregadas das parcelas
+        $installmentsStats = $installmentsService->getInstallmentsStats($allInstallments);
+        $nextDueDate = $installmentsStats['next_due_date'];
+        $overdueCount = $installmentsStats['overdue_count'];
         
         // Determinar status geral
         $statusGeral = 'Em andamento';
@@ -136,7 +216,11 @@ class DashboardController extends Controller
             'totalDebt' => $totalDebt,
             'totalPaid' => $totalPaid,
             'hasPending' => $hasPending,
-            'hasPendingRequest' => $hasPendingRequest
+            'hasPendingRequest' => $hasPendingRequest,
+            'theoryClass' => $theoryClass,
+            'theoryProgress' => $theoryProgress,
+            'nextDueDate' => $nextDueDate,
+            'overdueCount' => $overdueCount
         ];
         
         $this->view('dashboard/aluno', $data);
@@ -161,25 +245,14 @@ class DashboardController extends Controller
         $db = Database::getInstance()->getConnection();
         $cfcId = $_SESSION['cfc_id'] ?? Constants::CFC_ID_DEFAULT;
         
-        // Buscar próxima aula agendada
-        $today = date('Y-m-d');
-        $now = date('H:i:s');
-        $stmt = $db->prepare(
-            "SELECT l.*,
-                    s.name as student_name,
-                    v.plate as vehicle_plate
-             FROM lessons l
-             INNER JOIN students s ON l.student_id = s.id
-             LEFT JOIN vehicles v ON l.vehicle_id = v.id
-             WHERE l.instructor_id = ?
-               AND l.cfc_id = ?
-               AND l.status = 'agendada'
-               AND (l.scheduled_date > ? OR (l.scheduled_date = ? AND l.scheduled_time >= ?))
-             ORDER BY l.scheduled_date ASC, l.scheduled_time ASC
-             LIMIT 1"
+        // Buscar próxima aula agendada (com dedupe de sessões teóricas)
+        $lessonModel = new \App\Models\Lesson();
+        $nextLessons = $lessonModel->findByInstructorWithTheoryDedupe(
+            $instructorId,
+            $cfcId,
+            ['tab' => 'proximas']
         );
-        $stmt->execute([$instructorId, $cfcId, $today, $today, $now]);
-        $nextLesson = $stmt->fetch();
+        $nextLesson = !empty($nextLessons) ? $nextLessons[0] : null;
         
         // Buscar aulas de hoje
         $stmt = $db->prepare(

@@ -192,6 +192,112 @@
                 </div>
             </div>
         </div>
+        
+        <!-- Lista de Parcelas (apenas para aluno) -->
+        <?php if ($isAluno && !empty($allInstallments)): ?>
+        <div class="card" style="margin-top: var(--spacing-md);">
+            <div class="card-header">
+                <h3>Parcelas e Cobranças</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-wrapper">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Matrícula/Serviço</th>
+                                <th>Parcela</th>
+                                <th>Vencimento</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                                <th style="width: 180px;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($enrollments as $enr): ?>
+                                <?php 
+                                $enrollmentInstallments = $installmentsByEnrollment[$enr['id']] ?? [];
+                                if (empty($enrollmentInstallments)) continue;
+                                ?>
+                                <?php foreach ($enrollmentInstallments as $installment): ?>
+                                <tr>
+                                    <td>
+                                        <div style="font-weight: 500;">
+                                            <?= htmlspecialchars($enr['service_name'] ?? 'Matrícula') ?>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span style="font-weight: 500;">
+                                            <?= htmlspecialchars($installment['label']) ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php if ($installment['due_date']): ?>
+                                            <?php
+                                            $dueDate = new \DateTime($installment['due_date']);
+                                            $today = new \DateTime();
+                                            $isOverdue = $dueDate < $today && $installment['status'] !== 'paid';
+                                            ?>
+                                            <span style="<?= $isOverdue ? 'color: #ef4444; font-weight: 600;' : '' ?>">
+                                                <?= $dueDate->format('d/m/Y') ?>
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="text-muted">-</span>
+                                        <?php endif; ?>
+                                    </td>
+                                    <td style="font-weight: 600;">
+                                        R$ <?= number_format($installment['amount'], 2, ',', '.') ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        $statusConfig = [
+                                            'paid' => ['label' => '✅ Paga', 'color' => '#10b981', 'bg' => '#d1fae5'],
+                                            'open' => ['label' => '⚠️ A vencer', 'color' => '#3b82f6', 'bg' => '#dbeafe'],
+                                            'overdue' => ['label' => '❌ Vencida', 'color' => '#ef4444', 'bg' => '#fee2e2'],
+                                            'unknown' => ['label' => '⏳ Aguardando', 'color' => '#6b7280', 'bg' => '#f3f4f6']
+                                        ];
+                                        $status = $statusConfig[$installment['status']] ?? $statusConfig['unknown'];
+                                        ?>
+                                        <span style="
+                                            display: inline-block;
+                                            padding: 4px 12px;
+                                            border-radius: 12px;
+                                            font-size: var(--font-size-sm);
+                                            font-weight: 600;
+                                            color: <?= $status['color'] ?>;
+                                            background-color: <?= $status['bg'] ?>;
+                                        ">
+                                            <?= $status['label'] ?>
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($installment['payment_url'])): ?>
+                                            <a 
+                                                href="<?= htmlspecialchars($installment['payment_url']) ?>" 
+                                                target="_blank" 
+                                                class="btn btn-sm btn-primary"
+                                                title="Abrir link de pagamento"
+                                            >
+                                                Abrir pagamento
+                                            </a>
+                                        <?php else: ?>
+                                            <span class="text-muted" style="font-size: var(--font-size-sm);">
+                                                Link não disponível
+                                            </span>
+                                            <br>
+                                            <span class="text-muted" style="font-size: var(--font-size-xs);">
+                                                Fale com a secretaria
+                                            </span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
     <?php endif; ?>
 <?php else: ?>
     <?php if (!$isAluno && !$student && (!isset($students) || empty($students))): ?>

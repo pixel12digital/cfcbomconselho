@@ -7,6 +7,7 @@ use App\Models\Enrollment;
 use App\Models\User;
 use App\Config\Constants;
 use App\Config\Database;
+use App\Services\InstallmentsViewService;
 
 class FinanceiroController extends Controller
 {
@@ -41,6 +42,8 @@ class FinanceiroController extends Controller
         $pendingTotal = 0;
         $pendingPage = 1;
         $pendingPerPage = 10;
+        $allInstallments = [];
+        $installmentsByEnrollment = [];
         
         // Se for ALUNO, carregar automaticamente os dados do próprio aluno
         if ($currentRole === Constants::ROLE_ALUNO && $userId) {
@@ -58,6 +61,19 @@ class FinanceiroController extends Controller
                         
                         $totalPaid += $entryAmount;
                         $totalDebt += max(0, $finalPrice - $entryAmount);
+                    }
+                    
+                    // Calcular parcelas virtuais para o aluno
+                    $installmentsService = new InstallmentsViewService();
+                    $allInstallments = [];
+                    $installmentsByEnrollment = [];
+                    
+                    foreach ($enrollments as $enr) {
+                        if ($enr['status'] !== 'cancelada') {
+                            $enrollmentInstallments = $installmentsService->getInstallmentsViewForEnrollment($enr);
+                            $installmentsByEnrollment[$enr['id']] = $enrollmentInstallments;
+                            $allInstallments = array_merge($allInstallments, $enrollmentInstallments);
+                        }
                     }
                 }
             }
@@ -127,7 +143,9 @@ class FinanceiroController extends Controller
             'pendingTotal' => $pendingTotal ?? 0,
             'pendingPage' => $pendingPage,
             'pendingPerPage' => $pendingPerPage,
-            'pendingSyncableCount' => $pendingSyncableCount ?? 0
+            'pendingSyncableCount' => $pendingSyncableCount ?? 0,
+            'installmentsByEnrollment' => $installmentsByEnrollment ?? [],
+            'allInstallments' => $allInstallments ?? []
         ];
         
         $this->view('financeiro/index', $data);
