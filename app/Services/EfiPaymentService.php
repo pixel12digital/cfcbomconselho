@@ -208,8 +208,9 @@ class EfiPaymentService
                 if (!empty($student['cpf'])) {
                     $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
                     if (strlen($cpf) === 11) {
+                        $customerName = $this->sanitizeCustomerName($student['full_name'] ?? $student['name'] ?? 'Cliente');
                         $payload['customer'] = [
-                            'name' => $student['full_name'] ?? $student['name'] ?? 'Cliente',
+                            'name' => $customerName,
                             'cpf' => $cpf,
                             'email' => $student['email'] ?? null,
                             'phone_number' => !empty($student['phone']) ? preg_replace('/[^0-9]/', '', $student['phone']) : null
@@ -241,8 +242,9 @@ class EfiPaymentService
                 if (!empty($student['cpf'])) {
                     $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
                     if (strlen($cpf) === 11) {
+                        $customerName = $this->sanitizeCustomerName($student['full_name'] ?? $student['name'] ?? 'Cliente');
                         $bankingBillet['customer'] = [
-                            'name' => $student['full_name'] ?? $student['name'] ?? 'Cliente',
+                            'name' => $customerName,
                             'cpf' => $cpf,
                             'email' => $student['email'] ?? null,
                             'phone_number' => !empty($student['phone']) ? preg_replace('/[^0-9]/', '', $student['phone']) : null
@@ -340,9 +342,10 @@ class EfiPaymentService
             if (!empty($student['cpf'])) {
                 $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
                 if (strlen($cpf) === 11) {
+                    $devedorName = $this->sanitizeCustomerName($student['full_name'] ?? $student['name'] ?? 'Cliente');
                     $pixPayload['devedor'] = [
                         'cpf' => $cpf,
-                        'nome' => $student['full_name'] ?? $student['name'] ?? 'Cliente'
+                        'nome' => $devedorName
                     ];
                 }
             }
@@ -606,8 +609,15 @@ class EfiPaymentService
         if (!empty($student['cpf'])) {
             $cpf = preg_replace('/[^0-9]/', '', $student['cpf']);
             if (strlen($cpf) === 11) {
+                // Sanitizar nome do cliente conforme padrão Efí
+                // Regex Efí: ^(?!.*[؀-ۿ])[ ]*(.+[ ]+)+.+[ ]*$
+                // - Não pode conter caracteres árabes (؀-ۿ)
+                // - Deve ter pelo menos um espaço entre palavras (mínimo 2 palavras)
+                // - Pode ter espaços no início/fim (serão removidos)
+                $customerName = $this->sanitizeCustomerName($student['full_name'] ?? $student['name'] ?? 'Cliente');
+                
                 $payload['customer'] = [
-                    'name' => $student['full_name'] ?? $student['name'] ?? 'Cliente',
+                    'name' => $customerName,
                     'cpf' => $cpf,
                     'email' => $student['email'] ?? null,
                     'phone_number' => !empty($student['phone']) ? preg_replace('/[^0-9]/', '', $student['phone']) : null
@@ -2050,6 +2060,15 @@ class EfiPaymentService
             }
         }
         
+        // Mapear status para billing_status e financial_status (igual ao syncCharge)
+        $billingStatus = $this->mapGatewayStatusToBillingStatus($carnetStatus);
+        $financialStatus = $this->mapGatewayStatusToFinancialStatus($carnetStatus);
+        
+        // Se financial_status não foi mapeado, recalcular baseado em outstanding_amount
+        if ($financialStatus === null) {
+            $financialStatus = $this->recalculateFinancialStatus($enrollment);
+        }
+
         // Atualizar JSON no banco com dados atualizados (com versão e updated_at)
         $carnetDataJson = json_encode([
             'schema_version' => $schemaVersion,
@@ -2064,17 +2083,22 @@ class EfiPaymentService
             'updated_at' => date('Y-m-d H:i:s')
         ], JSON_UNESCAPED_UNICODE);
 
+        // Atualizar todos os campos necessários (igual ao syncCharge)
         $stmt = $this->db->prepare("
             UPDATE enrollments 
             SET gateway_payment_url = ?,
                 gateway_last_status = ?,
-                gateway_last_event_at = ?
+                gateway_last_event_at = ?,
+                billing_status = ?,
+                financial_status = ?
             WHERE id = ?
         ");
         $stmt->execute([
             $carnetDataJson,
             $carnetStatus,
             date('Y-m-d H:i:s'), // Refresh manual usa timestamp atual
+            $billingStatus,
+            $financialStatus,
             $enrollment['id']
         ]);
 
@@ -2097,6 +2121,8 @@ class EfiPaymentService
             'carnet_id' => $carnetId,
             'status' => $carnetStatus,
             'aggregated_status' => $aggregatedStatus,
+            'billing_status' => $billingStatus,
+            'financial_status' => $financialStatus,
             'cover' => $cover,
             'download_link' => $downloadLink,
             'charges' => $chargesData
@@ -2439,5 +2465,63 @@ class EfiPaymentService
         $sql = "UPDATE enrollments SET " . implode(', ', $setParts) . " WHERE id = ?";
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
+    }
+
+    /**
+     * Sanitiza nome do cliente conforme padrão da API Efí
+     * 
+     * Regex Efí: ^(?!.*[؀-ۿ])[ ]*(.+[ ]+)+.+[ ]*$
+     * - Não pode conter caracteres árabes (؀-ۿ)
+     * - Deve ter pelo menos um espaço entre palavras (mínimo 2 palavras)
+     * - Pode ter espaços no início/fim (serão removidos)
+     * 
+     * @param string $name Nome original
+     * @return string Nome sanitizado
+     */
+    private function sanitizeCustomerName($name)
+    {
+        if (empty($name)) {
+            return 'Cliente';
+        }
+        
+        // Remover caracteres árabes (؀-ۿ) e outros caracteres especiais problemáticos
+        $name = preg_replace('/[\x{0600}-\x{06FF}]/u', '', $name); // Remove árabes
+        
+        // Remover caracteres especiais não permitidos (manter apenas letras, números, espaços e acentos)
+        $name = preg_replace('/[^\p{L}\p{N}\s\-\.]/u', '', $name);
+        
+        // Normalizar espaços múltiplos para espaço único
+        $name = preg_replace('/\s+/', ' ', $name);
+        
+        // Remover espaços no início e fim
+        $name = trim($name);
+        
+        // Se ficou vazio após sanitização, usar fallback
+        if (empty($name)) {
+            return 'Cliente';
+        }
+        
+        // Verificar se tem pelo menos 2 palavras (requisito do regex Efí)
+        $words = explode(' ', $name);
+        $words = array_filter($words, function($word) {
+            return !empty(trim($word));
+        });
+        
+        if (count($words) < 2) {
+            // Se tem apenas uma palavra, adicionar "Cliente" no início
+            $name = 'Cliente ' . $name;
+        }
+        
+        // Garantir que o nome não exceda 100 caracteres (limite comum de APIs)
+        if (mb_strlen($name) > 100) {
+            $name = mb_substr($name, 0, 100);
+            // Garantir que não cortou no meio de uma palavra
+            $lastSpace = mb_strrpos($name, ' ');
+            if ($lastSpace !== false) {
+                $name = mb_substr($name, 0, $lastSpace);
+            }
+        }
+        
+        return trim($name);
     }
 }
