@@ -99,6 +99,8 @@ class PaymentsController extends Controller
                     'charge_id' => $enrollment['gateway_charge_id'],
                     'status' => $enrollment['gateway_last_status'],
                     'payment_url' => $enrollment['gateway_payment_url'] ?? null,
+                    'pix_code' => $enrollment['gateway_pix_code'] ?? null,
+                    'barcode' => $enrollment['gateway_barcode'] ?? null,
                     'message' => 'Esta cobrança já foi gerada anteriormente'
                 ], JSON_UNESCAPED_UNICODE);
                 exit;

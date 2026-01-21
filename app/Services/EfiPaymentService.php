@@ -379,6 +379,9 @@ class EfiPaymentService
             $chargeId = $responseData['txid'] ?? null;
             $status = 'waiting'; // Pix geralmente inicia como 'waiting'
             $paymentUrl = $responseData['pixCopiaECola'] ?? $responseData['qrCode'] ?? null;
+            // Extrair PIX copia-e-cola para persistência
+            $pixCode = $responseData['pixCopiaECola'] ?? $responseData['qrCode'] ?? null;
+            $barcode = null; // PIX não tem linha digitável
             
         } else {
             // API de Cobranças: usar endpoint one-step (cria e define pagamento em uma única chamada)
@@ -439,19 +442,31 @@ class EfiPaymentService
             $chargeId = $chargeData['charge_id'] ?? $chargeData['id'] ?? null;
             $status = $chargeData['status'] ?? 'unknown';
             $paymentUrl = null;
+            $pixCode = null;
+            $barcode = null;
             
-            // Extrair URL de pagamento se disponível
+            // Extrair URL de pagamento e dados de pagamento se disponível
             if (isset($chargeData['payment'])) {
                 // Boleto
                 if (isset($chargeData['payment']['banking_billet']['link'])) {
                     $paymentUrl = $chargeData['payment']['banking_billet']['link'];
-                } elseif (isset($chargeData['payment']['banking_billet']['barcode'])) {
-                    // Se não tiver link, pode ter código de barras
-                    $paymentUrl = $chargeData['payment']['banking_billet']['barcode'];
+                }
+                // Linha digitável do boleto (barcode)
+                if (isset($chargeData['payment']['banking_billet']['barcode'])) {
+                    $barcode = $chargeData['payment']['banking_billet']['barcode'];
+                    // Se não tiver link, usar barcode como payment_url
+                    if (!$paymentUrl) {
+                        $paymentUrl = $barcode;
+                    }
                 }
                 // Pix (se houver)
                 if (isset($chargeData['payment']['pix']['qr_code'])) {
-                    $paymentUrl = $chargeData['payment']['pix']['qr_code'];
+                    $pixCode = $chargeData['payment']['pix']['qr_code'];
+                    $paymentUrl = $pixCode;
+                }
+                // PIX copia-e-cola (campo específico)
+                if (isset($chargeData['payment']['pix']['pixCopiaECola'])) {
+                    $pixCode = $chargeData['payment']['pix']['pixCopiaECola'];
                 }
             }
             
@@ -464,14 +479,16 @@ class EfiPaymentService
             ]);
         }
 
-        // Atualizar matrícula com dados da cobrança (incluindo payment_url)
+        // Atualizar matrícula com dados da cobrança (incluindo payment_url, pix_code e barcode)
         $this->updateEnrollmentStatus(
             $enrollment['id'],
             'generated',
             $status,
             $chargeId,
             null,
-            $paymentUrl
+            $paymentUrl,
+            $pixCode,
+            $barcode
         );
 
         // Determinar tipo de pagamento para o retorno
@@ -976,6 +993,35 @@ class EfiPaymentService
         $carnetId = $requestPayload['identifiers']['carnet_id'] ?? $requestPayload['carnet_id'] ?? null;
         $status = $requestPayload['current']['status'] ?? $requestPayload['status'] ?? null;
         $occurredAt = $requestPayload['occurred_at'] ?? date('Y-m-d H:i:s');
+        
+        // Extrair dados de pagamento do payload (se disponíveis)
+        $pixCode = null;
+        $barcode = null;
+        if (isset($requestPayload['current']['payment'])) {
+            $payment = $requestPayload['current']['payment'];
+            // PIX copia-e-cola
+            if (isset($payment['pix']['pixCopiaECola'])) {
+                $pixCode = $payment['pix']['pixCopiaECola'];
+            } elseif (isset($payment['pix']['qr_code'])) {
+                $pixCode = $payment['pix']['qr_code'];
+            }
+            // Linha digitável do boleto
+            if (isset($payment['banking_billet']['barcode'])) {
+                $barcode = $payment['banking_billet']['barcode'];
+            }
+        }
+        // Também verificar no nível raiz do payload
+        if (isset($requestPayload['payment'])) {
+            $payment = $requestPayload['payment'];
+            if (isset($payment['pix']['pixCopiaECola'])) {
+                $pixCode = $payment['pix']['pixCopiaECola'];
+            } elseif (isset($payment['pix']['qr_code'])) {
+                $pixCode = $payment['pix']['qr_code'];
+            }
+            if (isset($payment['banking_billet']['barcode'])) {
+                $barcode = $payment['banking_billet']['barcode'];
+            }
+        }
 
         if ((!$chargeId && !$carnetId) || !$status) {
             return [
@@ -1117,19 +1163,35 @@ class EfiPaymentService
                     
                     // Atualizar JSON no banco
                     // Usar occurredAt do webhook (não "agora") para gateway_last_event_at
-                    $stmt = $this->db->prepare("
-                        UPDATE enrollments 
-                        SET gateway_payment_url = ?,
-                            gateway_last_status = ?,
-                            gateway_last_event_at = ?
-                        WHERE id = ?
-                    ");
-                    $stmt->execute([
+                    $updateFields = [
+                        'gateway_payment_url = ?',
+                        'gateway_last_status = ?',
+                        'gateway_last_event_at = ?'
+                    ];
+                    $updateParams = [
                         json_encode($paymentData, JSON_UNESCAPED_UNICODE),
                         $status,
-                        $occurredAt, // Timestamp do evento (não "agora")
-                        $enrollment['id']
-                    ]);
+                        $occurredAt // Timestamp do evento (não "agora")
+                    ];
+                    
+                    // Adicionar pix_code e barcode se disponíveis
+                    if ($pixCode !== null) {
+                        $updateFields[] = 'gateway_pix_code = ?';
+                        $updateParams[] = $pixCode;
+                    }
+                    if ($barcode !== null) {
+                        $updateFields[] = 'gateway_barcode = ?';
+                        $updateParams[] = $barcode;
+                    }
+                    
+                    $updateParams[] = $enrollment['id'];
+                    
+                    $stmt = $this->db->prepare("
+                        UPDATE enrollments 
+                        SET " . implode(', ', $updateFields) . "
+                        WHERE id = ?
+                    ");
+                    $stmt->execute($updateParams);
                     
                     $this->efiLog('INFO', 'parseWebhook: Parcela do carnê atualizada', [
                         'enrollment_id' => $enrollment['id'],
@@ -1180,30 +1242,56 @@ class EfiPaymentService
                     }
                     $paymentData['updated_at'] = date('Y-m-d H:i:s');
                     
-                    $stmt = $this->db->prepare("
-                        UPDATE enrollments 
-                        SET gateway_payment_url = ?,
-                            gateway_last_status = ?,
-                            gateway_last_event_at = ?,
-                            billing_status = ?
-                        WHERE id = ?
-                    ");
-                    $stmt->execute([
+                    $updateFields = [
+                        'gateway_payment_url = ?',
+                        'gateway_last_status = ?',
+                        'gateway_last_event_at = ?',
+                        'billing_status = ?'
+                    ];
+                    $updateParams = [
                         json_encode($paymentData, JSON_UNESCAPED_UNICODE),
                         $status,
                         $occurredAt, // Timestamp do evento (não "agora")
-                        $billingStatus,
-                        $enrollment['id']
-                    ]);
+                        $billingStatus
+                    ];
+                    
+                    // Adicionar pix_code e barcode se disponíveis
+                    if ($pixCode !== null) {
+                        $updateFields[] = 'gateway_pix_code = ?';
+                        $updateParams[] = $pixCode;
+                    }
+                    if ($barcode !== null) {
+                        $updateFields[] = 'gateway_barcode = ?';
+                        $updateParams[] = $barcode;
+                    }
+                    
+                    $updateParams[] = $enrollment['id'];
+                    
+                    $stmt = $this->db->prepare("
+                        UPDATE enrollments 
+                        SET " . implode(', ', $updateFields) . "
+                        WHERE id = ?
+                    ");
+                    $stmt->execute($updateParams);
                 }
             } else {
                 // Cobrança única
+                // Usar updateEnrollmentStatus com os dados de pagamento se disponíveis
+                $paymentUrl = null;
+                if ($pixCode) {
+                    $paymentUrl = $pixCode;
+                } elseif ($barcode) {
+                    $paymentUrl = $barcode;
+                }
                 $this->updateEnrollmentStatus(
                     $enrollment['id'],
                     $billingStatus,
                     $status,
                     $chargeId,
-                    $occurredAt
+                    $occurredAt,
+                    $paymentUrl,
+                    $pixCode,
+                    $barcode
                 );
             }
         }
@@ -2423,7 +2511,7 @@ class EfiPaymentService
      * @param string|null $eventAt Data/hora do evento (formato Y-m-d H:i:s)
      * @param string|null $paymentUrl URL de pagamento (PIX ou Boleto)
      */
-    private function updateEnrollmentStatus($enrollmentId, $billingStatus, $gatewayStatus, $chargeId = null, $eventAt = null, $paymentUrl = null)
+    private function updateEnrollmentStatus($enrollmentId, $billingStatus, $gatewayStatus, $chargeId = null, $eventAt = null, $paymentUrl = null, $pixCode = null, $barcode = null)
     {
         // Buscar matrícula atual para recalcular financial_status
         $stmt = $this->db->prepare("SELECT * FROM enrollments WHERE id = ?");
@@ -2448,6 +2536,16 @@ class EfiPaymentService
         // Salvar payment_url se fornecido (não sobrescreve se já existir e novo for vazio)
         if ($paymentUrl !== null) {
             $updateData['gateway_payment_url'] = $paymentUrl;
+        }
+        
+        // Salvar PIX copia-e-cola se fornecido
+        if ($pixCode !== null) {
+            $updateData['gateway_pix_code'] = $pixCode;
+        }
+        
+        // Salvar linha digitável do boleto se fornecido
+        if ($barcode !== null) {
+            $updateData['gateway_barcode'] = $barcode;
         }
         
         // Recalcular financial_status baseado em outstanding_amount
