@@ -127,6 +127,8 @@ $router->post('/configuracoes/smtp/testar', [ConfiguracoesController::class, 'te
 
 // Configurações do CFC (Logo PWA)
 $router->get('/configuracoes/cfc', [ConfiguracoesController::class, 'cfc'], [AuthMiddleware::class]);
+$router->post('/configuracoes/cfc/salvar', [ConfiguracoesController::class, 'salvarCfc'], [AuthMiddleware::class]);
+$router->get('/configuracoes/cfc/logo', [ConfiguracoesController::class, 'logo'], [AuthMiddleware::class]);
 $router->post('/configuracoes/cfc/logo/upload', [ConfiguracoesController::class, 'uploadLogo'], [AuthMiddleware::class]);
 $router->post('/configuracoes/cfc/logo/remover', [ConfiguracoesController::class, 'removerLogo'], [AuthMiddleware::class]);
 

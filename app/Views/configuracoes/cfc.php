@@ -20,10 +20,14 @@
                 <div style="display: flex; align-items: center; gap: var(--spacing-md);">
                     <div>
                         <img 
-                            src="<?= base_path($cfc['logo_path']) ?>" 
+                            src="<?= base_path('configuracoes/cfc/logo') ?>" 
                             alt="Logo do CFC" 
                             style="max-width: 150px; max-height: 150px; border-radius: var(--radius-md); box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+                            onerror="this.style.display='none'; this.parentElement.parentElement.querySelector('.logo-error')?.style.display='block';"
                         >
+                        <div class="logo-error" style="display: none; padding: 10px; background: var(--color-warning-light); border-radius: var(--radius-md); color: var(--color-warning);">
+                            Erro ao carregar logo
+                        </div>
                     </div>
                     <div style="flex: 1;">
                         <p style="margin: 0 0 var(--spacing-xs) 0; font-weight: 500;">Logo atual</p>
@@ -50,6 +54,24 @@
             </div>
         <?php endif; ?>
 
+        <!-- Preview do logo selecionado (antes do upload) -->
+        <div id="logo-preview-container" style="display: none; margin-bottom: var(--spacing-lg); padding: var(--spacing-md); background: var(--color-gray-50); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: var(--spacing-md);">
+                <div>
+                    <img 
+                        id="logo-preview" 
+                        src="" 
+                        alt="Preview do logo" 
+                        style="max-width: 150px; max-height: 150px; border-radius: var(--radius-md); box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+                    >
+                </div>
+                <div style="flex: 1;">
+                    <p style="margin: 0 0 var(--spacing-xs) 0; font-weight: 500;">Preview do logo selecionado</p>
+                    <p id="logo-preview-name" style="margin: 0; font-size: 0.875rem; color: var(--color-gray-600);"></p>
+                </div>
+            </div>
+        </div>
+
         <form method="POST" action="<?= base_path('configuracoes/cfc/logo/upload') ?>" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 
@@ -64,7 +86,7 @@
                     id="logo" 
                     class="form-input" 
                     accept="image/jpeg,image/jpg,image/png,image/webp"
-                    required
+                    <?= !$hasLogo ? 'required' : '' ?>
                 >
                 <small class="form-hint">
                     Formatos aceitos: JPG, PNG, WEBP. Tamanho máximo: 5MB. 
@@ -78,6 +100,24 @@
                 </button>
             </div>
         </form>
+
+        <script>
+        // Preview do logo antes do upload
+        document.getElementById('logo').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    document.getElementById('logo-preview').src = e.target.result;
+                    document.getElementById('logo-preview-name').textContent = file.name + ' (' + (file.size / 1024).toFixed(2) + ' KB)';
+                    document.getElementById('logo-preview-container').style.display = 'block';
+                };
+                reader.readAsDataURL(file);
+            } else {
+                document.getElementById('logo-preview-container').style.display = 'none';
+            }
+        });
+        </script>
 
         <?php if ($hasLogo): ?>
             <hr style="margin: var(--spacing-lg) 0; border: none; border-top: 1px solid var(--color-gray-200);">
@@ -96,31 +136,44 @@
     <div class="card-body">
         <h2 style="margin-bottom: var(--spacing-md); font-size: 1.25rem;">Informações do CFC</h2>
         
-        <div class="form-group">
-            <label class="form-label">Nome do CFC</label>
-            <input 
-                type="text" 
-                class="form-input" 
-                value="<?= htmlspecialchars($cfc['nome'] ?? '') ?>" 
-                readonly
-                style="background: var(--color-gray-50);"
-            >
-            <small class="form-hint">
-                O nome do CFC é usado no manifest do aplicativo PWA.
-            </small>
-        </div>
+        <form method="POST" action="<?= base_path('configuracoes/cfc/salvar') ?>">
+            <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 
-        <?php if (!empty($cfc['cnpj'])): ?>
             <div class="form-group">
-                <label class="form-label">CNPJ</label>
+                <label class="form-label" for="nome">Nome do CFC <span class="text-danger">*</span></label>
                 <input 
                     type="text" 
+                    name="nome" 
+                    id="nome"
                     class="form-input" 
-                    value="<?= htmlspecialchars($cfc['cnpj']) ?>" 
-                    readonly
-                    style="background: var(--color-gray-50);"
+                    value="<?= htmlspecialchars($cfc['nome'] ?? '') ?>" 
+                    required
+                    maxlength="255"
                 >
+                <small class="form-hint">
+                    O nome do CFC é usado no manifest do aplicativo PWA.
+                </small>
             </div>
-        <?php endif; ?>
+
+            <?php if (!empty($cfc['cnpj'])): ?>
+                <div class="form-group">
+                    <label class="form-label" for="cnpj">CNPJ</label>
+                    <input 
+                        type="text" 
+                        name="cnpj"
+                        id="cnpj"
+                        class="form-input" 
+                        value="<?= htmlspecialchars($cfc['cnpj']) ?>" 
+                        maxlength="18"
+                    >
+                </div>
+            <?php endif; ?>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    Salvar Informações
+                </button>
+            </div>
+        </form>
     </div>
 </div>

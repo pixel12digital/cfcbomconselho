@@ -700,4 +700,102 @@ class ConfiguracoesController extends Controller
         $_SESSION['success'] = 'Logo removido com sucesso!';
         redirect(base_url('configuracoes/cfc'));
     }
+
+    /**
+     * Salvar informações do CFC (nome, CNPJ, etc)
+     */
+    public function salvarCfc()
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = 'Token CSRF inválido.';
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        $cfcModel = new Cfc();
+        $cfc = $cfcModel->getCurrent();
+
+        if (!$cfc) {
+            $_SESSION['error'] = 'CFC não encontrado.';
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        $nome = trim($_POST['nome'] ?? '');
+        $cnpj = trim($_POST['cnpj'] ?? '');
+
+        // Validações
+        if (empty($nome)) {
+            $_SESSION['error'] = 'Nome do CFC é obrigatório.';
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        if (strlen($nome) > 255) {
+            $_SESSION['error'] = 'Nome do CFC muito longo (máximo 255 caracteres).';
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        // Validar CNPJ se fornecido (formato básico)
+        if (!empty($cnpj) && strlen($cnpj) > 18) {
+            $_SESSION['error'] = 'CNPJ inválido (máximo 18 caracteres).';
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        // Preparar dados para atualização
+        $data = ['nome' => $nome];
+        if (isset($_POST['cnpj'])) {
+            $data['cnpj'] = !empty($cnpj) ? $cnpj : null;
+        }
+
+        // Atualizar banco
+        $dataBefore = $cfc;
+        $cfcModel->update($cfc['id'], $data);
+
+        // Auditoria
+        $this->auditService->logUpdate('cfcs', $cfc['id'], $dataBefore, array_merge($cfc, $data));
+
+        $_SESSION['success'] = 'Informações do CFC atualizadas com sucesso!';
+        redirect(base_url('configuracoes/cfc'));
+    }
+
+    /**
+     * Servir logo do CFC (protegido)
+     */
+    public function logo()
+    {
+        $cfcModel = new Cfc();
+        $cfc = $cfcModel->getCurrent();
+
+        if (!$cfc || empty($cfc['logo_path'])) {
+            http_response_code(404);
+            exit('Logo não encontrado');
+        }
+
+        $filepath = dirname(__DIR__, 2) . '/' . $cfc['logo_path'];
+
+        if (!file_exists($filepath)) {
+            http_response_code(404);
+            exit('Logo não encontrado');
+        }
+
+        // Determinar tipo MIME
+        $mimeType = mime_content_type($filepath);
+        if (!$mimeType) {
+            $extension = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'webp' => 'image/webp'
+            ];
+            $mimeType = $mimeTypes[$extension] ?? 'image/jpeg';
+        }
+
+        header('Content-Type: ' . $mimeType);
+        header('Cache-Control: public, max-age=3600');
+        readfile($filepath);
+        exit;
+    }
 }
