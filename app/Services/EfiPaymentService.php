@@ -529,19 +529,27 @@ class EfiPaymentService
             $firstDueDate = date('Y-m-d', strtotime('+30 days'));
         }
 
-        // Preparar lista de parcelas (repeats) para o Carnê
-        $repeats = [];
-        for ($i = 0; $i < $installments; $i++) {
-            // Calcular data de vencimento de cada parcela (mensal)
-            $dueDate = date('Y-m-d', strtotime($firstDueDate . " +{$i} months"));
-            
-            $repeats[] = [
-                'value' => $parcelValueInCents,
-                'expire_at' => $dueDate
-            ];
+        // Preparar payload do Carnê conforme schema oficial da API Efí
+        // Schema: POST /v1/carnet
+        // - items[] (obrigatório)
+        // - customer{} (opcional mas recomendado)
+        // - expire_at (obrigatório no nível raiz) - formato YYYY-MM-DD
+        // - repeats (obrigatório) - INT (número de parcelas), não array!
+        // - message (opcional)
+        // - configurations{} (opcional)
+        
+        // Validar que a data está no futuro
+        $expireDate = date('Y-m-d', strtotime($firstDueDate));
+        if (strtotime($expireDate) < time()) {
+            $this->efiLog('WARNING', 'createCarnet: Data de vencimento no passado, ajustando', [
+                'enrollment_id' => $enrollment['id'],
+                'data_original' => $expireDate
+            ]);
+            // Se a data estiver no passado, usar pelo menos 3 dias a partir de hoje
+            $expireDate = date('Y-m-d', strtotime('+3 days'));
         }
 
-        // Preparar payload do Carnê
+        // Montar payload no formato correto do Carnê
         $payload = [
             'items' => [
                 [
@@ -550,8 +558,9 @@ class EfiPaymentService
                     'amount' => 1
                 ]
             ],
-            'repeats' => $repeats,
-            'split_items' => false // Não dividir itens entre parcelas
+            'expire_at' => $expireDate, // ✅ OBRIGATÓRIO no nível raiz (formato YYYY-MM-DD)
+            'repeats' => $installments, // ✅ OBRIGATÓRIO - INT (número de parcelas), não array!
+            'message' => 'Pagamento referente a matrícula'
         ];
 
         // Adicionar dados do cliente
@@ -581,15 +590,58 @@ class EfiPaymentService
                 }
             }
         }
+        
+        // Remover campos nulos/vazios do customer para evitar problemas na API
+        if (isset($payload['customer'])) {
+            $payload['customer'] = array_filter($payload['customer'], function($value) {
+                return $value !== null && $value !== '';
+            });
+            
+            // Se address existe mas está vazio, remover
+            if (isset($payload['customer']['address'])) {
+                $address = array_filter($payload['customer']['address'], function($value) {
+                    return $value !== null && $value !== '';
+                });
+                if (empty($address)) {
+                    unset($payload['customer']['address']);
+                } else {
+                    $payload['customer']['address'] = $address;
+                }
+            }
+            
+            // Se customer ficou vazio, remover
+            if (empty($payload['customer'])) {
+                unset($payload['customer']);
+            }
+        }
+        
+        // Log do payload para debug (sem dados sensíveis)
+        $logPayload = $payload;
+        // Remover dados sensíveis do log
+        if (isset($logPayload['customer']['cpf'])) {
+            $logPayload['customer']['cpf'] = '***';
+        }
+        if (isset($logPayload['customer']['email'])) {
+            $logPayload['customer']['email'] = '***';
+        }
+        if (isset($logPayload['customer']['phone_number'])) {
+            $logPayload['customer']['phone_number'] = '***';
+        }
+        
+        // Log detalhado incluindo endpoint e host
+        $this->efiLog('DEBUG', 'createCarnet: Payload no schema correto do Carnê', [
+            'enrollment_id' => $enrollment['id'],
+            'endpoint' => '/v1/carnet',
+            'host' => $this->baseUrlCharges,
+            'installments' => $installments,
+            'expire_at' => $expireDate,
+            'repeats' => $installments,
+            'has_customer' => !empty($payload['customer']),
+            'has_address' => !empty($payload['customer']['address'] ?? null),
+            'payload_structure' => json_encode($logPayload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+        ]);
 
-        // Configurar método de pagamento como boleto
-        $payload['payment'] = [
-            'banking_billet' => [
-                'message' => 'Pagamento referente a matrícula'
-            ]
-        ];
-
-        // Fazer requisição para criar Carnê
+        // Fazer requisição para criar Carnê - endpoint correto: /v1/carnet
         $response = $this->makeRequest('POST', '/v1/carnet', $payload, $token, false);
 
         $httpCode = $response['http_code'] ?? 0;
@@ -597,11 +649,14 @@ class EfiPaymentService
 
         if ($httpCode !== 200 && $httpCode !== 201) {
             $errorMessage = 'Erro ao criar Carnê';
+            $errorDetails = [];
+            
             if (is_array($responseData)) {
                 if (isset($responseData['error_description'])) {
                     $errorDesc = $responseData['error_description'];
                     if (is_array($errorDesc)) {
                         $errorMessage = json_encode($errorDesc, JSON_UNESCAPED_UNICODE);
+                        $errorDetails = $errorDesc;
                     } else {
                         $errorMessage = (string)$errorDesc;
                     }
@@ -610,15 +665,42 @@ class EfiPaymentService
                 } elseif (isset($responseData['error'])) {
                     $errorMessage = $responseData['error'];
                 }
+                
+                // Extrair detalhes específicos de validação
+                if (isset($responseData['errors']) && is_array($responseData['errors'])) {
+                    $errorDetails = $responseData['errors'];
+                }
             } else {
                 $errorMessage = (string)$responseData;
+            }
+
+            // Log detalhado incluindo payload (sem dados sensíveis)
+            $logPayload = $payload;
+            // Remover dados sensíveis do log
+            if (isset($logPayload['customer']['cpf'])) {
+                $logPayload['customer']['cpf'] = '***';
+            }
+            if (isset($logPayload['customer']['email'])) {
+                $logPayload['customer']['email'] = '***';
+            }
+            if (isset($logPayload['customer']['phone_number'])) {
+                $logPayload['customer']['phone_number'] = '***';
             }
 
             $this->efiLog('ERROR', 'createCarnet: Falha ao criar Carnê', [
                 'enrollment_id' => $enrollment['id'],
                 'http_code' => $httpCode,
-                'error' => substr($errorMessage, 0, 200),
-                'response_snippet' => is_array($responseData) ? json_encode($responseData, JSON_UNESCAPED_UNICODE) : substr((string)$responseData, 0, 200)
+                'endpoint' => '/v1/carnet',
+                'host' => $this->baseUrlCharges,
+                'error' => substr($errorMessage, 0, 500),
+                'error_details' => $errorDetails,
+                'payload_summary' => [
+                    'installments' => $installments,
+                    'repeats' => $installments,
+                    'expire_at' => $expireDate,
+                    'first_due_date' => $firstDueDate
+                ],
+                'response_snippet' => is_array($responseData) ? json_encode($responseData, JSON_UNESCAPED_UNICODE) : substr((string)$responseData, 0, 500)
             ]);
 
             $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
