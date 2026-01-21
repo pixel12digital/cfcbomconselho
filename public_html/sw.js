@@ -12,10 +12,10 @@ const CORE_ASSETS = [
   './assets/css/components.css',
   './assets/css/layout.css',
   './assets/css/utilities.css',
-  './assets/js/app.js',
-  './manifest.json',
-  './icons/icon-192x192.png',
-  './icons/icon-512x512.png'
+  './assets/js/app.js'
+  // Removido manifest.json e ícones - não são essenciais para cache offline
+  // Manifest dinâmico: /public_html/pwa-manifest.php
+  // Ícones podem estar em /public_html/icons/ ou /icons/ dependendo do CFC
 ];
 
 // Rotas que NUNCA devem ser cacheadas (autenticação e dados sensíveis)

@@ -580,15 +580,41 @@ class ConfiguracoesController extends Controller
             redirect(base_url('configuracoes/cfc'));
         }
 
+        // Log obrigatório mesmo quando $_FILES vier vazio
+        $logFile = dirname(__DIR__, 2) . '/storage/logs/upload_logo.log';
+        $logDir = dirname($logFile);
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        
+        $initialLog = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'REQUEST_METHOD' => $_SERVER['REQUEST_METHOD'] ?? 'N/A',
+            'Content-Type' => $_SERVER['CONTENT_TYPE'] ?? 'N/A',
+            'POST_keys' => array_keys($_POST),
+            'FILES_keys' => array_keys($_FILES),
+            'FILES_count' => count($_FILES),
+            'has_logo_in_FILES' => isset($_FILES['logo'])
+        ];
+        @file_put_contents($logFile, "=== UPLOAD REQUEST START ===\n" . json_encode($initialLog, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+
         $cfcModel = new Cfc();
         $cfc = $cfcModel->getCurrent();
 
         if (!$cfc) {
+            @file_put_contents($logFile, "ERROR: CFC não encontrado\n", FILE_APPEND);
             $_SESSION['error'] = 'CFC não encontrado.';
             redirect(base_url('configuracoes/cfc'));
         }
 
         if (!isset($_FILES['logo'])) {
+            $errorLog = [
+                'error' => 'Nenhum arquivo foi enviado',
+                'FILES_keys' => array_keys($_FILES),
+                'POST_keys' => array_keys($_POST),
+                'Content-Type' => $_SERVER['CONTENT_TYPE'] ?? 'N/A'
+            ];
+            @file_put_contents($logFile, "=== UPLOAD ERROR (no file) ===\n" . json_encode($errorLog, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
             $_SESSION['error'] = 'Nenhum arquivo foi enviado.';
             redirect(base_url('configuracoes/cfc'));
         }
