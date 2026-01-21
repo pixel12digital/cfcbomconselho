@@ -333,20 +333,37 @@
                 </div>
                 <?php endif; ?>
                 
-                <?php if (!empty($enrollment['gateway_payment_url'])): ?>
+                <?php 
+                // Verificar se é Carnê (JSON) ou cobrança única (link direto)
+                $paymentUrlForLink = null;
+                $paymentUrlDisplay = null;
+                if (!empty($enrollment['gateway_payment_url'])) {
+                    $decoded = json_decode($enrollment['gateway_payment_url'], true);
+                    if (json_last_error() === JSON_ERROR_NONE && isset($decoded['type']) && $decoded['type'] === 'carne') {
+                        // É um Carnê - usar cover para o link
+                        $paymentUrlForLink = $decoded['cover'] ?? $decoded['download_link'] ?? null;
+                        $paymentUrlDisplay = $paymentUrlForLink ?: 'Carnê (ver seção abaixo)';
+                    } else {
+                        // É uma cobrança única - usar o link direto
+                        $paymentUrlForLink = $enrollment['gateway_payment_url'];
+                        $paymentUrlDisplay = $enrollment['gateway_payment_url'];
+                    }
+                }
+                ?>
+                <?php if (!empty($paymentUrlForLink)): ?>
                 <div class="form-group">
                     <label class="form-label">Link de Pagamento</label>
                     <div style="display: flex; align-items: center; gap: 0.5rem;">
                         <input 
                             type="text" 
                             class="form-input" 
-                            value="<?= htmlspecialchars($enrollment['gateway_payment_url']) ?>" 
+                            value="<?= htmlspecialchars($paymentUrlDisplay) ?>" 
                             readonly
                             id="payment_url_input"
                             style="background-color: var(--color-bg); font-family: monospace; font-size: var(--font-size-sm); flex: 1;"
                         >
                         <a 
-                            href="<?= htmlspecialchars($enrollment['gateway_payment_url']) ?>" 
+                            href="<?= htmlspecialchars($paymentUrlForLink) ?>" 
                             target="_blank" 
                             class="btn btn-outline"
                             style="white-space: nowrap;"

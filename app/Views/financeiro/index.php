@@ -284,6 +284,24 @@
                         // Verificar se tem cobrança gerada
                         $hasCharge = !empty($enr['gateway_charge_id']) && $enr['gateway_charge_id'] !== '';
                         
+                        // Verificar se é Carnê (JSON) ou cobrança única (link direto)
+                        $paymentUrl = null;
+                        $isCarnet = false;
+                        $carnetData = null;
+                        if (!empty($enr['gateway_payment_url'])) {
+                            // Tentar decodificar como JSON (Carnê)
+                            $decoded = json_decode($enr['gateway_payment_url'], true);
+                            if (json_last_error() === JSON_ERROR_NONE && isset($decoded['type']) && $decoded['type'] === 'carne') {
+                                // É um Carnê - usar cover (visualização) ou download_link
+                                $isCarnet = true;
+                                $carnetData = $decoded;
+                                $paymentUrl = $decoded['cover'] ?? $decoded['download_link'] ?? null;
+                            } else {
+                                // É uma cobrança única - usar o link direto
+                                $paymentUrl = $enr['gateway_payment_url'];
+                            }
+                        }
+                        
                         // Status gateway (traduzir para português claro e não técnico)
                         $gatewayStatusRaw = $hasCharge ? ($enr['gateway_last_status'] ?? '-') : '-';
                         $gatewayStatus = '-';
@@ -359,23 +377,34 @@
                             <td>
                                 <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
                                     <?php if ($hasCharge): ?>
-                                        <?php if (!empty($enr['gateway_payment_url'])): ?>
+                                        <?php if (!empty($paymentUrl)): ?>
                                         <a 
-                                            href="<?= htmlspecialchars($enr['gateway_payment_url']) ?>" 
+                                            href="<?= htmlspecialchars($paymentUrl) ?>" 
                                             target="_blank" 
                                             class="btn btn-sm btn-outline"
-                                            title="Abrir cobrança"
+                                            title="<?= $isCarnet ? 'Ver carnê (capa)' : 'Abrir cobrança' ?>"
                                         >
-                                            Abrir Cobrança
+                                            <?= $isCarnet ? 'Ver Carnê' : 'Abrir Cobrança' ?>
                                         </a>
+                                        <?php if ($isCarnet && !empty($carnetData['download_link'])): ?>
+                                        <a 
+                                            href="<?= htmlspecialchars($carnetData['download_link']) ?>" 
+                                            target="_blank" 
+                                            class="btn btn-sm btn-primary"
+                                            title="Baixar carnê em PDF"
+                                        >
+                                            📥 Baixar Carnê
+                                        </a>
+                                        <?php else: ?>
                                         <button 
                                             type="button" 
                                             class="btn btn-sm btn-primary" 
-                                            onclick="imprimirBoleto('<?= htmlspecialchars($enr['gateway_payment_url'], ENT_QUOTES) ?>')"
+                                            onclick="imprimirBoleto('<?= htmlspecialchars($paymentUrl, ENT_QUOTES) ?>')"
                                             title="Imprimir boleto"
                                         >
                                             🖨️ Imprimir
                                         </button>
+                                        <?php endif; ?>
                                         <?php endif; ?>
                                         <button 
                                             type="button" 
