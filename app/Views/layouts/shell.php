@@ -8,8 +8,8 @@
     <base href="<?= base_path('/') ?>">
     <title><?= $pageTitle ?? 'CFC Sistema' ?></title>
     
-    <!-- PWA Manifest (dinâmico para white-label) -->
-    <link rel="manifest" href="<?= base_path('/manifest.php') ?>">
+    <!-- PWA Manifest (usando .json temporariamente - manifest.php com erro 500) -->
+    <link rel="manifest" href="<?= base_path('/manifest.json') ?>">
     
     <!-- Apple Touch Icon (iOS) -->
     <link rel="apple-touch-icon" href="<?= base_path('/icons/icon-192x192.png') ?>">
