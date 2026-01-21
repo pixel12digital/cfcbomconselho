@@ -173,23 +173,53 @@
         <?php endforeach; ?>
     <?php endif; ?>
     
-    <!-- Service Worker Registration -->
+    <!-- Service Worker Registration (apenas em produção ou se arquivo existir) -->
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('<?= base_path('/sw.js') ?>')
-                    .then(function(registration) {
-                        console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
-                        
-                        // Verificar atualizações periodicamente
-                        setInterval(function() {
-                            registration.update();
-                        }, 60000); // Verificar a cada minuto
+            // Verificar se estamos em ambiente de produção ou se o arquivo existe
+            const isProduction = <?= ($_ENV['APP_ENV'] ?? 'local') === 'production' ? 'true' : 'false' ?>;
+            const swPath = '<?= base_path('/sw.js') ?>';
+            
+            // Em desenvolvimento, verificar se o arquivo existe antes de registrar
+            if (isProduction) {
+                // Em produção, sempre tentar registrar
+                window.addEventListener('load', function() {
+                    navigator.serviceWorker.register(swPath)
+                        .then(function(registration) {
+                            console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
+                            
+                            // Verificar atualizações periodicamente
+                            setInterval(function() {
+                                registration.update();
+                            }, 60000); // Verificar a cada minuto
+                        })
+                        .catch(function(error) {
+                            // Silenciar erro em produção (não poluir console)
+                            if (console && console.warn) {
+                                console.warn('[SW] Falha ao registrar Service Worker:', error.message);
+                            }
+                        });
+                });
+            } else {
+                // Em desenvolvimento, verificar se arquivo existe primeiro
+                fetch(swPath, { method: 'HEAD' })
+                    .then(function(response) {
+                        if (response.ok) {
+                            window.addEventListener('load', function() {
+                                navigator.serviceWorker.register(swPath)
+                                    .then(function(registration) {
+                                        console.log('[SW] Service Worker registrado:', registration.scope);
+                                    })
+                                    .catch(function(error) {
+                                        // Silenciar erro silenciosamente em dev
+                                    });
+                            });
+                        }
                     })
-                    .catch(function(error) {
-                        console.warn('[SW] Falha ao registrar Service Worker:', error);
+                    .catch(function() {
+                        // Arquivo não existe ou erro - não registrar (evita 404)
                     });
-            });
+            }
         }
     </script>
 </body>
@@ -208,12 +238,16 @@ function getMenuItems($role) {
             ['path' => '/servicos', 'label' => 'Serviços', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>'],
             ['path' => '/comunicados/novo', 'label' => 'Comunicados', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>'],
             ['path' => '/usuarios', 'label' => 'Usuários', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>'],
+            ['path' => '/turmas-teoricas', 'label' => 'Turmas Teóricas', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>'],
+            ['path' => '/configuracoes/disciplinas', 'label' => 'Disciplinas', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>'],
+            ['path' => '/configuracoes/cursos', 'label' => 'Cursos Teóricos', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>'],
             ['path' => '/configuracoes/smtp', 'label' => 'Configurações', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>'],
         ],
         'SECRETARIA' => [
             ['path' => '/dashboard', 'label' => 'Dashboard', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/></svg>'],
             ['path' => '/alunos', 'label' => 'Alunos', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"/></svg>'],
             ['path' => '/agenda', 'label' => 'Agenda', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>'],
+            ['path' => '/turmas-teoricas', 'label' => 'Turmas Teóricas', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/></svg>'],
             ['path' => '/financeiro', 'label' => 'Financeiro', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>'],
             ['path' => '/comunicados/novo', 'label' => 'Comunicados', 'icon' => '<svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>'],
         ],

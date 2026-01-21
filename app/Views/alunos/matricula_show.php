@@ -340,6 +340,124 @@
             </div>
             <?php endif; ?>
 
+            <?php 
+            // Bloco de Carnê (se tipo for carne)
+            $paymentData = null;
+            if (!empty($enrollment['gateway_payment_url'])) {
+                $paymentData = json_decode($enrollment['gateway_payment_url'], true);
+            }
+            $isCarnet = $paymentData && isset($paymentData['type']) && $paymentData['type'] === 'carne';
+            
+            if ($isCarnet && !empty($enrollment['gateway_charge_id'])): 
+            ?>
+            <div class="card" style="margin-top: 2rem; margin-bottom: 1rem;">
+                <div class="card-header">
+                    <h3 style="margin: 0;">Carnê (Boleto Parcelado)</h3>
+                </div>
+                <div class="card-body">
+                    <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem; flex-wrap: wrap;">
+                        <?php if (!empty($paymentData['cover'])): ?>
+                        <a 
+                            href="<?= htmlspecialchars($paymentData['cover']) ?>" 
+                            target="_blank" 
+                            class="btn btn-outline"
+                        >
+                            📄 Ver Carnê (Capa)
+                        </a>
+                        <?php endif; ?>
+                        
+                        <?php if (!empty($paymentData['download_link'])): ?>
+                        <a 
+                            href="<?= htmlspecialchars($paymentData['download_link']) ?>" 
+                            target="_blank" 
+                            class="btn btn-outline"
+                            download
+                        >
+                            ⬇️ Baixar Carnê
+                        </a>
+                        <?php endif; ?>
+                        
+                        <button 
+                            type="button" 
+                            class="btn btn-outline" 
+                            onclick="atualizarStatusCarne(<?= $enrollment['id'] ?>)"
+                            id="btnAtualizarCarne"
+                        >
+                            🔄 Atualizar Status
+                        </button>
+                        
+                        <?php if (!in_array($paymentData['status'] ?? '', ['canceled', 'expired'])): ?>
+                        <button 
+                            type="button" 
+                            class="btn btn-outline btn-danger" 
+                            onclick="cancelarCarne(<?= $enrollment['id'] ?>)"
+                            id="btnCancelarCarne"
+                        >
+                            ❌ Cancelar Carnê
+                        </button>
+                        <?php endif; ?>
+                    </div>
+
+                    <?php if (!empty($paymentData['charges']) && is_array($paymentData['charges'])): ?>
+                    <div style="overflow-x: auto;">
+                        <table class="table" style="margin-top: 1rem;">
+                            <thead>
+                                <tr>
+                                    <th>Parcela</th>
+                                    <th>Vencimento</th>
+                                    <th>Status</th>
+                                    <th>Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="carne-parcelas-tbody">
+                                <?php foreach ($paymentData['charges'] as $idx => $charge): ?>
+                                <tr>
+                                    <td><strong><?= ($idx + 1) ?>/<?= count($paymentData['charges']) ?></strong></td>
+                                    <td>
+                                        <?php if (!empty($charge['expire_at'])): ?>
+                                            <?= date('d/m/Y', strtotime($charge['expire_at'])) ?>
+                                        <?php else: ?>
+                                            N/A
+                                        <?php endif; ?>
+                                    </td>
+                                    <td>
+                                        <?php
+                                        $statusLabels = [
+                                            'waiting' => ['label' => 'Aguardando', 'class' => 'badge-warning'],
+                                            'paid' => ['label' => 'Pago', 'class' => 'badge-success'],
+                                            'canceled' => ['label' => 'Cancelado', 'class' => 'badge-danger'],
+                                            'expired' => ['label' => 'Expirado', 'class' => 'badge-secondary']
+                                        ];
+                                        $status = $charge['status'] ?? 'waiting';
+                                        $statusInfo = $statusLabels[$status] ?? ['label' => ucfirst($status), 'class' => 'badge-secondary'];
+                                        ?>
+                                        <span class="badge <?= $statusInfo['class'] ?>"><?= $statusInfo['label'] ?></span>
+                                    </td>
+                                    <td>
+                                        <?php if (!empty($charge['billet_link'])): ?>
+                                        <a 
+                                            href="<?= htmlspecialchars($charge['billet_link']) ?>" 
+                                            target="_blank" 
+                                            class="btn btn-sm btn-outline"
+                                        >
+                                            Abrir Boleto
+                                        </a>
+                                        <?php else: ?>
+                                        <span style="color: var(--color-text-muted); font-size: var(--font-size-sm);">Link não disponível</span>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                    <?php else: ?>
+                    <p style="color: var(--color-text-muted); margin-top: 1rem;">Carregando informações das parcelas...</p>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div class="form-group">
                 <label class="form-label" for="financial_status">Status Financeiro *</label>
                 <select id="financial_status" name="financial_status" class="form-select" required>
@@ -757,6 +875,133 @@ function sincronizarCobrancaEfi() {
         alert('Erro ao comunicar com o servidor: ' + (error.message || 'Erro desconhecido') + '\n\nVerifique o console para mais detalhes.');
         btn.disabled = false;
         btn.textContent = 'Sincronizar Cobrança';
+    });
+}
+
+function atualizarStatusCarne(enrollmentId) {
+    const btn = document.getElementById('btnAtualizarCarne');
+    
+    // Desabilitar botão durante processamento
+    btn.disabled = true;
+    btn.textContent = 'Atualizando...';
+    
+    // Fazer chamada AJAX para atualizar status (com refresh=true)
+    fetch(`<?= base_path('api/payments/status') ?>?enrollment_id=${enrollmentId}&refresh=true`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(async response => {
+        const raw = await response.text();
+        let data;
+        try {
+            data = JSON.parse(raw);
+        } catch (e) {
+            throw new Error('Resposta não é JSON válido. Status: ' + response.status);
+        }
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao atualizar status');
+        }
+        
+        return data;
+    })
+    .then(data => {
+        if (data.ok && data.type === 'carne') {
+            // Atualizar tabela de parcelas
+            const tbody = document.getElementById('carne-parcelas-tbody');
+            if (tbody && data.charges) {
+                tbody.innerHTML = '';
+                data.charges.forEach((charge, idx) => {
+                    const statusLabels = {
+                        'waiting': ['Aguardando', 'badge-warning'],
+                        'paid': ['Pago', 'badge-success'],
+                        'canceled': ['Cancelado', 'badge-danger'],
+                        'expired': ['Expirado', 'badge-secondary']
+                    };
+                    const statusInfo = statusLabels[charge.status] || [charge.status, 'badge-secondary'];
+                    const expireDate = charge.expire_at ? new Date(charge.expire_at).toLocaleDateString('pt-BR') : 'N/A';
+                    
+                    const row = document.createElement('tr');
+                    row.innerHTML = `
+                        <td><strong>${idx + 1}/${data.charges.length}</strong></td>
+                        <td>${expireDate}</td>
+                        <td><span class="badge ${statusInfo[1]}">${statusInfo[0]}</span></td>
+                        <td>
+                            ${charge.billet_link ? 
+                                `<a href="${charge.billet_link}" target="_blank" class="btn btn-sm btn-outline">Abrir Boleto</a>` :
+                                '<span style="color: var(--color-text-muted); font-size: var(--font-size-sm);">Link não disponível</span>'
+                            }
+                        </td>
+                    `;
+                    tbody.appendChild(row);
+                });
+            }
+            
+            alert('Status do carnê atualizado com sucesso!');
+        } else {
+            throw new Error('Resposta inesperada do servidor');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao atualizar status: ' + (error.message || 'Erro desconhecido'));
+    })
+    .finally(() => {
+        btn.disabled = false;
+        btn.textContent = '🔄 Atualizar Status';
+    });
+}
+
+function cancelarCarne(enrollmentId) {
+    if (!confirm('Deseja realmente cancelar este carnê?\n\nTodas as parcelas serão canceladas na Efí e não poderão ser pagas.\n\nEsta ação não pode ser desfeita.')) {
+        return;
+    }
+    
+    const btn = document.getElementById('btnCancelarCarne');
+    btn.disabled = true;
+    btn.textContent = 'Cancelando...';
+    
+    // Fazer chamada AJAX para cancelar carnê
+    fetch('<?= base_path('api/payments/cancel') ?>', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        },
+        body: JSON.stringify({
+            enrollment_id: enrollmentId
+        })
+    })
+    .then(async response => {
+        const raw = await response.text();
+        let data;
+        try {
+            data = JSON.parse(raw);
+        } catch (e) {
+            throw new Error('Resposta não é JSON válido. Status: ' + response.status);
+        }
+        
+        if (!response.ok) {
+            throw new Error(data.message || 'Erro ao cancelar carnê');
+        }
+        
+        return data;
+    })
+    .then(data => {
+        if (data.ok) {
+            alert('Carnê cancelado com sucesso!');
+            window.location.reload();
+        } else {
+            throw new Error(data.message || 'Erro ao cancelar carnê');
+        }
+    })
+    .catch(error => {
+        console.error('Erro:', error);
+        alert('Erro ao cancelar carnê: ' + (error.message || 'Erro desconhecido'));
+        btn.disabled = false;
+        btn.textContent = '❌ Cancelar Carnê';
     });
 }
 </script>

@@ -509,6 +509,45 @@ class EfiPaymentService
             ];
         }
 
+        // Validar se já existe carnê ativo para esta matrícula
+        $existingCarnetId = $enrollment['gateway_charge_id'] ?? null;
+        if (!empty($existingCarnetId)) {
+            // Verificar se o carnê está ativo (não cancelado/expirado)
+            $paymentData = null;
+            if (!empty($enrollment['gateway_payment_url'])) {
+                $paymentData = json_decode($enrollment['gateway_payment_url'], true);
+            }
+            
+            $isActive = false;
+            if ($paymentData && isset($paymentData['type']) && $paymentData['type'] === 'carne') {
+                $carnetStatus = $paymentData['status'] ?? $enrollment['gateway_last_status'] ?? 'waiting';
+                // Status que indicam carnê ativo
+                $activeStatuses = ['waiting', 'up_to_date', 'paid_partial', 'paid'];
+                $isActive = in_array($carnetStatus, $activeStatuses);
+            } else {
+                // Se tem gateway_charge_id mas não é carnê, pode ser cobrança única ativa
+                $billingStatus = $enrollment['billing_status'] ?? 'draft';
+                $gatewayStatus = $enrollment['gateway_last_status'] ?? null;
+                $activeBillingStatuses = ['ready', 'generated'];
+                $activeGatewayStatuses = ['waiting', 'unpaid', 'pending', 'processing', 'new', 'paid_partial', 'paid'];
+                $isActive = in_array($billingStatus, $activeBillingStatuses) || 
+                           ($gatewayStatus && in_array($gatewayStatus, $activeGatewayStatuses));
+            }
+            
+            if ($isActive) {
+                $this->efiLog('WARN', 'createCarnet: Já existe cobrança ativa para esta matrícula', [
+                    'enrollment_id' => $enrollment['id'],
+                    'existing_charge_id' => $existingCarnetId,
+                    'billing_status' => $enrollment['billing_status'] ?? null,
+                    'gateway_status' => $enrollment['gateway_last_status'] ?? null
+                ]);
+                return [
+                    'ok' => false,
+                    'message' => 'Já existe uma cobrança ativa para esta matrícula. Por favor, cancele a cobrança existente antes de gerar uma nova.'
+                ];
+            }
+        }
+
         // Obter token de autenticação (Carnê usa API de Cobranças, não PIX)
         $token = $this->getAccessToken(false);
         if (!$token) {
@@ -615,9 +654,104 @@ class EfiPaymentService
             }
         }
         
-        // Log do payload para debug (sem dados sensíveis)
+        // REMOVER campo 'message' - não está na documentação oficial do Carnê
+        // A documentação oficial não menciona 'message' no nível raiz para Carnê
+        // Campos permitidos: items, expire_at, repeats, customer, instructions, custom_id, notification_url, configurations
+        if (isset($payload['message'])) {
+            unset($payload['message']);
+        }
+        
+        // VALIDAÇÃO EXPLÍCITA DO PAYLOAD ANTES DO ENVIO
+        $validationErrors = [];
+        
+        // 1. Validar items existe e é ARRAY
+        if (!isset($payload['items']) || !is_array($payload['items'])) {
+            $validationErrors[] = 'items deve existir e ser um ARRAY';
+        } elseif (empty($payload['items'])) {
+            $validationErrors[] = 'items não pode estar vazio';
+        } else {
+            // Validar items[0]
+            if (!isset($payload['items'][0])) {
+                $validationErrors[] = 'items[0] não existe';
+            } else {
+                $item = $payload['items'][0];
+                // Validar name
+                if (!isset($item['name']) || empty($item['name'])) {
+                    $validationErrors[] = 'items[0].name é obrigatório';
+                }
+                // Validar value é INT em centavos
+                if (!isset($item['value'])) {
+                    $validationErrors[] = 'items[0].value é obrigatório';
+                } elseif (!is_int($item['value']) || $item['value'] <= 0) {
+                    $validationErrors[] = 'items[0].value deve ser INT positivo (em centavos), recebido: ' . gettype($item['value']) . ' = ' . $item['value'];
+                }
+                // Validar amount
+                if (!isset($item['amount']) || !is_int($item['amount']) || $item['amount'] <= 0) {
+                    $validationErrors[] = 'items[0].amount deve ser INT positivo';
+                }
+            }
+        }
+        
+        // 2. Validar expire_at está no root e formato YYYY-MM-DD
+        if (!isset($payload['expire_at'])) {
+            $validationErrors[] = 'expire_at é obrigatório no nível raiz';
+        } elseif (!is_string($payload['expire_at'])) {
+            $validationErrors[] = 'expire_at deve ser STRING, recebido: ' . gettype($payload['expire_at']);
+        } elseif (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $payload['expire_at'])) {
+            $validationErrors[] = 'expire_at deve estar no formato YYYY-MM-DD, recebido: ' . $payload['expire_at'];
+        }
+        
+        // 3. Validar repeats é INT
+        if (!isset($payload['repeats'])) {
+            $validationErrors[] = 'repeats é obrigatório';
+        } elseif (!is_int($payload['repeats']) || $payload['repeats'] <= 0) {
+            $validationErrors[] = 'repeats deve ser INT positivo, recebido: ' . gettype($payload['repeats']) . ' = ' . $payload['repeats'];
+        }
+        
+        // 4. Garantir que NÃO existe installments no payload
+        if (isset($payload['installments'])) {
+            $validationErrors[] = 'installments NÃO deve existir no payload (usar repeats)';
+            unset($payload['installments']); // Remover se existir
+        }
+        
+        // 5. Validar customer contém apenas campos permitidos
+        // Campos permitidos: name, cpf, cnpj, email, phone_number, address
+        // address: street, number, neighborhood, zipcode, city, state
+        if (isset($payload['customer']) && is_array($payload['customer'])) {
+            $allowedCustomerFields = ['name', 'cpf', 'cnpj', 'email', 'phone_number', 'address'];
+            foreach (array_keys($payload['customer']) as $field) {
+                if (!in_array($field, $allowedCustomerFields)) {
+                    $validationErrors[] = "customer contém campo não permitido: {$field}";
+                }
+            }
+            
+            // Validar address se existir
+            if (isset($payload['customer']['address']) && is_array($payload['customer']['address'])) {
+                $allowedAddressFields = ['street', 'number', 'neighborhood', 'zipcode', 'city', 'state'];
+                foreach (array_keys($payload['customer']['address']) as $field) {
+                    if (!in_array($field, $allowedAddressFields)) {
+                        $validationErrors[] = "customer.address contém campo não permitido: {$field}";
+                    }
+                }
+            }
+        }
+        
+        // Se houver erros de validação, retornar erro
+        if (!empty($validationErrors)) {
+            $this->efiLog('ERROR', 'createCarnet: Validação do payload falhou', [
+                'enrollment_id' => $enrollment['id'],
+                'validation_errors' => $validationErrors,
+                'payload_keys' => array_keys($payload)
+            ]);
+            $this->updateEnrollmentStatus($enrollment['id'], 'error', 'error', null);
+            return [
+                'ok' => false,
+                'message' => 'Erro de validação do payload: ' . implode('; ', $validationErrors)
+            ];
+        }
+        
+        // Log do payload FINAL (antes do envio) - sem dados sensíveis
         $logPayload = $payload;
-        // Remover dados sensíveis do log
         if (isset($logPayload['customer']['cpf'])) {
             $logPayload['customer']['cpf'] = '***';
         }
@@ -628,17 +762,21 @@ class EfiPaymentService
             $logPayload['customer']['phone_number'] = '***';
         }
         
-        // Log detalhado incluindo endpoint e host
-        $this->efiLog('DEBUG', 'createCarnet: Payload no schema correto do Carnê', [
+        $this->efiLog('INFO', 'createCarnet: Payload FINAL validado e pronto para envio', [
             'enrollment_id' => $enrollment['id'],
             'endpoint' => '/v1/carnet',
             'host' => $this->baseUrlCharges,
-            'installments' => $installments,
-            'expire_at' => $expireDate,
-            'repeats' => $installments,
+            'payload_final' => json_encode($logPayload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT),
+            'validation_passed' => true,
+            'items_count' => count($payload['items'] ?? []),
+            'items[0].value' => $payload['items'][0]['value'] ?? null,
+            'items[0].value_type' => isset($payload['items'][0]['value']) ? gettype($payload['items'][0]['value']) : null,
+            'expire_at' => $payload['expire_at'] ?? null,
+            'repeats' => $payload['repeats'] ?? null,
+            'repeats_type' => isset($payload['repeats']) ? gettype($payload['repeats']) : null,
+            'has_installments' => isset($payload['installments']),
             'has_customer' => !empty($payload['customer']),
-            'has_address' => !empty($payload['customer']['address'] ?? null),
-            'payload_structure' => json_encode($logPayload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT)
+            'has_message' => isset($payload['message'])
         ]);
 
         // Fazer requisição para criar Carnê - endpoint correto: /v1/carnet
@@ -713,20 +851,34 @@ class EfiPaymentService
         // Processar resposta do Carnê
         $carnetData = $responseData['data'] ?? $responseData;
         $carnetId = $carnetData['carnet_id'] ?? null;
+        $carnetStatus = $carnetData['status'] ?? 'waiting';
+        $cover = $carnetData['cover'] ?? null; // Link de visualização do carnê
+        $downloadLink = $carnetData['link'] ?? null; // Link de download do carnê
         $charges = $carnetData['charges'] ?? [];
 
-        // Extrair charge_ids das parcelas
+        // Extrair dados completos de cada parcela
         $chargeIds = [];
         $paymentUrls = [];
+        $chargesData = [];
         foreach ($charges as $charge) {
             $chargeId = $charge['charge_id'] ?? null;
             if ($chargeId) {
                 $chargeIds[] = $chargeId;
                 
                 // Extrair URL de pagamento se disponível
-                if (isset($charge['payment']['banking_billet']['link'])) {
-                    $paymentUrls[] = $charge['payment']['banking_billet']['link'];
+                $billetLink = $charge['payment']['banking_billet']['link'] ?? null;
+                if ($billetLink) {
+                    $paymentUrls[] = $billetLink;
                 }
+                
+                // Salvar dados completos da parcela
+                $chargesData[] = [
+                    'charge_id' => $chargeId,
+                    'expire_at' => $charge['expire_at'] ?? null,
+                    'status' => $charge['status'] ?? 'waiting',
+                    'total' => $charge['total'] ?? null,
+                    'billet_link' => $billetLink
+                ];
             }
         }
 
@@ -735,50 +887,57 @@ class EfiPaymentService
             'enrollment_id' => $enrollment['id'],
             'carnet_id' => $carnetId,
             'installments' => $installments,
-            'charge_ids_count' => count($chargeIds)
+            'charge_ids_count' => count($chargeIds),
+            'has_cover' => !empty($cover),
+            'has_download_link' => !empty($downloadLink)
         ]);
 
         // Atualizar matrícula com dados do Carnê
-        // NOTA: Para Carnê, salvamos o carnet_id e lista de charge_ids
-        // Como a estrutura atual do banco só tem gateway_charge_id (singular),
-        // vamos salvar o carnet_id lá e guardar os charge_ids em gateway_payment_url como JSON
-        // (solução temporária - ideal seria ter campos dedicados para Carnê)
-        $chargeIdsJson = json_encode($chargeIds, JSON_UNESCAPED_UNICODE);
+        // gateway_charge_id = carnet_id (compatibilidade)
+        // gateway_payment_url = JSON completo com todos os dados do carnê
         $firstPaymentUrl = !empty($paymentUrls) ? $paymentUrls[0] : null;
 
         $this->updateEnrollmentStatus(
             $enrollment['id'],
             'generated',
-            'waiting', // Status inicial do Carnê
+            $carnetStatus, // Status do carnê (up_to_date, waiting, etc)
             $carnetId, // Usar carnet_id como identificador principal
             null,
-            $firstPaymentUrl // URL do primeiro boleto
+            $firstPaymentUrl // URL do primeiro boleto (compatibilidade)
         );
 
-        // Atualizar campo adicional para armazenar charge_ids (via UPDATE direto)
-        // Idealmente, deveria ter um campo gateway_charge_ids (JSON) ou tabela filha
+        // Salvar JSON completo com todos os dados do carnê (com versão e updated_at)
+        $carnetDataJson = json_encode([
+            'schema_version' => 1, // Versão do schema para evolução futura
+            'type' => 'carne',
+            'carnet_id' => $carnetId,
+            'status' => $carnetStatus,
+            'cover' => $cover, // Link de visualização
+            'download_link' => $downloadLink, // Link de download
+            'charge_ids' => $chargeIds, // Lista de IDs (compatibilidade)
+            'payment_urls' => $paymentUrls, // Lista de URLs (compatibilidade)
+            'charges' => $chargesData, // Dados completos de cada parcela
+            'updated_at' => date('Y-m-d H:i:s') // Timestamp da última atualização
+        ], JSON_UNESCAPED_UNICODE);
+        
         $stmt = $this->db->prepare("
             UPDATE enrollments 
             SET gateway_payment_url = ? 
             WHERE id = ?
         ");
-        // Salvar JSON com charge_ids e payment_urls
-        $additionalData = json_encode([
-            'carnet_id' => $carnetId,
-            'charge_ids' => $chargeIds,
-            'payment_urls' => $paymentUrls,
-            'type' => 'carne'
-        ], JSON_UNESCAPED_UNICODE);
-        $stmt->execute([$additionalData, $enrollment['id']]);
+        $stmt->execute([$carnetDataJson, $enrollment['id']]);
 
         return [
             'ok' => true,
             'type' => 'carne',
             'carnet_id' => $carnetId,
+            'status' => $carnetStatus,
+            'cover' => $cover,
+            'download_link' => $downloadLink,
             'charge_ids' => $chargeIds,
             'installments' => $installments,
             'payment_urls' => $paymentUrls,
-            'status' => 'waiting'
+            'charges' => $chargesData
         ];
     }
 
@@ -804,10 +963,11 @@ class EfiPaymentService
 
         // Normalizar payload
         $chargeId = $requestPayload['identifiers']['charge_id'] ?? $requestPayload['charge_id'] ?? null;
+        $carnetId = $requestPayload['identifiers']['carnet_id'] ?? $requestPayload['carnet_id'] ?? null;
         $status = $requestPayload['current']['status'] ?? $requestPayload['status'] ?? null;
         $occurredAt = $requestPayload['occurred_at'] ?? date('Y-m-d H:i:s');
 
-        if (!$chargeId || !$status) {
+        if ((!$chargeId && !$carnetId) || !$status) {
             return [
                 'ok' => false,
                 'processed' => false,
@@ -815,20 +975,67 @@ class EfiPaymentService
             ];
         }
 
-        // Buscar matrícula por gateway_charge_id
+        // Buscar matrícula
         $enrollmentModel = new Enrollment();
-        $stmt = $this->db->prepare("
-            SELECT * FROM enrollments 
-            WHERE gateway_charge_id = ? AND gateway_provider = 'efi'
-            LIMIT 1
-        ");
-        $stmt->execute([$chargeId]);
-        $enrollment = $stmt->fetch();
+        $enrollment = null;
+        
+        // Se tiver carnet_id, buscar diretamente
+        if ($carnetId) {
+            $stmt = $this->db->prepare("
+                SELECT * FROM enrollments 
+                WHERE gateway_charge_id = ? AND gateway_provider = 'efi'
+                LIMIT 1
+            ");
+            $stmt->execute([$carnetId]);
+            $enrollment = $stmt->fetch();
+        }
+        
+        // Se não encontrou e tem charge_id, buscar em carnês (charge_id pode estar no JSON)
+        if (!$enrollment && $chargeId) {
+            // Primeiro tentar buscar por gateway_charge_id (pode ser charge_id de cobrança única)
+            $stmt = $this->db->prepare("
+                SELECT * FROM enrollments 
+                WHERE gateway_charge_id = ? AND gateway_provider = 'efi'
+                LIMIT 1
+            ");
+            $stmt->execute([$chargeId]);
+            $enrollment = $stmt->fetch();
+            
+            // Se não encontrou, buscar em carnês (charge_id pode estar no JSON de gateway_payment_url)
+            // Buscar todas as matrículas com carnê e verificar no JSON
+            if (!$enrollment) {
+                $stmt = $this->db->prepare("
+                    SELECT * FROM enrollments 
+                    WHERE gateway_provider = 'efi'
+                    AND gateway_payment_url IS NOT NULL
+                    AND gateway_payment_url != ''
+                    LIMIT 100
+                ");
+                $stmt->execute();
+                $enrollments = $stmt->fetchAll();
+                
+                foreach ($enrollments as $enr) {
+                    $paymentData = json_decode($enr['gateway_payment_url'], true);
+                    if ($paymentData && isset($paymentData['type']) && $paymentData['type'] === 'carne') {
+                        // Verificar se charge_id está nas parcelas
+                        if (isset($paymentData['charges']) && is_array($paymentData['charges'])) {
+                            foreach ($paymentData['charges'] as $charge) {
+                                if (($charge['charge_id'] ?? null) == $chargeId) {
+                                    $enrollment = $enr;
+                                    break 2;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         if (!$enrollment) {
             // Logar mas não quebrar (idempotência)
-            $this->efiLog('WARN', 'processWebhook: Matrícula não encontrada', [
-                'charge_id' => $chargeId
+            $this->efiLog('WARN', 'parseWebhook: Matrícula não encontrada', [
+                'charge_id' => $chargeId,
+                'carnet_id' => $carnetId
             ]);
             return [
                 'ok' => true,
@@ -837,24 +1044,167 @@ class EfiPaymentService
             ];
         }
 
-        // Mapear status do gateway para billing_status interno
-        $billingStatus = $this->mapGatewayStatusToBillingStatus($status);
+        // Verificar se é Carnê
+        $paymentData = null;
+        if (!empty($enrollment['gateway_payment_url'])) {
+            $paymentData = json_decode($enrollment['gateway_payment_url'], true);
+        }
+        $isCarnet = $paymentData && isset($paymentData['type']) && $paymentData['type'] === 'carne';
 
-        // Atualizar matrícula
-        $this->updateEnrollmentStatus(
-            $enrollment['id'],
-            $billingStatus,
-            $status,
-            $chargeId,
-            $occurredAt
-        );
+        if ($isCarnet && $chargeId) {
+            // Webhook de parcela do carnê - atualizar status da parcela específica
+            // IDEMPOTÊNCIA: não regredir status (paid não volta para waiting, canceled não reabre)
+            if (isset($paymentData['charges']) && is_array($paymentData['charges'])) {
+                $updated = false;
+                $currentStatus = null;
+                foreach ($paymentData['charges'] as &$charge) {
+                    if (($charge['charge_id'] ?? null) == $chargeId) {
+                        $currentStatus = $charge['status'] ?? 'waiting';
+                        
+                        // Regras de idempotência: não regredir status
+                        $statusHierarchy = ['waiting' => 1, 'unpaid' => 1, 'pending' => 2, 'processing' => 3, 'paid_partial' => 4, 'paid' => 5, 'canceled' => 0, 'expired' => 0];
+                        $currentLevel = $statusHierarchy[$currentStatus] ?? 0;
+                        $newLevel = $statusHierarchy[$status] ?? 0;
+                        
+                        // Não atualizar se:
+                        // - Status já é paid e novo status é waiting/unpaid (regressão)
+                        // - Status já é canceled e novo status não é canceled (não reabrir)
+                        if ($currentStatus === 'paid' && in_array($status, ['waiting', 'unpaid', 'pending', 'processing'])) {
+                            $this->efiLog('INFO', 'parseWebhook: Ignorando regressão de status (paid -> ' . $status . ')', [
+                                'enrollment_id' => $enrollment['id'],
+                                'charge_id' => $chargeId,
+                                'current_status' => $currentStatus,
+                                'new_status' => $status
+                            ]);
+                            break;
+                        }
+                        
+                        if ($currentStatus === 'canceled' && $status !== 'canceled') {
+                            $this->efiLog('INFO', 'parseWebhook: Ignorando reabertura de parcela cancelada', [
+                                'enrollment_id' => $enrollment['id'],
+                                'charge_id' => $chargeId,
+                                'current_status' => $currentStatus,
+                                'new_status' => $status
+                            ]);
+                            break;
+                        }
+                        
+                        // Atualizar apenas se o novo status for "maior" ou igual na hierarquia
+                        if ($newLevel >= $currentLevel || $status === $currentStatus) {
+                            $charge['status'] = $status;
+                            $updated = true;
+                        }
+                        break;
+                    }
+                }
+                
+                if ($updated) {
+                    // Preservar schema_version e atualizar updated_at
+                    if (!isset($paymentData['schema_version'])) {
+                        $paymentData['schema_version'] = 1;
+                    }
+                    $paymentData['updated_at'] = date('Y-m-d H:i:s');
+                    
+                    // Atualizar JSON no banco
+                    // Usar occurredAt do webhook (não "agora") para gateway_last_event_at
+                    $stmt = $this->db->prepare("
+                        UPDATE enrollments 
+                        SET gateway_payment_url = ?,
+                            gateway_last_status = ?,
+                            gateway_last_event_at = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([
+                        json_encode($paymentData, JSON_UNESCAPED_UNICODE),
+                        $status,
+                        $occurredAt, // Timestamp do evento (não "agora")
+                        $enrollment['id']
+                    ]);
+                    
+                    $this->efiLog('INFO', 'parseWebhook: Parcela do carnê atualizada', [
+                        'enrollment_id' => $enrollment['id'],
+                        'carnet_id' => $carnetId,
+                        'charge_id' => $chargeId,
+                        'status' => $status
+                    ]);
+                }
+            }
+        } else {
+            // Webhook de cobrança única ou carnê completo
+            $billingStatus = $this->mapGatewayStatusToBillingStatus($status);
+            
+            // Se for carnê completo, atualizar status geral
+            // IDEMPOTÊNCIA: não regredir status
+            if ($isCarnet && $paymentData) {
+                $currentCarnetStatus = $paymentData['status'] ?? $enrollment['gateway_last_status'] ?? 'waiting';
+                
+                // Não regredir status (paid não volta para waiting)
+                $statusHierarchy = ['waiting' => 1, 'unpaid' => 1, 'pending' => 2, 'processing' => 3, 'paid_partial' => 4, 'paid' => 5, 'canceled' => 0, 'expired' => 0];
+                $currentLevel = $statusHierarchy[$currentCarnetStatus] ?? 0;
+                $newLevel = $statusHierarchy[$status] ?? 0;
+                
+                if ($currentCarnetStatus === 'paid' && in_array($status, ['waiting', 'unpaid', 'pending', 'processing'])) {
+                    $this->efiLog('INFO', 'parseWebhook: Ignorando regressão de status do carnê (paid -> ' . $status . ')', [
+                        'enrollment_id' => $enrollment['id'],
+                        'carnet_id' => $carnetId,
+                        'current_status' => $currentCarnetStatus,
+                        'new_status' => $status
+                    ]);
+                } elseif ($newLevel >= $currentLevel || $status === $currentCarnetStatus) {
+                    $paymentData['status'] = $status;
+                    if (isset($paymentData['charges']) && is_array($paymentData['charges'])) {
+                        // Se não especificou charge_id, atualizar todas as parcelas (respeitando idempotência)
+                        foreach ($paymentData['charges'] as &$charge) {
+                            $chargeCurrentStatus = $charge['status'] ?? 'waiting';
+                            $chargeCurrentLevel = $statusHierarchy[$chargeCurrentStatus] ?? 0;
+                            // Atualizar apenas se não for regressão
+                            if ($newLevel >= $chargeCurrentLevel || $status === $chargeCurrentStatus) {
+                                $charge['status'] = $status;
+                            }
+                        }
+                    }
+                    
+                    // Preservar schema_version e atualizar updated_at
+                    if (!isset($paymentData['schema_version'])) {
+                        $paymentData['schema_version'] = 1;
+                    }
+                    $paymentData['updated_at'] = date('Y-m-d H:i:s');
+                    
+                    $stmt = $this->db->prepare("
+                        UPDATE enrollments 
+                        SET gateway_payment_url = ?,
+                            gateway_last_status = ?,
+                            gateway_last_event_at = ?,
+                            billing_status = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([
+                        json_encode($paymentData, JSON_UNESCAPED_UNICODE),
+                        $status,
+                        $occurredAt, // Timestamp do evento (não "agora")
+                        $billingStatus,
+                        $enrollment['id']
+                    ]);
+                }
+            } else {
+                // Cobrança única
+                $this->updateEnrollmentStatus(
+                    $enrollment['id'],
+                    $billingStatus,
+                    $status,
+                    $chargeId,
+                    $occurredAt
+                );
+            }
+        }
 
         return [
             'ok' => true,
             'processed' => true,
             'charge_id' => $chargeId,
+            'carnet_id' => $carnetId,
             'status' => $status,
-            'billing_status' => $billingStatus
+            'is_carnet' => $isCarnet
         ];
     }
 
@@ -1419,6 +1769,35 @@ class EfiPaymentService
             ]);
         }
         
+        // LOG DO PAYLOAD FINAL EXATAMENTE ANTES DO curl_exec
+        // Este é o payload EXATO que será enviado à API Efí
+        if ($payload && in_array($method, ['POST', 'PUT', 'PATCH'])) {
+            $finalPayloadJson = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            
+            // Sanitizar dados sensíveis para o log
+            $logPayload = $payload;
+            if (isset($logPayload['customer']['cpf'])) {
+                $logPayload['customer']['cpf'] = '***';
+            }
+            if (isset($logPayload['customer']['email'])) {
+                $logPayload['customer']['email'] = '***';
+            }
+            if (isset($logPayload['customer']['phone_number'])) {
+                $logPayload['customer']['phone_number'] = '***';
+            }
+            $logPayloadJson = json_encode($logPayload, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+            
+            $this->efiLog('INFO', 'makeRequest: PAYLOAD FINAL antes de curl_exec', [
+                'method' => $method,
+                'endpoint' => $endpoint,
+                'url' => $url,
+                'isPix' => $isPix,
+                'payload_final_json' => $logPayloadJson,
+                'payload_size_bytes' => strlen($finalPayloadJson),
+                'payload_keys' => array_keys($payload)
+            ]);
+        }
+        
         $response = curl_exec($ch);
         $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         $curlError = curl_error($ch);
@@ -1446,6 +1825,18 @@ class EfiPaymentService
 
         $data = json_decode($response, true);
         $result['response'] = $data !== null ? $data : ['raw' => $response];
+        
+        // LOG DA RESPOSTA COMPLETA (status HTTP e body)
+        $this->efiLog('INFO', 'makeRequest: Resposta recebida da API', [
+            'method' => $method,
+            'endpoint' => $endpoint,
+            'url' => $url,
+            'isPix' => $isPix,
+            'http_code' => $httpCode,
+            'response_body' => is_string($response) ? substr($response, 0, 2000) : json_encode($response, JSON_UNESCAPED_UNICODE),
+            'response_is_json' => $data !== null,
+            'response_keys' => is_array($data) ? array_keys($data) : []
+        ]);
 
         // Logs já foram feitos acima no bloco "Log após requisição"
         
@@ -1536,6 +1927,293 @@ class EfiPaymentService
     }
 
     /**
+     * Sincroniza status de um Carnê consultando a API da EFI
+     * 
+     * @param array $enrollment Matrícula com gateway_charge_id (carnet_id)
+     * @return array {ok: bool, carnet_id?: string, status?: string, charges?: array, message?: string}
+     */
+    public function syncCarnet($enrollment)
+    {
+        // Validar configuração
+        if (!$this->clientId || !$this->clientSecret) {
+            return [
+                'ok' => false,
+                'message' => 'Configuração do gateway não encontrada'
+            ];
+        }
+
+        // Validar que existe carnê gerado
+        $carnetId = $enrollment['gateway_charge_id'] ?? null;
+        if (empty($carnetId)) {
+            return [
+                'ok' => false,
+                'message' => 'Nenhum carnê gerado para esta matrícula'
+            ];
+        }
+
+        // Obter token de autenticação
+        $token = $this->getAccessToken(false);
+        if (!$token) {
+            return [
+                'ok' => false,
+                'message' => 'Falha ao autenticar no gateway'
+            ];
+        }
+
+        // Consultar status do carnê na Efí
+        // Endpoint: GET /v1/carnet/{carnet_id}
+        $response = $this->makeRequest('GET', "/carnet/{$carnetId}", null, $token, false);
+
+        $httpCode = $response['http_code'] ?? 0;
+        $responseData = $response['response'] ?? null;
+
+        if ($httpCode >= 400 || !$responseData) {
+            $errorMessage = 'Erro desconhecido';
+            if (is_array($responseData)) {
+                $errorMessage = $responseData['error_description'] ?? $responseData['message'] ?? $responseData['error'] ?? 'Erro desconhecido';
+            }
+            
+            $this->efiLog('ERROR', 'syncCarnet: Falha ao consultar carnê', [
+                'enrollment_id' => $enrollment['id'],
+                'carnet_id' => $carnetId,
+                'http_code' => $httpCode,
+                'error' => substr((string)$errorMessage, 0, 180)
+            ]);
+            
+            return [
+                'ok' => false,
+                'message' => 'Não foi possível consultar status do carnê: ' . $errorMessage
+            ];
+        }
+
+        // Processar resposta do carnê
+        $carnetData = $responseData['data'] ?? $responseData;
+        $carnetStatus = $carnetData['status'] ?? 'waiting';
+        $cover = $carnetData['cover'] ?? null;
+        $downloadLink = $carnetData['link'] ?? null;
+        $charges = $carnetData['charges'] ?? [];
+
+        // Ler JSON existente para preservar schema_version e aplicar idempotência
+        $existingPaymentData = null;
+        if (!empty($enrollment['gateway_payment_url'])) {
+            $existingPaymentData = json_decode($enrollment['gateway_payment_url'], true);
+        }
+        $schemaVersion = $existingPaymentData['schema_version'] ?? 1;
+        $existingCarnetStatus = $existingPaymentData['status'] ?? $enrollment['gateway_last_status'] ?? 'waiting';
+        $existingCharges = $existingPaymentData['charges'] ?? [];
+        
+        // IDEMPOTÊNCIA: não regredir status do carnê
+        $statusHierarchy = ['waiting' => 1, 'unpaid' => 1, 'pending' => 2, 'processing' => 3, 'paid_partial' => 4, 'paid' => 5, 'canceled' => 0, 'expired' => 0];
+        $currentLevel = $statusHierarchy[$existingCarnetStatus] ?? 0;
+        $newLevel = $statusHierarchy[$carnetStatus] ?? 0;
+        
+        // Se o status atual é "maior" (paid) e o novo é "menor" (waiting), manter o atual
+        if ($currentLevel > $newLevel && $existingCarnetStatus === 'paid') {
+            $carnetStatus = $existingCarnetStatus;
+            $this->efiLog('INFO', 'syncCarnet: Mantendo status paid (idempotência)', [
+                'enrollment_id' => $enrollment['id'],
+                'existing_status' => $existingCarnetStatus,
+                'api_status' => $carnetStatus
+            ]);
+        }
+        
+        // Extrair dados completos de cada parcela (aplicando idempotência)
+        $chargesData = [];
+        foreach ($charges as $charge) {
+            $chargeId = $charge['charge_id'] ?? null;
+            if ($chargeId) {
+                // Buscar status existente da parcela para idempotência
+                $existingChargeStatus = 'waiting';
+                foreach ($existingCharges as $existingCharge) {
+                    if (($existingCharge['charge_id'] ?? null) == $chargeId) {
+                        $existingChargeStatus = $existingCharge['status'] ?? 'waiting';
+                        break;
+                    }
+                }
+                
+                $newChargeStatus = $charge['status'] ?? 'waiting';
+                $chargeCurrentLevel = $statusHierarchy[$existingChargeStatus] ?? 0;
+                $chargeNewLevel = $statusHierarchy[$newChargeStatus] ?? 0;
+                
+                // Não regredir status da parcela
+                if ($chargeCurrentLevel > $chargeNewLevel && $existingChargeStatus === 'paid') {
+                    $newChargeStatus = $existingChargeStatus;
+                }
+                
+                $chargesData[] = [
+                    'charge_id' => $chargeId,
+                    'expire_at' => $charge['expire_at'] ?? null,
+                    'status' => $newChargeStatus,
+                    'total' => $charge['total'] ?? null,
+                    'billet_link' => $charge['payment']['banking_billet']['link'] ?? null
+                ];
+            }
+        }
+        
+        // Atualizar JSON no banco com dados atualizados (com versão e updated_at)
+        $carnetDataJson = json_encode([
+            'schema_version' => $schemaVersion,
+            'type' => 'carne',
+            'carnet_id' => $carnetId,
+            'status' => $carnetStatus,
+            'cover' => $cover,
+            'download_link' => $downloadLink,
+            'charge_ids' => array_column($chargesData, 'charge_id'),
+            'payment_urls' => array_filter(array_column($chargesData, 'billet_link')),
+            'charges' => $chargesData,
+            'updated_at' => date('Y-m-d H:i:s')
+        ], JSON_UNESCAPED_UNICODE);
+
+        $stmt = $this->db->prepare("
+            UPDATE enrollments 
+            SET gateway_payment_url = ?,
+                gateway_last_status = ?,
+                gateway_last_event_at = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([
+            $carnetDataJson,
+            $carnetStatus,
+            date('Y-m-d H:i:s'), // Refresh manual usa timestamp atual
+            $enrollment['id']
+        ]);
+
+        // Determinar status agregado (se todas parcelas pagas, etc)
+        $allPaid = true;
+        $hasWaiting = false;
+        foreach ($chargesData as $charge) {
+            if ($charge['status'] !== 'paid' && $charge['status'] !== 'settled') {
+                $allPaid = false;
+            }
+            if ($charge['status'] === 'waiting') {
+                $hasWaiting = true;
+            }
+        }
+
+        $aggregatedStatus = $allPaid ? 'paid' : ($hasWaiting ? 'waiting' : $carnetStatus);
+
+        return [
+            'ok' => true,
+            'carnet_id' => $carnetId,
+            'status' => $carnetStatus,
+            'aggregated_status' => $aggregatedStatus,
+            'cover' => $cover,
+            'download_link' => $downloadLink,
+            'charges' => $chargesData
+        ];
+    }
+
+    /**
+     * Cancela um Carnê na API da EFI
+     * 
+     * @param array $enrollment Matrícula com gateway_charge_id (carnet_id)
+     * @return array {ok: bool, message?: string}
+     */
+    public function cancelCarnet($enrollment)
+    {
+        // Validar configuração
+        if (!$this->clientId || !$this->clientSecret) {
+            return [
+                'ok' => false,
+                'message' => 'Configuração do gateway não encontrada'
+            ];
+        }
+
+        // Validar que existe carnê gerado
+        $carnetId = $enrollment['gateway_charge_id'] ?? null;
+        if (empty($carnetId)) {
+            return [
+                'ok' => false,
+                'message' => 'Nenhum carnê gerado para esta matrícula'
+            ];
+        }
+
+        // Obter token de autenticação
+        $token = $this->getAccessToken(false);
+        if (!$token) {
+            return [
+                'ok' => false,
+                'message' => 'Falha ao autenticar no gateway'
+            ];
+        }
+
+        // Cancelar carnê na Efí
+        // Endpoint: PUT /v1/carnet/{carnet_id}/cancel
+        $response = $this->makeRequest('PUT', "/carnet/{$carnetId}/cancel", null, $token, false);
+
+        $httpCode = $response['http_code'] ?? 0;
+        $responseData = $response['response'] ?? null;
+
+        if ($httpCode !== 200 && $httpCode !== 201) {
+            $errorMessage = 'Erro desconhecido';
+            if (is_array($responseData)) {
+                $errorMessage = $responseData['error_description'] ?? $responseData['message'] ?? $responseData['error'] ?? 'Erro desconhecido';
+            }
+            
+            $this->efiLog('ERROR', 'cancelCarnet: Falha ao cancelar carnê', [
+                'enrollment_id' => $enrollment['id'],
+                'carnet_id' => $carnetId,
+                'http_code' => $httpCode,
+                'error' => substr((string)$errorMessage, 0, 180)
+            ]);
+            
+            return [
+                'ok' => false,
+                'message' => 'Não foi possível cancelar o carnê: ' . $errorMessage
+            ];
+        }
+
+        // Atualizar status no banco
+        $this->updateEnrollmentStatus(
+            $enrollment['id'],
+            'canceled', // billing_status = canceled (não error)
+            'canceled', // gateway_last_status = canceled
+            $carnetId,
+            date('Y-m-d H:i:s')
+        );
+
+        // Atualizar JSON no banco marcando como cancelado (preservar schema_version)
+        $paymentData = null;
+        if (!empty($enrollment['gateway_payment_url'])) {
+            $paymentData = json_decode($enrollment['gateway_payment_url'], true);
+        }
+        
+        if ($paymentData && isset($paymentData['type']) && $paymentData['type'] === 'carne') {
+            // Preservar schema_version se existir
+            if (!isset($paymentData['schema_version'])) {
+                $paymentData['schema_version'] = 1;
+            }
+            $paymentData['status'] = 'canceled';
+            $paymentData['updated_at'] = date('Y-m-d H:i:s');
+            if (isset($paymentData['charges']) && is_array($paymentData['charges'])) {
+                foreach ($paymentData['charges'] as &$charge) {
+                    $charge['status'] = 'canceled';
+                }
+            }
+            
+            $stmt = $this->db->prepare("
+                UPDATE enrollments 
+                SET gateway_payment_url = ? 
+                WHERE id = ?
+            ");
+            $stmt->execute([
+                json_encode($paymentData, JSON_UNESCAPED_UNICODE),
+                $enrollment['id']
+            ]);
+        }
+
+        $this->efiLog('INFO', 'cancelCarnet: Carnê cancelado com sucesso', [
+            'enrollment_id' => $enrollment['id'],
+            'carnet_id' => $carnetId
+        ]);
+
+        return [
+            'ok' => true,
+            'message' => 'Carnê cancelado com sucesso'
+        ];
+    }
+
+    /**
      * Sincroniza status de uma cobrança consultando a API da EFI
      * 
      * @param array $enrollment Matrícula com gateway_charge_id
@@ -1558,6 +2236,18 @@ class EfiPaymentService
                 'ok' => false,
                 'message' => 'Nenhuma cobrança gerada para esta matrícula'
             ];
+        }
+
+        // Verificar se é Carnê
+        $paymentData = null;
+        if (!empty($enrollment['gateway_payment_url'])) {
+            $paymentData = json_decode($enrollment['gateway_payment_url'], true);
+        }
+        $isCarnet = $paymentData && isset($paymentData['type']) && $paymentData['type'] === 'carne';
+
+        // Se for Carnê, usar syncCarnet
+        if ($isCarnet) {
+            return $this->syncCarnet($enrollment);
         }
 
         // Determinar se é PIX baseado no payment_method da matrícula

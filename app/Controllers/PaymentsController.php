@@ -518,4 +518,255 @@ class PaymentsController extends Controller
         ]);
         exit;
     }
+
+    /**
+     * GET /api/payments/status
+     * Retorna status e detalhes da cobrança (suporta Carnê e cobrança única)
+     * 
+     * Parâmetros:
+     * - enrollment_id (obrigatório)
+     * - refresh (opcional): se true, consulta Efí antes de retornar
+     */
+    public function status()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        // Verificar autenticação
+        if (empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'message' => 'Você precisa fazer login para continuar'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Verificar permissão (admin ou secretaria)
+        $currentRole = $_SESSION['current_role'] ?? '';
+        if (!in_array($currentRole, [Constants::ROLE_ADMIN, Constants::ROLE_SECRETARIA])) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'message' => 'Você não tem permissão para realizar esta ação'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Validar método
+        if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+            http_response_code(405);
+            echo json_encode(['ok' => false, 'message' => 'Operação não permitida'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Obter enrollment_id
+        $enrollmentId = $_GET['enrollment_id'] ?? null;
+        $refresh = isset($_GET['refresh']) && $_GET['refresh'] === 'true';
+
+        if (!$enrollmentId) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'message' => 'É necessário informar o ID da matrícula'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Buscar matrícula com detalhes
+        $enrollment = $this->enrollmentModel->findWithDetails($enrollmentId);
+        if (!$enrollment) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'message' => 'Matrícula não encontrada'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Verificar se matrícula pertence ao CFC do usuário
+        $cfcId = $_SESSION['cfc_id'] ?? Constants::CFC_ID_DEFAULT;
+        if ($enrollment['cfc_id'] != $cfcId) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'message' => 'Acesso negado a esta matrícula'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Verificar se existe cobrança gerada
+        if (empty($enrollment['gateway_charge_id'])) {
+            http_response_code(400);
+            echo json_encode([
+                'ok' => false,
+                'message' => 'Esta matrícula ainda não possui cobrança gerada.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Se refresh=true, sincronizar com Efí antes de retornar
+        if ($refresh) {
+            try {
+                $syncResult = $this->efiService->syncCharge($enrollment);
+                if ($syncResult['ok']) {
+                    // Recarregar matrícula após sincronização
+                    $enrollment = $this->enrollmentModel->findWithDetails($enrollmentId);
+                }
+            } catch (\Exception $e) {
+                // Log erro mas continua com dados do banco
+                error_log(sprintf(
+                    "EFI Status Refresh Error: enrollment_id=%d, error=%s",
+                    $enrollmentId,
+                    $e->getMessage()
+                ));
+            }
+        }
+
+        // Decodificar gateway_payment_url (JSON)
+        $paymentData = null;
+        if (!empty($enrollment['gateway_payment_url'])) {
+            $paymentData = json_decode($enrollment['gateway_payment_url'], true);
+        }
+
+        // Determinar tipo de cobrança
+        $type = 'charge'; // padrão
+        if ($paymentData && isset($paymentData['type']) && $paymentData['type'] === 'carne') {
+            $type = 'carne';
+        }
+
+        // Montar resposta padronizada
+        if ($type === 'carne' && $paymentData) {
+            // Resposta para Carnê
+            $charges = [];
+            if (isset($paymentData['charges']) && is_array($paymentData['charges'])) {
+                foreach ($paymentData['charges'] as $charge) {
+                    $charges[] = [
+                        'charge_id' => $charge['charge_id'] ?? null,
+                        'expire_at' => $charge['expire_at'] ?? null,
+                        'status' => $charge['status'] ?? 'waiting',
+                        'billet_link' => $charge['billet_link'] ?? null
+                    ];
+                }
+            }
+
+        echo json_encode([
+            'ok' => true,
+            'type' => 'carne',
+            'carnet_id' => $paymentData['carnet_id'] ?? $enrollment['gateway_charge_id'],
+            'status' => $paymentData['status'] ?? $enrollment['gateway_last_status'] ?? 'waiting',
+            'cover' => $paymentData['cover'] ?? null,
+            'download_link' => $paymentData['download_link'] ?? null,
+            'charges' => $charges
+        ], JSON_UNESCAPED_UNICODE);
+        } else {
+            // Resposta para cobrança única
+            echo json_encode([
+                'ok' => true,
+                'type' => 'charge',
+                'charge_id' => $enrollment['gateway_charge_id'],
+                'status' => $enrollment['gateway_last_status'] ?? 'waiting',
+                'payment_url' => $enrollment['gateway_payment_url'] ?? null
+            ], JSON_UNESCAPED_UNICODE);
+        }
+
+        exit;
+    }
+
+    /**
+     * POST /api/payments/cancel
+     * Cancela uma cobrança (Carnê ou cobrança única)
+     * 
+     * Parâmetros:
+     * - enrollment_id (obrigatório)
+     */
+    public function cancel()
+    {
+        header('Content-Type: application/json; charset=utf-8');
+
+        // Verificar autenticação
+        if (empty($_SESSION['user_id'])) {
+            http_response_code(401);
+            echo json_encode(['ok' => false, 'message' => 'Você precisa fazer login para continuar'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Verificar permissão (admin ou secretaria)
+        $currentRole = $_SESSION['current_role'] ?? '';
+        if (!in_array($currentRole, [Constants::ROLE_ADMIN, Constants::ROLE_SECRETARIA])) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'message' => 'Você não tem permissão para realizar esta ação'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Validar método
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            http_response_code(405);
+            echo json_encode(['ok' => false, 'message' => 'Operação não permitida'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Obter enrollment_id
+        $input = json_decode(file_get_contents('php://input'), true);
+        $enrollmentId = $input['enrollment_id'] ?? $_POST['enrollment_id'] ?? null;
+
+        if (!$enrollmentId) {
+            http_response_code(400);
+            echo json_encode(['ok' => false, 'message' => 'É necessário informar o ID da matrícula'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Buscar matrícula com detalhes
+        $enrollment = $this->enrollmentModel->findWithDetails($enrollmentId);
+        if (!$enrollment) {
+            http_response_code(404);
+            echo json_encode(['ok' => false, 'message' => 'Matrícula não encontrada'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Verificar se matrícula pertence ao CFC do usuário
+        $cfcId = $_SESSION['cfc_id'] ?? Constants::CFC_ID_DEFAULT;
+        if ($enrollment['cfc_id'] != $cfcId) {
+            http_response_code(403);
+            echo json_encode(['ok' => false, 'message' => 'Acesso negado a esta matrícula'], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Verificar se existe cobrança gerada
+        if (empty($enrollment['gateway_charge_id'])) {
+            http_response_code(400);
+            echo json_encode([
+                'ok' => false,
+                'message' => 'Esta matrícula ainda não possui cobrança gerada.'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
+        }
+
+        // Determinar tipo de cobrança
+        $paymentData = null;
+        if (!empty($enrollment['gateway_payment_url'])) {
+            $paymentData = json_decode($enrollment['gateway_payment_url'], true);
+        }
+        $isCarnet = $paymentData && isset($paymentData['type']) && $paymentData['type'] === 'carne';
+
+        // Cancelar cobrança
+        try {
+            if ($isCarnet) {
+                $result = $this->efiService->cancelCarnet($enrollment);
+            } else {
+                // Para cobrança única, ainda não implementado
+                // Por enquanto, apenas atualizar status local
+                http_response_code(501);
+                echo json_encode([
+                    'ok' => false,
+                    'message' => 'Cancelamento de cobrança única ainda não implementado. Use apenas para Carnê.'
+                ], JSON_UNESCAPED_UNICODE);
+                exit;
+            }
+            
+            if (!$result['ok']) {
+                http_response_code(400);
+            }
+            
+            echo json_encode($result, JSON_UNESCAPED_UNICODE);
+        } catch (\Exception $e) {
+            error_log(sprintf(
+                "EFI Cancel Error: enrollment_id=%d, error=%s",
+                $enrollmentId,
+                $e->getMessage()
+            ));
+            
+            http_response_code(500);
+            echo json_encode([
+                'ok' => false,
+                'message' => 'Não foi possível cancelar a cobrança: ' . $e->getMessage()
+            ], JSON_UNESCAPED_UNICODE);
+        }
+        
+        exit;
+    }
 }

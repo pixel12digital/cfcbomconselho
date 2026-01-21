@@ -185,7 +185,9 @@ $router->get('/api/students/{id}/enrollments', [ApiController::class, 'getStuden
 
 // Payments API
 $router->post('/api/payments/generate', [PaymentsController::class, 'generate'], [AuthMiddleware::class]);
+$router->get('/api/payments/status', [PaymentsController::class, 'status'], [AuthMiddleware::class]);
 $router->post('/api/payments/sync', [PaymentsController::class, 'sync'], [AuthMiddleware::class]);
+$router->post('/api/payments/cancel', [PaymentsController::class, 'cancel'], [AuthMiddleware::class]);
 $router->post('/api/payments/sync-pendings', [PaymentsController::class, 'syncPendings'], [AuthMiddleware::class]);
 $router->post('/api/payments/webhook/efi', [PaymentsController::class, 'webhookEfi']);
 

@@ -70,6 +70,13 @@ try {
     echo "  - Valor por parcela: R$ " . number_format($outstandingAmount / $installments, 2, ',', '.') . "\n";
     echo "\n";
     
+    echo "=== ATENÇÃO ===\n";
+    echo "Verifique os logs em storage/logs/php_errors.log para:\n";
+    echo "  - Payload FINAL enviado (antes de curl_exec)\n";
+    echo "  - Status HTTP da resposta\n";
+    echo "  - Response body completo\n";
+    echo "\n";
+    
     // Chamar método createCharge (que detecta Carnê e chama createCarnet)
     $result = $efiService->createCharge($enrollment);
     
