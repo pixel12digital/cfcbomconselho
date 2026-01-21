@@ -126,28 +126,32 @@
             }
         });
 
-        // Debug do form submit
+        // Debug do form submit com interceptação AJAX
         const uploadForm = document.querySelector('form[action*="logo/upload"]');
         if (uploadForm) {
             uploadForm.addEventListener('submit', function(e) {
                 const formData = new FormData(uploadForm);
                 const file = logoInput.files[0];
                 
-                console.log('[UPLOAD DEBUG] Form submit iniciado:', {
-                    action: uploadForm.action,
-                    method: uploadForm.method,
-                    enctype: uploadForm.enctype,
+                console.log('[UPLOAD DEBUG] ========================================');
+                console.log('[UPLOAD DEBUG] Form submit iniciado');
+                console.log('[UPLOAD DEBUG] Action:', uploadForm.action);
+                console.log('[UPLOAD DEBUG] Method:', uploadForm.method);
+                console.log('[UPLOAD DEBUG] Enctype:', uploadForm.enctype);
+                console.log('[UPLOAD DEBUG] Arquivo selecionado:', {
                     hasFile: !!file,
                     fileName: file?.name,
                     fileSize: file?.size,
-                    fileType: file?.type,
-                    csrfToken: formData.get('csrf_token') ? 'presente' : 'ausente',
-                    formDataKeys: Array.from(formData.keys())
+                    fileSizeMB: file ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : 'N/A',
+                    fileType: file?.type
                 });
+                console.log('[UPLOAD DEBUG] FormData keys:', Array.from(formData.keys()));
+                console.log('[UPLOAD DEBUG] CSRF Token:', formData.get('csrf_token') ? 'presente' : 'ausente');
+                console.log('[UPLOAD DEBUG] ========================================');
 
                 // Verificar se arquivo foi selecionado
                 if (!file) {
-                    console.error('[UPLOAD DEBUG] ERRO: Nenhum arquivo selecionado!');
+                    console.error('[UPLOAD DEBUG] ❌ ERRO: Nenhum arquivo selecionado!');
                     e.preventDefault();
                     alert('Por favor, selecione um arquivo antes de fazer upload.');
                     return false;
@@ -155,13 +159,67 @@
 
                 // Verificar tamanho (5MB)
                 if (file.size > 5 * 1024 * 1024) {
-                    console.error('[UPLOAD DEBUG] ERRO: Arquivo muito grande!', file.size);
+                    console.error('[UPLOAD DEBUG] ❌ ERRO: Arquivo muito grande!', {
+                        size: file.size,
+                        sizeMB: (file.size / 1024 / 1024).toFixed(2) + ' MB',
+                        maxSize: '5 MB'
+                    });
                     e.preventDefault();
                     alert('Arquivo muito grande. Máximo 5MB.');
                     return false;
                 }
 
-                console.log('[UPLOAD DEBUG] Enviando requisição...');
+                console.log('[UPLOAD DEBUG] ✅ Validações passaram, enviando requisição...');
+                
+                // Interceptar via AJAX para capturar resposta
+                e.preventDefault();
+                
+                const submitButton = uploadForm.querySelector('button[type="submit"]');
+                const originalText = submitButton.textContent;
+                submitButton.disabled = true;
+                submitButton.textContent = 'Enviando...';
+                
+                fetch(uploadForm.action, {
+                    method: 'POST',
+                    body: formData,
+                    credentials: 'same-origin'
+                })
+                .then(function(response) {
+                    console.log('[UPLOAD DEBUG] ========================================');
+                    console.log('[UPLOAD DEBUG] Resposta recebida');
+                    console.log('[UPLOAD DEBUG] Status:', response.status, response.statusText);
+                    console.log('[UPLOAD DEBUG] Headers:', Object.fromEntries(response.headers.entries()));
+                    
+                    // Ler headers de debug
+                    const debugHeaders = {};
+                    response.headers.forEach(function(value, key) {
+                        if (key.toLowerCase().startsWith('x-upload-debug')) {
+                            debugHeaders[key] = value;
+                        }
+                    });
+                    if (Object.keys(debugHeaders).length > 0) {
+                        console.log('[UPLOAD DEBUG] Headers de debug:', debugHeaders);
+                    }
+                    
+                    console.log('[UPLOAD DEBUG] ========================================');
+                    
+                    // Redirecionar para a página (mesmo comportamento do form submit)
+                    if (response.redirected || response.status === 302 || response.status === 301) {
+                        console.log('[UPLOAD DEBUG] Redirect detectado, recarregando página...');
+                        window.location.href = response.url || window.location.href;
+                    } else {
+                        // Se não houver redirect, recarregar a página atual
+                        window.location.reload();
+                    }
+                })
+                .catch(function(error) {
+                    console.error('[UPLOAD DEBUG] ❌ ERRO na requisição:', error);
+                    submitButton.disabled = false;
+                    submitButton.textContent = originalText;
+                    alert('Erro ao fazer upload: ' + error.message);
+                });
+                
+                return false;
             });
 
             // Interceptar resposta após submit usando fetch (se possível) ou verificar headers na próxima página
