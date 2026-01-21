@@ -86,6 +86,37 @@ try {
                 $shortName = mb_substr($cfcName, 0, 12) . '...';
             }
             
+            // Verificar se há ícones PWA gerados para este CFC
+            $icons = $defaultManifest['icons']; // Fallback para ícones padrão
+            
+            if (!empty($cfc['id'])) {
+                $icon192 = './icons/' . $cfc['id'] . '/icon-192x192.png';
+                $icon512 = './icons/' . $cfc['id'] . '/icon-512x512.png';
+                
+                // Verificar se os arquivos existem
+                $rootPath = dirname(__DIR__);
+                $icon192Path = $rootPath . '/public_html/icons/' . $cfc['id'] . '/icon-192x192.png';
+                $icon512Path = $rootPath . '/public_html/icons/' . $cfc['id'] . '/icon-512x512.png';
+                
+                if (file_exists($icon192Path) && file_exists($icon512Path)) {
+                    // Usar ícones dinâmicos do CFC
+                    $icons = [
+                        [
+                            'src' => $icon192,
+                            'sizes' => '192x192',
+                            'type' => 'image/png',
+                            'purpose' => 'any maskable'
+                        ],
+                        [
+                            'src' => $icon512,
+                            'sizes' => '512x512',
+                            'type' => 'image/png',
+                            'purpose' => 'any maskable'
+                        ]
+                    ];
+                }
+            }
+            
             // Usar nome do CFC
             $manifest = [
                 'name' => $cfcName,
@@ -97,12 +128,8 @@ try {
                 'orientation' => 'portrait-primary',
                 'theme_color' => '#023A8D', // Pode ser dinâmico no futuro se houver campo theme_color
                 'background_color' => '#ffffff',
-                'icons' => $defaultManifest['icons'] // Por enquanto usar ícones padrão
+                'icons' => $icons
             ];
-            
-            // Se houver logo no futuro, pode adicionar aqui
-            // $logo = $cfcModel->getCurrentLogo();
-            // if ($logo) { ... }
             
         } else {
             // CFC não encontrado ou sem nome - usar fallback

@@ -125,6 +125,11 @@ $router->get('/configuracoes/smtp', [ConfiguracoesController::class, 'smtp'], [A
 $router->post('/configuracoes/smtp/salvar', [ConfiguracoesController::class, 'salvarSmtp'], [AuthMiddleware::class]);
 $router->post('/configuracoes/smtp/testar', [ConfiguracoesController::class, 'testarSmtp'], [AuthMiddleware::class]);
 
+// Configurações do CFC (Logo PWA)
+$router->get('/configuracoes/cfc', [ConfiguracoesController::class, 'cfc'], [AuthMiddleware::class]);
+$router->post('/configuracoes/cfc/logo/upload', [ConfiguracoesController::class, 'uploadLogo'], [AuthMiddleware::class]);
+$router->post('/configuracoes/cfc/logo/remover', [ConfiguracoesController::class, 'removerLogo'], [AuthMiddleware::class]);
+
 // Curso Teórico - Configurações (ADMIN)
 $router->get('/configuracoes/disciplinas', [ConfiguracoesController::class, 'disciplinas'], [AuthMiddleware::class]);
 $router->get('/configuracoes/disciplinas/novo', [ConfiguracoesController::class, 'disciplinaNovo'], [AuthMiddleware::class]);
