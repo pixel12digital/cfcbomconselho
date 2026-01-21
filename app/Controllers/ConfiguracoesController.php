@@ -571,16 +571,7 @@ class ConfiguracoesController extends Controller
      */
     public function uploadLogo()
     {
-        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-            redirect(base_url('configuracoes/cfc'));
-        }
-
-        if (!csrf_verify($_POST['csrf_token'] ?? '')) {
-            $_SESSION['error'] = 'Token CSRF inválido.';
-            redirect(base_url('configuracoes/cfc'));
-        }
-
-        // Log obrigatório mesmo quando $_FILES vier vazio
+        // Log OBRIGATÓRIO no início - antes de qualquer verificação
         $logFile = dirname(__DIR__, 2) . '/storage/logs/upload_logo.log';
         $logDir = dirname($logFile);
         if (!is_dir($logDir)) {
@@ -589,14 +580,28 @@ class ConfiguracoesController extends Controller
         
         $initialLog = [
             'timestamp' => date('Y-m-d H:i:s'),
+            'method_called' => 'uploadLogo',
             'REQUEST_METHOD' => $_SERVER['REQUEST_METHOD'] ?? 'N/A',
+            'REQUEST_URI' => $_SERVER['REQUEST_URI'] ?? 'N/A',
             'Content-Type' => $_SERVER['CONTENT_TYPE'] ?? 'N/A',
             'POST_keys' => array_keys($_POST),
             'FILES_keys' => array_keys($_FILES),
             'FILES_count' => count($_FILES),
-            'has_logo_in_FILES' => isset($_FILES['logo'])
+            'has_logo_in_FILES' => isset($_FILES['logo']),
+            'csrf_token_present' => isset($_POST['csrf_token'])
         ];
         @file_put_contents($logFile, "=== UPLOAD REQUEST START ===\n" . json_encode($initialLog, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            @file_put_contents($logFile, "ERROR: Request method is not POST\n", FILE_APPEND);
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+            @file_put_contents($logFile, "ERROR: CSRF token invalid\n", FILE_APPEND);
+            $_SESSION['error'] = 'Token CSRF inválido.';
+            redirect(base_url('configuracoes/cfc'));
+        }
 
         $cfcModel = new Cfc();
         $cfc = $cfcModel->getCurrent();
