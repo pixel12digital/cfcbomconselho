@@ -103,8 +103,16 @@
 
         <script>
         // Preview do logo antes do upload
-        document.getElementById('logo').addEventListener('change', function(e) {
+        const logoInput = document.getElementById('logo');
+        logoInput.addEventListener('change', function(e) {
             const file = e.target.files[0];
+            console.log('[UPLOAD DEBUG] Arquivo selecionado:', {
+                name: file?.name,
+                size: file?.size,
+                type: file?.type,
+                lastModified: file?.lastModified
+            });
+            
             if (file) {
                 const reader = new FileReader();
                 reader.onload = function(e) {
@@ -116,6 +124,83 @@
             } else {
                 document.getElementById('logo-preview-container').style.display = 'none';
             }
+        });
+
+        // Debug do form submit
+        const uploadForm = document.querySelector('form[action*="logo/upload"]');
+        if (uploadForm) {
+            uploadForm.addEventListener('submit', function(e) {
+                const formData = new FormData(uploadForm);
+                const file = logoInput.files[0];
+                
+                console.log('[UPLOAD DEBUG] Form submit iniciado:', {
+                    action: uploadForm.action,
+                    method: uploadForm.method,
+                    enctype: uploadForm.enctype,
+                    hasFile: !!file,
+                    fileName: file?.name,
+                    fileSize: file?.size,
+                    fileType: file?.type,
+                    csrfToken: formData.get('csrf_token') ? 'presente' : 'ausente',
+                    formDataKeys: Array.from(formData.keys())
+                });
+
+                // Verificar se arquivo foi selecionado
+                if (!file) {
+                    console.error('[UPLOAD DEBUG] ERRO: Nenhum arquivo selecionado!');
+                    e.preventDefault();
+                    alert('Por favor, selecione um arquivo antes de fazer upload.');
+                    return false;
+                }
+
+                // Verificar tamanho (5MB)
+                if (file.size > 5 * 1024 * 1024) {
+                    console.error('[UPLOAD DEBUG] ERRO: Arquivo muito grande!', file.size);
+                    e.preventDefault();
+                    alert('Arquivo muito grande. Máximo 5MB.');
+                    return false;
+                }
+
+                console.log('[UPLOAD DEBUG] Enviando requisição...');
+            });
+
+            // Interceptar resposta após submit usando fetch (se possível) ou verificar headers na próxima página
+            // Como é um form submit tradicional, vamos verificar headers na resposta
+            if (window.performance && window.performance.getEntriesByType) {
+                // Verificar última navegação após um delay
+                setTimeout(function() {
+                    const navEntries = performance.getEntriesByType('navigation');
+                    if (navEntries.length > 0) {
+                        const lastNav = navEntries[navEntries.length - 1];
+                        console.log('[UPLOAD DEBUG] Navegação detectada:', {
+                            type: lastNav.type,
+                            duration: lastNav.duration
+                        });
+                    }
+                }, 1000);
+            }
+        } else {
+            console.error('[UPLOAD DEBUG] Form não encontrado!');
+        }
+
+        // Verificar headers de debug na resposta (após redirect)
+        window.addEventListener('load', function() {
+            // Tentar ler headers via fetch (não funciona com redirect, mas tenta)
+            fetch(window.location.href, { method: 'HEAD' })
+                .then(function(response) {
+                    const debugHeaders = {};
+                    response.headers.forEach(function(value, key) {
+                        if (key.toLowerCase().startsWith('x-upload-debug')) {
+                            debugHeaders[key] = value;
+                        }
+                    });
+                    if (Object.keys(debugHeaders).length > 0) {
+                        console.log('[UPLOAD DEBUG] Headers de debug encontrados:', debugHeaders);
+                    }
+                })
+                .catch(function(err) {
+                    // Ignorar erro (normal com redirect)
+                });
         });
         </script>
 

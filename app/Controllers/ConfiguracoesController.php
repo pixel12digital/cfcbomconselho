@@ -591,14 +591,21 @@ class ConfiguracoesController extends Controller
             'csrf_token_present' => isset($_POST['csrf_token'])
         ];
         @file_put_contents($logFile, "=== UPLOAD REQUEST START ===\n" . json_encode($initialLog, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+        
+        // Headers de debug para console do navegador
+        header('X-Upload-Debug: method_called=uploadLogo');
+        header('X-Upload-Debug-Files: ' . count($_FILES));
+        header('X-Upload-Debug-HasLogo: ' . (isset($_FILES['logo']) ? 'yes' : 'no'));
 
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             @file_put_contents($logFile, "ERROR: Request method is not POST\n", FILE_APPEND);
+            header('X-Upload-Debug-Error: Request method is not POST');
             redirect(base_url('configuracoes/cfc'));
         }
 
         if (!csrf_verify($_POST['csrf_token'] ?? '')) {
             @file_put_contents($logFile, "ERROR: CSRF token invalid\n", FILE_APPEND);
+            header('X-Upload-Debug-Error: CSRF token invalid');
             $_SESSION['error'] = 'Token CSRF inválido.';
             redirect(base_url('configuracoes/cfc'));
         }
@@ -608,6 +615,7 @@ class ConfiguracoesController extends Controller
 
         if (!$cfc) {
             @file_put_contents($logFile, "ERROR: CFC não encontrado\n", FILE_APPEND);
+            header('X-Upload-Debug-Error: CFC não encontrado');
             $_SESSION['error'] = 'CFC não encontrado.';
             redirect(base_url('configuracoes/cfc'));
         }
@@ -620,6 +628,8 @@ class ConfiguracoesController extends Controller
                 'Content-Type' => $_SERVER['CONTENT_TYPE'] ?? 'N/A'
             ];
             @file_put_contents($logFile, "=== UPLOAD ERROR (no file) ===\n" . json_encode($errorLog, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+            header('X-Upload-Debug-Error: Nenhum arquivo foi enviado');
+            header('X-Upload-Debug-FilesKeys: ' . implode(',', array_keys($_FILES)));
             $_SESSION['error'] = 'Nenhum arquivo foi enviado.';
             redirect(base_url('configuracoes/cfc'));
         }
@@ -779,6 +789,12 @@ class ConfiguracoesController extends Controller
         $logData['fileExistsOnDisk'] = file_exists($filepath);
         $logData['fileSizeOnDisk'] = filesize($filepath);
         @file_put_contents($logFile, "=== UPLOAD SUCCESS ===\n" . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+        
+        // Headers de debug para sucesso
+        header('X-Upload-Debug: success');
+        header('X-Upload-Debug-FilePath: ' . $relativePath);
+        header('X-Upload-Debug-FileSize: ' . filesize($filepath));
+        header('X-Upload-Debug-DbUpdate: ' . ($logData['dbUpdate']['dbUpdateSuccess'] ? 'success' : 'failed'));
 
         // Gerar ícones PWA
         $icons = PwaIconGenerator::generateIcons($filepath, $cfc['id']);
