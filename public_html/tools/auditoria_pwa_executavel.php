@@ -1,6 +1,6 @@
 <?php
 /**
- * Auditoria PWA Executável
+ * Auditoria PWA Executável - Versão Completa com Banco de Dados
  * 
  * Este script testa e valida todos os requisitos do PWA
  * Execute em produção via: https://seudominio.com/tools/auditoria_pwa_executavel.php
@@ -10,9 +10,21 @@
 
 header('Content-Type: text/html; charset=utf-8');
 
+// Carregar configurações
+require_once __DIR__ . '/../../app/Bootstrap.php';
+require_once __DIR__ . '/../../app/Config/Database.php';
+require_once __DIR__ . '/../../app/Config/Env.php';
+
+use App\Config\Database;
+use App\Config\Env;
+
+// Carregar .env
+Env::load();
+
 $results = [];
 $errors = [];
 $warnings = [];
+$db = null;
 
 // Helper para adicionar resultado
 function addResult($category, $check, $status, $message, $details = '') {
@@ -243,7 +255,103 @@ if (file_exists($generateIconsPath)) {
 }
 
 // ============================================
-// 6. VERIFICAÇÃO INSTALLABILITY
+// 6. VERIFICAÇÃO BANCO DE DADOS - WHITE-LABEL
+// ============================================
+
+try {
+    $db = Database::getInstance()->getConnection();
+    addResult('Banco de Dados', 'Conexão', 'ok', '✅ Conexão com banco de dados estabelecida');
+    
+    // Verificar estrutura da tabela cfcs
+    $stmt = $db->query("DESCRIBE cfcs");
+    $cfcColumns = $stmt->fetchAll();
+    $columnNames = array_column($cfcColumns, 'Field');
+    
+    addResult('Banco de Dados', 'Tabela cfcs', 'ok', '✅ Tabela cfcs existe', 
+        'Colunas: ' . implode(', ', $columnNames));
+    
+    // Verificar campo nome
+    if (in_array('nome', $columnNames)) {
+        addResult('White-Label', 'Campo nome', 'ok', '✅ Campo "nome" existe na tabela cfcs');
+        
+        // Buscar dados do CFC padrão
+        $stmt = $db->query("SELECT id, nome, cnpj, status FROM cfcs WHERE id = 1 LIMIT 1");
+        $cfcData = $stmt->fetch();
+        
+        if ($cfcData) {
+            addResult('White-Label', 'Dados CFC', 'ok', '✅ Dados do CFC encontrados', 
+                "ID: {$cfcData['id']}, Nome: '{$cfcData['nome']}', Status: {$cfcData['status']}");
+            
+            // Verificar se nome está sendo usado (não hardcoded)
+            if ($cfcData['nome'] !== 'CFC Sistema' && $cfcData['nome'] !== 'CFC Sistema de Gestão') {
+                addResult('White-Label', 'Nome dinâmico', 'ok', 
+                    "✅ Nome do CFC no banco é dinâmico: '{$cfcData['nome']}'");
+            } else {
+                addWarning('White-Label', 'Nome hardcoded', 
+                    "⚠️ Nome do CFC no banco ainda é genérico: '{$cfcData['nome']}'", 
+                    'Recomendado: Atualizar nome do CFC no banco para nome real');
+            }
+        } else {
+            addWarning('White-Label', 'CFC padrão', '⚠️ CFC com ID=1 não encontrado', 
+                'Verifique se há dados na tabela cfcs');
+        }
+    } else {
+        addError('White-Label', 'Campo nome', '❌ Campo "nome" NÃO existe na tabela cfcs');
+    }
+    
+    // Verificar campo logo
+    if (in_array('logo', $columnNames) || in_array('logo_path', $columnNames)) {
+        $logoField = in_array('logo', $columnNames) ? 'logo' : 'logo_path';
+        addResult('White-Label', "Campo $logoField", 'ok', 
+            "✅ Campo '$logoField' existe na tabela cfcs");
+        
+        // Verificar se há logo cadastrado
+        $stmt = $db->query("SELECT id, nome, $logoField FROM cfcs WHERE id = 1 LIMIT 1");
+        $cfcLogo = $stmt->fetch();
+        
+        if ($cfcLogo && !empty($cfcLogo[$logoField])) {
+            addResult('White-Label', 'Logo cadastrado', 'ok', 
+                "✅ Logo cadastrado para CFC ID=1: {$cfcLogo[$logoField]}");
+        } else {
+            addWarning('White-Label', 'Logo não cadastrado', 
+                "⚠️ Campo '$logoField' existe mas não há logo cadastrado", 
+                'Necessário: Fazer upload de logo do CFC');
+        }
+    } else {
+        addWarning('White-Label', 'Campo logo', 
+            '⚠️ Campo "logo" ou "logo_path" NÃO existe na tabela cfcs', 
+            'Necessário: Adicionar migration para criar campo logo na tabela cfcs');
+    }
+    
+    // Verificar se existe Model Cfc
+    $modelCfcPath = __DIR__ . '/../../app/Models/Cfc.php';
+    if (file_exists($modelCfcPath)) {
+        addResult('White-Label', 'Model Cfc', 'ok', '✅ Model Cfc.php existe');
+    } else {
+        addWarning('White-Label', 'Model Cfc', '⚠️ Model Cfc.php NÃO existe', 
+            'Necessário: Criar app/Models/Cfc.php para buscar dados do CFC');
+    }
+    
+    // Verificar quantos CFCs existem (multi-tenant)
+    $stmt = $db->query("SELECT COUNT(*) as total FROM cfcs WHERE status = 'ativo'");
+    $cfcCount = $stmt->fetch();
+    if ($cfcCount['total'] > 1) {
+        addResult('White-Label', 'Multi-tenant', 'ok', 
+            "✅ Sistema multi-tenant: {$cfcCount['total']} CFC(s) ativo(s)", 
+            'White-label é crítico para diferenciar CFCs');
+    } else {
+        addResult('White-Label', 'Multi-tenant', 'ok', 
+            "✅ Sistema tem {$cfcCount['total']} CFC ativo", 
+            'White-label ainda é recomendado para futuro');
+    }
+    
+} catch (\Exception $e) {
+    addError('Banco de Dados', 'Erro ao conectar', 
+        '❌ Erro ao conectar ao banco: ' . $e->getMessage());
+}
+
+// ============================================
+// 7. VERIFICAÇÃO INSTALLABILITY
 // ============================================
 
 // Verificar se todos os requisitos básicos estão OK
@@ -274,7 +382,48 @@ if ($allReqsMet) {
 }
 
 // ============================================
-// 7. OUTPUT HTML
+// 8. RESUMO EXECUTIVO
+// ============================================
+
+$summary = [
+    'total_checks' => count($results),
+    'ok' => count(array_filter($results, fn($r) => $r['status'] === 'ok')),
+    'warnings' => count($warnings),
+    'errors' => count($errors),
+    'white_label_ready' => false,
+    'installability_ready' => false
+];
+
+// Verificar se white-label está pronto
+$whiteLabelChecks = [
+    'Campo nome existe' => false,
+    'Campo logo existe' => false,
+    'Model Cfc existe' => false
+];
+
+foreach ($results as $result) {
+    if ($result['category'] === 'White-Label') {
+        if (strpos($result['check'], 'Campo nome') !== false && $result['status'] === 'ok') {
+            $whiteLabelChecks['Campo nome existe'] = true;
+        }
+        if ((strpos($result['check'], 'Campo logo') !== false || strpos($result['check'], 'logo_path') !== false) && $result['status'] === 'ok') {
+            $whiteLabelChecks['Campo logo existe'] = true;
+        }
+        if (strpos($result['check'], 'Model Cfc') !== false && $result['status'] === 'ok') {
+            $whiteLabelChecks['Model Cfc existe'] = true;
+        }
+    }
+}
+
+$summary['white_label_ready'] = $whiteLabelChecks['Campo nome existe'] && 
+                                ($whiteLabelChecks['Campo logo existe'] || true) && // Logo é opcional inicialmente
+                                $whiteLabelChecks['Model Cfc existe'];
+$summary['white_label_checks'] = $whiteLabelChecks; // Disponibilizar para HTML
+
+$summary['installability_ready'] = $allReqsMet;
+
+// ============================================
+// 9. OUTPUT HTML
 // ============================================
 
 ?>
@@ -407,7 +556,49 @@ if ($allReqsMet) {
                 <h3><?= count($errors) ?></h3>
                 <p>❌ Erros</p>
             </div>
+            <div class="summary-card <?= $summary['white_label_ready'] ? 'ok' : 'warning' ?>">
+                <h3><?= $summary['white_label_ready'] ? '✅' : '⚠️' ?></h3>
+                <p>White-Label</p>
+            </div>
+            <div class="summary-card <?= $summary['installability_ready'] ? 'ok' : 'warning' ?>">
+                <h3><?= $summary['installability_ready'] ? '✅' : '⚠️' ?></h3>
+                <p>Installable</p>
+            </div>
         </div>
+        
+        <?php if (!$summary['white_label_ready'] || !$summary['installability_ready']): ?>
+        <div class="instructions" style="margin: 30px; background: #fff3cd; border-color: #ffc107;">
+            <h3>🎯 O Que Realmente Precisamos Saber</h3>
+            <ul>
+                <?php if (!$summary['white_label_ready']): ?>
+                <li><strong>White-Label:</strong> 
+                    <?php if (!$summary['white_label_checks']['Campo nome existe']): ?>
+                        ❌ Campo "nome" não existe ou não está sendo usado
+                    <?php endif; ?>
+                    <?php if (!$summary['white_label_checks']['Campo logo existe']): ?>
+                        ⚠️ Campo "logo" não existe (opcional inicialmente)
+                    <?php endif; ?>
+                    <?php if (!$summary['white_label_checks']['Model Cfc existe']): ?>
+                        ❌ Model Cfc.php não existe
+                    <?php endif; ?>
+                </li>
+                <?php endif; ?>
+                <?php if (!$summary['installability_ready']): ?>
+                <li><strong>Installability:</strong> 
+                    <?php if (!$isHttps): ?>
+                        ❌ HTTPS não está ativo
+                    <?php endif; ?>
+                    <?php if (!file_exists($manifestPath)): ?>
+                        ❌ manifest.json não existe
+                    <?php endif; ?>
+                    <?php if (empty($iconFiles) || count($iconFiles) < 2): ?>
+                        ❌ Ícones PWA não foram gerados
+                    <?php endif; ?>
+                </li>
+                <?php endif; ?>
+            </ul>
+        </div>
+        <?php endif; ?>
         
         <div class="content">
             <?php
