@@ -9,7 +9,7 @@
     <title><?= $pageTitle ?? 'CFC Sistema' ?></title>
     
     <!-- PWA Manifest (usando pwa-manifest.php para white-label dinâmico) -->
-    <link rel="manifest" href="<?= base_path('pwa-manifest.php') ?>">
+    <link rel="manifest" href="<?= base_path('public_html/pwa-manifest.php') ?>">
     
     <!-- Apple Touch Icon (iOS) -->
     <link rel="apple-touch-icon" href="<?= base_path('/icons/icon-192x192.png') ?>">
