@@ -6,6 +6,7 @@
  * Substitui o manifest.json estático para permitir white-label
  */
 
+// Headers primeiro (antes de qualquer output)
 header('Content-Type: application/manifest+json; charset=utf-8');
 header('Cache-Control: public, max-age=3600'); // Cache por 1 hora
 
@@ -13,37 +14,58 @@ header('Cache-Control: public, max-age=3600'); // Cache por 1 hora
 $cfcName = 'CFC Sistema de Gestão';
 $cfcShortName = 'CFC Sistema';
 
-// Tentar carregar dados do CFC (com tratamento de erros)
+// Tentar carregar dados do CFC (com tratamento de erros robusto)
 try {
-    // Carregar configurações
-    require_once __DIR__ . '/../app/Bootstrap.php';
-    require_once __DIR__ . '/../app/Config/Database.php';
-    require_once __DIR__ . '/../app/Config/Env.php';
-    require_once __DIR__ . '/../app/Models/Cfc.php';
+    // Definir constantes básicas
+    if (!defined('ROOT_PATH')) {
+        define('ROOT_PATH', dirname(__DIR__));
+    }
+    if (!defined('APP_PATH')) {
+        define('APP_PATH', ROOT_PATH . '/app');
+    }
     
-    use App\Config\Env;
-    use App\Models\Cfc;
+    // Autoload
+    if (file_exists(ROOT_PATH . '/vendor/autoload.php')) {
+        require_once ROOT_PATH . '/vendor/autoload.php';
+    } elseif (file_exists(APP_PATH . '/autoload.php')) {
+        require_once APP_PATH . '/autoload.php';
+    }
     
     // Carregar .env
-    Env::load();
+    if (file_exists(APP_PATH . '/Config/Env.php')) {
+        require_once APP_PATH . '/Config/Env.php';
+        \App\Config\Env::load();
+    }
     
-    // Iniciar sessão se não estiver iniciada (Bootstrap já faz isso, mas garantir)
+    // Iniciar sessão apenas se necessário
     if (session_status() === PHP_SESSION_NONE) {
-        session_start();
+        @session_start();
     }
     
     // Buscar dados do CFC atual (com fallback se falhar)
-    try {
-        $cfcModel = new Cfc();
-        $cfcName = $cfcModel->getCurrentName();
-        $cfcShortName = strlen($cfcName) > 20 ? substr($cfcName, 0, 17) . '...' : $cfcName;
-    } catch (\Exception $e) {
-        // Se falhar, usar valores padrão (já definidos acima)
-        error_log("Erro ao buscar nome do CFC no manifest: " . $e->getMessage());
+    if (file_exists(APP_PATH . '/Models/Cfc.php') && 
+        file_exists(APP_PATH . '/Config/Database.php') &&
+        file_exists(APP_PATH . '/Config/Constants.php')) {
+        
+        require_once APP_PATH . '/Config/Database.php';
+        require_once APP_PATH . '/Config/Constants.php';
+        require_once APP_PATH . '/Models/Model.php';
+        require_once APP_PATH . '/Models/Cfc.php';
+        
+        try {
+            $cfcModel = new \App\Models\Cfc();
+            $cfcName = $cfcModel->getCurrentName();
+            $cfcShortName = strlen($cfcName) > 20 ? substr($cfcName, 0, 17) . '...' : $cfcName;
+        } catch (\Exception $e) {
+            // Se falhar, usar valores padrão (já definidos acima)
+        } catch (\Error $e) {
+            // Se falhar, usar valores padrão
+        }
     }
 } catch (\Exception $e) {
     // Se houver erro ao carregar classes/config, usar valores padrão
-    error_log("Erro ao carregar manifest dinâmico: " . $e->getMessage());
+} catch (\Error $e) {
+    // Se houver erro fatal, usar valores padrão
 }
 
 // Base path para assets (relativo ao manifest)
