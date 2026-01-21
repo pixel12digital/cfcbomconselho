@@ -11,6 +11,9 @@
     <!-- PWA Manifest (usando pwa-manifest.php para white-label dinâmico) -->
     <link rel="manifest" href="<?= base_path('public_html/pwa-manifest.php') ?>">
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="<?= base_path('public_html/icons/icon-192x192.png') ?>">
+    
     <!-- Apple Touch Icon (iOS) -->
     <link rel="apple-touch-icon" href="<?= base_path('/icons/icon-192x192.png') ?>">
     

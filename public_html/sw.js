@@ -70,23 +70,27 @@ function isStaticAsset(url) {
 self.addEventListener('install', (event) => {
   console.log('[SW] Installing service worker...');
   
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) => {
-        console.log('[SW] Caching core assets');
-        
-        // Converter paths relativos para URLs absolutas
-        const assetsToCache = CORE_ASSETS.map(relativePath => {
-          // Resolver path relativo baseado na localização do SW
-          return new URL(relativePath, self.location.origin).href;
-        });
-        
-        return cache.addAll(assetsToCache).catch((err) => {
-          console.warn('[SW] Some assets failed to cache:', err);
-          // Continuar mesmo se alguns assets falharem (ex: ícones ainda não criados)
-        });
-      })
-  );
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    console.log('[SW] Caching core assets');
+    
+    // Converter paths relativos para URLs absolutas
+    const assetsToCache = CORE_ASSETS.map(relativePath => {
+      // Resolver path relativo baseado na localização do SW
+      return new URL(relativePath, self.location.origin).href;
+    });
+    
+    // Cache individual para não quebrar se um asset falhar
+    for (const url of assetsToCache) {
+      try {
+        await cache.add(url);
+        console.log('[SW] Cached:', url);
+      } catch (e) {
+        console.warn('[SW] Failed to cache:', url, e.message);
+        // Continuar mesmo se alguns assets falharem (ex: ícones ainda não criados, favicon 404)
+      }
+    }
+  })());
   
   // Forçar ativação imediata (skip waiting)
   self.skipWaiting();
