@@ -1,13 +1,20 @@
 # Front Controller Pattern
 RewriteEngine On
+RewriteBase /cfc-v.1/public_html/
 
-# Permitir acesso direto a arquivos estáticos (assets, imagens, etc)
+# 1) Se o arquivo/pasta existe fisicamente, NÃO reescreve (servir diretamente)
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Redirecionar tudo para index.php
-RewriteRule ^(.*)$ index.php [QSA,L]
+# 2) Atalho para assets (garantir que assets/ sempre seja servido diretamente)
+RewriteRule ^assets/ - [L]
+
+# 2.1) Permitir acesso direto ao pwa-manifest.php (PWA white-label)
+RewriteRule ^pwa-manifest\.php$ - [L]
+
+# 3) Front controller (só chega aqui se não for arquivo estático)
+RewriteRule ^ index.php [L]
 
 # Segurança
 <FilesMatch "^\.">

@@ -658,6 +658,25 @@ class ConfiguracoesController extends Controller
             PwaIconGenerator::removeIcons($cfc['id']);
         }
 
+        // Log detalhado para diagnóstico (apenas em desenvolvimento)
+        $logFile = dirname(__DIR__, 2) . '/storage/logs/upload_logo.log';
+        $logDir = dirname($logFile);
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        $logData = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'uploadDir' => $uploadDir,
+            'uploadDirExists' => is_dir($uploadDir),
+            'uploadDirWritable' => is_dir($uploadDir) ? is_writable($uploadDir) : false,
+            'filepath' => $filepath,
+            'fileSize' => $file['size'],
+            'tmpName' => $file['tmp_name'],
+            'tmpNameExists' => file_exists($file['tmp_name']),
+            'errorCode' => $file['error']
+        ];
+        @file_put_contents($logFile, json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+
         // Mover arquivo
         if (!move_uploaded_file($file['tmp_name'], $filepath)) {
             $errorMsg = 'Erro ao salvar arquivo.';
@@ -673,7 +692,20 @@ class ConfiguracoesController extends Controller
                     UPLOAD_ERR_EXTENSION => 'Upload bloqueado por extensão.'
                 ];
                 $errorMsg = $uploadErrors[$file['error']] ?? 'Erro desconhecido no upload.';
+            } else {
+                // Erro adicional: verificar permissões e espaço em disco
+                $errorMsg .= ' Verifique permissões do diretório e espaço em disco.';
+                if (!is_writable($uploadDir)) {
+                    $errorMsg .= ' Diretório não é gravável.';
+                }
+                if (disk_free_space($uploadDir) < $file['size']) {
+                    $errorMsg .= ' Espaço em disco insuficiente.';
+                }
             }
+            // Log do erro
+            $logData['error'] = $errorMsg;
+            $logData['lastError'] = error_get_last();
+            @file_put_contents($logFile, "ERROR: " . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
             $_SESSION['error'] = $errorMsg;
             redirect(base_url('configuracoes/cfc'));
         }
@@ -686,7 +718,13 @@ class ConfiguracoesController extends Controller
 
         // Atualizar banco
         $relativePath = 'storage/uploads/cfcs/' . $filename;
-        $cfcModel->update($cfc['id'], ['logo_path' => $relativePath]);
+        $updateResult = $cfcModel->update($cfc['id'], ['logo_path' => $relativePath]);
+        
+        // Log do sucesso
+        $logData['success'] = true;
+        $logData['relativePath'] = $relativePath;
+        $logData['updateResult'] = $updateResult;
+        @file_put_contents($logFile, "SUCCESS: " . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
 
         // Gerar ícones PWA
         $icons = PwaIconGenerator::generateIcons($filepath, $cfc['id']);
