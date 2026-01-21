@@ -9,27 +9,42 @@
 header('Content-Type: application/manifest+json; charset=utf-8');
 header('Cache-Control: public, max-age=3600'); // Cache por 1 hora
 
-// Carregar configurações
-require_once __DIR__ . '/../app/Bootstrap.php';
-require_once __DIR__ . '/../app/Config/Database.php';
-require_once __DIR__ . '/../app/Config/Env.php';
-require_once __DIR__ . '/../app/Models/Cfc.php';
+// Valores padrão (fallback)
+$cfcName = 'CFC Sistema de Gestão';
+$cfcShortName = 'CFC Sistema';
 
-use App\Config\Env;
-use App\Models\Cfc;
-
-// Carregar .env
-Env::load();
-
-// Iniciar sessão se não estiver iniciada
-if (session_status() === PHP_SESSION_NONE) {
-    session_start();
+// Tentar carregar dados do CFC (com tratamento de erros)
+try {
+    // Carregar configurações
+    require_once __DIR__ . '/../app/Bootstrap.php';
+    require_once __DIR__ . '/../app/Config/Database.php';
+    require_once __DIR__ . '/../app/Config/Env.php';
+    require_once __DIR__ . '/../app/Models/Cfc.php';
+    
+    use App\Config\Env;
+    use App\Models\Cfc;
+    
+    // Carregar .env
+    Env::load();
+    
+    // Iniciar sessão se não estiver iniciada (Bootstrap já faz isso, mas garantir)
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Buscar dados do CFC atual (com fallback se falhar)
+    try {
+        $cfcModel = new Cfc();
+        $cfcName = $cfcModel->getCurrentName();
+        $cfcShortName = strlen($cfcName) > 20 ? substr($cfcName, 0, 17) . '...' : $cfcName;
+    } catch (\Exception $e) {
+        // Se falhar, usar valores padrão (já definidos acima)
+        error_log("Erro ao buscar nome do CFC no manifest: " . $e->getMessage());
+    }
+} catch (\Exception $e) {
+    // Se houver erro ao carregar classes/config, usar valores padrão
+    error_log("Erro ao carregar manifest dinâmico: " . $e->getMessage());
 }
-
-// Buscar dados do CFC atual
-$cfcModel = new Cfc();
-$cfcName = $cfcModel->getCurrentName();
-$cfcShortName = strlen($cfcName) > 20 ? substr($cfcName, 0, 17) . '...' : $cfcName;
 
 // Base path para assets (relativo ao manifest)
 $basePath = './';
