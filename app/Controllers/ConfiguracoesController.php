@@ -658,7 +658,7 @@ class ConfiguracoesController extends Controller
             PwaIconGenerator::removeIcons($cfc['id']);
         }
 
-        // Log detalhado para diagnóstico (apenas em desenvolvimento)
+        // Log detalhado para diagnóstico
         $logFile = dirname(__DIR__, 2) . '/storage/logs/upload_logo.log';
         $logDir = dirname($logFile);
         if (!is_dir($logDir)) {
@@ -666,19 +666,30 @@ class ConfiguracoesController extends Controller
         }
         $logData = [
             'timestamp' => date('Y-m-d H:i:s'),
+            '_FILES' => [
+                'name' => $file['name'],
+                'type' => $file['type'],
+                'size' => $file['size'],
+                'error' => $file['error'],
+                'tmp_name' => $file['tmp_name'] // Para verificar se existe
+            ],
             'uploadDir' => $uploadDir,
             'uploadDirExists' => is_dir($uploadDir),
             'uploadDirWritable' => is_dir($uploadDir) ? is_writable($uploadDir) : false,
             'filepath' => $filepath,
-            'fileSize' => $file['size'],
-            'tmpName' => $file['tmp_name'],
             'tmpNameExists' => file_exists($file['tmp_name']),
-            'errorCode' => $file['error']
+            'isUploadedFile' => is_uploaded_file($file['tmp_name']),
+            'cfcId' => $cfc['id']
         ];
-        @file_put_contents($logFile, json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+        @file_put_contents($logFile, "=== UPLOAD START ===\n" . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
 
         // Mover arquivo
-        if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+        $moveResult = move_uploaded_file($file['tmp_name'], $filepath);
+        $logData['moveResult'] = $moveResult;
+        $logData['fileExistsAfterMove'] = file_exists($filepath);
+        $logData['fileSizeAfterMove'] = $moveResult && file_exists($filepath) ? filesize($filepath) : 0;
+        
+        if (!$moveResult) {
             $errorMsg = 'Erro ao salvar arquivo.';
             // Verificar tipo de erro
             if ($file['error'] !== UPLOAD_ERR_OK) {
@@ -705,13 +716,16 @@ class ConfiguracoesController extends Controller
             // Log do erro
             $logData['error'] = $errorMsg;
             $logData['lastError'] = error_get_last();
-            @file_put_contents($logFile, "ERROR: " . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+            @file_put_contents($logFile, "=== UPLOAD ERROR ===\n" . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
             $_SESSION['error'] = $errorMsg;
             redirect(base_url('configuracoes/cfc'));
         }
 
         // Verificar se arquivo foi salvo corretamente
         if (!file_exists($filepath)) {
+            $logData['error'] = 'Arquivo não existe após move_uploaded_file';
+            $logData['lastError'] = error_get_last();
+            @file_put_contents($logFile, "=== UPLOAD ERROR (file not exists) ===\n" . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
             $_SESSION['error'] = 'Arquivo não foi salvo corretamente.';
             redirect(base_url('configuracoes/cfc'));
         }
@@ -720,11 +734,20 @@ class ConfiguracoesController extends Controller
         $relativePath = 'storage/uploads/cfcs/' . $filename;
         $updateResult = $cfcModel->update($cfc['id'], ['logo_path' => $relativePath]);
         
+        // Verificar se foi atualizado no banco
+        $cfcAfterUpdate = $cfcModel->findById($cfc['id']);
+        $logData['dbUpdate'] = [
+            'updateResult' => $updateResult,
+            'relativePath' => $relativePath,
+            'logoPathInDb' => $cfcAfterUpdate['logo_path'] ?? 'NULL',
+            'dbUpdateSuccess' => ($cfcAfterUpdate['logo_path'] ?? null) === $relativePath
+        ];
+        
         // Log do sucesso
         $logData['success'] = true;
-        $logData['relativePath'] = $relativePath;
-        $logData['updateResult'] = $updateResult;
-        @file_put_contents($logFile, "SUCCESS: " . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+        $logData['fileExistsOnDisk'] = file_exists($filepath);
+        $logData['fileSizeOnDisk'] = filesize($filepath);
+        @file_put_contents($logFile, "=== UPLOAD SUCCESS ===\n" . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
 
         // Gerar ícones PWA
         $icons = PwaIconGenerator::generateIcons($filepath, $cfc['id']);

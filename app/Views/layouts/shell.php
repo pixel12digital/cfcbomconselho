@@ -187,7 +187,7 @@
         if ('serviceWorker' in navigator) {
             // Verificar se estamos em ambiente de produção ou se o arquivo existe
             const isProduction = <?= ($_ENV['APP_ENV'] ?? 'local') === 'production' ? 'true' : 'false' ?>;
-            const swPath = '<?= base_path('/sw.js') ?>';
+            const swPath = '<?= base_path('public_html/sw.js') ?>';
             
             // Verificar se arquivo existe antes de registrar (tanto em produção quanto desenvolvimento)
             fetch(swPath, { method: 'HEAD' })
