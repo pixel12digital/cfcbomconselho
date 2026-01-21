@@ -3,61 +3,58 @@
  * Manifest PWA Dinâmico - White-Label
  * 
  * Retorna manifest.json dinâmico baseado no CFC atual
- * Substitui o manifest.json estático para permitir white-label
- * 
- * Funciona mesmo sem sessão/banco (usa fallback)
+ * Versão simplificada que funciona mesmo sem sessão/banco
  */
 
-// Headers primeiro (antes de qualquer output)
-header('Content-Type: application/manifest+json; charset=utf-8');
-header('Cache-Control: public, max-age=3600'); // Cache por 1 hora
+// Headers primeiro
+@header('Content-Type: application/manifest+json; charset=utf-8');
+@header('Cache-Control: public, max-age=3600');
 
 // Valores padrão (fallback)
 $cfcName = 'CFC Sistema de Gestão';
 $cfcShortName = 'CFC Sistema';
 
-// Tentar buscar nome do CFC apenas se houver sessão ativa
+// Tentar buscar nome do CFC apenas se houver sessão ativa e arquivos existirem
 if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['cfc_id'])) {
-    try {
-        // Definir constantes básicas
-        if (!defined('ROOT_PATH')) {
-            define('ROOT_PATH', dirname(__DIR__));
-        }
-        if (!defined('APP_PATH')) {
-            define('APP_PATH', ROOT_PATH . '/app');
-        }
+    $rootPath = dirname(__DIR__);
+    $appPath = $rootPath . '/app';
+    
+    // Verificar se arquivos existem antes de tentar carregar
+    if (file_exists($appPath . '/Models/Cfc.php') &&
+        file_exists($appPath . '/Config/Database.php')) {
         
-        // Autoload
-        if (file_exists(ROOT_PATH . '/vendor/autoload.php')) {
-            require_once ROOT_PATH . '/vendor/autoload.php';
-        } elseif (file_exists(APP_PATH . '/autoload.php')) {
-            require_once APP_PATH . '/autoload.php';
-        }
-        
-        // Carregar classes necessárias
-        if (file_exists(APP_PATH . '/Config/Database.php') &&
-            file_exists(APP_PATH . '/Config/Constants.php') &&
-            file_exists(APP_PATH . '/Models/Model.php') &&
-            file_exists(APP_PATH . '/Models/Cfc.php')) {
+        try {
+            // Autoload básico
+            if (file_exists($rootPath . '/vendor/autoload.php')) {
+                @require_once $rootPath . '/vendor/autoload.php';
+            } elseif (file_exists($appPath . '/autoload.php')) {
+                @require_once $appPath . '/autoload.php';
+            }
             
-            require_once APP_PATH . '/Config/Database.php';
-            require_once APP_PATH . '/Config/Constants.php';
-            require_once APP_PATH . '/Models/Model.php';
-            require_once APP_PATH . '/Models/Cfc.php';
+            // Carregar classes
+            @require_once $appPath . '/Config/Database.php';
+            @require_once $appPath . '/Config/Constants.php';
+            @require_once $appPath . '/Models/Model.php';
+            @require_once $appPath . '/Models/Cfc.php';
             
             // Tentar buscar nome do CFC
-            $cfcModel = new \App\Models\Cfc();
-            $cfcName = $cfcModel->getCurrentName();
-            $cfcShortName = strlen($cfcName) > 20 ? substr($cfcName, 0, 17) . '...' : $cfcName;
+            if (class_exists('\App\Models\Cfc')) {
+                $cfcModel = new \App\Models\Cfc();
+                $nome = $cfcModel->getCurrentName();
+                if (!empty($nome) && $nome !== 'CFC Sistema') {
+                    $cfcName = $nome;
+                    $cfcShortName = strlen($cfcName) > 20 ? substr($cfcName, 0, 17) . '...' : $cfcName;
+                }
+            }
+        } catch (\Exception $e) {
+            // Silenciar erro, usar fallback
+        } catch (\Error $e) {
+            // Silenciar erro, usar fallback
         }
-    } catch (\Exception $e) {
-        // Se falhar, usar valores padrão (já definidos acima)
-    } catch (\Error $e) {
-        // Se falhar, usar valores padrão
     }
 }
 
-// Manifest dinâmico
+// Manifest
 $manifest = [
     'name' => $cfcName,
     'short_name' => $cfcShortName,
@@ -84,4 +81,5 @@ $manifest = [
     ]
 ];
 
+// Output JSON
 echo json_encode($manifest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
