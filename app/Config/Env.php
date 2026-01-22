@@ -16,7 +16,15 @@ class Env
 
         $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
         foreach ($lines as $line) {
-            if (strpos(trim($line), '#') === 0) {
+            $line = trim($line);
+            
+            // Ignorar linhas vazias ou comentários
+            if (empty($line) || strpos($line, '#') === 0) {
+                continue;
+            }
+
+            // Verificar se a linha contém o sinal de igual
+            if (strpos($line, '=') === false) {
                 continue;
             }
 

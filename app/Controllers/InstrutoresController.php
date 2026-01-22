@@ -538,4 +538,123 @@ class InstrutoresController extends Controller
         readfile($filepath);
         exit;
     }
+
+    /**
+     * Excluir instrutor e todos os dados relacionados
+     */
+    public function excluir($id)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect(base_url('instrutores'));
+        }
+
+        if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = 'Token CSRF inválido.';
+            redirect(base_url('instrutores'));
+        }
+
+        $instructorModel = new Instructor();
+        $instructor = $instructorModel->find($id);
+
+        if (!$instructor || $instructor['cfc_id'] != $this->cfcId) {
+            $_SESSION['error'] = 'Instrutor não encontrado.';
+            redirect(base_url('instrutores'));
+        }
+
+        // Salvar dados para auditoria
+        $dataBefore = $instructor;
+
+        try {
+            // 1. Deletar todas as aulas (lessons) relacionadas
+            $lessonModel = new \App\Models\Lesson();
+            $lessons = $this->query(
+                "SELECT id FROM lessons WHERE instructor_id = ?",
+                [$id]
+            )->fetchAll();
+            
+            foreach ($lessons as $lesson) {
+                $lessonModel->delete($lesson['id']);
+            }
+
+            // 2. Deletar todas as turmas teóricas relacionadas
+            // (isso deletará automaticamente as sessões e matrículas por CASCADE)
+            $theoryClassModel = new \App\Models\TheoryClass();
+            $theoryClasses = $this->query(
+                "SELECT id FROM theory_classes WHERE instructor_id = ?",
+                [$id]
+            )->fetchAll();
+            
+            foreach ($theoryClasses as $theoryClass) {
+                $theoryClassModel->delete($theoryClass['id']);
+            }
+
+            // 3. Deletar disponibilidade (já tem CASCADE, mas garantindo)
+            $availabilityModel = new InstructorAvailability();
+            $availability = $availabilityModel->findByInstructor($id);
+            foreach ($availability as $av) {
+                $availabilityModel->delete($av['id']);
+            }
+
+            // 4. Remover foto do instrutor se existir
+            if (!empty($instructor['photo_path'])) {
+                $filepath = dirname(__DIR__, 2) . '/' . $instructor['photo_path'];
+                if (file_exists($filepath)) {
+                    @unlink($filepath);
+                }
+            }
+
+            // 5. Deletar usuário relacionado (se houver)
+            if (!empty($instructor['user_id'])) {
+                $userModel = new \App\Models\User();
+                // Verificar se o usuário não está vinculado a outro registro
+                $otherInstructor = $this->query(
+                    "SELECT id FROM instructors WHERE user_id = ? AND id != ?",
+                    [$instructor['user_id'], $id]
+                )->fetch();
+                
+                if (!$otherInstructor) {
+                    // Verificar se não está vinculado a um aluno
+                    $student = $this->query(
+                        "SELECT id FROM students WHERE user_id = ?",
+                        [$instructor['user_id']]
+                    )->fetch();
+                    
+                    if (!$student) {
+                        // Deletar roles do usuário
+                        $this->query(
+                            "DELETE FROM usuario_roles WHERE usuario_id = ?",
+                            [$instructor['user_id']]
+                        );
+                        
+                        // Deletar usuário
+                        $userModel->delete($instructor['user_id']);
+                    }
+                }
+            }
+
+            // 6. Registrar auditoria antes de deletar
+            $this->auditService->logDelete('instrutores', $id, $dataBefore);
+
+            // 7. Deletar o instrutor
+            $instructorModel->delete($id);
+
+            $_SESSION['success'] = 'Instrutor e todos os dados relacionados foram excluídos com sucesso!';
+        } catch (\Exception $e) {
+            error_log("Erro ao excluir instrutor: " . $e->getMessage());
+            $_SESSION['error'] = 'Erro ao excluir instrutor: ' . $e->getMessage();
+        }
+
+        redirect(base_url('instrutores'));
+    }
+
+    /**
+     * Método auxiliar para executar queries diretas
+     */
+    private function query($sql, $params = [])
+    {
+        $db = \App\Config\Database::getInstance()->getConnection();
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
+    }
 }

@@ -189,7 +189,7 @@ try {
         echo "- entry_payment_date (DATE) - Data do pagamento da entrada\n";
         echo "- outstanding_amount (DECIMAL) - Saldo devedor (valor_final - entry_amount)\n";
         echo "\nAgora você pode usar os campos de entrada nas telas de matrícula.\n";
-        echo "O Asaas deve usar outstanding_amount ao invés de final_price para gerar cobranças.\n";
+        echo "O gateway de pagamento deve usar outstanding_amount ao invés de final_price para gerar cobranças.\n";
     } else {
         echo "⚠️  MIGRATION PARCIALMENTE EXECUTADA\n";
         echo "Algumas colunas críticas não foram criadas. Verifique os erros acima.\n";

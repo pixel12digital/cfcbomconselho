@@ -284,9 +284,21 @@ class UsuariosController extends Controller
      */
     public function editar($id)
     {
-        if (!PermissionService::check('usuarios', 'update') && $_SESSION['current_role'] !== 'ADMIN') {
-            $_SESSION['error'] = 'Você não tem permissão para editar usuários.';
-            redirect(base_url('usuarios'));
+        error_log("[USUARIOS_EDITAR] Método chamado para ID: {$id}");
+        error_log("[USUARIOS_EDITAR] just_generated_temp_password: " . (isset($_SESSION['just_generated_temp_password']) ? 'SIM' : 'NÃO'));
+        
+        // Se acabamos de gerar senha temporária, não verificar permissão novamente
+        // (já foi verificado no método gerarSenhaTemporaria)
+        $justGeneratedPassword = !empty($_SESSION['just_generated_temp_password']);
+        if ($justGeneratedPassword) {
+            unset($_SESSION['just_generated_temp_password']);
+            error_log("[USUARIOS_EDITAR] Flag just_generated_temp_password encontrada. Pulando verificação de permissão.");
+        } else {
+            if (!PermissionService::check('usuarios', 'update') && $_SESSION['current_role'] !== 'ADMIN') {
+                error_log("[USUARIOS_EDITAR] Erro: Sem permissão para editar. Role: " . ($_SESSION['current_role'] ?? 'N/A'));
+                $_SESSION['error'] = 'Você não tem permissão para editar usuários.';
+                redirect(base_url('usuarios'));
+            }
         }
 
         $userModel = new User();
@@ -300,6 +312,15 @@ class UsuariosController extends Controller
         // Buscar roles do usuário
         $roles = User::getUserRoles($id);
         $user['roles'] = $roles;
+        
+        // Garantir que há pelo menos um role para o formulário
+        if (empty($roles) || !is_array($roles)) {
+            $user['roles'] = [];
+        }
+        
+        // Log para debug
+        error_log("[USUARIOS_EDITAR] Roles encontrados para usuário {$id}: " . print_r($roles, true));
+        error_log("[USUARIOS_EDITAR] Current role para formulário: " . ($user['roles'][0]['role'] ?? 'NENHUM'));
 
         // Verificar status de acesso
         $db = Database::getInstance()->getConnection();
@@ -316,21 +337,48 @@ class UsuariosController extends Controller
         $lastLogin = null;
         // TODO: Adicionar campo last_login em usuarios se necessário
 
+        // Verificar se há senha temporária gerada na sessão
+        $tempPasswordGenerated = null;
+        if (!empty($_SESSION['temp_password_generated'])) {
+            $tempPasswordGenerated = $_SESSION['temp_password_generated'];
+            error_log("[USUARIOS_EDITAR] Senha temporária encontrada na sessão: " . print_r($tempPasswordGenerated, true));
+            error_log("[USUARIOS_EDITAR] Comparando user_id: sessão={$tempPasswordGenerated['user_id']}, atual={$id}");
+            
+            // Verificar se a senha é para este usuário
+            if ((int)$tempPasswordGenerated['user_id'] === (int)$id) {
+                error_log("[USUARIOS_EDITAR] Senha temporária corresponde ao usuário atual. Mantendo na sessão para exibição.");
+            } else {
+                error_log("[USUARIOS_EDITAR] Senha temporária não corresponde ao usuário atual. Limpando.");
+                unset($_SESSION['temp_password_generated']);
+                $tempPasswordGenerated = null;
+            }
+        }
+
         $data = [
             'pageTitle' => 'Editar Usuário',
             'user' => $user,
             'hasPassword' => $hasPassword,
             'hasActiveToken' => $hasActiveToken,
             'activeToken' => $activeToken,
-            'tempPasswordGenerated' => $_SESSION['temp_password_generated'] ?? null,
+            'tempPasswordGenerated' => $tempPasswordGenerated,
             'activationLinkGenerated' => $_SESSION['activation_link_generated'] ?? null
         ];
 
-        // Limpar sessões após exibir
-        unset($_SESSION['temp_password_generated']);
-        unset($_SESSION['activation_link_generated']);
+        // Limpar sessões após passar para a view (será limpo após renderizar)
+        // Não limpar aqui para garantir que a view tenha acesso aos dados
 
+        error_log("[USUARIOS_EDITAR] Dados passados para view - tempPasswordGenerated: " . ($tempPasswordGenerated ? 'SIM' : 'NÃO'));
+        
         $this->view('usuarios/form', $data);
+        
+        // Limpar sessões após renderizar a view
+        if (!empty($_SESSION['temp_password_generated']) && (int)$_SESSION['temp_password_generated']['user_id'] === (int)$id) {
+            unset($_SESSION['temp_password_generated']);
+            error_log("[USUARIOS_EDITAR] Sessão temp_password_generated limpa após renderização.");
+        }
+        if (!empty($_SESSION['activation_link_generated']) && (int)$_SESSION['activation_link_generated']['user_id'] === (int)$id) {
+            unset($_SESSION['activation_link_generated']);
+        }
     }
 
     /**
@@ -338,6 +386,10 @@ class UsuariosController extends Controller
      */
     public function atualizar($id)
     {
+        // Log para debug
+        error_log("[USUARIOS_ATUALIZAR] Método chamado para ID: {$id}");
+        error_log("[USUARIOS_ATUALIZAR] POST data: " . print_r($_POST, true));
+        
         if (!PermissionService::check('usuarios', 'update') && $_SESSION['current_role'] !== 'ADMIN') {
             $_SESSION['error'] = 'Você não tem permissão para editar usuários.';
             redirect(base_url('usuarios'));
@@ -359,6 +411,8 @@ class UsuariosController extends Controller
         $email = trim($_POST['email'] ?? '');
         $role = $_POST['role'] ?? '';
         $status = $_POST['status'] ?? 'ativo';
+        
+        error_log("[USUARIOS_ATUALIZAR] Dados extraídos - Email: {$email}, Role: {$role}, Status: {$status}");
 
         // Validações
         if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -383,23 +437,53 @@ class UsuariosController extends Controller
 
         $db = Database::getInstance()->getConnection();
         
+        // Verificar se já está em transação
+        $inTransaction = $db->inTransaction();
+        error_log("[USUARIOS_ATUALIZAR] Já está em transação: " . ($inTransaction ? 'sim' : 'não'));
+        
         try {
-            $db->beginTransaction();
+            if (!$inTransaction) {
+                $db->beginTransaction();
+                error_log("[USUARIOS_ATUALIZAR] Transação iniciada");
+            }
 
             $dataBefore = $user;
 
             // Atualizar usuário
             $stmt = $db->prepare("UPDATE usuarios SET email = ?, status = ? WHERE id = ?");
-            $stmt->execute([$email, $status, $id]);
+            $result1 = $stmt->execute([$email, $status, $id]);
+            $rowsAffected1 = $stmt->rowCount();
+            error_log("[USUARIOS_ATUALIZAR] UPDATE usuarios executado. Rows affected: {$rowsAffected1}, Success: " . ($result1 ? 'true' : 'false'));
 
             // Atualizar role (remover antigas e adicionar nova)
             $stmt = $db->prepare("DELETE FROM usuario_roles WHERE usuario_id = ?");
-            $stmt->execute([$id]);
+            $result2 = $stmt->execute([$id]);
+            $rowsAffected2 = $stmt->rowCount();
+            error_log("[USUARIOS_ATUALIZAR] DELETE usuario_roles executado. Rows affected: {$rowsAffected2}, Success: " . ($result2 ? 'true' : 'false'));
             
             $stmt = $db->prepare("INSERT INTO usuario_roles (usuario_id, role) VALUES (?, ?)");
-            $stmt->execute([$id, $role]);
+            $result3 = $stmt->execute([$id, $role]);
+            $rowsAffected3 = $stmt->rowCount();
+            error_log("[USUARIOS_ATUALIZAR] INSERT usuario_roles executado. Rows affected: {$rowsAffected3}, Success: " . ($result3 ? 'true' : 'false'));
 
-            $db->commit();
+            if (!$inTransaction) {
+                $commitResult = $db->commit();
+                error_log("[USUARIOS_ATUALIZAR] Commit executado. Success: " . ($commitResult ? 'true' : 'false'));
+            } else {
+                error_log("[USUARIOS_ATUALIZAR] Não foi necessário fazer commit (já estava em transação externa)");
+            }
+            
+            // Verificar se realmente foi salvo - usar query direta para evitar cache
+            $stmt = $db->prepare("SELECT email, status FROM usuarios WHERE id = ?");
+            $stmt->execute([$id]);
+            $userAfter = $stmt->fetch();
+            error_log("[USUARIOS_ATUALIZAR] Dados após commit (query direta) - Email: " . ($userAfter['email'] ?? 'N/A') . ", Status: " . ($userAfter['status'] ?? 'N/A'));
+            
+            // Verificar role também
+            $stmt = $db->prepare("SELECT role FROM usuario_roles WHERE usuario_id = ?");
+            $stmt->execute([$id]);
+            $roleAfter = $stmt->fetch();
+            error_log("[USUARIOS_ATUALIZAR] Role após commit: " . ($roleAfter['role'] ?? 'N/A'));
 
             // Auditoria
             $dataAfter = array_merge($user, ['email' => $email, 'status' => $status, 'role' => $role]);
@@ -409,7 +493,14 @@ class UsuariosController extends Controller
             redirect(base_url('usuarios'));
             
         } catch (\Exception $e) {
-            $db->rollBack();
+            error_log("[USUARIOS_ATUALIZAR] ERRO capturado: " . $e->getMessage());
+            error_log("[USUARIOS_ATUALIZAR] Stack trace: " . $e->getTraceAsString());
+            
+            if ($db->inTransaction()) {
+                $db->rollBack();
+                error_log("[USUARIOS_ATUALIZAR] Rollback executado");
+            }
+            
             $_SESSION['error'] = 'Erro ao atualizar usuário: ' . $e->getMessage();
             redirect(base_url("usuarios/{$id}/editar"));
         }
@@ -567,12 +658,16 @@ class UsuariosController extends Controller
      */
     public function gerarSenhaTemporaria($id)
     {
+        error_log("[GERAR_SENHA_TEMP] Iniciando geração de senha temporária para usuário ID: {$id}");
+        
         if (!PermissionService::check('usuarios', 'update') && $_SESSION['current_role'] !== 'ADMIN') {
+            error_log("[GERAR_SENHA_TEMP] Erro: Sem permissão. Role atual: " . ($_SESSION['current_role'] ?? 'N/A'));
             $_SESSION['error'] = 'Você não tem permissão para esta ação.';
             redirect(base_url('usuarios'));
         }
 
         if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+            error_log("[GERAR_SENHA_TEMP] Erro: Token CSRF inválido");
             $_SESSION['error'] = 'Token CSRF inválido.';
             redirect(base_url("usuarios/{$id}/editar"));
         }
@@ -581,6 +676,7 @@ class UsuariosController extends Controller
         $user = $userModel->find($id);
 
         if (!$user || $user['cfc_id'] != $this->cfcId) {
+            error_log("[GERAR_SENHA_TEMP] Erro: Usuário não encontrado. ID: {$id}, CFC: {$this->cfcId}");
             $_SESSION['error'] = 'Usuário não encontrado.';
             redirect(base_url('usuarios'));
         }
@@ -607,10 +703,17 @@ class UsuariosController extends Controller
 
         // Retornar senha temporária (exibir apenas uma vez)
         $_SESSION['temp_password_generated'] = [
-            'user_id' => $id,
+            'user_id' => (int)$id,
             'user_email' => $user['email'],
             'temp_password' => $tempPassword
         ];
+        
+        // Flag para indicar que acabamos de gerar senha (evita redirecionamento duplo)
+        $_SESSION['just_generated_temp_password'] = true;
+
+        error_log("[GERAR_SENHA_TEMP] Senha temporária gerada e salva na sessão. User ID: {$id}, Email: {$user['email']}");
+        error_log("[GERAR_SENHA_TEMP] Sessão temp_password_generated: " . print_r($_SESSION['temp_password_generated'], true));
+        error_log("[GERAR_SENHA_TEMP] Redirecionando para: " . base_url("usuarios/{$id}/editar"));
 
         $_SESSION['success'] = 'Senha temporária gerada com sucesso!';
         redirect(base_url("usuarios/{$id}/editar"));
@@ -774,5 +877,89 @@ class UsuariosController extends Controller
         }
 
         redirect(base_url("usuarios/{$id}/editar"));
+    }
+
+    /**
+     * Excluir usuário e todos os dados relacionados
+     */
+    public function excluir($id)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect(base_url('usuarios'));
+        }
+
+        if (!PermissionService::check('usuarios', 'delete') && $_SESSION['current_role'] !== 'ADMIN') {
+            $_SESSION['error'] = 'Você não tem permissão para excluir usuários.';
+            redirect(base_url('usuarios'));
+        }
+
+        if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = 'Token CSRF inválido.';
+            redirect(base_url('usuarios'));
+        }
+
+        $userModel = new User();
+        $user = $userModel->find($id);
+
+        if (!$user || $user['cfc_id'] != $this->cfcId) {
+            $_SESSION['error'] = 'Usuário não encontrado.';
+            redirect(base_url('usuarios'));
+        }
+
+        // Não permitir excluir o próprio usuário logado
+        if ($user['id'] == ($_SESSION['user_id'] ?? 0)) {
+            $_SESSION['error'] = 'Você não pode excluir seu próprio usuário.';
+            redirect(base_url('usuarios'));
+        }
+
+        // Salvar dados para auditoria
+        $dataBefore = $user;
+
+        try {
+            $db = Database::getInstance()->getConnection();
+            $db->beginTransaction();
+
+            // 1. Remover vínculo com aluno (se houver)
+            if (!empty($user['student_id'])) {
+                $stmt = $db->prepare("UPDATE students SET user_id = NULL WHERE id = ?");
+                $stmt->execute([$user['student_id']]);
+            }
+
+            // 2. Remover vínculo com instrutor (se houver)
+            if (!empty($user['instructor_id'])) {
+                $stmt = $db->prepare("UPDATE instructors SET user_id = NULL WHERE id = ?");
+                $stmt->execute([$user['instructor_id']]);
+            }
+
+            // 3. Deletar tokens de ativação relacionados
+            $stmt = $db->prepare("DELETE FROM account_activation_tokens WHERE user_id = ?");
+            $stmt->execute([$id]);
+
+            // 4. Deletar roles do usuário
+            $stmt = $db->prepare("DELETE FROM usuario_roles WHERE usuario_id = ?");
+            $stmt->execute([$id]);
+
+            // 5. Deletar tokens de reset de senha (se houver tabela)
+            $stmt = $db->prepare("DELETE FROM password_reset_tokens WHERE user_id = ?");
+            $stmt->execute([$id]);
+
+            // 6. Registrar auditoria antes de deletar
+            $this->auditService->logDelete('usuarios', $id, $dataBefore);
+
+            // 7. Deletar o usuário
+            $userModel->delete($id);
+
+            $db->commit();
+
+            $_SESSION['success'] = 'Usuário excluído com sucesso!';
+        } catch (\Exception $e) {
+            if (isset($db)) {
+                $db->rollBack();
+            }
+            error_log("Erro ao excluir usuário: " . $e->getMessage());
+            $_SESSION['error'] = 'Erro ao excluir usuário: ' . $e->getMessage();
+        }
+
+        redirect(base_url('usuarios'));
     }
 }

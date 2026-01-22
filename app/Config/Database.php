@@ -11,6 +11,7 @@ class Database
     {
         $config = [
             'host' => $_ENV['DB_HOST'] ?? 'localhost',
+            'port' => $_ENV['DB_PORT'] ?? '3306',
             'dbname' => $_ENV['DB_NAME'] ?? 'cfc_db',
             'charset' => 'utf8mb4',
             'username' => $_ENV['DB_USER'] ?? 'root',
@@ -18,12 +19,19 @@ class Database
         ];
 
         try {
-            $dsn = "mysql:host={$config['host']};dbname={$config['dbname']};charset={$config['charset']}";
-            $this->connection = new \PDO($dsn, $config['username'], $config['password'], [
+            $dsn = "mysql:host={$config['host']};port={$config['port']};dbname={$config['dbname']};charset={$config['charset']}";
+            $options = [
                 \PDO::ATTR_ERRMODE => \PDO::ERRMODE_EXCEPTION,
                 \PDO::ATTR_DEFAULT_FETCH_MODE => \PDO::FETCH_ASSOC,
                 \PDO::ATTR_EMULATE_PREPARES => false
-            ]);
+            ];
+            
+            // Para conexões remotas, pode ser necessário configurar timeout
+            if ($config['host'] !== 'localhost' && $config['host'] !== '127.0.0.1') {
+                $options[\PDO::ATTR_TIMEOUT] = 10;
+            }
+            
+            $this->connection = new \PDO($dsn, $config['username'], $config['password'], $options);
         } catch (\PDOException $e) {
             die("Erro na conexão: " . $e->getMessage());
         }

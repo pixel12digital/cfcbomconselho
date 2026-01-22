@@ -160,8 +160,73 @@ class VeiculosController extends Controller
         $vehicleModel->update($id, $updateData);
         
         $this->auditService->logUpdate('veiculos', $id, $dataBefore, array_merge($vehicle, $updateData));
-        
+
         $_SESSION['success'] = 'Veículo atualizado com sucesso!';
         redirect(base_url('veiculos'));
+    }
+
+    /**
+     * Excluir veículo e todos os dados relacionados
+     */
+    public function excluir($id)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect(base_url('veiculos'));
+        }
+
+        if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = 'Token CSRF inválido.';
+            redirect(base_url('veiculos'));
+        }
+
+        $vehicleModel = new Vehicle();
+        $vehicle = $vehicleModel->find($id);
+
+        if (!$vehicle || $vehicle['cfc_id'] != $this->cfcId) {
+            $_SESSION['error'] = 'Veículo não encontrado.';
+            redirect(base_url('veiculos'));
+        }
+
+        // Salvar dados para auditoria
+        $dataBefore = $vehicle;
+
+        try {
+            // 1. Deletar todas as aulas (lessons) relacionadas
+            // Como vehicle_id é NOT NULL, precisamos deletar as aulas ou atribuir outro veículo
+            // Vamos deletar as aulas para manter consistência
+            $lessonModel = new \App\Models\Lesson();
+            $lessons = $this->query(
+                "SELECT id FROM lessons WHERE vehicle_id = ?",
+                [$id]
+            )->fetchAll();
+            
+            foreach ($lessons as $lesson) {
+                $lessonModel->delete($lesson['id']);
+            }
+
+            // 2. Registrar auditoria antes de deletar
+            $this->auditService->logDelete('veiculos', $id, $dataBefore);
+
+            // 3. Deletar o veículo
+            $vehicleModel->delete($id);
+
+            $_SESSION['success'] = 'Veículo e todos os dados relacionados foram excluídos com sucesso!';
+        } catch (\Exception $e) {
+            error_log("Erro ao excluir veículo: " . $e->getMessage());
+            $_SESSION['error'] = 'Erro ao excluir veículo: ' . $e->getMessage();
+        }
+
+        redirect(base_url('veiculos'));
+    }
+
+    /**
+     * Método auxiliar para executar queries diretas
+     */
+    private function query($sql, $params = [])
+    {
+        $db = \App\Config\Database::getInstance()->getConnection();
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
     }
 }

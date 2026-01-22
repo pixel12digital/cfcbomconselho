@@ -9,7 +9,7 @@ class AuthMiddleware implements MiddlewareInterface
     public function handle(): bool
     {
         if (empty($_SESSION['user_id'])) {
-            header('Location: /login');
+            header('Location: ' . base_url('login'));
             exit;
         }
         

@@ -9,7 +9,7 @@
             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
             </svg>
-            Criar Acesso Administrativo
+            Criar Acesso
         </a>
         <?php endif; ?>
     </div>
@@ -124,7 +124,7 @@
                         <th>Perfil</th>
                         <th>Vínculo</th>
                         <th>Status</th>
-                        <th style="width: 120px;">Ações</th>
+                        <th style="width: 150px;">Ações</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -159,11 +159,25 @@
                             <?php endif; ?>
                         </td>
                         <td>
-                            <?php if (\App\Services\PermissionService::check('usuarios', 'update') || $_SESSION['current_role'] === 'ADMIN'): ?>
-                            <a href="<?= base_path("usuarios/{$user['id']}/editar") ?>" class="btn btn-sm btn-outline">
-                                Editar
-                            </a>
-                            <?php endif; ?>
+                            <div class="table-actions">
+                                <?php if (\App\Services\PermissionService::check('usuarios', 'update') || $_SESSION['current_role'] === 'ADMIN'): ?>
+                                <a href="<?= base_path("usuarios/{$user['id']}/editar") ?>" class="btn-icon" title="Editar">
+                                    <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                                    </svg>
+                                </a>
+                                <?php endif; ?>
+                                <?php if ((\App\Services\PermissionService::check('usuarios', 'delete') || $_SESSION['current_role'] === 'ADMIN') && $user['id'] != ($_SESSION['user_id'] ?? 0)): ?>
+                                <form method="POST" action="<?= base_path("usuarios/{$user['id']}/excluir") ?>" style="display: inline-flex; margin: 0; padding: 0;" onsubmit="return confirm('Tem certeza que deseja excluir este usuário? Esta ação não pode ser desfeita.');">
+                                    <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
+                                    <button type="submit" class="btn-icon btn-icon-danger" title="Excluir">
+                                        <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>
+                                        </svg>
+                                    </button>
+                                </form>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -172,3 +186,55 @@
         </div>
     </div>
 <?php endif; ?>
+
+<style>
+.table-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid var(--color-border, #e0e0e0);
+    background: transparent;
+    color: var(--color-text, #333);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+}
+
+.btn-icon:hover {
+    background: var(--color-bg-light, #f5f5f5);
+    border-color: var(--color-primary, #007bff);
+    color: var(--color-primary, #007bff);
+}
+
+.btn-icon-danger {
+    color: var(--color-danger, #dc3545);
+    border-color: var(--color-border, #e0e0e0);
+}
+
+.btn-icon-danger:hover {
+    background: #fee;
+    border-color: var(--color-danger, #dc3545);
+    color: var(--color-danger, #dc3545);
+}
+
+.table-actions form {
+    display: inline-flex;
+    margin: 0;
+    padding: 0;
+}
+
+.table-actions button {
+    margin: 0;
+    font-family: inherit;
+}
+</style>

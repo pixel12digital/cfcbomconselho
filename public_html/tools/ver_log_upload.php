@@ -5,14 +5,24 @@
  */
 
 // Carregar configurações
-require_once __DIR__ . '/../app/Bootstrap.php';
-require_once __DIR__ . '/../app/Config/Env.php';
-require_once __DIR__ . '/../app/Config/Database.php';
+// __DIR__ = public_html/tools/, então precisamos subir 2 níveis para chegar à raiz
+define('ROOT_PATH', dirname(__DIR__, 2));
+define('APP_PATH', ROOT_PATH . '/app');
 
+// Autoload
+if (file_exists(ROOT_PATH . '/vendor/autoload.php')) {
+    require_once ROOT_PATH . '/vendor/autoload.php';
+} else {
+    require_once APP_PATH . '/autoload.php';
+}
+
+// Carregar variáveis de ambiente
+require_once APP_PATH . '/Config/Env.php';
 use App\Config\Env;
-use App\Config\Database;
-
 Env::load();
+
+// Bootstrap
+require_once APP_PATH . '/Bootstrap.php';
 
 // Verificar autenticação
 if (session_status() === PHP_SESSION_NONE) {
@@ -49,7 +59,7 @@ header('Content-Type: text/html; charset=utf-8');
 
 <?php
 
-$logFile = dirname(__DIR__, 2) . '/storage/logs/upload_logo.log';
+$logFile = ROOT_PATH . '/storage/logs/upload_logo.log';
 
 echo '<div class="section">';
 echo '<h2>📄 Arquivo de Log</h2>';
@@ -122,7 +132,7 @@ if (file_exists($logFile)) {
 }
 
 // Verificar erros PHP relacionados
-$phpErrorsLog = dirname(__DIR__, 2) . '/storage/logs/php_errors.log';
+$phpErrorsLog = ROOT_PATH . '/storage/logs/php_errors.log';
 if (file_exists($phpErrorsLog)) {
     $phpErrors = file_get_contents($phpErrorsLog);
     $uploadRelated = [];

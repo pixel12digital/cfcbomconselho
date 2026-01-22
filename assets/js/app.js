@@ -197,66 +197,101 @@
     const installButton = document.getElementById('pwa-install-btn');
     const installButtonContainer = document.getElementById('pwa-install-container');
     
-    // Detectar se já está instalado (standalone mode)
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                        window.navigator.standalone || 
-                        document.referrer.includes('android-app://');
+    // Detectar se já está instalado (standalone mode) - verificar no início
+    function isAppInstalled() {
+        return window.matchMedia('(display-mode: standalone)').matches || 
+               window.navigator.standalone === true ||
+               document.referrer.includes('android-app://');
+    }
+    
+    // Garantir que o botão está oculto por padrão
+    if (installButtonContainer) {
+        installButtonContainer.style.display = 'none';
+    }
+    
+    // Não mostrar botão se já estiver instalado
+    if (isAppInstalled()) {
+        if (installButtonContainer) {
+            installButtonContainer.style.display = 'none';
+        }
+    }
     
     // Interceptar beforeinstallprompt (Android/Desktop)
     window.addEventListener('beforeinstallprompt', function(e) {
-        // Prevenir o prompt automático
+        // Prevenir o prompt automático do navegador
         e.preventDefault();
         
         // Guardar o evento para usar depois
         deferredPrompt = e;
         
-        // Mostrar botão apenas se não estiver em standalone
-        if (!isStandalone && installButtonContainer) {
+        // Mostrar botão apenas se não estiver em standalone E deferredPrompt existir
+        if (!isAppInstalled() && installButtonContainer && deferredPrompt) {
             installButtonContainer.style.display = 'block';
+        }
+        
+        // Log discreto (apenas em desenvolvimento)
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('[PWA] install handler ready');
         }
     });
     
     // Handler do botão de instalação
     if (installButton) {
-        installButton.addEventListener('click', async function() {
+        installButton.addEventListener('click', async function(e) {
+            e.preventDefault();
+            
             // Android/Desktop: usar deferredPrompt
             if (deferredPrompt) {
-                // Mostrar prompt de instalação
-                deferredPrompt.prompt();
-                
-                // Aguardar escolha do usuário
-                const { outcome } = await deferredPrompt.userChoice;
-                
-                if (outcome === 'accepted') {
-                    console.log('Usuário aceitou instalação');
-                } else {
-                    console.log('Usuário recusou instalação');
-                }
-                
-                // Limpar referência
-                deferredPrompt = null;
-                
-                // Esconder botão
-                if (installButtonContainer) {
-                    installButtonContainer.style.display = 'none';
+                try {
+                    // Mostrar prompt de instalação
+                    deferredPrompt.prompt();
+                    
+                    // Aguardar escolha do usuário
+                    const { outcome } = await deferredPrompt.userChoice;
+                    
+                    // Log discreto (apenas em desenvolvimento)
+                    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                        if (outcome === 'accepted') {
+                            console.log('[PWA] Usuário aceitou instalação');
+                        } else {
+                            console.log('[PWA] Usuário recusou instalação');
+                        }
+                    }
+                    
+                    // Limpar referência
+                    deferredPrompt = null;
+                    
+                    // Esconder botão
+                    if (installButtonContainer) {
+                        installButtonContainer.style.display = 'none';
+                    }
+                } catch (error) {
+                    // Se houver erro, esconder botão e limpar
+                    deferredPrompt = null;
+                    if (installButtonContainer) {
+                        installButtonContainer.style.display = 'none';
+                    }
                 }
             } else {
-                // iOS: mostrar modal com instruções
+                // iOS: mostrar modal com instruções (somente ao clique)
                 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
                 
                 if (isIOS) {
                     showIOSInstallModal();
-                } else {
-                    // Outros navegadores que não suportam PWA
-                    alert('Instalação não disponível neste navegador. Use Chrome, Edge ou Safari.');
                 }
+                // Não mostrar alert para outros navegadores (deixar silencioso)
             }
         });
     }
     
     // Escutar evento de instalação concluída
     window.addEventListener('appinstalled', function() {
-        console.log('PWA instalado com sucesso');
+        // Log discreto (apenas em desenvolvimento)
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            console.log('[PWA] Aplicativo instalado com sucesso');
+        }
+        
+        // Limpar referência
         deferredPrompt = null;
         
         // Esconder botão definitivamente
@@ -264,6 +299,11 @@
             installButtonContainer.style.display = 'none';
         }
     });
+    
+    // Log discreto de inicialização (apenas em desenvolvimento)
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        console.log('[PWA] install handler ready');
+    }
     
     // Função para mostrar modal iOS
     function showIOSInstallModal() {
@@ -382,8 +422,8 @@
         });
     }
     
-    // Esconder botão se já estiver instalado
-    if (isStandalone && installButtonContainer) {
+    // Esconder botão se já estiver instalado (verificação final)
+    if (isAppInstalled() && installButtonContainer) {
         installButtonContainer.style.display = 'none';
     }
 })();

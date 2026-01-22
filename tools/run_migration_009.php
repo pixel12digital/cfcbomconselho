@@ -127,7 +127,7 @@ try {
         ['name' => 'down_payment_amount', 'type' => 'DECIMAL(10,2)', 'after' => 'installments', 'default' => 'DEFAULT NULL COMMENT \'Valor da entrada (quando entrada_parcelas)\''],
         ['name' => 'down_payment_due_date', 'type' => 'DATE', 'after' => 'down_payment_amount', 'default' => 'DEFAULT NULL COMMENT \'Data de vencimento da entrada\''],
         ['name' => 'first_due_date', 'type' => 'DATE', 'after' => 'down_payment_due_date', 'default' => 'DEFAULT NULL COMMENT \'Data de vencimento da primeira parcela\''],
-        ['name' => 'billing_status', 'type' => "ENUM('draft','ready','generated','error')", 'after' => 'first_due_date', 'default' => "NOT NULL DEFAULT 'draft' COMMENT 'Status da geração de cobrança Asaas'"],
+        ['name' => 'billing_status', 'type' => "ENUM('draft','ready','generated','error')", 'after' => 'first_due_date', 'default' => "NOT NULL DEFAULT 'draft' COMMENT 'Status da geração de cobrança no gateway de pagamento'"],
     ];
     
     echo "4. Verificando e adicionando colunas de plano de pagamento...\n";
@@ -216,7 +216,7 @@ try {
         echo "- down_payment_amount (DECIMAL) - Valor da entrada\n";
         echo "- down_payment_due_date (DATE) - Vencimento da entrada\n";
         echo "- first_due_date (DATE) - Vencimento da primeira parcela\n";
-        echo "- billing_status (ENUM) - Status da geração de cobrança Asaas\n";
+        echo "- billing_status (ENUM) - Status da geração de cobrança no gateway de pagamento\n";
         echo "\nAgora você pode usar as condições de pagamento nas telas de matrícula.\n";
     } else {
         echo "⚠️  MIGRATION PARCIALMENTE EXECUTADA\n";

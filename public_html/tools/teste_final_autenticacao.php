@@ -1,0 +1,300 @@
+<?php
+/**
+ * Teste Final - Autenticação EFI com Certificado
+ * 
+ * Este script testa especificamente se o certificado está sendo
+ * enviado corretamente no handshake TLS e se as credenciais estão corretas.
+ */
+
+require_once __DIR__ . '/../../app/Config/Env.php';
+use App\Config\Env;
+
+Env::load();
+
+$clientId = $_ENV['EFI_CLIENT_ID'] ?? null;
+$clientSecret = $_ENV['EFI_CLIENT_SECRET'] ?? null;
+$certPath = $_ENV['EFI_CERT_PATH'] ?? null;
+
+header('Content-Type: text/html; charset=utf-8');
+?>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste Final - Autenticação EFI</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #023A8D;
+            margin-top: 0;
+        }
+        .test-result {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 6px;
+            border-left: 4px solid #ddd;
+        }
+        .test-result.success {
+            background: #d4edda;
+            border-color: #28a745;
+        }
+        .test-result.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+        }
+        .test-result.warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+        }
+        .test-result h3 {
+            margin-top: 0;
+        }
+        .test-result code {
+            background: #e9ecef;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            display: block;
+            margin: 10px 0;
+            white-space: pre-wrap;
+            word-break: break-all;
+            font-size: 0.9em;
+        }
+        .info-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: #f8f9fa;
+            border-radius: 4px;
+        }
+        .btn {
+            display: inline-block;
+            padding: 10px 20px;
+            background: #023A8D;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background: #022a6d;
+        }
+        .solution-box {
+            background: #e7f3ff;
+            border-left: 4px solid #023A8D;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔬 Teste Final - Autenticação EFI</h1>
+        <p>Teste completo para identificar o problema específico com certificado e credenciais.</p>
+    </div>
+    
+    <?php
+    if (empty($clientId) || empty($clientSecret) || empty($certPath) || !file_exists($certPath)) {
+        echo '<div class="container">';
+        echo '<div class="test-result error">';
+        echo '<strong>❌ Configuração incompleta</strong><br>';
+        echo 'Verifique se CLIENT_ID, CLIENT_SECRET e CERT_PATH estão configurados corretamente.';
+        echo '</div>';
+        echo '</div>';
+        exit;
+    }
+    
+    // Limpar credenciais
+    $clientIdClean = trim($clientId);
+    $clientSecretClean = trim($clientSecret);
+    
+    // Remover aspas se existirem
+    if ((substr($clientIdClean, 0, 1) === '"' && substr($clientIdClean, -1) === '"') || 
+        (substr($clientIdClean, 0, 1) === "'" && substr($clientIdClean, -1) === "'")) {
+        $clientIdClean = substr($clientIdClean, 1, -1);
+    }
+    if ((substr($clientSecretClean, 0, 1) === '"' && substr($clientSecretClean, -1) === '"') || 
+        (substr($clientSecretClean, 0, 1) === "'" && substr($clientSecretClean, -1) === "'")) {
+        $clientSecretClean = substr($clientSecretClean, 1, -1);
+    }
+    
+    $url = 'https://apis.gerencianet.com.br/oauth/token';
+    
+    echo '<div class="container">';
+    echo '<h2>📋 Configuração Atual</h2>';
+    echo '<div class="info-item">';
+    echo '<strong>CLIENT_ID:</strong> ' . strlen($clientIdClean) . ' caracteres (primeiros 15: ' . htmlspecialchars(substr($clientIdClean, 0, 15)) . '...)<br>';
+    echo '<strong>CLIENT_SECRET:</strong> ' . strlen($clientSecretClean) . ' caracteres (primeiros 15: ' . htmlspecialchars(substr($clientSecretClean, 0, 15)) . '...)<br>';
+    echo '<strong>Certificado:</strong> ' . htmlspecialchars($certPath) . ' (' . number_format(filesize($certPath)) . ' bytes)<br>';
+    echo '<strong>URL:</strong> ' . htmlspecialchars($url) . '<br>';
+    echo '</div>';
+    echo '</div>';
+    
+    // Teste com configuração otimizada do certificado
+    echo '<div class="container">';
+    echo '<h2>🧪 Teste com Certificado (Configuração Otimizada)</h2>';
+    
+    $ch = curl_init($url);
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+    curl_setopt($ch, CURLOPT_POST, true);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, 'grant_type=client_credentials');
+    curl_setopt($ch, CURLOPT_HTTPHEADER, [
+        'Content-Type: application/x-www-form-urlencoded',
+        'Authorization: Basic ' . base64_encode($clientIdClean . ':' . $clientSecretClean)
+    ]);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
+    curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, 2);
+    curl_setopt($ch, CURLOPT_TIMEOUT, 30);
+    curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 10);
+    
+    // Configurar certificado (sem senha, já que não tem)
+    curl_setopt($ch, CURLOPT_SSLCERT, $certPath);
+    curl_setopt($ch, CURLOPT_SSLCERTTYPE, 'P12');
+    curl_setopt($ch, CURLOPT_SSLKEY, $certPath);
+    curl_setopt($ch, CURLOPT_SSLKEYTYPE, 'P12');
+    curl_setopt($ch, CURLOPT_SSLCERTPASSWD, '');
+    curl_setopt($ch, CURLOPT_SSLKEYPASSWD, '');
+    
+    // Habilitar verbose para debug detalhado
+    $verbose = fopen('php://temp', 'w+');
+    curl_setopt($ch, CURLOPT_VERBOSE, true);
+    curl_setopt($ch, CURLOPT_STDERR, $verbose);
+    
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $curlError = curl_error($ch);
+    $curlErrNo = curl_errno($ch);
+    $sslVerifyResult = curl_getinfo($ch, CURLINFO_SSL_VERIFYRESULT);
+    
+    rewind($verbose);
+    $verboseLog = stream_get_contents($verbose);
+    fclose($verbose);
+    
+    curl_close($ch);
+    
+    if ($httpCode === 200) {
+        $data = json_decode($response, true);
+        if (isset($data['access_token'])) {
+            echo '<div class="test-result success">';
+            echo '<h3>✅ Autenticação bem-sucedida!</h3>';
+            echo '<p>Token obtido com sucesso. A integração está funcionando corretamente.</p>';
+            echo '<p><strong>Token (primeiros 30 caracteres):</strong> <code>' . htmlspecialchars(substr($data['access_token'], 0, 30)) . '...</code></p>';
+            echo '</div>';
+        } else {
+            echo '<div class="test-result error">';
+            echo '<h3>❌ HTTP 200 mas sem access_token</h3>';
+            echo '<p>Resposta: <code>' . htmlspecialchars(substr($response, 0, 500)) . '</code></p>';
+            echo '</div>';
+        }
+    } else {
+        echo '<div class="test-result error">';
+        echo '<h3>❌ Falha na autenticação</h3>';
+        echo '<p><strong>HTTP Code:</strong> ' . $httpCode . '</p>';
+        
+        if ($curlError) {
+            echo '<p><strong>Erro cURL:</strong> <code>' . htmlspecialchars($curlError) . '</code></p>';
+            if ($curlErrNo) {
+                echo '<p><strong>CURL Error Number:</strong> ' . $curlErrNo . '</p>';
+            }
+        }
+        
+        if ($sslVerifyResult !== 0) {
+            echo '<p><strong>⚠️ SSL Verify Result:</strong> ' . $sslVerifyResult . ' (0 = OK)</p>';
+        }
+        
+        if ($response) {
+            $errorData = json_decode($response, true);
+            $errorMsg = $errorData['error_description'] ?? $errorData['error'] ?? 'Erro desconhecido';
+            echo '<p><strong>Resposta da API:</strong> <code>' . htmlspecialchars($errorMsg) . '</code></p>';
+            
+            if ($httpCode === 401) {
+                echo '<div class="solution-box">';
+                echo '<h3>🔍 Análise do Erro 401</h3>';
+                echo '<p>O erro 401 com certificado configurado corretamente indica que:</p>';
+                echo '<ol>';
+                echo '<li><strong>O certificado está sendo enviado corretamente</strong> (senão daria erro de conexão)</li>';
+                echo '<li><strong>As credenciais (CLIENT_ID/CLIENT_SECRET) estão incorretas ou inativas</strong></li>';
+                echo '</ol>';
+                echo '<p><strong>Próximos passos:</strong></p>';
+                echo '<ol>';
+                echo '<li>Acesse a dashboard EFI: <a href="https://dev.gerencianet.com.br/" target="_blank">https://dev.gerencianet.com.br/</a></li>';
+                echo '<li>Faça login</li>';
+                echo '<li>Vá em: <strong>API → Credenciais</strong></li>';
+                echo '<li>Selecione ambiente: <strong>PRODUÇÃO</strong></li>';
+                echo '<li>Verifique se as credenciais estão <strong>ATIVAS</strong></li>';
+                echo '<li>Se estiverem inativas, gere novas credenciais</li>';
+                echo '<li>Copie o <strong>Client_Id</strong> e <strong>Client_Secret</strong> exatos</li>';
+                echo '<li>Atualize o arquivo <code>.env</code> com as credenciais corretas</li>';
+                echo '<li>Certifique-se de que não há espaços extras ou caracteres invisíveis</li>';
+                echo '<li>Reinicie o Apache/XAMPP</li>';
+                echo '</ol>';
+                echo '</div>';
+            }
+        }
+        
+        // Mostrar verbose log se houver erro
+        if ($curlError && $verboseLog) {
+            echo '<p><strong>Detalhes técnicos (cURL verbose):</strong></p>';
+            echo '<code>' . htmlspecialchars(substr($verboseLog, 0, 2000)) . '</code>';
+        }
+    }
+    
+    echo '</div>';
+    
+    // Teste adicional: verificar se certificado está sendo usado
+    echo '<div class="container">';
+    echo '<h2>🔍 Verificação Adicional</h2>';
+    
+    // Verificar se o certificado está sendo lido corretamente
+    $certContent = @file_get_contents($certPath);
+    if ($certContent === false) {
+        echo '<div class="test-result error">';
+        echo '<strong>❌ Não foi possível ler o arquivo do certificado</strong><br>';
+        echo 'Verifique as permissões do arquivo.';
+        echo '</div>';
+    } else {
+        echo '<div class="test-result success">';
+        echo '<strong>✅ Certificado pode ser lido</strong><br>';
+        echo 'Tamanho: ' . number_format(strlen($certContent)) . ' bytes';
+        echo '</div>';
+    }
+    
+    // Verificar formato do certificado
+    $extension = strtolower(pathinfo($certPath, PATHINFO_EXTENSION));
+    if (in_array($extension, ['p12', 'pfx'])) {
+        echo '<div class="test-result success">';
+        echo '<strong>✅ Formato do certificado correto</strong><br>';
+        echo 'Extensão: .' . $extension;
+        echo '</div>';
+    } else {
+        echo '<div class="test-result error">';
+        echo '<strong>❌ Formato do certificado incorreto</strong><br>';
+        echo 'Extensão: .' . $extension . ' (esperado: .p12 ou .pfx)';
+        echo '</div>';
+    }
+    
+    echo '</div>';
+    ?>
+    
+    <div class="container">
+        <p>
+            <a href="teste_certificado_detalhado.php" class="btn">← Teste Detalhado do Certificado</a>
+            <a href="validar_integracao_efi.php" class="btn">← Validação Completa</a>
+        </p>
+    </div>
+</body>
+</html>

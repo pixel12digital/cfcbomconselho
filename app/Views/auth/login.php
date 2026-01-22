@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <base href="<?= base_path('/') ?>">
     <title>Login - CFC Sistema</title>
     <link rel="stylesheet" href="<?= asset_url('css/tokens.css') ?>">
     <link rel="stylesheet" href="<?= asset_url('css/components.css') ?>">
@@ -38,6 +37,15 @@
             margin-bottom: var(--spacing-sm);
         }
         
+        .login-logo-img {
+            max-width: 140px;
+            max-height: 140px;
+            width: auto;
+            height: auto;
+            margin: 0 auto var(--spacing-sm);
+            display: block;
+        }
+        
         .login-title {
             font-size: var(--font-size-xl);
             font-weight: var(--font-weight-semibold);
@@ -55,7 +63,15 @@
     <div class="login-container">
         <div class="login-card">
             <div class="login-header">
-                <div class="login-logo">CFC</div>
+                <?php 
+                $logoUrl = $logoUrl ?? null;
+                if (!empty($logoUrl)): 
+                ?>
+                    <img src="<?= htmlspecialchars($logoUrl) ?>" alt="Logo do CFC" class="login-logo-img" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <div class="login-logo" style="display: none;">CFC</div>
+                <?php else: ?>
+                    <div class="login-logo">CFC</div>
+                <?php endif; ?>
                 <h1 class="login-title">Sistema de Gestão</h1>
                 <p class="login-subtitle">Acesse sua conta</p>
             </div>

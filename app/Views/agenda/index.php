@@ -43,6 +43,16 @@ $isAdmin = !$isAluno && !$isInstrutor;
                 <?php endif; ?>
                 
                 <?php if ($isAdmin): ?>
+                <!-- Tipo (Prática/Teórica) -->
+                <div class="form-group">
+                    <label class="form-label">Tipo</label>
+                    <select name="type" class="form-input" onchange="this.form.submit()">
+                        <option value="">Todas</option>
+                        <option value="pratica" <?= ($filters['type'] ?? '') === 'pratica' ? 'selected' : '' ?>>Prática</option>
+                        <option value="teoria" <?= ($filters['type'] ?? '') === 'teoria' ? 'selected' : '' ?>>Teórica</option>
+                    </select>
+                </div>
+                
                 <!-- Instrutor (apenas administrativo) -->
                 <div class="form-group">
                     <label class="form-label">Instrutor</label>
@@ -56,10 +66,10 @@ $isAdmin = !$isAluno && !$isInstrutor;
                     </select>
                 </div>
                 
-                <!-- Veículo (apenas administrativo) -->
+                <!-- Veículo (apenas administrativo, desabilitado para teóricas) -->
                 <div class="form-group">
                     <label class="form-label">Veículo</label>
-                    <select name="vehicle_id" class="form-input" onchange="this.form.submit()">
+                    <select name="vehicle_id" id="vehicle_filter" class="form-input" onchange="this.form.submit()" <?= ($filters['type'] ?? '') === 'teoria' ? 'disabled' : '' ?>>
                         <option value="">Todos</option>
                         <?php foreach ($vehicles as $vehicle): ?>
                         <option value="<?= $vehicle['id'] ?>" <?= ($filters['vehicle_id'] ?? '') == $vehicle['id'] ? 'selected' : '' ?>>
@@ -67,19 +77,24 @@ $isAdmin = !$isAluno && !$isInstrutor;
                         </option>
                         <?php endforeach; ?>
                     </select>
+                    <?php if (($filters['type'] ?? '') === 'teoria'): ?>
+                    <small class="form-hint" style="color: var(--color-text-muted);">Não se aplica a aulas teóricas</small>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
                 
-                <?php if ($isAdmin): ?>
                 <!-- Status -->
                 <div class="form-group">
                     <label class="form-label">Status</label>
                     <select name="status" class="form-input" onchange="this.form.submit()">
                         <option value="">Todos</option>
                         <option value="agendada" <?= ($filters['status'] ?? '') === 'agendada' ? 'selected' : '' ?>>Agendada</option>
+                        <option value="scheduled" <?= ($filters['status'] ?? '') === 'scheduled' ? 'selected' : '' ?>>Agendada (Teórica)</option>
                         <option value="em_andamento" <?= ($filters['status'] ?? '') === 'em_andamento' ? 'selected' : '' ?>>Em Andamento</option>
+                        <option value="in_progress" <?= ($filters['status'] ?? '') === 'in_progress' ? 'selected' : '' ?>>Em Andamento (Teórica)</option>
                         <option value="concluida" <?= ($filters['status'] ?? '') === 'concluida' ? 'selected' : '' ?>>Concluída</option>
+                        <option value="done" <?= ($filters['status'] ?? '') === 'done' ? 'selected' : '' ?>>Concluída (Teórica)</option>
                         <option value="cancelada" <?= ($filters['status'] ?? '') === 'cancelada' ? 'selected' : '' ?>>Cancelada</option>
+                        <option value="canceled" <?= ($filters['status'] ?? '') === 'canceled' ? 'selected' : '' ?>>Cancelada (Teórica)</option>
                     </select>
                 </div>
                 <?php endif; ?>
@@ -194,11 +209,28 @@ $isAdmin = !$isAluno && !$isInstrutor;
                 <div style="display: flex; flex-direction: column; gap: var(--spacing-sm);">
                     <?php foreach ($lessons as $lesson): ?>
                         <?php
+                        // Detectar se é aula teórica
+                        $isTheory = ($lesson['lesson_type'] ?? '') === 'teoria' || !empty($lesson['theory_session_id']);
+                        
                         $lessonDate = new \DateTime($lesson['scheduled_date'] . ' ' . $lesson['scheduled_time']);
                         $endTime = clone $lessonDate;
                         $endTime->modify("+{$lesson['duration_minutes']} minutes");
                         
-                        $status = $statusConfig[$lesson['status']] ?? ['label' => $lesson['status'], 'color' => '#666', 'bg' => '#f3f4f6'];
+                        // Mapear status de teoria para exibição
+                        $lessonStatus = $lesson['status'] ?? 'agendada';
+                        if ($isTheory) {
+                            // Mapear status de theory_sessions para formato de lessons
+                            if ($lessonStatus === 'done') {
+                                $lessonStatus = 'concluida';
+                            } elseif ($lessonStatus === 'canceled') {
+                                $lessonStatus = 'cancelada';
+                            } elseif ($lessonStatus === 'scheduled') {
+                                $lessonStatus = 'agendada';
+                            } elseif ($lessonStatus === 'in_progress') {
+                                $lessonStatus = 'em_andamento';
+                            }
+                        }
+                        $status = $statusConfig[$lessonStatus] ?? ['label' => $lessonStatus, 'color' => '#666', 'bg' => '#f3f4f6'];
                         $isPast = $lessonDate < new \DateTime();
                         ?>
                         <div style="padding: var(--spacing-md); border: 1px solid var(--color-border, #e0e0e0); border-radius: var(--radius-md, 8px); background: <?= $isPast && $lesson['status'] !== 'agendada' ? '#f9fafb' : 'white' ?>; transition: all 0.2s;">
@@ -209,37 +241,57 @@ $isAdmin = !$isAluno && !$isInstrutor;
                                             <?= $lessonDate->format('d/m/Y') ?> às <?= $lessonDate->format('H:i') ?>
                                         </div>
                                         <div style="color: var(--color-text-muted, #666); font-size: 0.875rem; margin-bottom: var(--spacing-xs);">
-                                            <?php if ($isInstrutor): ?>
+                                            <?php
+                                            $isTheory = ($lesson['lesson_type'] ?? '') === 'teoria' || !empty($lesson['theory_session_id']);
+                                            if ($isTheory):
+                                                $studentCount = $lesson['student_count'] ?? 1;
+                                                $disciplineName = $lesson['discipline_name'] ?? 'Disciplina';
+                                                $className = $lesson['class_name'] ?? '';
+                                            ?>
+                                                Sessão Teórica — <?= htmlspecialchars($disciplineName) ?> — <?= $studentCount ?> aluno(s)<?= $className ? ' — ' . htmlspecialchars($className) : '' ?>
+                                            <?php elseif ($isInstrutor): ?>
                                                 Aluno: <?= htmlspecialchars($lesson['student_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>
                                             <?php else: ?>
                                                 <?= htmlspecialchars($lesson['instructor_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>
+                                                <?php if (!empty($lesson['student_name'])): ?>
+                                                <br><span style="font-size: 0.8rem;">Aluno: <?= htmlspecialchars($lesson['student_name']) ?></span>
+                                                <?php endif; ?>
                                             <?php endif; ?>
                                         </div>
-                                        <?php if ($isInstrutor && !empty($lesson['vehicle_plate'])): ?>
+                                        <?php if (!$isTheory && !empty($lesson['vehicle_plate'])): ?>
                                         <div style="color: var(--color-text-muted, #666); font-size: 0.875rem;">
                                             Veículo: <?= htmlspecialchars($lesson['vehicle_plate']) ?>
                                         </div>
                                         <?php endif; ?>
                                     </div>
-                                    <div>
+                                    <div style="display: flex; gap: var(--spacing-xs); align-items: center; flex-wrap: wrap;">
                                         <span style="display: inline-block; padding: 4px 12px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; background: <?= $status['bg'] ?>; color: <?= $status['color'] ?>;">
                                             <?= $status['label'] ?>
                                         </span>
                                     </div>
                                 </div>
                                 <div style="color: var(--color-text-muted, #666); font-size: 0.875rem; margin-top: var(--spacing-xs);">
-                                    Aula Prática • <?= $lessonDate->format('H:i') ?> – <?= $endTime->format('H:i') ?>
+                                    <?= $isTheory ? 'Aula Teórica' : 'Aula Prática' ?> • <?= $lessonDate->format('H:i') ?> – <?= $endTime->format('H:i') ?>
                                 </div>
                                 <?php if ($isInstrutor): ?>
+                                <?php
+                                $classId = $lesson['class_id'] ?? '';
+                                $sessionId = $lesson['theory_session_id'] ?? '';
+                                $lessonUrl = $isTheory && !empty($sessionId)
+                                    ? base_path("turmas-teoricas/{$classId}/sessoes/{$sessionId}/presenca")
+                                    : base_path("agenda/{$lesson['id']}");
+                                ?>
                                 <div style="display: flex; gap: var(--spacing-sm); margin-top: var(--spacing-sm); flex-wrap: wrap;">
-                                    <a href="<?= base_path("agenda/{$lesson['id']}") ?>" class="btn btn-sm btn-outline" style="flex: 1; min-width: 120px; text-align: center;">
-                                        Ver Detalhes
+                                    <a href="<?= $lessonUrl ?>" class="btn btn-sm btn-outline" style="flex: 1; min-width: 120px; text-align: center;">
+                                        <?= $isTheory ? 'Marcar Presença' : 'Ver Detalhes' ?>
                                     </a>
                                     <?php 
-                                    // Ações apenas para aulas futuras (não históricas)
-                                    $isHistorical = in_array($lesson['status'], ['concluida', 'cancelada', 'no_show']);
-                                    $isFuture = $currentTab === 'proximas' || (!$isHistorical && $currentTab === 'todas');
-                                    if ($isFuture && !$isHistorical):
+                                    // Ações apenas para aulas práticas futuras (não históricas)
+                                    // Sessões teóricas não têm "iniciar/concluir", apenas presença
+                                    if (!$isTheory):
+                                        $isHistorical = in_array($lesson['status'], ['concluida', 'cancelada', 'no_show']);
+                                        $isFuture = $currentTab === 'proximas' || (!$isHistorical && $currentTab === 'todas');
+                                        if ($isFuture && !$isHistorical):
                                     ?>
                                         <?php if ($lesson['status'] === 'agendada'): ?>
                                         <a href="<?= base_path("agenda/{$lesson['id']}/iniciar") ?>" class="btn btn-sm btn-warning" style="flex: 1; min-width: 120px; text-align: center;">
@@ -250,7 +302,10 @@ $isAdmin = !$isAluno && !$isInstrutor;
                                             Concluir Aula
                                         </a>
                                         <?php endif; ?>
-                                    <?php endif; ?>
+                                    <?php 
+                                        endif;
+                                    endif; 
+                                    ?>
                                 </div>
                                 <?php endif; ?>
                             </div>
@@ -310,7 +365,55 @@ $isAdmin = !$isAluno && !$isInstrutor;
                             return $lesson['scheduled_date'] === $dayStr;
                         });
                         
-                        foreach ($dayLessons as $lesson):
+                        // Agrupar eventos por overlap de horário
+                        $clusteredLessons = [];
+                        $processed = [];
+                        
+                        foreach ($dayLessons as $idx => $lesson) {
+                            if (isset($processed[$idx])) continue;
+                            
+                            $cluster = [$idx => $lesson];
+                            $processed[$idx] = true;
+                            
+                            // Calcular horários desta lesson
+                            $lessonStart = strtotime($lesson['scheduled_date'] . ' ' . $lesson['scheduled_time']);
+                            $lessonEnd = $lessonStart + (($lesson['duration_minutes'] ?? 50) * 60);
+                            
+                            // Buscar todas as lessons que se sobrepõem
+                            foreach ($dayLessons as $otherIdx => $otherLesson) {
+                                if (isset($processed[$otherIdx]) || $idx === $otherIdx) continue;
+                                
+                                $otherStart = strtotime($otherLesson['scheduled_date'] . ' ' . $otherLesson['scheduled_time']);
+                                $otherEnd = $otherStart + (($otherLesson['duration_minutes'] ?? 50) * 60);
+                                
+                                // Verificar overlap: A.start < B.end AND A.end > B.start
+                                if ($lessonStart < $otherEnd && $lessonEnd > $otherStart) {
+                                    $cluster[$otherIdx] = $otherLesson;
+                                    $processed[$otherIdx] = true;
+                                }
+                            }
+                            
+                            $clusteredLessons[] = $cluster;
+                        }
+                        
+                        // Renderizar clusters
+                        foreach ($clusteredLessons as $clusterIdx => $cluster):
+                            // Ordenar cluster por horário ANTES de fazer slice
+                            uasort($cluster, function($a, $b) {
+                                $timeA = strtotime($a['scheduled_date'] . ' ' . $a['scheduled_time']);
+                                $timeB = strtotime($b['scheduled_date'] . ' ' . $b['scheduled_time']);
+                                return $timeA <=> $timeB;
+                            });
+                            
+                            $clusterSize = count($cluster);
+                            $maxVisible = 2; // Máximo de cards visíveis
+                            $visibleLessons = array_slice($cluster, 0, $maxVisible, true);
+                            $hiddenCount = max(0, $clusterSize - $maxVisible);
+                            
+                            foreach ($visibleLessons as $lessonIdx => $lesson):
+                            // Detectar se é aula teórica
+                            $isTheory = ($lesson['lesson_type'] ?? '') === 'teoria' || !empty($lesson['theory_session_id']);
+                            
                             // Calcular posição e altura baseado em minutos
                             $lessonTime = strtotime($lesson['scheduled_time']);
                             $lessonHour = (int)date('H', $lessonTime);
@@ -333,28 +436,83 @@ $isAdmin = !$isAluno && !$isInstrutor;
                             $startTime = $startDateTime->format('H:i');
                             $endTime = $endDateTime->format('H:i');
                             
+                            // Status para teóricas usa theory_sessions.status
+                            $lessonStatus = $lesson['status'] ?? 'agendada';
+                            if ($isTheory && isset($lesson['status'])) {
+                                // Mapear status de teoria para prática quando necessário
+                                if ($lessonStatus === 'done') $lessonStatus = 'concluida';
+                                elseif ($lessonStatus === 'canceled') $lessonStatus = 'cancelada';
+                                elseif ($lessonStatus === 'scheduled') $lessonStatus = 'agendada';
+                                elseif ($lessonStatus === 'in_progress') $lessonStatus = 'em_andamento';
+                            }
+                            
                             $statusClass = [
                                 'agendada' => 'lesson-scheduled',
                                 'em_andamento' => 'lesson-in-progress',
                                 'concluida' => 'lesson-completed',
                                 'cancelada' => 'lesson-cancelled',
                                 'no_show' => 'lesson-no-show'
-                            ][$lesson['status']] ?? 'lesson-scheduled';
+                            ][$lessonStatus] ?? 'lesson-scheduled';
                         ?>
-                        <a href="<?= base_path("agenda/{$lesson['id']}") ?>" 
+                        <?php
+                        $isTheory = ($lesson['lesson_type'] ?? '') === 'teoria' || !empty($lesson['theory_session_id']);
+                        $studentCount = $lesson['student_count'] ?? 1;
+                        $disciplineName = $lesson['discipline_name'] ?? '';
+                        $className = $lesson['class_name'] ?? '';
+                        $classId = $lesson['class_id'] ?? '';
+                        $sessionId = $lesson['theory_session_id'] ?? '';
+                        
+                        if ($isTheory && !empty($sessionId)) {
+                            $lessonUrl = base_path("turmas-teoricas/{$classId}/sessoes/{$sessionId}/presenca");
+                        } elseif ($isTheory && !empty($classId)) {
+                            $lessonUrl = base_path("turmas-teoricas/{$classId}");
+                        } else {
+                            $lessonUrl = base_path("agenda/{$lesson['id']}");
+                        }
+                        ?>
+                        <a href="<?= $lessonUrl ?>" 
                            class="lesson-card <?= $statusClass ?>" 
-                           style="position: absolute; top: <?= $top ?>px; height: <?= $height ?>px; width: calc(100% - 8px); left: 4px; margin-bottom: 2px;"
-                           title="<?= htmlspecialchars($lesson['student_name'] ?? '', ENT_QUOTES, 'UTF-8') ?> - <?= htmlspecialchars($lesson['instructor_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
+                           style="position: absolute; top: <?= $top ?>px; height: <?= $height ?>px; left: 0; right: 4px; margin-bottom: 2px;"
+                           title="<?= $isTheory ? "Sessão Teórica - " . htmlspecialchars($disciplineName) . " - {$studentCount} aluno(s)" : htmlspecialchars($lesson['student_name'] ?? '', ENT_QUOTES, 'UTF-8') ?>">
                             <div class="lesson-card-time"><?= $startTime ?> – <?= $endTime ?></div>
-                            <div class="lesson-card-title"><?= htmlspecialchars($lesson['student_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
-                            <div class="lesson-card-instructor"><?= htmlspecialchars($lesson['instructor_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
-                            <?php if ($lesson['vehicle_plate'] ?? ''): ?>
-                            <div class="lesson-card-vehicle"><?= htmlspecialchars($lesson['vehicle_plate'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                            <?php if ($isTheory): ?>
+                                <div class="lesson-card-title"><?= htmlspecialchars($disciplineName ?: 'Sessão Teórica') ?></div>
+                                <div class="lesson-card-instructor"><?= $studentCount ?> aluno(s)<?= $className ? ' — ' . htmlspecialchars($className) : '' ?></div>
+                            <?php else: ?>
+                                <div class="lesson-card-title"><?= htmlspecialchars($lesson['student_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                                <div class="lesson-card-instructor"><?= htmlspecialchars($lesson['instructor_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                                <?php if ($lesson['vehicle_plate'] ?? ''): ?>
+                                <div class="lesson-card-vehicle"><?= htmlspecialchars($lesson['vehicle_plate'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                                <?php endif; ?>
                             <?php endif; ?>
-                            <?php if ($lesson['status'] === 'cancelada'): ?>
-                            <div class="lesson-card-status">Cancelada</div>
+                            <?php if ($lessonStatus === 'cancelada'): ?>
+                            <div class="lesson-card-status" style="font-size: 0.7rem; padding: 2px 6px; margin-top: 2px;">Cancelada</div>
                             <?php endif; ?>
                         </a>
+                            <?php 
+                            // Se é o último card visível e há mais eventos no cluster, mostrar indicador
+                            $lastVisibleKey = array_keys($visibleLessons)[count($visibleLessons) - 1] ?? null;
+                            if ($lessonIdx === $lastVisibleKey && $hiddenCount > 0):
+                                // Calcular posição do indicador (mesma posição do último card)
+                                $lastLesson = end($visibleLessons);
+                                $lastLessonTime = strtotime($lastLesson['scheduled_date'] . ' ' . $lastLesson['scheduled_time']);
+                                $lastLessonHour = (int)date('H', $lastLessonTime);
+                                $lastLessonMinute = (int)date('i', $lastLessonTime);
+                                $lastMinutesFromStart = (($lastLessonHour - $startHour) * 60) + $lastLessonMinute;
+                                $lastTop = $lastMinutesFromStart * $pixelsPerMinute;
+                                $lastDuration = (int)($lastLesson['duration_minutes'] ?? 50);
+                                $lastHeight = $lastDuration * $pixelsPerMinute;
+                            ?>
+                            <div class="lesson-cluster-indicator" 
+                                 data-cluster-id="cluster-<?= $clusterIdx ?>"
+                                 data-cluster-data="<?= htmlspecialchars(json_encode(array_values($cluster)), ENT_QUOTES, 'UTF-8') ?>"
+                                 data-cluster-date="<?= htmlspecialchars($dayStr, ENT_QUOTES, 'UTF-8') ?>"
+                                 style="position: absolute; top: <?= $lastTop + $lastHeight + 2 ?>px; left: 0; right: 4px; padding: 4px 6px; background: #f3f4f6; border: 1px dashed #9ca3af; border-radius: 4px; cursor: pointer; font-size: 0.7rem; text-align: center; z-index: 5; user-select: none; box-sizing: border-box;"
+                                 onclick="handleClusterClick(this)">
+                                <strong>+<?= $hiddenCount ?> agendamento(s) neste horário</strong>
+                            </div>
+                            <?php endif; ?>
+                            <?php endforeach; ?>
                         <?php endforeach; ?>
                     </div>
                     <?php endforeach; ?>
@@ -383,19 +541,63 @@ $isAdmin = !$isAluno && !$isInstrutor;
                     $dayLessons = array_filter($lessons, function($lesson) use ($date) {
                         return $lesson['scheduled_date'] === $date;
                     });
+                    
+                    // Agrupar eventos por overlap de horário
+                    $clusteredLessons = [];
+                    $processed = [];
+                    
+                    foreach ($dayLessons as $idx => $lesson) {
+                        if (isset($processed[$idx])) continue;
+                        
+                        $cluster = [$idx => $lesson];
+                        $processed[$idx] = true;
+                        
+                        // Calcular horários desta lesson
+                        $lessonStart = strtotime($lesson['scheduled_date'] . ' ' . $lesson['scheduled_time']);
+                        $lessonEnd = $lessonStart + (($lesson['duration_minutes'] ?? 50) * 60);
+                        
+                        // Buscar todas as lessons que se sobrepõem
+                        foreach ($dayLessons as $otherIdx => $otherLesson) {
+                            if (isset($processed[$otherIdx]) || $idx === $otherIdx) continue;
+                            
+                            $otherStart = strtotime($otherLesson['scheduled_date'] . ' ' . $otherLesson['scheduled_time']);
+                            $otherEnd = $otherStart + (($otherLesson['duration_minutes'] ?? 50) * 60);
+                            
+                            // Verificar overlap: A.start < B.end AND A.end > B.start
+                            if ($lessonStart < $otherEnd && $lessonEnd > $otherStart) {
+                                $cluster[$otherIdx] = $otherLesson;
+                                $processed[$otherIdx] = true;
+                            }
+                        }
+                        
+                        $clusteredLessons[] = $cluster;
+                    }
                     ?>
                     <div class="calendar-day-timeline" style="position: relative; height: <?= $dayColumnHeight ?>px;">
                         <!-- Marcações de hora -->
                         <?php for ($h = $startHour; $h <= $endHour; $h++): ?>
-                        <div class="calendar-day-hour-mark" style="position: absolute; top: <?= (($h - $startHour) * 60) * $pixelsPerMinute ?>px; width: 100%; border-top: 1px solid var(--color-border, #e0e0e0);">
-                            <div class="calendar-day-hour-label" style="position: absolute; left: 0; top: -12px; padding: 0 var(--spacing-sm); background: white;">
+                        <div class="calendar-day-hour-mark" style="position: absolute; top: <?= (($h - $startHour) * 60) * $pixelsPerMinute ?>px; left: 0; width: 80px; border-top: 1px solid var(--color-border, #e0e0e0); z-index: 3; pointer-events: none;">
+                            <div class="calendar-day-hour-label" style="position: absolute; left: 0; top: -12px; padding: 0 var(--spacing-sm); background: white; z-index: 4; font-weight: 600; color: #374151;">
                                 <?= str_pad($h, 2, '0', STR_PAD_LEFT) ?>:00
                             </div>
                         </div>
                         <?php endfor; ?>
                         
-                        <!-- Aulas -->
-                        <?php foreach ($dayLessons as $lesson):
+                        <!-- Aulas agrupadas -->
+                        <?php foreach ($clusteredLessons as $clusterIdx => $cluster):
+                            // Ordenar cluster por horário ANTES de fazer slice
+                            uasort($cluster, function($a, $b) {
+                                $timeA = strtotime($a['scheduled_date'] . ' ' . $a['scheduled_time']);
+                                $timeB = strtotime($b['scheduled_date'] . ' ' . $b['scheduled_time']);
+                                return $timeA <=> $timeB;
+                            });
+                            
+                            $clusterSize = count($cluster);
+                            $maxVisible = 2; // Máximo de cards visíveis
+                            $visibleLessons = array_slice($cluster, 0, $maxVisible, true);
+                            $hiddenCount = max(0, $clusterSize - $maxVisible);
+                            
+                            foreach ($visibleLessons as $lessonIdx => $lesson):
                             $lessonTime = strtotime($lesson['scheduled_time']);
                             $lessonHour = (int)date('H', $lessonTime);
                             $lessonMinute = (int)date('i', $lessonTime);
@@ -412,32 +614,99 @@ $isAdmin = !$isAluno && !$isInstrutor;
                             $startTime = $startDateTime->format('H:i');
                             $endTime = $endDateTime->format('H:i');
                             
+                            // Mapear status de teoria
+                            $isTheory = ($lesson['lesson_type'] ?? '') === 'teoria' || !empty($lesson['theory_session_id']);
+                            $lessonStatus = $lesson['status'] ?? 'agendada';
+                            if ($isTheory) {
+                                if ($lessonStatus === 'done') $lessonStatus = 'concluida';
+                                elseif ($lessonStatus === 'canceled') $lessonStatus = 'cancelada';
+                                elseif ($lessonStatus === 'scheduled') $lessonStatus = 'agendada';
+                                elseif ($lessonStatus === 'in_progress') $lessonStatus = 'em_andamento';
+                            }
+                            
                             $statusClass = [
                                 'agendada' => 'lesson-scheduled',
                                 'em_andamento' => 'lesson-in-progress',
                                 'concluida' => 'lesson-completed',
                                 'cancelada' => 'lesson-cancelled',
                                 'no_show' => 'lesson-no-show'
-                            ][$lesson['status']] ?? 'lesson-scheduled';
+                            ][$lessonStatus] ?? 'lesson-scheduled';
+                            
+                            // URL e dados para teóricas
+                            $studentCount = $lesson['student_count'] ?? 1;
+                            $disciplineName = $lesson['discipline_name'] ?? '';
+                            $className = $lesson['class_name'] ?? '';
+                            $classId = $lesson['class_id'] ?? '';
+                            $sessionId = $lesson['theory_session_id'] ?? '';
+                            
+                            if ($isTheory && !empty($sessionId)) {
+                                $lessonUrl = base_path("turmas-teoricas/{$classId}/sessoes/{$sessionId}/presenca");
+                            } elseif ($isTheory && !empty($classId)) {
+                                $lessonUrl = base_path("turmas-teoricas/{$classId}");
+                            } else {
+                                $lessonUrl = base_path("agenda/{$lesson['id']}");
+                            }
                         ?>
-                        <a href="<?= base_path("agenda/{$lesson['id']}") ?>" 
+                        <a href="<?= $lessonUrl ?>" 
                            class="lesson-card <?= $statusClass ?>" 
-                           style="position: absolute; top: <?= $top ?>px; height: <?= $height ?>px; width: calc(100% - 200px); left: 100px; margin-bottom: 2px;">
+                           style="position: absolute; top: <?= $top ?>px; height: <?= $height ?>px; left: 80px; right: 0; margin-bottom: 2px; padding-left: 12px; padding-right: 8px; box-sizing: border-box;">
                             <div class="lesson-card-time"><?= $startTime ?> – <?= $endTime ?></div>
-                            <div class="lesson-card-title"><?= htmlspecialchars($lesson['student_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
-                            <div class="lesson-card-instructor"><?= htmlspecialchars($lesson['instructor_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
-                            <?php if ($lesson['vehicle_plate'] ?? ''): ?>
-                            <div class="lesson-card-vehicle"><?= htmlspecialchars($lesson['vehicle_plate'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                            <?php if ($isTheory): ?>
+                                <div class="lesson-card-title"><?= htmlspecialchars($disciplineName ?: 'Sessão Teórica') ?></div>
+                                <div class="lesson-card-instructor"><?= $studentCount ?> aluno(s)<?= $className ? ' — ' . htmlspecialchars($className) : '' ?></div>
+                            <?php else: ?>
+                                <div class="lesson-card-title"><?= htmlspecialchars($lesson['student_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                                <div class="lesson-card-instructor"><?= htmlspecialchars($lesson['instructor_name'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                                <?php if ($lesson['vehicle_plate'] ?? ''): ?>
+                                <div class="lesson-card-vehicle"><?= htmlspecialchars($lesson['vehicle_plate'] ?? '', ENT_QUOTES, 'UTF-8') ?></div>
+                                <?php endif; ?>
                             <?php endif; ?>
-                            <?php if ($lesson['status'] === 'cancelada'): ?>
-                            <div class="lesson-card-status">Cancelada</div>
+                            <?php if ($lessonStatus === 'cancelada'): ?>
+                            <div class="lesson-card-status" style="font-size: 0.7rem; padding: 2px 6px; margin-top: 2px;">Cancelada</div>
                             <?php endif; ?>
                         </a>
+                            <?php 
+                            // Se é o último card visível e há mais eventos no cluster, mostrar indicador
+                            $lastVisibleKey = array_keys($visibleLessons)[count($visibleLessons) - 1] ?? null;
+                            if ($lessonIdx === $lastVisibleKey && $hiddenCount > 0):
+                                // Calcular posição do indicador (mesma posição do último card)
+                                $lastLesson = end($visibleLessons);
+                                $lastLessonTime = strtotime($lastLesson['scheduled_date'] . ' ' . $lastLesson['scheduled_time']);
+                                $lastLessonHour = (int)date('H', $lastLessonTime);
+                                $lastLessonMinute = (int)date('i', $lastLessonTime);
+                                $lastMinutesFromStart = (($lastLessonHour - $startHour) * 60) + $lastLessonMinute;
+                                $lastTop = $lastMinutesFromStart * $pixelsPerMinute;
+                                $lastDuration = (int)($lastLesson['duration_minutes'] ?? 50);
+                                $lastHeight = $lastDuration * $pixelsPerMinute;
+                            ?>
+                            <div class="lesson-cluster-indicator" 
+                                 data-cluster-id="cluster-day-<?= $clusterIdx ?>"
+                                 data-cluster-data="<?= htmlspecialchars(json_encode(array_values($cluster)), ENT_QUOTES, 'UTF-8') ?>"
+                                 data-cluster-date="<?= htmlspecialchars($date, ENT_QUOTES, 'UTF-8') ?>"
+                                 style="position: absolute; top: <?= $lastTop + $lastHeight + 2 ?>px; left: 80px; right: 0; padding: 4px 6px; background: #f3f4f6; border: 1px dashed #9ca3af; border-radius: 4px; cursor: pointer; font-size: 0.7rem; text-align: center; z-index: 5; user-select: none; box-sizing: border-box; padding-left: 12px;"
+                                 onclick="handleClusterClick(this)">
+                                <strong>+<?= $hiddenCount ?> agendamento(s) neste horário</strong>
+                            </div>
+                            <?php endif; ?>
+                            <?php endforeach; ?>
                         <?php endforeach; ?>
                     </div>
                 </div>
             </div>
         <?php endif; ?>
+        
+        <!-- Modal para exibir cluster de eventos -->
+        <div id="clusterModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
+            <div style="background: white; border-radius: 8px; padding: var(--spacing-lg); max-width: 600px; max-height: 80vh; overflow-y: auto; width: 90%; box-shadow: 0 4px 20px rgba(0,0,0,0.3);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--spacing-md);">
+                    <h3 style="margin: 0;">Agendamentos no Horário</h3>
+                    <button onclick="closeClusterModal()" style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #666;">&times;</button>
+                </div>
+                <div id="clusterModalContent">
+                    <!-- Conteúdo será preenchido via JavaScript -->
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -504,12 +773,18 @@ $isAdmin = !$isAluno && !$isInstrutor;
     display: flex;
     align-items: center;
     justify-content: center;
+    position: relative;
+    z-index: 10;
+    background: white;
 }
 
 .calendar-day-column {
     position: relative;
     border-right: 1px solid var(--color-border, #e0e0e0);
     border-bottom: 1px solid var(--color-border, #e0e0e0);
+    overflow: visible;
+    padding-left: 8px;
+    padding-right: 4px;
 }
 
 .calendar-day {
@@ -532,11 +807,28 @@ $isAdmin = !$isAluno && !$isInstrutor;
 .calendar-day-timeline {
     position: relative;
     padding-left: 80px;
+    padding-right: 0;
+    overflow: visible;
+}
+
+.calendar-day-timeline::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 80px;
+    background: white;
+    z-index: 2;
+    pointer-events: none;
 }
 
 .calendar-day-hour-mark {
     position: absolute;
-    width: 100%;
+    left: 0;
+    width: 80px;
+    z-index: 3;
+    pointer-events: none;
 }
 
 .calendar-day-hour-label {
@@ -547,7 +839,8 @@ $isAdmin = !$isAluno && !$isInstrutor;
     background: white;
     font-weight: 600;
     font-size: 0.875rem;
-    color: var(--color-text-muted, #666);
+    color: #374151;
+    z-index: 4;
 }
 
 .lesson-card {
@@ -563,6 +856,12 @@ $isAdmin = !$isAluno && !$isInstrutor;
     overflow: hidden;
     box-sizing: border-box;
     z-index: 5;
+}
+
+/* Ajuste de padding para cards na view semanal */
+.calendar-day-column .lesson-card {
+    padding-left: 8px;
+    padding-right: 8px;
 }
 
 .lesson-card:hover {
@@ -627,6 +926,42 @@ $isAdmin = !$isAluno && !$isInstrutor;
     margin-top: 2px;
 }
 
+.lesson-cluster-indicator {
+    transition: all 0.2s;
+    pointer-events: auto;
+    z-index: 5;
+}
+
+.lesson-cluster-indicator:hover {
+    background: #e5e7eb !important;
+    border-color: #6b7280 !important;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    z-index: 7;
+}
+
+/* JavaScript para desabilitar veículo quando tipo=teoria */
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.querySelector('select[name="type"]');
+    const vehicleSelect = document.getElementById('vehicle_filter');
+    
+    if (typeSelect && vehicleSelect) {
+        function updateVehicleFilter() {
+            if (typeSelect.value === 'teoria') {
+                vehicleSelect.disabled = true;
+                vehicleSelect.value = ''; // Limpar seleção
+            } else {
+                vehicleSelect.disabled = false;
+            }
+        }
+        
+        typeSelect.addEventListener('change', updateVehicleFilter);
+        updateVehicleFilter(); // Executar ao carregar
+    }
+});
+</script>
+
 /* Estilos para abas do instrutor (desktop e mobile) */
 .instructor-tabs {
     position: relative;
@@ -689,4 +1024,161 @@ function navigateDate(direction) {
     dateInput.value = currentDate.toISOString().split('T')[0];
     document.getElementById('filtersForm').submit();
 }
+
+// Desabilitar filtro de veículo quando tipo=teoria
+document.addEventListener('DOMContentLoaded', function() {
+    const typeSelect = document.querySelector('select[name="type"]');
+    const vehicleSelect = document.getElementById('vehicle_filter');
+    
+    if (typeSelect && vehicleSelect) {
+        function updateVehicleFilter() {
+            if (typeSelect.value === 'teoria') {
+                vehicleSelect.disabled = true;
+                vehicleSelect.value = ''; // Limpar seleção
+            } else {
+                vehicleSelect.disabled = false;
+            }
+        }
+        
+        typeSelect.addEventListener('change', updateVehicleFilter);
+        updateVehicleFilter(); // Executar ao carregar
+    }
+});
+
+// Função para tratar clique no indicador de cluster
+function handleClusterClick(element) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    const clusterData = element.getAttribute('data-cluster-data');
+    const clusterDate = element.getAttribute('data-cluster-date');
+    
+    if (!clusterData) {
+        console.error('Dados do cluster não encontrados');
+        return;
+    }
+    
+    try {
+        const clusterLessons = JSON.parse(clusterData);
+        showClusterModal(clusterLessons, clusterDate);
+    } catch (e) {
+        console.error('Erro ao parsear dados do cluster:', e);
+        alert('Erro ao carregar agendamentos. Tente novamente.');
+    }
+}
+
+// Função para exibir modal com cluster de eventos
+function showClusterModal(clusterLessons, date) {
+    const modal = document.getElementById('clusterModal');
+    const content = document.getElementById('clusterModalContent');
+    
+    if (!modal || !content) {
+        console.error('Modal não encontrado');
+        return;
+    }
+    
+    if (!clusterLessons || clusterLessons.length === 0) {
+        alert('Nenhum agendamento encontrado.');
+        return;
+    }
+    
+    // Ordenar por horário
+    clusterLessons.sort(function(a, b) {
+        const timeA = new Date(a.scheduled_date + ' ' + a.scheduled_time).getTime();
+        const timeB = new Date(b.scheduled_date + ' ' + b.scheduled_time).getTime();
+        return timeA - timeB;
+    });
+    
+    let html = '<div style="display: flex; flex-direction: column; gap: 12px;">';
+    
+    clusterLessons.forEach(function(lesson) {
+        const isTheory = (lesson.lesson_type === 'teoria') || lesson.theory_session_id;
+        const startTime = lesson.scheduled_time ? lesson.scheduled_time.substring(0, 5) : '00:00';
+        const duration = lesson.duration_minutes || 50;
+        const startDateTime = new Date(lesson.scheduled_date + ' ' + lesson.scheduled_time);
+        const endDateTime = new Date(startDateTime.getTime() + (duration * 60000));
+        const endTime = endDateTime.toTimeString().substring(0, 5);
+        
+        let lessonUrl = '';
+        if (isTheory && lesson.theory_session_id) {
+            lessonUrl = '<?= base_path("turmas-teoricas") ?>/' + (lesson.class_id || '') + '/sessoes/' + lesson.theory_session_id + '/presenca';
+        } else if (isTheory && lesson.class_id) {
+            lessonUrl = '<?= base_path("turmas-teoricas") ?>/' + lesson.class_id;
+        } else {
+            lessonUrl = '<?= base_path("agenda") ?>/' + lesson.id;
+        }
+        
+        const statusLabels = {
+            'agendada': 'Agendada',
+            'scheduled': 'Agendada',
+            'em_andamento': 'Em Andamento',
+            'in_progress': 'Em Andamento',
+            'concluida': 'Concluída',
+            'done': 'Concluída',
+            'cancelada': 'Cancelada',
+            'canceled': 'Cancelada'
+        };
+        const status = lesson.status || lesson.lesson_status || 'agendada';
+        const statusLabel = statusLabels[status] || status;
+        
+        html += '<div style="padding: 12px; border: 1px solid #e0e0e0; border-radius: 6px; background: #f9fafb;">';
+        html += '<div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">';
+        html += '<div style="flex: 1;">';
+        html += '<div style="font-weight: 600; margin-bottom: 4px; color: #111;">' + startTime + ' – ' + endTime + '</div>';
+        
+        if (isTheory) {
+            html += '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">';
+            html += '<span style="display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; font-weight: 600; background: #e0e7ff; color: #3730a3; text-transform: uppercase;">TEÓRICA</span>';
+            html += '<span style="color: #111; font-size: 0.875rem; font-weight: 500;">' + (lesson.discipline_name || 'Sessão Teórica') + '</span>';
+            html += '</div>';
+            html += '<div style="color: #666; font-size: 0.8rem;">' + (lesson.student_count || 1) + ' aluno(s)';
+            if (lesson.class_name) {
+                html += ' — ' + lesson.class_name;
+            }
+            html += '</div>';
+        } else {
+            html += '<div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">';
+            html += '<span style="display: inline-block; padding: 2px 6px; border-radius: 3px; font-size: 0.7rem; font-weight: 600; background: #f3f4f6; color: #374151; text-transform: uppercase;">PRÁTICA</span>';
+            html += '<span style="color: #111; font-size: 0.875rem; font-weight: 500;">' + (lesson.student_name || 'Aluno') + '</span>';
+            html += '</div>';
+            html += '<div style="color: #666; font-size: 0.8rem;">Instrutor: ' + (lesson.instructor_name || 'N/A');
+            if (lesson.vehicle_plate) {
+                html += ' • Veículo: ' + lesson.vehicle_plate;
+            }
+            html += '</div>';
+        }
+        
+        html += '</div>';
+        html += '<div style="margin-left: 12px; flex-shrink: 0;">';
+        html += '<span style="display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 0.75rem; background: #e5e7eb; color: #374151; white-space: nowrap;">' + statusLabel + '</span>';
+        html += '</div>';
+        html += '</div>';
+        html += '<div style="margin-top: 8px;">';
+        html += '<a href="' + lessonUrl + '" style="display: inline-block; padding: 6px 12px; background: #3b82f6; color: white; border-radius: 4px; text-decoration: none; font-size: 0.875rem; transition: background 0.2s;" onmouseover="this.style.background=\'#2563eb\'" onmouseout="this.style.background=\'#3b82f6\'">Ver Detalhes</a>';
+        html += '</div>';
+        html += '</div>';
+    });
+    
+    html += '</div>';
+    content.innerHTML = html;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden'; // Prevenir scroll da página
+}
+
+// Fechar modal
+function closeClusterModal() {
+    const modal = document.getElementById('clusterModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = ''; // Restaurar scroll
+    }
+}
+
+// Fechar modal ao clicar fora
+document.addEventListener('click', function(e) {
+    const modal = document.getElementById('clusterModal');
+    if (modal && e.target === modal) {
+        closeClusterModal();
+    }
+});
 </script>

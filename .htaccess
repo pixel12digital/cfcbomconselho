@@ -6,18 +6,23 @@
 
 # Front Controller - Redirecionar para index.php na raiz
 RewriteEngine On
+RewriteBase /cfc-v.1/
 
 # Permitir acesso direto a arquivos estáticos na raiz
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
+# Permitir acesso direto a public_html/ (deixar o .htaccess de public_html/ gerenciar)
+RewriteCond %{REQUEST_URI} ^/cfc-v\.1/public_html/
+RewriteRule ^ - [L]
+
 # Permitir acesso direto a assets (em public_html/assets/)
-RewriteCond %{REQUEST_URI} ^/public_html/assets/
+RewriteCond %{REQUEST_URI} ^/cfc-v\.1/public_html/assets/
 RewriteRule ^ - [L]
 
 # Permitir acesso direto a assets (também na raiz, se existir symlink)
-RewriteCond %{REQUEST_URI} ^/assets/
+RewriteCond %{REQUEST_URI} ^/cfc-v\.1/assets/
 RewriteRule ^ - [L]
 
 # Redirecionar tudo para index.php na raiz

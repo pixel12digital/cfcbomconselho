@@ -237,6 +237,42 @@
                 </div>
             </div>
 
+            <!-- Seção Curso Teórico (Opcional) -->
+            <div class="form-section-collapsible" style="margin-top: 2rem; margin-bottom: 1rem;">
+                <button type="button" class="form-section-toggle" onclick="toggleTheorySection()" style="width: 100%; text-align: left; padding: 0.75rem; background: var(--color-bg-light); border: 1px solid var(--color-border); border-radius: var(--border-radius); cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-weight: var(--font-weight-semibold);">Curso Teórico (Opcional)</span>
+                    <svg id="theoryToggleIcon" width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="transition: transform 0.2s;">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                    </svg>
+                </button>
+                <div id="theorySection" style="display: none; padding: 1rem; background: var(--color-bg-light); border: 1px solid var(--color-border); border-top: none; border-radius: 0 0 var(--border-radius) var(--border-radius);">
+                    <div class="form-group">
+                        <label class="form-label" for="theory_course_id">Template de Curso Teórico</label>
+                        <select id="theory_course_id" name="theory_course_id" class="form-select" onchange="updateTheoryClasses()">
+                            <option value="">Nenhum (selecionar depois)</option>
+                            <?php foreach ($theoryCourses ?? [] as $course): ?>
+                                <option value="<?= $course['id'] ?>"><?= htmlspecialchars($course['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">Selecione um template de curso teórico (opcional)</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label" for="theory_class_id">Turma Teórica</label>
+                        <select id="theory_class_id" name="theory_class_id" class="form-select">
+                            <option value="">Nenhuma (criar turma depois)</option>
+                            <?php foreach ($theoryClasses ?? [] as $class): ?>
+                                <option value="<?= $class['id'] ?>" data-course-id="<?= $class['course_id'] ?>">
+                                    <?= htmlspecialchars($class['name'] ?: $class['course_name']) ?> 
+                                    (<?= date('d/m/Y', strtotime($class['start_date'] ?? 'now')) ?>)
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="text-muted">Ou selecione uma turma existente para matricular o aluno diretamente</small>
+                    </div>
+                </div>
+            </div>
+
             <!-- Seção Processo DETRAN (Colapsável) -->
             <div class="form-section-collapsible" style="margin-top: 2rem; margin-bottom: 1rem;">
                 <button type="button" class="form-section-toggle" onclick="toggleDetranSection()" style="width: 100%; text-align: left; padding: 0.75rem; background: var(--color-bg-light); border: 1px solid var(--color-border); border-radius: var(--border-radius); cursor: pointer; display: flex; align-items: center; justify-content: space-between;">
@@ -373,6 +409,38 @@ function calculateOutstanding() {
 document.getElementById('enrollmentForm')?.addEventListener('submit', function(e) {
     calculateFinal();
 });
+
+function toggleTheorySection() {
+    const section = document.getElementById('theorySection');
+    const icon = document.getElementById('theoryToggleIcon');
+    const isVisible = section.style.display !== 'none';
+    
+    section.style.display = isVisible ? 'none' : 'block';
+    icon.style.transform = isVisible ? 'rotate(0deg)' : 'rotate(180deg)';
+}
+
+function updateTheoryClasses() {
+    const courseId = document.getElementById('theory_course_id').value;
+    const classSelect = document.getElementById('theory_class_id');
+    
+    // Filtrar turmas por curso selecionado
+    Array.from(classSelect.options).forEach(option => {
+        if (option.value === '') {
+            option.style.display = 'block'; // Sempre mostrar opção "Nenhuma"
+        } else if (courseId && option.getAttribute('data-course-id') !== courseId) {
+            option.style.display = 'none';
+        } else {
+            option.style.display = 'block';
+        }
+    });
+    
+    // Se nenhum curso selecionado, mostrar todas as turmas
+    if (!courseId) {
+        Array.from(classSelect.options).forEach(option => {
+            option.style.display = 'block';
+        });
+    }
+}
 
 function toggleDetranSection() {
     const section = document.getElementById('detranSection');

@@ -85,9 +85,17 @@ class AgendaController extends Controller
         
         // Calcular período baseado na view
         if ($view === 'list') {
-            // Lista: sem filtro de período, buscar todas as aulas
-            $startDate = null;
-            $endDate = null;
+            // Lista: se há data específica, usar EXATAMENTE esse dia (00:00-23:59)
+            // Se não há data, buscar período amplo
+            if ($date) {
+                // Data específica selecionada: usar EXATAMENTE esse dia
+                $startDate = $date;
+                $endDate = $date;
+            } else {
+                // Sem data específica: período amplo
+                $startDate = null;
+                $endDate = null;
+            }
         } elseif ($view === 'day') {
             $startDate = $date;
             $endDate = $date;
@@ -108,8 +116,16 @@ class AgendaController extends Controller
         if ($isAluno && $studentId) {
             $allLessons = $lessonModel->findByStudent($studentId);
             if ($view === 'list') {
-                // Lista: todas as aulas sem filtro
-                $lessons = $allLessons;
+                // Lista: se há data específica, filtrar por data
+                if ($startDate && $endDate) {
+                    $lessons = array_filter($allLessons, function($lesson) use ($startDate, $endDate) {
+                        return $lesson['scheduled_date'] >= $startDate && $lesson['scheduled_date'] <= $endDate;
+                    });
+                    $lessons = array_values($lessons);
+                } else {
+                    // Sem data específica: todas as aulas
+                    $lessons = $allLessons;
+                }
             } else {
                 // Filtrar por período
                 $lessons = array_filter($allLessons, function($lesson) use ($startDate, $endDate) {
@@ -118,52 +134,53 @@ class AgendaController extends Controller
                 $lessons = array_values($lessons);
             }
         } elseif ($isInstrutor && $loggedInstructorId && $view === 'list') {
-            // Para INSTRUTOR em view=list, buscar todas as aulas do instrutor
-            $db = Database::getInstance()->getConnection();
-            $today = date('Y-m-d');
-            $now = date('H:i:s');
-            
-            // Construir query baseada na aba selecionada
-            $sql = "SELECT l.*,
-                           s.name as student_name,
-                           v.plate as vehicle_plate
-                    FROM lessons l
-                    INNER JOIN students s ON l.student_id = s.id
-                    LEFT JOIN vehicles v ON l.vehicle_id = v.id
-                    WHERE l.instructor_id = ?
-                      AND l.cfc_id = ?";
-            
-            $params = [$loggedInstructorId, $this->cfcId];
-            
-            if ($tab === 'proximas') {
-                // Aulas futuras (agendadas ou em andamento)
-                $sql .= " AND l.status IN ('agendada', 'em_andamento')
-                          AND (l.scheduled_date > ? OR (l.scheduled_date = ? AND l.scheduled_time >= ?))";
-                $params[] = $today;
-                $params[] = $today;
-                $params[] = $now;
-                $sql .= " ORDER BY l.scheduled_date ASC, l.scheduled_time ASC";
-            } elseif ($tab === 'historico') {
-                // Aulas concluídas ou canceladas
-                $sql .= " AND l.status IN ('concluida', 'cancelada', 'no_show')";
-                $sql .= " ORDER BY l.scheduled_date DESC, l.scheduled_time DESC";
-            } else {
-                // Todas as aulas
-                $sql .= " ORDER BY l.scheduled_date DESC, l.scheduled_time DESC";
+            // Para INSTRUTOR em view=list, usar método com dedupe de sessões teóricas
+            // Adicionar filtro de data se houver
+            $instructorFilters = ['tab' => $tab];
+            if ($startDate && $endDate) {
+                $instructorFilters['start_date'] = $startDate;
+                $instructorFilters['end_date'] = $endDate;
             }
-            
-            $stmt = $db->prepare($sql);
-            $stmt->execute($params);
-            $lessons = $stmt->fetchAll();
+            $lessons = $lessonModel->findByInstructorWithTheoryDedupe(
+                $loggedInstructorId, 
+                $this->cfcId, 
+                $instructorFilters
+            );
         } else {
-            // Para outros perfis ou views diferentes
+            // Para admin/secretaria: usar método com dedupe de teóricas
             $filters = array_filter([
                 'instructor_id' => $instructorId,
                 'vehicle_id' => $vehicleId,
                 'status' => $status,
+                'type' => $_GET['type'] ?? null,
                 'show_canceled' => $showCanceled
             ]);
-            $lessons = $lessonModel->findByPeriod($this->cfcId, $startDate, $endDate, $filters);
+            
+            // Ajustar período se necessário
+            if ($view === 'list') {
+                // Se já calculamos período baseado na data, usar ele
+                // Senão, usar período amplo
+                if (!$startDate || !$endDate) {
+                    $startDate = date('Y-m-d', strtotime('-6 months'));
+                    $endDate = date('Y-m-d', strtotime('+6 months'));
+                }
+            } elseif (!$startDate || !$endDate) {
+                // Se não há período definido, usar data atual como referência
+                $startDate = $startDate ?: date('Y-m-d', strtotime('-1 month'));
+                $endDate = $endDate ?: date('Y-m-d', strtotime('+1 month'));
+            }
+            
+            $lessons = $lessonModel->findByPeriodWithTheoryDedupe($this->cfcId, $startDate, $endDate, $filters);
+            
+            // Log SQL para auditoria quando view=list e date está definido
+            if ($view === 'list' && $date && isset($_GET['date'])) {
+                error_log("=== AGENDA SQL AUDIT ===");
+                error_log("View: list, Date: {$date}");
+                error_log("StartDate: {$startDate}, EndDate: {$endDate}");
+                error_log("Filters: " . json_encode($filters));
+                error_log("Lessons count: " . count($lessons));
+                // A SQL será logada dentro do método findByPeriodWithTheoryDedupe
+            }
         }
         
         $instructors = ($isAluno || $isInstrutor) ? [] : $instructorModel->findAvailableForAgenda($this->cfcId);
@@ -182,6 +199,7 @@ class AgendaController extends Controller
                 'instructor_id' => $instructorId,
                 'vehicle_id' => $vehicleId,
                 'status' => $status,
+                'type' => $_GET['type'] ?? null,
                 'show_canceled' => $showCanceled
             ],
             'showCanceled' => $showCanceled,

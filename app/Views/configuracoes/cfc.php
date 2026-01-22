@@ -72,7 +72,7 @@
             </div>
         </div>
 
-        <form method="POST" action="<?= base_path('configuracoes/cfc/logo/upload') ?>" enctype="multipart/form-data">
+        <form id="logoUploadForm" method="POST" action="<?= base_path('configuracoes/cfc/logo/upload') ?>" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 
             <div class="form-group">
@@ -84,6 +84,7 @@
                     type="file" 
                     name="logo" 
                     id="logo" 
+                    form="logoUploadForm"
                     class="form-input" 
                     accept="image/jpeg,image/jpg,image/png,image/webp"
                     <?= !$hasLogo ? 'required' : '' ?>
@@ -95,136 +96,166 @@
             </div>
 
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
+                <button id="logoUploadBtn" type="button" class="btn btn-primary">
                     <?= $hasLogo ? 'Substituir Logo' : 'Fazer Upload' ?>
                 </button>
             </div>
         </form>
-
+        
         <script>
-        // Preview do logo antes do upload
-        const logoInput = document.getElementById('logo');
-        logoInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            console.log('[UPLOAD DEBUG] Arquivo selecionado:', {
-                name: file?.name,
-                size: file?.size,
-                type: file?.type,
-                lastModified: file?.lastModified
-            });
+        // Preview e validação do upload de logo - SOLUÇÃO SIMPLIFICADA
+        (function() {
+            'use strict';
             
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    document.getElementById('logo-preview').src = e.target.result;
-                    document.getElementById('logo-preview-name').textContent = file.name + ' (' + (file.size / 1024).toFixed(2) + ' KB)';
-                    document.getElementById('logo-preview-container').style.display = 'block';
-                };
-                reader.readAsDataURL(file);
-            } else {
-                document.getElementById('logo-preview-container').style.display = 'none';
-            }
-        });
-
-        // Debug do form submit com interceptação AJAX
-        const uploadForm = document.querySelector('form[action*="logo/upload"]');
-        if (uploadForm) {
-            uploadForm.addEventListener('submit', function(e) {
-                const formData = new FormData(uploadForm);
-                const file = logoInput.files[0];
+            document.addEventListener('DOMContentLoaded', function() {
+                console.log('[UPLOAD] Script carregado');
                 
-                console.log('[UPLOAD DEBUG] ========================================');
-                console.log('[UPLOAD DEBUG] Form submit iniciado');
-                console.log('[UPLOAD DEBUG] Action:', uploadForm.action);
-                console.log('[UPLOAD DEBUG] Method:', uploadForm.method);
-                console.log('[UPLOAD DEBUG] Enctype:', uploadForm.enctype);
-                console.log('[UPLOAD DEBUG] Arquivo selecionado:', {
-                    hasFile: !!file,
-                    fileName: file?.name,
-                    fileSize: file?.size,
-                    fileSizeMB: file ? (file.size / 1024 / 1024).toFixed(2) + ' MB' : 'N/A',
-                    fileType: file?.type
-                });
-                console.log('[UPLOAD DEBUG] FormData keys:', Array.from(formData.keys()));
-                console.log('[UPLOAD DEBUG] CSRF Token:', formData.get('csrf_token') ? 'presente' : 'ausente');
-                console.log('[UPLOAD DEBUG] ========================================');
-
-                // Verificar se arquivo foi selecionado
-                if (!file) {
-                    console.error('[UPLOAD DEBUG] ❌ ERRO: Nenhum arquivo selecionado!');
-                    e.preventDefault();
-                    alert('Por favor, selecione um arquivo antes de fazer upload.');
-                    return false;
+                var logoInput = document.getElementById('logo');
+                var form = document.getElementById('logoUploadForm');
+                var uploadBtn = document.getElementById('logoUploadBtn');
+                
+                if (!logoInput || !form || !uploadBtn) {
+                    console.error('[UPLOAD] Elementos não encontrados:', {
+                        logoInput: !!logoInput,
+                        form: !!form,
+                        uploadBtn: !!uploadBtn
+                    });
+                    return;
                 }
-
-                // Verificar tamanho (5MB)
-                if (file.size > 5 * 1024 * 1024) {
-                    console.error('[UPLOAD DEBUG] ❌ ERRO: Arquivo muito grande!', {
+                
+                console.log('[UPLOAD] Elementos encontrados:', {
+                    logoInput: !!logoInput,
+                    form: !!form,
+                    uploadBtn: !!uploadBtn,
+                    formAction: form.action,
+                    uploadBtnType: uploadBtn.type,
+                    uploadBtnId: uploadBtn.id,
+                    uploadBtnParent: uploadBtn.parentElement ? uploadBtn.parentElement.tagName : 'N/A'
+                });
+                
+                // Preview do logo
+                logoInput.addEventListener('change', function(e) {
+                    var file = e.target.files[0];
+                    if (file) {
+                        console.log('[UPLOAD] Arquivo selecionado:', file.name, file.size, 'bytes');
+                        var reader = new FileReader();
+                        reader.onload = function(e) {
+                            var preview = document.getElementById('logo-preview');
+                            var previewName = document.getElementById('logo-preview-name');
+                            var previewContainer = document.getElementById('logo-preview-container');
+                            if (preview) preview.src = e.target.result;
+                            if (previewName) previewName.textContent = file.name + ' (' + (file.size / 1024).toFixed(2) + ' KB)';
+                            if (previewContainer) previewContainer.style.display = 'block';
+                        };
+                        reader.readAsDataURL(file);
+                    }
+                });
+                
+                // Adicionar listener de clique com CAPTURE phase para garantir que seja executado primeiro
+                console.log('[UPLOAD] Adicionando listener de clique ao botão...');
+                
+                // Função para fazer o upload
+                function handleUpload(e) {
+                    console.log('[UPLOAD] ===== BOTÃO CLICADO - EVENTO CAPTURADO! =====');
+                    console.log('[UPLOAD] Detalhes do evento:', {
+                        type: e.type,
+                        target: e.target ? e.target.id : 'N/A',
+                        currentTarget: e.currentTarget ? e.currentTarget.id : 'N/A',
+                        defaultPrevented: e.defaultPrevented,
+                        bubbles: e.bubbles,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    // SEMPRE prevenir comportamento padrão
+                    if (e && e.preventDefault) {
+                        e.preventDefault();
+                    }
+                    if (e && e.stopPropagation) {
+                        e.stopPropagation();
+                    }
+                    if (e && e.stopImmediatePropagation) {
+                        e.stopImmediatePropagation();
+                    }
+                    
+                    console.log('[UPLOAD] Verificando arquivo...');
+                    // Verificar se há arquivo selecionado
+                    if (!logoInput || !logoInput.files || logoInput.files.length === 0) {
+                        alert('Por favor, selecione um arquivo antes de fazer upload.');
+                        console.warn('[UPLOAD] Submit bloqueado: nenhum arquivo selecionado');
+                        return false;
+                    }
+                    
+                    var file = logoInput.files[0];
+                    console.log('[UPLOAD] Arquivo encontrado, preparando submit:', {
+                        name: file.name,
                         size: file.size,
-                        sizeMB: (file.size / 1024 / 1024).toFixed(2) + ' MB',
-                        maxSize: '5 MB'
+                        type: file.type,
+                        formAction: form.action,
+                        formMethod: form.method,
+                        formEnctype: form.enctype
                     });
-                    e.preventDefault();
-                    alert('Arquivo muito grande. Máximo 5MB.');
+                    
+                    // Verificar se form existe
+                    if (!form) {
+                        console.error('[UPLOAD] Form não encontrado!');
+                        alert('Erro: formulário não encontrado.');
+                        return false;
+                    }
+                    
+                    // Submit DIRETO do form correto - sem interceptação
+                    console.log('[UPLOAD] Executando form.submit()...');
+                    try {
+                        form.submit();
+                        console.log('[UPLOAD] form.submit() executado com sucesso');
+                    } catch (error) {
+                        console.error('[UPLOAD] Erro ao executar form.submit():', error);
+                        alert('Erro ao enviar formulário: ' + error.message);
+                        return false;
+                    }
+                    
                     return false;
                 }
-
-                console.log('[UPLOAD DEBUG] ✅ Validações passaram, enviando requisição...');
                 
-                // Interceptar via AJAX para capturar resposta
-                e.preventDefault();
+                // Adicionar listener no CAPTURE phase
+                uploadBtn.addEventListener('click', handleUpload, true);
                 
-                const submitButton = uploadForm.querySelector('button[type="submit"]');
-                const originalText = submitButton.textContent;
-                submitButton.disabled = true;
-                submitButton.textContent = 'Enviando...';
+                // Também adicionar listener no bubbling phase como backup
+                uploadBtn.addEventListener('click', function(e) {
+                    console.log('[UPLOAD] Botão clicado (bubbling phase - backup)');
+                }, false);
                 
-                fetch(uploadForm.action, {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'same-origin'
-                })
-                .then(function(response) {
-                    console.log('[UPLOAD DEBUG] ========================================');
-                    console.log('[UPLOAD DEBUG] Resposta recebida');
-                    console.log('[UPLOAD DEBUG] Status:', response.status, response.statusText);
-                    console.log('[UPLOAD DEBUG] Headers:', Object.fromEntries(response.headers.entries()));
+                // Adicionar onclick diretamente como último recurso
+                uploadBtn.onclick = function(e) {
+                    console.log('[UPLOAD] Botão clicado (onclick direto)');
+                    return handleUpload(e || window.event);
+                };
+                
+                console.log('[UPLOAD] Listeners adicionados ao botão (capture, bubble, onclick)');
+                console.log('[UPLOAD] Botão pronto. ID:', uploadBtn.id, 'Type:', uploadBtn.type);
+                
+                // Validação antes de submit do form de upload (backup)
+                form.addEventListener('submit', function(e) {
+                    console.log('[UPLOAD] Submit do form logoUploadForm disparado');
                     
-                    // Ler headers de debug
-                    const debugHeaders = {};
-                    response.headers.forEach(function(value, key) {
-                        if (key.toLowerCase().startsWith('x-upload-debug')) {
-                            debugHeaders[key] = value;
-                        }
+                    if (!logoInput.files || logoInput.files.length === 0) {
+                        e.preventDefault();
+                        alert('Por favor, selecione um arquivo antes de fazer upload.');
+                        console.warn('[UPLOAD] Submit bloqueado: nenhum arquivo selecionado');
+                        return false;
+                    }
+                    
+                    var file = logoInput.files[0];
+                    console.log('[UPLOAD] Form sendo submetido com arquivo:', {
+                        name: file.name,
+                        size: file.size,
+                        type: file.type,
+                        formAction: form.action,
+                        formMethod: form.method,
+                        formEnctype: form.enctype
                     });
-                    if (Object.keys(debugHeaders).length > 0) {
-                        console.log('[UPLOAD DEBUG] Headers de debug:', debugHeaders);
-                    }
-                    
-                    console.log('[UPLOAD DEBUG] ========================================');
-                    
-                    // Redirecionar para a página (mesmo comportamento do form submit)
-                    if (response.redirected || response.status === 302 || response.status === 301) {
-                        console.log('[UPLOAD DEBUG] Redirect detectado, recarregando página...');
-                        window.location.href = response.url || window.location.href;
-                    } else {
-                        // Se não houver redirect, recarregar a página atual
-                        window.location.reload();
-                    }
-                })
-                .catch(function(error) {
-                    console.error('[UPLOAD DEBUG] ❌ ERRO na requisição:', error);
-                    submitButton.disabled = false;
-                    submitButton.textContent = originalText;
-                    alert('Erro ao fazer upload: ' + error.message);
                 });
-                
-                return false;
             });
-
-        } else {
-            console.error('[UPLOAD DEBUG] ❌ Form não encontrado!');
-        }
+        })();
         </script>
 
         <?php if ($hasLogo): ?>
@@ -244,7 +275,7 @@
     <div class="card-body">
         <h2 style="margin-bottom: var(--spacing-md); font-size: 1.25rem;">Informações do CFC</h2>
         
-        <form method="POST" action="<?= base_path('configuracoes/cfc/salvar') ?>">
+        <form id="salvarForm" method="POST" action="<?= base_path('configuracoes/cfc/salvar') ?>">
             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 
             <div class="form-group">
@@ -277,8 +308,143 @@
                 </div>
             <?php endif; ?>
 
+            <div class="form-group">
+                <label class="form-label">Endereço</label>
+                
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                    <div>
+                        <label class="form-label" for="endereco_logradouro" style="font-size: 0.875rem; font-weight: 500;">Logradouro</label>
+                        <input 
+                            type="text" 
+                            name="endereco_logradouro"
+                            id="endereco_logradouro"
+                            class="form-input" 
+                            value="<?= htmlspecialchars($cfc['endereco_logradouro'] ?? '') ?>" 
+                            maxlength="255"
+                            placeholder="Rua, Avenida, etc."
+                        >
+                    </div>
+                    <div>
+                        <label class="form-label" for="endereco_numero" style="font-size: 0.875rem; font-weight: 500;">Número</label>
+                        <input 
+                            type="text" 
+                            name="endereco_numero"
+                            id="endereco_numero"
+                            class="form-input" 
+                            value="<?= htmlspecialchars($cfc['endereco_numero'] ?? '') ?>" 
+                            maxlength="20"
+                            placeholder="123"
+                        >
+                    </div>
+                </div>
+
+                <div style="margin-bottom: var(--spacing-md);">
+                    <label class="form-label" for="endereco_complemento" style="font-size: 0.875rem; font-weight: 500;">Complemento</label>
+                    <input 
+                        type="text" 
+                        name="endereco_complemento"
+                        id="endereco_complemento"
+                        class="form-input" 
+                        value="<?= htmlspecialchars($cfc['endereco_complemento'] ?? '') ?>" 
+                        maxlength="150"
+                        placeholder="Apto, Bloco, etc."
+                    >
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--spacing-md); margin-bottom: var(--spacing-md);">
+                    <div>
+                        <label class="form-label" for="endereco_bairro" style="font-size: 0.875rem; font-weight: 500;">Bairro</label>
+                        <input 
+                            type="text" 
+                            name="endereco_bairro"
+                            id="endereco_bairro"
+                            class="form-input" 
+                            value="<?= htmlspecialchars($cfc['endereco_bairro'] ?? '') ?>" 
+                            maxlength="120"
+                            placeholder="Nome do bairro"
+                        >
+                    </div>
+                    <div>
+                        <label class="form-label" for="endereco_cep" style="font-size: 0.875rem; font-weight: 500;">CEP</label>
+                        <input 
+                            type="text" 
+                            name="endereco_cep"
+                            id="endereco_cep"
+                            class="form-input" 
+                            value="<?= htmlspecialchars($cfc['endereco_cep'] ?? '') ?>" 
+                            maxlength="10"
+                            placeholder="00000-000"
+                        >
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 2fr 1fr; gap: var(--spacing-md);">
+                    <div>
+                        <label class="form-label" for="endereco_cidade" style="font-size: 0.875rem; font-weight: 500;">Cidade</label>
+                        <input 
+                            type="text" 
+                            name="endereco_cidade"
+                            id="endereco_cidade"
+                            class="form-input" 
+                            value="<?= htmlspecialchars($cfc['endereco_cidade'] ?? '') ?>" 
+                            maxlength="120"
+                            placeholder="Nome da cidade"
+                        >
+                    </div>
+                    <div>
+                        <label class="form-label" for="endereco_uf" style="font-size: 0.875rem; font-weight: 500;">UF</label>
+                        <input 
+                            type="text" 
+                            name="endereco_uf"
+                            id="endereco_uf"
+                            class="form-input" 
+                            value="<?= htmlspecialchars($cfc['endereco_uf'] ?? '') ?>" 
+                            maxlength="2"
+                            placeholder="SP"
+                            style="text-transform: uppercase;"
+                        >
+                    </div>
+                </div>
+
+                <small class="form-hint" style="margin-top: var(--spacing-xs); display: block;">
+                    Preencha os campos de endereço do CFC.
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="telefone">Telefone</label>
+                <input 
+                    type="text" 
+                    name="telefone"
+                    id="telefone"
+                    class="form-input" 
+                    value="<?= htmlspecialchars($cfc['telefone'] ?? '') ?>" 
+                    maxlength="20"
+                    placeholder="(00) 0000-0000"
+                >
+                <small class="form-hint">
+                    Telefone de contato do CFC.
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="email">E-mail</label>
+                <input 
+                    type="email" 
+                    name="email"
+                    id="email"
+                    class="form-input" 
+                    value="<?= htmlspecialchars($cfc['email'] ?? '') ?>" 
+                    maxlength="255"
+                    placeholder="contato@cfc.com.br"
+                >
+                <small class="form-hint">
+                    E-mail de contato do CFC.
+                </small>
+            </div>
+
             <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
+                <button id="salvarBtn" type="submit" class="btn btn-primary">
                     Salvar Informações
                 </button>
             </div>

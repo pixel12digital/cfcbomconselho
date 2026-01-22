@@ -317,6 +317,83 @@ class ConfiguracoesController extends Controller
     }
 
     /**
+     * Excluir disciplina e todos os dados relacionados
+     */
+    public function disciplinaExcluir($id)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect(base_url('configuracoes/disciplinas'));
+        }
+
+        if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = 'Token CSRF inválido.';
+            redirect(base_url('configuracoes/disciplinas'));
+        }
+
+        $disciplineModel = new TheoryDiscipline();
+        $discipline = $disciplineModel->find($id);
+
+        if (!$discipline || $discipline['cfc_id'] != $this->cfcId) {
+            $_SESSION['error'] = 'Disciplina não encontrada.';
+            redirect(base_url('configuracoes/disciplinas'));
+        }
+
+        // Salvar dados para auditoria
+        $dataBefore = $discipline;
+
+        try {
+            // 1. Deletar todas as sessões teóricas relacionadas
+            $sessions = $this->query(
+                "SELECT id FROM theory_sessions WHERE discipline_id = ?",
+                [$id]
+            )->fetchAll();
+            
+            foreach ($sessions as $session) {
+                // Deletar presenças relacionadas (tem CASCADE, mas garantindo)
+                $this->query(
+                    "DELETE FROM theory_attendance WHERE session_id = ?",
+                    [$session['id']]
+                );
+                // Deletar sessão
+                $this->query(
+                    "DELETE FROM theory_sessions WHERE id = ?",
+                    [$session['id']]
+                );
+            }
+
+            // 2. Deletar relações com cursos (já tem CASCADE, mas garantindo)
+            $this->query(
+                "DELETE FROM theory_course_disciplines WHERE discipline_id = ?",
+                [$id]
+            );
+
+            // 3. Registrar auditoria antes de deletar
+            $this->auditService->logDelete('theory_disciplines', $id, $dataBefore);
+
+            // 4. Deletar a disciplina
+            $disciplineModel->delete($id);
+
+            $_SESSION['success'] = 'Disciplina e todos os dados relacionados foram excluídos com sucesso!';
+        } catch (\Exception $e) {
+            error_log("Erro ao excluir disciplina: " . $e->getMessage());
+            $_SESSION['error'] = 'Erro ao excluir disciplina: ' . $e->getMessage();
+        }
+
+        redirect(base_url('configuracoes/disciplinas'));
+    }
+
+    /**
+     * Método auxiliar para executar queries diretas
+     */
+    private function query($sql, $params = [])
+    {
+        $db = \App\Config\Database::getInstance()->getConnection();
+        $stmt = $db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt;
+    }
+
+    /**
      * Lista cursos
      */
     public function cursos()
@@ -544,6 +621,98 @@ class ConfiguracoesController extends Controller
         redirect(base_url('configuracoes/cursos'));
     }
 
+    /**
+     * Excluir curso e todos os dados relacionados
+     */
+    public function cursoExcluir($id)
+    {
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect(base_url('configuracoes/cursos'));
+        }
+
+        if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = 'Token CSRF inválido.';
+            redirect(base_url('configuracoes/cursos'));
+        }
+
+        $courseModel = new TheoryCourse();
+        $course = $courseModel->find($id);
+
+        if (!$course || $course['cfc_id'] != $this->cfcId) {
+            $_SESSION['error'] = 'Curso não encontrado.';
+            redirect(base_url('configuracoes/cursos'));
+        }
+
+        // Salvar dados para auditoria
+        $dataBefore = $course;
+
+        try {
+            // 1. Deletar todas as turmas relacionadas (isso deletará automaticamente sessões, matrículas e presenças)
+            $classes = $this->query(
+                "SELECT id FROM theory_classes WHERE course_id = ?",
+                [$id]
+            )->fetchAll();
+            
+            foreach ($classes as $class) {
+                // Deletar presenças (através das sessões)
+                $sessions = $this->query(
+                    "SELECT id FROM theory_sessions WHERE class_id = ?",
+                    [$class['id']]
+                )->fetchAll();
+                
+                foreach ($sessions as $session) {
+                    $this->query(
+                        "DELETE FROM theory_attendance WHERE session_id = ?",
+                        [$session['id']]
+                    );
+                }
+                
+                // Deletar sessões
+                $this->query(
+                    "DELETE FROM theory_sessions WHERE class_id = ?",
+                    [$class['id']]
+                );
+                
+                // Deletar matrículas (já tem CASCADE, mas garantindo)
+                $this->query(
+                    "DELETE FROM theory_enrollments WHERE class_id = ?",
+                    [$class['id']]
+                );
+                
+                // Deletar turma
+                $this->query(
+                    "DELETE FROM theory_classes WHERE id = ?",
+                    [$class['id']]
+                );
+            }
+
+            // 2. Deletar relações com disciplinas (já tem CASCADE, mas garantindo)
+            $this->query(
+                "DELETE FROM theory_course_disciplines WHERE course_id = ?",
+                [$id]
+            );
+
+            // 3. Atualizar matrículas para remover referência ao curso (ON DELETE SET NULL)
+            $this->query(
+                "UPDATE enrollments SET theory_course_id = NULL WHERE theory_course_id = ?",
+                [$id]
+            );
+
+            // 4. Registrar auditoria antes de deletar
+            $this->auditService->logDelete('theory_courses', $id, $dataBefore);
+
+            // 5. Deletar o curso
+            $courseModel->delete($id);
+
+            $_SESSION['success'] = 'Curso e todos os dados relacionados foram excluídos com sucesso!';
+        } catch (\Exception $e) {
+            error_log("Erro ao excluir curso: " . $e->getMessage());
+            $_SESSION['error'] = 'Erro ao excluir curso: ' . $e->getMessage();
+        }
+
+        redirect(base_url('configuracoes/cursos'));
+    }
+
     // ============================================
     // MÓDULO: CONFIGURAÇÕES DO CFC (LOGO PWA)
     // ============================================
@@ -553,13 +722,50 @@ class ConfiguracoesController extends Controller
      */
     public function cfc()
     {
+        // FASE 8: Log de exibição (não só de upload)
+        $logFile = dirname(__DIR__, 2) . '/storage/logs/display_logo.log';
+        $logDir = dirname($logFile);
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        
         $cfcModel = new Cfc();
         $cfc = $cfcModel->getCurrent();
+        
+        $hasLogo = !empty($cfc['logo_path']);
+        $logoPath = $cfc['logo_path'] ?? null;
+        $logoUrl = null;
+        $fileExists = false;
+        
+        if ($hasLogo && $logoPath) {
+            $filepath = dirname(__DIR__, 2) . '/' . $logoPath;
+            $fileExists = file_exists($filepath);
+            
+            // FASE 7: URL com cache buster baseado em updated_at
+            $cacheBuster = $cfc['updated_at'] ? strtotime($cfc['updated_at']) : time();
+            $logoUrl = base_path('configuracoes/cfc/logo') . '?v=' . $cacheBuster;
+        }
+        
+        // Log de exibição
+        $displayLog = [
+            'timestamp' => date('Y-m-d H:i:s'),
+            'cfc_id' => $cfc['id'] ?? 'N/A',
+            'logo_path' => $logoPath,
+            'hasLogo' => $hasLogo,
+            'fileExists' => $fileExists,
+            'logoUrl' => $logoUrl,
+            'docroot' => $_SERVER['DOCUMENT_ROOT'] ?? 'N/A',
+            'script_dir' => __DIR__,
+            'project_root' => dirname(__DIR__, 2)
+        ];
+        @file_put_contents($logFile, "=== DISPLAY LOGO ===\n" . json_encode($displayLog, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
 
         $data = [
             'pageTitle' => 'Configurações do CFC',
             'cfc' => $cfc,
-            'hasLogo' => !empty($cfc['logo_path']),
+            'hasLogo' => $hasLogo,
+            'logoUrl' => $logoUrl,
+            'fileExists' => $fileExists,
             'iconsExist' => $cfc ? PwaIconGenerator::iconsExist($cfc['id']) : false
         ];
 
@@ -571,13 +777,14 @@ class ConfiguracoesController extends Controller
      */
     public function uploadLogo()
     {
-        // Log OBRIGATÓRIO no início - antes de qualquer verificação
+        // FASE 4: Log OBRIGATÓRIO na PRIMEIRA LINHA - antes de QUALQUER coisa
         $logFile = dirname(__DIR__, 2) . '/storage/logs/upload_logo.log';
         $logDir = dirname($logFile);
         if (!is_dir($logDir)) {
             @mkdir($logDir, 0755, true);
         }
         
+        // Log detalhado na primeira linha
         $initialLog = [
             'timestamp' => date('Y-m-d H:i:s'),
             'method_called' => 'uploadLogo',
@@ -588,9 +795,16 @@ class ConfiguracoesController extends Controller
             'FILES_keys' => array_keys($_FILES),
             'FILES_count' => count($_FILES),
             'has_logo_in_FILES' => isset($_FILES['logo']),
+            'FILES_logo' => isset($_FILES['logo']) ? [
+                'name' => $_FILES['logo']['name'] ?? 'N/A',
+                'type' => $_FILES['logo']['type'] ?? 'N/A',
+                'size' => $_FILES['logo']['size'] ?? 0,
+                'error' => $_FILES['logo']['error'] ?? 'N/A',
+                'tmp_name' => $_FILES['logo']['tmp_name'] ?? 'N/A'
+            ] : 'N/A',
             'csrf_token_present' => isset($_POST['csrf_token'])
         ];
-        @file_put_contents($logFile, "=== UPLOAD REQUEST START ===\n" . json_encode($initialLog, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+        @file_put_contents($logFile, "=== UPLOAD REQUEST START ===\n" . json_encode($initialLog, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
         
         // Headers de debug para console do navegador
         header('X-Upload-Debug: method_called=uploadLogo');
@@ -636,19 +850,104 @@ class ConfiguracoesController extends Controller
 
         $file = $_FILES['logo'];
         
-        // Verificar erro de upload
-        if ($file['error'] !== UPLOAD_ERR_OK) {
-            $uploadErrors = [
-                UPLOAD_ERR_INI_SIZE => 'Arquivo excede o tamanho máximo permitido pelo PHP (upload_max_filesize).',
-                UPLOAD_ERR_FORM_SIZE => 'Arquivo excede o tamanho máximo do formulário (MAX_FILE_SIZE).',
-                UPLOAD_ERR_PARTIAL => 'Upload parcial do arquivo. Tente novamente.',
-                UPLOAD_ERR_NO_FILE => 'Nenhum arquivo foi enviado.',
-                UPLOAD_ERR_NO_TMP_DIR => 'Diretório temporário não encontrado no servidor.',
-                UPLOAD_ERR_CANT_WRITE => 'Erro ao escrever arquivo no disco. Verifique permissões.',
-                UPLOAD_ERR_EXTENSION => 'Upload bloqueado por extensão do PHP.'
-            ];
-            $errorMsg = $uploadErrors[$file['error']] ?? 'Erro desconhecido no upload (código: ' . $file['error'] . ').';
+        // DEBUG DETERMINÍSTICO: Log completo de $_FILES
+        $logFile = dirname(__DIR__, 2) . '/storage/logs/upload_logo.log';
+        $logDir = dirname($logFile);
+        if (!is_dir($logDir)) {
+            @mkdir($logDir, 0755, true);
+        }
+        
+        // Log completo de $_FILES (print_r para ver estrutura exata)
+        $filesDebug = [
+            '_FILES_complete' => print_r($_FILES, true),
+            '_FILES_keys' => array_keys($_FILES),
+            '_FILES_logo_raw' => $file,
+            'php_upload_config' => [
+                'file_uploads' => ini_get('file_uploads'),
+                'upload_max_filesize' => ini_get('upload_max_filesize'),
+                'post_max_size' => ini_get('post_max_size'),
+                'upload_tmp_dir' => ini_get('upload_tmp_dir') ?: sys_get_temp_dir(),
+                'upload_tmp_dir_exists' => is_dir(ini_get('upload_tmp_dir') ?: sys_get_temp_dir()),
+                'upload_tmp_dir_writable' => is_writable(ini_get('upload_tmp_dir') ?: sys_get_temp_dir()),
+                'max_file_uploads' => ini_get('max_file_uploads'),
+                'memory_limit' => ini_get('memory_limit')
+            ]
+        ];
+        @file_put_contents($logFile, "=== DEBUG: $_FILES COMPLETO ===\n" . json_encode($filesDebug, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+        
+        // Mapeamento completo dos UPLOAD_ERR_*
+        $uploadErrorsMap = [
+            UPLOAD_ERR_OK => 'OK - Nenhum erro',
+            UPLOAD_ERR_INI_SIZE => 'Arquivo excede upload_max_filesize (' . ini_get('upload_max_filesize') . ')',
+            UPLOAD_ERR_FORM_SIZE => 'Arquivo excede MAX_FILE_SIZE do formulário',
+            UPLOAD_ERR_PARTIAL => 'Upload parcial - arquivo não foi completamente transferido',
+            UPLOAD_ERR_NO_FILE => 'Nenhum arquivo foi enviado',
+            UPLOAD_ERR_NO_TMP_DIR => 'Diretório temporário não encontrado (upload_tmp_dir)',
+            UPLOAD_ERR_CANT_WRITE => 'Erro ao escrever arquivo no disco (permissões ou espaço)',
+            UPLOAD_ERR_EXTENSION => 'Upload bloqueado por extensão do PHP'
+        ];
+        
+        // Verificar erro de upload com log detalhado
+        $errorCode = $file['error'];
+        $errorInfo = [
+            'error_code' => $errorCode,
+            'error_message' => $uploadErrorsMap[$errorCode] ?? 'Erro desconhecido (código: ' . $errorCode . ')',
+            'error_constant' => array_search($errorCode, [
+                UPLOAD_ERR_OK => 'UPLOAD_ERR_OK',
+                UPLOAD_ERR_INI_SIZE => 'UPLOAD_ERR_INI_SIZE',
+                UPLOAD_ERR_FORM_SIZE => 'UPLOAD_ERR_FORM_SIZE',
+                UPLOAD_ERR_PARTIAL => 'UPLOAD_ERR_PARTIAL',
+                UPLOAD_ERR_NO_FILE => 'UPLOAD_ERR_NO_FILE',
+                UPLOAD_ERR_NO_TMP_DIR => 'UPLOAD_ERR_NO_TMP_DIR',
+                UPLOAD_ERR_CANT_WRITE => 'UPLOAD_ERR_CANT_WRITE',
+                UPLOAD_ERR_EXTENSION => 'UPLOAD_ERR_EXTENSION'
+            ]) ?: 'UNKNOWN'
+        ];
+        @file_put_contents($logFile, "=== DEBUG: UPLOAD ERROR ANALYSIS ===\n" . json_encode($errorInfo, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+        
+        if ($errorCode !== UPLOAD_ERR_OK) {
+            $errorMsg = $uploadErrorsMap[$errorCode] ?? 'Erro desconhecido no upload (código: ' . $errorCode . ').';
+            @file_put_contents($logFile, "=== UPLOAD ERROR: REDIRECTING ===\n" . json_encode(['error' => $errorMsg, 'error_code' => $errorCode], JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
             $_SESSION['error'] = $errorMsg;
+            redirect(base_url('configuracoes/cfc'));
+        }
+        
+        // DEBUG: Validação detalhada do tmp_name ANTES do move
+        $tmpNameDebug = [
+            'tmp_name' => $file['tmp_name'],
+            'tmp_name_exists' => file_exists($file['tmp_name']),
+            'tmp_name_readable' => is_readable($file['tmp_name']),
+            'tmp_name_size' => file_exists($file['tmp_name']) ? filesize($file['tmp_name']) : 0,
+            'tmp_name_size_reported' => $file['size'],
+            'is_uploaded_file' => is_uploaded_file($file['tmp_name']),
+            'tmp_dir' => dirname($file['tmp_name']),
+            'tmp_dir_exists' => is_dir(dirname($file['tmp_name'])),
+            'tmp_dir_writable' => is_writable(dirname($file['tmp_name']))
+        ];
+        @file_put_contents($logFile, "=== DEBUG: tmp_name VALIDATION ===\n" . json_encode($tmpNameDebug, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+        
+        // Se tmp_name não existe ou não é um arquivo enviado, erro crítico
+        if (!file_exists($file['tmp_name'])) {
+            $criticalError = [
+                'error' => 'tmp_name não existe no disco',
+                'tmp_name' => $file['tmp_name'],
+                'lastError' => error_get_last(),
+                'tmpNameDebug' => $tmpNameDebug
+            ];
+            @file_put_contents($logFile, "=== CRITICAL ERROR: tmp_name não existe ===\n" . json_encode($criticalError, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+            $_SESSION['error'] = 'Arquivo temporário não encontrado. Verifique configurações do PHP (upload_tmp_dir).';
+            redirect(base_url('configuracoes/cfc'));
+        }
+        
+        if (!is_uploaded_file($file['tmp_name'])) {
+            $criticalError = [
+                'error' => 'tmp_name não é um arquivo enviado via POST (possível ataque)',
+                'tmp_name' => $file['tmp_name'],
+                'lastError' => error_get_last(),
+                'tmpNameDebug' => $tmpNameDebug
+            ];
+            @file_put_contents($logFile, "=== CRITICAL ERROR: tmp_name não é uploaded file ===\n" . json_encode($criticalError, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+            $_SESSION['error'] = 'Arquivo inválido. Tente novamente.';
             redirect(base_url('configuracoes/cfc'));
         }
         
@@ -671,15 +970,45 @@ class ConfiguracoesController extends Controller
 
         // Criar diretório se não existir
         $uploadDir = dirname(__DIR__, 2) . '/storage/uploads/cfcs/';
+        $uploadDirDebug = [
+            'uploadDir' => $uploadDir,
+            'uploadDirExists' => is_dir($uploadDir),
+            'uploadDirWritable' => is_dir($uploadDir) ? is_writable($uploadDir) : false,
+            'parentDir' => dirname($uploadDir),
+            'parentDirExists' => is_dir(dirname($uploadDir)),
+            'parentDirWritable' => is_dir(dirname($uploadDir)) ? is_writable(dirname($uploadDir)) : false,
+            'diskFreeSpace' => disk_free_space($uploadDir),
+            'fileSize' => $file['size'],
+            'hasEnoughSpace' => disk_free_space($uploadDir) >= $file['size']
+        ];
+        
         if (!is_dir($uploadDir)) {
-            if (!mkdir($uploadDir, 0755, true)) {
+            $mkdirResult = @mkdir($uploadDir, 0755, true);
+            $uploadDirDebug['mkdirAttempted'] = true;
+            $uploadDirDebug['mkdirResult'] = $mkdirResult;
+            $uploadDirDebug['mkdirError'] = error_get_last();
+            $uploadDirDebug['uploadDirExistsAfterMkdir'] = is_dir($uploadDir);
+            
+            if (!$mkdirResult || !is_dir($uploadDir)) {
+                @file_put_contents($logFile, "=== ERROR: Não foi possível criar uploadDir ===\n" . json_encode($uploadDirDebug, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
                 $_SESSION['error'] = 'Erro ao criar diretório de upload. Verifique as permissões.';
                 redirect(base_url('configuracoes/cfc'));
             }
         }
+        
+        @file_put_contents($logFile, "=== DEBUG: uploadDir VALIDATION ===\n" . json_encode($uploadDirDebug, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
 
         // Verificar se diretório é gravável
         if (!is_writable($uploadDir)) {
+            $writableError = [
+                'error' => 'Diretório não é gravável',
+                'uploadDir' => $uploadDir,
+                'uploadDirExists' => is_dir($uploadDir),
+                'uploadDirWritable' => is_writable($uploadDir),
+                'permissions' => substr(sprintf('%o', fileperms($uploadDir)), -4),
+                'lastError' => error_get_last()
+            ];
+            @file_put_contents($logFile, "=== ERROR: uploadDir não é gravável ===\n" . json_encode($writableError, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
             $_SESSION['error'] = 'Diretório de upload não tem permissão de escrita. Verifique as permissões.';
             redirect(base_url('configuracoes/cfc'));
         }
@@ -699,90 +1028,183 @@ class ConfiguracoesController extends Controller
             PwaIconGenerator::removeIcons($cfc['id']);
         }
 
-        // Log detalhado para diagnóstico
-        $logFile = dirname(__DIR__, 2) . '/storage/logs/upload_logo.log';
-        $logDir = dirname($logFile);
-        if (!is_dir($logDir)) {
-            @mkdir($logDir, 0755, true);
-        }
+        // Log detalhado ANTES do move
         $logData = [
             'timestamp' => date('Y-m-d H:i:s'),
-            '_FILES' => [
+            'file_info' => [
                 'name' => $file['name'],
                 'type' => $file['type'],
                 'size' => $file['size'],
                 'error' => $file['error'],
-                'tmp_name' => $file['tmp_name'] // Para verificar se existe
+                'tmp_name' => $file['tmp_name']
             ],
-            'uploadDir' => $uploadDir,
-            'uploadDirExists' => is_dir($uploadDir),
-            'uploadDirWritable' => is_dir($uploadDir) ? is_writable($uploadDir) : false,
-            'filepath' => $filepath,
-            'tmpNameExists' => file_exists($file['tmp_name']),
-            'isUploadedFile' => is_uploaded_file($file['tmp_name']),
+            'destination' => [
+                'uploadDir' => $uploadDir,
+                'filename' => $filename,
+                'filepath' => $filepath,
+                'filepathExists' => file_exists($filepath),
+                'filepathWritable' => is_writable(dirname($filepath))
+            ],
+            'tmp_validation' => [
+                'tmpNameExists' => file_exists($file['tmp_name']),
+                'tmpNameReadable' => is_readable($file['tmp_name']),
+                'tmpNameSize' => file_exists($file['tmp_name']) ? filesize($file['tmp_name']) : 0,
+                'isUploadedFile' => is_uploaded_file($file['tmp_name'])
+            ],
             'cfcId' => $cfc['id']
         ];
-        @file_put_contents($logFile, "=== UPLOAD START ===\n" . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+        @file_put_contents($logFile, "=== UPLOAD: ANTES DO move_uploaded_file ===\n" . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
 
+        // Limpar error_get_last() antes do move para capturar erro específico
+        error_clear_last();
+        
         // Mover arquivo
         $moveResult = move_uploaded_file($file['tmp_name'], $filepath);
-        $logData['moveResult'] = $moveResult;
-        $logData['fileExistsAfterMove'] = file_exists($filepath);
-        $logData['fileSizeAfterMove'] = $moveResult && file_exists($filepath) ? filesize($filepath) : 0;
+        $moveError = error_get_last();
+        
+        // Log detalhado APÓS o move
+        $moveDebug = [
+            'moveResult' => $moveResult,
+            'fileExistsAfterMove' => file_exists($filepath),
+            'fileSizeAfterMove' => file_exists($filepath) ? filesize($filepath) : 0,
+            'tmpNameExistsAfterMove' => file_exists($file['tmp_name']),
+            'lastError' => $moveError,
+            'destination' => [
+                'filepath' => $filepath,
+                'filepathExists' => file_exists($filepath),
+                'filepathReadable' => file_exists($filepath) ? is_readable($filepath) : false,
+                'filepathWritable' => file_exists($filepath) ? is_writable($filepath) : false
+            ]
+        ];
+        @file_put_contents($logFile, "=== UPLOAD: APÓS move_uploaded_file ===\n" . json_encode($moveDebug, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
         
         if (!$moveResult) {
             $errorMsg = 'Erro ao salvar arquivo.';
+            $errorDetails = [];
+            
             // Verificar tipo de erro
             if ($file['error'] !== UPLOAD_ERR_OK) {
-                $uploadErrors = [
-                    UPLOAD_ERR_INI_SIZE => 'Arquivo excede o tamanho máximo permitido pelo PHP.',
-                    UPLOAD_ERR_FORM_SIZE => 'Arquivo excede o tamanho máximo do formulário.',
-                    UPLOAD_ERR_PARTIAL => 'Upload parcial do arquivo.',
-                    UPLOAD_ERR_NO_FILE => 'Nenhum arquivo foi enviado.',
-                    UPLOAD_ERR_NO_TMP_DIR => 'Diretório temporário não encontrado.',
-                    UPLOAD_ERR_CANT_WRITE => 'Erro ao escrever arquivo no disco.',
-                    UPLOAD_ERR_EXTENSION => 'Upload bloqueado por extensão.'
-                ];
-                $errorMsg = $uploadErrors[$file['error']] ?? 'Erro desconhecido no upload.';
+                $errorMsg = $uploadErrorsMap[$file['error']] ?? 'Erro desconhecido no upload.';
+                $errorDetails['uploadError'] = $file['error'];
             } else {
                 // Erro adicional: verificar permissões e espaço em disco
-                $errorMsg .= ' Verifique permissões do diretório e espaço em disco.';
+                $errorDetails['checks'] = [
+                    'uploadDirWritable' => is_writable($uploadDir),
+                    'diskFreeSpace' => disk_free_space($uploadDir),
+                    'fileSize' => $file['size'],
+                    'hasEnoughSpace' => disk_free_space($uploadDir) >= $file['size'],
+                    'filepathParentWritable' => is_writable(dirname($filepath))
+                ];
+                
                 if (!is_writable($uploadDir)) {
                     $errorMsg .= ' Diretório não é gravável.';
                 }
                 if (disk_free_space($uploadDir) < $file['size']) {
                     $errorMsg .= ' Espaço em disco insuficiente.';
                 }
+                if (!is_writable(dirname($filepath))) {
+                    $errorMsg .= ' Diretório pai do arquivo não é gravável.';
+                }
             }
-            // Log do erro
-            $logData['error'] = $errorMsg;
-            $logData['lastError'] = error_get_last();
-            @file_put_contents($logFile, "=== UPLOAD ERROR ===\n" . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+            
+            // Log do erro com TODOS os detalhes
+            $errorLog = [
+                'error' => $errorMsg,
+                'errorDetails' => $errorDetails,
+                'lastError' => $moveError,
+                'moveDebug' => $moveDebug,
+                'logData' => $logData
+            ];
+            @file_put_contents($logFile, "=== UPLOAD ERROR: move_uploaded_file FALHOU ===\n" . json_encode($errorLog, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
             $_SESSION['error'] = $errorMsg;
             redirect(base_url('configuracoes/cfc'));
         }
 
         // Verificar se arquivo foi salvo corretamente
         if (!file_exists($filepath)) {
-            $logData['error'] = 'Arquivo não existe após move_uploaded_file';
-            $logData['lastError'] = error_get_last();
-            @file_put_contents($logFile, "=== UPLOAD ERROR (file not exists) ===\n" . json_encode($logData, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+            $fileNotExistsError = [
+                'error' => 'Arquivo não existe após move_uploaded_file retornar TRUE',
+                'filepath' => $filepath,
+                'filepathExists' => file_exists($filepath),
+                'moveResult' => $moveResult,
+                'lastError' => error_get_last(),
+                'moveDebug' => $moveDebug
+            ];
+            @file_put_contents($logFile, "=== CRITICAL ERROR: Arquivo não existe após move ===\n" . json_encode($fileNotExistsError, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
             $_SESSION['error'] = 'Arquivo não foi salvo corretamente.';
             redirect(base_url('configuracoes/cfc'));
         }
 
-        // Atualizar banco
-        $relativePath = 'storage/uploads/cfcs/' . $filename;
-        $updateResult = $cfcModel->update($cfc['id'], ['logo_path' => $relativePath]);
-        
-        // Verificar se foi atualizado no banco
-        $cfcAfterUpdate = $cfcModel->findById($cfc['id']);
-        $logData['dbUpdate'] = [
-            'updateResult' => $updateResult,
-            'relativePath' => $relativePath,
-            'logoPathInDb' => $cfcAfterUpdate['logo_path'] ?? 'NULL',
-            'dbUpdateSuccess' => ($cfcAfterUpdate['logo_path'] ?? null) === $relativePath
+        // VALIDAÇÃO FINAL: Só atualizar DB se moveResult foi TRUE e arquivo existe
+        $finalValidation = [
+            'moveResult' => $moveResult,
+            'fileExists' => file_exists($filepath),
+            'fileSize' => filesize($filepath),
+            'fileSizeMatches' => filesize($filepath) === $file['size'],
+            'canProceedToDbUpdate' => ($moveResult === true && file_exists($filepath))
         ];
+        @file_put_contents($logFile, "=== VALIDAÇÃO FINAL: Antes de atualizar DB ===\n" . json_encode($finalValidation, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+        
+        if (!$finalValidation['canProceedToDbUpdate']) {
+            $criticalError = [
+                'error' => 'Validação final falhou - não deve atualizar DB',
+                'finalValidation' => $finalValidation,
+                'moveDebug' => $moveDebug
+            ];
+            @file_put_contents($logFile, "=== CRITICAL ERROR: Validação final falhou ===\n" . json_encode($criticalError, JSON_PRETTY_PRINT) . "\n", FILE_APPEND);
+            $_SESSION['error'] = 'Erro ao validar arquivo antes de atualizar banco de dados.';
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        // FASE 7: Atualizar banco com log detalhado (SÓ SE VALIDAÇÃO PASSOU)
+        $relativePath = 'storage/uploads/cfcs/' . $filename;
+        
+        // Log antes do update
+        $dbLogBefore = [
+            'cfc_id' => $cfc['id'],
+            'cfc_id_source' => 'session: ' . ($_SESSION['cfc_id'] ?? 'N/A'),
+            'update_data' => ['logo_path' => $relativePath],
+            'sql_will_execute' => "UPDATE cfcs SET logo_path = ? WHERE id = ?"
+        ];
+        @file_put_contents($logFile, "=== DB UPDATE START ===\n" . json_encode($dbLogBefore, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+        
+        try {
+            $updateResult = $cfcModel->update($cfc['id'], ['logo_path' => $relativePath]);
+            
+            // Verificar se foi atualizado no banco
+            $cfcAfterUpdate = $cfcModel->find($cfc['id']);
+            
+            if (!$cfcAfterUpdate) {
+                throw new \Exception('CFC não encontrado após update');
+            }
+            
+            $logData['dbUpdate'] = [
+                'updateResult' => $updateResult,
+                'relativePath' => $relativePath,
+                'logoPathInDb' => $cfcAfterUpdate['logo_path'] ?? 'NULL',
+                'dbUpdateSuccess' => ($cfcAfterUpdate['logo_path'] ?? null) === $relativePath,
+                'cfc_id_used' => $cfc['id'],
+                'cfc_id_after_update' => $cfcAfterUpdate['id'] ?? 'N/A'
+            ];
+            
+            // Se o update não foi bem-sucedido, lançar exceção
+            if (!$logData['dbUpdate']['dbUpdateSuccess']) {
+                throw new \Exception('Update não foi bem-sucedido. Logo não foi salvo no banco de dados.');
+            }
+        } catch (\Exception $e) {
+            $errorLog = [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+                'cfc_id' => $cfc['id'],
+                'relativePath' => $relativePath
+            ];
+            @file_put_contents($logFile, "=== DB UPDATE ERROR ===\n" . json_encode($errorLog, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
+            $_SESSION['error'] = 'Erro ao salvar logo no banco de dados: ' . $e->getMessage();
+            redirect(base_url('configuracoes/cfc'));
+        }
+        
+        // Log após update
+        @file_put_contents($logFile, "=== DB UPDATE RESULT ===\n" . json_encode($logData['dbUpdate'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) . "\n", FILE_APPEND);
         
         // Log do sucesso
         $logData['success'] = true;
@@ -878,6 +1300,17 @@ class ConfiguracoesController extends Controller
 
         $nome = trim($_POST['nome'] ?? '');
         $cnpj = trim($_POST['cnpj'] ?? '');
+        $telefone = trim($_POST['telefone'] ?? '');
+        $email = trim($_POST['email'] ?? '');
+        
+        // Campos de endereço estruturado
+        $endereco_logradouro = trim($_POST['endereco_logradouro'] ?? '');
+        $endereco_numero = trim($_POST['endereco_numero'] ?? '');
+        $endereco_complemento = trim($_POST['endereco_complemento'] ?? '');
+        $endereco_bairro = trim($_POST['endereco_bairro'] ?? '');
+        $endereco_cidade = trim($_POST['endereco_cidade'] ?? '');
+        $endereco_uf = trim($_POST['endereco_uf'] ?? '');
+        $endereco_cep = trim($_POST['endereco_cep'] ?? '');
 
         // Validações
         if (empty($nome)) {
@@ -896,10 +1329,86 @@ class ConfiguracoesController extends Controller
             redirect(base_url('configuracoes/cfc'));
         }
 
+        // Validar email se fornecido
+        if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            $_SESSION['error'] = 'E-mail inválido.';
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        // Validar telefone (tamanho máximo)
+        if (!empty($telefone) && strlen($telefone) > 20) {
+            $_SESSION['error'] = 'Telefone muito longo (máximo 20 caracteres).';
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        // Validar UF se fornecido (deve ter 2 caracteres)
+        if (!empty($endereco_uf) && strlen($endereco_uf) !== 2) {
+            $_SESSION['error'] = 'UF deve ter exatamente 2 caracteres.';
+            redirect(base_url('configuracoes/cfc'));
+        }
+
+        // Normalizar UF (uppercase)
+        if (!empty($endereco_uf)) {
+            $endereco_uf = strtoupper($endereco_uf);
+        }
+
         // Preparar dados para atualização
         $data = ['nome' => $nome];
         if (isset($_POST['cnpj'])) {
             $data['cnpj'] = !empty($cnpj) ? $cnpj : null;
+        }
+        if (isset($_POST['telefone'])) {
+            $data['telefone'] = !empty($telefone) ? $telefone : null;
+        }
+        if (isset($_POST['email'])) {
+            $data['email'] = !empty($email) ? $email : null;
+        }
+
+        // Campos de endereço estruturado
+        if (isset($_POST['endereco_logradouro'])) {
+            $data['endereco_logradouro'] = !empty($endereco_logradouro) ? $endereco_logradouro : null;
+        }
+        if (isset($_POST['endereco_numero'])) {
+            $data['endereco_numero'] = !empty($endereco_numero) ? $endereco_numero : null;
+        }
+        if (isset($_POST['endereco_complemento'])) {
+            $data['endereco_complemento'] = !empty($endereco_complemento) ? $endereco_complemento : null;
+        }
+        if (isset($_POST['endereco_bairro'])) {
+            $data['endereco_bairro'] = !empty($endereco_bairro) ? $endereco_bairro : null;
+        }
+        if (isset($_POST['endereco_cidade'])) {
+            $data['endereco_cidade'] = !empty($endereco_cidade) ? $endereco_cidade : null;
+        }
+        if (isset($_POST['endereco_uf'])) {
+            $data['endereco_uf'] = !empty($endereco_uf) ? $endereco_uf : null;
+        }
+        if (isset($_POST['endereco_cep'])) {
+            $data['endereco_cep'] = !empty($endereco_cep) ? $endereco_cep : null;
+        }
+
+        // Compatibilidade: atualizar campo endereco (TEXT) apenas se algum campo novo vier preenchido
+        $hasStructuredAddress = !empty($endereco_logradouro) || !empty($endereco_numero) || 
+                                 !empty($endereco_complemento) || !empty($endereco_bairro) || 
+                                 !empty($endereco_cidade) || !empty($endereco_uf) || !empty($endereco_cep);
+        
+        if ($hasStructuredAddress) {
+            // Montar string de endereço completo a partir das partes
+            $parts = array_filter([
+                $endereco_logradouro,
+                $endereco_numero,
+                $endereco_complemento,
+                $endereco_bairro,
+                $endereco_cidade,
+                $endereco_uf,
+                $endereco_cep
+            ]);
+            
+            if (!empty($parts)) {
+                $data['endereco'] = implode(', ', $parts);
+            } else {
+                $data['endereco'] = null;
+            }
         }
 
         // Atualizar banco
@@ -916,6 +1425,9 @@ class ConfiguracoesController extends Controller
     /**
      * Servir logo do CFC (protegido)
      */
+    /**
+     * FASE 7: Servir logo via rota dedicada (robusta e com cache buster)
+     */
     public function logo()
     {
         $cfcModel = new Cfc();
@@ -923,18 +1435,23 @@ class ConfiguracoesController extends Controller
 
         if (!$cfc || empty($cfc['logo_path'])) {
             http_response_code(404);
-            exit('Logo não encontrado');
+            header('Content-Type: text/plain');
+            exit('Logo não encontrado (CFC sem logo_path)');
         }
 
         $filepath = dirname(__DIR__, 2) . '/' . $cfc['logo_path'];
 
         if (!file_exists($filepath)) {
             http_response_code(404);
-            exit('Logo não encontrado');
+            header('Content-Type: text/plain');
+            exit('Logo não encontrado (arquivo não existe: ' . $filepath . ')');
         }
 
         // Determinar tipo MIME
-        $mimeType = mime_content_type($filepath);
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $filepath);
+        finfo_close($finfo);
+        
         if (!$mimeType) {
             $extension = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
             $mimeTypes = [

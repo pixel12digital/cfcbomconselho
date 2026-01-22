@@ -16,7 +16,7 @@ class RoleMiddleware implements MiddlewareInterface
     public function handle(): bool
     {
         if (empty($_SESSION['current_role'])) {
-            header('Location: /login');
+            header('Location: ' . base_url('login'));
             exit;
         }
 

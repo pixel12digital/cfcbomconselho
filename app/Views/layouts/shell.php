@@ -9,7 +9,7 @@
     <title><?= $pageTitle ?? 'CFC Sistema' ?></title>
     
     <!-- PWA Manifest (usando pwa-manifest.php para white-label dinâmico) -->
-    <link rel="manifest" href="<?= base_path('public_html/pwa-manifest.php') ?>">
+    <link rel="manifest" href="<?= base_path('pwa-manifest.php') ?>">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="<?= base_path('public_html/icons/icon-192x192.png') ?>">
@@ -187,42 +187,60 @@
     
     <!-- Service Worker Registration (apenas em produção ou se arquivo existir) -->
     <script>
-        if ('serviceWorker' in navigator) {
-            // Verificar se estamos em ambiente de produção ou se o arquivo existe
-            const isProduction = <?= ($_ENV['APP_ENV'] ?? 'local') === 'production' ? 'true' : 'false' ?>;
-            const swPath = '<?= base_path('public_html/sw.js') ?>';
+        (function() {
+            'use strict';
             
-            // Verificar se arquivo existe antes de registrar (tanto em produção quanto desenvolvimento)
-            fetch(swPath, { method: 'HEAD' })
-                .then(function(response) {
-                    if (response.ok) {
-                        window.addEventListener('load', function() {
-                            navigator.serviceWorker.register(swPath)
-                                .then(function(registration) {
-                                    if (isProduction) {
-                                        console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
-                                        
-                                        // Verificar atualizações periodicamente (apenas em produção)
-                                        setInterval(function() {
-                                            registration.update();
-                                        }, 60000); // Verificar a cada minuto
-                                    } else {
-                                        console.log('[SW] Service Worker registrado:', registration.scope);
-                                    }
-                                })
-                                .catch(function(error) {
-                                    // Silenciar erro completamente (não poluir console)
-                                    // O arquivo existe mas houve erro ao registrar (pode ser problema de CORS, etc)
-                                });
-                        });
-                    }
-                    // Se response não é ok (404, etc), não registrar (evita 404 no console)
-                })
-                .catch(function() {
-                    // Arquivo não existe ou erro de rede - não registrar (evita 404)
-                    // Não fazer nada, silenciar completamente
-                });
-        }
+            if ('serviceWorker' in navigator) {
+                // FASE 5: Desabilitar SW em localhost durante debug
+                const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
+                const isProduction = <?= json_encode(($_ENV['APP_ENV'] ?? 'local') === 'production') ?>;
+                
+                // Corrigir path do SW (remover duplicação de public_html)
+                // base_path já retorna com /public_html/, então não precisa adicionar novamente
+                let swPath = <?= json_encode(base_path('sw.js')) ?>;
+                
+                // Se base_path não incluir public_html, adicionar
+                if (!swPath.includes('public_html')) {
+                    swPath = <?= json_encode(base_path('public_html/sw.js')) ?>;
+                }
+                
+                // Desabilitar SW em localhost durante debug
+                if (isLocalhost) {
+                    console.log('[SW] Service Worker desabilitado em localhost para debug');
+                } else {
+                    // Verificar se arquivo existe antes de registrar (apenas em produção)
+                    fetch(swPath, { method: 'HEAD' })
+                    .then(function(response) {
+                        if (response.ok) {
+                            window.addEventListener('load', function() {
+                                navigator.serviceWorker.register(swPath)
+                                    .then(function(registration) {
+                                        if (isProduction) {
+                                            console.log('[SW] Service Worker registrado com sucesso:', registration.scope);
+                                            
+                                            // Verificar atualizações periodicamente (apenas em produção)
+                                            setInterval(function() {
+                                                registration.update();
+                                            }, 60000); // Verificar a cada minuto
+                                        } else {
+                                            console.log('[SW] Service Worker registrado:', registration.scope);
+                                        }
+                                    })
+                                    .catch(function(error) {
+                                        // Silenciar erro completamente (não poluir console)
+                                        // O arquivo existe mas houve erro ao registrar (pode ser problema de CORS, etc)
+                                    });
+                            });
+                        }
+                        // Se response não é ok (404, etc), não registrar (evita 404 no console)
+                    })
+                    .catch(function() {
+                        // Arquivo não existe ou erro de rede - não registrar (evita 404)
+                        // Não fazer nada, silenciar completamente
+                    });
+                }
+            }
+        })();
     </script>
 </body>
 </html>

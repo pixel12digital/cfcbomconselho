@@ -30,6 +30,7 @@ $router->get('/', [AuthController::class, 'showLogin']);
 $router->get('/login', [AuthController::class, 'showLogin']);
 $router->post('/login', [AuthController::class, 'login']);
 $router->get('/logout', [AuthController::class, 'logout']);
+$router->get('/login/cfc-logo', [AuthController::class, 'cfcLogo']); // Logo do CFC no login (público)
 $router->get('/forgot-password', [AuthController::class, 'showForgotPassword']);
 $router->post('/forgot-password', [AuthController::class, 'forgotPassword']);
 $router->get('/reset-password', [AuthController::class, 'showResetPassword']);
@@ -93,6 +94,7 @@ $router->get('/instrutores/novo', [InstrutoresController::class, 'novo'], [AuthM
 $router->post('/instrutores/criar', [InstrutoresController::class, 'criar'], [AuthMiddleware::class]);
 $router->get('/instrutores/{id}/editar', [InstrutoresController::class, 'editar'], [AuthMiddleware::class]);
 $router->post('/instrutores/{id}/atualizar', [InstrutoresController::class, 'atualizar'], [AuthMiddleware::class]);
+$router->post('/instrutores/{id}/excluir', [InstrutoresController::class, 'excluir'], [AuthMiddleware::class]);
 $router->post('/instrutores/{id}/foto/upload', [InstrutoresController::class, 'uploadFoto'], [AuthMiddleware::class]);
 $router->post('/instrutores/{id}/foto/remover', [InstrutoresController::class, 'removerFoto'], [AuthMiddleware::class]);
 $router->get('/instrutores/{id}/foto', [InstrutoresController::class, 'foto'], [AuthMiddleware::class]);
@@ -103,6 +105,7 @@ $router->get('/veiculos/novo', [VeiculosController::class, 'novo'], [AuthMiddlew
 $router->post('/veiculos/criar', [VeiculosController::class, 'criar'], [AuthMiddleware::class]);
 $router->get('/veiculos/{id}/editar', [VeiculosController::class, 'editar'], [AuthMiddleware::class]);
 $router->post('/veiculos/{id}/atualizar', [VeiculosController::class, 'atualizar'], [AuthMiddleware::class]);
+$router->post('/veiculos/{id}/excluir', [VeiculosController::class, 'excluir'], [AuthMiddleware::class]);
 
 // Financeiro
 $router->get('/financeiro', [FinanceiroController::class, 'index'], [AuthMiddleware::class]);
@@ -116,6 +119,7 @@ $router->post('/usuarios/criar-acesso-aluno', [UsuariosController::class, 'criar
 $router->post('/usuarios/criar-acesso-instrutor', [UsuariosController::class, 'criarAcessoInstrutor'], [AuthMiddleware::class]);
 $router->get('/usuarios/{id}/editar', [UsuariosController::class, 'editar'], [AuthMiddleware::class]);
 $router->post('/usuarios/{id}/atualizar', [UsuariosController::class, 'atualizar'], [AuthMiddleware::class]);
+$router->post('/usuarios/{id}/excluir', [UsuariosController::class, 'excluir'], [AuthMiddleware::class]);
 $router->post('/usuarios/{id}/gerar-senha-temporaria', [UsuariosController::class, 'gerarSenhaTemporaria'], [AuthMiddleware::class]);
 $router->post('/usuarios/{id}/gerar-link-ativacao', [UsuariosController::class, 'gerarLinkAtivacao'], [AuthMiddleware::class]);
 $router->post('/usuarios/{id}/enviar-link-email', [UsuariosController::class, 'enviarLinkEmail'], [AuthMiddleware::class]);
@@ -138,12 +142,14 @@ $router->get('/configuracoes/disciplinas/novo', [ConfiguracoesController::class,
 $router->post('/configuracoes/disciplinas/criar', [ConfiguracoesController::class, 'disciplinaCriar'], [AuthMiddleware::class]);
 $router->get('/configuracoes/disciplinas/{id}/editar', [ConfiguracoesController::class, 'disciplinaEditar'], [AuthMiddleware::class]);
 $router->post('/configuracoes/disciplinas/{id}/atualizar', [ConfiguracoesController::class, 'disciplinaAtualizar'], [AuthMiddleware::class]);
+$router->post('/configuracoes/disciplinas/{id}/excluir', [ConfiguracoesController::class, 'disciplinaExcluir'], [AuthMiddleware::class]);
 
 $router->get('/configuracoes/cursos', [ConfiguracoesController::class, 'cursos'], [AuthMiddleware::class]);
 $router->get('/configuracoes/cursos/novo', [ConfiguracoesController::class, 'cursoNovo'], [AuthMiddleware::class]);
 $router->post('/configuracoes/cursos/criar', [ConfiguracoesController::class, 'cursoCriar'], [AuthMiddleware::class]);
 $router->get('/configuracoes/cursos/{id}/editar', [ConfiguracoesController::class, 'cursoEditar'], [AuthMiddleware::class]);
 $router->post('/configuracoes/cursos/{id}/atualizar', [ConfiguracoesController::class, 'cursoAtualizar'], [AuthMiddleware::class]);
+$router->post('/configuracoes/cursos/{id}/excluir', [ConfiguracoesController::class, 'cursoExcluir'], [AuthMiddleware::class]);
 
 // Curso Teórico - Secretaria (Turmas, Sessões, Matrículas, Presença)
 $router->get('/turmas-teoricas', [TheoryClassesController::class, 'index'], [AuthMiddleware::class]);
@@ -172,6 +178,7 @@ $router->post('/turmas-teoricas/{classId}/sessoes/{sessionId}/presenca/salvar', 
 $router->get('/notificacoes', [NotificationsController::class, 'index'], [AuthMiddleware::class]);
 $router->post('/notificacoes/{id}/ler', [NotificationsController::class, 'markAsRead'], [AuthMiddleware::class]);
 $router->post('/notificacoes/ler-todas', [NotificationsController::class, 'markAllAsRead'], [AuthMiddleware::class]);
+$router->post('/notificacoes/excluir-historico', [NotificationsController::class, 'excluirHistorico'], [AuthMiddleware::class]);
 $router->get('/api/notificacoes/contador', [NotificationsController::class, 'getUnreadCount'], [AuthMiddleware::class]);
 
 // Comunicados (Broadcast de Notificações - ADMIN/SECRETARIA)

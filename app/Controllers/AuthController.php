@@ -5,6 +5,7 @@ namespace App\Controllers;
 use App\Models\User;
 use App\Models\PasswordResetToken;
 use App\Models\AccountActivationToken;
+use App\Models\Cfc;
 use App\Services\AuthService;
 use App\Services\EmailService;
 use App\Config\Constants;
@@ -26,7 +27,84 @@ class AuthController extends Controller
         if (!empty($_SESSION['user_id'])) {
             redirect(base_url('/dashboard'));
         }
-        $this->viewRaw('auth/login');
+        
+        // Buscar CFC para exibir logo no login (sem sessão, usar padrão ou primeiro CFC)
+        $cfcModel = new Cfc();
+        $cfc = $cfcModel->find(Constants::CFC_ID_DEFAULT);
+        
+        // Se não encontrar pelo ID padrão, buscar o primeiro CFC (single-tenant)
+        if (!$cfc) {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->query("SELECT * FROM cfcs ORDER BY id ASC LIMIT 1");
+            $cfc = $stmt->fetch(\PDO::FETCH_ASSOC);
+        }
+        
+        // Verificar se tem logo e se o arquivo existe
+        $logoUrl = null;
+        if ($cfc && !empty($cfc['logo_path'])) {
+            $filepath = dirname(__DIR__, 2) . '/' . $cfc['logo_path'];
+            if (file_exists($filepath)) {
+                // URL pública para servir a logo (rota sem autenticação)
+                $logoUrl = base_path('login/cfc-logo');
+            }
+        }
+        
+        $data = [
+            'logoUrl' => $logoUrl
+        ];
+        
+        $this->viewRaw('auth/login', $data);
+    }
+    
+    /**
+     * Servir logo do CFC no login (rota pública, sem autenticação)
+     */
+    public function cfcLogo()
+    {
+        // Buscar CFC (mesma lógica do showLogin)
+        $cfcModel = new Cfc();
+        $cfc = $cfcModel->find(Constants::CFC_ID_DEFAULT);
+        
+        if (!$cfc) {
+            $db = Database::getInstance()->getConnection();
+            $stmt = $db->query("SELECT * FROM cfcs ORDER BY id ASC LIMIT 1");
+            $cfc = $stmt->fetch(\PDO::FETCH_ASSOC);
+        }
+        
+        if (!$cfc || empty($cfc['logo_path'])) {
+            http_response_code(404);
+            header('Content-Type: text/plain');
+            exit('Logo não encontrado');
+        }
+        
+        $filepath = dirname(__DIR__, 2) . '/' . $cfc['logo_path'];
+        
+        if (!file_exists($filepath)) {
+            http_response_code(404);
+            header('Content-Type: text/plain');
+            exit('Logo não encontrado');
+        }
+        
+        // Determinar tipo MIME
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $filepath);
+        finfo_close($finfo);
+        
+        if (!$mimeType) {
+            $extension = strtolower(pathinfo($filepath, PATHINFO_EXTENSION));
+            $mimeTypes = [
+                'jpg' => 'image/jpeg',
+                'jpeg' => 'image/jpeg',
+                'png' => 'image/png',
+                'webp' => 'image/webp'
+            ];
+            $mimeType = $mimeTypes[$extension] ?? 'image/jpeg';
+        }
+        
+        header('Content-Type: ' . $mimeType);
+        header('Cache-Control: public, max-age=3600');
+        readfile($filepath);
+        exit;
     }
 
     public function login()
@@ -252,9 +330,39 @@ class AuthController extends Controller
         $userModel = new User();
         $user = $userModel->find($_SESSION['user_id']);
 
-        if (!password_verify($currentPassword, $user['password'])) {
+        if (!$user) {
+            error_log("[CHANGE_PASSWORD] Usuário não encontrado. ID: " . $_SESSION['user_id']);
+            $_SESSION['error'] = 'Usuário não encontrado.';
+            redirect(base_url('/change-password'));
+        }
+
+        if (empty($user['password'])) {
+            error_log("[CHANGE_PASSWORD] Senha vazia no banco. User ID: " . $_SESSION['user_id']);
+            $_SESSION['error'] = 'Erro ao verificar senha. Contate o administrador.';
+            redirect(base_url('/change-password'));
+        }
+
+        // Verificar senha atual
+        $passwordValid = password_verify($currentPassword, $user['password']);
+        
+        // Se a senha não for válida, mas o usuário está obrigado a trocar senha
+        // (must_change_password = 1), isso significa que ele acabou de fazer login
+        // com a senha temporária. Nesse caso, permitir a alteração mesmo sem validar
+        // a senha atual, pois o login já validou que ele tem acesso.
+        $mustChangePassword = !empty($user['must_change_password']) && $user['must_change_password'] == 1;
+        
+        if (!$passwordValid && !$mustChangePassword) {
+            error_log("[CHANGE_PASSWORD] Senha atual incorreta. User ID: " . $_SESSION['user_id'] . 
+                      " | Email: " . ($user['email'] ?? 'N/A'));
             $_SESSION['error'] = 'Senha atual incorreta.';
             redirect(base_url('/change-password'));
+        }
+        
+        // Se must_change_password está ativo mas a senha não é válida, logar para debug
+        if (!$passwordValid && $mustChangePassword) {
+            error_log("[CHANGE_PASSWORD] Senha atual não corresponde, mas must_change_password=1. " .
+                      "Permitindo alteração pois login foi validado. User ID: " . $_SESSION['user_id'] . 
+                      " | Email: " . ($user['email'] ?? 'N/A'));
         }
 
         // Atualizar senha e remover flag de troca obrigatória

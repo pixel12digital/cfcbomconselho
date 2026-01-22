@@ -1,4 +1,4 @@
--- Migration 009: Adicionar campos de plano de pagamento e preparação Asaas
+-- Migration 009: Adicionar campos de plano de pagamento e preparação para gateway de pagamento
 
 SET FOREIGN_KEY_CHECKS = 0;
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
@@ -14,7 +14,7 @@ ADD COLUMN `installments` int(11) DEFAULT NULL COMMENT 'Número de parcelas (1-1
 ADD COLUMN `down_payment_amount` decimal(10,2) DEFAULT NULL COMMENT 'Valor da entrada (quando entrada_parcelas)',
 ADD COLUMN `down_payment_due_date` date DEFAULT NULL COMMENT 'Data de vencimento da entrada',
 ADD COLUMN `first_due_date` date DEFAULT NULL COMMENT 'Data de vencimento da primeira parcela',
-ADD COLUMN `billing_status` enum('draft','ready','generated','error') NOT NULL DEFAULT 'draft' COMMENT 'Status da geração de cobrança Asaas';
+ADD COLUMN `billing_status` enum('draft','ready','generated','error') NOT NULL DEFAULT 'draft' COMMENT 'Status da geração de cobrança no gateway de pagamento';
 
 -- Adicionar índices para melhor performance
 ALTER TABLE `enrollments`

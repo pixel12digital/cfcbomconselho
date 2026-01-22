@@ -182,13 +182,28 @@ class AlunosController extends Controller
             $birthCity = $cityModel->findById($student['birth_city_id']);
         }
 
+        // Buscar informações do acesso vinculado (se houver)
+        $userInfo = null;
+        $userRoles = [];
+        if (!empty($student['user_id'])) {
+            $db = \App\Config\Database::getInstance()->getConnection();
+            $stmt = $db->prepare("SELECT * FROM usuarios WHERE id = ?");
+            $stmt->execute([$student['user_id']]);
+            $userInfo = $stmt->fetch();
+            if ($userInfo) {
+                $userRoles = \App\Models\User::getUserRoles($student['user_id']);
+            }
+        }
+        
         $data = [
             'pageTitle' => 'Aluno: ' . $fullName,
             'student' => $student,
             'enrollments' => $enrollments,
             'tab' => $tab,
             'addressCity' => $addressCity,
-            'birthCity' => $birthCity
+            'birthCity' => $birthCity,
+            'userInfo' => $userInfo,
+            'userRoles' => $userRoles
         ];
 
         if ($tab === 'progresso' && !empty($enrollments)) {

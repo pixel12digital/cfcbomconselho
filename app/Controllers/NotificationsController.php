@@ -4,14 +4,17 @@ namespace App\Controllers;
 
 use App\Models\Notification;
 use App\Config\Constants;
+use App\Services\AuditService;
 
 class NotificationsController extends Controller
 {
     private $notificationModel;
+    private $auditService;
 
     public function __construct()
     {
         $this->notificationModel = new Notification();
+        $this->auditService = new AuditService();
     }
 
     /**
@@ -102,5 +105,47 @@ class NotificationsController extends Controller
 
         $count = $this->notificationModel->countUnread($userId);
         $this->json(['count' => $count]);
+    }
+
+    /**
+     * Excluir todo o histórico de notificações (apenas ADMIN)
+     */
+    public function excluirHistorico()
+    {
+        // Verificar se é ADMIN
+        $currentRole = $_SESSION['current_role'] ?? '';
+        if ($currentRole !== Constants::ROLE_ADMIN) {
+            $_SESSION['error'] = 'Você não tem permissão para executar esta ação.';
+            redirect(base_url('notificacoes'));
+        }
+
+        if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+            redirect(base_url('notificacoes'));
+        }
+
+        if (!csrf_verify($_POST['csrf_token'] ?? '')) {
+            $_SESSION['error'] = 'Token CSRF inválido.';
+            redirect(base_url('notificacoes'));
+        }
+
+        try {
+            $db = \App\Config\Database::getInstance()->getConnection();
+            
+            // Contar notificações antes de deletar
+            $count = $db->query("SELECT COUNT(*) as count FROM notifications")->fetch(PDO::FETCH_ASSOC)['count'];
+            
+            // Registrar auditoria
+            $this->auditService->log('delete_all_notifications', 'notifications', null, ['count' => $count], null);
+            
+            // Deletar todas as notificações
+            $db->exec("DELETE FROM notifications");
+            
+            $_SESSION['success'] = "Histórico de notificações excluído com sucesso! ({$count} notificação(ões) removida(s))";
+        } catch (\Exception $e) {
+            error_log("Erro ao excluir histórico de notificações: " . $e->getMessage());
+            $_SESSION['error'] = 'Erro ao excluir histórico de notificações: ' . $e->getMessage();
+        }
+
+        redirect(base_url('notificacoes'));
     }
 }
