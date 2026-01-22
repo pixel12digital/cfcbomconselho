@@ -16,16 +16,26 @@ date_default_timezone_set('America/Sao_Paulo');
 // Helper functions
 if (!function_exists('base_path')) {
     function base_path($path = '') {
-        // Base calculada pelo caminho real do script (mesma lógica do asset_url e base_url)
-        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        $base = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+        // Detectar ambiente
+        $appEnv = $_ENV['APP_ENV'] ?? 'local';
+        $isProduction = $appEnv === 'production';
         
-        // Se estamos em /cfc-v.1/public_html/index.php -> $base = /cfc-v.1/public_html
-        // Se estamos em /index.php -> $base = / (raiz)
-        if ($base === '' || $base === '.') {
+        // Em produção, usar base fixo (DocumentRoot geralmente aponta para public_html/)
+        if ($isProduction) {
+            // Em produção, base é a raiz
             $base = '/';
-        } elseif (substr($base, 0, 1) !== '/') {
-            $base = '/' . $base;
+        } else {
+            // Em desenvolvimento, calcular base path dinamicamente
+            $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+            $base = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+            
+            // Se estamos em /cfc-v.1/public_html/index.php -> $base = /cfc-v.1/public_html
+            // Se estamos em /index.php -> $base = / (raiz)
+            if ($base === '' || $base === '.') {
+                $base = '/';
+            } elseif (substr($base, 0, 1) !== '/') {
+                $base = '/' . $base;
+            }
         }
         
         // Limpar o path
@@ -42,16 +52,26 @@ if (!function_exists('base_url')) {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         
-        // Base calculada pelo caminho real do script (mesma lógica do asset_url)
-        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        $basePath = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+        // Detectar ambiente
+        $appEnv = $_ENV['APP_ENV'] ?? 'local';
+        $isProduction = $appEnv === 'production';
         
-        // Se estamos em /cfc-v.1/public_html/index.php -> $basePath = /cfc-v.1/public_html
-        // Se estamos em /index.php -> $basePath = / (raiz)
-        if ($basePath === '' || $basePath === '.') {
+        // Em produção, usar basePath fixo (DocumentRoot geralmente aponta para public_html/)
+        if ($isProduction) {
+            // Em produção, basePath é a raiz
             $basePath = '/';
-        } elseif (substr($basePath, 0, 1) !== '/') {
-            $basePath = '/' . $basePath;
+        } else {
+            // Em desenvolvimento, calcular base path dinamicamente
+            $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+            $basePath = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+            
+            // Se estamos em /cfc-v.1/public_html/index.php -> $basePath = /cfc-v.1/public_html
+            // Se estamos em /index.php -> $basePath = / (raiz)
+            if ($basePath === '' || $basePath === '.') {
+                $basePath = '/';
+            } elseif (substr($basePath, 0, 1) !== '/') {
+                $basePath = '/' . $basePath;
+            }
         }
         
         // Montar URL completa: protocolo + host + basePath + path
@@ -124,6 +144,12 @@ if (!function_exists('asset_url')) {
 
 if (!function_exists('redirect')) {
     function redirect($url) {
+        // Garantir que é uma URL absoluta (com http:// ou https://)
+        // Se não começar com http:// ou https://, assumir que é um path e usar base_url()
+        if (!preg_match('/^https?:\/\//', $url)) {
+            $url = base_url($url);
+        }
+        
         header('Location: ' . $url);
         exit;
     }
