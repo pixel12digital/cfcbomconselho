@@ -1,36 +1,19 @@
-# Proteger diretórios sensíveis
+# Segurança: bloquear arquivos ocultos (.env, .git, etc)
 <FilesMatch "^\.">
     Order allow,deny
     Deny from all
 </FilesMatch>
 
-# Front Controller - Redirecionar para index.php na raiz
-# NOTA: Este .htaccess é APENAS para desenvolvimento local (XAMPP)
-# Em produção, o DocumentRoot aponta para public_html/, então este arquivo não é usado
 RewriteEngine On
-RewriteBase /cfc-v.1/
 
-# Permitir acesso direto a arquivos estáticos na raiz
+# Se for arquivo/pasta existente, servir direto
 RewriteCond %{REQUEST_FILENAME} -f [OR]
 RewriteCond %{REQUEST_FILENAME} -d
 RewriteRule ^ - [L]
 
-# Permitir acesso direto a public_html/ (deixar o .htaccess de public_html/ gerenciar)
-RewriteCond %{REQUEST_URI} ^/cfc-v\.1/public_html/
-RewriteRule ^ - [L]
-
-# Permitir acesso direto a assets (em public_html/assets/)
-RewriteCond %{REQUEST_URI} ^/cfc-v\.1/public_html/assets/
-RewriteRule ^ - [L]
-
-# Permitir acesso direto a assets (também na raiz, se existir symlink)
-RewriteCond %{REQUEST_URI} ^/cfc-v\.1/assets/
-RewriteRule ^ - [L]
-
-# Redirecionar tudo para index.php na raiz (apenas se não for public_html)
-RewriteCond %{REQUEST_URI} !^/cfc-v\.1/public_html/
-RewriteRule ^(.*)$ index.php [QSA,L]
-
-# Proteger storage e certificados
+# Bloquear pastas sensíveis diretamente pela raiz
 RewriteRule ^storage/ - [F,L]
 RewriteRule ^certificados/.*\.(p12|pfx|pem)$ - [F,L]
+
+# Front Controller na raiz (ponte para public_html/index.php)
+RewriteRule ^ index.php [QSA,L]
