@@ -1,0 +1,332 @@
+/**
+ * CSS para página de Agendar Aula com Slots Visuais
+ */
+
+/* Informações do Aluno */
+.student-info {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 30px;
+}
+
+/* Seções de Formulário */
+.form-section {
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+/* Radio buttons personalizados */
+.custom-radio {
+    margin-bottom: 0;
+}
+
+.custom-radio .form-check-input {
+    width: 20px;
+    height: 20px;
+    margin-top: 0;
+    border: 3px solid #dee2e6;
+    background-color: white;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.custom-radio .form-check-input:checked {
+    background-color: #007bff;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    transform: scale(1.1);
+}
+
+.custom-radio .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+    border-color: #007bff;
+}
+
+.custom-radio .form-check-label {
+    cursor: pointer;
+    padding: 8px 0;
+    margin-left: 8px;
+}
+
+.radio-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.radio-text strong {
+    color: #495057;
+    font-size: 14px;
+    line-height: 1.2;
+}
+
+.radio-text small {
+    color: #6c757d;
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.custom-radio .form-check-input:checked + .form-check-label .radio-text strong {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.custom-radio:hover .form-check-input:not(:checked) {
+    border-color: #adb5bd;
+    transform: scale(1.05);
+}
+
+/* Container de Dias */
+.dias-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Card de Dia */
+.dia-card {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.dia-card:hover {
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+}
+
+.dia-card--expandido {
+    border-color: #007bff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.2);
+}
+
+.dia-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    background: #f8f9fa;
+    transition: background 0.3s ease;
+}
+
+.dia-card:hover .dia-card-header {
+    background: #e9ecef;
+}
+
+.dia-card-info {
+    display: flex;
+    align-items: center;
+    flex: 1;
+    gap: 8px;
+}
+
+.dia-card-info i {
+    color: #6c757d;
+}
+
+.dia-data {
+    font-weight: 600;
+    color: #212529;
+    font-size: 16px;
+}
+
+.dia-semana {
+    color: #6c757d;
+    font-size: 14px;
+    text-transform: capitalize;
+}
+
+.dia-card-badge {
+    margin: 0 12px;
+}
+
+.dia-card-arrow {
+    color: #6c757d;
+    transition: transform 0.3s ease;
+}
+
+.dia-card--expandido .dia-card-arrow {
+    transform: rotate(180deg);
+}
+
+.dia-card-slots {
+    padding: 16px 20px;
+    background: #f8f9fa;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+/* Card de Slot */
+.slot-card {
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 16px;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.slot-card:hover {
+    border-color: #28a745;
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+    transform: translateY(-2px);
+}
+
+.slot-card--selecionado {
+    border-color: #007bff;
+    background: #e7f3ff;
+    box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
+}
+
+.slot-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.slot-card-header i {
+    color: #007bff;
+}
+
+.slot-horario {
+    font-weight: 600;
+    font-size: 16px;
+    color: #212529;
+}
+
+.slot-tipo-badge {
+    margin-left: auto;
+    padding: 4px 8px;
+    background: #e9ecef;
+    border-radius: 4px;
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.slot-card-body {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.slot-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #495057;
+    font-size: 14px;
+}
+
+.slot-info i {
+    color: #6c757d;
+    width: 16px;
+}
+
+.slot-card-selected {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    background: #28a745;
+    color: white;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+/* Resumo do Agendamento */
+.resumo-content {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 10px;
+    border-left: 4px solid #007bff;
+}
+
+.resumo-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.resumo-item:last-child {
+    margin-bottom: 0;
+    padding-bottom: 0;
+    border-bottom: none;
+}
+
+.resumo-item strong {
+    color: #495057;
+    min-width: 120px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.resumo-item strong i {
+    color: #007bff;
+    width: 18px;
+}
+
+.resumo-item span {
+    color: #212529;
+    font-weight: 500;
+}
+
+/* Loading */
+#loading-slots {
+    min-height: 200px;
+}
+
+/* Mensagens */
+#mensagens-container {
+    margin-top: 20px;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+    .dia-card-header {
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .dia-card-info {
+        flex-basis: 100%;
+    }
+    
+    .dia-card-badge {
+        margin: 0;
+    }
+    
+    .slot-card {
+        padding: 12px;
+    }
+    
+    .resumo-item {
+        flex-direction: column;
+        gap: 4px;
+    }
+    
+    .resumo-item strong {
+        min-width: auto;
+    }
+}
+

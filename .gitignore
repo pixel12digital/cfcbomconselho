@@ -1,36 +1,36 @@
-# Environment
-.env
-.env.local
+﻿# Sistema CFC Bom Conselho
 
-# Dependencies
-vendor/
-composer.lock
+# Arquivos de configuração local
+config_local.php
+config_homolog.php
 
-# Storage
-storage/logs/*
-storage/uploads/*
-!storage/logs/.gitkeep
-!storage/uploads/.gitkeep
+# Logs
+logs/*
 
-# IDE
-.idea/
-.vscode/
-*.swp
-*.swo
-*~
+# Backups
+backups/*
 
-# OS
-.DS_Store
-Thumbs.db
+# Uploads
+uploads/*
 
-# Temp
+# Arquivos temporários
 *.tmp
 *.log
 
-# Certificates (EFI)
-*.p12
-*.pfx
-*.pem
-certificados/*
-!certificados/.gitkeep
-!certificados/README.md
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Dependências
+vendor/
+node_modules/
+
+# Arquivos de ambiente
+.env
+.env.local

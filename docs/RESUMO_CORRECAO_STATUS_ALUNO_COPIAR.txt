@@ -1,0 +1,177 @@
+═══════════════════════════════════════════════════════════════════════════════
+  CORREÇÃO: ALTERAÇÃO DE STATUS DO ALUNO - RESUMO EXECUTIVO
+═══════════════════════════════════════════════════════════════════════════════
+
+Data: 2025-01-27
+Baseado em: docs/AUDITORIA_STATUS_ALUNO_INATIVACAO.md
+
+───────────────────────────────────────────────────────────────────────────────
+1. FLUXO 1 - BOTÃO RÁPIDO "DESATIVAR ALUNO" - ✅ CORRIGIDO
+───────────────────────────────────────────────────────────────────────────────
+
+PROBLEMA IDENTIFICADO:
+  • Função alterarStatusAluno() enviava POST para pages/alunos.php
+  • pages/alunos.php NÃO processa a ação alterar_status
+  • Nenhum UPDATE era executado no banco de dados
+  • Mensagem de sucesso aparecia, mas status não mudava
+
+SOLUÇÃO IMPLEMENTADA:
+  ✅ Refatorada função alterarStatusAluno() em admin/pages/alunos.php
+  ✅ Agora usa PUT para admin/api/alunos.php?id={id}
+  ✅ Body JSON contém apenas { status: 'inativo' }
+  ✅ Removido confirm duplicado em desativarAluno()
+  ✅ Adicionada validação de valores permitidos
+  ✅ Mensagens de sucesso contextualizadas
+
+ARQUIVOS MODIFICADOS:
+  • admin/pages/alunos.php (linhas ~5555 e ~5625)
+
+───────────────────────────────────────────────────────────────────────────────
+2. FLUXO 2 - MODAL "EDITAR ALUNO" - ✅ INSTRUMENTADO
+───────────────────────────────────────────────────────────────────────────────
+
+STATUS:
+  • Código já estava correto
+  • Adicionados logs temporários para validação
+
+LOGS ADICIONADOS:
+  Frontend (admin/assets/js/alunos.js):
+    • console.log('🔍 [LOG TEMPORÁRIO] Status enviado no salvarAluno:', ...)
+    • console.log('🔍 [LOG TEMPORÁRIO] Valor do campo status no FormData:', ...)
+    • console.log('🔍 [LOG TEMPORÁRIO] Ação (editar/criar):', ...)
+    • console.log('🔍 [LOG TEMPORÁRIO] ID do aluno:', ...)
+
+  Backend (admin/api/alunos.php):
+    • error_log('[LOG TEMPORÁRIO API] Status recebido na API de alunos: ...')
+    • error_log('[LOG TEMPORÁRIO API] Dados que serão atualizados no banco: ...')
+    • error_log('[LOG TEMPORÁRIO API] Status no $alunoData: ...')
+    • error_log('[LOG TEMPORÁRIO API] UPDATE executado com sucesso para aluno ID: ...')
+    • error_log('[LOG TEMPORÁRIO API] Status no banco após UPDATE: ...')
+
+ARQUIVOS MODIFICADOS:
+  • admin/assets/js/alunos.js
+  • admin/api/alunos.php
+
+───────────────────────────────────────────────────────────────────────────────
+3. SUPORTE A PUT NA API - ✅ ADICIONADO
+───────────────────────────────────────────────────────────────────────────────
+
+PROBLEMA:
+  • API não tinha suporte para método PUT, apenas POST
+
+SOLUÇÃO:
+  ✅ Adicionado case 'PUT' na API
+  ✅ Trata da mesma forma que POST com id (UPDATE)
+  ✅ Mantém compatibilidade com código existente
+
+ARQUIVOS MODIFICADOS:
+  • admin/api/alunos.php
+
+───────────────────────────────────────────────────────────────────────────────
+4. QUERY DE LISTAGEM - ✅ VALIDADA E DOCUMENTADA
+───────────────────────────────────────────────────────────────────────────────
+
+VALIDAÇÃO:
+  ✅ Query principal usa a.status (alunos.status) - linha 2166
+  ✅ Não há ambiguidade com outros campos de status
+  ✅ JOIN com matrículas não interfere no campo status do aluno
+
+DOCUMENTAÇÃO ADICIONADA:
+  ✅ Comentários explicativos na query principal
+  ✅ Nota sobre diferença entre alunos.status e matriculas.status
+  ✅ Comentário no fallback da query
+
+ARQUIVOS MODIFICADOS:
+  • admin/index.php
+
+───────────────────────────────────────────────────────────────────────────────
+5. DOCUMENTAÇÃO NA API - ✅ ADICIONADA
+───────────────────────────────────────────────────────────────────────────────
+
+ADICIONADO NO CABEÇALHO DE admin/api/alunos.php:
+  ✅ Nota explicando que alunos.status é o único campo usado para controlar
+    agendamento de aulas
+  ✅ Diferenciação entre alunos.status e matriculas.status
+
+───────────────────────────────────────────────────────────────────────────────
+CHECKLIST DE TESTES
+───────────────────────────────────────────────────────────────────────────────
+
+TESTE 1 - BOTÃO RÁPIDO "DESATIVAR ALUNO":
+  [ ] Clicar no botão "Desativar aluno" para um aluno ativo
+  [ ] Confirmar a ação
+  [ ] Verificar Network tab - requisição deve ir para admin/api/alunos.php?id={id} com PUT
+  [ ] Verificar body JSON - deve conter {"status": "inativo"}
+  [ ] Verificar resposta - deve retornar {"success": true}
+  [ ] Verificar banco: SELECT status FROM alunos WHERE id = {id} - deve retornar inativo
+  [ ] Verificar listagem - badge deve aparecer como "INATIVO"
+
+TESTE 2 - MODAL "EDITAR ALUNO":
+  [ ] Abrir modal "Editar Aluno" para um aluno
+  [ ] Alterar status de "Ativo" para "Inativo"
+  [ ] Clicar em "Salvar"
+  [ ] Verificar Network tab - payload deve conter "status": "inativo"
+  [ ] Verificar console - logs temporários devem mostrar o status sendo enviado
+  [ ] Verificar resposta da API - deve retornar {"success": true}
+  [ ] Verificar logs do PHP - devem mostrar status sendo recebido e atualizado
+  [ ] Verificar banco: SELECT status FROM alunos WHERE id = {id} - deve retornar inativo
+  [ ] Verificar listagem - badge deve aparecer como "INATIVO"
+
+TESTE 3 - REATIVAÇÃO:
+  [ ] Alterar status de "Inativo" para "Ativo" (via botão rápido ou modal)
+  [ ] Verificar que o aluno volta a aparecer como "ATIVO" na listagem
+  [ ] Verificar banco - status deve ser ativo
+
+───────────────────────────────────────────────────────────────────────────────
+ARQUIVOS MODIFICADOS (RESUMO)
+───────────────────────────────────────────────────────────────────────────────
+
+1. admin/pages/alunos.php
+   • Função alterarStatusAluno() refatorada
+   • Função desativarAluno() simplificada
+
+2. admin/assets/js/alunos.js
+   • Logs temporários adicionados em salvarAluno()
+
+3. admin/api/alunos.php
+   • Suporte a método PUT adicionado
+   • Logs temporários adicionados no bloco de UPDATE
+   • Documentação sobre status do aluno adicionada
+   • Melhor tratamento de dados JSON no UPDATE (suporta PUT e POST)
+
+4. admin/index.php
+   • Documentação adicionada na query de listagem
+
+───────────────────────────────────────────────────────────────────────────────
+OBSERVAÇÕES IMPORTANTES
+───────────────────────────────────────────────────────────────────────────────
+
+⚠️ LOGS TEMPORÁRIOS:
+   Todos os logs marcados com [LOG TEMPORÁRIO] devem ser removidos após
+   validação completa
+
+✅ COMPATIBILIDADE:
+   A API agora suporta tanto POST quanto PUT para UPDATE (mantendo
+   compatibilidade com código existente)
+
+✅ VALORES DE STATUS:
+   Apenas 'ativo', 'inativo' e 'concluido' são aceitos (alinhado com ENUM
+   do banco)
+
+───────────────────────────────────────────────────────────────────────────────
+PRÓXIMOS PASSOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. Executar testes manuais seguindo o checklist acima
+2. Verificar logs temporários no console do navegador e logs do PHP
+3. Validar no banco se os UPDATEs estão sendo executados corretamente
+4. Remover logs temporários após validação completa
+5. Se necessário: Investigar validações de agendamento de aulas que podem
+   estar usando outro campo
+
+───────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ IMPLEMENTAÇÃO CONCLUÍDA - AGUARDANDO TESTES DE VALIDAÇÃO
+───────────────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════════════
+

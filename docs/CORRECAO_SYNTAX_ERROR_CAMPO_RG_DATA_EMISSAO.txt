@@ -1,0 +1,104 @@
+═══════════════════════════════════════════════════════════════════════════════
+  CORREÇÃO: SYNTAX ERROR - IDENTIFIER 'campoRgDataEmissao' HAS ALREADY BEEN DECLARED
+═══════════════════════════════════════════════════════════════════════════════
+
+Data: 2025-01-27
+Erro: SyntaxError: Identifier 'campoRgDataEmissao' has already been declared
+Consequência: ReferenceError: editarAluno is not defined (script parou de carregar)
+
+───────────────────────────────────────────────────────────────────────────────
+PROBLEMA IDENTIFICADO
+───────────────────────────────────────────────────────────────────────────────
+
+Na função saveAlunoDados() havia duas declarações da mesma constante:
+  • Linha 7135: const campoRgDataEmissao = ...
+  • Linha 7143: const campoRgDataEmissao = ... (DUPLICADA!)
+
+E também duas declarações de rgDataEmissaoValor:
+  • Linha 7136: const rgDataEmissaoValor = ...
+  • Linha 7144: const rgDataEmissaoValor = ... (DUPLICADA!)
+
+Quando o navegador encontra um SyntaxError, ele para de interpretar o resto do script.
+Como a função editarAluno() está depois desse ponto, ela nunca foi registrada.
+
+───────────────────────────────────────────────────────────────────────────────
+CORREÇÃO APLICADA
+───────────────────────────────────────────────────────────────────────────────
+
+Arquivo: admin/pages/alunos.php (função saveAlunoDados)
+
+1. ✅ REMOVIDA declaração duplicada (linhas 7142-7150)
+   • Mantida apenas a primeira declaração (linha 7135)
+   • Alterado `const` para `let` em rgDataEmissaoValor (linha 7136)
+
+2. ✅ ADICIONADO tratamento de rg_data_emissao na conversão para JSON
+   • Na parte que converte FormData para JSON (linha ~7271)
+   • Trata rg_data_emissao sem redeclarar constantes
+   • Converte string vazia ou "0000-00-00" para null
+
+Código final:
+```javascript
+// Uma única declaração no início da função
+const campoRgDataEmissao = form.querySelector('input[name="rg_data_emissao"]');
+let rgDataEmissaoValor = campoRgDataEmissao ? campoRgDataEmissao.value.trim() : '';
+if (rgDataEmissaoValor === '' || rgDataEmissaoValor === '0000-00-00') {
+    dadosFormData.append('rg_data_emissao', '');
+} else {
+    dadosFormData.append('rg_data_emissao', rgDataEmissaoValor);
+}
+
+// Na conversão para JSON (sem redeclarar)
+for (let [key, value] of dadosFormData.entries()) {
+    if (!(value instanceof File)) {
+        if (key === 'rg_data_emissao' && (value === '' || value === '0000-00-00')) {
+            data[key] = null;
+        } else {
+            data[key] = value;
+        }
+    }
+}
+```
+
+───────────────────────────────────────────────────────────────────────────────
+VALIDAÇÕES
+───────────────────────────────────────────────────────────────────────────────
+
+✅ Apenas uma declaração de `campoRgDataEmissao` na função saveAlunoDados
+✅ Apenas uma declaração de `rgDataEmissaoValor` na função saveAlunoDados
+✅ Tratamento de rg_data_emissao na conversão para JSON sem redeclarar constantes
+✅ Nenhum erro de lint encontrado
+
+───────────────────────────────────────────────────────────────────────────────
+TESTES RECOMENDADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. Recarregar página (F5):
+   [ ] Verificar console - não deve aparecer SyntaxError
+   [ ] Verificar que script carrega completamente
+
+2. Testar modal de edição:
+   [ ] Clicar no ícone azul de editar de um aluno
+   [ ] Modal deve abrir normalmente
+   [ ] Verificar que editarAluno está definida (sem erro no console)
+
+3. Testar salvamento:
+   [ ] Editar aluno José Edilson (ID 168)
+   [ ] Alterar status para "Inativo"
+   [ ] Salvar
+   [ ] Verificar que status é atualizado no banco
+   [ ] Verificar que não há erro de CPF duplicado (já tratado na API)
+
+───────────────────────────────────────────────────────────────────────────────
+ARQUIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. admin/pages/alunos.php
+   • Função saveAlunoDados: Removida declaração duplicada
+   • Função saveAlunoDados: Adicionado tratamento de rg_data_emissao no JSON
+
+───────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ CORREÇÃO APLICADA
+───────────────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════════════
+

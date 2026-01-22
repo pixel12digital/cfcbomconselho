@@ -1,0 +1,365 @@
+/* =====================================================
+   FLYOUT/HOVER MENU - SIDEBAR SEMPRE COMPACTA
+   Sidebar permanece sempre em 70px, flyouts aparecem no hover
+   ===================================================== */
+
+/* =====================================================
+   SIDEBAR - SEMPRE COMPACTA (70px)
+   ===================================================== */
+
+.admin-sidebar {
+    /* Largura fixa compacta - nunca expande */
+    width: 70px !important;
+    /* SEM transições de largura */
+    transition: none !important;
+    /* Garantir estabilidade */
+    transform: none !important;
+    backface-visibility: visible !important;
+    /* Evitar overflow */
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    /* Posição relativa para flyouts */
+    position: relative !important;
+}
+
+/* SEM hover CSS - sidebar nunca expande */
+.admin-sidebar:hover {
+    width: 70px !important;
+    transition: none !important;
+}
+
+/* =====================================================
+   ELEMENTOS DE NAVEGAÇÃO - SEMPRE CENTRALIZADOS
+   ===================================================== */
+
+.admin-sidebar .nav-link,
+.admin-sidebar .nav-toggle {
+    /* Sempre centralizados - ícones no centro */
+    justify-content: center !important;
+    padding: 12px !important;
+    /* SEM transições */
+    transition: none !important;
+    /* Garantir estabilidade */
+    transform: none !important;
+    backface-visibility: visible !important;
+    /* Alinhamento consistente */
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    /* Posição relativa para flyouts */
+    position: relative !important;
+}
+
+/* =====================================================
+   TEXTOS E BADGES - COMPLETAMENTE OCULTOS
+   ===================================================== */
+
+.admin-sidebar .nav-text,
+.admin-sidebar .nav-badge,
+.admin-sidebar .nav-arrow,
+.admin-sidebar .sidebar-title,
+.admin-sidebar .sidebar-subtitle {
+    /* Completamente ocultos - sidebar sempre compacta */
+    opacity: 0 !important;
+    visibility: hidden !important;
+    /* SEM transições */
+    transition: none !important;
+    /* Garantir estabilidade */
+    transform: none !important;
+    backface-visibility: visible !important;
+    /* Remover completamente do layout */
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+    /* Forçar ocultação */
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+}
+
+/* =====================================================
+   HEADER DA SIDEBAR - SEMPRE CENTRALIZADO
+   ===================================================== */
+
+.admin-sidebar .sidebar-header {
+    /* Sempre centralizado */
+    align-items: center !important;
+    padding: 20px 12px !important;
+    /* SEM transições */
+    transition: none !important;
+    /* Garantir estabilidade */
+    transform: none !important;
+    backface-visibility: visible !important;
+}
+
+/* =====================================================
+   ÍCONES - COMPLETAMENTE VISÍVEIS
+   ===================================================== */
+
+.admin-sidebar .nav-icon {
+    /* Tamanho fixo */
+    width: 20px !important;
+    height: 20px !important;
+    font-size: 16px !important;
+    /* Posição fixa */
+    margin: 0 !important;
+    padding: 0 !important;
+    /* SEM transições para evitar tremulação */
+    transition: none !important;
+    /* Garantir estabilidade máxima */
+    transform: none !important;
+    backface-visibility: visible !important;
+    /* Centralização */
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+    /* Garantir visibilidade */
+    opacity: 1 !important;
+    visibility: visible !important;
+    color: #ecf0f1 !important;
+}
+
+/* =====================================================
+   FLYOUTS - MENUS SUSPENSOS AO LADO
+   ===================================================== */
+
+.admin-sidebar .nav-flyout {
+    /* Posicionamento absoluto - ao lado da sidebar */
+    position: fixed !important;
+    left: 70px !important; /* Exatamente ao lado da sidebar */
+    top: auto !important;
+    /* Estilo do flyout */
+    background-color: #2c3e50 !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3) !important;
+    /* Oculto por padrão */
+    opacity: 0 !important;
+    visibility: hidden !important;
+    /* Transição suave */
+    transition: opacity 0.2s ease, visibility 0.2s ease !important;
+    /* Z-index alto */
+    z-index: 1000 !important;
+    /* Largura fixa */
+    min-width: 200px !important;
+    max-width: 250px !important;
+    /* Padding interno */
+    padding: 12px 0 !important;
+    /* Margem para não colar na sidebar */
+    margin-left: 8px !important;
+}
+
+/* Flyout visível no hover */
+.admin-sidebar .nav-item:hover .nav-flyout,
+.admin-sidebar .nav-group:hover .nav-flyout,
+.admin-sidebar .nav-link:hover .nav-flyout {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+/* =====================================================
+   CONTEÚDO DOS FLYOUTS - TEXTOS CLAROS
+   ===================================================== */
+
+.admin-sidebar .nav-flyout .flyout-title {
+    /* Título do flyout */
+    color: #ecf0f1 !important;
+    font-size: 16px !important;
+    font-weight: 700 !important;
+    padding: 12px 16px !important;
+    margin: 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    border-radius: 8px 8px 0 0 !important;
+}
+
+.admin-sidebar .nav-flyout .flyout-item {
+    /* Itens do flyout - apenas texto */
+    display: block !important;
+    padding: 12px 16px !important;
+    color: #ecf0f1 !important;
+    text-decoration: none !important;
+    font-size: 14px !important;
+    font-weight: 500 !important;
+    /* Transição suave */
+    transition: background-color 0.2s ease !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+.admin-sidebar .nav-flyout .flyout-item:hover {
+    /* Hover nos itens */
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+}
+
+.admin-sidebar .nav-flyout .flyout-item:last-child {
+    /* Último item sem borda */
+    border-bottom: none !important;
+    border-radius: 0 0 8px 8px !important;
+}
+
+/* Ocultar ícones dos itens do flyout - apenas texto */
+.admin-sidebar .nav-flyout .flyout-item .flyout-icon {
+    display: none !important;
+}
+
+/* =====================================================
+   SUBMENUS - OCULTOS (USAMOS FLYOUTS)
+   ===================================================== */
+
+.admin-sidebar .nav-submenu {
+    /* Submenus ocultos - usamos flyouts */
+    display: none !important;
+}
+
+/* =====================================================
+   CORREÇÃO ESPECÍFICA PARA MOBILE
+   ===================================================== */
+
+@media (max-width: 1024px) {
+    .admin-sidebar {
+        /* Em mobile, sempre expandido */
+        width: 280px !important;
+        transition: none !important;
+    }
+    
+    .admin-sidebar .nav-text,
+    .admin-sidebar .nav-badge,
+    .admin-sidebar .nav-arrow,
+    .admin-sidebar .sidebar-title,
+    .admin-sidebar .sidebar-subtitle {
+        /* Em mobile, sempre visível */
+        opacity: 1 !important;
+        display: block !important;
+        transition: none !important;
+    }
+    
+    .admin-sidebar .nav-link,
+    .admin-sidebar .nav-toggle {
+        /* Em mobile, sempre alinhado à esquerda */
+        justify-content: flex-start !important;
+        padding: 12px 16px !important;
+        transition: none !important;
+    }
+    
+    .admin-sidebar .sidebar-header {
+        /* Em mobile, sempre alinhado à esquerda */
+        align-items: flex-start !important;
+        padding: 20px 16px !important;
+        transition: none !important;
+    }
+    
+    /* Flyouts ocultos em mobile */
+    .admin-sidebar .nav-flyout {
+        display: none !important;
+    }
+    
+    /* Submenus visíveis em mobile */
+    .admin-sidebar .nav-submenu {
+        display: block !important;
+    }
+}
+
+/* =====================================================
+   CORREÇÃO DE EMERGÊNCIA - ESTABILIDADE MÁXIMA
+   ===================================================== */
+
+/* Garantir que nenhum elemento trema */
+.admin-sidebar,
+.admin-sidebar *,
+.admin-sidebar *::before,
+.admin-sidebar *::after {
+    /* Desabilitar qualquer animação */
+    animation: none !important;
+    /* Forçar estabilidade */
+    transform: none !important;
+    backface-visibility: visible !important;
+    /* Otimizar renderização */
+    -webkit-font-smoothing: antialiased !important;
+    -moz-osx-font-smoothing: grayscale !important;
+}
+
+/* =====================================================
+   CORREÇÃO ESPECÍFICA PARA ELEMENTOS PROBLEMÁTICOS
+   ===================================================== */
+
+/* Garantir que elementos específicos não causem problemas */
+.admin-sidebar .nav-item,
+.admin-sidebar .nav-group {
+    /* Posição fixa */
+    display: flex !important;
+    align-items: center !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    /* SEM transições */
+    transition: none !important;
+    /* Garantir estabilidade */
+    transform: none !important;
+    backface-visibility: visible !important;
+    /* Posição relativa para flyouts */
+    position: relative !important;
+}
+
+/* =====================================================
+   CORREÇÃO ESPECÍFICA - GARANTIR APENAS ÍCONES
+   ===================================================== */
+
+/* Forçar que apenas ícones sejam visíveis */
+.admin-sidebar .nav-link span,
+.admin-sidebar .nav-toggle span,
+.admin-sidebar .nav-item span,
+.admin-sidebar .nav-group span {
+    /* Ocultar qualquer span de texto */
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Garantir que badges não apareçam */
+.admin-sidebar .badge,
+.admin-sidebar .nav-badge {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+}
+
+/* Garantir que setas não apareçam */
+.admin-sidebar .fa-chevron-down,
+.admin-sidebar .fa-chevron-up,
+.admin-sidebar .fa-chevron-right,
+.admin-sidebar .fa-chevron-left {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+}
+
+/* =====================================================
+   CORREÇÃO FINAL - FORÇAR COMPORTAMENTO CORRETO
+   ===================================================== */
+
+/* Garantir que o menu funcione corretamente */
+.admin-sidebar {
+    /* Forçar renderização estável */
+    contain: none !important;
+    /* Otimizar para performance */
+    will-change: auto !important;
+}
+
+/* Garantir que os elementos internos sejam estáveis */
+.admin-sidebar .nav-link,
+.admin-sidebar .nav-toggle,
+.admin-sidebar .nav-item,
+.admin-sidebar .nav-group {
+    /* Forçar estabilidade */
+    contain: none !important;
+    /* Otimizar para performance */
+    will-change: auto !important;
+}

@@ -1,0 +1,192 @@
+═══════════════════════════════════════════════════════════════════════════════
+  CORREÇÃO: TRAVAMENTO DO MODAL AO SALVAR (ERRO 500 EM exames.php)
+═══════════════════════════════════════════════════════════════════════════════
+
+Data: 2025-01-27
+Problema: Modal travava em "Salvando Dados..." quando exames.php retornava 500
+
+───────────────────────────────────────────────────────────────────────────────
+PROBLEMA IDENTIFICADO
+───────────────────────────────────────────────────────────────────────────────
+
+Após salvar o aluno pelo modal, o sistema tentava atualizar resumos (financeiro,
+provas, teórico, prático). Em produção, a chamada para admin/api/exames.php
+retornava HTTP 500, fazendo a Promise rejeitar e travando o modal em
+"Salvando Dados...", mesmo que o aluno tivesse sido salvo com sucesso.
+
+Erro observado:
+  Failed to load resource: exames.php:1 the server responded with a status of 500
+  Erro HTTP ao buscar exames: 500
+  atualizarResumoProvasAluno @ index.php?page=alunos:11137
+
+───────────────────────────────────────────────────────────────────────────────
+CORREÇÕES IMPLEMENTADAS
+───────────────────────────────────────────────────────────────────────────────
+
+1. ✅ HELPER PARA CHAMADAS SEGURAS DE RESUMO
+   Arquivo: admin/pages/alunos.php (linha ~5640)
+   
+   Criada função tentarAtualizarResumoAluno(nomeResumo, fn):
+   • Envolve chamadas de resumo em try/catch
+   • Se falhar, registra erro no console mas não trava o fluxo
+   • Mostra toast de aviso opcional (sem bloquear)
+   
+   Código aplicado:
+   ```javascript
+   async function tentarAtualizarResumoAluno(nomeResumo, fn) {
+       try {
+           await fn();
+       } catch (error) {
+           console.error(`[RESUMO] Falha ao atualizar resumo de ${nomeResumo}:`, error);
+           // Mostrar aviso suave sem bloquear
+           if (typeof mostrarAlerta === 'function') {
+               mostrarAlerta(
+                   `Aluno atualizado, mas não foi possível atualizar o resumo de ${nomeResumo}.`,
+                   'warning'
+               );
+           }
+       }
+   }
+   ```
+
+2. ✅ FUNÇÃO PARA FINALIZAR SALVAMENTO
+   Arquivo: admin/pages/alunos.php (linha ~5670)
+   
+   Criada função finalizarSalvamentoAlunoComSucesso():
+   • Restaura botão (remove spinner)
+   • Fecha modal
+   • Mostra notificação
+   • Garante que sempre executa (usada no finally)
+   
+   Código aplicado:
+   ```javascript
+   function finalizarSalvamentoAlunoComSucesso(alunoAtualizado, silencioso = false) {
+       const btnSalvar = document.getElementById('btnSalvarAluno');
+       const textoOriginal = btnSalvar ? btnSalvar.getAttribute('data-texto-original') : null;
+       
+       if (btnSalvar && textoOriginal) {
+           btnSalvar.innerHTML = textoOriginal;
+           btnSalvar.disabled = false;
+       }
+       
+       if (!silencioso) {
+           mostrarAlerta('Aluno atualizado com sucesso!', 'success');
+           fecharModalAluno();
+       }
+   }
+   ```
+
+3. ✅ saveAlunoDados REFATORADO
+   Arquivo: admin/pages/alunos.php (linha ~7480)
+   
+   • Atualiza resumos usando Promise.all com tentarAtualizarResumoAluno
+   • Chama finalizarSalvamentoAlunoComSucesso no finally
+   • Garante que o fluxo sempre finalize, mesmo se algum resumo falhar
+   
+   Código aplicado:
+   ```javascript
+   // Atualizar resumos de forma segura (best effort)
+   try {
+       await Promise.all([
+           tentarAtualizarResumoAluno('financeiro', async () => {
+               if (typeof atualizarResumoFinanceiroAluno === 'function') {
+                   await atualizarResumoFinanceiroAluno(alunoId, null);
+               }
+           }),
+           tentarAtualizarResumoAluno('provas', async () => {
+               if (typeof atualizarResumoProvasAluno === 'function') {
+                   await atualizarResumoProvasAluno(alunoId);
+               }
+           }),
+           // ... outros resumos
+       ]);
+   } catch (error) {
+       console.warn('[saveAlunoDados] Algum resumo falhou, mas continuando o fluxo:', error);
+   } finally {
+       // GARANTIR que o fluxo sempre finalize
+       finalizarSalvamentoAlunoComSucesso(data.aluno, silencioso);
+   }
+   ```
+
+4. ✅ atualizarResumoProvasAluno COM LOGS MELHORADOS
+   Arquivo: admin/pages/alunos.php (linha ~9196)
+   
+   • Adicionados logs detalhados (URL, status HTTP, erro)
+   • Detecta caminho correto da API (admin/api/exames.php)
+   • Lança erro para ser capturado por tentarAtualizarResumoAluno
+   
+   Código aplicado:
+   ```javascript
+   console.log('[RESUMO PROVAS] Atualizando para aluno:', alunoId);
+   const url = `${apiUrl}?aluno_id=${encodeURIComponent(alunoId)}&resumo=1`;
+   console.log('[RESUMO PROVAS] URL chamada:', url);
+   
+   const response = await fetch(url);
+   console.log('[RESUMO PROVAS] Status HTTP:', response.status);
+   
+   if (!response.ok) {
+       const text = await response.text().catch(() => '');
+       console.error('[RESUMO PROVAS] Erro HTTP ao buscar exames:', response.status, text.substring(0, 200));
+       throw new Error(`Erro ao buscar exames: ${response.status}`);
+   }
+   ```
+
+5. ✅ SALVAR TEXTO ORIGINAL DO BOTÃO
+   Arquivo: admin/pages/alunos.php (linha ~7315)
+   
+   • Salva texto original em data-texto-original
+   • Usado na finalização para restaurar botão corretamente
+   
+───────────────────────────────────────────────────────────────────────────────
+COMPORTAMENTO ESPERADO
+───────────────────────────────────────────────────────────────────────────────
+
+1. Salvar aluno pelo modal:
+   ✅ Aluno é salvo com sucesso
+   ✅ Resumos são atualizados em paralelo (best effort)
+   ✅ Se algum resumo falhar (500, erro de rede), mostra aviso mas não trava
+   ✅ Modal fecha normalmente
+   ✅ Botão volta ao estado original
+
+2. Em caso de erro 500 em exames.php:
+   ✅ Erro é registrado no console
+   ✅ Toast de aviso é mostrado (opcional)
+   ✅ Modal fecha normalmente
+   ✅ Aluno permanece salvo
+
+3. Logs melhorados:
+   ✅ Console mostra URL chamada
+   ✅ Console mostra status HTTP
+   ✅ Console mostra detalhes do erro
+   ✅ Facilita debug em produção
+
+───────────────────────────────────────────────────────────────────────────────
+PRÓXIMOS PASSOS (OPCIONAL)
+───────────────────────────────────────────────────────────────────────────────
+
+1. Investigar erro 500 em admin/api/exames.php:
+   • Verificar diferenças entre localhost e produção
+   • Verificar includes/config.php
+   • Verificar estrutura do banco (tabelas/colunas)
+   • Adicionar try/catch no PHP com error_log
+
+2. Remover scripts de debug (se existirem):
+   • Condicionar carregamento apenas em localhost
+   • Remover scripts não essenciais em produção
+
+───────────────────────────────────────────────────────────────────────────────
+ARQUIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. admin/pages/alunos.php
+   • Função tentarAtualizarResumoAluno(): Nova função helper
+   • Função finalizarSalvamentoAlunoComSucesso(): Nova função de finalização
+   • Função saveAlunoDados(): Refatorada para usar helper e finally
+   • Função atualizarResumoProvasAluno(): Logs melhorados
+
+───────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ CORREÇÕES IMPLEMENTADAS
+───────────────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════════════
+

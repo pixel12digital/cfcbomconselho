@@ -1,0 +1,858 @@
+/* ==========================================
+   ARQUIVO DE REFERÊNCIA - ESTILO PADRONIZADO DE POPUP
+   ==========================================
+   
+   Este arquivo contém todos os estilos necessários para replicar
+   exatamente o design do popup "Gerenciar Disciplinas" em novos modais.
+   
+   Para usar: Inclua este CSS e copie a estrutura HTML de referência.
+   
+   Paleta de Cores Oficial:
+   - Azul Principal: #023A8D (azul marinho)
+   - Laranja Secundário: #F7931E (laranja vibrante)
+   - Gradiente Azul: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%)
+   ========================================== */
+
+/* ==========================================
+   ESTRUTURA BASE DO MODAL
+   ========================================== */
+
+.popup-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1055;
+    padding: 2rem;
+}
+
+.popup-modal.show {
+    display: flex !important;
+}
+
+.popup-modal-wrapper {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+    position: relative;
+    max-width: 95vw;
+    width: 95vw;
+    max-height: calc(100vh - 4rem);
+    height: calc(100vh - 4rem);
+}
+
+/* ==========================================
+   HEADER DO MODAL
+   ========================================== */
+
+.popup-modal-header {
+    background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%);
+    color: white;
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.popup-modal-header .header-content {
+    display: flex;
+    align-items: center;
+}
+
+.popup-modal-header .header-icon {
+    margin-right: 1rem;
+}
+
+.popup-modal-header .header-icon i {
+    font-size: 1.8rem;
+    color: #F7931E;
+}
+
+.popup-modal-header .header-text h5 {
+    margin: 0 0 0.25rem 0;
+    font-weight: bold;
+    font-size: 1.25rem;
+}
+
+.popup-modal-header .header-text small {
+    opacity: 0.75;
+    font-size: 0.875rem;
+}
+
+.popup-modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+}
+
+.popup-modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transform: scale(1.1);
+}
+
+/* ==========================================
+   CONTEÚDO DO MODAL
+   ========================================== */
+
+.popup-modal-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    overscroll-behavior: contain;
+    scrollbar-gutter: stable;
+    padding: 1.5rem 2rem;
+    flex: 1;
+    background: white;
+    min-height: 0;
+}
+
+/* Garantir que o grid do modal funcione com scroll */
+.popup-modal-wrapper {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    overflow: hidden;
+}
+
+.popup-modal-wrapper .popup-modal-content {
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+/* ==========================================
+   BARRA DE BUSCA
+   ========================================== */
+
+.popup-search-container {
+    margin-bottom: 1.5rem;
+}
+
+.popup-search-wrapper {
+    position: relative;
+}
+
+.popup-search-input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    border: none;
+    border-radius: 8px;
+    background-color: white;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    font-size: 1rem;
+    transition: all 0.2s ease;
+}
+
+.popup-search-input:focus {
+    outline: none;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    border: 2px solid #023A8D;
+}
+
+.popup-search-icon {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 1rem;
+}
+
+/* ==========================================
+   ESTATÍSTICAS
+   ========================================== */
+
+.popup-stats-container {
+    margin-bottom: 1.5rem;
+}
+
+.popup-stats-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.popup-stats-item {
+    display: flex;
+    align-items: center;
+}
+
+.popup-stats-icon {
+    flex-shrink: 0;
+    margin-right: 0.75rem;
+}
+
+.popup-stats-icon .icon-circle {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #023A8D, #1e5bb8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.popup-stats-icon .icon-circle i {
+    color: white;
+    font-size: 1rem;
+}
+
+.popup-stats-text {
+    flex-grow: 1;
+}
+
+.popup-stats-text h6 {
+    margin: 0;
+    font-weight: bold;
+    color: #212529;
+}
+
+.popup-stats-text .stats-number {
+    color: #023A8D;
+    font-weight: bold;
+}
+
+/* ==========================================
+   SEÇÃO DE TÍTULO E BOTÃO
+   ========================================== */
+
+.popup-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.popup-section-title h6 {
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+    color: #212529;
+    font-size: 1.1rem;
+}
+
+.popup-section-title small {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.popup-primary-button {
+    background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.popup-primary-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, #1e5bb8 0%, #023A8D 100%);
+}
+
+.popup-primary-button i {
+    font-size: 1rem;
+}
+
+/* ==========================================
+   GRID DE ITENS
+   ========================================== */
+
+.popup-items-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+    gap: 1.5rem;
+    overflow: visible;
+    max-height: none;
+    height: auto;
+}
+
+/* ==========================================
+   CARDS DE ITENS
+   ========================================== */
+
+.popup-item-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    padding: 1.5rem;
+    min-height: 240px;
+    min-width: 320px;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.popup-item-card:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    transform: translateY(-2px);
+    border-color: #023A8D;
+}
+
+.popup-item-card.active {
+    border-left: 4px solid #28a745;
+}
+
+.popup-item-card.modified {
+    border-color: #ffc107;
+    box-shadow: 0 0 0 0.2rem rgba(255, 193, 7, 0.25);
+}
+
+.popup-item-card.new {
+    border-color: #28a745;
+    border-width: 2px;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% {
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+    50% {
+        box-shadow: 0 0 0 0.4rem rgba(40, 167, 69, 0.1);
+    }
+    100% {
+        box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25);
+    }
+}
+
+.popup-item-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1rem;
+}
+
+.popup-item-card-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #212529;
+    margin: 0;
+    line-height: 1.4;
+    margin-bottom: 0.5rem;
+}
+
+.popup-item-card-code {
+    font-size: 0.85rem;
+    color: #6c757d;
+    font-family: 'Courier New', monospace;
+    background: #f8f9fa;
+    padding: 0.5rem 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.5rem;
+    width: 100%;
+    line-height: 1.4;
+}
+
+.popup-item-card-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.popup-item-card-menu {
+    width: 36px;
+    height: 36px;
+    border: none;
+    background: #f8f9fa;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    color: #6c757d;
+}
+
+.popup-item-card-menu:hover {
+    background: #e9ecef;
+    color: #023A8D;
+}
+
+.popup-item-card-content {
+    flex: 1;
+}
+
+.popup-item-card-stats {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.popup-item-card-description {
+    font-size: 0.85rem;
+    color: #6c757d;
+    line-height: 1.4;
+}
+
+/* ==========================================
+   ESTADOS DE CARREGAMENTO
+   ========================================== */
+
+.popup-loading-state {
+    text-align: center;
+    padding: 3rem 0;
+    display: none;
+}
+
+.popup-loading-state.show {
+    display: block;
+}
+
+.popup-loading-spinner {
+    width: 3rem;
+    height: 3rem;
+    border: 0.25rem solid #f3f3f3;
+    border-top: 0.25rem solid #023A8D;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.popup-loading-text h6 {
+    color: #023A8D;
+    margin-bottom: 0.5rem;
+}
+
+.popup-loading-text p {
+    color: #6c757d;
+    margin: 0;
+}
+
+.popup-empty-state {
+    text-align: center;
+    padding: 3rem 0;
+    display: none;
+}
+
+.popup-empty-state.show {
+    display: block;
+}
+
+.popup-empty-state .empty-icon {
+    width: 5rem;
+    height: 5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+
+.popup-empty-state .empty-icon i {
+    color: #6c757d;
+    font-size: 2rem;
+}
+
+.popup-empty-state h5 {
+    color: #212529;
+    margin-bottom: 1rem;
+}
+
+.popup-empty-state p {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}
+
+.popup-error-state {
+    text-align: center;
+    padding: 3rem 0;
+    display: none;
+}
+
+.popup-error-state.show {
+    display: block;
+}
+
+.popup-error-state .error-icon {
+    width: 5rem;
+    height: 5rem;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ffe6e6 0%, #ffcccc 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 1.5rem;
+}
+
+.popup-error-state .error-icon i {
+    color: #dc3545;
+    font-size: 2rem;
+}
+
+.popup-error-state h5 {
+    color: #dc3545;
+    margin-bottom: 1rem;
+}
+
+.popup-error-state p {
+    color: #6c757d;
+    margin-bottom: 1.5rem;
+}
+
+/* ==========================================
+   FOOTER DO MODAL
+   ========================================== */
+
+.popup-modal-footer {
+    padding: 1rem 2rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    background: #fafbfc;
+}
+
+.popup-footer-info {
+    display: flex;
+    align-items: center;
+}
+
+.popup-footer-info small {
+    color: #6c757d;
+    margin-right: 1rem;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.popup-footer-info i {
+    color: #6c757d;
+}
+
+.popup-footer-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.popup-secondary-button {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    color: #6c757d;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.popup-secondary-button:hover {
+    background: #f8f9fa;
+    border-color: #023A8D;
+    color: #023A8D;
+}
+
+.popup-save-button {
+    background: linear-gradient(135deg, #023A8D 0%, #1e5bb8 100%);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.popup-save-button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    background: linear-gradient(135deg, #1e5bb8 0%, #023A8D 100%);
+}
+
+/* ==========================================
+   RESPONSIVIDADE
+   ========================================== */
+
+/* Tablet */
+@media (min-width: 768px) and (max-width: 991.98px) {
+    .popup-modal-wrapper {
+        max-width: calc(100vw - 4rem);
+        width: calc(100vw - 4rem);
+    }
+    
+    .popup-items-grid {
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+        gap: 1.25rem;
+    }
+}
+
+/* Mobile */
+@media (max-width: 767.98px) {
+    .popup-modal {
+        padding: 0;
+    }
+    
+    .popup-modal-wrapper {
+        width: 100vw;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    
+    .popup-modal-header {
+        padding: 1rem 1.5rem;
+    }
+    
+    .popup-modal-content {
+        padding: 1rem 1.5rem;
+    }
+    
+    .popup-modal-footer {
+        padding: 1rem 1.5rem;
+    }
+    
+    .popup-items-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .popup-item-card {
+        min-width: 100%;
+        min-height: 200px;
+        padding: 1rem;
+    }
+    
+    .popup-section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .popup-primary-button {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .popup-footer-actions {
+        flex-direction: column;
+        width: 100%;
+        gap: 0.5rem;
+    }
+    
+    .popup-secondary-button,
+    .popup-save-button {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+/* Desktop Large */
+@media (min-width: 1200px) {
+    .popup-items-grid {
+        grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+        gap: 2rem;
+    }
+}
+
+@media (min-width: 1920px) {
+    .popup-items-grid {
+        grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+        gap: 2.5rem;
+    }
+}
+
+/* ==========================================
+   UTILITÁRIOS
+   ========================================== */
+
+.popup-hidden {
+    display: none !important;
+}
+
+.popup-visible {
+    display: block !important;
+}
+
+.popup-text-center {
+    text-align: center;
+}
+
+.popup-text-muted {
+    color: #6c757d;
+}
+
+.popup-text-primary {
+    color: #023A8D;
+}
+
+.popup-text-success {
+    color: #28a745;
+}
+
+.popup-text-danger {
+    color: #dc3545;
+}
+
+.popup-text-warning {
+    color: #ffc107;
+}
+
+.popup-bg-light {
+    background-color: #f8f9fa;
+}
+
+.popup-bg-white {
+    background-color: white;
+}
+
+.popup-shadow-sm {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.popup-shadow {
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.popup-rounded {
+    border-radius: 8px;
+}
+
+.popup-rounded-lg {
+    border-radius: 12px;
+}
+
+.popup-rounded-xl {
+    border-radius: 16px;
+}
+
+/* ==========================================
+   ANIMAÇÕES
+   ========================================== */
+
+.popup-fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+.popup-slide-up {
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* ==========================================
+   SCROLLBAR PERSONALIZADA
+   ========================================== */
+
+.popup-modal-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.popup-modal-content::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.popup-modal-content::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+.popup-modal-content::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* ==========================================
+   FOCUS STATES PARA ACESSIBILIDADE
+   ========================================== */
+
+.popup-modal-close:focus,
+.popup-primary-button:focus,
+.popup-secondary-button:focus,
+.popup-save-button:focus,
+.popup-item-card-menu:focus {
+    outline: 2px solid #023A8D;
+    outline-offset: 2px;
+}
+
+.popup-search-input:focus {
+    outline: none;
+    border: 2px solid #023A8D;
+    box-shadow: 0 0 0 0.2rem rgba(2, 58, 141, 0.25);
+}
+
+/* ==========================================
+   PRINT STYLES
+   ========================================== */
+
+@media print {
+    .popup-modal {
+        position: static;
+        background: white;
+        box-shadow: none;
+    }
+    
+    .popup-modal-wrapper {
+        box-shadow: none;
+        border: 1px solid #dee2e6;
+    }
+    
+    .popup-modal-close,
+    .popup-footer-actions {
+        display: none;
+    }
+}

@@ -1,0 +1,1111 @@
+/**
+ * =====================================================
+ * MODAL DE FORMULÁRIO LONGO - PADRÃO DO SISTEMA
+ * =====================================================
+ * 
+ * Este arquivo define o padrão estrutural para modais de formulário longo
+ * com as seguintes características:
+ * 
+ * - Header fixo (não rola)
+ * - Abas fixas (não rolam)
+ * - Corpo com scroll interno (área rolável)
+ * - Footer fixo (sempre visível no final)
+ * 
+ * PADRÃO DE LAYOUT:
+ * 
+ * #modalAluno (ou .custom-modal)
+ *   └─ .custom-modal-dialog (container centralizado)
+ *       └─ .custom-modal-content (flex column)
+ *           └─ form (flex column)
+ *               ├─ .aluno-modal-header (fixo)
+ *               ├─ .aluno-modal-tabs (fixo)
+ *               ├─ .aluno-modal-body (rolável, flex: 1)
+ *               │   └─ .aluno-modal-panel
+ *               │       └─ .aluno-tab-content
+ *               └─ .aluno-modal-footer (fixo)
+ * 
+ * PADRÃO VISUAL HARMONIZADO COM "AGENDAR NOVA AULA":
+ * 
+ * Header:
+ *   - Fundo branco (--cfc-surface)
+ *   - Borda inferior suave (--cfc-border-subtle)
+ *   - Título em cor primária escura (--cfc-primary)
+ *   - Botão close discreto (cinza médio)
+ * 
+ * Footer:
+ *   - Fundo cinza claro (--cfc-surface-muted: #F3F4F6)
+ *   - Borda superior leve (--cfc-border-subtle)
+ *   - Botão Cancelar: outline-secondary (branco, borda cinza)
+ *   - Botão Primário: btn-primary (azul, como no agendamento)
+ * 
+ * Body:
+ *   - Fundo branco (--cfc-surface)
+ *   - Scroll interno independente
+ * 
+ * MODAIS QUE SERÃO MIGRADOS PARA ESTE PADRÃO:
+ * - Aluno (#modalAluno) ✅ (referência)
+ * - Detalhes do Aluno (#modalVisualizarAluno) ✅ (harmonizado)
+ * - Instrutor (#modalInstrutor)
+ * - Veículo (#modalVeiculo)
+ * - Financeiro (quando tiver formulário longo)
+ * - Exames (se aplicável)
+ * 
+ * =====================================================
+ */
+
+/* =====================================================
+   OVERLAY E CONTAINER PRINCIPAL
+   ===================================================== */
+
+/* =====================================================
+   CONTROLE DE VISIBILIDADE DO MODAL - PADRÃO ÚNICO
+   ===================================================== */
+
+/* Estado padrão: modal escondido */
+.custom-modal {
+    position: fixed;
+    inset: 0;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background-color: rgba(0, 0, 0, 0.45);
+    z-index: 2000;
+    width: 100vw;
+    min-height: 100vh;
+    padding: clamp(16px, 4vw, 48px);
+    box-sizing: border-box;
+    
+    /* Animação suave */
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease-out;
+}
+
+/* Modal visível quando data-opened="true" */
+.custom-modal[data-opened="true"] {
+    display: flex;
+    opacity: 1;
+    pointer-events: auto;
+}
+
+/* Dialog centralizado - limita largura e altura */
+.custom-modal-dialog {
+    max-width: 1120px;
+    width: 100%;
+    margin: 0 auto; /* centraliza horizontalmente */
+    position: relative;
+    display: flex;
+    align-items: stretch;
+}
+
+/* Específico para modal de aluno - mantém altura controlada */
+#modalAluno .custom-modal-dialog {
+    width: min(95vw, 1080px);
+    max-width: 1080px;
+    height: min(760px, calc(100vh - (clamp(16px, 4vw, 48px) * 2)));
+    min-height: min(480px, calc(100vh - (clamp(16px, 4vw, 48px) * 2)));
+    max-height: calc(100vh - (clamp(16px, 4vw, 48px) * 2));
+}
+
+/* Content - container flex em coluna */
+#modalAluno .custom-modal-content {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Form também é flex column */
+.aluno-modal-form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+}
+
+/* =====================================================
+   HEADER - FIXO (NÃO ROLA)
+   ===================================================== */
+
+/* =====================================================
+   HEADER - PADRÃO HARMONIZADO COM "AGENDAR NOVA AULA"
+   ===================================================== */
+
+.aluno-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background-color: var(--cfc-surface, #FFFFFF);
+    border-bottom: 1px solid var(--cfc-border-subtle, #E5E7EB);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    color: var(--cfc-primary, #0F1E4A);
+    min-height: 56px;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+}
+
+.aluno-modal-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--cfc-primary, #0F1E4A);
+}
+
+.aluno-modal-title i {
+    font-size: 1rem;
+    color: var(--cfc-primary, #0F1E4A);
+}
+
+.aluno-modal-close {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--gray-300, #cbd5e1);
+    border: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    opacity: 1;
+    background-image: none;
+    color: var(--gray-700, #334155);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.aluno-modal-close:hover {
+    background-color: var(--gray-400, #94a3b8);
+    color: var(--gray-800, #1e293b);
+}
+
+.aluno-modal-close:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.4);
+}
+
+.aluno-modal-close::after {
+    content: "\00d7";
+    font-size: 1.4rem;
+    line-height: 1;
+    color: #fff;
+    font-weight: 300;
+}
+
+/* =====================================================
+   ABAS - FIXAS (NÃO ROLAM)
+   ===================================================== */
+
+/* Barra de abas - altura consistente 56-64px */
+.aluno-modal-tabs {
+    display: flex;
+    align-items: flex-end;
+    padding: 0 32px;
+    margin: 0;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    min-height: 64px;
+    height: 64px;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+}
+
+/* Container das abas - alinhado na parte inferior */
+.aluno-tabs {
+    border-bottom: none;
+    display: flex;
+    gap: 8px;
+    width: 100%;
+    height: 56px;
+    align-items: flex-end;
+    padding-bottom: 0;
+}
+
+.aluno-tabs .nav-item {
+    display: flex;
+}
+
+/* Abas individuais - padding vertical controlado */
+.aluno-tabs .nav-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 16px;
+    border: none;
+    border-radius: 0;
+    color: #64748b;
+    font-weight: 600;
+    font-size: 0.9rem;
+    background: transparent;
+    height: auto;
+    min-height: 40px;
+    position: relative;
+    transition: color 0.2s ease, background 0.2s ease;
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+.aluno-tabs .nav-link i {
+    font-size: 1rem;
+}
+
+/* Abas inativas - hover */
+.aluno-tabs .nav-link:hover {
+    color: #0f172a;
+    background: rgba(15, 23, 42, 0.04);
+}
+
+/* Aba ativa - cor do CFC */
+.aluno-tabs .nav-link.active {
+    color: var(--cfc-primary, #0F1E4A);
+    background: transparent;
+}
+
+/* Underline da aba ativa */
+.aluno-tabs .nav-link.active::after {
+    content: "";
+    position: absolute;
+    left: 16px;
+    right: 16px;
+    bottom: 0;
+    height: 2px;
+    background: var(--cfc-primary, #0F1E4A);
+    border-radius: 0;
+}
+
+/* =====================================================
+   CORPO - ROLÁVEL (SCROLL INTERNO)
+   ===================================================== */
+
+/* Body principal - área rolável com flex: 1 */
+#modalAluno .aluno-modal-body {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: 24px 32px;
+    background-color: var(--cfc-surface, #FFFFFF);
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: #94a3b8 #edf2f7;
+    box-sizing: border-box;
+}
+
+/* Panel interno */
+#modalAluno .aluno-modal-panel {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    padding: 0;
+    background: transparent;
+    gap: 0;
+    box-sizing: border-box;
+}
+
+/* Tab content */
+#modalAluno .aluno-tab-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* Remover display flex para evitar centralização vertical */
+    display: block !important;
+    flex-direction: unset;
+    height: auto;
+    /* Garantir fluxo natural de cima para baixo */
+    align-items: unset;
+    justify-content: unset;
+}
+
+#modalAluno .aluno-tab-content .tab-pane {
+    /* Remover flex que pode causar expansão vertical indesejada */
+    flex: none;
+    min-height: 0;
+    /* NÃO forçar display aqui - deixar Bootstrap controlar (display: none para inativas, display: block para .active) */
+    height: auto;
+}
+
+#modalAluno .aluno-modal-panel > .tab-content {
+    flex: 1 1 auto;
+    min-height: 0;
+    /* NÃO forçar display aqui - deixar Bootstrap controlar */
+    height: auto;
+    padding: 0;
+    overflow: visible;
+    background: transparent;
+}
+
+#modalAluno .aluno-modal-panel > .tab-content > .tab-pane {
+    /* Remover flex que pode causar expansão vertical indesejada */
+    flex: none;
+    min-height: 0;
+    padding: 0;
+    /* NÃO forçar display aqui - deixar Bootstrap controlar (display: none para inativas, display: block para .active) */
+    overflow: visible;
+    height: auto;
+}
+
+/* Remover regra de .active - Bootstrap já controla isso */
+
+/* Scrollbar customizada */
+#modalAluno .aluno-modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+#modalAluno .aluno-modal-body::-webkit-scrollbar-track {
+    background: #edf2f7;
+    border-radius: 4px;
+}
+
+#modalAluno .aluno-modal-body::-webkit-scrollbar-thumb {
+    background: #94a3b8;
+    border-radius: 4px;
+}
+
+#modalAluno .aluno-modal-body::-webkit-scrollbar-thumb:hover {
+    background: #64748b;
+}
+
+/* =====================================================
+   FOOTER - FIXO (SEMPRE VISÍVEL)
+   ===================================================== */
+
+.aluno-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 12px 24px;
+    background-color: var(--cfc-surface-muted, #F3F4F6);
+    border-top: 1px solid var(--cfc-border-subtle, #E5E7EB);
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+    min-height: auto;
+}
+
+.aluno-btn-cancelar,
+.aluno-btn-salvar {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 18px;
+    min-height: 40px;
+    font-weight: 600;
+    border-radius: 10px;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    cursor: pointer;
+}
+
+/* Botão Cancelar - estilo discreto como no modal de agendamento */
+.aluno-modal-footer .btn-outline-secondary,
+.aluno-btn-cancelar {
+    border: 1px solid var(--cfc-border-subtle, #E5E7EB);
+    background: var(--cfc-surface, #FFFFFF);
+    color: var(--gray-700, #334155);
+}
+
+.aluno-modal-footer .btn-outline-secondary:hover,
+.aluno-btn-cancelar:hover {
+    background: var(--gray-100, #f1f5f9);
+    color: var(--gray-800, #1e293b);
+    border-color: var(--gray-300, #cbd5e1);
+}
+
+/* Botão Salvar - estilo primário como no modal de agendamento */
+.aluno-modal-footer .btn-primary,
+.aluno-btn-salvar {
+    padding-inline: 20px;
+    background: var(--primary-color, #1e3a8a);
+    color: #ffffff;
+    border: none;
+    min-height: 40px;
+}
+
+.aluno-modal-footer .btn-primary:hover,
+.aluno-btn-salvar:hover {
+    background: var(--primary-dark, #1e40af);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+}
+
+.aluno-modal-footer .btn i {
+    font-size: 0.95rem;
+}
+
+/* =====================================================
+   ESTILOS DE FORMULÁRIO (ESSENCIAIS)
+   ===================================================== */
+
+#modalAluno .aluno-modal-panel .row {
+    --bs-gutter-x: 1rem;
+    --bs-gutter-y: 1.35rem;
+}
+
+#modalAluno .aluno-modal-panel .container-fluid > .row {
+    margin-bottom: 1.5rem;
+}
+
+#modalAluno .aluno-modal-panel .container-fluid > .row:last-child {
+    margin-bottom: 0;
+}
+
+#modalAluno .aluno-modal-panel h6 {
+    font-size: 0.88rem;
+    font-weight: 600;
+    color: #1e293b;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#modalAluno .form-label {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #475569;
+    margin-bottom: 0.35rem;
+}
+
+#modalAluno .form-control,
+#modalAluno .form-select {
+    min-height: 40px;
+    padding: 0 12px;
+    font-size: 0.94rem;
+    border-radius: 10px;
+    border: 1px solid #cbd5e1;
+    color: #1f2937;
+}
+
+#modalAluno .form-control:focus,
+#modalAluno .form-select:focus {
+    border-color: var(--cfc-primary, #0F1E4A);
+    box-shadow: 0 0 0 2px rgba(15, 30, 74, 0.18);
+    outline: none;
+}
+
+#modalAluno textarea.form-control {
+    min-height: 96px;
+    padding: 12px;
+    resize: vertical;
+}
+
+/* =====================================================
+   CONTEÚDO DAS ABAS - ESPAÇAMENTO PADRONIZADO
+   ===================================================== */
+
+/* Classe padrão para todas as tab-pane do modal de Aluno
+   Garante que o conteúdo comece logo abaixo das abas com espaçamento moderado
+   IMPORTANTE: NÃO forçar display aqui - Bootstrap controla (display: none para inativas, display: block para .active) */
+#modalAluno .modal-tab-pane {
+    padding-top: 1rem; /* 16px - espaçamento confortável mas compacto */
+    padding-left: 0;
+    padding-right: 0;
+    padding-bottom: 0;
+    
+    /* DEBUG VISUAL - BORDA COLORIDA PARA VERIFICAR SE CSS ESTÁ ATIVO */
+    border: 2px solid magenta !important;
+    box-sizing: border-box;
+}
+
+/* Zerar margens superiores de elementos no topo das abas */
+#modalAluno .modal-tab-pane > .row:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+#modalAluno .modal-tab-pane > .row:first-child > .col-12:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Títulos h6 dentro das abas - sem margem superior */
+#modalAluno .modal-tab-pane h6 {
+    margin-top: 0 !important;
+    margin-bottom: 1rem;
+    padding-top: 0;
+    padding-bottom: 0.5rem;
+}
+
+/* Remover margens/paddings excessivos de containers no topo */
+#modalAluno .modal-tab-pane .container-fluid:first-child {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+#modalAluno .modal-tab-pane .container-fluid:first-child > .row:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+#modalAluno .modal-tab-pane .row:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+#modalAluno .modal-tab-pane .row:first-child .col-12:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Garantir que placeholders não tenham espaçamento excessivo no topo */
+#modalAluno .modal-tab-pane .text-center.text-muted:first-child {
+    margin-top: 0;
+    padding-top: 0;
+}
+
+/* Normalizar espaçamento do container-fluid na aba Histórico e outras */
+#modalAluno .modal-tab-pane .container-fluid {
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+}
+
+/* Garantir que a primeira row dentro de container-fluid não tenha margin-top */
+#modalAluno .modal-tab-pane .container-fluid > .row:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Título da aba Histórico - sem margin-top excessivo */
+#modalAluno .modal-tab-pane .container-fluid > .row:first-child > .col-12:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* H5 e parágrafos no topo das abas - espaçamento mínimo */
+#modalAluno .modal-tab-pane h5,
+#modalAluno .modal-tab-pane .container-fluid h5 {
+    margin-top: 0 !important;
+    margin-bottom: 0.75rem !important;
+    padding-top: 0 !important;
+}
+
+#modalAluno .modal-tab-pane p.text-muted.small,
+#modalAluno .modal-tab-pane .container-fluid p.text-muted.small {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Placeholders das abas Matrícula e Documentos - sem espaçamento excessivo */
+#modalAluno .modal-tab-pane > p:first-child,
+#modalAluno .modal-tab-pane > p:only-child {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Garantir que elementos diretos dentro de tab-pane não tenham margin-top */
+#modalAluno .modal-tab-pane > *:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* Garantir que parágrafos diretos (placeholders) não tenham espaçamento excessivo */
+#modalAluno .modal-tab-pane > p:first-child,
+#modalAluno .modal-tab-pane > p:only-child {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+}
+
+/* Remover qualquer height: 100% ou min-height grande que possa causar centralização */
+#modalAluno .modal-tab-pane,
+#modalAluno .modal-tab-pane .container-fluid {
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+}
+
+/* Classe auxiliar para cabeçalhos de seção (mantida para compatibilidade) */
+#modalAluno .modal-section-header {
+    margin-top: 0 !important;
+    margin-bottom: 1rem;
+    padding-top: 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+/* =====================================================
+   MODAL DE VISUALIZAÇÃO (DETALHES DO ALUNO)
+   ===================================================== */
+
+/* Reaproveita a mesma estrutura base do #modalAluno */
+.modal-visualizar-aluno .custom-modal-dialog {
+    width: min(95vw, 1080px);
+    max-width: 1080px;
+    height: min(760px, calc(100vh - (clamp(16px, 4vw, 48px) * 2)));
+    min-height: min(480px, calc(100vh - (clamp(16px, 4vw, 48px) * 2)));
+    max-height: calc(100vh - (clamp(16px, 4vw, 48px) * 2));
+}
+
+.modal-visualizar-aluno .custom-modal-content {
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    max-height: 100%;
+    border-radius: 12px;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+    background: #ffffff;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Header do modal de visualização - harmonizado com modal de edição e agendamento */
+.modal-visualizar-aluno .visualizar-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 24px;
+    background-color: var(--cfc-surface, #FFFFFF);
+    border-bottom: 1px solid var(--cfc-border-subtle, #E5E7EB);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+    color: var(--cfc-primary, #0F1E4A);
+    flex: 0 0 auto;
+    flex-shrink: 0;
+}
+
+.modal-visualizar-aluno .visualizar-modal-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--cfc-primary, #0F1E4A);
+}
+
+.modal-visualizar-aluno .visualizar-modal-header .btn-close {
+    width: 40px !important;
+    height: 40px !important;
+    border-radius: 50% !important;
+    background-color: var(--gray-300, #cbd5e1) !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23334155'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") !important;
+    background-repeat: no-repeat !important;
+    background-position: center !important;
+    background-size: 12px 12px !important;
+    border: none !important;
+    opacity: 1 !important;
+    transition: all 0.2s ease;
+    filter: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+}
+
+.modal-visualizar-aluno .visualizar-modal-header .btn-close:hover {
+    background-color: var(--gray-400, #94a3b8) !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%231e293b'%3e%3cpath d='M.293.293a1 1 0 0 1 1.414 0L8 6.586 14.293.293a1 1 0 1 1 1.414 1.414L9.414 8l6.293 6.293a1 1 0 0 1-1.414 1.414L8 9.414l-6.293 6.293a1 1 0 0 1-1.414-1.414L6.586 8 .293 1.707a1 1 0 0 1 0-1.414z'/%3e%3c/svg%3e") !important;
+    filter: none !important;
+}
+
+/* Body do modal de visualização - scrollável */
+.modal-visualizar-aluno .visualizar-modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 24px 32px;
+    background: #ffffff;
+}
+
+/* Footer do modal de visualização - harmonizado com modal de edição e agendamento */
+.modal-visualizar-aluno .visualizar-modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 12px 24px;
+    background-color: var(--cfc-surface-muted, #F3F4F6);
+    border-top: 1px solid var(--cfc-border-subtle, #E5E7EB);
+    border-bottom-left-radius: 16px;
+    border-bottom-right-radius: 16px;
+    flex: 0 0 auto;
+    flex-shrink: 0;
+}
+
+.modal-visualizar-aluno .visualizar-modal-footer .btn {
+    min-width: 120px;
+}
+
+/* Botões do footer de visualização - estilo harmonizado */
+.modal-visualizar-aluno .visualizar-modal-footer .btn-outline-secondary {
+    border: 1px solid var(--cfc-border-subtle, #E5E7EB);
+    background: var(--cfc-surface, #FFFFFF);
+    color: var(--gray-700, #334155);
+}
+
+.modal-visualizar-aluno .visualizar-modal-footer .btn-outline-secondary:hover {
+    background: var(--gray-100, #f1f5f9);
+    color: var(--gray-800, #1e293b);
+    border-color: var(--gray-300, #cbd5e1);
+}
+
+/* Botão primário no footer de visualização */
+.modal-visualizar-aluno .visualizar-modal-footer .btn-primary {
+    background: var(--primary-color, #1e3a8a);
+    color: #ffffff;
+    border: none;
+}
+
+.modal-visualizar-aluno .visualizar-modal-footer .btn-primary:hover {
+    background: var(--primary-dark, #1e40af);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(30, 58, 138, 0.3);
+}
+
+/* Ajustes de espaçamento no conteúdo de visualização */
+.modal-visualizar-aluno .visualizar-modal-body .row {
+    margin-bottom: 1rem;
+}
+
+.modal-visualizar-aluno .visualizar-modal-body h6 {
+    color: var(--cfc-primary, #0F1E4A);
+    font-weight: 600;
+    margin-bottom: 0.75rem;
+    font-size: 0.95rem;
+}
+
+.modal-visualizar-aluno .visualizar-modal-body hr {
+    margin: 1.5rem 0;
+    opacity: 0.2;
+}
+
+/* =====================================================
+   RESPONSIVIDADE
+   ===================================================== */
+
+@media (max-width: 1024px) {
+    #modalAluno .custom-modal-dialog {
+        width: min(95vw, 1024px);
+        max-width: 1024px;
+    }
+
+    #modalAluno .aluno-modal-body {
+        padding: 20px 24px;
+    }
+}
+
+@media (max-width: 768px) {
+    #modalAluno .custom-modal-dialog {
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        min-height: 100vh;
+    }
+
+    #modalAluno.custom-modal {
+        padding: 0;
+    }
+
+    #modalAluno .custom-modal-content {
+        border-radius: 0;
+    }
+
+    .aluno-modal-header {
+        padding: 14px 20px;
+    }
+
+    .aluno-modal-tabs {
+        padding: 0 18px;
+        overflow-x: auto;
+    }
+
+    .aluno-tabs {
+        gap: 8px;
+    }
+
+    .aluno-tabs .nav-link {
+        padding: 0 14px;
+        white-space: nowrap;
+    }
+
+    #modalAluno .aluno-modal-body {
+        padding: 18px 18px;
+    }
+}
+
+@media (max-width: 576px) {
+    .aluno-modal-header,
+    .aluno-modal-footer {
+        padding: 14px 16px;
+    }
+
+    #modalAluno .aluno-modal-body {
+        padding: 16px 16px;
+    }
+
+    .aluno-tabs {
+        height: auto;
+    }
+
+    .aluno-tabs .nav-link {
+        height: 44px;
+    }
+
+    .aluno-btn-cancelar,
+    .aluno-btn-salvar {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .aluno-modal-footer {
+        flex-wrap: wrap;
+    }
+}
+
+/* ============================================================
+ * Correção definitiva de espaçamento das abas do modalAluno
+ * Garante que o conteúdo das abas comece logo abaixo das tabs
+ * removendo margens/paddings/alturas herdadas dos wrappers.
+ * ============================================================ */
+
+/* Zerar margens/paddings dos wrappers internos do modalAluno
+   IMPORTANTE: NÃO forçar display em .tab-pane aqui - Bootstrap controla */
+#modalAluno .aluno-modal-body,
+#modalAluno .aluno-modal-panel,
+#modalAluno .aluno-tab-content,
+#modalAluno .tab-content,
+#modalAluno .tab-pane .container-fluid {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+}
+
+/* Regra padrão para o conteúdo de cada aba do aluno
+   IMPORTANTE: NÃO forçar display aqui - Bootstrap controla (display: none para inativas, display: block para .active) */
+#modalAluno .modal-tab-pane {
+    margin-top: 0 !important;
+    padding-top: 1rem !important; /* ~16px de respiro abaixo das tabs */
+    padding-bottom: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+
+    /* DEBUG VISUAL já existente: borda magenta para enxergar limites */
+    border: 2px solid magenta !important;
+    box-sizing: border-box;
+}
+
+/* Garantir que parágrafos/headers não tenham margens gigantes no topo */
+#modalAluno .modal-tab-pane > h1,
+#modalAluno .modal-tab-pane > h2,
+#modalAluno .modal-tab-pane > h3,
+#modalAluno .modal-tab-pane > p {
+    margin-top: 0.5rem !important;
+}
+
+/* =====================================================
+   ABA HISTÓRICO - ESTILOS ESPECÍFICOS
+   ===================================================== */
+
+/* Container dos cards de resumo */
+.aluno-historico-cards {
+    margin-top: 1.5rem;
+}
+
+/* Cards de resumo - altura mínima igual em telas >= md */
+@media (min-width: 768px) {
+    .aluno-historico-cards .card {
+        min-height: 140px;
+    }
+}
+
+.aluno-historico-cards .card {
+    padding: 0;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.aluno-historico-cards .card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.aluno-historico-cards .card-body {
+    padding: 1.25rem;
+}
+
+/* Valor dentro dos cards - preparado para dados futuros */
+.aluno-card-valor {
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: var(--cfc-primary, #0F1E4A);
+    min-height: 1.5rem;
+}
+
+.aluno-card-valor p {
+    margin: 0;
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: #6c757d;
+}
+
+/* Timeline - lista de eventos */
+.aluno-timeline-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    position: relative;
+}
+
+/* Item da timeline */
+.aluno-timeline-item {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    position: relative;
+    padding-left: 2rem;
+}
+
+.aluno-timeline-item:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    left: 0.375rem;
+    top: 1.25rem;
+    width: 2px;
+    height: calc(100% + 0.5rem);
+    background-color: var(--cfc-border-subtle, #E5E7EB);
+}
+
+/* Ponto da timeline */
+.aluno-timeline-dot {
+    position: absolute;
+    left: 0;
+    top: 0.25rem;
+    width: 0.75rem;
+    height: 0.75rem;
+    border-radius: 50%;
+    background-color: var(--cfc-primary, #0F1E4A);
+    border: 2px solid var(--cfc-surface, #FFFFFF);
+    box-shadow: 0 0 0 2px var(--cfc-primary, #0F1E4A);
+    z-index: 1;
+    flex-shrink: 0;
+}
+
+/* Conteúdo do item da timeline */
+.aluno-timeline-content {
+    flex: 1;
+    background-color: var(--cfc-surface, #FFFFFF);
+    border: 1px solid var(--cfc-border-subtle, #E5E7EB);
+    border-radius: 8px;
+    padding: 1rem;
+    transition: box-shadow 0.2s ease;
+}
+
+.aluno-timeline-content:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+/* Data do evento */
+.aluno-timeline-date {
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+/* Título do evento */
+.aluno-timeline-title {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--cfc-primary, #0F1E4A);
+    margin-bottom: 0.5rem;
+}
+
+/* Descrição do evento */
+.aluno-timeline-description {
+    font-size: 0.85rem;
+    color: #495057;
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+/* Tag do evento */
+.aluno-timeline-tag {
+    display: inline-block;
+    font-size: 0.7rem;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-weight: 500;
+    margin-top: 0.25rem;
+}
+
+/* Estado vazio da timeline */
+.aluno-timeline-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.aluno-timeline-empty-icon {
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.aluno-timeline-empty p {
+    font-size: 0.9rem;
+    max-width: 400px;
+}
+
+/* Container de atalhos rápidos */
+.aluno-atalhos-rapidos {
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--cfc-border-subtle, #E5E7EB);
+}
+
+/* Botões de atalho */
+.aluno-atalho {
+    color: var(--cfc-primary, #0F1E4A) !important;
+    text-decoration: none !important;
+    font-size: 0.9rem;
+    padding: 0.5rem 1rem;
+    border: none;
+    background: transparent;
+    transition: all 0.2s ease;
+}
+
+.aluno-atalho:hover {
+    color: var(--primary-color, #0D6EFD) !important;
+    background-color: var(--cfc-primary-soft, #E7ECF7);
+    text-decoration: none !important;
+}
+
+.aluno-atalho:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px rgba(15, 30, 74, 0.2);
+    border-radius: 4px;
+}
+
+.aluno-atalho i {
+    margin-right: 0.5rem;
+}
+

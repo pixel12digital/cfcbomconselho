@@ -1,0 +1,165 @@
+═══════════════════════════════════════════════════════════════════════════════
+  CORREÇÃO: BOTÃO RÁPIDO DE STATUS NÃO ALTERNAVA CORRETAMENTE
+═══════════════════════════════════════════════════════════════════════════════
+
+Data: 2025-01-27
+Problema: Botão rápido funcionava no primeiro clique, mas no segundo não alterava status
+
+───────────────────────────────────────────────────────────────────────────────
+PROBLEMA IDENTIFICADO
+───────────────────────────────────────────────────────────────────────────────
+
+O botão de ação rápida estava usando dois botões separados (um para ativar, outro para desativar)
+renderizados pelo PHP com base no status inicial. Quando o status era atualizado pela função
+atualizarAlunoNaListagem(), apenas o badge era atualizado, mas o botão não tinha seu data-status
+atualizado, então no segundo clique ele ainda usava o status antigo.
+
+───────────────────────────────────────────────────────────────────────────────
+CORREÇÕES IMPLEMENTADAS
+───────────────────────────────────────────────────────────────────────────────
+
+1. ✅ HTML DO BOTÃO ATUALIZADO
+   Arquivo: admin/pages/alunos.php (linha ~1663 e ~1740)
+   
+   • Substituído dois botões separados por um único botão com data-status
+   • Botão tem data-aluno-id e data-status para leitura dinâmica
+   • Classes e ícones mudam dinamicamente conforme status
+   • Mesma estrutura para desktop e mobile
+   
+   Código aplicado:
+   ```php
+   <button type="button" 
+           class="btn btn-sm btn-toggle-status action-icon-btn <?php echo $aluno['status'] === 'ativo' ? 'btn-outline-secondary' : 'btn-outline-success'; ?>" 
+           data-aluno-id="<?php echo (int)$aluno['id']; ?>"
+           data-status="<?php echo htmlspecialchars($aluno['status']); ?>"
+           onclick="toggleStatusAluno(this)"
+           title="<?php echo $aluno['status'] === 'ativo' ? 'Desativar aluno (não poderá agendar aulas)' : 'Reativar aluno para agendamento de aulas'; ?>" 
+           data-bs-toggle="tooltip">
+       <i class="fas <?php echo $aluno['status'] === 'ativo' ? 'fa-ban' : 'fa-check'; ?>"></i>
+   </button>
+   ```
+
+2. ✅ FUNÇÃO toggleStatusAluno CRIADA
+   Arquivo: admin/pages/alunos.php (linha ~5560)
+   
+   • Nova função que lê data-status do botão clicado
+   • Alterna entre ativo/inativo automaticamente
+   • Chama alterarStatusAluno com o novo status
+   
+   Código aplicado:
+   ```javascript
+   function toggleStatusAluno(button) {
+       const alunoId = button.getAttribute('data-aluno-id');
+       const currentStatus = button.getAttribute('data-status') || 'ativo';
+       const newStatus = currentStatus === 'ativo' ? 'inativo' : 'ativo';
+       
+       console.log('📡 Alterando status do aluno:', { id: alunoId, currentStatus, newStatus });
+       
+       alterarStatusAluno(parseInt(alunoId, 10), newStatus);
+   }
+   ```
+
+3. ✅ atualizarAlunoNaListagem REFORÇADA
+   Arquivo: admin/pages/alunos.php (linha ~5647)
+   
+   • Agora atualiza data-status da linha (tr)
+   • Atualiza data-status do botão (.btn-toggle-status)
+   • Atualiza classes, ícone e tooltip do botão
+   • Atualiza badge no card mobile
+   • Atualiza botão no card mobile
+   
+   Código aplicado:
+   ```javascript
+   // Atualizar botão de ação rápida na linha
+   const btnToggle = row.querySelector('.btn-toggle-status');
+   if (btnToggle) {
+       btnToggle.dataset.status = status;
+       
+       // Atualizar classes e ícone do botão
+       btnToggle.classList.remove('btn-outline-secondary', 'btn-outline-success');
+       if (status === 'ativo') {
+           btnToggle.classList.add('btn-outline-secondary');
+           btnToggle.setAttribute('title', 'Desativar aluno (não poderá agendar aulas)');
+           const icon = btnToggle.querySelector('i');
+           if (icon) icon.className = 'fas fa-ban';
+       } else if (status === 'inativo') {
+           btnToggle.classList.add('btn-outline-success');
+           btnToggle.setAttribute('title', 'Reativar aluno para agendamento de aulas');
+           const icon = btnToggle.querySelector('i');
+           if (icon) icon.className = 'fas fa-check';
+       }
+   }
+   ```
+
+4. ✅ alterarStatusAluno COM LOGS MELHORADOS
+   Arquivo: admin/pages/alunos.php (linha ~5772)
+   
+   • Adicionados logs de debug do payload enviado
+   • Adicionado log da resposta da API
+   • Verifica se API retornou aluno antes de atualizar listagem
+   
+───────────────────────────────────────────────────────────────────────────────
+COMPORTAMENTO ESPERADO
+───────────────────────────────────────────────────────────────────────────────
+
+1. Primeiro clique (aluno ATIVO → INATIVO):
+   ✅ Botão lê data-status="ativo" do botão
+   ✅ Calcula newStatus="inativo"
+   ✅ Envia PUT com { status: "inativo" }
+   ✅ API retorna aluno com status="inativo"
+   ✅ atualizarAlunoNaListagem atualiza badge e botão
+   ✅ Botão agora tem data-status="inativo"
+
+2. Segundo clique (aluno INATIVO → ATIVO):
+   ✅ Botão lê data-status="inativo" (atualizado!)
+   ✅ Calcula newStatus="ativo"
+   ✅ Envia PUT com { status: "ativo" }
+   ✅ API retorna aluno com status="ativo"
+   ✅ atualizarAlunoNaListagem atualiza badge e botão
+   ✅ Botão agora tem data-status="ativo"
+
+3. Cliques subsequentes:
+   ✅ Sempre alterna corretamente
+   ✅ Status no banco é atualizado
+   ✅ Badge e botão são atualizados na tela
+
+───────────────────────────────────────────────────────────────────────────────
+TESTES RECOMENDADOS
+───────────────────────────────────────────────────────────────────────────────
+
+TESTE 1 - ALTERNAR STATUS VÁRIAS VEZES:
+  [ ] Com aluno em ATIVO, clicar botão rápido → deve ir para INATIVO
+  [ ] Sem recarregar, clicar novamente → deve voltar para ATIVO
+  [ ] Repetir 3-4 vezes → deve alternar sempre corretamente
+  [ ] Verificar console: logs devem mostrar status alternando
+  [ ] Verificar banco: status deve estar correto após cada clique
+
+TESTE 2 - VERIFICAR ATUALIZAÇÃO DO BOTÃO:
+  [ ] Clicar botão rápido para desativar
+  [ ] Inspecionar botão no DevTools
+  [ ] Verificar que data-status mudou para "inativo"
+  [ ] Verificar que classe mudou para btn-outline-success
+  [ ] Verificar que ícone mudou para fa-check
+  [ ] Verificar que tooltip mudou para "Reativar aluno..."
+
+TESTE 3 - TESTE CRUZADO MODAL + BOTÃO RÁPIDO:
+  [ ] Inativar pelo modal → badge e botão devem mudar
+  [ ] Reativar pelo botão rápido → badge e botão devem mudar
+  [ ] Ambos devem funcionar sem recarregar página
+
+───────────────────────────────────────────────────────────────────────────────
+ARQUIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. admin/pages/alunos.php
+   • HTML do botão: Substituído por botão único com data-status
+   • Função toggleStatusAluno(): Nova função para alternar status
+   • Função atualizarAlunoNaListagem(): Atualiza botão e data-status
+   • Função alterarStatusAluno(): Logs melhorados
+
+───────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ CORREÇÕES IMPLEMENTADAS
+───────────────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════════════
+

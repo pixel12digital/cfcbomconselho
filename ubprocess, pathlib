@@ -1,0 +1,1295 @@
+<?php
+// Verificar se estamos sendo incluídos pelo sistema de roteamento do admin
+if (!defined('ADMIN_ROUTING')) {
+    // Se acessado diretamente, redirecionar para o sistema de roteamento
+    header('Location: ../index.php?page=alunos');
+    exit;
+}
+
+// Verificar se as variáveis estão definidas
+if (!isset($alunos)) $alunos = [];
+if (!isset($cfcs)) $cfcs = [];
+if (!isset($mensagem)) $mensagem = '';
+if (!isset($tipo_mensagem)) $tipo_mensagem = 'info';
+
+// Headers para evitar cache em produção - removidos pois já há saída HTML
+// header("Cache-Control: no-cache, no-store, must-revalidate");
+// header("Pragma: no-cache");
+// header("Expires: 0");
+
+// Debug: Verificar se os dados estão sendo carregados
+error_log("DEBUG ALUNOS: Total de alunos carregados: " . count($alunos));
+error_log("DEBUG ALUNOS: Primeiro aluno: " . json_encode($alunos[0] ?? 'nenhum'));
+?>
+
+<style>
+/* =====================================================
+   ESTILOS PARA OTIMIZAÇÃO DE ESPAÇO DESKTOP
+   ===================================================== */
+
+/* MODAL FECHADO POR PADRÃO - MAS PERMITIR ABERTURA */
+#modalAluno {
+    display: none;
+    visibility: hidden;
+}
+
+#modalAluno.show {
+    display: none;
+    visibility: hidden;
+}
+
+/* Permitir abertura quando definido via JavaScript */
+#modalAluno[style*="display: block"],
+#modalAluno[style*="display: flex"] {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Garantir que modal seja visível quando aberto */
+#modalAluno[data-opened="true"] {
+    display: block !important;
+    visibility: visible !important;
+}
+
+/* Cards de estatísticas mais compactos */
+.card.border-left-primary,
+.card.border-left-success,
+.card.border-left-warning,
+.card.border-left-info {
+    min-height: 100px;
+}
+
+.card-body {
+    padding: 1rem 0.75rem;
+}
+
+.text-xs {
+    font-size: 0.7rem !important;
+}
+
+.h5 {
+    font-size: 1.5rem !important;
+}
+
+/* Tabela otimizada */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.table th,
+.table td {
+    padding: 0.5rem 0.75rem;
+    vertical-align: middle;
+}
+
+/* Avatar menor */
+.avatar-sm {
+    width: 32px;
+    height: 32px;
+}
+
+.avatar-title {
+    font-size: 0.875rem;
+}
+
+/* Botões de ação compactos */
+.action-buttons-compact {
+    min-width: 180px;
+    justify-content: center;
+    /* CORREÇÃO: Garantir que os ícones fiquem SEMPRE atrás dos modais */
+    z-index: 1 !important;
+    position: relative !important;
+}
+
+.action-icon-btn {
+    width: 28px;
+    height: 28px;
+    font-size: 0.8rem;
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    /* CORREÇÃO: z-index baixo para ficar atrás dos modais */
+    position: relative !important;
+    z-index: 10 !important;
+}
+
+/* CORREÇÃO: Estilo especial para quando modal estiver aberto */
+body:has(#modalVisualizarAluno.show) .action-icon-btn,
+body:has(#modalAluno[data-opened="true"]) .action-icon-btn {
+    z-index: 1 !important;
+    pointer-events: none !important;
+}
+
+body:has(#modalVisualizarAluno.show) .action-buttons-compact,
+body:has(#modalAluno[data-opened="true"]) .action-buttons-compact {
+    z-index: 1 !important;
+}
+
+/* Garantir que todos os botões de ação sejam visíveis */
+.btn-history,
+.btn-financial,
+.btn-edit,
+.btn-view,
+.btn-add {
+    display: inline-flex !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+/* Responsividade melhorada */
+@media (max-width: 1200px) {
+    .col-lg-2 {
+        flex: 0 0 25%;
+        max-width: 25%;
+    }
+}
+
+@media (max-width: 992px) {
+    .col-lg-2 {
+        flex: 0 0 50%;
+        max-width: 50%;
+    }
+    
+    .action-buttons-compact {
+        min-width: 150px;
+    }
+}
+
+@media (max-width: 768px) {
+    .col-lg-2 {
+        flex: 0 0 100%;
+        max-width: 100%;
+    }
+    
+    .action-buttons-compact {
+        min-width: 120px;
+        gap: 0.15rem;
+    }
+    
+    .action-icon-btn {
+        width: 26px;
+        height: 26px;
+        font-size: 0.75rem;
+    }
+}
+
+/* =====================================================
+   CSS RESPONSIVO PARA MOBILE - ALUNOS
+   ===================================================== */
+
+/* Layout responsivo para tablets */
+@media screen and (max-width: 768px), screen and (max-width: 900px) {
+    .card .card-body .table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        border-radius: 8px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+        max-width: 100% !important;
+        width: 100% !important;
+    }
+    
+    .card .card-body .table-container .table {
+        min-width: 600px !important;
+        width: 600px !important;
+        font-size: 14px !important;
+        table-layout: fixed !important;
+    }
+    
+    .card .card-body .table-container .table th,
+    .card .card-body .table-container .table td {
+        padding: 8px 6px !important;
+        white-space: nowrap !important;
+        vertical-align: middle !important;
+    }
+    
+    .action-buttons-compact {
+        display: flex !important;
+        flex-direction: row !important;
+        gap: 5px !important;
+        flex-wrap: nowrap !important;
+    }
+}
+
+/* Layout em cards para mobile */
+@media screen and (max-width: 480px), screen and (max-width: 600px) {
+    .card .card-body .table-container {
+        display: none !important;
+        overflow: visible !important;
+    }
+    
+    .card .card-body .table-container .table {
+        display: none !important;
+    }
+    
+    .card .card-body .mobile-aluno-cards {
+        display: block !important;
+        width: 100% !important;
+    }
+    
+    .mobile-aluno-card {
+        background: #fff !important;
+        border: 1px solid #e3e6f0 !important;
+        border-radius: 8px !important;
+        margin-bottom: 15px !important;
+        padding: 15px !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    
+    .mobile-aluno-header {
+        display: flex !important;
+        align-items: center !important;
+        margin-bottom: 12px !important;
+    }
+    
+    /* Avatar mobile removido - CSS órfão removido */
+    
+    .mobile-aluno-info {
+        flex: 1 !important;
+    }
+    
+    .mobile-aluno-title {
+        display: flex !important;
+        align-items: center !important;
+        margin-bottom: 4px !important;
+    }
+    
+    .mobile-aluno-title strong {
+        font-size: 16px !important;
+        color: #2c3e50 !important;
+        margin-right: 8px !important;
+    }
+    
+    .mobile-aluno-id {
+        font-size: 12px !important;
+        color: #6c757d !important;
+        background: #f8f9fa !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+    }
+    
+    .mobile-aluno-email {
+        font-size: 13px !important;
+        color: #6c757d !important;
+    }
+    
+    .mobile-aluno-status {
+        margin-left: auto !important;
+    }
+    
+    .mobile-aluno-body {
+        margin-bottom: 12px !important;
+    }
+    
+    .mobile-aluno-field {
+        display: flex !important;
+        justify-content: space-between !important;
+        align-items: center !important;
+        margin-bottom: 8px !important;
+    }
+    
+    .mobile-aluno-label {
+        font-size: 12px !important;
+        color: #6c757d !important;
+        font-weight: 500 !important;
+    }
+    
+    .mobile-aluno-value {
+        font-size: 13px !important;
+        color: #2c3e50 !important;
+    }
+    
+    .mobile-aluno-actions {
+        display: flex !important;
+        gap: 8px !important;
+        justify-content: center !important;
+        flex-wrap: wrap !important;
+    }
+    
+    .mobile-aluno-actions .btn {
+        width: 35px !important;
+        height: 35px !important;
+        padding: 0 !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        font-size: 14px !important;
+        border-radius: 6px !important;
+    }
+}
+
+/* =====================================================
+   ESTILOS PARA MODAL DE AGENDAMENTO
+   ===================================================== */
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+    max-width: 90vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.modal-large {
+    width: 800px;
+}
+
+.modal-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 0.5rem 0.5rem 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+.modal-form {
+    padding: 1.5rem;
+}
+
+.form-section {
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    flex: 1;
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    font-size: 0.9rem;
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+}
+
+.custom-radio {
+    position: relative;
+}
+
+.custom-radio input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.custom-radio .form-check-label {
+    display: block;
+    padding: 0.75rem 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 0.5rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: white;
+}
+
+.custom-radio input[type="radio"]:checked + .form-check-label {
+    border-color: #0d6efd;
+    background-color: #f8f9ff;
+}
+
+.custom-radio .radio-text strong {
+    display: block;
+    color: #495057;
+    margin-bottom: 0.25rem;
+}
+
+.custom-radio .radio-text small {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.form-actions .btn {
+    padding: 0.75rem 1.5rem;
+    font-weight: 500;
+}
+
+/* Responsividade do modal */
+@media (max-width: 768px) {
+    .modal-large {
+        width: 95vw;
+        margin: 1rem;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+
+/* =====================================================
+   ESTILOS PERSONALIZADOS PARA MODAL DE ALUNOS
+   Sobrescrevendo Bootstrap com especificidade máxima
+   ===================================================== */
+
+/* Modal quase fullscreen com margens pequenas */
+.modal#modalAluno .modal-dialog {
+    max-width: calc(100vw - 2rem) !important;
+    max-height: calc(100vh - 2rem) !important;
+    width: calc(100vw - 2rem) !important;
+    height: calc(100vh - 2rem) !important;
+    margin: 1rem !important;
+    padding: 0 !important;
+}
+
+/* Para telas muito pequenas, usar margens menores */
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-dialog {
+        max-width: calc(100vw - 0.5rem) !important;
+        max-height: calc(100vh - 0.5rem) !important;
+        width: calc(100vw - 0.5rem) !important;
+        height: calc(100vh - 0.5rem) !important;
+        margin: 0.25rem !important;
+    }
+}
+
+.modal#modalAluno .modal-content {
+    height: 100% !important;
+    border-radius: 0.5rem !important;
+    border: none !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+.modal#modalAluno .modal-body {
+    max-height: calc(100% - 120px) !important;
+    overflow-y: auto !important;
+    padding: 1.5rem !important;
+    background-color: #f8f9fa !important;
+}
+
+/* Responsividade do modal-body */
+@media (max-width: 768px) {
+    .modal#modalAluno .modal-body {
+        padding: 1rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-body {
+        padding: 0.75rem !important;
+    }
+}
+
+.modal#modalAluno .modal-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%) !important;
+    color: white !important;
+    border-bottom: none !important;
+    padding: 1rem 1.5rem !important;
+    border-radius: 0.5rem 0.5rem 0 0 !important;
+}
+
+/* Responsividade do modal-header */
+@media (max-width: 768px) {
+    .modal#modalAluno .modal-header {
+        padding: 0.75rem 1rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-header {
+        padding: 0.5rem 0.75rem !important;
+    }
+}
+
+.modal#modalAluno .modal-title {
+    color: white !important;
+    font-weight: 600 !important;
+    font-size: 1.5rem !important;
+}
+
+/* Responsividade do modal-title */
+@media (max-width: 768px) {
+    .modal#modalAluno .modal-title {
+        font-size: 1.25rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-title {
+        font-size: 1.1rem !important;
+    }
+}
+
+.modal#modalAluno .btn-close {
+    filter: invert(1) !important;
+}
+
+.modal#modalAluno .modal-footer {
+    background-color: #f8f9fa !important;
+    border-top: 1px solid #dee2e6 !important;
+    padding: 1rem 1.5rem !important;
+    border-radius: 0 0 0.5rem 0.5rem !important;
+}
+
+/* Responsividade do modal-footer */
+@media (max-width: 768px) {
+    .modal#modalAluno .modal-footer {
+        padding: 0.75rem 1rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-footer {
+        padding: 0.5rem 0.75rem !important;
+    }
+}
+
+/* Melhorias para scroll do modal */
+.custom-modal .modal-body {
+    scrollbar-width: thin;
+    scrollbar-color: #6c757d #f8f9fa;
+}
+
+.custom-modal .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+.custom-modal .modal-body::-webkit-scrollbar-track {
+    background: #f8f9fa;
+    border-radius: 4px;
+}
+
+.custom-modal .modal-body::-webkit-scrollbar-thumb {
+    background: #6c757d;
+    border-radius: 4px;
+}
+
+.custom-modal .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #495057;
+}
+
+/* Garantir que os botões sejam sempre visíveis */
+.custom-modal .modal-footer {
+    position: sticky !important;
+    bottom: 0 !important;
+    background-color: #f8f9fa !important;
+    border-top: 1px solid #dee2e6 !important;
+    z-index: 10 !important;
+}
+
+/* Responsividade para telas menores */
+@media (max-height: 768px) {
+    .custom-modal-content {
+        max-height: 85vh !important;
+    }
+    
+    .custom-modal .modal-body {
+        max-height: calc(85vh - 140px) !important;
+    }
+}
+
+@media (max-height: 600px) {
+    .custom-modal-content {
+        max-height: 80vh !important;
+    }
+    
+    .custom-modal .modal-body {
+        max-height: calc(80vh - 140px) !important;
+    }
+}
+
+/* =====================================================
+   RESPONSIVIDADE PARA ABAS DO MODAL - MOBILE
+   ===================================================== */
+
+@media (max-width: 768px) {
+    /* Garantir que modal seja visível no mobile */
+    #modalAluno[data-opened="true"] {
+        z-index: 99999 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        background: rgba(0,0,0,0.5) !important;
+    }
+    
+    /* Abas do modal - Mobile */
+    .modal#modalAluno .nav-tabs {
+        flex-wrap: wrap !important;
+        gap: 0.25rem !important;
+        padding: 0.5rem !important;
+        background-color: #f8f9fa !important;
+        border-radius: 0.5rem !important;
+        margin-bottom: 1rem !important;
+        border: none !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link {
+        flex: 1 1 calc(50% - 0.125rem) !important;
+        min-width: calc(50% - 0.125rem) !important;
+        max-width: calc(50% - 0.125rem) !important;
+        padding: 0.5rem 0.25rem !important;
+        font-size: 0.75rem !important;
+        text-align: center !important;
+        border-radius: 0.375rem !important;
+        margin: 0 !important;
+        border: 1px solid #dee2e6 !important;
+        background-color: white !important;
+        color: #6c757d !important;
+        transition: all 0.2s ease !important;
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        min-height: 60px !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link:hover {
+        background-color: #e9ecef !important;
+        color: #495057 !important;
+        transform: translateY(-1px) !important;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1) !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link.active {
+        background-color: #0d6efd !important;
+        color: white !important;
+        border-color: #0d6efd !important;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.3) !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link i {
+        display: block !important;
+        font-size: 1.1rem !important;
+        margin-bottom: 0.25rem !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link span {
+        display: block !important;
+        font-weight: 500 !important;
+        line-height: 1.2 !important;
+        font-size: 0.7rem !important;
+    }
+    
+    /* Conteúdo das abas - Mobile */
+    .modal#modalAluno .tab-content {
+        padding: 0.5rem !important;
+    }
+    
+    .modal#modalAluno .tab-pane {
+        padding: 0.5rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    /* Abas em uma coluna para telas muito pequenas */
+    .modal#modalAluno .nav-tabs .nav-link {
+        flex: 1 1 100% !important;
+        min-width: 100% !important;
+        max-width: 100% !important;
+        margin-bottom: 0.25rem !important;
+        min-height: 50px !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link:last-child {
+        margin-bottom: 0 !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link i {
+        font-size: 1rem !important;
+    }
+    
+    .modal#modalAluno .nav-tabs .nav-link span {
+        font-size: 0.65rem !important;
+    }
+}
+
+/* Estilos dos formulários */
+.modal#modalAluno .form-label {
+    font-weight: 600 !important;
+    color: #495057 !important;
+    margin-bottom: 0.5rem !important;
+    font-size: 0.9rem !important;
+}
+
+.modal#modalAluno .form-control,
+.modal#modalAluno .form-select {
+    border-radius: 0.5rem !important;
+    border: 1px solid #ced4da !important;
+    transition: all 0.2s ease !important;
+    padding: 0.75rem 1rem !important;
+    font-size: 0.9rem !important;
+}
+
+.modal#modalAluno .form-control:focus,
+.modal#modalAluno .form-select:focus {
+    border-color: #0d6efd !important;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25) !important;
+}
+
+.modal#modalAluno .text-primary {
+    color: #0d6efd !important;
+}
+
+.modal#modalAluno .border-bottom {
+    border-bottom: 2px solid #e9ecef !important;
+}
+
+.modal#modalAluno .form-range {
+    height: 6px !important;
+    border-radius: 3px !important;
+}
+
+.modal#modalAluno .form-range::-webkit-slider-thumb {
+    background: #0d6efd !important;
+    border-radius: 50% !important;
+    width: 20px !important;
+    height: 20px !important;
+}
+
+.modal#modalAluno .form-range::-moz-range-thumb {
+    background: #0d6efd !important;
+    border-radius: 50% !important;
+    width: 20px !important;
+    height: 20px !important;
+}
+
+/* Melhorar espaçamento entre seções */
+.modal#modalAluno .row.mb-4 {
+    margin-bottom: 2rem !important;
+}
+
+.modal#modalAluno .mb-3 {
+    margin-bottom: 1.25rem !important;
+}
+
+/* Seções com fundo branco e sombra */
+.modal#modalAluno .container-fluid {
+    background-color: white !important;
+    border-radius: 0.5rem !important;
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075) !important;
+    padding: 2rem !important;
+    margin: 1rem 0 !important;
+    transition: all 0.3s ease !important;
+}
+
+/* Animações suaves para melhor UX */
+.modal#modalAluno .modal-content {
+    animation: modalSlideIn 0.3s ease-out !important;
+}
+
+@keyframes modalSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+/* Melhorar aparência dos campos obrigatórios */
+.modal#modalAluno .form-label:has-text("*") {
+    position: relative !important;
+}
+
+.modal#modalAluno .form-label:after {
+    content: " *" !important;
+    color: #dc3545 !important;
+    font-weight: bold !important;
+}
+
+/* Hover effects para melhor interatividade */
+.modal#modalAluno .form-control:hover,
+.modal#modalAluno .form-select:hover {
+    border-color: #86b7fe !important;
+    box-shadow: 0 0 0 0.1rem rgba(13, 110, 253, 0.1) !important;
+}
+
+/* Estilo para seções com melhor hierarquia visual */
+.modal#modalAluno .row.mb-4 h6 {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
+    padding: 0.75rem 1rem !important;
+    border-radius: 0.375rem !important;
+    margin-bottom: 1.5rem !important;
+    border-left: 4px solid #0d6efd !important;
+    font-weight: 600 !important;
+    color: #495057 !important;
+}
+
+/* Responsividade otimizada para diferentes tamanhos de tela */
+@media (max-width: 1400px) {
+    .modal#modalAluno .col-md-2 {
+        flex: 0 0 33.333333% !important;
+        max-width: 33.333333% !important;
+    }
+    
+    .modal#modalAluno .col-md-3 {
+        flex: 0 0 33.333333% !important;
+        max-width: 33.333333% !important;
+    }
+    
+    .modal#modalAluno .col-md-4 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+    }
+}
+
+@media (max-width: 1200px) {
+    .modal#modalAluno .col-md-2 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+    }
+    
+    .modal#modalAluno .col-md-3 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+    }
+    
+    .modal#modalAluno .col-md-4 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+    }
+    
+    .modal#modalAluno .col-md-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+}
+
+@media (max-width: 992px) {
+    .modal#modalAluno .modal-body {
+        padding: 1.5rem !important;
+    }
+    
+    .modal#modalAluno .container-fluid {
+        padding: 1.5rem !important;
+        margin: 0.75rem 0 !important;
+    }
+    
+    .modal#modalAluno .col-md-2,
+    .modal#modalAluno .col-md-3,
+    .modal#modalAluno .col-md-4,
+    .modal#modalAluno .col-md-6 {
+        flex: 0 0 50% !important;
+        max-width: 50% !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .modal#modalAluno .modal-body {
+        padding: 1rem !important;
+    }
+    
+    .modal#modalAluno .container-fluid {
+        padding: 1rem !important;
+        margin: 0.5rem 0 !important;
+    }
+    
+    .modal#modalAluno .col-md-2,
+    .modal#modalAluno .col-md-3,
+    .modal#modalAluno .col-md-4,
+    .modal#modalAluno .col-md-6 {
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+    }
+    
+    .modal#modalAluno .modal-header {
+        padding: 1rem 1.5rem !important;
+    }
+    
+    .modal#modalAluno .modal-footer {
+        padding: 1rem 1.5rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal#modalAluno .modal-body {
+        padding: 0.75rem !important;
+    }
+    
+    .modal#modalAluno .container-fluid {
+        padding: 0.75rem !important;
+        margin: 0.25rem 0 !important;
+    }
+    
+    .modal#modalAluno .modal-header {
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .modal#modalAluno .modal-footer {
+        padding: 0.75rem 1rem !important;
+    }
+    
+    .modal#modalAluno .modal-title {
+        font-size: 1.25rem !important;
+    }
+}
+
+/* Garantir que o modal ocupe toda a tela - FORÇA MÁXIMA */
+.modal#modalAluno {
+    z-index: 1055 !important;
+}
+
+.modal#modalAluno .modal-dialog {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* FORÇA BRUTA - Sobrescrever qualquer estilo do Bootstrap */
+.modal#modalAluno .modal-dialog.modal-fullscreen {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+}
+
+/* Forçar o modal a ocupar toda a tela */
+body.modal-open #modalAluno .modal-dialog {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    transform: none !important;
+}
+
+/* =====================================================
+   ESTILOS PARA MODAL DE VISUALIZAÇÃO
+   ===================================================== */
+
+.modal#modalVisualizarAluno .modal-dialog.modal-fullscreen {
+    max-width: 100vw !important;
+    max-height: 100vh !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.modal#modalVisualizarAluno .modal-content {
+    height: 100vh !important;
+    border-radius: 0 !important;
+    border: none !important;
+}
+
+.modal#modalVisualizarAluno .modal-body {
+    max-height: calc(100vh - 120px) !important;
+    overflow-y: auto !important;
+    padding: 2rem !important;
+    background-color: #f8f9fa !important;
+}
+
+.modal#modalVisualizarAluno .modal-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%) !important;
+    color: white !important;
+    border-bottom: none !important;
+    padding: 1.5rem 2rem !important;
+}
+
+.modal#modalVisualizarAluno .modal-title {
+    color: white !important;
+    font-weight: 600 !important;
+    font-size: 1.5rem !important;
+}
+
+.modal#modalVisualizarAluno .btn-close {
+    filter: invert(1) !important;
+}
+
+.modal#modalVisualizarAluno .modal-footer {
+    background-color: #f8f9fa !important;
+    border-top: 1px solid #dee2e6 !important;
+    padding: 1.5rem 2rem !important;
+}
+
+.modal#modalVisualizarAluno {
+    z-index: 1055 !important;
+}
+
+.modal#modalVisualizarAluno .modal-dialog {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* =====================================================
+   ESTILOS PARA TOASTS MELHORADOS
+   ===================================================== */
+
+.toast-container {
+    z-index: 9999 !important;
+}
+
+
+/* =====================================================
+   ESTILOS PARA VALIDAÇÃO DE CPF
+   ===================================================== */
+
+.cpf-validation-feedback {
+    font-size: 0.75rem !important;
+    margin-top: 0.25rem !important;
+    padding: 0.25rem 0.5rem !important;
+    border-radius: 0.25rem !important;
+    display: none !important;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+    opacity: 0;
+    visibility: hidden;
+}
+
+.cpf-validation-feedback.valid {
+    background-color: #d1edff !important;
+    color: #0c5460 !important;
+    border: 1px solid #bee5eb !important;
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.cpf-validation-feedback.invalid {
+    background-color: #f8d7da !important;
+    color: #721c24 !important;
+    border: 1px solid #f5c6cb !important;
+    display: block !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.cpf-validation-feedback::before {
+    content: "✓ ";
+    font-weight: bold;
+}
+
+.cpf-validation-feedback.invalid::before {
+    content: "✗ ";
+    font-weight: bold;
+}
+
+/* Manter contorno verde visível mesmo sem mensagem */
+input[type="text"].valid, 
+input.form-control.valid {
+    border-color: var(--success-color, #28a745) !important;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+}
+
+input[type="text"].invalid, 
+input.form-control.invalid {
+    border-color: var(--danger-color, #dc3545) !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+/* Estilos para campo CPF com validação */
+#cpf.valid {
+    border-color: #28a745 !important;
+    box-shadow: 0 0 0 0.2rem rgba(40, 167, 69, 0.25) !important;
+}
+
+#cpf.invalid {
+    border-color: #dc3545 !important;
+    box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25) !important;
+}
+
+
+.toast {
+    min-width: 350px;
+    max-width: 450px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    border: none;
+}
+
+.toast-body {
+    padding: 1rem;
+}
+
+.toast .btn-close {
+    filter: invert(1);
+}
+
+.toast.bg-danger {
+    background: linear-gradient(135deg, #dc3545, #c82333) !important;
+}
+
+.toast.bg-success {
+    background: linear-gradient(135deg, #198754, #157347) !important;
+}
+
+.toast.bg-warning {
+    background: linear-gradient(135deg, #ffc107, #e0a800) !important;
+}
+
+.toast.bg-info {
+    background: linear-gradient(135deg, #0dcaf0, #0aa2c0) !important;
+}
+
+/* Responsividade para toasts */
+@media (max-width: 768px) {
+    .toast {
+        min-width: 300px;
+        max-width: 350px;
+    }
+}
+</style>
+
+<div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+    <h1 class="h2">
+        <i class="fas fa-user-graduate me-2"></i>Gestão de Alunos
+    </h1>
+    <div class="btn-toolbar mb-2 mb-md-0">
+        <div class="btn-group me-2">
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="exportarAlunos()">
+                <i class="fas fa-download me-1"></i>Exportar
+            </button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="imprimirAlunos()">
+                <i class="fas fa-print me-1"></i>Imprimir
+            </button>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="abrirModalAluno()">
+            <i class="fas fa-plus me-1"></i>Novo Aluno
+        </button>
+    </div>
+</div>
+
+<!-- Mensagens de Feedback -->
+<?php if (!empty($mensagem)): ?>
+<div class="alert alert-<?php echo $tipo_mensagem; ?> alert-dismissible fade show" role="alert">
+    <?php echo htmlspecialchars($mensagem); ?>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<?php endif; ?>
+
+<!-- Filtros e Busca Avançada -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="input-group">
+            <span class="input-group-text"><i class="fas fa-search"></i></span>
+            <input type="text" class="form-control" id="buscaAluno" placeholder="Buscar aluno..." data-validate="minLength:2">
+        </div>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="filtroStatus">
+            <option value="">Todos os Status</option>
+            <option value="ativo">Ativo</option>
+            <option value="inativo">Inativo</option>
+            <option value="concluido">Concluído</option>
+            <option value="pendente">Pendente</option>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="filtroCFC">
+            <option value="">Todos os CFCs</option>
+            <?php foreach ($cfcs as $cfc): ?>
+                <option value="<?php echo $cfc['id']; ?>"><?php echo htmlspecialchars($cfc['nome']); ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <div class="col-md-2">
+        <select class="form-select" id="filtroCategoria">
+            <option value="">Todas as Categorias</option>
+            <option value="A">Categoria A</option>
+            <option value="B">Categoria B</option>
+            <option value="C">Categoria C</option>

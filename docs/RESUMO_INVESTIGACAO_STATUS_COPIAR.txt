@@ -1,0 +1,231 @@
+═══════════════════════════════════════════════════════════════════════════════
+  INVESTIGAÇÃO: Persistência do Problema de Status no Modal de Edição
+═══════════════════════════════════════════════════════════════════════════════
+
+📋 RESUMO EXECUTIVO
+───────────────────────────────────────────────────────────────────────────────
+
+O problema de atualização de status do aluno no modal "Editar Aluno" persiste 
+mesmo após implementação de múltiplas correções.
+
+EVIDÊNCIAS DOS LOGS:
+✅ O campo status é preenchido corretamente com "inativo" quando o modal abre
+✅ A API retorna o status correto ("status":"inativo")
+❌ Quando o usuário clica em "Salvar Aluno", o código lê "ativo" do select
+❌ O botão fica travado em "Salvando Dados..." (problema secundário)
+
+═══════════════════════════════════════════════════════════════════════════════
+  HISTÓRICO DE TENTATIVAS DE CORREÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+1. ✅ Alinhar Fluxo Rápido com API
+   - Refatorar alterarStatusAluno() para usar PUT
+   - RESULTADO: SUCESSO - Botão rápido funciona
+
+2. ⚠️ Validar e Instrumentar Fluxo do Modal
+   - Adicionar logs de debug
+   - RESULTADO: PARCIAL - Problema persistiu
+
+3. ⚠️ Unificar saveAlunoDados com API
+   - Refatorar para usar fetchAPIAlunos
+   - RESULTADO: PARCIAL - Fluxo unificado, mas status não atualiza
+
+4. ✅ Corrigir Erro de Sintaxe PHP
+   - Reorganizar router por método HTTP
+   - RESULTADO: SUCESSO - Erro corrigido
+
+5. ✅ Tratar rg_data_emissao e CPF Duplicado
+   - Tratar valores "0000-00-00" e conflitos de CPF
+   - RESULTADO: SUCESSO - Problemas secundários resolvidos
+
+6. ✅ Corrigir SyntaxError de Variável Duplicada
+   - Remover declaração duplicada
+   - RESULTADO: SUCESSO - Erro corrigido
+
+7. ⚠️ Corrigir Travamento do Modal
+   - Tornar resumos "fire and forget"
+   - RESULTADO: PARCIAL - Modal não trava, mas status não atualiza
+
+═══════════════════════════════════════════════════════════════════════════════
+  ANÁLISE DOS LOGS ATUAIS
+═══════════════════════════════════════════════════════════════════════════════
+
+LOGS DE CARREGAMENTO DO MODAL:
+───────────────────────────────────────────────────────────────────────────────
+✅ Campo status preenchido corretamente
+  - Valor anterior: "ativo"
+  - Valor novo: "inativo"
+  - Valor atual: "inativo"
+
+CONCLUSÃO: O campo status é preenchido corretamente com "inativo".
+
+LOGS AO CLICAR EM "SALVAR ALUNO":
+───────────────────────────────────────────────────────────────────────────────
+[DEBUG STATUS MODAL] Status no FormData: ativo
+[DEBUG STATUS MODAL] Status lido do select (direto): ativo
+[DEBUG STATUS MODAL] isEditing: true
+[DEBUG STATUS MODAL] alunoId: 168
+
+CONCLUSÃO: Quando o usuário clica em "Salvar Aluno", o código lê "ativo" do 
+select, mesmo que o modal tenha sido preenchido com "inativo".
+
+═══════════════════════════════════════════════════════════════════════════════
+  POSSÍVEIS CAUSAS DO PROBLEMA
+═══════════════════════════════════════════════════════════════════════════════
+
+CAUSA 1: Select sendo Resetado Após Preenchimento ⚠️ MAIS PROVÁVEL
+───────────────────────────────────────────────────────────────────────────────
+Hipótese: Algum código está resetando o valor do select #status após 
+preencherFormularioAluno() ser executado.
+
+Evidências:
+- Logs mostram que o campo é preenchido corretamente
+- Mas quando saveAlunoDados() é chamado, o valor lido é "ativo" (valor padrão)
+
+Onde investigar:
+- Funções que manipulam o formulário após o modal abrir
+- Event listeners que podem estar resetando campos
+- Código que limpa/reseta o formulário
+- Código relacionado a abas do modal
+
+CAUSA 2: Múltiplos Elementos com id="status" ⚠️ PROVÁVEL
+───────────────────────────────────────────────────────────────────────────────
+Hipótese: Existem múltiplos elementos com id="status" no DOM, e 
+document.getElementById('status') está retornando o elemento errado.
+
+Evidências:
+- O modal tem múltiplas abas (Dados, Matrícula, Documentos, Histórico)
+- Pode haver um select #status em cada aba ou em diferentes contextos
+
+Solução proposta:
+- Usar seletor mais específico: formAluno.querySelector('#status') ou 
+  formAluno.querySelector('select[name="status"]')
+
+CAUSA 3: Problema de Timing / Race Condition ⚠️ POSSÍVEL
+───────────────────────────────────────────────────────────────────────────────
+Hipótese: O valor do select está sendo lido antes de ser definido, ou há uma 
+condição de corrida entre o preenchimento e a leitura.
+
+CAUSA 4: Valor Padrão do Select ⚠️ POSSÍVEL
+───────────────────────────────────────────────────────────────────────────────
+Hipótese: O select #status tem um valor padrão "ativo" definido no HTML, e esse 
+valor não está sendo sobrescrito corretamente.
+
+CAUSA 5: FormData Capturando Valor Antigo ⚠️ MENOS PROVÁVEL
+───────────────────────────────────────────────────────────────────────────────
+Hipótese: O FormData está sendo criado antes do select ser atualizado, ou está 
+capturando um valor em cache.
+
+═══════════════════════════════════════════════════════════════════════════════
+  SOLUÇÕES PROPOSTAS (SEM APLICAÇÃO)
+═══════════════════════════════════════════════════════════════════════════════
+
+SOLUÇÃO 1: Verificar e Corrigir Reset do Select
+───────────────────────────────────────────────────────────────────────────────
+Ação:
+1. Adicionar log imediatamente após preencherFormularioAluno() para verificar 
+   se o valor permanece
+2. Adicionar log antes de saveAlunoDados() para verificar o valor atual do select
+3. Procurar por código que chama form.reset(), select.value = '', ou similar
+4. Verificar event listeners que podem estar alterando o valor
+
+SOLUÇÃO 2: Usar Seletor Mais Específico
+───────────────────────────────────────────────────────────────────────────────
+Ação:
+1. Verificar se há múltiplos elementos com id="status" no DOM
+2. Usar seletor mais específico: formAluno.querySelector('select[name="status"]')
+3. Adicionar validação para garantir que o elemento correto está sendo usado
+
+SOLUÇÃO 3: Adicionar Observer para Monitorar Mudanças
+───────────────────────────────────────────────────────────────────────────────
+Ação:
+1. Adicionar MutationObserver ou event listener para monitorar mudanças no select
+2. Logar todas as alterações de valor do select
+3. Identificar qual código está alterando o valor
+
+SOLUÇÃO 4: Forçar Valor do Select Antes de Salvar
+───────────────────────────────────────────────────────────────────────────────
+Ação:
+1. Em saveAlunoDados(), antes de ler o valor, forçar a leitura do valor correto
+2. Adicionar validação para garantir que o valor está correto
+3. Se não estiver, tentar corrigir antes de enviar
+
+SOLUÇÃO 5: Verificar HTML do Select
+───────────────────────────────────────────────────────────────────────────────
+Ação:
+1. Verificar o HTML do select #status no modal
+2. Verificar se há selected ou value="ativo" definido no HTML
+3. Verificar se há JavaScript que define valor padrão
+
+SOLUÇÃO 6: Adicionar Logs Detalhados em Todos os Pontos
+───────────────────────────────────────────────────────────────────────────────
+Ação:
+1. Adicionar logs em TODOS os pontos onde o select #status é acessado ou 
+   modificado
+2. Adicionar stack trace para identificar qual código está alterando o valor
+3. Criar um log completo do ciclo de vida do select
+
+═══════════════════════════════════════════════════════════════════════════════
+  CHECKLIST DE INVESTIGAÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+FASE 1: Verificação Básica
+───────────────────────────────────────────────────────────────────────────────
+[ ] Verificar se há múltiplos elementos com id="status" no DOM
+[ ] Verificar HTML do select #status (valor padrão, selected, etc.)
+[ ] Verificar se há código que chama form.reset() após preencher
+[ ] Verificar event listeners que podem estar alterando o valor
+
+FASE 2: Logs Detalhados
+───────────────────────────────────────────────────────────────────────────────
+[ ] Adicionar log imediatamente após preencherFormularioAluno()
+[ ] Adicionar log antes de saveAlunoDados()
+[ ] Adicionar MutationObserver para monitorar mudanças
+[ ] Adicionar stack trace quando o valor é alterado
+
+FASE 3: Correção
+───────────────────────────────────────────────────────────────────────────────
+[ ] Usar seletor mais específico (formAluno.querySelector())
+[ ] Adicionar validação antes de ler o valor
+[ ] Corrigir código que está resetando o select (se identificado)
+[ ] Testar em produção após correção
+
+═══════════════════════════════════════════════════════════════════════════════
+  PRÓXIMOS PASSOS RECOMENDADOS
+═══════════════════════════════════════════════════════════════════════════════
+
+1. IMEDIATO: Adicionar logs detalhados para identificar exatamente quando e 
+   onde o valor do select está sendo alterado
+
+2. CURTO PRAZO: Verificar se há múltiplos elementos com id="status" e corrigir 
+   se necessário
+
+3. MÉDIO PRAZO: Implementar MutationObserver para monitorar mudanças no select
+
+4. LONGO PRAZO: Refatorar código para usar seletor mais específico e adicionar 
+   validações
+
+═══════════════════════════════════════════════════════════════════════════════
+  NOTAS ADICIONAIS
+═══════════════════════════════════════════════════════════════════════════════
+
+- O problema NÃO está na API (botão rápido funciona perfeitamente)
+- O problema NÃO está no backend (status é recebido e salvo corretamente quando 
+  enviado)
+- O problema ESTÁ no frontend, especificamente na leitura do valor do select 
+  antes de enviar
+- O modal fecha corretamente agora (problema secundário resolvido)
+- Os resumos são atualizados em background (problema secundário resolvido)
+
+═══════════════════════════════════════════════════════════════════════════════
+  ARQUIVOS RELACIONADOS
+═══════════════════════════════════════════════════════════════════════════════
+
+- admin/pages/alunos.php - Função preencherFormularioAluno() (linha ~4323)
+- admin/pages/alunos.php - Função saveAlunoDados() (linha ~7380)
+- admin/pages/alunos.php - HTML do select #status (linha ~2252)
+- admin/api/alunos.php - API de atualização de alunos
+- admin/assets/js/alunos.js - Função fetchAPIAlunos()
+
+═══════════════════════════════════════════════════════════════════════════════
+

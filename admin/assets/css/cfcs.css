@@ -1,0 +1,482 @@
+/* CSS específico para CFCs - Versão Otimizada - MÁXIMA ESPECIFICIDADE */
+/* SOLUÇÃO AGGRESSIVA: Sobrescrever TODOS os possíveis seletores do Bootstrap */
+.modal#modalCFC .modal-dialog,
+#modalCFC .modal-dialog,
+.modal#modalCFC .modal-dialog.modal-custom-cfc,
+#modalCFC .modal-dialog.modal-custom-cfc,
+.modal.show#modalCFC .modal-dialog,
+.modal.fade#modalCFC .modal-dialog,
+.modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+.modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+    max-width: 1200px !important;
+    width: 1200px !important;
+    margin: 2rem auto !important;
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+}
+
+/* Responsividade otimizada - MÁXIMA ESPECIFICIDADE */
+@media (max-width: 1400px) {
+    .modal#modalCFC .modal-dialog,
+    #modalCFC .modal-dialog,
+    .modal#modalCFC .modal-dialog.modal-custom-cfc,
+    #modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.show#modalCFC .modal-dialog,
+    .modal.fade#modalCFC .modal-dialog,
+    .modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+        max-width: 95vw !important;
+        width: 95vw !important;
+        margin: 1.5rem auto !important;
+    }
+}
+
+@media (max-width: 1200px) {
+    .modal#modalCFC .modal-dialog,
+    #modalCFC .modal-dialog,
+    .modal#modalCFC .modal-dialog.modal-custom-cfc,
+    #modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.show#modalCFC .modal-dialog,
+    .modal.fade#modalCFC .modal-dialog,
+    .modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+        max-width: 90vw !important;
+        width: 90vw !important;
+        margin: 1rem auto !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .modal#modalCFC .modal-dialog,
+    #modalCFC .modal-dialog,
+    .modal#modalCFC .modal-dialog.modal-custom-cfc,
+    #modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.show#modalCFC .modal-dialog,
+    .modal.fade#modalCFC .modal-dialog,
+    .modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+        max-width: 95vw !important;
+        width: 95vw !important;
+        margin: 0.5rem auto !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .modal#modalCFC .modal-dialog,
+    #modalCFC .modal-dialog,
+    .modal#modalCFC .modal-dialog.modal-custom-cfc,
+    #modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.show#modalCFC .modal-dialog,
+    .modal.fade#modalCFC .modal-dialog,
+    .modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+        max-width: 98vw !important;
+        width: 98vw !important;
+        margin: 0.25rem auto !important;
+    }
+}
+
+/* CRÍTICO: Sobrescrever QUALQUER regra do Bootstrap que possa estar interferindo */
+.modal#modalCFC,
+#modalCFC {
+    width: auto !important;
+    max-width: none !important;
+    min-width: auto !important;
+}
+
+/* CRÍTICO: Garantir que o modal-dialog tenha a largura correta em TODOS os contextos */
+.modal#modalCFC .modal-dialog,
+#modalCFC .modal-dialog,
+.modal#modalCFC .modal-dialog.modal-custom-cfc,
+#modalCFC .modal-dialog.modal-custom-cfc,
+.modal.show#modalCFC .modal-dialog,
+.modal.fade#modalCFC .modal-dialog,
+.modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+.modal.fade#modalCFC .modal-dialog.modal-custom-cfc,
+.modal.show#modalCFC .modal-dialog.modal-custom-cfc.show,
+.modal.fade#modalCFC .modal-dialog.modal-custom-cfc.fade,
+.modal.show#modalCFC .modal-dialog.modal-custom-cfc.show.fade,
+.modal.fade#modalCFC .modal-dialog.modal-custom-cfc.fade.show {
+    width: 1200px !important;
+    max-width: 1200px !important;
+    min-width: 1200px !important;
+    margin: 2rem auto !important;
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    flex: none !important;
+    flex-basis: 1200px !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+}
+
+/* CRÍTICO: Sobrescrever qualquer regra de responsividade do Bootstrap */
+@media (min-width: 576px) {
+    .modal#modalCFC .modal-dialog,
+    #modalCFC .modal-dialog,
+    .modal#modalCFC .modal-dialog.modal-custom-cfc,
+    #modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.show#modalCFC .modal-dialog,
+    .modal.fade#modalCFC .modal-dialog,
+    .modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .modal#modalCFC .modal-dialog,
+    #modalCFC .modal-dialog,
+    .modal#modalCFC .modal-dialog.modal-custom-cfc,
+    #modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.show#modalCFC .modal-dialog,
+    .modal.fade#modalCFC .modal-dialog,
+    .modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 992px) {
+    .modal#modalCFC .modal-dialog,
+    #modalCFC .modal-dialog,
+    .modal#modalCFC .modal-dialog.modal-custom-cfc,
+    #modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.show#modalCFC .modal-dialog,
+    .modal.fade#modalCFC .modal-dialog,
+    .modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    .modal#modalCFC .modal-dialog,
+    #modalCFC .modal-dialog,
+    .modal#modalCFC .modal-dialog.modal-custom-cfc,
+    #modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.show#modalCFC .modal-dialog,
+    .modal.fade#modalCFC .modal-dialog,
+    .modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 1400px) {
+    .modal#modalCFC .modal-dialog,
+    #modalCFC .modal-dialog,
+    .modal#modalCFC .modal-dialog.modal-custom-cfc,
+    #modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.show#modalCFC .modal-dialog,
+    .modal.fade#modalCFC .modal-dialog,
+    .modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+    .modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+/* SOLUÇÃO FINAL: CSS ULTRA AGGRESSIVO - Sobrescrever TUDO */
+/* Usar seletores com máxima especificidade e !important em todas as propriedades */
+html body .modal#modalCFC .modal-dialog,
+html body #modalCFC .modal-dialog,
+html body .modal#modalCFC .modal-dialog.modal-custom-cfc,
+html body #modalCFC .modal-dialog.modal-custom-cfc,
+html body .modal.show#modalCFC .modal-dialog,
+html body .modal.fade#modalCFC .modal-dialog,
+html body .modal.show#modalCFC .modal-dialog.modal-custom-cfc,
+html body .modal.fade#modalCFC .modal-dialog.modal-custom-cfc {
+    width: 1200px !important;
+    max-width: 1200px !important;
+    min-width: 1200px !important;
+    margin: 2rem auto !important;
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    flex: none !important;
+    flex-basis: 1200px !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+    display: block !important;
+    float: none !important;
+    clear: both !important;
+    overflow: visible !important;
+    z-index: 1056 !important;
+}
+
+/* CSS para modal-content, modal-header, modal-body e modal-footer */
+#modalCFC .modal-content {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    position: relative !important;
+    background-color: #fff !important;
+    border: 1px solid rgba(0, 0, 0, 0.2) !important;
+    border-radius: 0.375rem !important;
+    outline: 0 !important;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+#modalCFC .modal-header {
+    display: flex !important;
+    flex-shrink: 0 !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 1rem !important;
+    border-bottom: 1px solid #dee2e6 !important;
+    border-top-left-radius: calc(0.375rem - 1px) !important;
+    border-top-right-radius: calc(0.375rem - 1px) !important;
+}
+
+#modalCFC .modal-body {
+    position: relative !important;
+    flex: 1 1 auto !important;
+    padding: 1rem !important;
+}
+
+#modalCFC .modal-footer {
+    display: flex !important;
+    flex-shrink: 0 !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    padding: 0.75rem !important;
+    border-top: 1px solid #dee2e6 !important;
+    border-bottom-right-radius: calc(0.375rem - 1px) !important;
+    border-bottom-left-radius: calc(0.375rem - 1px) !important;
+}
+
+/* Remover backdrop do modal */
+.modal-backdrop {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    background: transparent !important;
+}
+
+.modal-backdrop.show {
+    display: none !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    background: transparent !important;
+}
+
+/* CSS para modal-dialog específico */
+.modal-dialog.modal-custom-cfc {
+    width: 1200px !important;
+    max-width: 1200px !important;
+    min-width: 1200px !important;
+    margin: 2rem auto !important;
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    flex: none !important;
+    flex-basis: 1200px !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+}
+
+/* CSS para modal-dialog específico em diferentes estados */
+.modal.show .modal-dialog.modal-custom-cfc,
+.modal.fade .modal-dialog.modal-custom-cfc {
+    width: 1200px !important;
+    max-width: 1200px !important;
+    min-width: 1200px !important;
+    margin: 2rem auto !important;
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    flex: none !important;
+    flex-basis: 1200px !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+}
+
+/* CSS para modal-dialog específico em diferentes estados com classes combinadas */
+.modal.show .modal-dialog.modal-custom-cfc.show,
+.modal.fade .modal-dialog.modal-custom-cfc.fade,
+.modal.show .modal-dialog.modal-custom-cfc.show.fade,
+.modal.fade .modal-dialog.modal-custom-cfc.fade.show {
+    width: 1200px !important;
+    max-width: 1200px !important;
+    min-width: 1200px !important;
+    margin: 2rem auto !important;
+    position: relative !important;
+    left: auto !important;
+    right: auto !important;
+    transform: none !important;
+    box-sizing: border-box !important;
+    flex: none !important;
+    flex-basis: 1200px !important;
+    flex-grow: 0 !important;
+    flex-shrink: 0 !important;
+}
+
+/* CSS para modal-dialog específico em diferentes breakpoints */
+@media (min-width: 576px) {
+    .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 992px) {
+    .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 1400px) {
+    .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+/* CSS para modal-dialog específico em diferentes breakpoints com estados */
+@media (min-width: 576px) {
+    .modal.show .modal-dialog.modal-custom-cfc,
+    .modal.fade .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .modal.show .modal-dialog.modal-custom-cfc,
+    .modal.fade .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 992px) {
+    .modal.show .modal-dialog.modal-custom-cfc,
+    .modal.fade .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    .modal.show .modal-dialog.modal-custom-cfc,
+    .modal.fade .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 1400px) {
+    .modal.show .modal-dialog.modal-custom-cfc,
+    .modal.fade .modal-dialog.modal-custom-cfc {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+/* CSS para modal-dialog específico em diferentes breakpoints com estados combinados */
+@media (min-width: 576px) {
+    .modal.show .modal-dialog.modal-custom-cfc.show,
+    .modal.fade .modal-dialog.modal-custom-cfc.fade,
+    .modal.show .modal-dialog.modal-custom-cfc.show.fade,
+    .modal.fade .modal-dialog.modal-custom-cfc.fade.show {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 768px) {
+    .modal.show .modal-dialog.modal-custom-cfc.show,
+    .modal.fade .modal-dialog.modal-custom-cfc.fade,
+    .modal.show .modal-dialog.modal-custom-cfc.show.fade,
+    .modal.fade .modal-dialog.modal-custom-cfc.fade.show {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 992px) {
+    .modal.show .modal-dialog.modal-custom-cfc.show,
+    .modal.fade .modal-dialog.modal-custom-cfc.fade,
+    .modal.show .modal-dialog.modal-custom-cfc.show.fade,
+    .modal.fade .modal-dialog.modal-custom-cfc.fade.show {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 1200px) {
+    .modal.show .modal-dialog.modal-custom-cfc.show,
+    .modal.fade .modal-dialog.modal-custom-cfc.fade,
+    .modal.show .modal-dialog.modal-custom-cfc.show.fade,
+    .modal.fade .modal-dialog.modal-custom-cfc.fade.show {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}
+
+@media (min-width: 1400px) {
+    .modal.show .modal-dialog.modal-custom-cfc.show,
+    .modal.fade .modal-dialog.modal-custom-cfc.fade,
+    .modal.show .modal-dialog.modal-custom-cfc.show.fade,
+    .modal.fade .modal-dialog.modal-custom-cfc.fade.show {
+        width: 1200px !important;
+        max-width: 1200px !important;
+        min-width: 1200px !important;
+    }
+}

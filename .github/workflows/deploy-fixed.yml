@@ -1,0 +1,67 @@
+name: 🚀 Deploy FIXED - CFC Bom Conselho
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    name: Deploy to Hostinger
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📋 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔐 Deploy via SSH (Fixed)
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HOSTINGER_HOST }}
+        username: ${{ secrets.HOSTINGER_USERNAME }}
+        key: ${{ secrets.HOSTINGER_SSH_KEY }}
+        port: ${{ secrets.HOSTINGER_PORT || '22' }}
+        script: |
+          set -e
+          
+          echo "🚀 [$(date)] Deploy iniciado..." >> /tmp/deploy.log
+          
+          # Verificar se estamos no diretório correto
+          if [ ! -d "/public_html" ]; then
+            echo "❌ Erro: Diretório /public_html não existe" >> /tmp/deploy.log
+            exit 1
+          fi
+          
+          cd /public_html || { echo "❌ Erro: Não consegui entrar em /public_html" >> /tmp/deploy.log; exit 1; }
+          
+          # Criar backup rápido
+          BACKUP_DIR="/backups/backup-$(date +%Y%m%d-%H%M%S)"
+          echo "💾 Criando backup em: $BACKUP_DIR" >> /tmp/deploy.log
+          mkdir -p "$BACKUP_DIR"
+          cp -r ./* "$BACKUP_DIR/" 2>/dev/null || true
+          
+          # Git pull simples
+          echo "📥 Fazendo pull do código..." >> /tmp/deploy.log
+          
+          # Se não for um repositório Git ainda, clonar
+          if [ ! -d ".git" ]; then
+            echo "📁 Clonando repositório pela primeira vez..." >> /tmp/deploy.log
+            rm -rf ./* 2>/dev/null || true
+            git clone https://github.com/pixel12digital/cfcbomconselho.git .
+          fi
+          
+          # Pull atualizações
+          git fetch origin
+          git reset --hard origin/master
+          git clean -fd
+          
+          # Permissões
+          echo "🔧 Ajustando permissões..." >> /tmp/deploy.log
+          find . -type f -name "*.php" -exec chmod 644 {} \; 2>/dev/null || true
+          find . -type d -exec chmod 755 {} \; 2>/dev/null || true
+          
+          # Arquivo de versão
+          echo "${{ github.sha }}" > .version
+          echo "$(date)" >> .version
+          
+          echo "✅ Deploy concluído com sucesso!" >> /tmp/deploy.log

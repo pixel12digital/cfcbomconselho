@@ -1,0 +1,298 @@
+/* =====================================================
+   CORREÇÕES CRÍTICAS DE LAYOUT - SISTEMA CFC
+   Elimina gaps e garante comportamento sticky
+   ===================================================== */
+
+/* =====================================================
+   RESET COMPLETO PARA ELIMINAR GAPS
+   ===================================================== */
+
+* {
+    box-sizing: border-box;
+}
+
+/* CRÍTICO: Variável CSS para altura da navbar (será definida via JS) */
+:root {
+    --navbar-h: 64px;
+}
+
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: 100%;
+}
+
+/* CRÍTICO: Usar scroll-padding-top para compensar navbar fixa (sem somar com margin-top) */
+html {
+    scroll-padding-top: var(--navbar-h);
+}
+
+body {
+    /* CRÍTICO: Padding-top apenas se necessário para não cobrir conteúdo, mas sem somar com margin-top */
+    padding-top: var(--navbar-h) !important;
+    margin: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    padding-bottom: 0 !important;
+    overflow-x: hidden;
+}
+
+/* =====================================================
+   TOPBAR - SEMPRE STICKY/FIXED
+   ===================================================== */
+
+.topbar {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    width: 100% !important;
+    height: 64px !important;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+    z-index: 1000 !important;
+    display: flex !important;
+    align-items: center !important;
+    padding: 0 24px !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    margin: 0 !important;
+    /* Garantir que seja sempre sticky */
+    position: -webkit-sticky !important;
+    position: sticky !important;
+    position: fixed !important;
+}
+
+/* =====================================================
+   CONTAINER PRINCIPAL - SEM GAPS
+   ===================================================== */
+
+.admin-container {
+    display: flex;
+    min-height: 100vh;
+    background-color: #f8f9fa;
+    padding-top: 0 !important;
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
+}
+
+/* =====================================================
+   SIDEBAR - ALINHADA COM TOPBAR
+   ===================================================== */
+
+.admin-sidebar {
+    position: fixed !important;
+    top: var(--navbar-h) !important;
+    left: 0 !important;
+    width: 70px !important;
+    height: calc(100vh - var(--navbar-h)) !important;
+    background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%) !important;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.15) !important;
+    z-index: 999 !important;
+    overflow-y: auto;
+    overflow-x: hidden;
+    transition: none !important;
+}
+
+/* =====================================================
+   CONTEÚDO PRINCIPAL - SEM GAPS
+   ===================================================== */
+
+.admin-main {
+    flex: 1;
+    margin-left: 70px !important;
+    /* CRÍTICO: margin-top ZERADO - a compensação da navbar já está no body.padding-top */
+    margin-top: 0 !important;
+    /* CRÍTICO: Padding reduzido para respiro consistente - alinhado ao respiro lateral */
+    padding: 14px 24px 24px 24px !important;
+    min-height: calc(100vh - var(--navbar-h)) !important;
+    background-color: #f8f9fa;
+    margin-right: 0 !important;
+    margin-bottom: 0 !important;
+    box-sizing: border-box !important;
+    /* CRÍTICO: Padding-top reduzido para 14px (desktop) - alinhado ao respiro lateral */
+    padding-top: 14px !important;
+}
+
+/* =====================================================
+   ELIMINAR GAPS EM TODOS OS ELEMENTOS
+   ===================================================== */
+
+/* CRÍTICO: Resetar elementos que podem causar gap - zerar margin-top do primeiro filho */
+.admin-main > *:first-child,
+.admin-main .page-header:first-child,
+.admin-main .container:first-child,
+.admin-main .row:first-child,
+.admin-main .card:first-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* CRÍTICO: Remover pseudo-elementos do primeiro filho que possam criar espaço */
+.admin-main > *:first-child::before,
+.admin-main > *:first-child::after {
+    display: none !important;
+    content: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* Corrigir elementos específicos do Bootstrap */
+.container,
+.container-fluid,
+.row,
+.col,
+.col-*,
+.card,
+.card-body,
+.card-header,
+.alert,
+.badge,
+.btn {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* CRÍTICO: Corrigir elementos específicos do dashboard - zerar margin-top do page-header */
+.stat-card,
+.chart-section,
+.main-content,
+.content-wrapper,
+.page-wrapper {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* CRÍTICO: Zerar margin-top do page-header (header da seção "Gestão de Turmas") */
+.page-header,
+.admin-main .page-header {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* CRÍTICO: Remover pseudo-elementos do page-header que possam criar espaço */
+.page-header::before,
+.page-header::after,
+.admin-main .page-header::before,
+.admin-main .page-header::after {
+    display: none !important;
+    content: none !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+/* =====================================================
+   CORREÇÕES ESPECÍFICAS PARA ELEMENTOS ABSOLUTOS
+   ===================================================== */
+
+.position-absolute,
+.position-fixed,
+.position-relative,
+.position-sticky {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+
+/* =====================================================
+   GARANTIR QUE HEADERS ANTIGOS NÃO INTERFIram
+   ===================================================== */
+
+.admin-header,
+.main-header,
+header[class*="header"] {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+/* =====================================================
+   RESPONSIVIDADE - MANTENDO ZERO GAPS
+   ===================================================== */
+
+@media (max-width: 1024px) {
+    .admin-sidebar {
+        transform: translateX(-100%);
+        width: 280px;
+    }
+    
+    .admin-sidebar.open {
+        transform: translateX(0);
+    }
+    
+    .admin-main {
+        margin-left: 0 !important;
+    }
+    
+    .topbar {
+        padding: 0 20px !important;
+    }
+}
+
+@media (max-width: 768px) {
+    .topbar {
+        padding: 0 16px !important;
+    }
+    
+    .admin-main {
+        /* CRÍTICO: Padding reduzido em mobile - respiro de 10px no topo */
+        padding: 10px 16px 16px 16px !important;
+        padding-top: 10px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .topbar {
+        padding: 0 12px !important;
+    }
+    
+    .admin-main {
+        /* CRÍTICO: Padding reduzido em mobile pequeno - respiro de 8px no topo */
+        padding: 8px 12px 12px 12px !important;
+        padding-top: 8px !important;
+    }
+}
+
+/* =====================================================
+   FORÇAR COMPORTAMENTO STICKY EM TODOS OS NAVEGADORES
+   ===================================================== */
+
+.topbar {
+    /* Webkit (Chrome, Safari) */
+    position: -webkit-sticky !important;
+    /* Standard */
+    position: sticky !important;
+    /* Fallback para navegadores antigos */
+    position: fixed !important;
+    /* Garantir que fique sempre no topo */
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+}
+
+/* =====================================================
+   DEBUG - REMOVER EM PRODUÇÃO
+   ===================================================== */
+
+/*
+.topbar {
+    border: 2px solid red !important;
+}
+
+.admin-main {
+    border: 2px solid blue !important;
+}
+
+.admin-sidebar {
+    border: 2px solid green !important;
+}
+*/

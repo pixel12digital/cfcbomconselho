@@ -1,0 +1,136 @@
+═══════════════════════════════════════════════════════════════════════════════
+  CONCLUSÃO: UNIFICAÇÃO DO FLUXO MODAL COM A API - STATUS DO ALUNO
+═══════════════════════════════════════════════════════════════════════════════
+
+Data: 2025-01-27
+Problema: Modal "Editar Aluno" usava fluxo antigo (saveAlunoDados) que não atualizava status
+
+───────────────────────────────────────────────────────────────────────────────
+PROBLEMA IDENTIFICADO
+───────────────────────────────────────────────────────────────────────────────
+
+A função saveAlunoDados() estava usando:
+  ❌ POST sempre (mesmo na edição)
+  ❌ URL relativa api/alunos.php (não admin/api/alunos.php)
+  ❌ FormData (não JSON)
+  ❌ Endpoint diferente do botão rápido
+
+O botão rápido funcionava porque usava:
+  ✅ PUT para admin/api/alunos.php?id={id}
+  ✅ JSON com { status: 'inativo' }
+
+───────────────────────────────────────────────────────────────────────────────
+CORREÇÕES IMPLEMENTADAS
+───────────────────────────────────────────────────────────────────────────────
+
+1. ✅ UNIFICAÇÃO DO FLUXO - saveAlunoDados() REFATORADA
+   Arquivo: admin/pages/alunos.php (função saveAlunoDados, linha ~7066)
+   
+   Mudanças:
+   • Agora usa PUT quando isEditing = true (mesmo padrão do botão rápido)
+   • Usa admin/api/alunos.php (mesmo endpoint do botão rápido)
+   • Converte FormData para JSON quando não houver foto (mais eficiente)
+   • Mantém FormData apenas quando houver upload de foto
+   • Status é enviado corretamente no payload
+
+2. ✅ API PUT SUPORTA FORMDATA E JSON
+   Arquivo: admin/api/alunos.php (case 'PUT')
+   
+   Mudanças:
+   • Detecta se há FormData (foto) ou JSON
+   • Processa ambos os formatos corretamente
+   • Status é lido de $data['status'] (seja FormData ou JSON)
+   • Processa upload de foto quando presente
+
+3. ✅ LOGS TEMPORÁRIOS ADICIONADOS
+   Frontend:
+   • [DEBUG STATUS MODAL] Status no FormData: ...
+   • [DEBUG STATUS MODAL] Payload enviado para API: ...
+   • [DEBUG STATUS MODAL] Status no payload: ...
+   
+   Backend:
+   • [LOG TEMPORÁRIO API PUT] Status recebido na API de alunos: ...
+   • [LOG TEMPORÁRIO API PUT] Dados completos recebidos: ...
+
+───────────────────────────────────────────────────────────────────────────────
+ARQUIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. admin/pages/alunos.php
+   • Função saveAlunoDados(): Refatorada para usar PUT + JSON na edição
+   • Logs temporários adicionados
+   • Comentário explicativo sobre o fluxo antigo vs novo
+
+2. admin/api/alunos.php
+   • Case 'PUT': Suporte a FormData e JSON
+   • Processamento de upload de foto no PUT
+   • Logs temporários adicionados
+
+───────────────────────────────────────────────────────────────────────────────
+CHECKLIST DE VALIDAÇÃO
+───────────────────────────────────────────────────────────────────────────────
+
+TESTE 1 - EDITAR ALUNO E ALTERAR STATUS PARA INATIVO (SEM FOTO):
+  [ ] Abrir modal "Editar Aluno" para um aluno ativo
+  [ ] Alterar "Status do Aluno" de "Ativo" para "Inativo"
+  [ ] Clicar em "Salvar Aluno"
+  [ ] Verificar console:
+      - [DEBUG STATUS MODAL] Status no FormData: "inativo"
+      - [DEBUG STATUS MODAL] Modo: EDIÇÃO sem FOTO - usando JSON
+      - [DEBUG STATUS MODAL] Payload enviado para API: { ..., status: "inativo", ... }
+      - [DEBUG STATUS MODAL] Status no payload: "inativo"
+  [ ] Verificar Network tab:
+      - Requisição PUT para admin/api/alunos.php?id={id}
+      - Body JSON contém "status": "inativo"
+      - Content-Type: application/json
+  [ ] Verificar resposta da API: {"success": true, ...}
+  [ ] Verificar logs do PHP:
+      - [LOG TEMPORÁRIO API PUT] Status recebido: "inativo"
+      - [LOG TEMPORÁRIO API PUT] UPDATE executado com sucesso
+      - [LOG TEMPORÁRIO API PUT] Status no banco após UPDATE: "inativo"
+  [ ] Verificar banco: SELECT status FROM alunos WHERE id = {id} → "inativo"
+  [ ] Verificar listagem - badge aparece como "INATIVO"
+
+TESTE 2 - EDITAR ALUNO COM FOTO:
+  [ ] Editar aluno e alterar status + fazer upload de foto
+  [ ] Verificar que usa FormData mas status ainda é enviado
+  [ ] Confirmar que status é atualizado no banco
+
+TESTE 3 - REATIVAR ALUNO:
+  [ ] Editar aluno inativo e alterar para "Ativo"
+  [ ] Salvar e verificar que status volta para "ativo" no banco e listagem
+
+───────────────────────────────────────────────────────────────────────────────
+PAYLOAD ESPERADO NA EDIÇÃO (SEM FOTO)
+───────────────────────────────────────────────────────────────────────────────
+
+method: PUT
+endpoint: admin/api/alunos.php?id=167
+headers: {
+  "Content-Type": "application/json",
+  "X-Requested-With": "XMLHttpRequest"
+}
+body JSON: {
+  "nome": "Nome do Aluno",
+  "cpf": "123.456.789-00",
+  ... (outros campos) ...,
+  "status": "inativo",  ← Este campo deve estar presente
+  "salvar_apenas_dados": "1",
+  ...
+}
+
+───────────────────────────────────────────────────────────────────────────────
+PRÓXIMOS PASSOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. Executar testes manuais seguindo o checklist
+2. Verificar logs temporários no console e logs do PHP
+3. Validar que o status está sendo atualizado no banco
+4. Remover logs temporários após validação completa
+
+───────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ CORREÇÕES IMPLEMENTADAS - AGUARDANDO VALIDAÇÃO
+───────────────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════════════
+

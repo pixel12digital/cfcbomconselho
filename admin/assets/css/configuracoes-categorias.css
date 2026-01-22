@@ -1,0 +1,70 @@
+/* =====================================================
+   CORREÇÃO DE CORES - CONFIGURAÇÕES DE CATEGORIAS
+   ===================================================== */
+
+/* Garantir que as cores dos headers funcionem corretamente */
+.card-header.bg-success {
+    background-color: #198754 !important;
+    color: #ffffff !important;
+}
+
+.card-header.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #ffffff !important;
+}
+
+.card-header.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000000 !important;
+}
+
+/* Garantir que os badges tenham cores corretas */
+.badge.bg-success {
+    background-color: #198754 !important;
+    color: #ffffff !important;
+}
+
+.badge.bg-info {
+    background-color: #0dcaf0 !important;
+    color: #ffffff !important;
+}
+
+.badge.bg-warning {
+    background-color: #ffc107 !important;
+    color: #000000 !important;
+}
+
+/* Garantir que os botões tenham cores corretas */
+.btn-success {
+    background-color: #198754 !important;
+    border-color: #198754 !important;
+    color: #ffffff !important;
+}
+
+.btn-info {
+    background-color: #0dcaf0 !important;
+    border-color: #0dcaf0 !important;
+    color: #ffffff !important;
+}
+
+.btn-warning {
+    background-color: #ffc107 !important;
+    border-color: #ffc107 !important;
+    color: #000000 !important;
+}
+
+/* Hover states */
+.btn-success:hover {
+    background-color: #157347 !important;
+    border-color: #146c43 !important;
+}
+
+.btn-info:hover {
+    background-color: #0aa2c0 !important;
+    border-color: #0aa2c0 !important;
+}
+
+.btn-warning:hover {
+    background-color: #ffca2c !important;
+    border-color: #ffc720 !important;
+}

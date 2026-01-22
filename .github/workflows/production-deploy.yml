@@ -1,0 +1,119 @@
+name: 🚀 Deploy to Production - CFC Bom Conselho
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+env:
+  APP_NAME: "CFC Bom Conselho"
+  DEPLOY_BRANCH: "master"
+
+jobs:
+  deploy:
+    name: Deploy to Hostinger
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📋 Checkout code
+      uses: actions/checkout@v4
+      
+    - name: 🔧 Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.1'
+        
+    - name: 📦 Cache dependencies
+      id: cache
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.composer/cache
+        key: ${{ runner.os }}-php-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-php-
+          
+    - name: 🔐 Deploy to Hostinger
+      id: deploy
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HOSTINGER_HOST }}
+        username: ${{ secrets.HOSTINGER_USERNAME }}
+        key: ${{ secrets.HOSTINGER_SSH_KEY }}
+        port: ${{ secrets.HOSTINGER_PORT || '22' }}
+        script: |
+          set -e
+          
+          # Log do deploy
+          echo "🚀 [$(date)] Iniciando deploy do CFC Bom Conselho..." >> /tmp/deploy.log
+          
+          # Criar backup antes do deploy
+          BACKUP_DIR="/backups/backup-$(date +%Y%m%d-%H%M%S)"
+          echo "💾 Criando backup em: $BACKUP_DIR" >> /tmp/deploy.log
+          mkdir -p "$BACKUP_DIR"
+          cp -r /public_html/* "$BACKUP_DIR/" 2>/dev/null || true
+          
+          # Entrar no diretório
+          cd /public_html || { echo "❌ Erro: Não consegui entrar em /public_html" >> /tmp/deploy.log; exit 1; }
+          
+          # Pull do código
+          echo "📥 Fazendo pull do código..." >> /tmp/deploy.log
+          git fetch origin
+          git reset --hard origin/master
+          git clean -fd
+          
+          # Permissões corretas
+          echo "🔧 Ajustando permissões..." >> /tmp/deploy.log
+          find . -type f -name "*.php" -exec chmod 644 {} \;
+          find . -type d -exec chmod 755 {} \;
+          chmod 666 logs/ 2>/dev/null || mkdir -p logs && chmod 666 logs/
+          
+          # Criar arquivo de versão
+          echo "${{ github.sha }}" > .version
+          echo "$(date)" >> .version
+          
+          echo "✅ Deploy concluído com sucesso!" >> /tmp/deploy.log
+
+    - name: 🔔 Notify Success
+      if: success()
+      run: |
+        echo "✅ Deploy concluído com sucesso!"
+        echo "🚀 CFC Bom Conselho atualizado em produção"
+        echo "📅 Data/Hora: $(date)"
+
+    - name: 📊 Deploy Summary
+      if: always()
+      run: |
+        echo "## Deploy Summary" >> $GITHUB_STEP_SUMMARY
+        echo "**App:** ${{ env.APP_NAME }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch:** ${{ github.ref }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Time:** $(date)" >> $GITHUB_STEP_SUMMARY
+
+  rollback:
+    name: Rollback if needed
+    runs-on: ubuntu-latest
+    if: failure()
+    
+    steps:
+    - name: 🔄 Auto Rollback
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HOSTINGER_HOST }}
+        username: ${{ secrets.HOSTINGER_USERNAME }}
+        key: ${{ secrets.HOSTINGER_SSH_KEY }}
+        script: |
+          echo "🔄 Iniciando rollback..." >> /tmp/deploy.log
+          
+          # Encontrar backup mais recente
+          LATEST_BACKUP=$(ls -dt /backups/backup-* 2>/dev/null | head -1)
+          
+          if [ ! -z "$LATEST_BACKUP" ]; then
+            echo "📦 Restaurando backup: $LATEST_BACKUP" >> /tmp/deploy.log
+            rm -rf /public_html/* 2>/dev/null || true
+            cp -r "$LATEST_BACKUP"/* /public_html/ 2>/dev/null || true
+            echo "✅ Rollback concluído" >> /tmp/deploy.log
+          else
+            echo "❌ Nenhum backup encontrado para rollback" >> /tmp/deploy.log
+          fi

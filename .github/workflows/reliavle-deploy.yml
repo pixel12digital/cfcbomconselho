@@ -1,0 +1,213 @@
+name: 🚀 Deploy Confiável - CFC Bom Conselho
+
+on:
+  push:
+    branches: [ master, main ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Ambiente de deploy'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  APP_NAME: "CFC Bom Conselho"
+  DEPLOY_TIMEOUT: 300
+
+jobs:
+  deploy:
+    name: Deploy Confiável para Hostinger
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    
+    steps:
+    - name: 📋 Checkout código
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: 📦 Preparar artefatos de deploy
+      run: |
+        echo "📦 Preparando artefatos para deploy..."
+        
+        # Criar arquivo de metadados do deploy
+        echo "commit=${{ github.sha }}" >> deploy.info
+        echo "branch=${{ github.ref_name }}" >> deploy.info  
+        echo "actor=${{ github.actor }}" >> deploy.info
+        echo "timestamp=$(date)" >> deploy.info
+        echo "environment=${{ inputs.environment || 'production' }}" >> deploy.info
+        
+        # Criar checksum dos arquivos principais
+        find . -name "*.php" -exec sha256sum {} \; | sort > file-checksums.txt
+        
+        echo "✅ Artefatos preparados"
+        
+    - name: 🔐 Deploy via SSH (Robusto)
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HOSTINGER_HOST }}
+        username: ${{ secrets.HOSTINGER_USERNAME }}
+        key: ${{ secrets.HOSTINGER_SSH_KEY }}
+        port: ${{ secrets.HOSTINGER_PORT || '22' }}
+        timeout: ${{ env.DEPLOY_TIMEOUT }}s
+        script: |
+          set -e
+          
+          # Configurações
+          DEPLOY_DIR="/public_html"
+          BACKUP_DIR="/backups"
+          TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+          LOG_FILE="/tmp/deploy.log"
+          
+          # Função de log
+          log() {
+            echo "[$(date)] $1" | tee -a "$LOG_FILE"
+          }
+          
+          log "🚀 Iniciando deploy confiável do ${{ github.event.repository.name }}"
+          
+          # Verificar pré-requisitos
+          if [ ! -d "$DEPLOY_DIR" ]; then
+            log "❌ Diretório $DEPLOY_DIR não encontrado"
+            exit 1
+          fi
+          
+          # Criar diretório de backup
+          mkdir -p "$BACKUP_DIR"
+          
+          # Backup rápido antes do deploy
+          cd "$DEPLOY_DIR"
+          BACKUP_NAME="pre-deploy-$TIMESTAMP"
+          log "💾 Criando backup: $BACKUP_NAME"
+          
+          tar -czf "$BACKUP_DIR/$BACKUP_NAME.tar.gz" . 2>/dev/null || {
+            log "⚠️ Backup falhou, mas continuando..."
+          }
+          
+          # Deploy principal
+          log "📥 Iniciando deploy principal"
+          
+          # Se for um repositório Git, usar Git
+          if [ -d ".git" ]; then
+            log "🔀 Repositório Git detectado"
+            
+            # Stash de mudanças locais
+            git stash push -m "Deploy backup $TIMESTAMP" 2>/dev/null || true
+            
+            # Pull das atualizações
+            git fetch origin
+            git reset --hard origin/${{ github.ref_name }}
+            git clean -fd
+            
+            log "✅ Git pull concluído"
+          else
+            log "📁 Clonando repositório pela primeira vez"
+            cd /tmp
+            rm -rf deploy-temp
+            git clone https://github.com/${{ github.repository }}.git deploy-temp
+            cd deploy-temp
+            git checkout ${{ github.ref_name }}
+            
+            # Backup diretório atual e substituir
+            cd "$DEPLOY_DIR"
+            mv . ../old-${TIMESTAMP} 2>/dev/null || rm -rf ./*
+            
+            cp -r /tmp/deploy-temp/* .
+            cp -r /tmp/deploy-temp/.* . 2>/dev/null || true
+            
+            rm -rf /tmp/deploy-temp
+            
+            log "✅ Clone inicial concluído"
+          fi
+          
+          # Aplicar configurações específicas de ambiente
+          cd "$DEPLOY_DIR"
+          
+          # Permissões corretas
+          log "🔧 Aplicando permissões corretas"
+          find . -type f -name "*.php" -exec chmod 644 {} \; 2>/dev/null || true
+          find . -type d -exec chmod 755 {} \; 2>/dev/null || true
+          chmod +x *.sh 2>/dev/null || true
+          
+          # Arquivo de versão
+          echo "${{ github.sha }}" > .deploy-status
+          echo "$(date)" >> .deploy-status
+          echo "${{ github.ref_name }}" >> .deploy-status
+          echo "${{ github.actor }}" >> .deploy-status
+          
+          # Verificação pós-deploy
+          log "🔍 Verificando integridade"
+          
+          # Verificar arquivos essenciais
+          ESSENTIAL_FILES=("index.php" "login.php" "includes/config.php" "includes/database.php")
+          
+          for file in "${ESSENTIAL_FILES[@]}"; do
+            if [ -f "$file" ]; then
+              log "✅ $file encontrado"
+            else
+              log "❌ $file NÃO encontrado"
+              exit 1
+            fi
+          done
+          
+          # Limpar backups antigos (manter últimos 7 dias)
+          find "$BACKUP_DIR" -name "pre-deploy-*.tar.gz" -mtime +7 -delete 2>/dev/null || true
+          
+          log "✅ Deploy confiável concluído com sucesso!"
+          
+          # Status final
+          echo "DEPLOY_SUCCESS=true" >> .deploy-status
+          echo "DEPLOY_TIMESTAMP=$TIMESTAMP" >> .deploy-status
+          
+    - name: 📊 Relatório de Deploy
+      if: always()
+      run: |
+        echo "## 🚀 Relatório de Deploy" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        echo "**App:** ${{ env.APP_NAME }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Branch:** ${{ github.ref_name }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Environment:** ${{ inputs.environment || 'production' }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Actor:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+        echo "**Status:** ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+        echo **Time:** $(date)" >> $GITHUB_STEP_SUMMARY
+        
+  rollback:
+    name: Rollback Automático
+    runs-on: ubuntu-latest
+    needs: deploy
+    if: failure()
+    
+    steps:
+    - name: 🔄 Executar Rollback
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.HOSTINGER_HOST }}
+        username: ${{ secrets.HOSTINGER_USERNAME }}
+        key: ${{ secrets.HOSTINGER_SSH_KEY }}
+        port: ${{ secrets.HOSTINGER_PORT || '22' }}
+        script: |
+          set -e
+          
+          BACKUP_DIR="/backups"
+          DEPLOY_DIR="/public_html"
+          
+          echo "🔄 Iniciando rollback automático..."
+          
+          # Encontrar backup mais recente
+          LATEST_BACKUP=$(ls -t $BACKUP_DIR/pre-deploy-*.tar.gz 2>/dev/null | head -1)
+          
+          if [ ! -z "$LATEST_BACKUP" ]; then
+            echo "📦 Restaurando backup: $LATEST_BACKUP"
+            cd "$DEPLOY_DIR"
+            rm -rf ./*
+            tar -xzf "$LATEST_BACKUP"
+            echo "✅ Rollback concluído"
+          else
+            echo "❌ Nenhum backup encontrado"
+            exit 1
+          fi

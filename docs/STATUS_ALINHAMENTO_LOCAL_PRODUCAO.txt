@@ -1,0 +1,192 @@
+═══════════════════════════════════════════════════════════════════════════════
+  STATUS DE ALINHAMENTO: LOCAL vs PRODUÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+Data da Verificação: 28/11/2025
+
+═══════════════════════════════════════════════════════════════════════════════
+  ✅ STATUS DOS COMMITS
+═══════════════════════════════════════════════════════════════════════════════
+
+ÚLTIMO COMMIT NO REMOTO (origin/master):
+───────────────────────────────────────────────────────────────────────────────
+d163747 - fix: Refatorar saveAlunoDados para fechar modal imediatamente
+
+STATUS DO BRANCH:
+───────────────────────────────────────────────────────────────────────────────
+✅ Branch master está sincronizado com origin/master
+✅ Não há commits locais não enviados
+✅ Não há commits remotos não puxados
+✅ Último push foi bem-sucedido
+
+═══════════════════════════════════════════════════════════════════════════════
+  ⚠️ ARQUIVOS MODIFICADOS (NÃO COMMITADOS)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. admin/assets/js/alunos.js
+   ───────────────────────────────────────────────────────────────────────────
+   Status: MODIFICADO (65 linhas alteradas)
+   
+   Mudanças identificadas:
+   - Adição de logs temporários para debug ([LOG TEMPORÁRIO])
+   - Melhorias na leitura de campos hidden (acaoAluno, aluno_id_hidden)
+   - Comentários explicativos sobre uso de PUT vs POST
+   - Remoção de código que enviava id no body JSON (agora só na query string)
+   - Validação adicional de aluno_id (parseInt)
+   
+   Tipo: MELHORIAS E LOGS TEMPORÁRIOS
+   Recomendação: Revisar e decidir se deve commitar ou descartar
+
+2. admin/index.php
+   ───────────────────────────────────────────────────────────────────────────
+   Status: MODIFICADO (5 linhas adicionadas)
+   
+   Mudanças identificadas:
+   - Aparentemente apenas ajustes de formatação ou comentários
+   - Warning sobre LF/CRLF (normal no Windows)
+   
+   Tipo: MUDANÇAS MENORES
+   Recomendação: Verificar se são mudanças intencionais
+
+═══════════════════════════════════════════════════════════════════════════════
+  📄 ARQUIVOS NÃO RASTREADOS (NOVOS)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. docs/INVESTIGACAO_PERSISTENCIA_STATUS_MODAL.md
+   ───────────────────────────────────────────────────────────────────────────
+   Tipo: DOCUMENTAÇÃO
+   Status: Novo arquivo de investigação do problema de status
+   Recomendação: Commitar (documentação útil)
+
+2. docs/RESUMO_INVESTIGACAO_STATUS_COPIAR.txt
+   ───────────────────────────────────────────────────────────────────────────
+   Tipo: DOCUMENTAÇÃO
+   Status: Resumo em texto para copiar
+   Recomendação: Commitar (documentação útil)
+
+3. docs/RESUMO_CORRECAO_MODAL_TRAVADO_COPIAR.txt
+   ───────────────────────────────────────────────────────────────────────────
+   Tipo: DOCUMENTAÇÃO
+   Status: Resumo de correção anterior
+   Recomendação: Commitar (documentação útil)
+
+═══════════════════════════════════════════════════════════════════════════════
+  📊 RESUMO GERAL
+═══════════════════════════════════════════════════════════════════════════════
+
+ALINHAMENTO DE COMMITS:
+───────────────────────────────────────────────────────────────────────────────
+✅ LOCAL e PRODUÇÃO estão ALINHADOS em termos de commits
+✅ Último commit (d163747) está em ambos os ambientes
+✅ Não há divergências entre local e remoto
+
+ARQUIVOS PENDENTES:
+───────────────────────────────────────────────────────────────────────────────
+⚠️ 2 arquivos modificados não commitados:
+   - admin/assets/js/alunos.js (logs temporários e melhorias)
+   - admin/index.php (mudanças menores)
+
+📄 3 arquivos novos não rastreados:
+   - Documentação de investigação (recomendado commitar)
+
+═══════════════════════════════════════════════════════════════════════════════
+  💡 RECOMENDAÇÕES
+═══════════════════════════════════════════════════════════════════════════════
+
+OPÇÃO 1: Commitar Tudo (Recomendado para Documentação)
+───────────────────────────────────────────────────────────────────────────────
+1. Adicionar arquivos de documentação:
+   git add docs/INVESTIGACAO_PERSISTENCIA_STATUS_MODAL.md
+   git add docs/RESUMO_INVESTIGACAO_STATUS_COPIAR.txt
+   git add docs/RESUMO_CORRECAO_MODAL_TRAVADO_COPIAR.txt
+
+2. Commitar documentação:
+   git commit -m "docs: Adicionar documentação de investigação do problema de status"
+
+3. Decidir sobre arquivos modificados:
+   - Se os logs temporários em alunos.js são necessários: commitar
+   - Se são apenas para debug: descartar ou commitar com nota de remoção futura
+
+OPÇÃO 2: Commitar Apenas Documentação
+───────────────────────────────────────────────────────────────────────────────
+1. Adicionar apenas documentação
+2. Deixar arquivos modificados para revisão posterior
+3. Fazer commit apenas da documentação
+
+OPÇÃO 3: Descartar Mudanças Temporárias
+───────────────────────────────────────────────────────────────────────────────
+1. Se os logs temporários não são mais necessários:
+   git restore admin/assets/js/alunos.js
+   git restore admin/index.php
+
+2. Commitar apenas documentação
+
+═══════════════════════════════════════════════════════════════════════════════
+  🔍 DETALHES DAS MUDANÇAS EM alunos.js
+═══════════════════════════════════════════════════════════════════════════════
+
+MUDANÇAS PRINCIPAIS:
+───────────────────────────────────────────────────────────────────────────────
+1. Adição de logs temporários para debug:
+   - [LOG TEMPORÁRIO] acao (do DOM)
+   - [LOG TEMPORÁRIO] acao (do FormData)
+   - [LOG TEMPORÁRIO] aluno_id (do DOM)
+   - [LOG TEMPORÁRIO] aluno_id (do FormData)
+   - [LOG TEMPORÁRIO] Método HTTP
+   - [LOG TEMPORÁRIO] Endpoint
+   - [LOG TEMPORÁRIO] Status no alunoData antes de enviar
+
+2. Melhorias na leitura de campos hidden:
+   - Leitura direta do DOM antes de usar FormData
+   - Validação de existência dos elementos
+   - Conversão de aluno_id para número (parseInt)
+
+3. Remoção de código que enviava id no body:
+   - Comentário explicando que id vai na query string, não no body
+   - Código antigo comentado para referência
+
+4. Melhorias em editarAluno():
+   - Garantia de que campos hidden estão preenchidos
+   - Logs de confirmação de valores definidos
+
+TIPO DE MUDANÇAS:
+───────────────────────────────────────────────────────────────────────────────
+✅ Melhorias de código (leitura de campos hidden)
+⚠️ Logs temporários (devem ser removidos após debug)
+📝 Comentários explicativos (úteis)
+
+═══════════════════════════════════════════════════════════════════════════════
+  ✅ CONCLUSÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+STATUS ATUAL:
+───────────────────────────────────────────────────────────────────────────────
+✅ LOCAL e PRODUÇÃO estão ALINHADOS em commits
+⚠️ Há mudanças locais não commitadas (principalmente logs temporários)
+📄 Há documentação nova que deve ser commitada
+
+AÇÃO RECOMENDADA:
+───────────────────────────────────────────────────────────────────────────────
+1. Commitar documentação (útil para referência futura)
+2. Revisar mudanças em alunos.js:
+   - Se logs são necessários: commitar com nota de remoção futura
+   - Se não são necessários: descartar ou limpar antes de commitar
+3. Verificar mudanças em index.php (parecem menores)
+
+PRÓXIMOS PASSOS:
+───────────────────────────────────────────────────────────────────────────────
+1. Decidir sobre logs temporários em alunos.js
+2. Commitar documentação
+3. Fazer push para produção após revisão
+
+═══════════════════════════════════════════════════════════════════════════════
+
+
+
+
+
+
+
+
+
+

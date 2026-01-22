@@ -1,0 +1,250 @@
+═══════════════════════════════════════════════════════════════════════════════
+  RESUMO FINAL: CORREÇÃO STATUS DO ALUNO NO MODAL - TRECHOS ATUALIZADOS
+═══════════════════════════════════════════════════════════════════════════════
+
+Data: 2025-01-27
+Status: ✅ CORREÇÕES IMPLEMENTADAS
+
+───────────────────────────────────────────────────────────────────────────────
+PROBLEMA IDENTIFICADO
+───────────────────────────────────────────────────────────────────────────────
+
+O modal "Editar Aluno" não atualizava o status porque:
+  • saveAlunoDados() não estava lendo o status diretamente do select
+  • Status não estava sendo garantido no payload JSON
+  • Logs não apareciam no console (código antigo ainda rodando)
+
+───────────────────────────────────────────────────────────────────────────────
+TRECHO ATUALIZADO - saveAlunoDados() (admin/pages/alunos.php)
+───────────────────────────────────────────────────────────────────────────────
+
+LOCALIZAÇÃO: Linha ~7175-7270
+
+CÓDIGO ATUALIZADO:
+
+    // Detectar se estamos editando (usar aluno_id_hidden que é o campo real)
+    const alunoIdHidden = document.getElementById('aluno_id_hidden');
+    const alunoId = alunoIdHidden?.value;
+    const isEditing = !!alunoId && alunoId.trim() !== '';
+    
+    // IMPORTANTE: Ler status DIRETAMENTE do select, não do FormData
+    const statusSelect = document.getElementById('status');
+    const status = statusSelect ? statusSelect.value : (formData.get('status') || 'ativo');
+    
+    // LOG TEMPORÁRIO: Status sendo lido
+    console.log('[DEBUG STATUS MODAL] Status no FormData:', formData.get('status'));
+    console.log('[DEBUG STATUS MODAL] Status lido do select (direto):', status);
+    console.log('[DEBUG STATUS MODAL] isEditing:', isEditing);
+    console.log('[DEBUG STATUS MODAL] alunoId:', alunoId);
+    
+    // GARANTIR que status está no FormData com o valor correto
+    dadosFormData.set('status', status);
+    
+    if (isEditing) {
+        const endpoint = `?id=${alunoId}`;
+        const url = apiBaseUrl + endpoint;
+        
+        if (temFoto) {
+            // FormData com method override
+            dadosFormData.append('_method', 'PUT');
+            response = await fetch(url, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                credentials: 'same-origin',
+                body: dadosFormData
+            });
+        } else {
+            // JSON (mesmo padrão do botão rápido)
+            const data = {};
+            for (let [key, value] of dadosFormData.entries()) {
+                if (!(value instanceof File)) {
+                    data[key] = value;
+                }
+            }
+            
+            // GARANTIR que status está presente e correto
+            data.status = status;
+            
+            console.log('[DEBUG STATUS MODAL] Modo edição, payload enviado:', data);
+            console.log('[DEBUG STATUS MODAL] Status no payload (garantido):', data.status);
+            
+            response = await fetch(url, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin',
+                body: JSON.stringify(data)
+            });
+        }
+    }
+
+───────────────────────────────────────────────────────────────────────────────
+TRECHO ATUALIZADO - API PUT (admin/api/alunos.php)
+───────────────────────────────────────────────────────────────────────────────
+
+LOCALIZAÇÃO: Linha ~1340-1378
+
+CÓDIGO ATUALIZADO:
+
+    // Lista de campos permitidos para atualização
+    // IMPORTANTE: 'status' está na lista e será atualizado se presente em $data
+    $camposPermitidos = [
+        'nome', 'cpf', 'rg', 'rg_orgao_emissor', 'rg_uf', 'rg_data_emissao', 'renach',
+        'data_nascimento', 'estado_civil', 'profissao', 'escolaridade',
+        'naturalidade', 'nacionalidade', 'telefone', 'telefone_secundario',
+        'contato_emergencia_nome', 'contato_emergencia_telefone', 'email',
+        'endereco', 'numero', 'bairro', 'cidade', 'estado', 'cep',
+        'categoria_cnh', 'tipo_servico', 'status', 'observacoes',  // ✅ 'status' está aqui
+        'atividade_remunerada', 'lgpd_consentimento', 'lgpd_consentimento_em',
+        'numero_processo', 'detran_numero', 'status_matricula', 'processo_situacao',
+        'status_pagamento'
+    ];
+    
+    // Montar array de campos para atualização
+    $alunoData = [];
+    foreach ($camposPermitidos as $campo) {
+        if (isset($data[$campo])) {
+            $alunoData[$campo] = $data[$campo];
+        }
+    }
+    
+    unset($alunoData['id']);
+    unset($alunoData['_method']); // Remover method override se presente
+    
+    // LOG TEMPORÁRIO
+    error_log('[LOG TEMP STATUS PUT] Dados recebidos no PUT: ' . print_r($data, true));
+    error_log('[LOG TEMP STATUS PUT] Status recebido: ' . ($data['status'] ?? 'NULO'));
+    error_log('[LOG TEMP STATUS PUT] Dados que serão atualizados no banco: ' . print_r($alunoData, true));
+    error_log('[LOG TEMP STATUS PUT] Status no $alunoData: ' . ($alunoData['status'] ?? 'NÃO DEFINIDO'));
+    
+    // Montar SQL UPDATE para log
+    $sqlMontado = "UPDATE alunos SET ";
+    $camposSql = [];
+    foreach ($alunoData as $campo => $valor) {
+        $camposSql[] = "`{$campo}` = ?";
+    }
+    $sqlMontado .= implode(', ', $camposSql) . " WHERE id = ?";
+    error_log('[LOG TEMP STATUS PUT] SQL UPDATE montado: ' . $sqlMontado);
+
+───────────────────────────────────────────────────────────────────────────────
+TRECHO ATUALIZADO - API POST com _method=PUT (admin/api/alunos.php)
+───────────────────────────────────────────────────────────────────────────────
+
+LOCALIZAÇÃO: Linha ~534-574
+
+CÓDIGO ATUALIZADO:
+
+    case 'POST':
+        // Verificar se há method override (PUT via POST com _method=PUT)
+        $methodOverride = $_POST['_method'] ?? null;
+        $isPutOverride = strtoupper($methodOverride) === 'PUT';
+        
+        // Determinar se é CREATE ou UPDATE
+        $id = isset($_GET['id']) ? (int)$_GET['id'] : null;
+        $isUpdate = ($id !== null && $id > 0) || $isPutOverride;
+        
+        if ($isUpdate) {
+            // Verificar se é PUT override (POST com _method=PUT)
+            if ($isPutOverride) {
+                // Ler do $_POST (FormData)
+                $data = $_POST;
+            } else {
+                // Tentar JSON primeiro, depois $_POST
+                $rawInput = file_get_contents('php://input');
+                $data = json_decode($rawInput, true) ?: $_POST;
+            }
+            
+            // ... resto do código de UPDATE ...
+
+───────────────────────────────────────────────────────────────────────────────
+RESUMO DO PAYLOAD
+───────────────────────────────────────────────────────────────────────────────
+
+EDIÇÃO SEM FOTO:
+  method: PUT
+  endpoint: admin/api/alunos.php?id=168
+  headers: {
+    "Content-Type": "application/json",
+    "X-Requested-With": "XMLHttpRequest"
+  }
+  body JSON: {
+    "nome": "...",
+    "cpf": "...",
+    ...,
+    "status": "inativo",  ← GARANTIDO no código (linha 7257)
+    "salvar_apenas_dados": "1",
+    ...
+  }
+
+EDIÇÃO COM FOTO:
+  method: POST
+  endpoint: admin/api/alunos.php?id=168
+  headers: {
+    "X-Requested-With": "XMLHttpRequest"
+  }
+  body FormData: {
+    ... (todos os campos) ...,
+    "status": "inativo",  ← GARANTIDO no código (linha 7198)
+    "_method": "PUT",
+    "foto": [File],
+    ...
+  }
+
+───────────────────────────────────────────────────────────────────────────────
+CHECKLIST DE TESTE
+───────────────────────────────────────────────────────────────────────────────
+
+TESTE 1 - EDITAR ALUNO E ALTERAR STATUS PARA INATIVO (SEM FOTO):
+  [ ] Abrir modal "Editar Aluno" para um aluno ativo
+  [ ] Alterar "Status do Aluno" de "Ativo" para "Inativo"
+  [ ] Clicar em "Salvar Aluno"
+  [ ] Verificar console - DEVE aparecer:
+      - [DEBUG STATUS MODAL] Status no FormData: "ativo" (valor antigo)
+      - [DEBUG STATUS MODAL] Status lido do select (direto): "inativo" ✅
+      - [DEBUG STATUS MODAL] isEditing: true
+      - [DEBUG STATUS MODAL] alunoId: {id}
+      - [DEBUG STATUS MODAL] Modo: EDIÇÃO sem FOTO - usando JSON
+      - [DEBUG STATUS MODAL] Modo edição, payload enviado: { ..., status: "inativo", ... }
+      - [DEBUG STATUS MODAL] Status no payload (garantido): "inativo" ✅
+  [ ] Verificar Network tab:
+      - Requisição PUT para admin/api/alunos.php?id={id}
+      - Body JSON contém "status": "inativo" ✅
+  [ ] Verificar logs do PHP:
+      - [LOG TEMP STATUS PUT] Status recebido: "inativo" ✅
+      - [LOG TEMP STATUS PUT] Status no $alunoData: "inativo" ✅
+      - [LOG TEMP STATUS PUT] SQL UPDATE montado: UPDATE alunos SET ... `status` = ? ...
+  [ ] Verificar banco: SELECT status FROM alunos WHERE id = {id} → "inativo" ✅
+  [ ] Verificar listagem - badge aparece como "INATIVO" ✅
+
+───────────────────────────────────────────────────────────────────────────────
+ARQUIVOS MODIFICADOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. admin/pages/alunos.php
+   • Função saveAlunoDados() (linha ~7175-7270)
+   • Status lido diretamente do select
+   • Status garantido no FormData e JSON
+   • Logs temporários adicionados
+
+2. admin/api/alunos.php
+   • Case 'POST': Suporte a _method=PUT override (linha ~534-574)
+   • Case 'PUT': Logs temporários melhorados (linha ~1259-1378)
+   • Status confirmado na lista de campos permitidos (linha 1338 e 798)
+
+───────────────────────────────────────────────────────────────────────────────
+PRÓXIMOS PASSOS
+───────────────────────────────────────────────────────────────────────────────
+
+1. Executar testes manuais seguindo o checklist
+2. Verificar logs no console e logs do PHP
+3. Validar que o status está sendo atualizado no banco
+4. Remover logs temporários após validação completa
+
+───────────────────────────────────────────────────────────────────────────────
+STATUS: ✅ CORREÇÕES IMPLEMENTADAS - PRONTO PARA TESTES
+───────────────────────────────────────────────────────────────────────────────
+
+═══════════════════════════════════════════════════════════════════════════════
+

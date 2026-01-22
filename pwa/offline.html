@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modo Offline - CFC Bom Conselho</title>
+    
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #2c3e50;
+            --primary-dark: #34495e;
+            --accent-color: #3498db;
+            --success-color: #27ae60;
+            --warning-color: #f39c12;
+            --danger-color: #e74c3c;
+            --light-gray: #ecf0f1;
+            --dark-gray: #7f8c8d;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+            color: #ffffff;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .offline-container {
+            text-align: center;
+            max-width: 500px;
+            padding: 40px 20px;
+        }
+        
+        .offline-icon {
+            font-size: 80px;
+            color: var(--accent-color);
+            margin-bottom: 30px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        
+        .offline-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            color: #ffffff;
+        }
+        
+        .offline-subtitle {
+            font-size: 1.2rem;
+            color: var(--light-gray);
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .offline-message {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .offline-message p {
+            margin: 0;
+            font-size: 1rem;
+            line-height: 1.6;
+        }
+        
+        .offline-actions {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            align-items: center;
+        }
+        
+        .btn-offline {
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-weight: 600;
+            text-decoration: none;
+            transition: all 0.3s ease;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            min-width: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .btn-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #2980b9;
+            color: white;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+        
+        .connection-status {
+            margin-top: 30px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+        
+        .status-offline {
+            background: rgba(231, 76, 60, 0.2);
+            border: 1px solid var(--danger-color);
+            color: #ff6b6b;
+        }
+        
+        .status-online {
+            background: rgba(39, 174, 96, 0.2);
+            border: 1px solid var(--success-color);
+            color: #51cf66;
+        }
+        
+        .offline-features {
+            margin-top: 40px;
+            text-align: left;
+        }
+        
+        .offline-features h4 {
+            color: var(--accent-color);
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .feature-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .feature-list li {
+            padding: 10px 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            color: var(--light-gray);
+        }
+        
+        .feature-list i {
+            color: var(--accent-color);
+            width: 20px;
+        }
+        
+        .logo {
+            margin-bottom: 30px;
+        }
+        
+        .logo i {
+            font-size: 3rem;
+            color: var(--accent-color);
+        }
+        
+        .logo h2 {
+            margin: 10px 0 0 0;
+            font-size: 1.5rem;
+            font-weight: 600;
+        }
+        
+        @media (max-width: 768px) {
+            .offline-container {
+                padding: 20px 15px;
+            }
+            
+            .offline-title {
+                font-size: 2rem;
+            }
+            
+            .offline-subtitle {
+                font-size: 1rem;
+            }
+            
+            .offline-actions {
+                flex-direction: column;
+            }
+            
+            .btn-offline {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <!-- Logo -->
+        <div class="logo">
+            <i class="fas fa-car"></i>
+            <h2>CFC Bom Conselho</h2>
+        </div>
+        
+        <!-- Ícone Offline -->
+        <div class="offline-icon">
+            <i class="fas fa-wifi-slash"></i>
+        </div>
+        
+        <!-- Título -->
+        <h1 class="offline-title">Modo Offline</h1>
+        
+        <!-- Subtítulo -->
+        <p class="offline-subtitle">
+            Você está sem conexão com a internet, mas ainda pode acessar algumas funcionalidades do sistema.
+        </p>
+        
+        <!-- Mensagem -->
+        <div class="offline-message">
+            <p>
+                <i class="fas fa-info-circle"></i>
+                <strong>Não se preocupe!</strong> Algumas funcionalidades continuam disponíveis mesmo offline. 
+                Quando a conexão for restabelecida, os dados serão sincronizados automaticamente.
+            </p>
+        </div>
+        
+        <!-- Ações -->
+        <div class="offline-actions">
+            <button class="btn-offline btn-primary" onclick="retryConnection()">
+                <i class="fas fa-sync-alt"></i>
+                Tentar Novamente
+            </button>
+            
+            <button class="btn-offline btn-secondary" onclick="goToDashboard()">
+                <i class="fas fa-home"></i>
+                Ir para Dashboard
+            </button>
+        </div>
+        
+        <!-- Status da Conexão -->
+        <div class="connection-status status-offline" id="connectionStatus">
+            <i class="fas fa-exclamation-triangle"></i>
+            <strong>Sem conexão</strong> - Verificando automaticamente...
+        </div>
+        
+        <!-- Funcionalidades Offline -->
+        <div class="offline-features">
+            <h4>Funcionalidades Disponíveis Offline</h4>
+            <ul class="feature-list">
+                <li>
+                    <i class="fas fa-check"></i>
+                    Visualizar dados já carregados
+                </li>
+                <li>
+                    <i class="fas fa-check"></i>
+                    Navegar entre páginas visitadas
+                </li>
+                <li>
+                    <i class="fas fa-check"></i>
+                    Acessar menu de navegação
+                </li>
+                <li>
+                    <i class="fas fa-times"></i>
+                    Salvar novos dados (aguardando conexão)
+                </li>
+                <li>
+                    <i class="fas fa-times"></i>
+                    Sincronizar com servidor (aguardando conexão)
+                </li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        // Verificar status da conexão
+        function updateConnectionStatus() {
+            const statusElement = document.getElementById('connectionStatus');
+            
+            if (navigator.onLine) {
+                statusElement.className = 'connection-status status-online';
+                statusElement.innerHTML = '<i class="fas fa-check-circle"></i> <strong>Conectado</strong> - Redirecionando...';
+                
+                // Redirecionar após 2 segundos
+                setTimeout(() => {
+                    window.location.href = '/admin/';
+                }, 2000);
+            } else {
+                statusElement.className = 'connection-status status-offline';
+                statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>Sem conexão</strong> - Verificando automaticamente...';
+            }
+        }
+        
+        // Tentar reconectar
+        function retryConnection() {
+            const statusElement = document.getElementById('connectionStatus');
+            statusElement.innerHTML = '<i class="fas fa-spinner fa-spin"></i> <strong>Verificando conexão...</strong>';
+            
+            // Simular verificação
+            setTimeout(() => {
+                if (navigator.onLine) {
+                    window.location.href = '/admin/';
+                } else {
+                    statusElement.innerHTML = '<i class="fas fa-exclamation-triangle"></i> <strong>Sem conexão</strong> - Tente novamente em alguns instantes.';
+                }
+            }, 2000);
+        }
+        
+        // Ir para dashboard (mesmo offline)
+        function goToDashboard() {
+            // Tentar carregar dashboard do cache
+            window.location.href = '/admin/';
+        }
+        
+        // Event listeners para mudanças de conexão
+        window.addEventListener('online', () => {
+            console.log('Conexão restabelecida');
+            updateConnectionStatus();
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('Conexão perdida');
+            updateConnectionStatus();
+        });
+        
+        // Verificar status inicial
+        updateConnectionStatus();
+        
+        // Verificar periodicamente
+        setInterval(updateConnectionStatus, 5000);
+        
+        // Log para debug
+        console.log('Página offline carregada');
+        console.log('Status da conexão:', navigator.onLine ? 'Online' : 'Offline');
+    </script>
+</body>
+</html>

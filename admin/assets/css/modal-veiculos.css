@@ -1,0 +1,365 @@
+/* CSS específico para o Modal de Veículos - Corrigindo problemas de visibilidade */
+
+/* Modal principal */
+#modalVeiculo {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0,0,0,0.6) !important;
+    z-index: 9999 !important;
+    overflow: auto !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+    backdrop-filter: blur(2px);
+}
+
+/* Container do modal */
+#modalVeiculo .custom-modal-dialog {
+    position: relative;
+    width: 95%;
+    max-width: 1200px;
+    margin: 20px auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    overflow: hidden;
+    display: block;
+    max-height: 90vh;
+    transform: translateY(0);
+    transition: all 0.3s ease-out;
+}
+
+/* Conteúdo do modal */
+#modalVeiculo .custom-modal-content {
+    width: 100%;
+    height: auto;
+    background: white;
+    border: none;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Header do modal */
+#modalVeiculo .modal-header {
+    background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
+    color: white;
+    border-bottom: none;
+    padding: 1rem 1.5rem;
+    flex-shrink: 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+}
+
+#modalVeiculo .modal-header::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: rgba(255,255,255,0.2);
+}
+
+#modalVeiculo .modal-title {
+    color: white;
+    font-weight: 600;
+    font-size: 1.25rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+#modalVeiculo .modal-title i {
+    font-size: 1.1rem;
+}
+
+/* Botão de fechar */
+#modalVeiculo .btn-close {
+    filter: invert(1);
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: white;
+    opacity: 0.8;
+    cursor: pointer;
+    padding: 0;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+#modalVeiculo .btn-close:hover {
+    opacity: 1;
+    background: rgba(255,255,255,0.1);
+    transform: scale(1.1);
+}
+
+/* Body do modal */
+#modalVeiculo .modal-body {
+    overflow-y: auto;
+    padding: 1.5rem;
+    max-height: 70vh;
+    flex: 1;
+    background: #fafbfc;
+    min-height: 400px;
+}
+
+/* Footer do modal */
+#modalVeiculo .modal-footer {
+    background-color: #ffffff;
+    border-top: 1px solid #e9ecef;
+    padding: 1rem 1.5rem;
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    flex-shrink: 0;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+    position: relative;
+    z-index: 10;
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 1200px) {
+    #modalVeiculo .custom-modal-dialog {
+        max-width: 95%;
+    }
+}
+
+@media (max-width: 768px) {
+    #modalVeiculo {
+        padding: 10px;
+    }
+    
+    #modalVeiculo .custom-modal-dialog {
+        width: 98%;
+        margin: 0 auto;
+        max-height: 95vh;
+    }
+    
+    #modalVeiculo .modal-body {
+        max-height: 65vh;
+        padding: 1rem;
+    }
+    
+    #modalVeiculo .modal-header,
+    #modalVeiculo .modal-footer {
+        padding: 0.75rem 1rem;
+    }
+    
+    #modalVeiculo .modal-title {
+        font-size: 1.1rem;
+    }
+    
+    #modalVeiculo .btn-close {
+        width: 32px;
+        height: 32px;
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 576px) {
+    #modalVeiculo {
+        padding: 5px;
+    }
+    
+    #modalVeiculo .custom-modal-dialog {
+        width: 100%;
+        border-radius: 8px;
+    }
+    
+    #modalVeiculo .modal-body {
+        padding: 0.75rem;
+        max-height: 70vh;
+    }
+    
+    #modalVeiculo .modal-header,
+    #modalVeiculo .modal-footer {
+        padding: 0.5rem 0.75rem;
+    }
+    
+    #modalVeiculo .modal-title {
+        font-size: 1rem;
+    }
+}
+
+/* Garantir que o modal seja sempre visível */
+#modalVeiculo.show {
+    display: block !important;
+}
+
+/* Scrollbar personalizada para o modal */
+#modalVeiculo .modal-body::-webkit-scrollbar {
+    width: 8px;
+}
+
+#modalVeiculo .modal-body::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+#modalVeiculo .modal-body::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+#modalVeiculo .modal-body::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Animações suaves */
+#modalVeiculo {
+    animation: fadeIn 0.3s ease-out;
+}
+
+#modalVeiculo .custom-modal-dialog {
+    animation: slideIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from { 
+        opacity: 0; 
+        backdrop-filter: blur(0px);
+    }
+    to { 
+        opacity: 1; 
+        backdrop-filter: blur(2px);
+    }
+}
+
+@keyframes slideIn {
+    from { 
+        transform: translateY(-30px);
+        opacity: 0;
+    }
+    to { 
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Estados de hover e foco */
+#modalVeiculo .modal-body input:focus,
+#modalVeiculo .modal-body select:focus,
+#modalVeiculo .modal-body textarea:focus {
+    border-color: #0d6efd;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.25);
+    outline: none;
+}
+
+/* Melhorias nos formulários */
+#modalVeiculo .form-label {
+    font-weight: 500;
+    color: #495057;
+    margin-bottom: 0.25rem;
+}
+
+#modalVeiculo .form-control,
+#modalVeiculo .form-select {
+    border: 1px solid #ced4da;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+}
+
+#modalVeiculo .form-control:hover,
+#modalVeiculo .form-select:hover {
+    border-color: #adb5bd;
+}
+
+/* Botões do modal */
+#modalVeiculo .modal-footer .btn {
+    border-radius: 6px;
+    font-weight: 500;
+    padding: 0.5rem 1.5rem;
+    transition: all 0.2s ease;
+}
+
+#modalVeiculo .modal-footer .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+/* Seções do formulário */
+#modalVeiculo .text-primary.border-bottom {
+    border-bottom: 2px solid #0d6efd !important;
+    padding-bottom: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+/* Melhorias na responsividade dos campos */
+@media (max-width: 768px) {
+    #modalVeiculo .col-md-4,
+    #modalVeiculo .col-md-6 {
+        margin-bottom: 0.5rem;
+    }
+    
+    #modalVeiculo .form-control,
+    #modalVeiculo .form-select {
+        font-size: 16px; /* Evita zoom no iOS */
+    }
+}
+
+/* Correção específica para garantir visibilidade total */
+#modalVeiculo {
+    display: none;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    background: rgba(0,0,0,0.6) !important;
+    z-index: 9999 !important;
+    overflow: auto !important;
+    padding: 20px !important;
+    box-sizing: border-box !important;
+}
+
+#modalVeiculo .custom-modal-dialog {
+    position: relative !important;
+    width: 95% !important;
+    max-width: 1200px !important;
+    margin: 0 auto !important;
+    background: white !important;
+    border-radius: 12px !important;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3) !important;
+    overflow: hidden !important;
+    display: block !important;
+    max-height: 90vh !important;
+    transform: translateY(0) !important;
+}
+
+#modalVeiculo .custom-modal-content {
+    width: 100% !important;
+    height: auto !important;
+    background: white !important;
+    border: none !important;
+    border-radius: 12px !important;
+    overflow: hidden !important;
+    display: flex !important;
+    flex-direction: column !important;
+}
+
+/* Garantir que os botões sejam sempre visíveis */
+#modalVeiculo .modal-footer {
+    position: relative !important;
+    background-color: #ffffff !important;
+    border-top: 1px solid #e9ecef !important;
+    padding: 1rem 1.5rem !important;
+    display: flex !important;
+    justify-content: flex-end !important;
+    gap: 1rem !important;
+    flex-shrink: 0 !important;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.05) !important;
+    z-index: 1000 !important;
+}

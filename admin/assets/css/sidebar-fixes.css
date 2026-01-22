@@ -1,0 +1,182 @@
+/* =====================================================
+   CORREÇÕES PARA SIDEBAR - COMPORTAMENTO FLYOUT ÚNICO
+   Garante que sidebar sempre seja compacta com flyouts
+   ===================================================== */
+
+/* =====================================================
+   DESABILITAR EXPANSÃO INTERNA COMPLETAMENTE
+   ===================================================== */
+
+/* Garantir que submenus nunca sejam visíveis dentro da sidebar */
+.admin-sidebar .nav-submenu {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    left: -9999px !important;
+    top: -9999px !important;
+}
+
+/* Remover qualquer comportamento de expansão */
+.admin-sidebar .nav-submenu.open {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+    max-height: 0 !important;
+    overflow: hidden !important;
+}
+
+/* Garantir que setas não sejam clicáveis */
+.admin-sidebar .nav-arrow {
+    pointer-events: none !important;
+    cursor: default !important;
+}
+
+/* Permitir cliques apenas quando .nav-toggle for um link <a> */
+.admin-sidebar .nav-toggle:not(a) {
+    cursor: default !important;
+    pointer-events: none !important;
+}
+
+/* Permitir cliques em links da sidebar */
+.admin-sidebar a.nav-link.nav-toggle {
+    cursor: pointer !important;
+    pointer-events: auto !important;
+    text-decoration: none !important;
+}
+
+/* =====================================================
+   GARANTIR COMPORTAMENTO FLYOUT
+   ===================================================== */
+
+/* Flyouts devem aparecer ao lado da sidebar */
+.nav-flyout {
+    position: fixed !important;
+    top: 0 !important;
+    left: 70px !important;
+    width: 200px !important;
+    background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%) !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+    z-index: 1001 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: all 0.3s ease !important;
+    padding: 16px !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.nav-flyout.show {
+    opacity: 1 !important;
+    visibility: visible !important;
+}
+
+.flyout-title {
+    color: #ffffff !important;
+    font-size: 14px !important;
+    font-weight: 600 !important;
+    margin-bottom: 12px !important;
+    padding-bottom: 8px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.flyout-item {
+    display: block !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+    text-decoration: none !important;
+    padding: 8px 12px !important;
+    border-radius: 6px !important;
+    transition: all 0.3s ease !important;
+    font-size: 13px !important;
+    margin-bottom: 4px !important;
+}
+
+.flyout-item:hover {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    text-decoration: none !important;
+    transform: translateX(4px) !important;
+}
+
+.flyout-item:last-child {
+    margin-bottom: 0 !important;
+}
+
+/* =====================================================
+   GARANTIR QUE SIDEBAR SEJA SEMPRE COMPACTA
+   ===================================================== */
+
+.admin-sidebar {
+    width: 70px !important;
+    overflow: visible !important;
+}
+
+.admin-sidebar:hover {
+    width: 70px !important;
+}
+
+/* Garantir que elementos de texto não apareçam */
+.admin-sidebar .nav-link > span:not(.nav-icon),
+.admin-sidebar .nav-toggle > span:not(.nav-icon) {
+    display: none !important;
+}
+
+.admin-sidebar .nav-arrow {
+    display: none !important;
+}
+
+/* =====================================================
+   CORREÇÕES PARA RESPONSIVIDADE
+   ===================================================== */
+
+@media (max-width: 1024px) {
+    .admin-sidebar {
+        width: 280px !important;
+        transform: translateX(-100%) !important;
+    }
+    
+    .admin-sidebar.open {
+        transform: translateX(0) !important;
+    }
+    
+    .nav-flyout {
+        display: none !important;
+    }
+}
+
+/* =====================================================
+   GARANTIR QUE NÃO HAJA CONFLITOS
+   ===================================================== */
+
+/* Remover qualquer estilo que possa causar expansão */
+.admin-sidebar * {
+    transition: none !important;
+}
+
+.admin-sidebar .nav-submenu,
+.admin-sidebar .nav-sublink {
+    transition: none !important;
+}
+
+/* Garantir que hover não cause expansão */
+.admin-sidebar .nav-group:hover .nav-submenu {
+    display: none !important;
+    visibility: hidden !important;
+    opacity: 0 !important;
+}
+
+/* =====================================================
+   DEBUG - REMOVER EM PRODUÇÃO
+   ===================================================== */
+
+/*
+.admin-sidebar {
+    border: 2px solid red !important;
+}
+
+.nav-flyout {
+    border: 2px solid blue !important;
+}
+*/
