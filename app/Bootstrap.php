@@ -67,30 +67,53 @@ if (!function_exists('asset_url')) {
         // Limpar o path
         $path = ltrim($path, '/'); // ex: css/tokens.css
         
-        // Base calculada pelo caminho real do script (funciona em subpastas)
-        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-        $base = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+        // Detectar ambiente
+        $appEnv = $_ENV['APP_ENV'] ?? 'local';
+        $isProduction = $appEnv === 'production';
         
-        // Se estamos em /cfc-v.1/public_html/index.php -> $base = /cfc-v.1/public_html
-        // Se estamos em /index.php -> $base = / (raiz)
-        // Garantir que $base sempre comece com / ou seja vazio (raiz)
-        if ($base === '' || $base === '.') {
-            $base = '/';
-        } elseif (substr($base, 0, 1) !== '/') {
-            $base = '/' . $base;
+        // Em produção, usar path fixo (DocumentRoot geralmente aponta para public_html/)
+        if ($isProduction) {
+            // Em produção, assets devem estar em /assets/ (relativo ao DocumentRoot)
+            // Se DocumentRoot = public_html/, então /assets/ aponta para public_html/assets/
+            $url = '/assets/' . $path;
+        } else {
+            // Em desenvolvimento, calcular base path dinamicamente
+            $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+            $base = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
+            
+            // Se estamos em /cfc-v.1/public_html/index.php -> $base = /cfc-v.1/public_html
+            // Se estamos em /index.php -> $base = / (raiz)
+            // Garantir que $base sempre comece com / ou seja vazio (raiz)
+            if ($base === '' || $base === '.') {
+                $base = '/';
+            } elseif (substr($base, 0, 1) !== '/') {
+                $base = '/' . $base;
+            }
+            
+            // Montar URL: base + /assets/ + path
+            $url = $base . '/assets/' . $path;
         }
-        
-        // Montar URL: base + /assets/ + path
-        $url = $base . '/assets/' . $path;
         
         // Cache bust (versionamento)
         if ($versioned) {
-            $fileOnDisk = (defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__)) . '/public_html/assets/' . $path;
-            if (!file_exists($fileOnDisk)) {
-                // Tentar em assets/ na raiz também
-                $fileOnDisk = (defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__)) . '/assets/' . $path;
+            // Tentar encontrar o arquivo no disco
+            $fileOnDisk = null;
+            
+            // Primeiro tentar em public_html/assets/ (estrutura padrão)
+            if (defined('ROOT_PATH')) {
+                $fileOnDisk = ROOT_PATH . '/public_html/assets/' . $path;
+                if (!file_exists($fileOnDisk)) {
+                    $fileOnDisk = ROOT_PATH . '/assets/' . $path;
+                }
+            } else {
+                $fileOnDisk = dirname(__DIR__) . '/public_html/assets/' . $path;
+                if (!file_exists($fileOnDisk)) {
+                    $fileOnDisk = dirname(__DIR__) . '/assets/' . $path;
+                }
             }
-            if (is_file($fileOnDisk)) {
+            
+            // Se encontrou o arquivo, adicionar timestamp
+            if ($fileOnDisk && is_file($fileOnDisk)) {
                 $url .= '?v=' . filemtime($fileOnDisk);
             }
         }
