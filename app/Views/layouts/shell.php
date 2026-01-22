@@ -9,7 +9,7 @@
     <title><?= $pageTitle ?? 'CFC Sistema' ?></title>
     
     <!-- PWA Manifest (usando pwa-manifest.php para white-label dinâmico) -->
-    <link rel="manifest" href="<?= base_url('pwa-manifest.php') ?>">
+    <link rel="manifest" href="<?= base_path('pwa-manifest.php') ?>">
     
     <!-- Favicon -->
     <link rel="icon" type="image/png" href="<?= base_url('icons/icon-192x192.png') ?>">
@@ -195,8 +195,8 @@
                 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 const isProduction = <?= json_encode(($_ENV['APP_ENV'] ?? 'local') === 'production') ?>;
                 
-                // Corrigir path do SW usando base_url
-                let swPath = <?= json_encode(base_url('sw.js')) ?>;
+                // Corrigir path do SW usando base_path (path relativo ao DocumentRoot)
+                let swPath = <?= json_encode(base_path('sw.js')) ?>;
                 
                 // Desabilitar SW em localhost durante debug
                 if (isLocalhost) {
