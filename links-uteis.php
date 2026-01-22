@@ -950,7 +950,7 @@
                 </ul>
             </nav>
             
-            <a href="login.php" class="login-btn" title="Acessar Sistema">
+            <a href="https://painel.cfcbomconselho.com.br/login" class="login-btn" title="Acessar Sistema" target="_blank">
                 🔑 Entrar
             </a>
         </div>
@@ -1040,8 +1040,8 @@
                         <li><a href="index.php#servicos">Serviços</a></li>
                         <li><a href="index.php#trabalhe-conosco">Trabalhe Conosco</a></li>
                         <li><a href="links-uteis.php">Links Úteis</a></li>
-                        <li><a href="#portal-aluno">Portal do Aluno</a></li>
-                        <li><a href="#portal-cfc">Portal do CFC</a></li>
+                        <li><a href="https://painel.cfcbomconselho.com.br/login" target="_blank">Portal do Aluno</a></li>
+                        <li><a href="https://painel.cfcbomconselho.com.br/login" target="_blank">Portal do CFC</a></li>
                     </ul>
                 </div>
                 

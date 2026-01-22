@@ -1440,25 +1440,25 @@ try {
             <div class="mobile-menu-access">
                 <h3 class="access-title">Acessos</h3>
                 <div class="access-item">
-                    <a href="login.php?type=aluno" target="_blank" class="access-link">
+                    <a href="https://painel.cfcbomconselho.com.br/login" target="_blank" class="access-link">
                         <i class="fas fa-user-graduate"></i>
                         <span class="access-label">Portal do Aluno</span>
                     </a>
                 </div>
                 <div class="access-item">
-                    <a href="login.php?type=secretaria" target="_blank" class="access-link">
+                    <a href="https://painel.cfcbomconselho.com.br/login" target="_blank" class="access-link">
                         <i class="fas fa-user-tie"></i>
                         <span class="access-label">Portal da Secretaria</span>
                     </a>
                 </div>
                 <div class="access-item">
-                    <a href="login.php?type=instrutor" target="_blank" class="access-link">
+                    <a href="https://painel.cfcbomconselho.com.br/login" target="_blank" class="access-link">
                         <i class="fas fa-chalkboard-teacher"></i>
                         <span class="access-label">Portal do Instrutor</span>
                     </a>
                 </div>
                 <div class="access-item">
-                    <a href="login.php?type=admin" target="_blank" class="access-link">
+                    <a href="https://painel.cfcbomconselho.com.br/login" target="_blank" class="access-link">
                         <i class="fas fa-user-shield"></i>
                         <span class="access-label">Portal do Administrador</span>
                     </a>
@@ -1756,10 +1756,10 @@ try {
                     </ul>
                     <h5 class="footer-access-title">Acessos</h5>
                     <ul class="footer-links footer-access-links">
-                        <li><a href="login.php?type=aluno" target="_blank">Portal do Aluno</a></li>
-                        <li><a href="login.php?type=secretaria" target="_blank">Portal da Secretaria</a></li>
-                        <li><a href="login.php?type=instrutor" target="_blank">Portal do Instrutor</a></li>
-                        <li><a href="login.php?type=admin" target="_blank">Portal do Administrador</a></li>
+                        <li><a href="https://painel.cfcbomconselho.com.br/login" target="_blank">Portal do Aluno</a></li>
+                        <li><a href="https://painel.cfcbomconselho.com.br/login" target="_blank">Portal da Secretaria</a></li>
+                        <li><a href="https://painel.cfcbomconselho.com.br/login" target="_blank">Portal do Instrutor</a></li>
+                        <li><a href="https://painel.cfcbomconselho.com.br/login" target="_blank">Portal do Administrador</a></li>
                     </ul>
                 </div>
                 
