@@ -6,6 +6,12 @@
  * Fallback seguro para valores estáticos se não conseguir resolver CFC
  */
 
+// Limpar qualquer output buffer anterior e iniciar novo (garantir JSON puro)
+if (ob_get_level()) {
+    ob_end_clean();
+}
+ob_start();
+
 // Headers (definir antes de qualquer output)
 header('Content-Type: application/manifest+json; charset=utf-8');
 header('Cache-Control: public, max-age=300'); // 5 minutos - permite atualização rápida mas mantém performance
@@ -64,8 +70,11 @@ $defaultManifest = [
 
 // Tentar carregar dados dinâmicos do CFC (com fallback seguro)
 try {
-    // Incluir dependências mínimas
+    // Incluir dependências mínimas (com output buffering para evitar warnings)
     $rootPath = dirname(__DIR__);
+    
+    // Suprimir warnings/notices durante includes (não queremos no JSON)
+    $oldErrorReporting = error_reporting(E_ALL & ~E_WARNING & ~E_NOTICE);
     
     // 1. Bootstrap (session e helpers)
     if (file_exists($rootPath . '/app/Bootstrap.php')) {
@@ -169,7 +178,18 @@ try {
 } catch (\Throwable $e) {
     // Capturar qualquer erro fatal também
     $manifest = $defaultManifest;
+} finally {
+    // Restaurar error reporting
+    if (isset($oldErrorReporting)) {
+        error_reporting($oldErrorReporting);
+    }
 }
+
+// Limpar buffer e garantir que não há output antes do JSON
+ob_clean();
 
 // Output JSON (sempre retorna 200 com manifest válido)
 echo json_encode($manifest, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+
+// Finalizar output buffer
+ob_end_flush();
