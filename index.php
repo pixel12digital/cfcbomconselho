@@ -4,6 +4,26 @@
 // VERSÃO 3.0 - PÁGINA PRINCIPAL DO SITE
 // =====================================================
 
+// Verificar se está sendo acessado pelo subdomínio painel
+// Se sim, redirecionar para o sistema de login
+$host = $_SERVER['HTTP_HOST'] ?? '';
+$isPainelSubdomain = strpos($host, 'painel.') === 0 || $host === 'painel.cfcbomconselho.com.br';
+
+if ($isPainelSubdomain) {
+    // Se o subdomínio painel estiver acessando a raiz, redirecionar para public_html/index.php
+    $publicHtmlPath = __DIR__ . '/public_html/index.php';
+    
+    if (file_exists($publicHtmlPath)) {
+        // Incluir o index.php do sistema de login
+        require_once $publicHtmlPath;
+        exit;
+    } else {
+        // Se não encontrar, redirecionar para /login
+        header('Location: /login');
+        exit;
+    }
+}
+
 require_once 'includes/config.php';
 ?>
 <!DOCTYPE html>
