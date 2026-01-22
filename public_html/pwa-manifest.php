@@ -10,26 +10,51 @@
 header('Content-Type: application/manifest+json; charset=utf-8');
 header('Cache-Control: public, max-age=300'); // 5 minutos - permite atualização rápida mas mantém performance
 
+// Função helper para gerar URL absoluta (se base_url não estiver disponível)
+function getBaseUrl($path = '') {
+    $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    
+    // Detectar se é localhost
+    $isLocalhost = in_array($host, ['localhost', '127.0.0.1', '::1']) || 
+                  strpos($host, 'localhost') !== false ||
+                  strpos($host, '127.0.0.1') !== false;
+    
+    // Em desenvolvimento (localhost), usar caminho completo
+    if ($isLocalhost) {
+        $basePath = '/cfc-v.1/public_html/';
+    } else {
+        $basePath = '/';
+    }
+    
+    $path = ltrim($path, '/');
+    if ($path) {
+        return $protocol . '://' . $host . $basePath . $path;
+    } else {
+        return $protocol . '://' . $host . rtrim($basePath, '/');
+    }
+}
+
 // Valores padrão (fallback)
 $defaultManifest = [
     'name' => 'CFC Sistema de Gestão',
     'short_name' => 'CFC Sistema',
     'description' => 'Sistema de gestão para Centros de Formação de Condutores',
-    'start_url' => './dashboard',
-    'scope' => './',
+    'start_url' => getBaseUrl('dashboard'),
+    'scope' => getBaseUrl(''),
     'display' => 'standalone',
     'orientation' => 'portrait-primary',
     'theme_color' => '#023A8D',
     'background_color' => '#ffffff',
     'icons' => [
         [
-            'src' => './icons/icon-192x192.png',
+            'src' => getBaseUrl('icons/1/icon-192x192.png'),
             'sizes' => '192x192',
             'type' => 'image/png',
             'purpose' => 'any maskable'
         ],
         [
-            'src' => './icons/icon-512x512.png',
+            'src' => getBaseUrl('icons/1/icon-512x512.png'),
             'sizes' => '512x512',
             'type' => 'image/png',
             'purpose' => 'any maskable'
@@ -90,25 +115,22 @@ try {
             $icons = $defaultManifest['icons']; // Fallback para ícones padrão
             
             if (!empty($cfc['id'])) {
-                $icon192 = './icons/' . $cfc['id'] . '/icon-192x192.png';
-                $icon512 = './icons/' . $cfc['id'] . '/icon-512x512.png';
-                
                 // Verificar se os arquivos existem
                 $rootPath = dirname(__DIR__);
                 $icon192Path = $rootPath . '/public_html/icons/' . $cfc['id'] . '/icon-192x192.png';
                 $icon512Path = $rootPath . '/public_html/icons/' . $cfc['id'] . '/icon-512x512.png';
                 
                 if (file_exists($icon192Path) && file_exists($icon512Path)) {
-                    // Usar ícones dinâmicos do CFC
+                    // Usar ícones dinâmicos do CFC com URLs absolutas
                     $icons = [
                         [
-                            'src' => $icon192,
+                            'src' => getBaseUrl('icons/' . $cfc['id'] . '/icon-192x192.png'),
                             'sizes' => '192x192',
                             'type' => 'image/png',
                             'purpose' => 'any maskable'
                         ],
                         [
-                            'src' => $icon512,
+                            'src' => getBaseUrl('icons/' . $cfc['id'] . '/icon-512x512.png'),
                             'sizes' => '512x512',
                             'type' => 'image/png',
                             'purpose' => 'any maskable'
@@ -122,8 +144,8 @@ try {
                 'name' => $cfcName,
                 'short_name' => $shortName,
                 'description' => 'Sistema de gestão para ' . $cfcName,
-                'start_url' => './dashboard',
-                'scope' => './',
+                'start_url' => getBaseUrl('dashboard'),
+                'scope' => getBaseUrl(''),
                 'display' => 'standalone',
                 'orientation' => 'portrait-primary',
                 'theme_color' => '#023A8D', // Pode ser dinâmico no futuro se houver campo theme_color

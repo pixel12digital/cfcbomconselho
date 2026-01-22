@@ -20,7 +20,7 @@
                 <div style="display: flex; align-items: center; gap: var(--spacing-md);">
                     <div>
                         <img 
-                            src="<?= base_path('configuracoes/cfc/logo') ?>" 
+                            src="<?= base_url('login/cfc-logo') ?>" 
                             alt="Logo do CFC" 
                             style="max-width: 150px; max-height: 150px; border-radius: var(--radius-md); box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
                             onerror="this.style.display='none'; this.parentElement.parentElement.querySelector('.logo-error')?.style.display='block';"
@@ -72,7 +72,7 @@
             </div>
         </div>
 
-        <form id="logoUploadForm" method="POST" action="<?= base_path('configuracoes/cfc/logo/upload') ?>" enctype="multipart/form-data">
+        <form id="logoUploadForm" method="POST" action="<?= base_url('configuracoes/cfc/logo/upload') ?>" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 
             <div class="form-group">
@@ -261,7 +261,7 @@
         <?php if ($hasLogo): ?>
             <hr style="margin: var(--spacing-lg) 0; border: none; border-top: 1px solid var(--color-gray-200);">
             
-            <form method="POST" action="<?= base_path('configuracoes/cfc/logo/remover') ?>" onsubmit="return confirm('Tem certeza que deseja remover o logo? Os ícones PWA também serão removidos.');">
+            <form method="POST" action="<?= base_url('configuracoes/cfc/logo/remover') ?>" onsubmit="return confirm('Tem certeza que deseja remover o logo? Os ícones PWA também serão removidos.');">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 <button type="submit" class="btn btn-danger">
                     Remover Logo
@@ -275,7 +275,7 @@
     <div class="card-body">
         <h2 style="margin-bottom: var(--spacing-md); font-size: 1.25rem;">Informações do CFC</h2>
         
-        <form id="salvarForm" method="POST" action="<?= base_path('configuracoes/cfc/salvar') ?>">
+        <form id="salvarForm" method="POST" action="<?= base_url('configuracoes/cfc/salvar') ?>">
             <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
 
             <div class="form-group">

@@ -9,13 +9,13 @@
     <title><?= $pageTitle ?? 'CFC Sistema' ?></title>
     
     <!-- PWA Manifest (usando pwa-manifest.php para white-label dinâmico) -->
-    <link rel="manifest" href="<?= base_path('pwa-manifest.php') ?>">
+    <link rel="manifest" href="<?= base_url('pwa-manifest.php') ?>">
     
     <!-- Favicon -->
-    <link rel="icon" type="image/png" href="<?= base_path('public_html/icons/icon-192x192.png') ?>">
+    <link rel="icon" type="image/png" href="<?= base_url('icons/icon-192x192.png') ?>">
     
     <!-- Apple Touch Icon (iOS) -->
-    <link rel="apple-touch-icon" href="<?= base_path('/icons/icon-192x192.png') ?>">
+    <link rel="apple-touch-icon" href="<?= base_url('icons/icon-192x192.png') ?>">
     
     <!-- CSS -->
     <link rel="stylesheet" href="<?= asset_url('css/tokens.css') ?>">
@@ -40,7 +40,7 @@
                     </svg>
                 </button>
                 
-                <a href="<?= base_path('/dashboard') ?>" class="topbar-logo">
+                <a href="<?= base_url('dashboard') ?>" class="topbar-logo">
                     CFC Sistema
                 </a>
                 
@@ -58,7 +58,7 @@
                     $notificationCount = $notificationModel->countUnread($_SESSION['user_id']);
                 }
                 ?>
-                <a href="<?= base_path('notificacoes') ?>" class="topbar-icon" id="notificationsBtn" style="text-decoration: none; color: inherit;">
+                <a href="<?= base_url('notificacoes') ?>" class="topbar-icon" id="notificationsBtn" style="text-decoration: none; color: inherit;">
                     <svg width="20" height="20" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
                     </svg>
@@ -105,13 +105,13 @@
                                 Instalar Aplicativo
                             </button>
                         </div>
-                        <a href="<?= base_path('/change-password') ?>" class="topbar-profile-dropdown-item">
+                        <a href="<?= base_url('change-password') ?>" class="topbar-profile-dropdown-item">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 8px;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                             </svg>
                             Alterar Senha
                         </a>
-                        <a href="<?= base_path('/logout') ?>" class="topbar-profile-dropdown-item">
+                        <a href="<?= base_url('logout') ?>" class="topbar-profile-dropdown-item">
                             <svg width="16" height="16" fill="none" stroke="currentColor" viewBox="0 0 24 24" style="margin-right: 8px;">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
                             </svg>
@@ -135,7 +135,7 @@
                     foreach ($menuItems as $item):
                         $isActive = strpos($currentPath, $item['path']) === 0;
                     ?>
-                        <a href="<?= base_path($item['path']) ?>" class="sidebar-menu-item <?= $isActive ? 'active' : '' ?>">
+                        <a href="<?= base_url($item['path']) ?>" class="sidebar-menu-item <?= $isActive ? 'active' : '' ?>">
                             <span class="sidebar-menu-icon">
                                 <?= $item['icon'] ?? '' ?>
                             </span>
@@ -195,14 +195,8 @@
                 const isLocalhost = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1';
                 const isProduction = <?= json_encode(($_ENV['APP_ENV'] ?? 'local') === 'production') ?>;
                 
-                // Corrigir path do SW (remover duplicação de public_html)
-                // base_path já retorna com /public_html/, então não precisa adicionar novamente
-                let swPath = <?= json_encode(base_path('sw.js')) ?>;
-                
-                // Se base_path não incluir public_html, adicionar
-                if (!swPath.includes('public_html')) {
-                    swPath = <?= json_encode(base_path('public_html/sw.js')) ?>;
-                }
+                // Corrigir path do SW usando base_url
+                let swPath = <?= json_encode(base_url('sw.js')) ?>;
                 
                 // Desabilitar SW em localhost durante debug
                 if (isLocalhost) {

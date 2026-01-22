@@ -132,7 +132,12 @@
                 const role = this.getAttribute('data-role');
                 
                 // Fazer requisição para trocar papel
-                fetch('/api/switch-role', {
+                // Usar path relativo que será resolvido pela tag <base>
+                const baseElement = document.querySelector('base');
+                const apiUrl = baseElement ? 
+                    new URL('/api/switch-role', baseElement.href).href : 
+                    '/api/switch-role';
+                fetch(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',

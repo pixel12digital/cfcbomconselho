@@ -16,33 +16,53 @@ date_default_timezone_set('America/Sao_Paulo');
 // Helper functions
 if (!function_exists('base_path')) {
     function base_path($path = '') {
-        // Detectar ambiente
-        $appEnv = $_ENV['APP_ENV'] ?? 'local';
-        $isProduction = $appEnv === 'production';
+        // Detectar ambiente de forma mais robusta
+        $appEnv = $_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? null;
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        
+        // Detectar produção: se APP_ENV=production OU se host não contém localhost/127.0.0.1
+        $isProduction = false;
+        if ($appEnv === 'production') {
+            $isProduction = true;
+        } elseif ($appEnv === null || $appEnv === 'local') {
+            // Se não tem APP_ENV definido, detectar pelo hostname E pelo SCRIPT_NAME
+            $isLocalhost = in_array($host, ['localhost', '127.0.0.1', '::1']) || 
+                          strpos($host, 'localhost') !== false ||
+                          strpos($host, '127.0.0.1') !== false;
+            
+            // Se SCRIPT_NAME contém /cfc-v.1/ ou /public_html/, é local
+            $isLocalPath = strpos($scriptName, '/cfc-v.1/') !== false || 
+                          strpos($scriptName, '/public_html/') !== false;
+            
+            // É produção se NÃO for localhost E NÃO tiver path de desenvolvimento
+            $isProduction = !$isLocalhost && !$isLocalPath;
+        }
         
         // Em produção, usar base fixo (DocumentRoot geralmente aponta para public_html/)
         if ($isProduction) {
             // Em produção, base é a raiz
             $base = '/';
         } else {
-            // Em desenvolvimento, calcular base path dinamicamente
-            $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-            $base = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
-            
-            // Se estamos em /cfc-v.1/public_html/index.php -> $base = /cfc-v.1/public_html
-            // Se estamos em /index.php -> $base = / (raiz)
-            if ($base === '' || $base === '.') {
-                $base = '/';
-            } elseif (substr($base, 0, 1) !== '/') {
-                $base = '/' . $base;
-            }
+            // Em desenvolvimento (localhost), SEMPRE usar o caminho completo
+            // Não depender do SCRIPT_NAME que pode variar com rewrites
+            $base = '/cfc-v.1/public_html/';
         }
         
         // Limpar o path
         $path = ltrim($path, '/');
         
         // Montar path: base + / + path (ou apenas base se path vazio)
-        return $base . ($path ? '/' . $path : '');
+        // Evitar dupla barra: se base termina com /, não adicionar outra /
+        if ($path) {
+            if (substr($base, -1) === '/') {
+                return $base . $path;
+            } else {
+                return $base . '/' . $path;
+            }
+        } else {
+            return $base;
+        }
     }
 }
 
@@ -52,31 +72,40 @@ if (!function_exists('base_url')) {
         $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
         $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
         
-        // Detectar ambiente
-        $appEnv = $_ENV['APP_ENV'] ?? 'local';
-        $isProduction = $appEnv === 'production';
+        // Detectar se é localhost (desenvolvimento)
+        $isLocalhost = in_array($host, ['localhost', '127.0.0.1', '::1']) || 
+                      strpos($host, 'localhost') !== false ||
+                      strpos($host, '127.0.0.1') !== false;
+        
+        // Detectar produção: se APP_ENV=production E não é localhost
+        $appEnv = $_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? null;
+        $isProduction = ($appEnv === 'production') && !$isLocalhost;
         
         // Em produção, usar basePath fixo (DocumentRoot geralmente aponta para public_html/)
         if ($isProduction) {
             // Em produção, basePath é a raiz
             $basePath = '/';
         } else {
-            // Em desenvolvimento, calcular base path dinamicamente
-            $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-            $basePath = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
-            
-            // Se estamos em /cfc-v.1/public_html/index.php -> $basePath = /cfc-v.1/public_html
-            // Se estamos em /index.php -> $basePath = / (raiz)
-            if ($basePath === '' || $basePath === '.') {
-                $basePath = '/';
-            } elseif (substr($basePath, 0, 1) !== '/') {
-                $basePath = '/' . $basePath;
-            }
+            // Em desenvolvimento (localhost), SEMPRE usar o caminho completo
+            // Não depender do SCRIPT_NAME que pode variar com rewrites
+            $basePath = '/cfc-v.1/public_html/';
         }
         
         // Montar URL completa: protocolo + host + basePath + path
+        // IMPORTANTE: sempre remover barra inicial do path para evitar problemas
         $path = ltrim($path, '/');
-        $url = $protocol . '://' . $host . $basePath . ($path ? '/' . $path : '');
+        
+        // Evitar dupla barra: se basePath termina com /, não adicionar outra /
+        if ($path) {
+            if (substr($basePath, -1) === '/') {
+                $url = $protocol . '://' . $host . $basePath . $path;
+            } else {
+                $url = $protocol . '://' . $host . $basePath . '/' . $path;
+            }
+        } else {
+            // Se path vazio, retornar basePath (sem barra final se for raiz)
+            $url = $protocol . '://' . $host . rtrim($basePath, '/');
+        }
         
         return $url;
     }
@@ -87,31 +116,23 @@ if (!function_exists('asset_url')) {
         // Limpar o path
         $path = ltrim($path, '/'); // ex: css/tokens.css
         
-        // Detectar ambiente
-        $appEnv = $_ENV['APP_ENV'] ?? 'local';
-        $isProduction = $appEnv === 'production';
+        // Detectar ambiente de forma mais robusta (mesma lógica do base_path)
+        $appEnv = $_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? null;
+        $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
         
-        // Em produção, usar path fixo (DocumentRoot geralmente aponta para public_html/)
-        if ($isProduction) {
+        // Detectar se é localhost (desenvolvimento)
+        $isLocalhost = in_array($host, ['localhost', '127.0.0.1', '::1']) || 
+                      strpos($host, 'localhost') !== false ||
+                      strpos($host, '127.0.0.1') !== false;
+        
+        // Em produção (APP_ENV=production E não é localhost), usar path fixo
+        if ($appEnv === 'production' && !$isLocalhost) {
             // Em produção, assets devem estar em /assets/ (relativo ao DocumentRoot)
-            // Se DocumentRoot = public_html/, então /assets/ aponta para public_html/assets/
             $url = '/assets/' . $path;
         } else {
-            // Em desenvolvimento, calcular base path dinamicamente
-            $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-            $base = rtrim(str_replace('\\', '/', dirname($scriptName)), '/');
-            
-            // Se estamos em /cfc-v.1/public_html/index.php -> $base = /cfc-v.1/public_html
-            // Se estamos em /index.php -> $base = / (raiz)
-            // Garantir que $base sempre comece com / ou seja vazio (raiz)
-            if ($base === '' || $base === '.') {
-                $base = '/';
-            } elseif (substr($base, 0, 1) !== '/') {
-                $base = '/' . $base;
-            }
-            
-            // Montar URL: base + /assets/ + path
-            $url = $base . '/assets/' . $path;
+            // Em desenvolvimento (localhost), SEMPRE usar o caminho completo
+            $url = '/cfc-v.1/public_html/assets/' . $path;
         }
         
         // Cache bust (versionamento)

@@ -83,7 +83,7 @@
                 <?php unset($_SESSION['error']); ?>
             <?php endif; ?>
             
-            <form method="POST" action="<?= base_path('/login') ?>">
+            <form method="POST" action="<?= base_url('/login') ?>">
                 <input type="hidden" name="csrf_token" value="<?= csrf_token() ?>">
                 
                 <div class="form-group">
@@ -113,7 +113,7 @@
             </form>
             
             <div style="text-align: center; margin-top: var(--spacing-md);">
-                <a href="<?= base_path('/forgot-password') ?>" class="text-link" style="font-size: var(--font-size-sm);">
+                <a href="<?= base_url('/forgot-password') ?>" class="text-link" style="font-size: var(--font-size-sm);">
                     Esqueci minha senha
                 </a>
             </div>

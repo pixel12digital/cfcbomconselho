@@ -45,7 +45,7 @@ class AuthController extends Controller
             $filepath = dirname(__DIR__, 2) . '/' . $cfc['logo_path'];
             if (file_exists($filepath)) {
                 // URL pública para servir a logo (rota sem autenticação)
-                $logoUrl = base_path('login/cfc-logo');
+                $logoUrl = base_url('login/cfc-logo');
             }
         }
         

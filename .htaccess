@@ -5,6 +5,8 @@
 </FilesMatch>
 
 # Front Controller - Redirecionar para index.php na raiz
+# NOTA: Este .htaccess é APENAS para desenvolvimento local (XAMPP)
+# Em produção, o DocumentRoot aponta para public_html/, então este arquivo não é usado
 RewriteEngine On
 RewriteBase /cfc-v.1/
 
@@ -25,7 +27,8 @@ RewriteRule ^ - [L]
 RewriteCond %{REQUEST_URI} ^/cfc-v\.1/assets/
 RewriteRule ^ - [L]
 
-# Redirecionar tudo para index.php na raiz
+# Redirecionar tudo para index.php na raiz (apenas se não for public_html)
+RewriteCond %{REQUEST_URI} !^/cfc-v\.1/public_html/
 RewriteRule ^(.*)$ index.php [QSA,L]
 
 # Proteger storage e certificados
