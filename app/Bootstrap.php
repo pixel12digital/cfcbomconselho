@@ -111,6 +111,37 @@ if (!function_exists('base_url')) {
     }
 }
 
+if (!function_exists('pwa_asset_path')) {
+    /**
+     * Retorna o path correto para arquivos PWA (manifest, service worker)
+     * Detecta automaticamente baseado na estrutura do servidor
+     */
+    function pwa_asset_path($filename) {
+        $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+        
+        // Se SCRIPT_NAME contém /public_html/, extrair o path base completo
+        // Ex: /public_html/painel/public_html/index.php -> /public_html/painel/public_html/sw.js
+        if (preg_match('#(/[^/]+/public_html)/#', $scriptName, $matches)) {
+            // Padrão: /public_html/painel/public_html/
+            return $matches[1] . '/' . $filename;
+        } elseif (preg_match('#(/public_html)/#', $scriptName, $matches)) {
+            // Padrão: /public_html/ (sem subdiretório)
+            return $matches[1] . '/' . $filename;
+        } elseif (strpos($scriptName, '/public_html') !== false) {
+            // Fallback: extrair diretório do SCRIPT_NAME
+            $base = dirname($scriptName);
+            // Garantir que termina com /
+            if (substr($base, -1) !== '/') {
+                $base .= '/';
+            }
+            return $base . $filename;
+        }
+        
+        // Se não detectou /public_html/, usar base_path (DocumentRoot = raiz ou outro)
+        return base_path($filename);
+    }
+}
+
 if (!function_exists('asset_url')) {
     function asset_url($path, $versioned = true) {
         // Limpar o path
