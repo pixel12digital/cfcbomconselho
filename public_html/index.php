@@ -1,5 +1,27 @@
 <?php
 
+// Verificar se está sendo acessado pelo subdomínio painel
+// Se sim, garantir que sempre mostre o login (a menos que haja sessão válida)
+$host = $_SERVER['HTTP_HOST'] ?? '';
+$isPainelSubdomain = strpos($host, 'painel.') === 0 || $host === 'painel.cfcbomconselho.com.br';
+
+// Se for o subdomínio painel e não houver sessão válida, garantir que mostre login
+if ($isPainelSubdomain) {
+    // Iniciar sessão se ainda não estiver iniciada
+    if (session_status() === PHP_SESSION_NONE) {
+        session_start();
+    }
+    
+    // Se houver user_id na sessão, verificar se é válido
+    if (!empty($_SESSION['user_id'])) {
+        // A validação será feita no AuthController::showLogin()
+        // Por enquanto, apenas garantir que a sessão está ativa
+    } else {
+        // Limpar qualquer sessão inválida
+        $_SESSION = [];
+    }
+}
+
 // Inicialização
 define('ROOT_PATH', dirname(__DIR__));
 define('APP_PATH', ROOT_PATH . '/app');

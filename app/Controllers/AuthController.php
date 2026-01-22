@@ -24,8 +24,19 @@ class AuthController extends Controller
 
     public function showLogin()
     {
+        // Verificar se há sessão ativa E se o usuário realmente existe e está ativo
         if (!empty($_SESSION['user_id'])) {
-            redirect(base_url('/dashboard'));
+            $userModel = new User();
+            $user = $userModel->find($_SESSION['user_id']);
+            
+            // Só redirecionar para dashboard se o usuário existir e estiver ativo
+            if ($user && $user['status'] === 'ativo') {
+                redirect(base_url('/dashboard'));
+            } else {
+                // Se usuário não existe ou está inativo, limpar sessão e mostrar login
+                session_destroy();
+                session_start();
+            }
         }
         
         // Buscar CFC para exibir logo no login (sem sessão, usar padrão ou primeiro CFC)
