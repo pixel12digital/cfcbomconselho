@@ -1,10 +1,10 @@
 <?php
 // =====================================================
 // PÁGINA TRABALHE CONOSCO - CFC BOM CONSELHO
+// VERSÃO ESTÁTICA - SEM DEPENDÊNCIA DE BANCO DE DADOS
 // =====================================================
 
 require_once 'includes/config.php';
-require_once 'includes/database.php';
 
 // Processar formulário se foi enviado
 $mensagem_sucesso = '';
@@ -12,8 +12,6 @@ $mensagem_erro = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        $db = db();
-        
         // Validar dados
         $nome_completo = trim($_POST['nome_completo'] ?? '');
         $email = trim($_POST['email'] ?? '');
@@ -28,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pais = trim($_POST['pais'] ?? 'Brasil');
         $indicacoes = trim($_POST['indicacoes'] ?? '');
         $mensagem = trim($_POST['mensagem'] ?? '');
-        $vaga_id = intval($_POST['vaga_id'] ?? 0);
+        $vaga_id = trim($_POST['vaga_id'] ?? '');
         
         // Validações básicas
         if (empty($nome_completo) || empty($email)) {
@@ -81,35 +79,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
         }
         
-        // Inserir candidato no banco
-        $sql = "INSERT INTO candidatos (
-            nome_completo, email, whatsapp, telefone, categoria_cnh, escolaridade,
-            endereco_rua, cidade, estado, cep, pais, indicacoes, mensagem,
-            curriculo_arquivo, foto_arquivo, vaga_id, status
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'novo')";
+        // Enviar por e-mail ao invés de salvar no banco
+        $destinatario = 'contato@cfcbomconselho.com.br'; // Altere para o e-mail desejado
+        $assunto = 'Nova Candidatura - CFC Bom Conselho';
         
-        $params = [
-            $nome_completo, $email, $whatsapp, $telefone, $categoria_cnh, $escolaridade,
-            $endereco_rua, $cidade, $estado, $cep, $pais, $indicacoes, $mensagem,
-            $curriculo_arquivo, $foto_arquivo, $vaga_id
-        ];
+        $corpo_email = "Nova candidatura recebida:\n\n";
+        $corpo_email .= "Nome Completo: $nome_completo\n";
+        $corpo_email .= "E-mail: $email\n";
+        $corpo_email .= "WhatsApp: $whatsapp\n";
+        $corpo_email .= "Telefone: $telefone\n";
+        $corpo_email .= "Categoria CNH: $categoria_cnh\n";
+        $corpo_email .= "Escolaridade: $escolaridade\n";
+        $corpo_email .= "Endereço: $endereco_rua\n";
+        $corpo_email .= "Cidade: $cidade\n";
+        $corpo_email .= "Estado: $estado\n";
+        $corpo_email .= "CEP: $cep\n";
+        $corpo_email .= "País: $pais\n";
+        $corpo_email .= "Área de Interesse: $vaga_id\n";
+        $corpo_email .= "Indicações: $indicacoes\n";
+        $corpo_email .= "Mensagem: $mensagem\n";
         
-        $db->query($sql, $params);
+        if ($curriculo_arquivo) {
+            $corpo_email .= "\nCurrículo anexado: $curriculo_arquivo\n";
+        }
+        if ($foto_arquivo) {
+            $corpo_email .= "Foto anexada: $foto_arquivo\n";
+        }
         
-        $mensagem_sucesso = 'Candidatura enviada com sucesso! Entraremos em contato em breve.';
+        $headers = "From: $email\r\n";
+        $headers .= "Reply-To: $email\r\n";
+        $headers .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        
+        if (mail($destinatario, $assunto, $corpo_email, $headers)) {
+            $mensagem_sucesso = 'Candidatura enviada com sucesso! Entraremos em contato em breve.';
+        } else {
+            throw new Exception('Erro ao enviar e-mail. Tente novamente ou entre em contato diretamente.');
+        }
         
     } catch (Exception $e) {
         $mensagem_erro = 'Erro ao enviar candidatura: ' . $e->getMessage();
     }
 }
 
-// Buscar vagas ativas
-try {
-    $db = db();
-    $vagas = $db->fetchAll("SELECT * FROM vagas WHERE status = 'ativa' ORDER BY titulo");
-} catch (Exception $e) {
-    $vagas = [];
-}
+// Vagas estáticas (sem banco de dados)
+$vagas = [];
 ?>
 <!DOCTYPE html>
 <html lang="pt-BR">
